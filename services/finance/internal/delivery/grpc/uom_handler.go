@@ -123,18 +123,18 @@ func (h *UOMHandler) UpdateUOM(ctx context.Context, req *financev1.UpdateUOMRequ
 		UpdatedBy: getUserFromContext(ctx),
 	}
 
-	if req.UomName != "" {
-		cmd.UOMName = &req.UomName
+	if req.UomName != nil && *req.UomName != "" {
+		cmd.UOMName = req.UomName
 	}
-	if req.UomCategory != financev1.UOMCategory_UOM_CATEGORY_UNSPECIFIED {
-		cat := protoToCategory(req.UomCategory)
+	if req.UomCategory != nil && *req.UomCategory != financev1.UOMCategory_UOM_CATEGORY_UNSPECIFIED {
+		cat := protoToCategory(*req.UomCategory)
 		cmd.UOMCategory = &cat
 	}
-	if req.Description != "" {
-		cmd.Description = &req.Description
+	if req.Description != nil {
+		cmd.Description = req.Description
 	}
-	if req.IsActive {
-		cmd.IsActive = &req.IsActive
+	if req.IsActive != nil {
+		cmd.IsActive = req.IsActive
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, cmd)
@@ -212,8 +212,15 @@ func (h *UOMHandler) ListUOMs(ctx context.Context, req *financev1.ListUOMsReques
 		query.Category = &cat
 	}
 
-	if req.IsActive {
-		query.IsActive = &req.IsActive
+	// Handle ActiveFilter enum
+	switch req.ActiveFilter {
+	case financev1.ActiveFilter_ACTIVE_FILTER_ACTIVE:
+		active := true
+		query.IsActive = &active
+	case financev1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
+		active := false
+		query.IsActive = &active
+		// ACTIVE_FILTER_UNSPECIFIED (0) means show all - no filter
 	}
 
 	result, err := h.listHandler.Handle(ctx, query)
@@ -250,8 +257,15 @@ func (h *UOMHandler) ExportUOMs(ctx context.Context, req *financev1.ExportUOMsRe
 		query.Category = &cat
 	}
 
-	if req.IsActive {
-		query.IsActive = &req.IsActive
+	// Handle ActiveFilter enum
+	switch req.ActiveFilter {
+	case financev1.ActiveFilter_ACTIVE_FILTER_ACTIVE:
+		active := true
+		query.IsActive = &active
+	case financev1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
+		active := false
+		query.IsActive = &active
+		// ACTIVE_FILTER_UNSPECIFIED (0) means export all - no filter
 	}
 
 	result, err := h.exportHandler.Handle(ctx, query)

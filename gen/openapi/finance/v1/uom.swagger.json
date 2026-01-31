@@ -60,7 +60,7 @@
           },
           {
             "name": "category",
-            "description": "Filter by category (optional).\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
+            "description": "Filter by category.\nUOM_CATEGORY_UNSPECIFIED (0) means \"show all categories\" (no filter).\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
             "in": "query",
             "required": false,
             "type": "string",
@@ -74,11 +74,17 @@
             "default": "UOM_CATEGORY_UNSPECIFIED"
           },
           {
-            "name": "isActive",
-            "description": "Filter by active status (optional).",
+            "name": "activeFilter",
+            "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = show all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
             "in": "query",
             "required": false,
-            "type": "boolean"
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
           },
           {
             "name": "sortBy",
@@ -153,7 +159,7 @@
         "parameters": [
           {
             "name": "category",
-            "description": "Filter by category (optional, export all if not specified).\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
+            "description": "Filter by category.\nUOM_CATEGORY_UNSPECIFIED (0) means \"export all categories\".\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
             "in": "query",
             "required": false,
             "type": "string",
@@ -167,11 +173,17 @@
             "default": "UOM_CATEGORY_UNSPECIFIED"
           },
           {
-            "name": "isActive",
-            "description": "Filter by active status (optional).",
+            "name": "activeFilter",
+            "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = export all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
             "in": "query",
             "required": false,
-            "type": "boolean"
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
           }
         ],
         "tags": [
@@ -298,7 +310,7 @@
         ]
       },
       "put": {
-        "summary": "UpdateUOM updates an existing UOM.",
+        "summary": "UpdateUOM updates an existing UOM.\nNote: uom_code is immutable and cannot be changed.",
         "operationId": "UOMService_UpdateUOM",
         "responses": {
           "200": {
@@ -343,11 +355,11 @@
       "properties": {
         "uomName": {
           "type": "string",
-          "description": "New display name (optional, 1-100 chars if provided)."
+          "description": "New display name (optional, 1-100 chars if provided).\nEmpty string means no change."
         },
         "uomCategory": {
           "$ref": "#/definitions/v1UOMCategory",
-          "description": "New category (optional)."
+          "description": "New category (optional, cannot be UNSPECIFIED if provided).\nUse has_uom_category to check if this field is set."
         },
         "description": {
           "type": "string",
@@ -358,7 +370,7 @@
           "description": "New active status (optional)."
         }
       },
-      "description": "UpdateUOMRequest is the request for updating a UOM."
+      "description": "UpdateUOMRequest is the request for updating a UOM.\nNote: uom_code is immutable and cannot be changed after creation."
     },
     "protobufAny": {
       "type": "object",
@@ -387,6 +399,16 @@
           }
         }
       }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
     },
     "v1AuditInfo": {
       "type": "object",
@@ -441,7 +463,7 @@
       "properties": {
         "uomCode": {
           "type": "string",
-          "description": "Unique code (uppercase, alphanumeric with underscore, 1-20 chars)."
+          "description": "Unique code (uppercase, alphanumeric with underscore, 1-20 chars).\nMust start with an uppercase letter. Immutable after creation."
         },
         "uomName": {
           "type": "string",
@@ -563,11 +585,11 @@
         },
         "fileName": {
           "type": "string",
-          "description": "Original filename (for format detection)."
+          "description": "Original filename (for format detection).\nMust be a simple filename without path separators."
         },
         "duplicateAction": {
           "type": "string",
-          "description": "How to handle duplicates: \"skip\", \"update\", \"error\"."
+          "description": "Required. How to handle duplicates: \"skip\", \"update\", \"error\"."
         }
       },
       "description": "ImportUOMsRequest is the request for importing UOMs from Excel."
@@ -667,7 +689,7 @@
         },
         "uomCode": {
           "type": "string",
-          "description": "Unique code (e.g., \"KG\", \"MTR\", \"PCS\")."
+          "description": "Unique code (e.g., \"KG\", \"MTR\", \"PCS\"). Immutable after creation."
         },
         "uomName": {
           "type": "string",
@@ -702,7 +724,7 @@
         "UOM_CATEGORY_QUANTITY"
       ],
       "default": "UOM_CATEGORY_UNSPECIFIED",
-      "description": "UOMCategory represents the category of a unit of measure.\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET)."
+      "description": "UOMCategory represents the category of a unit of measure.\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET)."
     },
     "v1UpdateUOMResponse": {
       "type": "object",

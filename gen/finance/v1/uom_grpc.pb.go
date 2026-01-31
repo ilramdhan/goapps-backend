@@ -40,6 +40,7 @@ type UOMServiceClient interface {
 	// GetUOM retrieves a UOM by ID.
 	GetUOM(ctx context.Context, in *GetUOMRequest, opts ...grpc.CallOption) (*GetUOMResponse, error)
 	// UpdateUOM updates an existing UOM.
+	// Note: uom_code is immutable and cannot be changed.
 	UpdateUOM(ctx context.Context, in *UpdateUOMRequest, opts ...grpc.CallOption) (*UpdateUOMResponse, error)
 	// DeleteUOM soft deletes a UOM.
 	DeleteUOM(ctx context.Context, in *DeleteUOMRequest, opts ...grpc.CallOption) (*DeleteUOMResponse, error)
@@ -152,6 +153,7 @@ type UOMServiceServer interface {
 	// GetUOM retrieves a UOM by ID.
 	GetUOM(context.Context, *GetUOMRequest) (*GetUOMResponse, error)
 	// UpdateUOM updates an existing UOM.
+	// Note: uom_code is immutable and cannot be changed.
 	UpdateUOM(context.Context, *UpdateUOMRequest) (*UpdateUOMResponse, error)
 	// DeleteUOM soft deletes a UOM.
 	DeleteUOM(context.Context, *DeleteUOMRequest) (*DeleteUOMResponse, error)

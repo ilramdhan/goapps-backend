@@ -154,11 +154,17 @@ grpc-list-uoms:
 # Tools Installation
 # =============================================================================
 
-install-tools:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	go install github.com/air-verse/air@latest
-	go install golang.org/x/tools/cmd/goimports@latest
-	go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
-	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-	@echo "Tools installed"
+# Tool versions - pin for security and reproducibility
+GOLANGCI_LINT_VERSION := v1.62.2
+AIR_VERSION := v1.52.3
+GOIMPORTS_VERSION := v0.28.0
+GRPCURL_VERSION := v1.9.1
+MIGRATE_VERSION := v4.18.1
 
+install-tools:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	go install github.com/air-verse/air@$(AIR_VERSION)
+	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
+	go install github.com/fullstorydev/grpcurl/cmd/grpcurl@$(GRPCURL_VERSION)
+	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@$(MIGRATE_VERSION)
+	@echo "Tools installed (pinned versions)"
