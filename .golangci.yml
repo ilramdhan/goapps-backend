@@ -1,8 +1,5 @@
 # golangci-lint configuration for goapps-backend
-# Version: 2.1
 # https://golangci-lint.run/usage/configuration/
-
-version: "2"
 
 run:
   timeout: 5m
@@ -10,7 +7,6 @@ run:
   allow-parallel-runners: true
 
 linters:
-  default: standard
   enable:
     # Default linters
     - errcheck
@@ -26,7 +22,6 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exportloopref
     - gocognit
     - goconst
     - gocritic
@@ -139,17 +134,10 @@ issues:
   max-issues-per-linter: 50
   max-same-issues: 10
 
-formatters:
-  enable:
-    - gofmt
-    - goimports
-
 output:
   formats:
-    text:
-      path: stdout
-      print-issued-lines: true
-      print-linter-name: true
+    - format: colored-line-number
+  sort-results: true
   sort-order:
     - linter
     - severity
