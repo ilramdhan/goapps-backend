@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver with SCRAM-SHA-256 support
 	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
@@ -21,7 +21,7 @@ type DB struct {
 
 // NewConnection creates a new PostgreSQL connection pool.
 func NewConnection(cfg *config.DatabaseConfig) (*DB, error) {
-	db, err := sql.Open("postgres", cfg.ConnectionString())
+	db, err := sql.Open("pgx", cfg.ConnectionString())
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
