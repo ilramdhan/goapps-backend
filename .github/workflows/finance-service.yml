@@ -4,14 +4,18 @@ on:
   push:
     branches: [main, develop]
     paths:
+    paths:
       - 'services/finance/**'
       - 'gen/**'
       - '.github/workflows/finance-service.yml'
+      - '.golangci.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'services/finance/**'
       - 'gen/**'
+      - '.golangci.yml'
+  workflow_dispatch:
 
 env:
   GO_VERSION: '1.24'
