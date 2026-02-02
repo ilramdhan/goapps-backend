@@ -12,6 +12,7 @@ import (
 // Action represents the type of audit action.
 type Action string
 
+// Action constants for audit logging.
 const (
 	ActionCreate Action = "CREATE"
 	ActionUpdate Action = "UPDATE"
@@ -81,7 +82,9 @@ func WithPerformer(ctx context.Context, performer string) context.Context {
 // GetRequestID retrieves the request ID from context.
 func GetRequestID(ctx context.Context) string {
 	if v := ctx.Value(requestIDKey); v != nil {
-		return v.(string)
+		if s, ok := v.(string); ok {
+			return s
+		}
 	}
 	return ""
 }
@@ -89,7 +92,9 @@ func GetRequestID(ctx context.Context) string {
 // GetIPAddress retrieves the IP address from context.
 func GetIPAddress(ctx context.Context) string {
 	if v := ctx.Value(ipAddressKey); v != nil {
-		return v.(string)
+		if s, ok := v.(string); ok {
+			return s
+		}
 	}
 	return ""
 }
@@ -97,7 +102,9 @@ func GetIPAddress(ctx context.Context) string {
 // GetUserAgent retrieves the user agent from context.
 func GetUserAgent(ctx context.Context) string {
 	if v := ctx.Value(userAgentKey); v != nil {
-		return v.(string)
+		if s, ok := v.(string); ok {
+			return s
+		}
 	}
 	return ""
 }
@@ -105,7 +112,9 @@ func GetUserAgent(ctx context.Context) string {
 // GetPerformer retrieves the performer from context.
 func GetPerformer(ctx context.Context) string {
 	if v := ctx.Value(performerKey); v != nil {
-		return v.(string)
+		if s, ok := v.(string); ok {
+			return s
+		}
 	}
 	return "system"
 }

@@ -4,6 +4,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -72,7 +73,11 @@ func (db *DB) Transaction(ctx context.Context, fn func(tx *sql.Tx) error) error 
 
 	if err := fn(tx); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("failed to rollback transaction: %v (original error: %w)", rbErr, err)
+			// Use errors.Join to properly wrap both errors (Go 1.20+)
+			return errors.Join(
+				fmt.Errorf("rollback failed: %w", rbErr),
+				fmt.Errorf("transaction error: %w", err),
+			)
 		}
 		return err
 	}

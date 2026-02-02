@@ -2,6 +2,7 @@
 package grpc
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -89,7 +90,10 @@ func (s *Server) GRPCServer() *grpc.Server {
 // Start starts the gRPC server.
 func (s *Server) Start() error {
 	addr := fmt.Sprintf(":%d", s.config.GRPCPort)
-	listener, err := net.Listen("tcp", addr)
+
+	// Use ListenConfig for context-aware listening
+	lc := net.ListenConfig{}
+	listener, err := lc.Listen(context.Background(), "tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to create listener: %w", err)
 	}

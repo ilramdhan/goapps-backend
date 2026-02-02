@@ -11,6 +11,7 @@ import (
 // State represents the circuit breaker state.
 type State int
 
+// State constants for circuit breaker.
 const (
 	StateClosed   State = iota // Normal operation
 	StateOpen                  // Failing, reject requests
@@ -151,12 +152,13 @@ func (cb *CircuitBreaker) onSuccess() {
 	switch cb.state {
 	case StateClosed:
 		cb.failures = 0
-
 	case StateHalfOpen:
 		cb.successes++
 		if cb.successes >= cb.settings.MaxHalfOpenRequests {
 			cb.toClosed()
 		}
+	case StateOpen:
+		// No action needed in open state for success
 	}
 }
 
@@ -169,9 +171,10 @@ func (cb *CircuitBreaker) onFailure() {
 		if cb.failures >= cb.settings.MaxFailures {
 			cb.toOpen()
 		}
-
 	case StateHalfOpen:
 		cb.toOpen()
+	case StateOpen:
+		// Already open, no state change needed
 	}
 }
 

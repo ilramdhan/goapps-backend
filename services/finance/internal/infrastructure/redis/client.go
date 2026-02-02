@@ -89,7 +89,7 @@ func (c *Client) DeletePattern(ctx context.Context, pattern string) error {
 	return nil
 }
 
-// Client returns the underlying redis client for advanced operations.
+// Redis returns the underlying redis client for advanced operations.
 func (c *Client) Redis() *redis.Client {
 	return c.client
 }

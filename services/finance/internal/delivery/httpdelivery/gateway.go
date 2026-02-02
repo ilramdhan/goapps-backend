@@ -1,5 +1,5 @@
-// Package http provides HTTP server for gateway and Swagger.
-package http
+// Package httpdelivery provides HTTP server for gateway and Swagger.
+package httpdelivery
 
 import (
 	"context"
@@ -109,28 +109,36 @@ func (s *Server) Stop(ctx context.Context) error {
 }
 
 // Health handlers
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"healthy"}`))
+	if _, err := w.Write([]byte(`{"status":"healthy"}`)); err != nil {
+		log.Warn().Err(err).Msg("Failed to write health response")
+	}
 }
 
-func (s *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) readyHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ready"}`))
+	if _, err := w.Write([]byte(`{"status":"ready"}`)); err != nil {
+		log.Warn().Err(err).Msg("Failed to write ready response")
+	}
 }
 
-func (s *Server) liveHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) liveHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"live"}`))
+	if _, err := w.Write([]byte(`{"status":"live"}`)); err != nil {
+		log.Warn().Err(err).Msg("Failed to write live response")
+	}
 }
 
 // Swagger handlers
-func (s *Server) swaggerHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	_, _ = w.Write([]byte(swaggerUIHTML))
+func (s *Server) swaggerHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if _, err := w.Write([]byte(swaggerUIHTML)); err != nil {
+		log.Warn().Err(err).Msg("Failed to write swagger UI response")
+	}
 }
 
 func (s *Server) swaggerJSONHandler(w http.ResponseWriter, r *http.Request) {

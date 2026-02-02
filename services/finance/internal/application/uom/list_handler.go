@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
+	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
 
 // ListQuery represents the list UOMs query.
@@ -69,17 +70,18 @@ func (h *ListHandler) Handle(ctx context.Context, query ListQuery) (*ListResult,
 		return nil, err
 	}
 
-	// Calculate pages
-	totalPages := int32(0)
-	if filter.PageSize > 0 {
-		totalPages = int32((total + int64(filter.PageSize) - 1) / int64(filter.PageSize))
+	// Calculate total pages using safe conversion
+	var totalPages int32
+	if filter.PageSize > 0 && total > 0 {
+		computed := (total + int64(filter.PageSize) - 1) / int64(filter.PageSize)
+		totalPages = safeconv.Int64ToInt32(computed)
 	}
 
 	return &ListResult{
 		UOMs:        uoms,
 		TotalItems:  total,
 		TotalPages:  totalPages,
-		CurrentPage: int32(filter.Page),
-		PageSize:    int32(filter.PageSize),
+		CurrentPage: safeconv.IntToInt32(filter.Page),
+		PageSize:    safeconv.IntToInt32(filter.PageSize),
 	}, nil
 }

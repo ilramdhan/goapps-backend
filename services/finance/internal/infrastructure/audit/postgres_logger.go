@@ -43,9 +43,18 @@ func (l *PostgresLogger) Log(ctx context.Context, entry *LogEntry) error {
 		entry.UserAgent = GetUserAgent(ctx)
 	}
 
-	oldDataJSON, _ := json.Marshal(entry.OldData)
-	newDataJSON, _ := json.Marshal(entry.NewData)
-	changesJSON, _ := json.Marshal(entry.Changes)
+	oldDataJSON, err := json.Marshal(entry.OldData)
+	if err != nil {
+		oldDataJSON = []byte("null")
+	}
+	newDataJSON, err := json.Marshal(entry.NewData)
+	if err != nil {
+		newDataJSON = []byte("null")
+	}
+	changesJSON, err := json.Marshal(entry.Changes)
+	if err != nil {
+		changesJSON = []byte("null")
+	}
 
 	query := `
 		INSERT INTO audit_logs (
@@ -56,7 +65,7 @@ func (l *PostgresLogger) Log(ctx context.Context, entry *LogEntry) error {
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
-	_, err := l.db.ExecContext(ctx, query,
+	_, err = l.db.ExecContext(ctx, query,
 		entry.ID,
 		entry.TableName,
 		entry.RecordID,
@@ -133,7 +142,12 @@ func (l *PostgresLogger) GetByRecordID(ctx context.Context, tableName string, re
 	if err != nil {
 		return nil, fmt.Errorf("failed to query audit logs: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Log or handle the error if needed
+			_ = err
+		}
+	}()
 
 	return scanLogEntries(rows)
 }
@@ -153,7 +167,12 @@ func (l *PostgresLogger) GetByPerformer(ctx context.Context, performedBy string,
 	if err != nil {
 		return nil, fmt.Errorf("failed to query audit logs: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Log or handle the error if needed
+			_ = err
+		}
+	}()
 
 	return scanLogEntries(rows)
 }
@@ -185,13 +204,22 @@ func scanLogEntries(rows *sql.Rows) ([]*LogEntry, error) {
 		}
 
 		if oldDataJSON.Valid {
-			_ = json.Unmarshal([]byte(oldDataJSON.String), &entry.OldData)
+			if err := json.Unmarshal([]byte(oldDataJSON.String), &entry.OldData); err != nil {
+				// Data may be malformed, continue with empty data
+				entry.OldData = nil
+			}
 		}
 		if newDataJSON.Valid {
-			_ = json.Unmarshal([]byte(newDataJSON.String), &entry.NewData)
+			if err := json.Unmarshal([]byte(newDataJSON.String), &entry.NewData); err != nil {
+				// Data may be malformed, continue with empty data
+				entry.NewData = nil
+			}
 		}
 		if changesJSON.Valid {
-			_ = json.Unmarshal([]byte(changesJSON.String), &entry.Changes)
+			if err := json.Unmarshal([]byte(changesJSON.String), &entry.Changes); err != nil {
+				// Data may be malformed, continue with empty data
+				entry.Changes = nil
+			}
 		}
 		entry.RequestID = requestID.String
 		entry.IPAddress = ipAddress.String

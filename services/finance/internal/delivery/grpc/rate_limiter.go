@@ -70,7 +70,7 @@ func RateLimitInterceptor(limiter *RateLimiter) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
-		info *grpc.UnaryServerInfo,
+		_ *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
 		if !limiter.Allow() {

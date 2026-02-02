@@ -35,7 +35,7 @@ func RequestIDInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
-		info *grpc.UnaryServerInfo,
+		_ *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
 		// Check if request ID exists in metadata
@@ -56,7 +56,9 @@ func RequestIDInterceptor() grpc.UnaryServerInterceptor {
 
 		// Add to response metadata
 		header := metadata.Pairs("x-request-id", requestID)
-		_ = grpc.SetHeader(ctx, header)
+		if err := grpc.SetHeader(ctx, header); err != nil {
+			log.Debug().Err(err).Msg("Failed to set request ID header")
+		}
 
 		return handler(ctx, req)
 	}
@@ -67,7 +69,7 @@ func TimeoutInterceptor(timeout time.Duration) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
-		info *grpc.UnaryServerInfo,
+		_ *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
 		// Check if context already has deadline

@@ -2,6 +2,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -103,7 +104,8 @@ func Load() (*Config, error) {
 	// Read config file (optional, env vars can override)
 	if err := v.ReadInConfig(); err != nil {
 		// Config file is optional
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
 			return nil, fmt.Errorf("error reading config file: %w", err)
 		}
 	}
@@ -165,24 +167,35 @@ func setDefaults(v *viper.Viper) {
 }
 
 func bindEnvVars(v *viper.Viper) {
-	// Database environment variables
-	_ = v.BindEnv("database.host", "DATABASE_HOST")
-	_ = v.BindEnv("database.port", "DATABASE_PORT")
-	_ = v.BindEnv("database.user", "DATABASE_USER")
-	_ = v.BindEnv("database.password", "DATABASE_PASSWORD")
-	_ = v.BindEnv("database.dbname", "DATABASE_NAME")
-	_ = v.BindEnv("database.sslmode", "DATABASE_SSLMODE")
+	// These bindings are best-effort; errors are unlikely and non-critical
+	// as viper will still read from environment via AutomaticEnv.
+	envBindings := []struct {
+		key     string
+		envName string
+	}{
+		// Database
+		{"database.host", "DATABASE_HOST"},
+		{"database.port", "DATABASE_PORT"},
+		{"database.user", "DATABASE_USER"},
+		{"database.password", "DATABASE_PASSWORD"},
+		{"database.dbname", "DATABASE_NAME"},
+		{"database.sslmode", "DATABASE_SSLMODE"},
+		// Redis
+		{"redis.host", "REDIS_HOST"},
+		{"redis.port", "REDIS_PORT"},
+		{"redis.password", "REDIS_PASSWORD"},
+		// Tracing
+		{"tracing.enabled", "TRACING_ENABLED"},
+		{"tracing.endpoint", "JAEGER_ENDPOINT"},
+		// App
+		{"app.environment", "APP_ENV"},
+		{"logger.level", "LOG_LEVEL"},
+	}
 
-	// Redis environment variables
-	_ = v.BindEnv("redis.host", "REDIS_HOST")
-	_ = v.BindEnv("redis.port", "REDIS_PORT")
-	_ = v.BindEnv("redis.password", "REDIS_PASSWORD")
-
-	// Tracing environment variables
-	_ = v.BindEnv("tracing.enabled", "TRACING_ENABLED")
-	_ = v.BindEnv("tracing.endpoint", "JAEGER_ENDPOINT")
-
-	// App environment variables
-	_ = v.BindEnv("app.environment", "APP_ENV")
-	_ = v.BindEnv("logger.level", "LOG_LEVEL")
+	for _, binding := range envBindings {
+		if err := v.BindEnv(binding.key, binding.envName); err != nil {
+			// Log but don't fail - environment binding errors are non-critical
+			fmt.Printf("Warning: failed to bind env %s: %v\n", binding.envName, err)
+		}
+	}
 }

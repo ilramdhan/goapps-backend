@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/uom"
@@ -78,7 +80,9 @@ func (h *UOMHandler) CreateUOM(ctx context.Context, req *financev1.CreateUOMRequ
 
 	// Invalidate list cache
 	if h.cache != nil {
-		_ = h.cache.InvalidateList(ctx)
+		if err := h.cache.InvalidateList(ctx); err != nil {
+			log.Debug().Err(err).Msg("Failed to invalidate list cache")
+		}
 	}
 
 	return &financev1.CreateUOMResponse{
@@ -147,7 +151,9 @@ func (h *UOMHandler) UpdateUOM(ctx context.Context, req *financev1.UpdateUOMRequ
 
 	// Invalidate cache
 	if h.cache != nil {
-		_ = h.cache.InvalidateList(ctx)
+		if err := h.cache.InvalidateList(ctx); err != nil {
+			log.Debug().Err(err).Msg("Failed to invalidate list cache")
+		}
 	}
 
 	return &financev1.UpdateUOMResponse{
@@ -178,7 +184,9 @@ func (h *UOMHandler) DeleteUOM(ctx context.Context, req *financev1.DeleteUOMRequ
 
 	// Invalidate cache
 	if h.cache != nil {
-		_ = h.cache.InvalidateList(ctx)
+		if err := h.cache.InvalidateList(ctx); err != nil {
+			log.Debug().Err(err).Msg("Failed to invalidate list cache")
+		}
 	}
 
 	return &financev1.DeleteUOMResponse{
@@ -220,7 +228,8 @@ func (h *UOMHandler) ListUOMs(ctx context.Context, req *financev1.ListUOMsReques
 	case financev1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
 		active := false
 		query.IsActive = &active
-		// ACTIVE_FILTER_UNSPECIFIED (0) means show all - no filter
+	case financev1.ActiveFilter_ACTIVE_FILTER_UNSPECIFIED:
+		// Show all - no filter
 	}
 
 	result, err := h.listHandler.Handle(ctx, query)
@@ -265,7 +274,8 @@ func (h *UOMHandler) ExportUOMs(ctx context.Context, req *financev1.ExportUOMsRe
 	case financev1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
 		active := false
 		query.IsActive = &active
-		// ACTIVE_FILTER_UNSPECIFIED (0) means export all - no filter
+	case financev1.ActiveFilter_ACTIVE_FILTER_UNSPECIFIED:
+		// Export all - no filter
 	}
 
 	result, err := h.exportHandler.Handle(ctx, query)
@@ -308,7 +318,9 @@ func (h *UOMHandler) ImportUOMs(ctx context.Context, req *financev1.ImportUOMsRe
 
 	// Invalidate all cache after import
 	if h.cache != nil {
-		_ = h.cache.InvalidateAll(ctx)
+		if err := h.cache.InvalidateAll(ctx); err != nil {
+			log.Debug().Err(err).Msg("Failed to invalidate all cache")
+		}
 	}
 
 	errors := make([]*financev1.ImportError, len(result.Errors))
@@ -331,7 +343,7 @@ func (h *UOMHandler) ImportUOMs(ctx context.Context, req *financev1.ImportUOMsRe
 }
 
 // DownloadTemplate downloads the Excel import template.
-func (h *UOMHandler) DownloadTemplate(ctx context.Context, req *financev1.DownloadTemplateRequest) (*financev1.DownloadTemplateResponse, error) {
+func (h *UOMHandler) DownloadTemplate(_ context.Context, _ *financev1.DownloadTemplateRequest) (*financev1.DownloadTemplateResponse, error) {
 	result, err := h.templateHandler.Handle()
 	if err != nil {
 		return &financev1.DownloadTemplateResponse{Base: InternalErrorResponse(err.Error())}, nil

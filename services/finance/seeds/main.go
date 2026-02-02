@@ -74,13 +74,18 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to database")
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Warn().Err(err).Msg("Failed to close database connection")
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		log.Fatal().Err(err).Msg("Failed to ping database")
+		log.Error().Err(err).Msg("Failed to ping database")
+		return
 	}
 
 	// Seed UOMs

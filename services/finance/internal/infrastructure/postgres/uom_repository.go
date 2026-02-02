@@ -154,7 +154,12 @@ func (r *UOMRepository) List(ctx context.Context, filter uom.ListFilter) ([]*uom
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list uoms: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Log silently as this is cleanup
+			_ = err
+		}
+	}()
 
 	var uoms []*uom.UOM
 	for rows.Next() {
@@ -290,7 +295,12 @@ func (r *UOMRepository) ListAll(ctx context.Context, filter uom.ExportFilter) ([
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all uoms: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Log silently as this is cleanup
+			_ = err
+		}
+	}()
 
 	var uoms []*uom.UOM
 	for rows.Next() {
