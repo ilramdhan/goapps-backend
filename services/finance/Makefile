@@ -66,6 +66,27 @@ test-unit:
 test-integration:
 	INTEGRATION_TEST=true go test -v -race ./internal/infrastructure/...
 
+# Run full CI test locally (mimics GitHub Actions)
+test-ci-local:
+	@echo "==> Starting test database..."
+	docker compose -f deployments/docker-compose.yaml up -d postgres redis
+	@echo "==> Waiting for PostgreSQL to be healthy..."
+	@sleep 5
+	@echo "==> Creating test database..."
+	docker exec finance-postgres psql -U finance -d postgres -c "DROP DATABASE IF EXISTS finance_db_test;" || true
+	docker exec finance-postgres psql -U finance -d postgres -c "CREATE DATABASE finance_db_test;"
+	@echo "==> Running migrations on test database..."
+	migrate -path migrations/postgres -database "postgres://finance:finance123@localhost:5434/finance_db_test?sslmode=disable" up
+	@echo "==> Running integration tests..."
+	INTEGRATION_TEST=true \
+		TEST_DB_HOST=localhost \
+		TEST_DB_PORT=5434 \
+		TEST_DB_USER=finance \
+		TEST_DB_PASSWORD=finance123 \
+		TEST_DB_NAME=finance_db_test \
+		go test -v -race ./internal/infrastructure/...
+	@echo "==> CI tests completed!"
+
 test-e2e:
 	E2E_TEST=true go test -v ./tests/e2e/...
 

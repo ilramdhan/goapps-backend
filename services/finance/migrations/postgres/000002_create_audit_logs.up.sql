@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     -- What was changed
     table_name VARCHAR(100) NOT NULL,
     record_id UUID NOT NULL,
-    action VARCHAR(20) NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'DELETE')),
+    action VARCHAR(20) NOT NULL,
     
     -- Change details
     old_data JSONB,
@@ -21,12 +21,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     ip_address VARCHAR(50),
     user_agent TEXT,
     
-    -- Indexes
+    -- Constraints
     CONSTRAINT audit_logs_action_check CHECK (action IN ('CREATE', 'UPDATE', 'DELETE'))
 );
 
 -- Indexes for common queries
-CREATE INDEX idx_audit_logs_table_record ON audit_logs(table_name, record_id);
-CREATE INDEX idx_audit_logs_performed_at ON audit_logs(performed_at DESC);
-CREATE INDEX idx_audit_logs_performed_by ON audit_logs(performed_by);
-CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_table_record ON audit_logs(table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_performed_at ON audit_logs(performed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_performed_by ON audit_logs(performed_by);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);

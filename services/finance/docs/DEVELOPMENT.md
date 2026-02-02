@@ -312,8 +312,33 @@ DROP TABLE IF EXISTS new_table;
 -- DOWN: Drop table
 
 -- Add indexes for frequently queried columns
-CREATE INDEX idx_new_table_code ON new_table(code);
+CREATE INDEX IF NOT EXISTS idx_new_table_code ON new_table(code);
 ```
+
+### Migration Gotchas
+
+> **⚠️ IMPORTANT:** Follow these rules to avoid CI failures!
+
+1. **Don't define constraints twice:**
+   ```sql
+   -- ❌ WRONG: Constraint defined twice (inline AND named)
+   action VARCHAR(20) NOT NULL CHECK (action IN ('A', 'B')),
+   CONSTRAINT action_check CHECK (action IN ('A', 'B'))
+
+   -- ✅ CORRECT: Use only named constraint
+   action VARCHAR(20) NOT NULL,
+   CONSTRAINT action_check CHECK (action IN ('A', 'B'))
+   ```
+
+2. **Always use `IF NOT EXISTS` for indexes:**
+   ```sql
+   CREATE INDEX IF NOT EXISTS idx_table_column ON table(column);
+   ```
+
+3. **Test migrations locally before push:**
+   ```bash
+   make test-ci-local  # Runs full CI locally
+   ```
 
 ---
 
@@ -334,6 +359,19 @@ E2E_TEST=true make test-e2e
 # All tests with coverage report
 make coverage
 ```
+
+### Run Full CI Locally (Recommended before push!)
+
+```bash
+# This mimics GitHub Actions CI:
+# 1. Starts PostgreSQL & Redis via docker-compose
+# 2. Creates test database
+# 3. Runs all migrations
+# 4. Runs integration tests
+make test-ci-local
+```
+
+> **💡 TIP:** Always run `make test-ci-local` before pushing to avoid CI failures!
 
 ### Writing Unit Tests
 
@@ -396,6 +434,84 @@ chore(finance): update dependencies
 
 ---
 
+## Linting Best Practices
+
+> **⚠️ IMPORTANT:** Code must pass `golangci-lint` with 0 issues before merge!
+
+### Avoid `//nolint` Directives
+
+Instead of suppressing lint errors, fix them properly:
+
+| Lint Error | ❌ Don't | ✅ Do |
+|------------|----------|-------|
+| `errcheck` | `_ = f.Close() //nolint:errcheck` | Handle error or use helper with logging |
+| `gosec` (int overflow) | `int32(x) //nolint:gosec` | Use `pkg/safeconv.IntToInt32(x)` |
+| `gocognit` (complexity) | `//nolint:gocognit` | Extract helper functions |
+| `errorlint` (multi-error) | `fmt.Errorf("...%v", err) //nolint:errorlint` | Use `errors.Join(err1, err2)` |
+
+### Safe Integer Conversion
+
+Use the `pkg/safeconv` package for safe int conversions:
+
+```go
+import "github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
+
+// Safe: caps at MaxInt32 instead of overflow
+totalPages := safeconv.Int64ToInt32(computed)
+currentPage := safeconv.IntToInt32(filter.Page)
+```
+
+### Excel Error Handling Pattern
+
+For Excel operations (excelize), use error collection pattern:
+
+```go
+type excelWriter struct {
+    f         *excelize.File
+    sheetName string
+    errs      []error
+}
+
+func (ew *excelWriter) setCellValue(cell string, value interface{}) {
+    if err := ew.f.SetCellValue(ew.sheetName, cell, value); err != nil {
+        ew.errs = append(ew.errs, fmt.Errorf("cell %s: %w", cell, err))
+    }
+}
+
+// Log collected errors at the end
+if writer.hasErrors() {
+    log.Warn().Err(writer.error()).Msg("Some Excel operations failed")
+}
+```
+
+### Reducing Cognitive Complexity
+
+When `gocognit` reports high complexity, extract helper functions:
+
+```go
+// ❌ Before: Handle() with complexity 41
+func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
+    // 200+ lines of nested logic
+}
+
+// ✅ After: Handle() with complexity 14
+func (h *Handler) Handle(ctx context.Context, cmd Command) (*Result, error) {
+    rows, err := h.parseFile(cmd.Content)
+    if err != nil { return nil, err }
+    
+    for _, row := range rows {
+        h.processRow(ctx, row, cmd, result)
+    }
+    return result, nil
+}
+
+func (h *Handler) parseFile(content []byte) ([][]string, error) { ... }
+func (h *Handler) processRow(...) { ... }
+func (h *Handler) validateRowData(...) (Code, Category, error) { ... }
+```
+
+---
+
 ## Useful Make Commands
 
 | Command | Description |
@@ -405,6 +521,7 @@ chore(finance): update dependencies
 | `make dev` | Run with hot reload |
 | `make test-unit` | Run unit tests |
 | `make test-integration` | Run integration tests |
+| `make test-ci-local` | **Run full CI locally (recommended!)** |
 | `make coverage` | Run tests with coverage |
 | `make lint` | Run linter |
 | `make fmt` | Format code |
