@@ -4,7 +4,6 @@ on:
   push:
     branches: [main, develop]
     paths:
-    paths:
       - 'services/finance/**'
       - 'gen/**'
       - '.github/workflows/finance-service.yml'
