@@ -46,7 +46,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    needs: lint
+    # Runs in parallel with lint job
     services:
       postgres:
         image: postgres:16-alpine
@@ -131,7 +131,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: test
+    needs: [lint, test]  # Wait for both lint and test to pass
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -220,11 +220,41 @@ jobs:
           cache: true
           cache-dependency-path: '**/go.sum'
 
-      - name: Start services with Docker Compose
+      - name: Start infrastructure with Docker Compose
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          docker compose -f deployments/docker-compose.yaml up -d
+          docker compose -f deployments/docker-compose.yaml up -d postgres redis
+          echo "Waiting for PostgreSQL to be healthy..."
           sleep 10
+
+      - name: Install golang-migrate
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+          sudo mv migrate /usr/local/bin/migrate
+
+      - name: Run database migrations
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          migrate -path migrations/postgres \
+            -database "postgres://finance:finance123@localhost:5434/finance_db?sslmode=disable" \
+            up
+
+      - name: Build and start finance service
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          go build -o ./bin/finance-service ./cmd/server/main.go
+          ./bin/finance-service &
+          echo "Waiting for service to start..."
+          sleep 5
+        env:
+          APP_ENV: test
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5434
+          DATABASE_USER: finance
+          DATABASE_PASSWORD: finance123
+          DATABASE_NAME: finance_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
       - name: Run E2E tests
         working-directory: ${{ env.WORKING_DIR }}
