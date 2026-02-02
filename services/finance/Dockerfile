@@ -1,18 +1,23 @@
 # Multi-stage Dockerfile for Finance Service
+# Build from repository ROOT: docker build -t finance-service -f services/finance/Dockerfile .
 # Stage 1: Build
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
 # Install dependencies
 RUN apk add --no-cache git ca-certificates tzdata
 
-# Copy go mod files for dependency caching
-COPY go.mod go.sum* ./
-RUN go mod download
+# Copy gen module first (needed for replace directive)
+COPY gen/ ./gen/
 
-# Copy source code
-COPY . .
+# Copy finance service
+COPY services/finance/ ./services/finance/
+
+WORKDIR /app/services/finance
+
+# Download dependencies
+RUN go mod download
 
 # Build arguments
 ARG VERSION=dev
@@ -40,7 +45,7 @@ RUN addgroup -g 1000 appgroup && \
 COPY --from=builder /bin/finance-service /app/finance-service
 
 # Copy config (can be overridden by ConfigMap in Kubernetes)
-COPY config.yaml /app/config.yaml
+COPY services/finance/config.yaml /app/config.yaml
 
 # Set ownership
 RUN chown -R appuser:appgroup /app
@@ -58,8 +63,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget -q --spider http://localhost:8080/healthz || exit 1
 
 # Labels for metadata
-LABEL maintainer="ilramdhan" \
+LABEL maintainer="mutugading" \
     service="finance-service" \
     description="Finance microservice for UOM management"
 
 ENTRYPOINT ["/app/finance-service"]
+

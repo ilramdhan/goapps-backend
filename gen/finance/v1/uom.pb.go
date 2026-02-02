@@ -8,7 +8,7 @@ package financev1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	v1 "github.com/ilramdhan/goapps-backend/gen/common/v1"
+	v1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -1315,7 +1315,7 @@ var File_finance_v1_uom_proto protoreflect.FileDescriptor
 const file_finance_v1_uom_proto_rawDesc = "" +
 	"\n" +
 	"\x14finance/v1/uom.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x16common/v1/common.proto\"\xf9\x01\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xf9\x01\n" +
 	"\x03UOM\x12\x15\n" +
 	"\x06uom_id\x18\x01 \x01(\tR\x05uomId\x12\x19\n" +
 	"\buom_code\x18\x02 \x01(\tR\auomCode\x12\x19\n" +
@@ -1420,8 +1420,8 @@ const file_finance_v1_uom_proto_rawDesc = "" +
 	"ExportUOMs\x12\x1d.finance.v1.ExportUOMsRequest\x1a\x1e.finance.v1.ExportUOMsResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/v1/finance/uoms/export\x12s\n" +
 	"\n" +
 	"ImportUOMs\x12\x1d.finance.v1.ImportUOMsRequest\x1a\x1e.finance.v1.ImportUOMsResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/finance/uoms/import\x12\x84\x01\n" +
-	"\x10DownloadTemplate\x12#.finance.v1.DownloadTemplateRequest\x1a$.finance.v1.DownloadTemplateResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/finance/uoms/templateB\xa1\x01\n" +
-	"\x0ecom.finance.v1B\bUomProtoP\x01Z<github.com/ilramdhan/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
+	"\x10DownloadTemplate\x12#.finance.v1.DownloadTemplateRequest\x1a$.finance.v1.DownloadTemplateResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/finance/uoms/templateB\xa2\x01\n" +
+	"\x0ecom.finance.v1B\bUomProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
 	"Finance.V1\xca\x02\n" +
 	"Finance\\V1\xe2\x02\x16Finance\\V1\\GPBMetadata\xea\x02\vFinance::V1b\x06proto3"
 

@@ -11,13 +11,13 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	financev1 "github.com/ilramdhan/goapps-backend/gen/finance/v1"
-	grpcdelivery "github.com/ilramdhan/goapps-backend/services/finance/internal/delivery/grpc"
-	httpdelivery "github.com/ilramdhan/goapps-backend/services/finance/internal/delivery/http"
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/config"
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/postgres"
-	redisinfra "github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/redis"
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/tracing"
+	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
+	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/http"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
+	redisinfra "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/redis"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/tracing"
 )
 
 func main() {

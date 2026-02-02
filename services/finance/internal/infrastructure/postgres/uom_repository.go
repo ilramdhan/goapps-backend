@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/domain/uom"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
 )
 
 // UOMRepository implements uom.Repository interface using PostgreSQL.

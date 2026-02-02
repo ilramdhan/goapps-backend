@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/domain/uom"
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/postgres"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
 
 // UOMRepositorySuite is the test suite for UOM repository

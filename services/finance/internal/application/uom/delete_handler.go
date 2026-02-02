@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/domain/uom"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
 )
 
 // DeleteCommand represents the delete UOM command.

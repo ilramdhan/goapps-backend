@@ -10,8 +10,8 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/config"
-	"github.com/ilramdhan/goapps-backend/services/finance/pkg/logger"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
+	"github.com/mutugading/goapps-backend/services/finance/pkg/logger"
 )
 
 type uomSeed struct {

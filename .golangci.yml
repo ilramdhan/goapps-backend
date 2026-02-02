@@ -1,23 +1,36 @@
 # golangci-lint configuration for goapps-backend
 # https://golangci-lint.run/usage/configuration/
+# golangci-lint v2.x compatible
+
+version: "2"
 
 run:
   timeout: 5m
   modules-download-mode: readonly
   allow-parallel-runners: true
 
+# Formatters (separate from linters in v2)
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/mutugading/goapps-backend
+
 linters:
   enable:
-    # Default linters
+    # Core linters
     - errcheck
-    - gosimple
     - govet
     - ineffassign
-    - staticcheck
+    - staticcheck  # includes gosimple and stylecheck in v2
     - unused
     # Additional linters
     - bodyclose
-    - contextcheck
     - dupl
     - errname
     - errorlint
@@ -27,8 +40,6 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - gofmt
-    - goimports
     - gosec
     - misspell
     - nakedret
@@ -68,15 +79,9 @@ linters-settings:
     scope: declarations
     capital: true
 
-  gofmt:
-    simplify: true
-
-  goimports:
-    local-prefixes: github.com/ilramdhan/goapps-backend
-
   gosec:
     excludes:
-      - G104 # Unhandled errors (we use errcheck for this)
+      - G104
 
   misspell:
     locale: US
@@ -113,7 +118,6 @@ linters-settings:
 
 issues:
   exclude-rules:
-    # Exclude some linters from running on tests files.
     - path: _test\.go
       linters:
         - dupl
@@ -121,12 +125,10 @@ issues:
         - goconst
         - gocognit
 
-    # Exclude generated files
     - path: gen/
       linters:
         - all
 
-    # Allow long lines in configuration files
     - path: config\.go$
       linters:
         - lll
@@ -136,7 +138,9 @@ issues:
 
 output:
   formats:
-    - format: colored-line-number
+    text:
+      path: stdout
+      colors: true
   sort-results: true
   sort-order:
     - linter

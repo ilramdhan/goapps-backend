@@ -14,8 +14,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/config"
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/postgres"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
 
 // Server represents the gRPC server.

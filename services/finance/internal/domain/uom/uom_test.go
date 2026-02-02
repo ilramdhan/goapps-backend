@@ -3,7 +3,7 @@ package uom_test
 import (
 	"testing"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/domain/uom"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
 )
 
 func TestNewCode_ValidInput_ReturnsCode(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/proto"
 
-	commonv1 "github.com/ilramdhan/goapps-backend/gen/common/v1"
+	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 )
 
 // ValidationHelper provides validation utilities for handlers.

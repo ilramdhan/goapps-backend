@@ -15,8 +15,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	financev1 "github.com/ilramdhan/goapps-backend/gen/finance/v1"
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/config"
+	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 )
 
 // Server represents the HTTP server.

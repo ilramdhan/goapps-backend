@@ -1,4 +1,4 @@
-module github.com/ilramdhan/goapps-backend/services/finance
+module github.com/mutugading/goapps-backend/services/finance
 
 go 1.24.0
 
@@ -24,7 +24,7 @@ require (
 require (
 	buf.build/go/protovalidate v1.1.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.7
-	github.com/ilramdhan/goapps-backend/gen v0.0.0-00010101000000-000000000000
+	github.com/mutugading/goapps-backend/gen v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.3
 	github.com/rs/cors v1.11.1
@@ -91,4 +91,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/ilramdhan/goapps-backend/gen => ../../gen
+replace github.com/mutugading/goapps-backend/gen => ../../gen

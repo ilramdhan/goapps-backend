@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/config"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 )
 
 // Provider wraps the trace provider.

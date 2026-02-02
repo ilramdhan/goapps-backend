@@ -383,8 +383,8 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x03 \x01(\tR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_by\x18\x04 \x01(\tR\tupdatedByB\x9d\x01\n" +
-	"\rcom.common.v1B\vCommonProtoP\x01Z:github.com/ilramdhan/goapps-backend/gen/common/v1;commonv1\xa2\x02\x03CXX\xaa\x02\tCommon.V1\xca\x02\tCommon\\V1\xe2\x02\x15Common\\V1\\GPBMetadata\xea\x02\n" +
+	"updated_by\x18\x04 \x01(\tR\tupdatedByB\x9e\x01\n" +
+	"\rcom.common.v1B\vCommonProtoP\x01Z;github.com/mutugading/goapps-backend/gen/common/v1;commonv1\xa2\x02\x03CXX\xaa\x02\tCommon.V1\xca\x02\tCommon\\V1\xe2\x02\x15Common\\V1\\GPBMetadata\xea\x02\n" +
 	"Common::V1b\x06proto3"
 
 var (

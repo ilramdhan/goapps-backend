@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/postgres"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
 
 // PostgresLogger implements audit.Logger using PostgreSQL.

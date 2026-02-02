@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	financev1 "github.com/ilramdhan/goapps-backend/gen/finance/v1"
+	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 )
 
 // E2ETestSuite is the end-to-end test suite
@@ -175,10 +175,12 @@ func (s *E2ETestSuite) TestCRUDFlow() {
 	assert.Equal(s.T(), code, getResp.Data.UomCode)
 
 	// 3. Update
+	updatedName := "CRUD Updated"
+	updatedDesc := "Updated description"
 	updateResp, err := s.client.UpdateUOM(ctx, &financev1.UpdateUOMRequest{
 		UomId:       uomID,
-		UomName:     "CRUD Updated",
-		Description: "Updated description",
+		UomName:     &updatedName,
+		Description: &updatedDesc,
 	})
 	require.NoError(s.T(), err)
 	assert.True(s.T(), updateResp.Base.IsSuccess)

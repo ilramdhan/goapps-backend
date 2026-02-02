@@ -10,7 +10,7 @@ import (
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/rs/zerolog/log"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/config"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 )
 
 // DB wraps the SQL database connection.

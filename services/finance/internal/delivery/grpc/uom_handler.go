@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	commonv1 "github.com/ilramdhan/goapps-backend/gen/common/v1"
-	financev1 "github.com/ilramdhan/goapps-backend/gen/finance/v1"
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/application/uom"
-	uomdomain "github.com/ilramdhan/goapps-backend/services/finance/internal/domain/uom"
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/infrastructure/redis"
+	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
+	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/uom"
+	uomdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/redis"
 )
 
 // UOMHandler implements the UOMServiceServer interface.

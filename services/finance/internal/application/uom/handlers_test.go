@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ilramdhan/goapps-backend/services/finance/internal/application/uom"
-	uomdomain "github.com/ilramdhan/goapps-backend/services/finance/internal/domain/uom"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/uom"
+	uomdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
 )
 
 // MockRepository is a mock implementation of uom.Repository

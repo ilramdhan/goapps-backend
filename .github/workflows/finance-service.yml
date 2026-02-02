@@ -14,7 +14,8 @@ on:
       - 'gen/**'
 
 env:
-  GO_VERSION: '1.23'
+  GO_VERSION: '1.24'
+  GOLANGCI_LINT_VERSION: 'v2.3.0'
   SERVICE_NAME: finance-service
   WORKING_DIR: ./services/finance
 
@@ -33,9 +34,9 @@ jobs:
           cache: false  # Disable built-in cache, use golangci cache instead
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.62.2
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: ${{ env.WORKING_DIR }}
           args: --timeout=5m
 
@@ -176,7 +177,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ env.WORKING_DIR }}
+          context: .
           file: ${{ env.WORKING_DIR }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -223,38 +224,36 @@ jobs:
 
   deploy-staging:
     name: Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, staging, goapps-runner]
     needs: e2e
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: staging
-      url: https://staging.api.example.com
+      url: https://staging-goapps.mutugading.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Kubernetes (Staging)
+      - name: Notify ArgoCD to sync
         run: |
-          echo "Deploying to staging environment..."
-          # kubectl set image deployment/${{ env.SERVICE_NAME }} \
-          #   ${{ env.SERVICE_NAME }}=ghcr.io/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-          #   -n staging
+          echo "Staging deployment triggered via ArgoCD auto-sync"
+          echo "Image: ghcr.io/mutugading/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          # ArgoCD will auto-sync when it detects new image
 
   deploy-production:
     name: Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, production, goapps-runner]
     needs: deploy-staging
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://api.example.com
+      url: https://goapps.mutugading.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Kubernetes (Production)
+      - name: Trigger Production Deploy via ArgoCD
         run: |
-          echo "Deploying to production environment..."
-          # kubectl set image deployment/${{ env.SERVICE_NAME }} \
-          #   ${{ env.SERVICE_NAME }}=ghcr.io/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-          #   -n production
+          echo "Production deployment requires manual ArgoCD sync"
+          echo "Image: ghcr.io/mutugading/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          # Manual sync required in ArgoCD dashboard
