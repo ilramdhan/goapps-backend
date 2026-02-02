@@ -1,6 +1,6 @@
 # golangci-lint configuration for goapps-backend
 # https://golangci-lint.run/usage/configuration/
-# golangci-lint v2.x compatible
+# Compatible with golangci-lint v2.3.0+ (GitHub Actions)
 
 version: "2"
 
@@ -27,7 +27,7 @@ linters:
     - errcheck
     - govet
     - ineffassign
-    - staticcheck  # includes gosimple and stylecheck in v2
+    - staticcheck
     - unused
     # Additional linters
     - bodyclose
@@ -53,96 +53,73 @@ linters:
     - unconvert
     - unparam
     - whitespace
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-
-  govet:
-    enable-all: true
-
-  gocyclo:
-    min-complexity: 15
-
-  gocognit:
-    min-complexity: 20
-
-  dupl:
-    threshold: 150
-
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  godot:
-    scope: declarations
-    capital: true
-
-  gosec:
-    excludes:
-      - G104
-
-  misspell:
-    locale: US
-
-  nestif:
-    min-complexity: 4
-
-  revive:
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    govet:
+      enable-all: true
+    gocyclo:
+      min-complexity: 15
+    gocognit:
+      min-complexity: 20
+    dupl:
+      threshold: 150
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    godot:
+      scope: declarations
+      capital: true
+    gosec:
+      excludes:
+        - G104
+    misspell:
+      locale: US
+    nestif:
+      min-complexity: 4
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unreachable-code
+    exhaustive:
+      default-signifies-exhaustive: true
+  exclusions:
     rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: exported
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unreachable-code
-
-  exhaustive:
-    default-signifies-exhaustive: true
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - dupl
-        - gosec
-        - goconst
-        - gocognit
-
-    - path: gen/
-      linters:
-        - all
-
-    - path: config\.go$
-      linters:
-        - lll
-
-  max-issues-per-linter: 50
-  max-same-issues: 10
+      - path: _test\.go
+        linters:
+          - dupl
+          - gosec
+          - goconst
+          - gocognit
+      - path: gen/
+        linters:
+          - all
+      - path: config\.go$
+        linters:
+          - lll
 
 output:
   formats:
     text:
       path: stdout
       colors: true
-  sort-results: true
-  sort-order:
-    - linter
-    - severity
-    - file
