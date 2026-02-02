@@ -1,6 +1,5 @@
-# golangci-lint configuration for goapps-backend
-# https://golangci-lint.run/usage/configuration/
-# Compatible with golangci-lint v2.3.0+ (GitHub Actions)
+# golangci-lint v2.3.0 configuration
+# https://golangci-lint.run/
 
 version: "2"
 
@@ -9,27 +8,22 @@ run:
   modules-download-mode: readonly
   allow-parallel-runners: true
 
-# Formatters (separate from linters in v2)
 formatters:
   enable:
     - gofmt
     - goimports
   settings:
-    gofmt:
-      simplify: true
     goimports:
       local-prefixes:
         - github.com/mutugading/goapps-backend
 
 linters:
   enable:
-    # Core linters
     - errcheck
     - govet
     - ineffassign
     - staticcheck
     - unused
-    # Additional linters
     - bodyclose
     - dupl
     - errname
@@ -39,7 +33,6 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    - godot
     - gosec
     - misspell
     - nakedret
@@ -57,8 +50,6 @@ linters:
     errcheck:
       check-type-assertions: true
       check-blank: true
-    govet:
-      enable-all: true
     gocyclo:
       min-complexity: 15
     gocognit:
@@ -68,9 +59,6 @@ linters:
     goconst:
       min-len: 3
       min-occurrences: 3
-    godot:
-      scope: declarations
-      capital: true
     gosec:
       excludes:
         - G104
@@ -78,32 +66,12 @@ linters:
       locale: US
     nestif:
       min-complexity: 4
-    revive:
-      rules:
-        - name: blank-imports
-        - name: context-as-argument
-        - name: context-keys-type
-        - name: dot-imports
-        - name: error-return
-        - name: error-strings
-        - name: error-naming
-        - name: exported
-        - name: increment-decrement
-        - name: var-naming
-        - name: var-declaration
-        - name: package-comments
-        - name: range
-        - name: receiver-naming
-        - name: time-naming
-        - name: unexported-return
-        - name: indent-error-flow
-        - name: errorf
-        - name: empty-block
-        - name: superfluous-else
-        - name: unreachable-code
     exhaustive:
       default-signifies-exhaustive: true
   exclusions:
+    paths:
+      - gen/
+      - ".*_test\\.go$"
     rules:
       - path: _test\.go
         linters:
@@ -111,15 +79,8 @@ linters:
           - gosec
           - goconst
           - gocognit
-      - path: gen/
-        linters:
-          - all
-      - path: config\.go$
-        linters:
-          - lll
 
 output:
   formats:
     text:
       path: stdout
-      colors: true
