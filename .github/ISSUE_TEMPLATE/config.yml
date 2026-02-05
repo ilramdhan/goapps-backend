@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/mutugading/goapps-backend/blob/main/README.md
+    about: Read documentation before creating an issue
+  - name: 📋 Development Rules
+    url: https://github.com/mutugading/goapps-backend/blob/main/RULES.md
+    about: Development guidelines and conventions
+  - name: 🤝 Contributing Guide
+    url: https://github.com/mutugading/goapps-backend/blob/main/CONTRIBUTING.md
+    about: How to contribute to this project

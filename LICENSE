@@ -1,0 +1,85 @@
+# Proprietary License
+
+Copyright (c) 2024-2026 PT Mutu Gading Tekstil. All Rights Reserved.
+
+## Terms and Conditions
+
+### 1. Definitions
+
+- **"Software"** refers to the goapps-backend repository and all its contents, including but not limited to source code, configuration files, documentation, scripts, and any related materials.
+- **"Company"** refers to PT Mutu Gading Tekstil.
+- **"Authorized User"** refers to employees, contractors, and affiliates of the Company who have been explicitly granted access to the Software.
+
+### 2. License Grant
+
+The Company grants Authorized Users a limited, non-exclusive, non-transferable license to:
+
+- Access, view, and use the Software for internal business purposes only
+- Modify the Software for internal use within the Company's infrastructure
+- Create derivative works based on the Software for internal use only
+
+### 3. Restrictions
+
+Authorized Users are expressly prohibited from:
+
+- Distributing, sublicensing, or selling the Software or any portion thereof to any third party
+- Using the Software for any purpose outside of the Company's business operations
+- Removing or altering any proprietary notices, labels, or marks on the Software
+- Disclosing the Software's source code, architecture, or implementation details to any third party
+- Using the Software to provide services to third parties (e.g., SaaS offerings)
+- Reverse engineering, decompiling, or disassembling the Software (except to the extent permitted by applicable law)
+
+### 4. Ownership
+
+The Software is and shall remain the exclusive property of the Company. This license does not grant any ownership rights to the Software.
+
+### 5. Confidentiality
+
+The Software and all related documentation are considered confidential information of the Company. Authorized Users agree to:
+
+- Maintain the confidentiality of the Software
+- Use reasonable measures to protect the Software from unauthorized access or disclosure
+- Immediately notify the Company of any unauthorized access or disclosure
+
+### 6. Termination
+
+This license is effective until terminated. The Company may terminate this license at any time without notice. Upon termination:
+
+- All rights granted under this license will immediately cease
+- Authorized Users must destroy all copies of the Software in their possession
+- The confidentiality obligations shall survive termination
+
+### 7. Disclaimer of Warranties
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+### 8. Limitation of Liability
+
+IN NO EVENT SHALL THE COMPANY BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE USE OF THE SOFTWARE.
+
+### 9. Governing Law
+
+This license shall be governed by and construed in accordance with the laws of the Republic of Indonesia, without regard to its conflict of law provisions.
+
+### 10. Contact
+
+For licensing inquiries, please contact:
+
+**PT Mutu Gading Tekstil**
+Email: legal@mutugading.com
+Website: https://mutugading.com
+
+---
+
+## Summary
+
+| Allowed | Not Allowed |
+|---------|-------------|
+| ✅ Internal use | ❌ Public distribution |
+| ✅ Modification for internal use | ❌ Commercial resale |
+| ✅ Private copies for work | ❌ Sharing with third parties |
+| ✅ Integration with internal systems | ❌ Open source release |
+
+---
+
+**Last Updated**: February 2026
