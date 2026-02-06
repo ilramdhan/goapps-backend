@@ -1,0 +1,758 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/uom.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "UOMService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/uoms": {
+      "get": {
+        "summary": "ListUOMs lists UOMs with search, filter, and pagination.",
+        "operationId": "UOMService_ListUOMs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListUOMsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, default 1, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100, default 10).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in code, name, description).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "description": "Filter by category.\nUOM_CATEGORY_UNSPECIFIED (0) means \"show all categories\" (no filter).\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "UOM_CATEGORY_UNSPECIFIED",
+              "UOM_CATEGORY_WEIGHT",
+              "UOM_CATEGORY_LENGTH",
+              "UOM_CATEGORY_VOLUME",
+              "UOM_CATEGORY_QUANTITY"
+            ],
+            "default": "UOM_CATEGORY_UNSPECIFIED"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = show all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"code\", \"name\", \"created_at\" (default: \"code\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UOMService"
+        ]
+      },
+      "post": {
+        "summary": "CreateUOM creates a new UOM.",
+        "operationId": "UOMService_CreateUOM",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateUOMResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateUOMRequest is the request for creating a new UOM.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateUOMRequest"
+            }
+          }
+        ],
+        "tags": [
+          "UOMService"
+        ]
+      }
+    },
+    "/api/v1/finance/uoms/export": {
+      "get": {
+        "summary": "ExportUOMs exports UOMs to Excel file.",
+        "operationId": "UOMService_ExportUOMs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportUOMsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "category",
+            "description": "Filter by category.\nUOM_CATEGORY_UNSPECIFIED (0) means \"export all categories\".\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "UOM_CATEGORY_UNSPECIFIED",
+              "UOM_CATEGORY_WEIGHT",
+              "UOM_CATEGORY_LENGTH",
+              "UOM_CATEGORY_VOLUME",
+              "UOM_CATEGORY_QUANTITY"
+            ],
+            "default": "UOM_CATEGORY_UNSPECIFIED"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = export all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "UOMService"
+        ]
+      }
+    },
+    "/api/v1/finance/uoms/import": {
+      "post": {
+        "summary": "ImportUOMs imports UOMs from Excel file.",
+        "operationId": "UOMService_ImportUOMs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportUOMsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportUOMsRequest is the request for importing UOMs from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportUOMsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "UOMService"
+        ]
+      }
+    },
+    "/api/v1/finance/uoms/template": {
+      "get": {
+        "summary": "DownloadTemplate downloads the Excel import template.",
+        "operationId": "UOMService_DownloadTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "UOMService"
+        ]
+      }
+    },
+    "/api/v1/finance/uoms/{uomId}": {
+      "get": {
+        "summary": "GetUOM retrieves a UOM by ID.",
+        "operationId": "UOMService_GetUOM",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetUOMResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uomId",
+            "description": "UOM ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UOMService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteUOM soft deletes a UOM.",
+        "operationId": "UOMService_DeleteUOM",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteUOMResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uomId",
+            "description": "UOM ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UOMService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateUOM updates an existing UOM.\nNote: uom_code is immutable and cannot be changed.",
+        "operationId": "UOMService_UpdateUOM",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateUOMResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uomId",
+            "description": "UOM ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UOMServiceUpdateUOMBody"
+            }
+          }
+        ],
+        "tags": [
+          "UOMService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "UOMServiceUpdateUOMBody": {
+      "type": "object",
+      "properties": {
+        "uomName": {
+          "type": "string",
+          "description": "New display name (optional, 1-100 chars if provided).\nEmpty string means no change."
+        },
+        "uomCategory": {
+          "$ref": "#/definitions/v1UOMCategory",
+          "description": "New category (optional, cannot be UNSPECIFIED if provided).\nUse has_uom_category to check if this field is set."
+        },
+        "description": {
+          "type": "string",
+          "description": "New description (optional, max 500 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "New active status (optional)."
+        }
+      },
+      "description": "UpdateUOMRequest is the request for updating a UOM.\nNote: uom_code is immutable and cannot be changed after creation."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateUOMRequest": {
+      "type": "object",
+      "properties": {
+        "uomCode": {
+          "type": "string",
+          "description": "Unique code (uppercase, alphanumeric with underscore, 1-20 chars).\nMust start with an uppercase letter. Immutable after creation."
+        },
+        "uomName": {
+          "type": "string",
+          "description": "Display name (1-100 chars)."
+        },
+        "uomCategory": {
+          "$ref": "#/definitions/v1UOMCategory",
+          "description": "Category (required, cannot be UNSPECIFIED)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 500 chars)."
+        }
+      },
+      "description": "CreateUOMRequest is the request for creating a new UOM."
+    },
+    "v1CreateUOMResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1UOM",
+          "description": "Created UOM data."
+        }
+      },
+      "description": "CreateUOMResponse is the response for creating a UOM."
+    },
+    "v1DeleteUOMResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteUOMResponse is the response for deleting a UOM."
+    },
+    "v1DownloadTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "DownloadTemplateResponse is the response containing the template file."
+    },
+    "v1ExportUOMsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportUOMsResponse is the response containing the Excel file."
+    },
+    "v1GetUOMResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1UOM",
+          "description": "UOM data."
+        }
+      },
+      "description": "GetUOMResponse is the response for getting a UOM."
+    },
+    "v1ImportError": {
+      "type": "object",
+      "properties": {
+        "rowNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Row number in the Excel file."
+        },
+        "field": {
+          "type": "string",
+          "description": "Field that caused the error."
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message."
+        }
+      },
+      "description": "ImportError represents a single import error."
+    },
+    "v1ImportUOMsRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx or .xls format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original filename (for format detection).\nMust be a simple filename without path separators."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "Required. How to handle duplicates: \"skip\", \"update\", \"error\"."
+        }
+      },
+      "description": "ImportUOMsRequest is the request for importing UOMs from Excel."
+    },
+    "v1ImportUOMsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully imported records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records (duplicates with skip action)."
+        },
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of updated records (duplicates with update action)."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Details of failed records."
+        }
+      },
+      "description": "ImportUOMsResponse is the response for importing UOMs."
+    },
+    "v1ListUOMsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UOM"
+          },
+          "description": "List of UOMs."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListUOMsResponse is the response for listing UOMs."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1UOM": {
+      "type": "object",
+      "properties": {
+        "uomId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "Unique code (e.g., \"KG\", \"MTR\", \"PCS\"). Immutable after creation."
+        },
+        "uomName": {
+          "type": "string",
+          "description": "Display name (e.g., \"Kilogram\", \"Meter\", \"Pieces\")."
+        },
+        "uomCategory": {
+          "$ref": "#/definitions/v1UOMCategory",
+          "description": "Category of the UOM."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the UOM is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "UOM represents a Unit of Measure entity."
+    },
+    "v1UOMCategory": {
+      "type": "string",
+      "enum": [
+        "UOM_CATEGORY_UNSPECIFIED",
+        "UOM_CATEGORY_WEIGHT",
+        "UOM_CATEGORY_LENGTH",
+        "UOM_CATEGORY_VOLUME",
+        "UOM_CATEGORY_QUANTITY"
+      ],
+      "default": "UOM_CATEGORY_UNSPECIFIED",
+      "description": "UOMCategory represents the category of a unit of measure.\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET)."
+    },
+    "v1UpdateUOMResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1UOM",
+          "description": "Updated UOM data."
+        }
+      },
+      "description": "UpdateUOMResponse is the response for updating a UOM."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

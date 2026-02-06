@@ -100,6 +100,22 @@ grpcurl -plaintext -d '{"page":1,"page_size":5}' localhost:50051 finance.v1.UOMS
 grpcurl -plaintext -d '{"uom_code":"DEV_TEST","uom_name":"Dev Test","uom_category":"UOM_CATEGORY_QUANTITY"}' localhost:50051 finance.v1.UOMService/CreateUOM
 ```
 
+### 6. Access Swagger API Documentation
+
+```bash
+# Access Swagger UI in browser
+open http://localhost:8080/swagger/
+
+# Or via curl for raw JSON
+curl http://localhost:8080/swagger.json
+```
+
+> **Note:** After proto generation in `goapps-shared-proto`, run:
+> ```bash
+> make proto-copy-swagger
+> ```
+> This copies the generated swagger.json to the httpdelivery directory for embedding.
+
 ---
 
 ## Common Issues & Solutions

@@ -3,6 +3,7 @@ package httpdelivery
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"time"
@@ -18,6 +19,9 @@ import (
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 )
+
+//go:embed swagger.json
+var swaggerJSON []byte
 
 // Server represents the HTTP server.
 type Server struct {
@@ -141,9 +145,11 @@ func (s *Server) swaggerHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func (s *Server) swaggerJSONHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) swaggerJSONHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	http.ServeFile(w, r, "gen/openapi/finance/v1/uom.swagger.json")
+	if _, err := w.Write(swaggerJSON); err != nil {
+		log.Warn().Err(err).Msg("Failed to write swagger JSON response")
+	}
 }
 
 const swaggerUIHTML = `<!DOCTYPE html>

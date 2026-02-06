@@ -115,6 +115,22 @@ clean:
 	@echo "Cleaned build artifacts"
 
 # =============================================================================
+# Proto/Swagger
+# =============================================================================
+
+# Copy swagger.json from generated proto to httpdelivery for embedding
+# Run this after proto generation in goapps-shared-proto
+proto-copy-swagger:
+	@if [ -f "../../gen/openapi/finance/v1/uom.swagger.json" ]; then \
+		cp ../../gen/openapi/finance/v1/uom.swagger.json internal/delivery/httpdelivery/swagger.json; \
+		echo "✅ Copied swagger.json to internal/delivery/httpdelivery/"; \
+	else \
+		echo "❌ Error: ../../gen/openapi/finance/v1/uom.swagger.json not found"; \
+		echo "   Run 'buf generate' in goapps-shared-proto first"; \
+		exit 1; \
+	fi
+
+# =============================================================================
 # Database
 # =============================================================================
 
