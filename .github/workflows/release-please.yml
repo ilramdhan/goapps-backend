@@ -35,6 +35,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Extract version
+        id: version
+        run: |
+          # Extract clean version from tag (e.g., "finance-service/v1.0.0" -> "v1.0.0")
+          TAG="${{ needs.release-please.outputs.finance--tag_name }}"
+          VERSION=$(echo "$TAG" | sed 's|.*/||')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Clean version: $VERSION"
+      
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -48,7 +57,7 @@ jobs:
           context: ./services/finance
           push: true
           tags: |
-            ghcr.io/mutugading/finance-service:${{ needs.release-please.outputs.finance--tag_name }}
+            ghcr.io/mutugading/finance-service:${{ steps.version.outputs.version }}
             ghcr.io/mutugading/finance-service:latest
 
   build-iam:
@@ -59,6 +68,15 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Extract version
+        id: version
+        run: |
+          # Extract clean version from tag (e.g., "iam-service/v0.2.0" -> "v0.2.0")
+          TAG="${{ needs.release-please.outputs.iam--tag_name }}"
+          VERSION=$(echo "$TAG" | sed 's|.*/||')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Clean version: $VERSION"
       
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -73,7 +91,7 @@ jobs:
           context: ./services/iam
           push: true
           tags: |
-            ghcr.io/mutugading/iam-service:${{ needs.release-please.outputs.iam--tag_name }}
+            ghcr.io/mutugading/iam-service:${{ steps.version.outputs.version }}
             ghcr.io/mutugading/iam-service:latest
 
   build-hr:
@@ -84,6 +102,15 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Extract version
+        id: version
+        run: |
+          # Extract clean version from tag (e.g., "hr-service/v1.0.0" -> "v1.0.0")
+          TAG="${{ needs.release-please.outputs.hr--tag_name }}"
+          VERSION=$(echo "$TAG" | sed 's|.*/||')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Clean version: $VERSION"
       
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -98,5 +125,5 @@ jobs:
           context: ./services/hr
           push: true
           tags: |
-            ghcr.io/mutugading/hr-service:${{ needs.release-please.outputs.hr--tag_name }}
+            ghcr.io/mutugading/hr-service:${{ steps.version.outputs.version }}
             ghcr.io/mutugading/hr-service:latest
