@@ -11,6 +11,7 @@ import (
 // EventType represents the type of audit event.
 type EventType string
 
+// Audit event type constants.
 const (
 	EventTypeLogin          EventType = "LOGIN"
 	EventTypeLogout         EventType = "LOGOUT"
@@ -95,21 +96,47 @@ func ReconstructLog(
 	}
 }
 
-// Getters
-func (l *Log) ID() uuid.UUID            { return l.id }
-func (l *Log) EventType() EventType     { return l.eventType }
-func (l *Log) TableName() string        { return l.tableName }
-func (l *Log) RecordID() *uuid.UUID     { return l.recordID }
-func (l *Log) UserID() *uuid.UUID       { return l.userID }
-func (l *Log) Username() string         { return l.username }
-func (l *Log) FullName() string         { return l.fullName }
-func (l *Log) IPAddress() string        { return l.ipAddress }
-func (l *Log) UserAgent() string        { return l.userAgent }
-func (l *Log) ServiceName() string      { return l.serviceName }
+// ID returns the audit log identifier.
+func (l *Log) ID() uuid.UUID { return l.id }
+
+// EventType returns the event type.
+func (l *Log) EventType() EventType { return l.eventType }
+
+// TableName returns the table name.
+func (l *Log) TableName() string { return l.tableName }
+
+// RecordID returns the record identifier.
+func (l *Log) RecordID() *uuid.UUID { return l.recordID }
+
+// UserID returns the user identifier.
+func (l *Log) UserID() *uuid.UUID { return l.userID }
+
+// Username returns the username.
+func (l *Log) Username() string { return l.username }
+
+// FullName returns the full name.
+func (l *Log) FullName() string { return l.fullName }
+
+// IPAddress returns the IP address.
+func (l *Log) IPAddress() string { return l.ipAddress }
+
+// UserAgent returns the user agent.
+func (l *Log) UserAgent() string { return l.userAgent }
+
+// ServiceName returns the service name.
+func (l *Log) ServiceName() string { return l.serviceName }
+
+// OldData returns the old data.
 func (l *Log) OldData() json.RawMessage { return l.oldData }
+
+// NewData returns the new data.
 func (l *Log) NewData() json.RawMessage { return l.newData }
+
+// Changes returns the changes.
 func (l *Log) Changes() json.RawMessage { return l.changes }
-func (l *Log) PerformedAt() time.Time   { return l.performedAt }
+
+// PerformedAt returns the time the event was performed.
+func (l *Log) PerformedAt() time.Time { return l.performedAt }
 
 // SetOldData sets the old data field.
 func (l *Log) SetOldData(data interface{}) error {

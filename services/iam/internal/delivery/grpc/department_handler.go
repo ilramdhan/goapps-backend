@@ -5,9 +5,11 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/organization"
+	"github.com/mutugading/goapps-backend/services/iam/pkg/safeconv"
 )
 
 // DepartmentHandler handles department-related gRPC requests.
@@ -22,6 +24,7 @@ func NewDepartmentHandler(repo organization.DepartmentRepository, validationHelp
 	return &DepartmentHandler{repo: repo, validationHelper: validationHelper}
 }
 
+// CreateDepartment handles the gRPC request to create a new department.
 func (h *DepartmentHandler) CreateDepartment(ctx context.Context, req *iamv1.CreateDepartmentRequest) (*iamv1.CreateDepartmentResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		return &iamv1.CreateDepartmentResponse{Base: baseResp}, nil
@@ -29,14 +32,14 @@ func (h *DepartmentHandler) CreateDepartment(ctx context.Context, req *iamv1.Cre
 
 	divisionID, err := uuid.Parse(req.GetDivisionId())
 	if err != nil {
-		return &iamv1.CreateDepartmentResponse{
+		return &iamv1.CreateDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: ErrorResponse("400", "Invalid division ID"),
 		}, nil
 	}
 
 	exists, err := h.repo.ExistsByCode(ctx, req.GetDepartmentCode())
 	if err != nil {
-		return &iamv1.CreateDepartmentResponse{
+		return &iamv1.CreateDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: InternalErrorResponse("Failed to check existing department"),
 		}, nil
 	}
@@ -49,13 +52,13 @@ func (h *DepartmentHandler) CreateDepartment(ctx context.Context, req *iamv1.Cre
 	userID := getUserFromCtx(ctx)
 	department, err := organization.NewDepartment(divisionID, req.GetDepartmentCode(), req.GetDepartmentName(), req.GetDescription(), userID)
 	if err != nil {
-		return &iamv1.CreateDepartmentResponse{
+		return &iamv1.CreateDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
 
 	if err := h.repo.Create(ctx, department); err != nil {
-		return &iamv1.CreateDepartmentResponse{
+		return &iamv1.CreateDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: InternalErrorResponse("Failed to create department"),
 		}, nil
 	}
@@ -66,6 +69,7 @@ func (h *DepartmentHandler) CreateDepartment(ctx context.Context, req *iamv1.Cre
 	}, nil
 }
 
+// GetDepartment handles the gRPC request to retrieve a department by ID.
 func (h *DepartmentHandler) GetDepartment(ctx context.Context, req *iamv1.GetDepartmentRequest) (*iamv1.GetDepartmentResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		return &iamv1.GetDepartmentResponse{Base: baseResp}, nil
@@ -73,14 +77,14 @@ func (h *DepartmentHandler) GetDepartment(ctx context.Context, req *iamv1.GetDep
 
 	id, err := uuid.Parse(req.GetDepartmentId())
 	if err != nil {
-		return &iamv1.GetDepartmentResponse{
+		return &iamv1.GetDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: ErrorResponse("400", "Invalid department ID"),
 		}, nil
 	}
 
 	department, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		return &iamv1.GetDepartmentResponse{
+		return &iamv1.GetDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
@@ -91,6 +95,7 @@ func (h *DepartmentHandler) GetDepartment(ctx context.Context, req *iamv1.GetDep
 	}, nil
 }
 
+// UpdateDepartment handles the gRPC request to update an existing department.
 func (h *DepartmentHandler) UpdateDepartment(ctx context.Context, req *iamv1.UpdateDepartmentRequest) (*iamv1.UpdateDepartmentResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		return &iamv1.UpdateDepartmentResponse{Base: baseResp}, nil
@@ -98,27 +103,27 @@ func (h *DepartmentHandler) UpdateDepartment(ctx context.Context, req *iamv1.Upd
 
 	id, err := uuid.Parse(req.GetDepartmentId())
 	if err != nil {
-		return &iamv1.UpdateDepartmentResponse{
+		return &iamv1.UpdateDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: ErrorResponse("400", "Invalid department ID"),
 		}, nil
 	}
 
 	department, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		return &iamv1.UpdateDepartmentResponse{
+		return &iamv1.UpdateDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
 
 	userID := getUserFromCtx(ctx)
 	if err := department.Update(req.DepartmentName, req.Description, req.IsActive, userID); err != nil {
-		return &iamv1.UpdateDepartmentResponse{
+		return &iamv1.UpdateDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
 
 	if err := h.repo.Update(ctx, department); err != nil {
-		return &iamv1.UpdateDepartmentResponse{
+		return &iamv1.UpdateDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: InternalErrorResponse("Failed to update department"),
 		}, nil
 	}
@@ -129,6 +134,7 @@ func (h *DepartmentHandler) UpdateDepartment(ctx context.Context, req *iamv1.Upd
 	}, nil
 }
 
+// DeleteDepartment handles the gRPC request to delete a department.
 func (h *DepartmentHandler) DeleteDepartment(ctx context.Context, req *iamv1.DeleteDepartmentRequest) (*iamv1.DeleteDepartmentResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		return &iamv1.DeleteDepartmentResponse{Base: baseResp}, nil
@@ -136,14 +142,14 @@ func (h *DepartmentHandler) DeleteDepartment(ctx context.Context, req *iamv1.Del
 
 	id, err := uuid.Parse(req.GetDepartmentId())
 	if err != nil {
-		return &iamv1.DeleteDepartmentResponse{
+		return &iamv1.DeleteDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: ErrorResponse("400", "Invalid department ID"),
 		}, nil
 	}
 
 	userID := getUserFromCtx(ctx)
 	if err := h.repo.Delete(ctx, id, userID); err != nil {
-		return &iamv1.DeleteDepartmentResponse{
+		return &iamv1.DeleteDepartmentResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
@@ -153,6 +159,7 @@ func (h *DepartmentHandler) DeleteDepartment(ctx context.Context, req *iamv1.Del
 	}, nil
 }
 
+// ListDepartments handles the gRPC request to list departments with pagination.
 func (h *DepartmentHandler) ListDepartments(ctx context.Context, req *iamv1.ListDepartmentsRequest) (*iamv1.ListDepartmentsResponse, error) {
 	page := int(req.GetPage())
 	pageSize := int(req.GetPageSize())
@@ -171,6 +178,8 @@ func (h *DepartmentHandler) ListDepartments(ctx context.Context, req *iamv1.List
 	case iamv1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
 		inactive := false
 		isActive = &inactive
+	case iamv1.ActiveFilter_ACTIVE_FILTER_UNSPECIFIED:
+		// No filter — return all
 	}
 
 	var divisionID, companyID *uuid.UUID
@@ -202,36 +211,39 @@ func (h *DepartmentHandler) ListDepartments(ctx context.Context, req *iamv1.List
 
 	departments, total, err := h.repo.List(ctx, params)
 	if err != nil {
-		return &iamv1.ListDepartmentsResponse{
+		return &iamv1.ListDepartmentsResponse{ //nolint:nilerr // error returned in response body
 			Base: InternalErrorResponse("Failed to list departments"),
 		}, nil
 	}
 
 	totalPages := int32(0)
 	if total > 0 {
-		totalPages = int32((total + int64(pageSize) - 1) / int64(pageSize))
+		totalPages = safeconv.Int64ToInt32((total + int64(pageSize) - 1) / int64(pageSize))
 	}
 
 	return &iamv1.ListDepartmentsResponse{
 		Base:       SuccessResponse("Departments listed successfully"),
 		Data:       toDepartmentProtos(departments),
-		Pagination: &commonv1.PaginationResponse{CurrentPage: int32(page), PageSize: int32(pageSize), TotalItems: total, TotalPages: totalPages},
+		Pagination: &commonv1.PaginationResponse{CurrentPage: safeconv.IntToInt32(page), PageSize: safeconv.IntToInt32(pageSize), TotalItems: total, TotalPages: totalPages},
 	}, nil
 }
 
-func (h *DepartmentHandler) ExportDepartments(ctx context.Context, req *iamv1.ExportDepartmentsRequest) (*iamv1.ExportDepartmentsResponse, error) {
+// ExportDepartments handles the gRPC request to export departments.
+func (h *DepartmentHandler) ExportDepartments(_ context.Context, _ *iamv1.ExportDepartmentsRequest) (*iamv1.ExportDepartmentsResponse, error) {
 	return &iamv1.ExportDepartmentsResponse{
 		Base: ErrorResponse("501", "Export not implemented"),
 	}, nil
 }
 
-func (h *DepartmentHandler) ImportDepartments(ctx context.Context, req *iamv1.ImportDepartmentsRequest) (*iamv1.ImportDepartmentsResponse, error) {
+// ImportDepartments handles the gRPC request to import departments.
+func (h *DepartmentHandler) ImportDepartments(_ context.Context, _ *iamv1.ImportDepartmentsRequest) (*iamv1.ImportDepartmentsResponse, error) {
 	return &iamv1.ImportDepartmentsResponse{
 		Base: ErrorResponse("501", "Import not implemented"),
 	}, nil
 }
 
-func (h *DepartmentHandler) DownloadDepartmentTemplate(ctx context.Context, req *iamv1.DownloadDepartmentTemplateRequest) (*iamv1.DownloadDepartmentTemplateResponse, error) {
+// DownloadDepartmentTemplate handles the gRPC request to download the department import template.
+func (h *DepartmentHandler) DownloadDepartmentTemplate(_ context.Context, _ *iamv1.DownloadDepartmentTemplateRequest) (*iamv1.DownloadDepartmentTemplateResponse, error) {
 	return &iamv1.DownloadDepartmentTemplateResponse{
 		Base: ErrorResponse("501", "Template download not implemented"),
 	}, nil

@@ -38,7 +38,7 @@ func NewUpdateDetailHandler(repo user.Repository) *UpdateDetailHandler {
 }
 
 // Handle executes the update user detail command.
-func (h *UpdateDetailHandler) Handle(ctx context.Context, cmd UpdateDetailCommand) (*user.UserDetail, error) {
+func (h *UpdateDetailHandler) Handle(ctx context.Context, cmd UpdateDetailCommand) (*user.Detail, error) {
 	// 1. Parse user ID.
 	userID, err := uuid.Parse(cmd.UserID)
 	if err != nil {

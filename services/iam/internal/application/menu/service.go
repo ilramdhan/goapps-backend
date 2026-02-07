@@ -151,12 +151,12 @@ func (s *Service) ListMenus(ctx context.Context, params menu.ListParams) ([]*men
 }
 
 // GetMenuTree retrieves the complete menu tree for a service.
-func (s *Service) GetMenuTree(ctx context.Context, serviceName string, includeInactive, includeHidden bool) ([]*menu.MenuWithChildren, error) {
+func (s *Service) GetMenuTree(ctx context.Context, serviceName string, includeInactive, includeHidden bool) ([]*menu.WithChildren, error) {
 	return s.menuRepo.GetTree(ctx, serviceName, includeInactive, includeHidden)
 }
 
 // GetMenuTreeForUser retrieves the menu tree accessible by a specific user.
-func (s *Service) GetMenuTreeForUser(ctx context.Context, userID uuid.UUID, serviceName string) ([]*menu.MenuWithChildren, error) {
+func (s *Service) GetMenuTreeForUser(ctx context.Context, userID uuid.UUID, serviceName string) ([]*menu.WithChildren, error) {
 	return s.menuRepo.GetTreeForUser(ctx, userID, serviceName)
 }
 

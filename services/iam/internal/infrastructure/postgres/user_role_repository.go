@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
 )
@@ -74,7 +75,11 @@ func (r *UserRoleRepository) GetUserRoles(ctx context.Context, userID uuid.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user roles: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in user roles")
+		}
+	}()
 
 	var roles []*role.Role
 	for rows.Next() {
@@ -99,7 +104,11 @@ func (r *UserRoleRepository) GetUsersWithRole(ctx context.Context, roleID uuid.U
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users with role: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in users with role")
+		}
+	}()
 
 	var userIDs []uuid.UUID
 	for rows.Next() {

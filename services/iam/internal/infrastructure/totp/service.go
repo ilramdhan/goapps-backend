@@ -4,7 +4,7 @@ package totp
 import (
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // TOTP spec requires SHA1 per RFC 6238
 	"encoding/base32"
 	"encoding/binary"
 	"fmt"
@@ -75,7 +75,7 @@ func (s *Service) generateCode(secret string, period int64) string {
 
 	// Convert period to bytes
 	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, uint64(period))
+	binary.BigEndian.PutUint64(buf, uint64(period)) //nolint:gosec // period is always positive (unix timestamp / period)
 
 	// Calculate HMAC-SHA1
 	mac := hmac.New(sha1.New, secretBytes)
@@ -85,7 +85,7 @@ func (s *Service) generateCode(secret string, period int64) string {
 	// Dynamic truncation
 	offset := hash[len(hash)-1] & 0x0f
 	code := binary.BigEndian.Uint32(hash[offset:offset+4]) & 0x7fffffff
-	code = code % pow10(s.digits)
+	code %= pow10(s.digits)
 
 	return fmt.Sprintf("%0*d", s.digits, code)
 }

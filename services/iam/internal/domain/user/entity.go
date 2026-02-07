@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 )
 
@@ -21,19 +22,16 @@ var (
 	ErrPasswordNoNumber    = errors.New("password must contain at least one number")
 	ErrAccountLocked       = errors.New("account is locked due to too many failed login attempts")
 	ErrInactive            = errors.New("user account is inactive")
-	Err2FARequired         = errors.New("two-factor authentication is required")
-	Err2FAAlreadyEnabled   = errors.New("two-factor authentication is already enabled")
-	Err2FANotEnabled       = errors.New("two-factor authentication is not enabled")
+	ErrTwoFARequired       = errors.New("two-factor authentication is required")
+	ErrTwoFAAlreadyEnabled = errors.New("two-factor authentication is already enabled")
+	ErrTwoFANotEnabled     = errors.New("two-factor authentication is not enabled")
 	ErrInvalidTOTPCode     = errors.New("invalid TOTP code")
 )
 
 // Regex patterns for validation.
 var (
-	usernameRegex  = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]{2,49}$`)
-	emailRegex     = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	uppercaseRegex = regexp.MustCompile(`[A-Z]`)
-	lowercaseRegex = regexp.MustCompile(`[a-z]`)
-	numberRegex    = regexp.MustCompile(`[0-9]`)
+	usernameRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]{2,49}$`)
+	emailRegex    = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 )
 
 // User is the aggregate root for User domain.
@@ -111,25 +109,50 @@ func ReconstructUser(
 	}
 }
 
-// =============================================================================
-// Getters
-// =============================================================================
+// ID returns the user identifier.
+func (u *User) ID() uuid.UUID { return u.id }
 
-func (u *User) ID() uuid.UUID                 { return u.id }
-func (u *User) Username() string              { return u.username }
-func (u *User) Email() string                 { return u.email }
-func (u *User) PasswordHash() string          { return u.passwordHash }
-func (u *User) IsActive() bool                { return u.isActive }
-func (u *User) IsLocked() bool                { return u.isLocked }
-func (u *User) FailedLoginAttempts() int      { return u.failedLoginAttempts }
-func (u *User) LockedUntil() *time.Time       { return u.lockedUntil }
-func (u *User) TwoFactorEnabled() bool        { return u.twoFactorEnabled }
-func (u *User) TwoFactorSecret() string       { return u.twoFactorSecret }
-func (u *User) LastLoginAt() *time.Time       { return u.lastLoginAt }
-func (u *User) LastLoginIP() string           { return u.lastLoginIP }
+// Username returns the username.
+func (u *User) Username() string { return u.username }
+
+// Email returns the email address.
+func (u *User) Email() string { return u.email }
+
+// PasswordHash returns the password hash.
+func (u *User) PasswordHash() string { return u.passwordHash }
+
+// IsActive returns whether the user is active.
+func (u *User) IsActive() bool { return u.isActive }
+
+// IsLocked returns whether the user account is locked.
+func (u *User) IsLocked() bool { return u.isLocked }
+
+// FailedLoginAttempts returns the number of failed login attempts.
+func (u *User) FailedLoginAttempts() int { return u.failedLoginAttempts }
+
+// LockedUntil returns the lock expiry time.
+func (u *User) LockedUntil() *time.Time { return u.lockedUntil }
+
+// TwoFactorEnabled returns whether 2FA is enabled.
+func (u *User) TwoFactorEnabled() bool { return u.twoFactorEnabled }
+
+// TwoFactorSecret returns the 2FA secret.
+func (u *User) TwoFactorSecret() string { return u.twoFactorSecret }
+
+// LastLoginAt returns the last login time.
+func (u *User) LastLoginAt() *time.Time { return u.lastLoginAt }
+
+// LastLoginIP returns the last login IP address.
+func (u *User) LastLoginIP() string { return u.lastLoginIP }
+
+// PasswordChangedAt returns when the password was last changed.
 func (u *User) PasswordChangedAt() *time.Time { return u.passwordChangedAt }
-func (u *User) Audit() shared.AuditInfo       { return u.audit }
-func (u *User) IsDeleted() bool               { return u.audit.IsDeleted() }
+
+// Audit returns the audit information.
+func (u *User) Audit() shared.AuditInfo { return u.audit }
+
+// IsDeleted returns whether the user has been soft-deleted.
+func (u *User) IsDeleted() bool { return u.audit.IsDeleted() }
 
 // =============================================================================
 // Domain Behavior Methods
@@ -198,7 +221,7 @@ func (u *User) Enable2FA(secret string, updatedBy string) error {
 		return shared.ErrAlreadyDeleted
 	}
 	if u.twoFactorEnabled {
-		return Err2FAAlreadyEnabled
+		return ErrTwoFAAlreadyEnabled
 	}
 
 	u.twoFactorEnabled = true
@@ -213,7 +236,7 @@ func (u *User) Disable2FA(updatedBy string) error {
 		return shared.ErrAlreadyDeleted
 	}
 	if !u.twoFactorEnabled {
-		return Err2FANotEnabled
+		return ErrTwoFANotEnabled
 	}
 
 	u.twoFactorEnabled = false

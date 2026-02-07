@@ -243,30 +243,10 @@ func (h *UserHandler) ListUsers(ctx context.Context, req *iamv1.ListUsersRequest
 	}
 
 	// Parse optional UUID filters.
-	if req.SectionId != nil {
-		sectionID, err := uuid.Parse(req.GetSectionId())
-		if err == nil {
-			query.SectionID = &sectionID
-		}
-	}
-	if req.DepartmentId != nil {
-		departmentID, err := uuid.Parse(req.GetDepartmentId())
-		if err == nil {
-			query.DepartmentID = &departmentID
-		}
-	}
-	if req.DivisionId != nil {
-		divisionID, err := uuid.Parse(req.GetDivisionId())
-		if err == nil {
-			query.DivisionID = &divisionID
-		}
-	}
-	if req.CompanyId != nil {
-		companyID, err := uuid.Parse(req.GetCompanyId())
-		if err == nil {
-			query.CompanyID = &companyID
-		}
-	}
+	query.SectionID = parseOptionalUUID(req.SectionId)
+	query.DepartmentID = parseOptionalUUID(req.DepartmentId)
+	query.DivisionID = parseOptionalUUID(req.DivisionId)
+	query.CompanyID = parseOptionalUUID(req.CompanyId)
 
 	result, err := h.listHandler.Handle(ctx, query)
 	if err != nil {
@@ -453,7 +433,7 @@ func (h *UserHandler) toUserProto(u *user.User) *iamv1.User {
 	return proto
 }
 
-func (h *UserHandler) toUserWithDetailProto(u *user.User, detail *user.UserDetail, roleCodes []string) *iamv1.UserWithDetail {
+func (h *UserHandler) toUserWithDetailProto(u *user.User, detail *user.Detail, roleCodes []string) *iamv1.UserWithDetail {
 	proto := &iamv1.UserWithDetail{
 		User:      h.toUserProto(u),
 		RoleCodes: roleCodes,
@@ -466,7 +446,7 @@ func (h *UserHandler) toUserWithDetailProto(u *user.User, detail *user.UserDetai
 	return proto
 }
 
-func (h *UserHandler) toUserDetailProto(d *user.UserDetail) *iamv1.UserDetail {
+func (h *UserHandler) toUserDetailProto(d *user.Detail) *iamv1.UserDetail {
 	proto := &iamv1.UserDetail{
 		DetailId:     d.ID().String(),
 		UserId:       d.UserID().String(),

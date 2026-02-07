@@ -13,6 +13,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/session"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/user"
+	"github.com/mutugading/goapps-backend/services/iam/pkg/safeconv"
 )
 
 // AuthHandler implements the AuthService gRPC service.
@@ -60,14 +61,14 @@ func (h *AuthHandler) Login(ctx context.Context, req *iamv1.LoginRequest) (*iamv
 	if err != nil {
 		// Special case: TOTP required returns a partial response with Requires2fa flag.
 		if errors.Is(err, shared.ErrTOTPRequired) {
-			return &iamv1.LoginResponse{
+			return &iamv1.LoginResponse{ //nolint:nilerr // error returned in response body
 				Base: domainErrorToBaseResponse(err),
 				Data: &iamv1.LoginData{
 					Requires_2Fa: true,
 				},
 			}, nil
 		}
-		return &iamv1.LoginResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.LoginResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.LoginResponse{
@@ -99,7 +100,7 @@ func (h *AuthHandler) Logout(ctx context.Context, req *iamv1.LogoutRequest) (*ia
 	refreshToken := req.GetRefreshToken()
 
 	if err := h.authService.Logout(ctx, refreshToken); err != nil {
-		return &iamv1.LogoutResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.LogoutResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.LogoutResponse{
@@ -115,7 +116,7 @@ func (h *AuthHandler) RefreshToken(ctx context.Context, req *iamv1.RefreshTokenR
 
 	result, err := h.authService.RefreshToken(ctx, req.GetRefreshToken())
 	if err != nil {
-		return &iamv1.RefreshTokenResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.RefreshTokenResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.RefreshTokenResponse{
@@ -138,7 +139,7 @@ func (h *AuthHandler) ForgotPassword(ctx context.Context, req *iamv1.ForgotPassw
 	expiresIn, err := h.authService.ForgotPassword(ctx, req.GetEmail())
 	if err != nil {
 		// Don't reveal whether email exists — always return success.
-		return &iamv1.ForgotPasswordResponse{
+		return &iamv1.ForgotPasswordResponse{ //nolint:nilerr // error returned in response body
 			Base:      SuccessResponse("If the email exists, an OTP has been sent"),
 			ExpiresIn: 300,
 		}, nil
@@ -146,7 +147,7 @@ func (h *AuthHandler) ForgotPassword(ctx context.Context, req *iamv1.ForgotPassw
 
 	return &iamv1.ForgotPasswordResponse{
 		Base:      SuccessResponse("OTP sent to your email"),
-		ExpiresIn: int32(expiresIn),
+		ExpiresIn: safeconv.IntToInt32(expiresIn),
 	}, nil
 }
 
@@ -158,7 +159,7 @@ func (h *AuthHandler) VerifyResetOTP(ctx context.Context, req *iamv1.VerifyReset
 
 	resetToken, err := h.authService.VerifyResetOTP(ctx, req.GetEmail(), req.GetOtpCode())
 	if err != nil {
-		return &iamv1.VerifyResetOTPResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.VerifyResetOTPResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.VerifyResetOTPResponse{
@@ -174,7 +175,7 @@ func (h *AuthHandler) ResetPassword(ctx context.Context, req *iamv1.ResetPasswor
 	}
 
 	if err := h.authService.ResetPassword(ctx, req.GetResetToken(), req.GetNewPassword()); err != nil {
-		return &iamv1.ResetPasswordResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.ResetPasswordResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.ResetPasswordResponse{
@@ -190,11 +191,11 @@ func (h *AuthHandler) UpdatePassword(ctx context.Context, req *iamv1.UpdatePassw
 
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
-		return &iamv1.UpdatePasswordResponse{Base: UnauthorizedResponse("not authenticated")}, nil
+		return &iamv1.UpdatePasswordResponse{Base: UnauthorizedResponse("not authenticated")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	if err := h.authService.UpdatePassword(ctx, userID, req.GetCurrentPassword(), req.GetNewPassword()); err != nil {
-		return &iamv1.UpdatePasswordResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.UpdatePasswordResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.UpdatePasswordResponse{
@@ -203,15 +204,15 @@ func (h *AuthHandler) UpdatePassword(ctx context.Context, req *iamv1.UpdatePassw
 }
 
 // Enable2FA enables two-factor authentication.
-func (h *AuthHandler) Enable2FA(ctx context.Context, req *iamv1.Enable2FARequest) (*iamv1.Enable2FAResponse, error) {
+func (h *AuthHandler) Enable2FA(ctx context.Context, _ *iamv1.Enable2FARequest) (*iamv1.Enable2FAResponse, error) {
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
-		return &iamv1.Enable2FAResponse{Base: UnauthorizedResponse("not authenticated")}, nil
+		return &iamv1.Enable2FAResponse{Base: UnauthorizedResponse("not authenticated")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	result, err := h.authService.Enable2FA(ctx, userID)
 	if err != nil {
-		return &iamv1.Enable2FAResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.Enable2FAResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.Enable2FAResponse{
@@ -232,11 +233,11 @@ func (h *AuthHandler) Verify2FA(ctx context.Context, req *iamv1.Verify2FARequest
 
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
-		return &iamv1.Verify2FAResponse{Base: UnauthorizedResponse("not authenticated")}, nil
+		return &iamv1.Verify2FAResponse{Base: UnauthorizedResponse("not authenticated")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	if err := h.authService.Verify2FA(ctx, userID, req.GetTotpCode()); err != nil {
-		return &iamv1.Verify2FAResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.Verify2FAResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.Verify2FAResponse{
@@ -252,11 +253,11 @@ func (h *AuthHandler) Disable2FA(ctx context.Context, req *iamv1.Disable2FAReque
 
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
-		return &iamv1.Disable2FAResponse{Base: UnauthorizedResponse("not authenticated")}, nil
+		return &iamv1.Disable2FAResponse{Base: UnauthorizedResponse("not authenticated")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	if err := h.authService.Disable2FA(ctx, userID, req.GetPassword(), req.GetVerificationCode()); err != nil {
-		return &iamv1.Disable2FAResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.Disable2FAResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.Disable2FAResponse{
@@ -265,21 +266,21 @@ func (h *AuthHandler) Disable2FA(ctx context.Context, req *iamv1.Disable2FAReque
 }
 
 // GetCurrentUser returns the currently authenticated user.
-func (h *AuthHandler) GetCurrentUser(ctx context.Context, req *iamv1.GetCurrentUserRequest) (*iamv1.GetCurrentUserResponse, error) {
+func (h *AuthHandler) GetCurrentUser(ctx context.Context, _ *iamv1.GetCurrentUserRequest) (*iamv1.GetCurrentUserResponse, error) {
 	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
-		return &iamv1.GetCurrentUserResponse{Base: UnauthorizedResponse("not authenticated")}, nil
+		return &iamv1.GetCurrentUserResponse{Base: UnauthorizedResponse("not authenticated")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	u, err := h.userRepo.GetByID(ctx, userID)
 	if err != nil {
-		return &iamv1.GetCurrentUserResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.GetCurrentUserResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	// Get user roles and permissions.
 	roles, permissions, err := h.userRepo.GetRolesAndPermissions(ctx, userID)
 	if err != nil {
-		return &iamv1.GetCurrentUserResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.GetCurrentUserResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	roleNames := make([]string, len(roles))

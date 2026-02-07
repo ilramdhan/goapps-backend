@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 )
 
@@ -112,20 +113,44 @@ func ReconstructMenu(
 	}
 }
 
-// Getters
-func (m *Menu) ID() uuid.UUID           { return m.id }
-func (m *Menu) ParentID() *uuid.UUID    { return m.parentID }
-func (m *Menu) Code() string            { return m.code }
-func (m *Menu) Title() string           { return m.title }
-func (m *Menu) URL() string             { return m.url }
-func (m *Menu) IconName() string        { return m.iconName }
-func (m *Menu) ServiceName() string     { return m.serviceName }
-func (m *Menu) Level() int              { return m.level }
-func (m *Menu) SortOrder() int          { return m.sortOrder }
-func (m *Menu) IsVisible() bool         { return m.isVisible }
-func (m *Menu) IsActive() bool          { return m.isActive }
+// ID returns the menu identifier.
+func (m *Menu) ID() uuid.UUID { return m.id }
+
+// ParentID returns the parent menu identifier.
+func (m *Menu) ParentID() *uuid.UUID { return m.parentID }
+
+// Code returns the menu code.
+func (m *Menu) Code() string { return m.code }
+
+// Title returns the menu title.
+func (m *Menu) Title() string { return m.title }
+
+// URL returns the menu URL.
+func (m *Menu) URL() string { return m.url }
+
+// IconName returns the menu icon name.
+func (m *Menu) IconName() string { return m.iconName }
+
+// ServiceName returns the service name.
+func (m *Menu) ServiceName() string { return m.serviceName }
+
+// Level returns the menu level.
+func (m *Menu) Level() int { return m.level }
+
+// SortOrder returns the sort order.
+func (m *Menu) SortOrder() int { return m.sortOrder }
+
+// IsVisible returns whether the menu is visible.
+func (m *Menu) IsVisible() bool { return m.isVisible }
+
+// IsActive returns whether the menu is active.
+func (m *Menu) IsActive() bool { return m.isActive }
+
+// Audit returns the audit information.
 func (m *Menu) Audit() shared.AuditInfo { return m.audit }
-func (m *Menu) IsDeleted() bool         { return m.audit.IsDeleted() }
+
+// IsDeleted returns whether the menu has been soft-deleted.
+func (m *Menu) IsDeleted() bool { return m.audit.IsDeleted() }
 
 // Update updates menu fields.
 func (m *Menu) Update(
@@ -172,9 +197,9 @@ func (m *Menu) SoftDelete(deletedBy string) error {
 	return nil
 }
 
-// MenuWithChildren represents a menu with its child menus (for tree view).
-type MenuWithChildren struct {
+// WithChildren represents a menu with its child menus (for tree view).
+type WithChildren struct {
 	Menu                *Menu
-	Children            []*MenuWithChildren
+	Children            []*WithChildren
 	RequiredPermissions []string
 }

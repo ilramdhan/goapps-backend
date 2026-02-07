@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/user"
@@ -27,7 +28,7 @@ func NewUserRepository(db *DB) *UserRepository {
 }
 
 // Create creates a new user with detail.
-func (r *UserRepository) Create(ctx context.Context, u *user.User, detail *user.UserDetail) error {
+func (r *UserRepository) Create(ctx context.Context, u *user.User, detail *user.Detail) error {
 	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
 		// Insert user
 		query := `
@@ -50,7 +51,10 @@ func (r *UserRepository) Create(ctx context.Context, u *user.User, detail *user.
 
 		// Insert user detail if provided
 		if detail != nil {
-			extraDataJSON, _ := json.Marshal(detail.ExtraData())
+			extraDataJSON, err := json.Marshal(detail.ExtraData())
+			if err != nil {
+				return fmt.Errorf("failed to marshal extra data: %w", err)
+			}
 			query = `
 				INSERT INTO mst_user_detail (
 					detail_id, user_id, section_id, employee_code, full_name, first_name, last_name,
@@ -215,7 +219,7 @@ func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy str
 }
 
 // GetDetailByUserID retrieves user detail by user ID.
-func (r *UserRepository) GetDetailByUserID(ctx context.Context, userID uuid.UUID) (*user.UserDetail, error) {
+func (r *UserRepository) GetDetailByUserID(ctx context.Context, userID uuid.UUID) (*user.Detail, error) {
 	query := `
 		SELECT detail_id, user_id, section_id, employee_code, full_name, first_name, last_name,
 			phone, profile_picture, position, date_of_birth, address, extra_data,
@@ -241,8 +245,11 @@ func (r *UserRepository) GetDetailByUserID(ctx context.Context, userID uuid.UUID
 }
 
 // UpdateDetail updates user detail.
-func (r *UserRepository) UpdateDetail(ctx context.Context, detail *user.UserDetail) error {
-	extraDataJSON, _ := json.Marshal(detail.ExtraData())
+func (r *UserRepository) UpdateDetail(ctx context.Context, detail *user.Detail) error {
+	extraDataJSON, err := json.Marshal(detail.ExtraData())
+	if err != nil {
+		return fmt.Errorf("failed to marshal extra data: %w", err)
+	}
 	query := `
 		UPDATE mst_user_detail SET
 			section_id = $2, full_name = $3, first_name = $4, last_name = $5,
@@ -328,7 +335,11 @@ func (r *UserRepository) List(ctx context.Context, params user.ListParams) ([]*u
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list users: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in user list")
+		}
+	}()
 
 	var users []*user.User
 	for rows.Next() {
@@ -348,7 +359,7 @@ func (r *UserRepository) List(ctx context.Context, params user.ListParams) ([]*u
 }
 
 // ListWithDetails lists users with their details.
-func (r *UserRepository) ListWithDetails(ctx context.Context, params user.ListParams) ([]*user.UserWithDetail, int64, error) {
+func (r *UserRepository) ListWithDetails(ctx context.Context, params user.ListParams) ([]*user.WithDetail, int64, error) {
 	// Implementation similar to List but with JOIN to user_detail
 	// For brevity, we'll reuse the List method and fetch details separately
 	users, total, err := r.List(ctx, params)
@@ -356,12 +367,18 @@ func (r *UserRepository) ListWithDetails(ctx context.Context, params user.ListPa
 		return nil, 0, err
 	}
 
-	result := make([]*user.UserWithDetail, len(users))
+	result := make([]*user.WithDetail, len(users))
 	for i, u := range users {
-		detail, _ := r.GetDetailByUserID(ctx, u.ID())
-		roles, _ := r.getUserRoles(ctx, u.ID())
+		detail, err := r.GetDetailByUserID(ctx, u.ID())
+		if err != nil && !errors.Is(err, shared.ErrNotFound) {
+			log.Warn().Err(err).Str("user_id", u.ID().String()).Msg("failed to get user detail")
+		}
+		roles, err := r.getUserRoles(ctx, u.ID())
+		if err != nil {
+			log.Warn().Err(err).Str("user_id", u.ID().String()).Msg("failed to get user roles")
+		}
 
-		result[i] = &user.UserWithDetail{
+		result[i] = &user.WithDetail{
 			User:   u,
 			Detail: detail,
 			Roles:  roles,
@@ -383,7 +400,11 @@ func (r *UserRepository) getUserRoles(ctx context.Context, userID uuid.UUID) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in getUserRoles")
+		}
+	}()
 
 	var roles []user.RoleInfo
 	for rows.Next() {
@@ -441,7 +462,11 @@ func (r *UserRepository) GetRolesAndPermissions(ctx context.Context, userID uuid
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get user roles: %w", err)
 	}
-	defer roleRows.Close()
+	defer func() {
+		if err := roleRows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close roleRows in GetRolesAndPermissions")
+		}
+	}()
 
 	var roles []user.RoleRef
 	for roleRows.Next() {
@@ -465,7 +490,11 @@ func (r *UserRepository) GetRolesAndPermissions(ctx context.Context, userID uuid
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get user permissions: %w", err)
 	}
-	defer permRows.Close()
+	defer func() {
+		if err := permRows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close permRows in GetRolesAndPermissions")
+		}
+	}()
 
 	var permissions []user.PermissionRef
 	for permRows.Next() {
@@ -501,11 +530,11 @@ func (p *permissionRefImpl) ID() uuid.UUID { return p.id }
 func (p *permissionRefImpl) Code() string  { return p.code }
 
 // BatchCreate creates multiple users in a batch.
-func (r *UserRepository) BatchCreate(ctx context.Context, users []*user.User, details []*user.UserDetail) (int, error) {
+func (r *UserRepository) BatchCreate(ctx context.Context, users []*user.User, details []*user.Detail) (int, error) {
 	count := 0
 	err := r.db.Transaction(ctx, func(tx *sql.Tx) error {
 		for i, u := range users {
-			var detail *user.UserDetail
+			var detail *user.Detail
 			if i < len(details) {
 				detail = details[i]
 			}
@@ -530,7 +559,10 @@ func (r *UserRepository) BatchCreate(ctx context.Context, users []*user.User, de
 			}
 
 			if detail != nil {
-				extraDataJSON, _ := json.Marshal(detail.ExtraData())
+				extraDataJSON, err := json.Marshal(detail.ExtraData())
+				if err != nil {
+					return fmt.Errorf("failed to marshal extra data for %s: %w", u.Username(), err)
+				}
 				query = `
 					INSERT INTO mst_user_detail (
 						detail_id, user_id, section_id, employee_code, full_name, first_name, last_name,
@@ -627,10 +659,12 @@ type userDetailRow struct {
 	UpdatedBy      *string
 }
 
-func (r *userDetailRow) toDomain() *user.UserDetail {
+func (r *userDetailRow) toDomain() *user.Detail {
 	var extraData map[string]interface{}
 	if len(r.ExtraData) > 0 {
-		_ = json.Unmarshal(r.ExtraData, &extraData)
+		if err := json.Unmarshal(r.ExtraData, &extraData); err != nil {
+			log.Warn().Err(err).Str("user_id", r.UserID.String()).Msg("failed to unmarshal user detail extra data")
+		}
 	}
 
 	audit := shared.AuditInfo{
@@ -640,7 +674,7 @@ func (r *userDetailRow) toDomain() *user.UserDetail {
 		UpdatedBy: r.UpdatedBy,
 	}
 
-	return user.ReconstructUserDetail(
+	return user.ReconstructDetail(
 		r.ID, r.UserID, r.SectionID, r.EmployeeCode, r.FullName,
 		r.FirstName.String, r.LastName.String,
 		r.Phone.String, r.ProfilePicture.String, r.Position.String,

@@ -392,7 +392,7 @@ func TestUser_Enable2FA(t *testing.T) {
 		err = u.Enable2FA("ANOTHERSECRET", "admin")
 
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, user.Err2FAAlreadyEnabled)
+		assert.ErrorIs(t, err, user.ErrTwoFAAlreadyEnabled)
 	})
 
 	t.Run("deleted user", func(t *testing.T) {
@@ -428,7 +428,7 @@ func TestUser_Disable2FA(t *testing.T) {
 		err := u.Disable2FA("admin")
 
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, user.Err2FANotEnabled)
+		assert.ErrorIs(t, err, user.ErrTwoFANotEnabled)
 	})
 
 	t.Run("deleted user", func(t *testing.T) {

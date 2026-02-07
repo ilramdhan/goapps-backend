@@ -21,11 +21,11 @@ type UpdateCommand struct {
 
 // UpdateHandler handles the UpdateRole command.
 type UpdateHandler struct {
-	repo role.RoleRepository
+	repo role.Repository
 }
 
 // NewUpdateHandler creates a new UpdateHandler.
-func NewUpdateHandler(repo role.RoleRepository) *UpdateHandler {
+func NewUpdateHandler(repo role.Repository) *UpdateHandler {
 	return &UpdateHandler{repo: repo}
 }
 

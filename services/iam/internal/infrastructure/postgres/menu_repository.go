@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/menu"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
@@ -83,7 +84,10 @@ func (r *MenuRepository) Update(ctx context.Context, m *menu.Menu) error {
 		return fmt.Errorf("failed to update menu: %w", err)
 	}
 
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
 		return shared.ErrNotFound
 	}
@@ -98,7 +102,10 @@ func (r *MenuRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy str
 		return fmt.Errorf("failed to delete menu: %w", err)
 	}
 
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
 		return shared.ErrNotFound
 	}
@@ -120,13 +127,25 @@ func (r *MenuRepository) DeleteWithChildren(ctx context.Context, id uuid.UUID, d
 		UPDATE mst_menu SET deleted_at = $2, deleted_by = $3
 		WHERE menu_id IN (SELECT menu_id FROM descendants)
 	`
-	result1, _ := r.db.ExecContext(ctx, query, id, now, deletedBy)
-	count1, _ := result1.RowsAffected()
+	result1, err := r.db.ExecContext(ctx, query, id, now, deletedBy)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete menu descendants: %w", err)
+	}
+	count1, err := result1.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected for descendants: %w", err)
+	}
 
 	// Delete the parent
 	query2 := `UPDATE mst_menu SET deleted_at = $2, deleted_by = $3 WHERE menu_id = $1 AND deleted_at IS NULL`
-	result2, _ := r.db.ExecContext(ctx, query2, id, now, deletedBy)
-	count2, _ := result2.RowsAffected()
+	result2, err := r.db.ExecContext(ctx, query2, id, now, deletedBy)
+	if err != nil {
+		return int(count1), fmt.Errorf("failed to delete parent menu: %w", err)
+	}
+	count2, err := result2.RowsAffected()
+	if err != nil {
+		return int(count1), fmt.Errorf("failed to get rows affected for parent: %w", err)
+	}
 
 	return int(count1 + count2), nil
 }
@@ -182,9 +201,9 @@ func (r *MenuRepository) List(ctx context.Context, params menu.ListParams) ([]*m
 	// Get data
 	orderBy := "sort_order ASC, created_at DESC"
 	if params.SortBy != "" {
-		sortOrder := "ASC"
-		if params.SortOrder == "desc" {
-			sortOrder = "DESC"
+		sortOrder := sortASC
+		if strings.EqualFold(params.SortOrder, sortDESC) {
+			sortOrder = sortDESC
 		}
 		orderBy = params.SortBy + " " + sortOrder
 	}
@@ -202,7 +221,11 @@ func (r *MenuRepository) List(ctx context.Context, params menu.ListParams) ([]*m
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list menus: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in List menus")
+		}
+	}()
 
 	var menus []*menu.Menu
 	for rows.Next() {
@@ -248,7 +271,7 @@ func (r *MenuRepository) BatchCreate(ctx context.Context, menus []*menu.Menu) (i
 }
 
 // GetTree gets the menu tree.
-func (r *MenuRepository) GetTree(ctx context.Context, serviceName string, includeInactive, includeHidden bool) ([]*menu.MenuWithChildren, error) {
+func (r *MenuRepository) GetTree(ctx context.Context, serviceName string, includeInactive, includeHidden bool) ([]*menu.WithChildren, error) {
 	conditions := []string{"deleted_at IS NULL"}
 	var args []interface{}
 	argIndex := 1
@@ -256,7 +279,6 @@ func (r *MenuRepository) GetTree(ctx context.Context, serviceName string, includ
 	if serviceName != "" {
 		conditions = append(conditions, fmt.Sprintf("service_name = $%d", argIndex))
 		args = append(args, serviceName)
-		argIndex++
 	}
 	if !includeInactive {
 		conditions = append(conditions, "is_active = true")
@@ -276,7 +298,11 @@ func (r *MenuRepository) GetTree(ctx context.Context, serviceName string, includ
 	if err != nil {
 		return nil, fmt.Errorf("failed to get menu tree: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in GetTree")
+		}
+	}()
 
 	var allMenus []*menu.Menu
 	for rows.Next() {
@@ -291,7 +317,7 @@ func (r *MenuRepository) GetTree(ctx context.Context, serviceName string, includ
 }
 
 // GetTreeForUser gets the menu tree for a specific user.
-func (r *MenuRepository) GetTreeForUser(ctx context.Context, userID uuid.UUID, serviceName string) ([]*menu.MenuWithChildren, error) {
+func (r *MenuRepository) GetTreeForUser(ctx context.Context, _ uuid.UUID, serviceName string) ([]*menu.WithChildren, error) {
 	// For now, return all active visible menus
 	// TODO: filter by user permissions
 	return r.GetTree(ctx, serviceName, false, false)
@@ -305,7 +331,12 @@ func (r *MenuRepository) AssignPermissions(ctx context.Context, menuID uuid.UUID
 			INSERT INTO mst_menu_permission (menu_id, permission_id, created_at, created_by)
 			VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING
 		`
-		_, _ = r.db.ExecContext(ctx, query, menuID, permID, now, assignedBy)
+		if _, err := r.db.ExecContext(ctx, query, menuID, permID, now, assignedBy); err != nil {
+			log.Warn().Err(err).
+				Str("menu_id", menuID.String()).
+				Str("permission_id", permID.String()).
+				Msg("failed to assign permission to menu")
+		}
 	}
 	return nil
 }
@@ -314,7 +345,12 @@ func (r *MenuRepository) AssignPermissions(ctx context.Context, menuID uuid.UUID
 func (r *MenuRepository) RemovePermissions(ctx context.Context, menuID uuid.UUID, permissionIDs []uuid.UUID) error {
 	for _, permID := range permissionIDs {
 		query := `DELETE FROM mst_menu_permission WHERE menu_id = $1 AND permission_id = $2`
-		_, _ = r.db.ExecContext(ctx, query, menuID, permID)
+		if _, err := r.db.ExecContext(ctx, query, menuID, permID); err != nil {
+			log.Warn().Err(err).
+				Str("menu_id", menuID.String()).
+				Str("permission_id", permID.String()).
+				Msg("failed to remove permission from menu")
+		}
 	}
 	return nil
 }
@@ -333,7 +369,11 @@ func (r *MenuRepository) GetPermissions(ctx context.Context, menuID uuid.UUID) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to get permissions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in GetPermissions")
+		}
+	}()
 
 	var perms []*role.Permission
 	for rows.Next() {
@@ -347,10 +387,15 @@ func (r *MenuRepository) GetPermissions(ctx context.Context, menuID uuid.UUID) (
 }
 
 // Reorder reorders menus within the same parent.
-func (r *MenuRepository) Reorder(ctx context.Context, parentID *uuid.UUID, menuIDs []uuid.UUID) error {
+func (r *MenuRepository) Reorder(ctx context.Context, _ *uuid.UUID, menuIDs []uuid.UUID) error {
 	for i, menuID := range menuIDs {
 		query := `UPDATE mst_menu SET sort_order = $2 WHERE menu_id = $1`
-		_, _ = r.db.ExecContext(ctx, query, menuID, i+1)
+		if _, err := r.db.ExecContext(ctx, query, menuID, i+1); err != nil {
+			log.Warn().Err(err).
+				Str("menu_id", menuID.String()).
+				Int("sort_order", i+1).
+				Msg("failed to reorder menu")
+		}
 	}
 	return nil
 }
@@ -467,13 +512,13 @@ func scanPermissionFromRows(rows *sql.Rows) (*role.Permission, error) {
 	return role.ReconstructPermission(id, code, name, "", serviceName, moduleName, actionType, isActive, audit), nil
 }
 
-func buildMenuTree(allMenus []*menu.Menu) []*menu.MenuWithChildren {
-	menuMap := make(map[uuid.UUID]*menu.MenuWithChildren)
-	var roots []*menu.MenuWithChildren
+func buildMenuTree(allMenus []*menu.Menu) []*menu.WithChildren {
+	menuMap := make(map[uuid.UUID]*menu.WithChildren)
+	var roots []*menu.WithChildren
 
 	// Create nodes
 	for _, m := range allMenus {
-		menuMap[m.ID()] = &menu.MenuWithChildren{Menu: m, Children: []*menu.MenuWithChildren{}}
+		menuMap[m.ID()] = &menu.WithChildren{Menu: m, Children: []*menu.WithChildren{}}
 	}
 
 	// Build tree

@@ -4,14 +4,21 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/organization"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
+)
+
+const (
+	sortASC  = "ASC"
+	sortDESC = "DESC"
 )
 
 // =============================================================================
@@ -28,6 +35,7 @@ func NewCompanyRepository(db *DB) *CompanyRepository {
 	return &CompanyRepository{db: db}
 }
 
+// Create inserts a new company into the database.
 func (r *CompanyRepository) Create(ctx context.Context, company *organization.Company) error {
 	query := `
 		INSERT INTO mst_company (company_id, company_code, company_name, description, is_active, created_at, created_by)
@@ -38,6 +46,7 @@ func (r *CompanyRepository) Create(ctx context.Context, company *organization.Co
 	return err
 }
 
+// GetByID retrieves a company by its unique identifier.
 func (r *CompanyRepository) GetByID(ctx context.Context, id uuid.UUID) (*organization.Company, error) {
 	query := `
 		SELECT company_id, company_code, company_name, description, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -46,6 +55,7 @@ func (r *CompanyRepository) GetByID(ctx context.Context, id uuid.UUID) (*organiz
 	return r.scanCompany(row)
 }
 
+// GetByCode retrieves a company by its unique code.
 func (r *CompanyRepository) GetByCode(ctx context.Context, code string) (*organization.Company, error) {
 	query := `
 		SELECT company_id, company_code, company_name, description, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -54,6 +64,7 @@ func (r *CompanyRepository) GetByCode(ctx context.Context, code string) (*organi
 	return r.scanCompany(row)
 }
 
+// Update persists changes to an existing company in the database.
 func (r *CompanyRepository) Update(ctx context.Context, company *organization.Company) error {
 	query := `
 		UPDATE mst_company SET company_name = $2, description = $3, is_active = $4, updated_at = $5, updated_by = $6
@@ -63,19 +74,24 @@ func (r *CompanyRepository) Update(ctx context.Context, company *organization.Co
 	return err
 }
 
+// Delete soft-deletes a company by setting its deleted_at timestamp.
 func (r *CompanyRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy string) error {
 	query := `UPDATE mst_company SET deleted_at = $2, deleted_by = $3, is_active = false WHERE company_id = $1 AND deleted_at IS NULL`
 	result, err := r.db.ExecContext(ctx, query, id, time.Now(), deletedBy)
 	if err != nil {
 		return err
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
 		return shared.ErrNotFound
 	}
 	return nil
 }
 
+// List retrieves a paginated list of companies with optional filtering and sorting.
 func (r *CompanyRepository) List(ctx context.Context, params organization.ListParams) ([]*organization.Company, int64, error) {
 	var whereClauses []string
 	var args []interface{}
@@ -102,9 +118,9 @@ func (r *CompanyRepository) List(ctx context.Context, params organization.ListPa
 
 	orderBy := "created_at DESC"
 	if params.SortBy != "" {
-		order := "ASC"
-		if strings.ToUpper(params.SortOrder) == "DESC" {
-			order = "DESC"
+		order := sortASC
+		if strings.ToUpper(params.SortOrder) == sortDESC {
+			order = sortDESC
 		}
 		orderBy = fmt.Sprintf("%s %s", sanitizeColumn(params.SortBy), order)
 	}
@@ -119,7 +135,11 @@ func (r *CompanyRepository) List(ctx context.Context, params organization.ListPa
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in company list")
+		}
+	}()
 
 	var companies []*organization.Company
 	for rows.Next() {
@@ -132,6 +152,7 @@ func (r *CompanyRepository) List(ctx context.Context, params organization.ListPa
 	return companies, total, nil
 }
 
+// ExistsByCode checks whether a company with the given code already exists.
 func (r *CompanyRepository) ExistsByCode(ctx context.Context, code string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM mst_company WHERE company_code = $1 AND deleted_at IS NULL)`
 	var exists bool
@@ -139,12 +160,17 @@ func (r *CompanyRepository) ExistsByCode(ctx context.Context, code string) (bool
 	return exists, err
 }
 
+// BatchCreate inserts multiple companies in a single transaction and returns the count of successfully inserted records.
 func (r *CompanyRepository) BatchCreate(ctx context.Context, companies []*organization.Company) (int, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Warn().Err(err).Msg("failed to rollback transaction")
+		}
+	}()
 
 	count := 0
 	for _, c := range companies {
@@ -224,6 +250,7 @@ func NewDivisionRepository(db *DB) *DivisionRepository {
 	return &DivisionRepository{db: db}
 }
 
+// Create inserts a new division into the database.
 func (r *DivisionRepository) Create(ctx context.Context, division *organization.Division) error {
 	query := `
 		INSERT INTO mst_division (division_id, company_id, division_code, division_name, description, is_active, created_at, created_by)
@@ -234,6 +261,7 @@ func (r *DivisionRepository) Create(ctx context.Context, division *organization.
 	return err
 }
 
+// GetByID retrieves a division by its unique identifier.
 func (r *DivisionRepository) GetByID(ctx context.Context, id uuid.UUID) (*organization.Division, error) {
 	query := `
 		SELECT division_id, company_id, division_code, division_name, description, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -242,6 +270,7 @@ func (r *DivisionRepository) GetByID(ctx context.Context, id uuid.UUID) (*organi
 	return r.scanDivision(row)
 }
 
+// GetByCode retrieves a division by its unique code.
 func (r *DivisionRepository) GetByCode(ctx context.Context, code string) (*organization.Division, error) {
 	query := `
 		SELECT division_id, company_id, division_code, division_name, description, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -250,6 +279,7 @@ func (r *DivisionRepository) GetByCode(ctx context.Context, code string) (*organ
 	return r.scanDivision(row)
 }
 
+// Update persists changes to an existing division in the database.
 func (r *DivisionRepository) Update(ctx context.Context, division *organization.Division) error {
 	query := `
 		UPDATE mst_division SET division_name = $2, description = $3, is_active = $4, updated_at = $5, updated_by = $6
@@ -259,19 +289,24 @@ func (r *DivisionRepository) Update(ctx context.Context, division *organization.
 	return err
 }
 
+// Delete soft-deletes a division by setting its deleted_at timestamp.
 func (r *DivisionRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy string) error {
 	query := `UPDATE mst_division SET deleted_at = $2, deleted_by = $3, is_active = false WHERE division_id = $1 AND deleted_at IS NULL`
 	result, err := r.db.ExecContext(ctx, query, id, time.Now(), deletedBy)
 	if err != nil {
 		return err
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
 		return shared.ErrNotFound
 	}
 	return nil
 }
 
+// List retrieves a paginated list of divisions with optional filtering and sorting.
 func (r *DivisionRepository) List(ctx context.Context, params organization.DivisionListParams) ([]*organization.Division, int64, error) {
 	var whereClauses []string
 	var args []interface{}
@@ -303,9 +338,9 @@ func (r *DivisionRepository) List(ctx context.Context, params organization.Divis
 
 	orderBy := "created_at DESC"
 	if params.SortBy != "" {
-		order := "ASC"
-		if strings.ToUpper(params.SortOrder) == "DESC" {
-			order = "DESC"
+		order := sortASC
+		if strings.ToUpper(params.SortOrder) == sortDESC {
+			order = sortDESC
 		}
 		orderBy = fmt.Sprintf("%s %s", sanitizeColumn(params.SortBy), order)
 	}
@@ -320,7 +355,11 @@ func (r *DivisionRepository) List(ctx context.Context, params organization.Divis
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in division list")
+		}
+	}()
 
 	var divisions []*organization.Division
 	for rows.Next() {
@@ -333,6 +372,7 @@ func (r *DivisionRepository) List(ctx context.Context, params organization.Divis
 	return divisions, total, nil
 }
 
+// ExistsByCode checks whether a division with the given code already exists.
 func (r *DivisionRepository) ExistsByCode(ctx context.Context, code string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM mst_division WHERE division_code = $1 AND deleted_at IS NULL)`
 	var exists bool
@@ -340,12 +380,17 @@ func (r *DivisionRepository) ExistsByCode(ctx context.Context, code string) (boo
 	return exists, err
 }
 
+// BatchCreate inserts multiple divisions in a single transaction and returns the count of successfully inserted records.
 func (r *DivisionRepository) BatchCreate(ctx context.Context, divisions []*organization.Division) (int, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Warn().Err(err).Msg("failed to rollback transaction")
+		}
+	}()
 
 	count := 0
 	for _, d := range divisions {
@@ -425,6 +470,7 @@ func NewDepartmentRepository(db *DB) *DepartmentRepository {
 	return &DepartmentRepository{db: db}
 }
 
+// Create inserts a new department into the database.
 func (r *DepartmentRepository) Create(ctx context.Context, department *organization.Department) error {
 	query := `
 		INSERT INTO mst_department (department_id, division_id, department_code, department_name, description, is_active, created_at, created_by)
@@ -435,6 +481,7 @@ func (r *DepartmentRepository) Create(ctx context.Context, department *organizat
 	return err
 }
 
+// GetByID retrieves a department by its unique identifier.
 func (r *DepartmentRepository) GetByID(ctx context.Context, id uuid.UUID) (*organization.Department, error) {
 	query := `
 		SELECT department_id, division_id, department_code, department_name, description, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -443,6 +490,7 @@ func (r *DepartmentRepository) GetByID(ctx context.Context, id uuid.UUID) (*orga
 	return r.scanDepartment(row)
 }
 
+// GetByCode retrieves a department by its unique code.
 func (r *DepartmentRepository) GetByCode(ctx context.Context, code string) (*organization.Department, error) {
 	query := `
 		SELECT department_id, division_id, department_code, department_name, description, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -451,6 +499,7 @@ func (r *DepartmentRepository) GetByCode(ctx context.Context, code string) (*org
 	return r.scanDepartment(row)
 }
 
+// Update persists changes to an existing department in the database.
 func (r *DepartmentRepository) Update(ctx context.Context, department *organization.Department) error {
 	query := `
 		UPDATE mst_department SET department_name = $2, description = $3, is_active = $4, updated_at = $5, updated_by = $6
@@ -460,19 +509,24 @@ func (r *DepartmentRepository) Update(ctx context.Context, department *organizat
 	return err
 }
 
+// Delete soft-deletes a department by setting its deleted_at timestamp.
 func (r *DepartmentRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy string) error {
 	query := `UPDATE mst_department SET deleted_at = $2, deleted_by = $3, is_active = false WHERE department_id = $1 AND deleted_at IS NULL`
 	result, err := r.db.ExecContext(ctx, query, id, time.Now(), deletedBy)
 	if err != nil {
 		return err
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
 		return shared.ErrNotFound
 	}
 	return nil
 }
 
+// List retrieves a paginated list of departments with optional filtering and sorting.
 func (r *DepartmentRepository) List(ctx context.Context, params organization.DepartmentListParams) ([]*organization.Department, int64, error) {
 	var whereClauses []string
 	var args []interface{}
@@ -512,9 +566,9 @@ func (r *DepartmentRepository) List(ctx context.Context, params organization.Dep
 
 	orderBy := "d.created_at DESC"
 	if params.SortBy != "" {
-		order := "ASC"
-		if strings.ToUpper(params.SortOrder) == "DESC" {
-			order = "DESC"
+		order := sortASC
+		if strings.ToUpper(params.SortOrder) == sortDESC {
+			order = sortDESC
 		}
 		orderBy = fmt.Sprintf("d.%s %s", sanitizeColumn(params.SortBy), order)
 	}
@@ -531,7 +585,11 @@ func (r *DepartmentRepository) List(ctx context.Context, params organization.Dep
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in department list")
+		}
+	}()
 
 	var departments []*organization.Department
 	for rows.Next() {
@@ -544,6 +602,7 @@ func (r *DepartmentRepository) List(ctx context.Context, params organization.Dep
 	return departments, total, nil
 }
 
+// ExistsByCode checks whether a department with the given code already exists.
 func (r *DepartmentRepository) ExistsByCode(ctx context.Context, code string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM mst_department WHERE department_code = $1 AND deleted_at IS NULL)`
 	var exists bool
@@ -551,12 +610,17 @@ func (r *DepartmentRepository) ExistsByCode(ctx context.Context, code string) (b
 	return exists, err
 }
 
+// BatchCreate inserts multiple departments in a single transaction and returns the count of successfully inserted records.
 func (r *DepartmentRepository) BatchCreate(ctx context.Context, departments []*organization.Department) (int, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Warn().Err(err).Msg("failed to rollback transaction")
+		}
+	}()
 
 	count := 0
 	for _, d := range departments {
@@ -636,6 +700,7 @@ func NewSectionRepository(db *DB) *SectionRepository {
 	return &SectionRepository{db: db}
 }
 
+// Create inserts a new section into the database.
 func (r *SectionRepository) Create(ctx context.Context, section *organization.Section) error {
 	query := `
 		INSERT INTO mst_section (section_id, department_id, section_code, section_name, description, is_active, created_at, created_by)
@@ -646,6 +711,7 @@ func (r *SectionRepository) Create(ctx context.Context, section *organization.Se
 	return err
 }
 
+// GetByID retrieves a section by its unique identifier.
 func (r *SectionRepository) GetByID(ctx context.Context, id uuid.UUID) (*organization.Section, error) {
 	query := `
 		SELECT section_id, department_id, section_code, section_name, description, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -654,6 +720,7 @@ func (r *SectionRepository) GetByID(ctx context.Context, id uuid.UUID) (*organiz
 	return r.scanSection(row)
 }
 
+// GetByCode retrieves a section by its unique code.
 func (r *SectionRepository) GetByCode(ctx context.Context, code string) (*organization.Section, error) {
 	query := `
 		SELECT section_id, department_id, section_code, section_name, description, is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -662,6 +729,7 @@ func (r *SectionRepository) GetByCode(ctx context.Context, code string) (*organi
 	return r.scanSection(row)
 }
 
+// Update persists changes to an existing section in the database.
 func (r *SectionRepository) Update(ctx context.Context, section *organization.Section) error {
 	query := `
 		UPDATE mst_section SET section_name = $2, description = $3, is_active = $4, updated_at = $5, updated_by = $6
@@ -671,19 +739,24 @@ func (r *SectionRepository) Update(ctx context.Context, section *organization.Se
 	return err
 }
 
+// Delete soft-deletes a section by setting its deleted_at timestamp.
 func (r *SectionRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy string) error {
 	query := `UPDATE mst_section SET deleted_at = $2, deleted_by = $3, is_active = false WHERE section_id = $1 AND deleted_at IS NULL`
 	result, err := r.db.ExecContext(ctx, query, id, time.Now(), deletedBy)
 	if err != nil {
 		return err
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
 		return shared.ErrNotFound
 	}
 	return nil
 }
 
+// List retrieves a paginated list of sections with optional filtering and sorting.
 func (r *SectionRepository) List(ctx context.Context, params organization.SectionListParams) ([]*organization.Section, int64, error) {
 	var whereClauses []string
 	var args []interface{}
@@ -729,9 +802,9 @@ func (r *SectionRepository) List(ctx context.Context, params organization.Sectio
 
 	orderBy := "s.created_at DESC"
 	if params.SortBy != "" {
-		order := "ASC"
-		if strings.ToUpper(params.SortOrder) == "DESC" {
-			order = "DESC"
+		order := sortASC
+		if strings.ToUpper(params.SortOrder) == sortDESC {
+			order = sortDESC
 		}
 		orderBy = fmt.Sprintf("s.%s %s", sanitizeColumn(params.SortBy), order)
 	}
@@ -749,7 +822,11 @@ func (r *SectionRepository) List(ctx context.Context, params organization.Sectio
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in section list")
+		}
+	}()
 
 	var sections []*organization.Section
 	for rows.Next() {
@@ -762,6 +839,7 @@ func (r *SectionRepository) List(ctx context.Context, params organization.Sectio
 	return sections, total, nil
 }
 
+// ExistsByCode checks whether a section with the given code already exists.
 func (r *SectionRepository) ExistsByCode(ctx context.Context, code string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM mst_section WHERE section_code = $1 AND deleted_at IS NULL)`
 	var exists bool
@@ -769,12 +847,17 @@ func (r *SectionRepository) ExistsByCode(ctx context.Context, code string) (bool
 	return exists, err
 }
 
+// BatchCreate inserts multiple sections in a single transaction and returns the count of successfully inserted records.
 func (r *SectionRepository) BatchCreate(ctx context.Context, sections []*organization.Section) (int, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Warn().Err(err).Msg("failed to rollback transaction")
+		}
+	}()
 
 	count := 0
 	for _, s := range sections {

@@ -5,9 +5,11 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/organization"
+	"github.com/mutugading/goapps-backend/services/iam/pkg/safeconv"
 )
 
 // getUserFromCtx extracts the user ID from context, falling back to "system".
@@ -30,6 +32,7 @@ func NewCompanyHandler(repo organization.CompanyRepository, validationHelper *Va
 	return &CompanyHandler{repo: repo, validationHelper: validationHelper}
 }
 
+// CreateCompany handles the gRPC request to create a new company.
 func (h *CompanyHandler) CreateCompany(ctx context.Context, req *iamv1.CreateCompanyRequest) (*iamv1.CreateCompanyResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		return &iamv1.CreateCompanyResponse{Base: baseResp}, nil
@@ -38,7 +41,7 @@ func (h *CompanyHandler) CreateCompany(ctx context.Context, req *iamv1.CreateCom
 	// Check for existing code
 	exists, err := h.repo.ExistsByCode(ctx, req.GetCompanyCode())
 	if err != nil {
-		return &iamv1.CreateCompanyResponse{
+		return &iamv1.CreateCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: InternalErrorResponse("Failed to check existing company"),
 		}, nil
 	}
@@ -51,13 +54,13 @@ func (h *CompanyHandler) CreateCompany(ctx context.Context, req *iamv1.CreateCom
 	userID := getUserFromCtx(ctx)
 	company, err := organization.NewCompany(req.GetCompanyCode(), req.GetCompanyName(), req.GetDescription(), userID)
 	if err != nil {
-		return &iamv1.CreateCompanyResponse{
+		return &iamv1.CreateCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
 
 	if err := h.repo.Create(ctx, company); err != nil {
-		return &iamv1.CreateCompanyResponse{
+		return &iamv1.CreateCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: InternalErrorResponse("Failed to create company"),
 		}, nil
 	}
@@ -68,6 +71,7 @@ func (h *CompanyHandler) CreateCompany(ctx context.Context, req *iamv1.CreateCom
 	}, nil
 }
 
+// GetCompany handles the gRPC request to retrieve a company by ID.
 func (h *CompanyHandler) GetCompany(ctx context.Context, req *iamv1.GetCompanyRequest) (*iamv1.GetCompanyResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		return &iamv1.GetCompanyResponse{Base: baseResp}, nil
@@ -75,14 +79,14 @@ func (h *CompanyHandler) GetCompany(ctx context.Context, req *iamv1.GetCompanyRe
 
 	id, err := uuid.Parse(req.GetCompanyId())
 	if err != nil {
-		return &iamv1.GetCompanyResponse{
+		return &iamv1.GetCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: ErrorResponse("400", "Invalid company ID"),
 		}, nil
 	}
 
 	company, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		return &iamv1.GetCompanyResponse{
+		return &iamv1.GetCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
@@ -93,6 +97,7 @@ func (h *CompanyHandler) GetCompany(ctx context.Context, req *iamv1.GetCompanyRe
 	}, nil
 }
 
+// UpdateCompany handles the gRPC request to update an existing company.
 func (h *CompanyHandler) UpdateCompany(ctx context.Context, req *iamv1.UpdateCompanyRequest) (*iamv1.UpdateCompanyResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		return &iamv1.UpdateCompanyResponse{Base: baseResp}, nil
@@ -100,27 +105,27 @@ func (h *CompanyHandler) UpdateCompany(ctx context.Context, req *iamv1.UpdateCom
 
 	id, err := uuid.Parse(req.GetCompanyId())
 	if err != nil {
-		return &iamv1.UpdateCompanyResponse{
+		return &iamv1.UpdateCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: ErrorResponse("400", "Invalid company ID"),
 		}, nil
 	}
 
 	company, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		return &iamv1.UpdateCompanyResponse{
+		return &iamv1.UpdateCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
 
 	userID := getUserFromCtx(ctx)
 	if err := company.Update(req.CompanyName, req.Description, req.IsActive, userID); err != nil {
-		return &iamv1.UpdateCompanyResponse{
+		return &iamv1.UpdateCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
 
 	if err := h.repo.Update(ctx, company); err != nil {
-		return &iamv1.UpdateCompanyResponse{
+		return &iamv1.UpdateCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: InternalErrorResponse("Failed to update company"),
 		}, nil
 	}
@@ -131,6 +136,7 @@ func (h *CompanyHandler) UpdateCompany(ctx context.Context, req *iamv1.UpdateCom
 	}, nil
 }
 
+// DeleteCompany handles the gRPC request to delete a company.
 func (h *CompanyHandler) DeleteCompany(ctx context.Context, req *iamv1.DeleteCompanyRequest) (*iamv1.DeleteCompanyResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		return &iamv1.DeleteCompanyResponse{Base: baseResp}, nil
@@ -138,14 +144,14 @@ func (h *CompanyHandler) DeleteCompany(ctx context.Context, req *iamv1.DeleteCom
 
 	id, err := uuid.Parse(req.GetCompanyId())
 	if err != nil {
-		return &iamv1.DeleteCompanyResponse{
+		return &iamv1.DeleteCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: ErrorResponse("400", "Invalid company ID"),
 		}, nil
 	}
 
 	userID := getUserFromCtx(ctx)
 	if err := h.repo.Delete(ctx, id, userID); err != nil {
-		return &iamv1.DeleteCompanyResponse{
+		return &iamv1.DeleteCompanyResponse{ //nolint:nilerr // error returned in response body
 			Base: domainErrorToBaseResponse(err),
 		}, nil
 	}
@@ -155,6 +161,7 @@ func (h *CompanyHandler) DeleteCompany(ctx context.Context, req *iamv1.DeleteCom
 	}, nil
 }
 
+// ListCompanies handles the gRPC request to list companies with pagination.
 func (h *CompanyHandler) ListCompanies(ctx context.Context, req *iamv1.ListCompaniesRequest) (*iamv1.ListCompaniesResponse, error) {
 	page := int(req.GetPage())
 	pageSize := int(req.GetPageSize())
@@ -173,6 +180,8 @@ func (h *CompanyHandler) ListCompanies(ctx context.Context, req *iamv1.ListCompa
 	case iamv1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
 		inactive := false
 		isActive = &inactive
+	case iamv1.ActiveFilter_ACTIVE_FILTER_UNSPECIFIED:
+		// No filter — return all
 	}
 
 	params := organization.ListParams{
@@ -186,38 +195,41 @@ func (h *CompanyHandler) ListCompanies(ctx context.Context, req *iamv1.ListCompa
 
 	companies, total, err := h.repo.List(ctx, params)
 	if err != nil {
-		return &iamv1.ListCompaniesResponse{
+		return &iamv1.ListCompaniesResponse{ //nolint:nilerr // error returned in response body
 			Base: InternalErrorResponse("Failed to list companies"),
 		}, nil
 	}
 
 	totalPages := int32(0)
 	if total > 0 {
-		totalPages = int32((total + int64(pageSize) - 1) / int64(pageSize))
+		totalPages = safeconv.Int64ToInt32((total + int64(pageSize) - 1) / int64(pageSize))
 	}
 
 	return &iamv1.ListCompaniesResponse{
 		Base:       SuccessResponse("Companies listed successfully"),
 		Data:       toCompanyProtos(companies),
-		Pagination: &commonv1.PaginationResponse{CurrentPage: int32(page), PageSize: int32(pageSize), TotalItems: total, TotalPages: totalPages},
+		Pagination: &commonv1.PaginationResponse{CurrentPage: safeconv.IntToInt32(page), PageSize: safeconv.IntToInt32(pageSize), TotalItems: total, TotalPages: totalPages},
 	}, nil
 }
 
-func (h *CompanyHandler) ExportCompanies(ctx context.Context, req *iamv1.ExportCompaniesRequest) (*iamv1.ExportCompaniesResponse, error) {
+// ExportCompanies handles the gRPC request to export companies.
+func (h *CompanyHandler) ExportCompanies(_ context.Context, _ *iamv1.ExportCompaniesRequest) (*iamv1.ExportCompaniesResponse, error) {
 	// TODO: Implement Excel export.
 	return &iamv1.ExportCompaniesResponse{
 		Base: ErrorResponse("501", "Export not implemented"),
 	}, nil
 }
 
-func (h *CompanyHandler) ImportCompanies(ctx context.Context, req *iamv1.ImportCompaniesRequest) (*iamv1.ImportCompaniesResponse, error) {
+// ImportCompanies handles the gRPC request to import companies.
+func (h *CompanyHandler) ImportCompanies(_ context.Context, _ *iamv1.ImportCompaniesRequest) (*iamv1.ImportCompaniesResponse, error) {
 	// TODO: Implement Excel import.
 	return &iamv1.ImportCompaniesResponse{
 		Base: ErrorResponse("501", "Import not implemented"),
 	}, nil
 }
 
-func (h *CompanyHandler) DownloadCompanyTemplate(ctx context.Context, req *iamv1.DownloadCompanyTemplateRequest) (*iamv1.DownloadCompanyTemplateResponse, error) {
+// DownloadCompanyTemplate handles the gRPC request to download the company import template.
+func (h *CompanyHandler) DownloadCompanyTemplate(_ context.Context, _ *iamv1.DownloadCompanyTemplateRequest) (*iamv1.DownloadCompanyTemplateResponse, error) {
 	// TODO: Implement template download.
 	return &iamv1.DownloadCompanyTemplateResponse{
 		Base: ErrorResponse("501", "Template download not implemented"),

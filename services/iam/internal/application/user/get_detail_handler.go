@@ -18,7 +18,7 @@ type GetDetailQuery struct {
 // GetDetailResult holds the user and their detail.
 type GetDetailResult struct {
 	User   *user.User
-	Detail *user.UserDetail
+	Detail *user.Detail
 }
 
 // GetDetailHandler handles the get user detail query.

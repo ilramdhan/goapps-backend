@@ -23,7 +23,7 @@ type ListQuery struct {
 
 // ListResult contains the result of listing sessions.
 type ListResult struct {
-	Sessions    []*session.SessionInfo
+	Sessions    []*session.Info
 	TotalItems  int64
 	TotalPages  int32
 	CurrentPage int32

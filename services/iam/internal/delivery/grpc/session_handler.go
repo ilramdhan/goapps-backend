@@ -11,6 +11,7 @@ import (
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/session"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
+	"github.com/mutugading/goapps-backend/services/iam/pkg/safeconv"
 )
 
 // SessionHandler implements the SessionService gRPC service.
@@ -37,15 +38,15 @@ func (h *SessionHandler) GetCurrentSession(ctx context.Context, req *iamv1.GetCu
 	// Extract session ID from context (set by auth interceptor)
 	sessionID, err := getSessionIDFromContext(ctx)
 	if err != nil {
-		return &iamv1.GetCurrentSessionResponse{Base: UnauthorizedResponse("not authenticated")}, nil
+		return &iamv1.GetCurrentSessionResponse{Base: UnauthorizedResponse("not authenticated")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	s, err := h.sessionRepo.GetByID(ctx, sessionID)
 	if err != nil {
 		if errors.Is(err, shared.ErrNotFound) {
-			return &iamv1.GetCurrentSessionResponse{Base: NotFoundResponse("session not found")}, nil
+			return &iamv1.GetCurrentSessionResponse{Base: NotFoundResponse("session not found")}, nil //nolint:nilerr // error returned in response body
 		}
-		return &iamv1.GetCurrentSessionResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.GetCurrentSessionResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.GetCurrentSessionResponse{
@@ -62,14 +63,14 @@ func (h *SessionHandler) RevokeSession(ctx context.Context, req *iamv1.RevokeSes
 
 	sessionID, err := uuid.Parse(req.GetSessionId())
 	if err != nil {
-		return &iamv1.RevokeSessionResponse{Base: ErrorResponse("400", "invalid session ID")}, nil
+		return &iamv1.RevokeSessionResponse{Base: ErrorResponse("400", "invalid session ID")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	if err := h.sessionRepo.Revoke(ctx, sessionID); err != nil {
 		if errors.Is(err, shared.ErrNotFound) {
-			return &iamv1.RevokeSessionResponse{Base: NotFoundResponse("session not found")}, nil
+			return &iamv1.RevokeSessionResponse{Base: NotFoundResponse("session not found")}, nil //nolint:nilerr // error returned in response body
 		}
-		return &iamv1.RevokeSessionResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.RevokeSessionResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.RevokeSessionResponse{
@@ -96,7 +97,7 @@ func (h *SessionHandler) ListActiveSessions(ctx context.Context, req *iamv1.List
 	if req.UserId != nil && *req.UserId != "" {
 		id, err := uuid.Parse(*req.UserId)
 		if err != nil {
-			return &iamv1.ListActiveSessionsResponse{Base: ErrorResponse("400", "invalid user ID")}, nil
+			return &iamv1.ListActiveSessionsResponse{Base: ErrorResponse("400", "invalid user ID")}, nil //nolint:nilerr // error returned in response body
 		}
 		userID = &id
 	}
@@ -113,7 +114,7 @@ func (h *SessionHandler) ListActiveSessions(ctx context.Context, req *iamv1.List
 
 	sessions, total, err := h.sessionRepo.ListActive(ctx, params)
 	if err != nil {
-		return &iamv1.ListActiveSessionsResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.ListActiveSessionsResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	protoSessions := make([]*iamv1.Session, len(sessions))
@@ -121,14 +122,14 @@ func (h *SessionHandler) ListActiveSessions(ctx context.Context, req *iamv1.List
 		protoSessions[i] = sessionInfoToProto(s)
 	}
 
-	totalPages := int32((total + int64(pageSize) - 1) / int64(pageSize))
+	totalPages := safeconv.Int64ToInt32((total + int64(pageSize) - 1) / int64(pageSize))
 
 	return &iamv1.ListActiveSessionsResponse{
 		Base: SuccessResponse("Sessions retrieved successfully"),
 		Data: protoSessions,
 		Pagination: &commonv1.PaginationResponse{
-			CurrentPage: int32(page),
-			PageSize:    int32(pageSize),
+			CurrentPage: safeconv.IntToInt32(page),
+			PageSize:    safeconv.IntToInt32(pageSize),
 			TotalItems:  total,
 			TotalPages:  totalPages,
 		},
@@ -156,7 +157,7 @@ func sessionToProto(s *session.Session) *iamv1.Session {
 	return proto
 }
 
-func sessionInfoToProto(s *session.SessionInfo) *iamv1.Session {
+func sessionInfoToProto(s *session.Info) *iamv1.Session {
 	proto := &iamv1.Session{
 		SessionId:   s.SessionID.String(),
 		UserId:      s.UserID.String(),

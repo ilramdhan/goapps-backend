@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/audit"
@@ -63,105 +64,43 @@ func NewService(
 
 // Login authenticates a user and returns tokens.
 func (s *Service) Login(ctx context.Context, input domainAuth.LoginInput) (*domainAuth.LoginResult, error) {
-	// Check rate limiting
-	if s.rateLimitCache != nil {
-		attempts, err := s.rateLimitCache.GetLoginAttempts(ctx, input.Username)
-		if err == nil && attempts >= int64(s.securityCfg.MaxLoginAttempts) {
-			return nil, shared.ErrAccountLocked
-		}
-	}
-
-	// Find user
-	u, err := s.userRepo.GetByUsername(ctx, input.Username)
-	if err != nil {
-		if errors.Is(err, shared.ErrNotFound) {
-			s.recordFailedLogin(ctx, input.Username)
-			return nil, shared.ErrInvalidCredentials
-		}
-		return nil, fmt.Errorf("failed to get user: %w", err)
-	}
-
-	// Check if user can login
-	if err := u.CanLogin(); err != nil {
+	if err := s.checkRateLimit(ctx, input.Username); err != nil {
 		return nil, err
 	}
 
-	// Verify password
-	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash()), []byte(input.Password)); err != nil {
-		s.recordFailedLogin(ctx, input.Username)
-		u.RecordLoginFailure(s.securityCfg.MaxLoginAttempts, s.securityCfg.LockoutDuration)
-		_ = s.userRepo.Update(ctx, u)
-		return nil, shared.ErrInvalidCredentials
-	}
-
-	// Check 2FA if enabled
-	if u.TwoFactorEnabled() {
-		if input.TOTPCode == "" {
-			return nil, shared.Err2FARequired
-		}
-		if !s.totpService.Validate(u.TwoFactorSecret(), input.TOTPCode) {
-			return nil, shared.ErrInvalid2FACode
-		}
-	}
-
-	// Get user roles and permissions
-	roles, permissions, err := s.userRepo.GetRolesAndPermissions(ctx, u.ID())
+	u, err := s.authenticateUser(ctx, input)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get roles and permissions: %w", err)
+		return nil, err
 	}
 
-	roleNames := make([]string, len(roles))
-	for i, r := range roles {
-		roleNames[i] = r.Code()
-	}
-	permNames := make([]string, len(permissions))
-	for i, p := range permissions {
-		permNames[i] = p.Code()
+	roleNames, permNames, err := s.getUserRolePermNames(ctx, u.ID())
+	if err != nil {
+		return nil, err
 	}
 
-	// Generate tokens
 	tokenPair, err := s.jwtService.GenerateTokenPair(u.ID(), u.Username(), u.Email(), roleNames, permNames, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tokens: %w", err)
 	}
 
-	// Record successful login
-	u.RecordLoginSuccess(input.IPAddress)
-	if err := s.userRepo.Update(ctx, u); err != nil {
-		return nil, fmt.Errorf("failed to update user: %w", err)
+	if err := s.recordSuccessfulLogin(ctx, u, input); err != nil {
+		return nil, err
 	}
 
-	// Reset rate limit on success
-	if s.rateLimitCache != nil {
-		_ = s.rateLimitCache.ResetLoginAttempts(ctx, input.Username)
-	}
-
-	// Create session
 	sess := session.NewSession(u.ID(), tokenPair.TokenID, input.IPAddress, input.UserAgent, input.DeviceInfo, tokenPair.RefreshExp)
 	if err := s.sessionRepo.Create(ctx, sess); err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
+	s.cacheSession(ctx, sess.ID(), u.ID())
 
-	// Cache session
-	if s.sessionCache != nil {
-		_ = s.sessionCache.StoreSession(ctx, sess.ID(), u.ID(), s.jwtService.GetRefreshTTLSeconds())
-	}
-
-	// Get user detail for full name
-	detail, _ := s.userRepo.GetDetailByUserID(ctx, u.ID())
-	fullName := u.Username()
-	if detail != nil {
-		fullName = detail.FullName()
-	}
-
-	// Log audit
+	fullName := s.getFullName(ctx, u)
 	s.logAudit(ctx, u.ID(), "LOGIN", "User logged in", input.IPAddress, input.UserAgent)
 
 	return &domainAuth.LoginResult{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    s.jwtService.GetAccessTTLSeconds(),
-		User: &domainAuth.AuthUserInfo{
+		User: &domainAuth.UserInfo{
 			ID:               u.ID(),
 			Username:         u.Username(),
 			Email:            u.Email(),
@@ -173,6 +112,101 @@ func (s *Service) Login(ctx context.Context, input domainAuth.LoginInput) (*doma
 	}, nil
 }
 
+func (s *Service) checkRateLimit(ctx context.Context, username string) error {
+	if s.rateLimitCache != nil {
+		attempts, err := s.rateLimitCache.GetLoginAttempts(ctx, username)
+		if err == nil && attempts >= int64(s.securityCfg.MaxLoginAttempts) {
+			return shared.ErrAccountLocked
+		}
+	}
+	return nil
+}
+
+func (s *Service) authenticateUser(ctx context.Context, input domainAuth.LoginInput) (*user.User, error) {
+	u, err := s.userRepo.GetByUsername(ctx, input.Username)
+	if err != nil {
+		if errors.Is(err, shared.ErrNotFound) {
+			s.recordFailedLogin(ctx, input.Username)
+			return nil, shared.ErrInvalidCredentials
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if err := u.CanLogin(); err != nil {
+		return nil, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash()), []byte(input.Password)); err != nil {
+		s.recordFailedLogin(ctx, input.Username)
+		u.RecordLoginFailure(s.securityCfg.MaxLoginAttempts, s.securityCfg.LockoutDuration)
+		if updateErr := s.userRepo.Update(ctx, u); updateErr != nil {
+			log.Warn().Err(updateErr).Msg("failed to update user after login failure")
+		}
+		return nil, shared.ErrInvalidCredentials
+	}
+
+	if u.TwoFactorEnabled() {
+		if input.TOTPCode == "" {
+			return nil, shared.ErrTwoFARequired
+		}
+		if !s.totpService.Validate(u.TwoFactorSecret(), input.TOTPCode) {
+			return nil, shared.ErrInvalid2FACode
+		}
+	}
+
+	return u, nil
+}
+
+func (s *Service) getUserRolePermNames(ctx context.Context, userID uuid.UUID) ([]string, []string, error) {
+	roles, permissions, err := s.userRepo.GetRolesAndPermissions(ctx, userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get roles and permissions: %w", err)
+	}
+
+	roleNames := make([]string, len(roles))
+	for i, r := range roles {
+		roleNames[i] = r.Code()
+	}
+	permNames := make([]string, len(permissions))
+	for i, p := range permissions {
+		permNames[i] = p.Code()
+	}
+	return roleNames, permNames, nil
+}
+
+func (s *Service) recordSuccessfulLogin(ctx context.Context, u *user.User, input domainAuth.LoginInput) error {
+	u.RecordLoginSuccess(input.IPAddress)
+	if err := s.userRepo.Update(ctx, u); err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	if s.rateLimitCache != nil {
+		if err := s.rateLimitCache.ResetLoginAttempts(ctx, input.Username); err != nil {
+			log.Warn().Err(err).Msg("failed to reset login attempts")
+		}
+	}
+	return nil
+}
+
+func (s *Service) cacheSession(ctx context.Context, sessID, userID uuid.UUID) {
+	if s.sessionCache != nil {
+		if err := s.sessionCache.StoreSession(ctx, sessID, userID, s.jwtService.GetRefreshTTLSeconds()); err != nil {
+			log.Warn().Err(err).Msg("failed to cache session")
+		}
+	}
+}
+
+func (s *Service) getFullName(ctx context.Context, u *user.User) string {
+	detail, err := s.userRepo.GetDetailByUserID(ctx, u.ID())
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to get user detail for login")
+	}
+	if detail != nil {
+		return detail.FullName()
+	}
+	return u.Username()
+}
+
 // Logout invalidates a user session.
 func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	claims, err := s.jwtService.ValidateRefreshToken(refreshToken)
@@ -180,20 +214,17 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 		return shared.ErrInvalidToken
 	}
 
-	// Blacklist the token
-	if s.sessionCache != nil {
-		expiresIn := claims.ExpiresAt.Unix() - time.Now().Unix()
-		if expiresIn > 0 {
-			_ = s.sessionCache.BlacklistToken(ctx, claims.ID, expiresIn)
-		}
-	}
+	s.blacklistToken(ctx, claims.ID, claims.ExpiresAt.Unix())
 
 	// Invalidate session in database
 	if err := s.sessionRepo.RevokeByTokenID(ctx, claims.ID); err != nil {
 		return fmt.Errorf("failed to revoke session: %w", err)
 	}
 
-	userID, _ := uuid.Parse(claims.UserID)
+	userID, parseErr := uuid.Parse(claims.UserID)
+	if parseErr != nil {
+		log.Warn().Err(parseErr).Msg("failed to parse user ID on logout")
+	}
 	s.logAudit(ctx, userID, "LOGOUT", "User logged out", "", "")
 
 	return nil
@@ -206,52 +237,36 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domai
 		return nil, shared.ErrInvalidToken
 	}
 
-	// Check if token is blacklisted
-	if s.sessionCache != nil {
-		blacklisted, _ := s.sessionCache.IsBlacklisted(ctx, claims.ID)
-		if blacklisted {
-			return nil, shared.ErrTokenRevoked
-		}
+	if err := s.checkTokenBlacklist(ctx, claims.ID); err != nil {
+		return nil, err
 	}
 
-	// Verify session exists
 	sess, err := s.sessionRepo.GetByTokenID(ctx, claims.ID)
 	if err != nil || sess == nil || sess.IsRevoked() {
 		return nil, shared.ErrSessionNotFound
 	}
 
-	userID, _ := uuid.Parse(claims.UserID)
+	userID, parseErr := uuid.Parse(claims.UserID)
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse user ID: %w", parseErr)
+	}
 	u, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	// Get roles and permissions
-	roles, permissions, _ := s.userRepo.GetRolesAndPermissions(ctx, u.ID())
-	roleNames := make([]string, len(roles))
-	for i, r := range roles {
-		roleNames[i] = r.Code()
-	}
-	permNames := make([]string, len(permissions))
-	for i, p := range permissions {
-		permNames[i] = p.Code()
+	roleNames, permNames, err := s.getUserRolePermNames(ctx, u.ID())
+	if err != nil {
+		log.Warn().Err(err).Str("userID", u.ID().String()).Msg("failed to get user role/permission names during token refresh")
 	}
 
-	// Generate new token pair
 	tokenPair, err := s.jwtService.GenerateTokenPair(u.ID(), u.Username(), u.Email(), roleNames, permNames, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tokens: %w", err)
 	}
 
-	// Blacklist old refresh token and create new session
-	if s.sessionCache != nil {
-		expiresIn := claims.ExpiresAt.Unix() - time.Now().Unix()
-		if expiresIn > 0 {
-			_ = s.sessionCache.BlacklistToken(ctx, claims.ID, expiresIn)
-		}
-	}
+	s.blacklistToken(ctx, claims.ID, claims.ExpiresAt.Unix())
 
-	// Update session with new token ID
 	sess.UpdateTokenID(tokenPair.TokenID, tokenPair.RefreshExp)
 	if err := s.sessionRepo.Update(ctx, sess); err != nil {
 		return nil, fmt.Errorf("failed to update session: %w", err)
@@ -262,6 +277,30 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domai
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    s.jwtService.GetAccessTTLSeconds(),
 	}, nil
+}
+
+func (s *Service) checkTokenBlacklist(ctx context.Context, tokenID string) error {
+	if s.sessionCache != nil {
+		blacklisted, err := s.sessionCache.IsBlacklisted(ctx, tokenID)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to check token blacklist")
+		}
+		if blacklisted {
+			return shared.ErrTokenRevoked
+		}
+	}
+	return nil
+}
+
+func (s *Service) blacklistToken(ctx context.Context, tokenID string, expiresAtUnix int64) {
+	if s.sessionCache != nil {
+		expiresIn := expiresAtUnix - time.Now().Unix()
+		if expiresIn > 0 {
+			if err := s.sessionCache.BlacklistToken(ctx, tokenID, expiresIn); err != nil {
+				log.Warn().Err(err).Msg("failed to blacklist token")
+			}
+		}
+	}
 }
 
 // ForgotPassword initiates the password reset flow.
@@ -391,7 +430,7 @@ func (s *Service) Enable2FA(ctx context.Context, userID uuid.UUID) (*domainAuth.
 	}
 
 	if u.TwoFactorEnabled() {
-		return nil, shared.Err2FAAlreadyEnabled
+		return nil, shared.ErrTwoFAAlreadyEnabled
 	}
 
 	// Generate secret
@@ -409,7 +448,9 @@ func (s *Service) Enable2FA(ctx context.Context, userID uuid.UUID) (*domainAuth.
 	// Store secret temporarily (not activated yet)
 	// User must verify with TOTP code first
 	if s.otpCache != nil {
-		_ = s.otpCache.StoreResetToken(ctx, "2fa:"+userID.String(), uuid.New(), 10*time.Minute)
+		if err := s.otpCache.StoreResetToken(ctx, "2fa:"+userID.String(), uuid.New(), 10*time.Minute); err != nil {
+			log.Warn().Err(err).Msg("failed to store 2FA setup token")
+		}
 	}
 
 	return &domainAuth.Enable2FAResult{
@@ -448,7 +489,7 @@ func (s *Service) Disable2FA(ctx context.Context, userID uuid.UUID, password, to
 	}
 
 	if !u.TwoFactorEnabled() {
-		return shared.Err2FANotEnabled
+		return shared.ErrTwoFANotEnabled
 	}
 
 	// Verify password
@@ -478,13 +519,15 @@ func (s *Service) Disable2FA(ctx context.Context, userID uuid.UUID, password, to
 
 func (s *Service) recordFailedLogin(ctx context.Context, username string) {
 	if s.rateLimitCache != nil {
-		_, _ = s.rateLimitCache.IncrementLoginAttempt(ctx, username, s.securityCfg.LockoutDuration)
+		if _, err := s.rateLimitCache.IncrementLoginAttempt(ctx, username, s.securityCfg.LockoutDuration); err != nil {
+			log.Warn().Err(err).Msg("failed to increment login attempt counter")
+		}
 	}
 }
 
 func (s *Service) logAudit(ctx context.Context, userID uuid.UUID, action, description, ipAddress, userAgent string) {
 	if s.auditRepo != nil {
-		log := audit.NewLog(
+		entry := audit.NewLog(
 			audit.EventType(action),
 			"mst_user",
 			&userID,
@@ -495,14 +538,16 @@ func (s *Service) logAudit(ctx context.Context, userID uuid.UUID, action, descri
 			userAgent,
 			"iam",
 		)
-		_ = s.auditRepo.Create(ctx, log)
+		if err := s.auditRepo.Create(ctx, entry); err != nil {
+			log.Warn().Err(err).Msg("failed to create audit log")
+		}
 	}
 }
 
 func generateOTP(length int) string {
 	const digits = "0123456789"
 	b := make([]byte, length)
-	_, _ = rand.Read(b)
+	_, _ = rand.Read(b) //nolint:errcheck // crypto/rand.Read never returns error on supported platforms
 	for i := range b {
 		b[i] = digits[int(b[i])%len(digits)]
 	}
@@ -511,7 +556,7 @@ func generateOTP(length int) string {
 
 func generateResetToken() string {
 	b := make([]byte, 32)
-	_, _ = rand.Read(b)
+	_, _ = rand.Read(b) //nolint:errcheck // crypto/rand.Read never returns error on supported platforms
 	return hex.EncodeToString(b)
 }
 
@@ -519,7 +564,7 @@ func generateRecoveryCodes(count int) []string {
 	codes := make([]string, count)
 	for i := 0; i < count; i++ {
 		b := make([]byte, 5)
-		_, _ = rand.Read(b)
+		_, _ = rand.Read(b) //nolint:errcheck // crypto/rand.Read never returns error on supported platforms
 		codes[i] = hex.EncodeToString(b)
 	}
 	return codes

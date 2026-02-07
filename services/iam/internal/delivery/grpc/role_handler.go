@@ -25,7 +25,7 @@ type RoleHandler struct {
 }
 
 // NewRoleHandler creates a new RoleHandler.
-func NewRoleHandler(roleRepo role.RoleRepository, validationHelper *ValidationHelper) *RoleHandler {
+func NewRoleHandler(roleRepo role.Repository, validationHelper *ValidationHelper) *RoleHandler {
 	return &RoleHandler{
 		createHandler:            roleapp.NewCreateHandler(roleRepo),
 		getHandler:               roleapp.NewGetHandler(roleRepo),
@@ -146,6 +146,8 @@ func (h *RoleHandler) ListRoles(ctx context.Context, req *iamv1.ListRolesRequest
 	case iamv1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
 		inactive := false
 		isActive = &inactive
+	case iamv1.ActiveFilter_ACTIVE_FILTER_UNSPECIFIED:
+		// No filter — return all.
 	}
 
 	result, err := h.listHandler.Handle(ctx, roleapp.ListQuery{

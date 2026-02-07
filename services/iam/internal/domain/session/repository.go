@@ -37,7 +37,7 @@ type Repository interface {
 	RevokeAllForUser(ctx context.Context, userID uuid.UUID) error
 
 	// ListActive lists all active sessions (admin only).
-	ListActive(ctx context.Context, params ListParams) ([]*SessionInfo, int64, error)
+	ListActive(ctx context.Context, params ListParams) ([]*Info, int64, error)
 
 	// CleanupExpired removes expired sessions.
 	CleanupExpired(ctx context.Context) (int, error)

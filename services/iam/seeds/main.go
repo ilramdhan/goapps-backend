@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	systemUser     = "system-seed"
+	systemUser        = "system-seed"
 	defaultBcryptCost = bcrypt.DefaultCost
 )
 
@@ -261,7 +261,7 @@ func seedPermissions(ctx context.Context, tx *sql.Tx) (map[string]uuid.UUID, err
 }
 
 // seedRolePermissions assigns permissions to roles.
-func seedRolePermissions(ctx context.Context, tx *sql.Tx, roleIDs map[string]uuid.UUID, permIDs map[string]uuid.UUID) error {
+func seedRolePermissions(ctx context.Context, tx *sql.Tx, roleIDs map[string]uuid.UUID, permIDs map[string]uuid.UUID) error { //nolint:gocyclo,gocognit // seed function with inherent complexity from role-permission matrix
 	log.Info().Msg("Seeding role-permission assignments...")
 
 	allPermCodes := make([]string, 0, len(permIDs))

@@ -21,6 +21,7 @@ var (
 // TokenType represents the type of JWT token.
 type TokenType string
 
+// Token type constants.
 const (
 	TokenTypeAccess  TokenType = "access"
 	TokenTypeRefresh TokenType = "refresh"
@@ -165,7 +166,7 @@ func (s *Service) validateToken(tokenString string, expectedType TokenType, secr
 	return claims, nil
 }
 
-// GetExpRemainingSeconds returns the remaining seconds until expiry.
+// GetAccessTTLSeconds returns the access token TTL in seconds.
 func (s *Service) GetAccessTTLSeconds() int64 {
 	return int64(s.accessTTL.Seconds())
 }

@@ -19,11 +19,11 @@ type AssignPermissionsCommand struct {
 
 // AssignPermissionsHandler handles the AssignPermissions command.
 type AssignPermissionsHandler struct {
-	repo role.RoleRepository
+	repo role.Repository
 }
 
 // NewAssignPermissionsHandler creates a new AssignPermissionsHandler.
-func NewAssignPermissionsHandler(repo role.RoleRepository) *AssignPermissionsHandler {
+func NewAssignPermissionsHandler(repo role.Repository) *AssignPermissionsHandler {
 	return &AssignPermissionsHandler{repo: repo}
 }
 

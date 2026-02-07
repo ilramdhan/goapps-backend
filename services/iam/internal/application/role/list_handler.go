@@ -30,18 +30,18 @@ type ListResult struct {
 
 // ListHandler handles the ListRoles query.
 type ListHandler struct {
-	repo role.RoleRepository
+	repo role.Repository
 }
 
 // NewListHandler creates a new ListHandler.
-func NewListHandler(repo role.RoleRepository) *ListHandler {
+func NewListHandler(repo role.Repository) *ListHandler {
 	return &ListHandler{repo: repo}
 }
 
 // Handle executes the list roles query.
 func (h *ListHandler) Handle(ctx context.Context, query ListQuery) (*ListResult, error) {
 	// Build params
-	params := role.RoleListParams{
+	params := role.ListParams{
 		Page:      query.Page,
 		PageSize:  query.PageSize,
 		Search:    query.Search,

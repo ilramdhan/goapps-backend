@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"buf.build/go/protovalidate"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
@@ -121,6 +122,19 @@ func SuccessResponse(message string) *commonv1.BaseResponse {
 	}
 }
 
+// parseOptionalUUID parses a proto optional string field into a *uuid.UUID.
+// Returns nil if the input is nil or not a valid UUID.
+func parseOptionalUUID(s *string) *uuid.UUID {
+	if s == nil {
+		return nil
+	}
+	id, err := uuid.Parse(*s)
+	if err != nil {
+		return nil
+	}
+	return &id
+}
+
 // domainErrorToBaseResponse maps domain errors to BaseResponse.
 func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	if err == nil {
@@ -146,11 +160,11 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	case errors.Is(err, shared.ErrAccountLocked):
 		return ForbiddenResponse(err.Error())
 	case errors.Is(err, shared.ErrTOTPRequired),
-		errors.Is(err, shared.Err2FARequired):
+		errors.Is(err, shared.ErrTwoFARequired):
 		return ErrorResponse("428", "2FA required")
 	case errors.Is(err, shared.ErrTOTPInvalid),
 		errors.Is(err, shared.ErrInvalid2FACode),
-		errors.Is(err, shared.Err2FAAlreadyEnabled):
+		errors.Is(err, shared.ErrTwoFAAlreadyEnabled):
 		return ErrorResponse("422", err.Error())
 	case errors.Is(err, shared.ErrInvalidOTP):
 		return ErrorResponse("422", err.Error())

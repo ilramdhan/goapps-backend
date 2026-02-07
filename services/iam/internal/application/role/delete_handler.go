@@ -18,11 +18,11 @@ type DeleteCommand struct {
 
 // DeleteHandler handles the DeleteRole command.
 type DeleteHandler struct {
-	repo role.RoleRepository
+	repo role.Repository
 }
 
 // NewDeleteHandler creates a new DeleteHandler.
-func NewDeleteHandler(repo role.RoleRepository) *DeleteHandler {
+func NewDeleteHandler(repo role.Repository) *DeleteHandler {
 	return &DeleteHandler{repo: repo}
 }
 

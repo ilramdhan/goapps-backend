@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 )
 
-// RoleRepository implements role.RoleRepository interface.
+// RoleRepository implements role.Repository interface.
 type RoleRepository struct {
 	db *DB
 }
@@ -146,7 +147,7 @@ func (r *RoleRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy str
 }
 
 // List lists roles with pagination.
-func (r *RoleRepository) List(ctx context.Context, params role.RoleListParams) ([]*role.Role, int64, error) {
+func (r *RoleRepository) List(ctx context.Context, params role.ListParams) ([]*role.Role, int64, error) {
 	var conditions []string
 	var args []interface{}
 	argPos := 1
@@ -185,9 +186,9 @@ func (r *RoleRepository) List(ctx context.Context, params role.RoleListParams) (
 	if params.SortBy != "" {
 		sortBy = params.SortBy
 	}
-	sortOrder := "ASC"
-	if params.SortOrder != "" && (params.SortOrder == "DESC" || params.SortOrder == "desc") {
-		sortOrder = "DESC"
+	sortOrder := sortASC
+	if params.SortOrder != "" && (params.SortOrder == sortDESC || params.SortOrder == "desc") {
+		sortOrder = sortDESC
 	}
 
 	offset := (params.Page - 1) * params.PageSize
@@ -206,7 +207,11 @@ func (r *RoleRepository) List(ctx context.Context, params role.RoleListParams) (
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list roles: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in role list")
+		}
+	}()
 
 	var roles []*role.Role
 	for rows.Next() {
@@ -310,7 +315,11 @@ func (r *RoleRepository) GetPermissions(ctx context.Context, roleID uuid.UUID) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role permissions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in role permissions")
+		}
+	}()
 
 	var permissions []*role.Permission
 	for rows.Next() {
@@ -342,7 +351,11 @@ func (r *RoleRepository) GetRolesByPermission(ctx context.Context, permissionID 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get roles by permission: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in roles by permission")
+		}
+	}()
 
 	var roles []*role.Role
 	for rows.Next() {

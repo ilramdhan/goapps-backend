@@ -26,7 +26,7 @@ type ListQuery struct {
 
 // ListResult represents the list users result.
 type ListResult struct {
-	Users       []*user.UserWithDetail
+	Users       []*user.WithDetail
 	TotalItems  int64
 	TotalPages  int32
 	CurrentPage int32

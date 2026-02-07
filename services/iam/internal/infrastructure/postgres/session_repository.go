@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/session"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
@@ -218,7 +219,7 @@ func hashToken(token string) string {
 }
 
 // ListActive lists all active sessions with pagination.
-func (r *SessionRepository) ListActive(ctx context.Context, params session.ListParams) ([]*session.SessionInfo, int64, error) {
+func (r *SessionRepository) ListActive(ctx context.Context, params session.ListParams) ([]*session.Info, int64, error) {
 	var conditions []string
 	var args []interface{}
 	argPos := 1
@@ -281,11 +282,15 @@ func (r *SessionRepository) ListActive(ctx context.Context, params session.ListP
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list sessions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in session list")
+		}
+	}()
 
-	var sessions []*session.SessionInfo
+	var sessions []*session.Info
 	for rows.Next() {
-		var s session.SessionInfo
+		var s session.Info
 		if err := rows.Scan(
 			&s.SessionID, &s.UserID, &s.Username, &s.FullName,
 			&s.DeviceInfo, &s.IPAddress, &s.ServiceName, &s.CreatedAt, &s.ExpiresAt, &s.RevokedAt,

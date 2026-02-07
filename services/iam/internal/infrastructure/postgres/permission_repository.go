@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
@@ -204,9 +205,9 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 	if params.SortBy != "" {
 		sortBy = params.SortBy
 	}
-	sortOrder := "ASC"
-	if params.SortOrder == "DESC" || params.SortOrder == "desc" {
-		sortOrder = "DESC"
+	sortOrder := sortASC
+	if strings.EqualFold(params.SortOrder, sortDESC) {
+		sortOrder = sortDESC
 	}
 
 	offset := (params.Page - 1) * params.PageSize
@@ -226,7 +227,11 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list permissions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in permission list")
+		}
+	}()
 
 	var permissions []*role.Permission
 	for rows.Next() {
@@ -301,7 +306,11 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 	if err != nil {
 		return nil, fmt.Errorf("failed to get permissions by service: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in permission modules")
+		}
+	}()
 
 	moduleMap := make(map[string][]*role.Permission)
 	var moduleOrder []string
@@ -320,7 +329,7 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 		moduleMap[row.ModuleName] = append(moduleMap[row.ModuleName], row.toDomain())
 	}
 
-	var modules []*role.ModulePermissions
+	modules := make([]*role.ModulePermissions, 0, len(moduleOrder))
 	for _, moduleName := range moduleOrder {
 		modules = append(modules, &role.ModulePermissions{
 			ModuleName:  moduleName,

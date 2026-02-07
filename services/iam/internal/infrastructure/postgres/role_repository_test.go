@@ -126,7 +126,7 @@ func TestRoleRepository_List(t *testing.T) {
 	})
 
 	// List with search filter to only pick up our test roles.
-	params := role.RoleListParams{
+	params := role.ListParams{
 		Page:     1,
 		PageSize: 10,
 		Search:   "TESTLIST_" + suffix,

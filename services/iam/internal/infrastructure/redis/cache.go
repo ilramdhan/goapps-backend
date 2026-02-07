@@ -3,6 +3,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -83,7 +84,7 @@ func (c *SessionCache) GetSession(ctx context.Context, sessionID uuid.UUID) (uui
 	key := sessionPrefix + sessionID.String()
 	val, err := c.client.Get(ctx, key).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return uuid.Nil, nil
 		}
 		return uuid.Nil, err
@@ -144,7 +145,7 @@ func (c *OTPCache) VerifyOTP(ctx context.Context, userID uuid.UUID, otp string) 
 	key := otpPrefix + userID.String()
 	stored, err := c.client.Get(ctx, key).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return false, nil
 		}
 		return false, err
@@ -170,7 +171,7 @@ func (c *OTPCache) GetResetToken(ctx context.Context, token string) (uuid.UUID, 
 	key := resetTokenPrefix + token
 	val, err := c.client.Get(ctx, key).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return uuid.Nil, nil
 		}
 		return uuid.Nil, err
@@ -209,7 +210,7 @@ func (c *RateLimitCache) GetLoginAttempts(ctx context.Context, identifier string
 	key := loginAttemptPrefix + identifier
 	val, err := c.client.Get(ctx, key).Int64()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return 0, nil
 		}
 		return 0, err

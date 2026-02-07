@@ -20,7 +20,7 @@ import (
 // Mock Repository
 // =============================================================================
 
-// MockRoleRepository is a mock implementation of role.RoleRepository.
+// MockRoleRepository is a mock implementation of role.Repository.
 type MockRoleRepository struct {
 	mock.Mock
 }
@@ -56,7 +56,7 @@ func (m *MockRoleRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy
 	return args.Error(0)
 }
 
-func (m *MockRoleRepository) List(ctx context.Context, params domainrole.RoleListParams) ([]*domainrole.Role, int64, error) {
+func (m *MockRoleRepository) List(ctx context.Context, params domainrole.ListParams) ([]*domainrole.Role, int64, error) {
 	args := m.Called(ctx, params)
 	return args.Get(0).([]*domainrole.Role), args.Get(1).(int64), args.Error(2)
 }
@@ -312,7 +312,7 @@ func TestListHandler(t *testing.T) {
 		role1 := domainrole.ReconstructRole(uuid.New(), "ADMIN", "Administrator", "desc", false, true, audit)
 		role2 := domainrole.ReconstructRole(uuid.New(), "EDITOR", "Editor", "desc", false, true, audit)
 
-		mockRepo.On("List", ctx, mock.AnythingOfType("role.RoleListParams")).Return(
+		mockRepo.On("List", ctx, mock.AnythingOfType("role.ListParams")).Return(
 			[]*domainrole.Role{role1, role2},
 			int64(2),
 			nil,
@@ -336,7 +336,7 @@ func TestListHandler(t *testing.T) {
 		handler := approle.NewListHandler(mockRepo)
 		ctx := context.Background()
 
-		mockRepo.On("List", ctx, mock.MatchedBy(func(p domainrole.RoleListParams) bool {
+		mockRepo.On("List", ctx, mock.MatchedBy(func(p domainrole.ListParams) bool {
 			return p.Page == 1 && p.PageSize == 10
 		})).Return(
 			[]*domainrole.Role{},

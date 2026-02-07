@@ -10,7 +10,7 @@ import (
 // Repository defines the interface for user persistence operations.
 type Repository interface {
 	// User CRUD
-	Create(ctx context.Context, user *User, detail *UserDetail) error
+	Create(ctx context.Context, user *User, detail *Detail) error
 	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
@@ -18,12 +18,12 @@ type Repository interface {
 	Delete(ctx context.Context, id uuid.UUID, deletedBy string) error
 
 	// User Detail
-	GetDetailByUserID(ctx context.Context, userID uuid.UUID) (*UserDetail, error)
-	UpdateDetail(ctx context.Context, detail *UserDetail) error
+	GetDetailByUserID(ctx context.Context, userID uuid.UUID) (*Detail, error)
+	UpdateDetail(ctx context.Context, detail *Detail) error
 
 	// Listing
 	List(ctx context.Context, params ListParams) ([]*User, int64, error)
-	ListWithDetails(ctx context.Context, params ListParams) ([]*UserWithDetail, int64, error)
+	ListWithDetails(ctx context.Context, params ListParams) ([]*WithDetail, int64, error)
 
 	// Bulk operations
 	ExistsByUsername(ctx context.Context, username string) (bool, error)
@@ -31,7 +31,7 @@ type Repository interface {
 	ExistsByEmployeeCode(ctx context.Context, code string) (bool, error)
 
 	// Batch
-	BatchCreate(ctx context.Context, users []*User, details []*UserDetail) (int, error)
+	BatchCreate(ctx context.Context, users []*User, details []*Detail) (int, error)
 
 	// Role and Permission operations
 	GetRolesAndPermissions(ctx context.Context, userID uuid.UUID) ([]RoleRef, []PermissionRef, error)
@@ -50,10 +50,10 @@ type PermissionRef interface {
 	Code() string
 }
 
-// UserWithDetail combines User and UserDetail for listing.
-type UserWithDetail struct {
+// WithDetail combines User and Detail for listing.
+type WithDetail struct {
 	User   *User
-	Detail *UserDetail
+	Detail *Detail
 	Roles  []RoleInfo
 }
 
@@ -81,6 +81,7 @@ type ListParams struct {
 // ActiveFilter represents the filter for active status.
 type ActiveFilter int
 
+// ActiveFilter values for filtering by active status.
 const (
 	ActiveFilterAll      ActiveFilter = 0
 	ActiveFilterActive   ActiveFilter = 1

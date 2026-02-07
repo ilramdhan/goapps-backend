@@ -17,11 +17,11 @@ type GetPermissionsQuery struct {
 
 // GetPermissionsHandler handles the GetPermissions query.
 type GetPermissionsHandler struct {
-	repo role.RoleRepository
+	repo role.Repository
 }
 
 // NewGetPermissionsHandler creates a new GetPermissionsHandler.
-func NewGetPermissionsHandler(repo role.RoleRepository) *GetPermissionsHandler {
+func NewGetPermissionsHandler(repo role.Repository) *GetPermissionsHandler {
 	return &GetPermissionsHandler{repo: repo}
 }
 

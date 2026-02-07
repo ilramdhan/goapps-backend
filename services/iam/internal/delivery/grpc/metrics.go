@@ -104,29 +104,34 @@ func MetricsInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
+const (
+	metricStatusSuccess = "success"
+	metricStatusFailure = "failure"
+)
+
 // RecordAuthOperation records an authentication operation metric.
 func RecordAuthOperation(operation string, success bool) {
-	s := "success"
+	s := metricStatusSuccess
 	if !success {
-		s = "failure"
+		s = metricStatusFailure
 	}
 	iamAuthOperationsTotal.WithLabelValues(operation, s).Inc()
 }
 
 // RecordUserOperation records a user operation metric.
 func RecordUserOperation(operation string, success bool) {
-	s := "success"
+	s := metricStatusSuccess
 	if !success {
-		s = "failure"
+		s = metricStatusFailure
 	}
 	iamUserOperationsTotal.WithLabelValues(operation, s).Inc()
 }
 
 // RecordRoleOperation records a role operation metric.
 func RecordRoleOperation(operation string, success bool) {
-	s := "success"
+	s := metricStatusSuccess
 	if !success {
-		s = "failure"
+		s = metricStatusFailure
 	}
 	iamRoleOperationsTotal.WithLabelValues(operation, s).Inc()
 }

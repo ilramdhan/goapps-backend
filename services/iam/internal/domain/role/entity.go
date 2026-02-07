@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 )
 
@@ -85,15 +86,31 @@ func ReconstructRole(id uuid.UUID, code, name, description string, isSystem, isA
 	}
 }
 
-func (r *Role) ID() uuid.UUID           { return r.id }
-func (r *Role) Code() string            { return r.code }
-func (r *Role) Name() string            { return r.name }
-func (r *Role) Description() string     { return r.description }
-func (r *Role) IsSystem() bool          { return r.isSystem }
-func (r *Role) IsActive() bool          { return r.isActive }
-func (r *Role) Audit() shared.AuditInfo { return r.audit }
-func (r *Role) IsDeleted() bool         { return r.audit.IsDeleted() }
+// ID returns the role identifier.
+func (r *Role) ID() uuid.UUID { return r.id }
 
+// Code returns the role code.
+func (r *Role) Code() string { return r.code }
+
+// Name returns the role name.
+func (r *Role) Name() string { return r.name }
+
+// Description returns the role description.
+func (r *Role) Description() string { return r.description }
+
+// IsSystem returns whether the role is a system role.
+func (r *Role) IsSystem() bool { return r.isSystem }
+
+// IsActive returns whether the role is active.
+func (r *Role) IsActive() bool { return r.isActive }
+
+// Audit returns the audit information.
+func (r *Role) Audit() shared.AuditInfo { return r.audit }
+
+// IsDeleted returns whether the role has been soft-deleted.
+func (r *Role) IsDeleted() bool { return r.audit.IsDeleted() }
+
+// Update updates mutable role fields.
 func (r *Role) Update(name, description *string, isActive *bool, updatedBy string) error {
 	if r.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -114,6 +131,7 @@ func (r *Role) Update(name, description *string, isActive *bool, updatedBy strin
 	return nil
 }
 
+// SoftDelete marks the role as soft-deleted.
 func (r *Role) SoftDelete(deletedBy string) error {
 	if r.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -186,16 +204,34 @@ func ReconstructPermission(id uuid.UUID, code, name, description, serviceName, m
 	}
 }
 
-func (p *Permission) ID() uuid.UUID           { return p.id }
-func (p *Permission) Code() string            { return p.code }
-func (p *Permission) Name() string            { return p.name }
-func (p *Permission) Description() string     { return p.description }
-func (p *Permission) ServiceName() string     { return p.serviceName }
-func (p *Permission) ModuleName() string      { return p.moduleName }
-func (p *Permission) ActionType() string      { return p.actionType }
-func (p *Permission) IsActive() bool          { return p.isActive }
+// ID returns the permission identifier.
+func (p *Permission) ID() uuid.UUID { return p.id }
+
+// Code returns the permission code.
+func (p *Permission) Code() string { return p.code }
+
+// Name returns the permission name.
+func (p *Permission) Name() string { return p.name }
+
+// Description returns the permission description.
+func (p *Permission) Description() string { return p.description }
+
+// ServiceName returns the service name.
+func (p *Permission) ServiceName() string { return p.serviceName }
+
+// ModuleName returns the module name.
+func (p *Permission) ModuleName() string { return p.moduleName }
+
+// ActionType returns the action type.
+func (p *Permission) ActionType() string { return p.actionType }
+
+// IsActive returns whether the permission is active.
+func (p *Permission) IsActive() bool { return p.isActive }
+
+// Audit returns the audit information.
 func (p *Permission) Audit() shared.AuditInfo { return p.audit }
 
+// Update updates mutable permission fields.
 func (p *Permission) Update(name, description *string, isActive *bool, updatedBy string) error {
 	if name != nil {
 		if *name == "" {

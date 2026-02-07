@@ -35,16 +35,16 @@ var (
 	ErrTokenExpired       = errors.New("token has expired")
 
 	// 2FA errors
-	Err2FARequired       = errors.New("2FA code required")
-	Err2FAAlreadyEnabled = errors.New("2FA is already enabled")
-	Err2FANotEnabled     = errors.New("2FA is not enabled")
-	ErrInvalid2FACode    = errors.New("invalid 2FA code")
+	ErrTwoFARequired       = errors.New("2FA code required")
+	ErrTwoFAAlreadyEnabled = errors.New("2FA is already enabled")
+	ErrTwoFANotEnabled     = errors.New("2FA is not enabled")
+	ErrInvalid2FACode      = errors.New("invalid 2FA code")
 
 	// OTP errors
 	ErrInvalidOTP = errors.New("invalid OTP code")
 
 	// Legacy aliases for compatibility
-	ErrTOTPRequired = Err2FARequired
+	ErrTOTPRequired = ErrTwoFARequired
 	ErrTOTPInvalid  = ErrInvalid2FACode
 )
 

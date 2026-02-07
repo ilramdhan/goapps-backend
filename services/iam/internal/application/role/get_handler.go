@@ -17,11 +17,11 @@ type GetQuery struct {
 
 // GetHandler handles the GetRole query.
 type GetHandler struct {
-	repo role.RoleRepository
+	repo role.Repository
 }
 
 // NewGetHandler creates a new GetHandler.
-func NewGetHandler(repo role.RoleRepository) *GetHandler {
+func NewGetHandler(repo role.Repository) *GetHandler {
 	return &GetHandler{repo: repo}
 }
 

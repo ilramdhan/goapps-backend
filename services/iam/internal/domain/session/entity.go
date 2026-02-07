@@ -61,16 +61,32 @@ func ReconstructSession(
 	}
 }
 
-// Getters
-func (s *Session) ID() uuid.UUID            { return s.id }
-func (s *Session) UserID() uuid.UUID        { return s.userID }
+// ID returns the session identifier.
+func (s *Session) ID() uuid.UUID { return s.id }
+
+// UserID returns the user identifier.
+func (s *Session) UserID() uuid.UUID { return s.userID }
+
+// RefreshTokenHash returns the refresh token hash.
 func (s *Session) RefreshTokenHash() string { return s.refreshTokenHash }
-func (s *Session) DeviceInfo() string       { return s.deviceInfo }
-func (s *Session) IPAddress() string        { return s.ipAddress }
-func (s *Session) ServiceName() string      { return s.serviceName }
-func (s *Session) ExpiresAt() time.Time     { return s.expiresAt }
-func (s *Session) CreatedAt() time.Time     { return s.createdAt }
-func (s *Session) RevokedAt() *time.Time    { return s.revokedAt }
+
+// DeviceInfo returns the device information.
+func (s *Session) DeviceInfo() string { return s.deviceInfo }
+
+// IPAddress returns the IP address.
+func (s *Session) IPAddress() string { return s.ipAddress }
+
+// ServiceName returns the service name.
+func (s *Session) ServiceName() string { return s.serviceName }
+
+// ExpiresAt returns the expiration time.
+func (s *Session) ExpiresAt() time.Time { return s.expiresAt }
+
+// CreatedAt returns the creation time.
+func (s *Session) CreatedAt() time.Time { return s.createdAt }
+
+// RevokedAt returns the revocation time.
+func (s *Session) RevokedAt() *time.Time { return s.revokedAt }
 
 // IsActive returns true if the session is not revoked and not expired.
 func (s *Session) IsActive() bool {
@@ -110,8 +126,8 @@ func hashToken(token string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// SessionInfo contains minimal session information for display.
-type SessionInfo struct {
+// Info contains minimal session information for display.
+type Info struct {
 	SessionID   uuid.UUID
 	UserID      uuid.UUID
 	Username    string

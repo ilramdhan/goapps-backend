@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/audit"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
@@ -74,56 +75,7 @@ func (r *AuditRepository) GetByID(ctx context.Context, id uuid.UUID) (*audit.Log
 
 // List lists audit logs with filters.
 func (r *AuditRepository) List(ctx context.Context, params audit.ListParams) ([]*audit.Log, int64, error) {
-	var conditions []string
-	var args []interface{}
-	argPos := 1
-
-	if params.EventType != "" {
-		conditions = append(conditions, fmt.Sprintf("event_type = $%d", argPos))
-		args = append(args, params.EventType)
-		argPos++
-	}
-
-	if params.UserID != nil {
-		conditions = append(conditions, fmt.Sprintf("user_id = $%d", argPos))
-		args = append(args, *params.UserID)
-		argPos++
-	}
-
-	if params.TableName != "" {
-		conditions = append(conditions, fmt.Sprintf("table_name = $%d", argPos))
-		args = append(args, params.TableName)
-		argPos++
-	}
-
-	if params.ServiceName != "" {
-		conditions = append(conditions, fmt.Sprintf("service_name = $%d", argPos))
-		args = append(args, params.ServiceName)
-		argPos++
-	}
-
-	if params.DateFrom != nil {
-		conditions = append(conditions, fmt.Sprintf("performed_at >= $%d", argPos))
-		args = append(args, *params.DateFrom)
-		argPos++
-	}
-
-	if params.DateTo != nil {
-		conditions = append(conditions, fmt.Sprintf("performed_at <= $%d", argPos))
-		args = append(args, *params.DateTo)
-		argPos++
-	}
-
-	if params.Search != "" {
-		conditions = append(conditions, fmt.Sprintf("(username ILIKE $%d OR full_name ILIKE $%d)", argPos, argPos))
-		args = append(args, "%"+params.Search+"%")
-		argPos++
-	}
-
-	whereClause := "1=1"
-	if len(conditions) > 0 {
-		whereClause = strings.Join(conditions, " AND ")
-	}
+	whereClause, args, argPos := buildAuditListFilters(params)
 
 	// Count total
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM audit_logs WHERE %s", whereClause)
@@ -137,9 +89,9 @@ func (r *AuditRepository) List(ctx context.Context, params audit.ListParams) ([]
 	if params.SortBy != "" {
 		sortBy = params.SortBy
 	}
-	sortOrder := "DESC"
-	if params.SortOrder != "" && (params.SortOrder == "ASC" || params.SortOrder == "asc") {
-		sortOrder = "ASC"
+	sortOrder := sortDESC
+	if strings.EqualFold(params.SortOrder, sortASC) {
+		sortOrder = sortASC
 	}
 
 	offset := (params.Page - 1) * params.PageSize
@@ -158,7 +110,11 @@ func (r *AuditRepository) List(ctx context.Context, params audit.ListParams) ([]
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list audit logs: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in audit log list")
+		}
+	}()
 
 	var logs []*audit.Log
 	for rows.Next() {
@@ -176,69 +132,63 @@ func (r *AuditRepository) List(ctx context.Context, params audit.ListParams) ([]
 	return logs, total, nil
 }
 
+func buildAuditListFilters(params audit.ListParams) (string, []interface{}, int) {
+	var conditions []string
+	var args []interface{}
+	argPos := 1
+
+	if params.EventType != "" {
+		conditions = append(conditions, fmt.Sprintf("event_type = $%d", argPos))
+		args = append(args, params.EventType)
+		argPos++
+	}
+	if params.UserID != nil {
+		conditions = append(conditions, fmt.Sprintf("user_id = $%d", argPos))
+		args = append(args, *params.UserID)
+		argPos++
+	}
+	if params.TableName != "" {
+		conditions = append(conditions, fmt.Sprintf("table_name = $%d", argPos))
+		args = append(args, params.TableName)
+		argPos++
+	}
+	if params.ServiceName != "" {
+		conditions = append(conditions, fmt.Sprintf("service_name = $%d", argPos))
+		args = append(args, params.ServiceName)
+		argPos++
+	}
+	if params.DateFrom != nil {
+		conditions = append(conditions, fmt.Sprintf("performed_at >= $%d", argPos))
+		args = append(args, *params.DateFrom)
+		argPos++
+	}
+	if params.DateTo != nil {
+		conditions = append(conditions, fmt.Sprintf("performed_at <= $%d", argPos))
+		args = append(args, *params.DateTo)
+		argPos++
+	}
+	if params.Search != "" {
+		conditions = append(conditions, fmt.Sprintf("(username ILIKE $%d OR full_name ILIKE $%d)", argPos, argPos))
+		args = append(args, "%"+params.Search+"%")
+		argPos++
+	}
+
+	whereClause := "1=1"
+	if len(conditions) > 0 {
+		whereClause = strings.Join(conditions, " AND ")
+	}
+	return whereClause, args, argPos
+}
+
 // GetSummary retrieves audit statistics for a time range.
 func (r *AuditRepository) GetSummary(ctx context.Context, timeRange string, serviceName string) (*audit.Summary, error) {
-	// Determine time range
-	var since time.Time
-	switch timeRange {
-	case "24h":
-		since = time.Now().Add(-24 * time.Hour)
-	case "7d":
-		since = time.Now().Add(-7 * 24 * time.Hour)
-	case "30d":
-		since = time.Now().Add(-30 * 24 * time.Hour)
-	default:
-		since = time.Now().Add(-24 * time.Hour)
-	}
+	since := parseTimeRange(timeRange)
 
-	var args []interface{}
-	args = append(args, since)
-	serviceCondition := ""
-	if serviceName != "" {
-		serviceCondition = " AND service_name = $2"
-		args = append(args, serviceName)
-	}
+	args, serviceCondition := buildServiceFilter(since, serviceName)
 
-	// Get counts by event type
-	query := fmt.Sprintf(`
-		SELECT event_type, COUNT(*) as count
-		FROM audit_logs
-		WHERE performed_at >= $1%s
-		GROUP BY event_type
-	`, serviceCondition)
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	summary, err := r.getEventCounts(ctx, serviceCondition, args)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get summary: %w", err)
-	}
-	defer rows.Close()
-
-	summary := &audit.Summary{}
-	for rows.Next() {
-		var eventType string
-		var count int64
-		if err := rows.Scan(&eventType, &count); err != nil {
-			return nil, err
-		}
-		summary.TotalEvents += count
-		switch eventType {
-		case string(audit.EventTypeLogin):
-			summary.LoginCount = count
-		case string(audit.EventTypeLoginFailed):
-			summary.LoginFailedCount = count
-		case string(audit.EventTypeLogout):
-			summary.LogoutCount = count
-		case string(audit.EventTypeCreate):
-			summary.CreateCount = count
-		case string(audit.EventTypeUpdate):
-			summary.UpdateCount = count
-		case string(audit.EventTypeDelete):
-			summary.DeleteCount = count
-		case string(audit.EventTypeExport):
-			summary.ExportCount = count
-		case string(audit.EventTypeImport):
-			summary.ImportCount = count
-		}
+		return nil, err
 	}
 
 	// Get top users
@@ -255,7 +205,11 @@ func (r *AuditRepository) GetSummary(ctx context.Context, timeRange string, serv
 	if err != nil {
 		return nil, fmt.Errorf("failed to get top users: %w", err)
 	}
-	defer userRows.Close()
+	defer func() {
+		if err := userRows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close userRows in audit summary")
+		}
+	}()
 
 	for userRows.Next() {
 		var activity audit.UserActivity
@@ -278,7 +232,11 @@ func (r *AuditRepository) GetSummary(ctx context.Context, timeRange string, serv
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hourly counts: %w", err)
 	}
-	defer hourlyRows.Close()
+	defer func() {
+		if err := hourlyRows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close hourlyRows in audit summary")
+		}
+	}()
 
 	for hourlyRows.Next() {
 		var hourly audit.HourlyCount
@@ -289,6 +247,79 @@ func (r *AuditRepository) GetSummary(ctx context.Context, timeRange string, serv
 	}
 
 	return summary, nil
+}
+
+func parseTimeRange(timeRange string) time.Time {
+	switch timeRange {
+	case "7d":
+		return time.Now().Add(-7 * 24 * time.Hour)
+	case "30d":
+		return time.Now().Add(-30 * 24 * time.Hour)
+	default:
+		return time.Now().Add(-24 * time.Hour)
+	}
+}
+
+func buildServiceFilter(since time.Time, serviceName string) ([]interface{}, string) {
+	args := []interface{}{since}
+	serviceCondition := ""
+	if serviceName != "" {
+		serviceCondition = " AND service_name = $2"
+		args = append(args, serviceName)
+	}
+	return args, serviceCondition
+}
+
+func (r *AuditRepository) getEventCounts(ctx context.Context, serviceCondition string, args []interface{}) (*audit.Summary, error) {
+	query := fmt.Sprintf(`
+		SELECT event_type, COUNT(*) as count
+		FROM audit_logs
+		WHERE performed_at >= $1%s
+		GROUP BY event_type
+	`, serviceCondition)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get summary: %w", err)
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in audit summary")
+		}
+	}()
+
+	summary := &audit.Summary{}
+	for rows.Next() {
+		var eventType string
+		var count int64
+		if err := rows.Scan(&eventType, &count); err != nil {
+			return nil, err
+		}
+		summary.TotalEvents += count
+		assignEventCount(summary, eventType, count)
+	}
+	return summary, nil
+}
+
+func assignEventCount(summary *audit.Summary, eventType string, count int64) {
+	switch eventType {
+	case string(audit.EventTypeLogin):
+		summary.LoginCount = count
+	case string(audit.EventTypeLoginFailed):
+		summary.LoginFailedCount = count
+	case string(audit.EventTypeLogout):
+		summary.LogoutCount = count
+	case string(audit.EventTypeCreate):
+		summary.CreateCount = count
+	case string(audit.EventTypeUpdate):
+		summary.UpdateCount = count
+	case string(audit.EventTypeDelete):
+		summary.DeleteCount = count
+	case string(audit.EventTypeExport):
+		summary.ExportCount = count
+	case string(audit.EventTypeImport):
+		summary.ImportCount = count
+	}
 }
 
 // Helper struct for scanning

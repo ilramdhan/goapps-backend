@@ -7,14 +7,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// RoleRepository defines the interface for role persistence operations.
-type RoleRepository interface {
+// Repository defines the interface for role persistence operations.
+type Repository interface {
 	Create(ctx context.Context, role *Role) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Role, error)
 	GetByCode(ctx context.Context, code string) (*Role, error)
 	Update(ctx context.Context, role *Role) error
 	Delete(ctx context.Context, id uuid.UUID, deletedBy string) error
-	List(ctx context.Context, params RoleListParams) ([]*Role, int64, error)
+	List(ctx context.Context, params ListParams) ([]*Role, int64, error)
 	ExistsByCode(ctx context.Context, code string) (bool, error)
 	BatchCreate(ctx context.Context, roles []*Role) (int, error)
 
@@ -56,8 +56,8 @@ type UserPermissionRepository interface {
 	GetEffectivePermissions(ctx context.Context, userID uuid.UUID) ([]*Permission, error) // Roles + Direct
 }
 
-// RoleListParams contains parameters for listing roles.
-type RoleListParams struct {
+// ListParams contains parameters for listing roles.
+type ListParams struct {
 	Page      int
 	PageSize  int
 	Search    string

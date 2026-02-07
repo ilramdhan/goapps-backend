@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
 )
@@ -75,7 +76,11 @@ func (r *UserPermissionRepository) GetUserDirectPermissions(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user direct permissions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in user direct permissions")
+		}
+	}()
 
 	var permissions []*role.Permission
 	for rows.Next() {
@@ -117,7 +122,11 @@ func (r *UserPermissionRepository) GetEffectivePermissions(ctx context.Context, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get effective permissions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in effective permissions")
+		}
+	}()
 
 	var permissions []*role.Permission
 	for rows.Next() {

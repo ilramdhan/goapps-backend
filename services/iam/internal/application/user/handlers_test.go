@@ -25,7 +25,7 @@ type MockUserRepo struct {
 	mock.Mock
 }
 
-func (m *MockUserRepo) Create(ctx context.Context, u *user.User, detail *user.UserDetail) error {
+func (m *MockUserRepo) Create(ctx context.Context, u *user.User, detail *user.Detail) error {
 	args := m.Called(ctx, u, detail)
 	return args.Error(0)
 }
@@ -64,15 +64,15 @@ func (m *MockUserRepo) Delete(ctx context.Context, id uuid.UUID, deletedBy strin
 	return args.Error(0)
 }
 
-func (m *MockUserRepo) GetDetailByUserID(ctx context.Context, userID uuid.UUID) (*user.UserDetail, error) {
+func (m *MockUserRepo) GetDetailByUserID(ctx context.Context, userID uuid.UUID) (*user.Detail, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*user.UserDetail), args.Error(1)
+	return args.Get(0).(*user.Detail), args.Error(1)
 }
 
-func (m *MockUserRepo) UpdateDetail(ctx context.Context, detail *user.UserDetail) error {
+func (m *MockUserRepo) UpdateDetail(ctx context.Context, detail *user.Detail) error {
 	args := m.Called(ctx, detail)
 	return args.Error(0)
 }
@@ -82,9 +82,9 @@ func (m *MockUserRepo) List(ctx context.Context, params user.ListParams) ([]*use
 	return args.Get(0).([]*user.User), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockUserRepo) ListWithDetails(ctx context.Context, params user.ListParams) ([]*user.UserWithDetail, int64, error) {
+func (m *MockUserRepo) ListWithDetails(ctx context.Context, params user.ListParams) ([]*user.WithDetail, int64, error) {
 	args := m.Called(ctx, params)
-	return args.Get(0).([]*user.UserWithDetail), args.Get(1).(int64), args.Error(2)
+	return args.Get(0).([]*user.WithDetail), args.Get(1).(int64), args.Error(2)
 }
 
 func (m *MockUserRepo) ExistsByUsername(ctx context.Context, username string) (bool, error) {
@@ -102,7 +102,7 @@ func (m *MockUserRepo) ExistsByEmployeeCode(ctx context.Context, code string) (b
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockUserRepo) BatchCreate(ctx context.Context, users []*user.User, details []*user.UserDetail) (int, error) {
+func (m *MockUserRepo) BatchCreate(ctx context.Context, users []*user.User, details []*user.Detail) (int, error) {
 	args := m.Called(ctx, users, details)
 	return args.Int(0), args.Error(1)
 }
@@ -219,7 +219,7 @@ func TestCreateHandler_Handle(t *testing.T) {
 		mockRepo.On("ExistsByUsername", ctx, "johndoe").Return(false, nil)
 		mockRepo.On("ExistsByEmail", ctx, "johndoe@example.com").Return(false, nil)
 		mockRepo.On("ExistsByEmployeeCode", ctx, "EMP001").Return(false, nil)
-		mockRepo.On("Create", ctx, mock.AnythingOfType("*user.User"), mock.AnythingOfType("*user.UserDetail")).Return(nil)
+		mockRepo.On("Create", ctx, mock.AnythingOfType("*user.User"), mock.AnythingOfType("*user.Detail")).Return(nil)
 
 		result, err := handler.Handle(ctx, cmd)
 
@@ -393,7 +393,7 @@ func TestListHandler_Handle(t *testing.T) {
 		u1 := newDummyUser(id1)
 		u2 := newDummyUser(id2)
 
-		usersWithDetails := []*user.UserWithDetail{
+		usersWithDetails := []*user.WithDetail{
 			{User: u1},
 			{User: u2},
 		}

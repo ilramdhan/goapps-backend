@@ -18,11 +18,11 @@ type CreateCommand struct {
 
 // CreateHandler handles the CreateRole command.
 type CreateHandler struct {
-	repo role.RoleRepository
+	repo role.Repository
 }
 
 // NewCreateHandler creates a new CreateHandler.
-func NewCreateHandler(repo role.RoleRepository) *CreateHandler {
+func NewCreateHandler(repo role.Repository) *CreateHandler {
 	return &CreateHandler{repo: repo}
 }
 

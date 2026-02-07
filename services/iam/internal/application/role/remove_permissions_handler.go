@@ -18,11 +18,11 @@ type RemovePermissionsCommand struct {
 
 // RemovePermissionsHandler handles the RemovePermissions command.
 type RemovePermissionsHandler struct {
-	repo role.RoleRepository
+	repo role.Repository
 }
 
 // NewRemovePermissionsHandler creates a new RemovePermissionsHandler.
-func NewRemovePermissionsHandler(repo role.RoleRepository) *RemovePermissionsHandler {
+func NewRemovePermissionsHandler(repo role.Repository) *RemovePermissionsHandler {
 	return &RemovePermissionsHandler{repo: repo}
 }
 

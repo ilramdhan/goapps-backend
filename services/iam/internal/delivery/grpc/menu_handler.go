@@ -6,11 +6,13 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/menu"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
+	"github.com/mutugading/goapps-backend/services/iam/pkg/safeconv"
 )
 
 // MenuHandler implements iamv1.MenuServiceServer.
@@ -38,14 +40,14 @@ func (h *MenuHandler) CreateMenu(ctx context.Context, req *iamv1.CreateMenuReque
 	if req.ParentId != nil && *req.ParentId != "" {
 		id, err := uuid.Parse(*req.ParentId)
 		if err != nil {
-			return &iamv1.CreateMenuResponse{Base: ErrorResponse("400", "invalid parent_id format")}, nil
+			return &iamv1.CreateMenuResponse{Base: ErrorResponse("400", "invalid parent_id format")}, nil //nolint:nilerr // error returned in response body
 		}
 		parentID = &id
 	}
 
 	exists, err := h.menuRepo.ExistsByCode(ctx, req.GetMenuCode())
 	if err != nil {
-		return &iamv1.CreateMenuResponse{Base: InternalErrorResponse(fmt.Sprintf("failed to check code: %v", err))}, nil
+		return &iamv1.CreateMenuResponse{Base: InternalErrorResponse(fmt.Sprintf("failed to check code: %v", err))}, nil //nolint:nilerr // error returned in response body
 	}
 	if exists {
 		return &iamv1.CreateMenuResponse{Base: ConflictResponse("menu code already exists")}, nil
@@ -64,11 +66,11 @@ func (h *MenuHandler) CreateMenu(ctx context.Context, req *iamv1.CreateMenuReque
 		"system",
 	)
 	if err != nil {
-		return &iamv1.CreateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.CreateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	if err := h.menuRepo.Create(ctx, m); err != nil {
-		return &iamv1.CreateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.CreateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	if len(req.GetPermissionIds()) > 0 {
@@ -78,7 +80,9 @@ func (h *MenuHandler) CreateMenu(ctx context.Context, req *iamv1.CreateMenuReque
 				permIDs = append(permIDs, id)
 			}
 		}
-		_ = h.menuRepo.AssignPermissions(ctx, m.ID(), permIDs, "system")
+		if err := h.menuRepo.AssignPermissions(ctx, m.ID(), permIDs, "system"); err != nil {
+			log.Warn().Err(err).Str("menu_id", m.ID().String()).Msg("failed to assign permissions during menu creation")
+		}
 	}
 
 	return &iamv1.CreateMenuResponse{
@@ -99,15 +103,18 @@ func (h *MenuHandler) GetMenu(ctx context.Context, req *iamv1.GetMenuRequest) (*
 
 	id, err := uuid.Parse(req.GetMenuId())
 	if err != nil {
-		return &iamv1.GetMenuResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil
+		return &iamv1.GetMenuResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	m, err := h.menuRepo.GetByID(ctx, id)
 	if err != nil {
-		return &iamv1.GetMenuResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.GetMenuResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
-	perms, _ := h.menuRepo.GetPermissions(ctx, id)
+	perms, err := h.menuRepo.GetPermissions(ctx, id)
+	if err != nil {
+		log.Warn().Err(err).Str("menu_id", id.String()).Msg("failed to get permissions for menu")
+	}
 
 	return &iamv1.GetMenuResponse{
 		Base:                SuccessResponse("Menu retrieved successfully"),
@@ -124,12 +131,12 @@ func (h *MenuHandler) UpdateMenu(ctx context.Context, req *iamv1.UpdateMenuReque
 
 	id, err := uuid.Parse(req.GetMenuId())
 	if err != nil {
-		return &iamv1.UpdateMenuResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil
+		return &iamv1.UpdateMenuResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	m, err := h.menuRepo.GetByID(ctx, id)
 	if err != nil {
-		return &iamv1.UpdateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.UpdateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	if err := m.Update(
@@ -141,11 +148,11 @@ func (h *MenuHandler) UpdateMenu(ctx context.Context, req *iamv1.UpdateMenuReque
 		req.IsActive,
 		"system",
 	); err != nil {
-		return &iamv1.UpdateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.UpdateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	if err := h.menuRepo.Update(ctx, m); err != nil {
-		return &iamv1.UpdateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.UpdateMenuResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.UpdateMenuResponse{
@@ -162,19 +169,19 @@ func (h *MenuHandler) DeleteMenu(ctx context.Context, req *iamv1.DeleteMenuReque
 
 	id, err := uuid.Parse(req.GetMenuId())
 	if err != nil {
-		return &iamv1.DeleteMenuResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil
+		return &iamv1.DeleteMenuResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	hasChildren, err := h.menuRepo.HasChildren(ctx, id)
 	if err != nil {
-		return &iamv1.DeleteMenuResponse{Base: InternalErrorResponse(fmt.Sprintf("failed to check children: %v", err))}, nil
+		return &iamv1.DeleteMenuResponse{Base: InternalErrorResponse(fmt.Sprintf("failed to check children: %v", err))}, nil //nolint:nilerr // error returned in response body
 	}
 	if hasChildren {
 		return &iamv1.DeleteMenuResponse{Base: ErrorResponse("409", "cannot delete menu with children")}, nil
 	}
 
 	if err := h.menuRepo.Delete(ctx, id, "system"); err != nil {
-		return &iamv1.DeleteMenuResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.DeleteMenuResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.DeleteMenuResponse{
@@ -208,7 +215,7 @@ func (h *MenuHandler) ListMenus(ctx context.Context, req *iamv1.ListMenusRequest
 
 	menus, total, err := h.menuRepo.List(ctx, params)
 	if err != nil {
-		return &iamv1.ListMenusResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.ListMenusResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	data := make([]*iamv1.Menu, len(menus))
@@ -216,14 +223,14 @@ func (h *MenuHandler) ListMenus(ctx context.Context, req *iamv1.ListMenusRequest
 		data[i] = toMenuProto(m)
 	}
 
-	totalPages := int32((total + int64(pageSize) - 1) / int64(pageSize))
+	totalPages := safeconv.Int64ToInt32((total + int64(pageSize) - 1) / int64(pageSize))
 
 	return &iamv1.ListMenusResponse{
 		Base: SuccessResponse("Menus listed successfully"),
 		Data: data,
 		Pagination: &commonv1.PaginationResponse{
-			CurrentPage: int32(page),
-			PageSize:    int32(pageSize),
+			CurrentPage: safeconv.IntToInt32(page),
+			PageSize:    safeconv.IntToInt32(pageSize),
 			TotalItems:  total,
 			TotalPages:  totalPages,
 		},
@@ -240,7 +247,7 @@ func (h *MenuHandler) GetMenuTree(ctx context.Context, req *iamv1.GetMenuTreeReq
 
 	tree, err := h.menuRepo.GetTreeForUser(ctx, userID, req.GetServiceName())
 	if err != nil {
-		return &iamv1.GetMenuTreeResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.GetMenuTreeResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.GetMenuTreeResponse{
@@ -257,7 +264,7 @@ func (h *MenuHandler) GetFullMenuTree(ctx context.Context, req *iamv1.GetFullMen
 
 	tree, err := h.menuRepo.GetTree(ctx, req.GetServiceName(), req.GetIncludeInactive(), req.GetIncludeHidden())
 	if err != nil {
-		return &iamv1.GetFullMenuTreeResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.GetFullMenuTreeResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.GetFullMenuTreeResponse{
@@ -274,7 +281,7 @@ func (h *MenuHandler) AssignMenuPermissions(ctx context.Context, req *iamv1.Assi
 
 	menuID, err := uuid.Parse(req.GetMenuId())
 	if err != nil {
-		return &iamv1.AssignMenuPermissionsResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil
+		return &iamv1.AssignMenuPermissionsResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	permIDs := make([]uuid.UUID, 0, len(req.GetPermissionIds()))
@@ -285,7 +292,7 @@ func (h *MenuHandler) AssignMenuPermissions(ctx context.Context, req *iamv1.Assi
 	}
 
 	if err := h.menuRepo.AssignPermissions(ctx, menuID, permIDs, "system"); err != nil {
-		return &iamv1.AssignMenuPermissionsResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.AssignMenuPermissionsResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.AssignMenuPermissionsResponse{
@@ -301,7 +308,7 @@ func (h *MenuHandler) RemoveMenuPermissions(ctx context.Context, req *iamv1.Remo
 
 	menuID, err := uuid.Parse(req.GetMenuId())
 	if err != nil {
-		return &iamv1.RemoveMenuPermissionsResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil
+		return &iamv1.RemoveMenuPermissionsResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	permIDs := make([]uuid.UUID, 0, len(req.GetPermissionIds()))
@@ -312,7 +319,7 @@ func (h *MenuHandler) RemoveMenuPermissions(ctx context.Context, req *iamv1.Remo
 	}
 
 	if err := h.menuRepo.RemovePermissions(ctx, menuID, permIDs); err != nil {
-		return &iamv1.RemoveMenuPermissionsResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.RemoveMenuPermissionsResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.RemoveMenuPermissionsResponse{
@@ -328,12 +335,12 @@ func (h *MenuHandler) GetMenuPermissions(ctx context.Context, req *iamv1.GetMenu
 
 	menuID, err := uuid.Parse(req.GetMenuId())
 	if err != nil {
-		return &iamv1.GetMenuPermissionsResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil
+		return &iamv1.GetMenuPermissionsResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
 	}
 
 	perms, err := h.menuRepo.GetPermissions(ctx, menuID)
 	if err != nil {
-		return &iamv1.GetMenuPermissionsResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.GetMenuPermissionsResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.GetMenuPermissionsResponse{
@@ -352,7 +359,7 @@ func (h *MenuHandler) ReorderMenus(ctx context.Context, req *iamv1.ReorderMenusR
 	if req.ParentId != nil && *req.ParentId != "" {
 		id, err := uuid.Parse(*req.ParentId)
 		if err != nil {
-			return &iamv1.ReorderMenusResponse{Base: ErrorResponse("400", "invalid parent_id format")}, nil
+			return &iamv1.ReorderMenusResponse{Base: ErrorResponse("400", "invalid parent_id format")}, nil //nolint:nilerr // error returned in response body
 		}
 		parentID = &id
 	}
@@ -365,7 +372,7 @@ func (h *MenuHandler) ReorderMenus(ctx context.Context, req *iamv1.ReorderMenusR
 	}
 
 	if err := h.menuRepo.Reorder(ctx, parentID, menuIDs); err != nil {
-		return &iamv1.ReorderMenusResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &iamv1.ReorderMenusResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}
 
 	return &iamv1.ReorderMenusResponse{
@@ -411,15 +418,15 @@ func toMenuProto(m *menu.Menu) *iamv1.Menu {
 		MenuUrl:     strPtr(m.URL()),
 		IconName:    m.IconName(),
 		ServiceName: m.ServiceName(),
-		MenuLevel:   iamv1.MenuLevel(m.Level()),
-		SortOrder:   int32(m.SortOrder()),
+		MenuLevel:   iamv1.MenuLevel(safeconv.IntToInt32(m.Level())),
+		SortOrder:   safeconv.IntToInt32(m.SortOrder()),
 		IsVisible:   m.IsVisible(),
 		IsActive:    m.IsActive(),
 		Audit:       toAuditProto(m.Audit()),
 	}
 }
 
-func toMenuWithChildrenProtos(items []*menu.MenuWithChildren) []*iamv1.MenuWithChildren {
+func toMenuWithChildrenProtos(items []*menu.WithChildren) []*iamv1.MenuWithChildren {
 	result := make([]*iamv1.MenuWithChildren, len(items))
 	for i, item := range items {
 		result[i] = &iamv1.MenuWithChildren{

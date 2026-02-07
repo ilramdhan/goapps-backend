@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 )
 
@@ -71,14 +72,28 @@ func ReconstructCompany(id uuid.UUID, code, name, description string, isActive b
 	}
 }
 
-func (c *Company) ID() uuid.UUID           { return c.id }
-func (c *Company) Code() string            { return c.code }
-func (c *Company) Name() string            { return c.name }
-func (c *Company) Description() string     { return c.description }
-func (c *Company) IsActive() bool          { return c.isActive }
-func (c *Company) Audit() shared.AuditInfo { return c.audit }
-func (c *Company) IsDeleted() bool         { return c.audit.IsDeleted() }
+// ID returns the company identifier.
+func (c *Company) ID() uuid.UUID { return c.id }
 
+// Code returns the company code.
+func (c *Company) Code() string { return c.code }
+
+// Name returns the company name.
+func (c *Company) Name() string { return c.name }
+
+// Description returns the company description.
+func (c *Company) Description() string { return c.description }
+
+// IsActive returns whether the company is active.
+func (c *Company) IsActive() bool { return c.isActive }
+
+// Audit returns the company audit information.
+func (c *Company) Audit() shared.AuditInfo { return c.audit }
+
+// IsDeleted returns whether the company has been soft-deleted.
+func (c *Company) IsDeleted() bool { return c.audit.IsDeleted() }
+
+// Update updates the company fields.
 func (c *Company) Update(name, description *string, isActive *bool, updatedBy string) error {
 	if c.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -99,6 +114,7 @@ func (c *Company) Update(name, description *string, isActive *bool, updatedBy st
 	return nil
 }
 
+// SoftDelete marks the company as deleted.
 func (c *Company) SoftDelete(deletedBy string) error {
 	if c.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -159,15 +175,31 @@ func ReconstructDivision(id, companyID uuid.UUID, code, name, description string
 	}
 }
 
-func (d *Division) ID() uuid.UUID           { return d.id }
-func (d *Division) CompanyID() uuid.UUID    { return d.companyID }
-func (d *Division) Code() string            { return d.code }
-func (d *Division) Name() string            { return d.name }
-func (d *Division) Description() string     { return d.description }
-func (d *Division) IsActive() bool          { return d.isActive }
-func (d *Division) Audit() shared.AuditInfo { return d.audit }
-func (d *Division) IsDeleted() bool         { return d.audit.IsDeleted() }
+// ID returns the division identifier.
+func (d *Division) ID() uuid.UUID { return d.id }
 
+// CompanyID returns the parent company identifier.
+func (d *Division) CompanyID() uuid.UUID { return d.companyID }
+
+// Code returns the division code.
+func (d *Division) Code() string { return d.code }
+
+// Name returns the division name.
+func (d *Division) Name() string { return d.name }
+
+// Description returns the division description.
+func (d *Division) Description() string { return d.description }
+
+// IsActive returns whether the division is active.
+func (d *Division) IsActive() bool { return d.isActive }
+
+// Audit returns the division audit information.
+func (d *Division) Audit() shared.AuditInfo { return d.audit }
+
+// IsDeleted returns whether the division has been soft-deleted.
+func (d *Division) IsDeleted() bool { return d.audit.IsDeleted() }
+
+// Update updates the division fields.
 func (d *Division) Update(name, description *string, isActive *bool, updatedBy string) error {
 	if d.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -188,6 +220,7 @@ func (d *Division) Update(name, description *string, isActive *bool, updatedBy s
 	return nil
 }
 
+// SoftDelete marks the division as deleted.
 func (d *Division) SoftDelete(deletedBy string) error {
 	if d.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -248,15 +281,31 @@ func ReconstructDepartment(id, divisionID uuid.UUID, code, name, description str
 	}
 }
 
-func (d *Department) ID() uuid.UUID           { return d.id }
-func (d *Department) DivisionID() uuid.UUID   { return d.divisionID }
-func (d *Department) Code() string            { return d.code }
-func (d *Department) Name() string            { return d.name }
-func (d *Department) Description() string     { return d.description }
-func (d *Department) IsActive() bool          { return d.isActive }
-func (d *Department) Audit() shared.AuditInfo { return d.audit }
-func (d *Department) IsDeleted() bool         { return d.audit.IsDeleted() }
+// ID returns the department identifier.
+func (d *Department) ID() uuid.UUID { return d.id }
 
+// DivisionID returns the parent division identifier.
+func (d *Department) DivisionID() uuid.UUID { return d.divisionID }
+
+// Code returns the department code.
+func (d *Department) Code() string { return d.code }
+
+// Name returns the department name.
+func (d *Department) Name() string { return d.name }
+
+// Description returns the department description.
+func (d *Department) Description() string { return d.description }
+
+// IsActive returns whether the department is active.
+func (d *Department) IsActive() bool { return d.isActive }
+
+// Audit returns the department audit information.
+func (d *Department) Audit() shared.AuditInfo { return d.audit }
+
+// IsDeleted returns whether the department has been soft-deleted.
+func (d *Department) IsDeleted() bool { return d.audit.IsDeleted() }
+
+// Update updates the department fields.
 func (d *Department) Update(name, description *string, isActive *bool, updatedBy string) error {
 	if d.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -277,6 +326,7 @@ func (d *Department) Update(name, description *string, isActive *bool, updatedBy
 	return nil
 }
 
+// SoftDelete marks the department as deleted.
 func (d *Department) SoftDelete(deletedBy string) error {
 	if d.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -337,15 +387,31 @@ func ReconstructSection(id, departmentID uuid.UUID, code, name, description stri
 	}
 }
 
-func (s *Section) ID() uuid.UUID           { return s.id }
-func (s *Section) DepartmentID() uuid.UUID { return s.departmentID }
-func (s *Section) Code() string            { return s.code }
-func (s *Section) Name() string            { return s.name }
-func (s *Section) Description() string     { return s.description }
-func (s *Section) IsActive() bool          { return s.isActive }
-func (s *Section) Audit() shared.AuditInfo { return s.audit }
-func (s *Section) IsDeleted() bool         { return s.audit.IsDeleted() }
+// ID returns the section identifier.
+func (s *Section) ID() uuid.UUID { return s.id }
 
+// DepartmentID returns the parent department identifier.
+func (s *Section) DepartmentID() uuid.UUID { return s.departmentID }
+
+// Code returns the section code.
+func (s *Section) Code() string { return s.code }
+
+// Name returns the section name.
+func (s *Section) Name() string { return s.name }
+
+// Description returns the section description.
+func (s *Section) Description() string { return s.description }
+
+// IsActive returns whether the section is active.
+func (s *Section) IsActive() bool { return s.isActive }
+
+// Audit returns the section audit information.
+func (s *Section) Audit() shared.AuditInfo { return s.audit }
+
+// IsDeleted returns whether the section has been soft-deleted.
+func (s *Section) IsDeleted() bool { return s.audit.IsDeleted() }
+
+// Update updates the section fields.
 func (s *Section) Update(name, description *string, isActive *bool, updatedBy string) error {
 	if s.IsDeleted() {
 		return shared.ErrAlreadyDeleted
@@ -366,6 +432,7 @@ func (s *Section) Update(name, description *string, isActive *bool, updatedBy st
 	return nil
 }
 
+// SoftDelete marks the section as deleted.
 func (s *Section) SoftDelete(deletedBy string) error {
 	if s.IsDeleted() {
 		return shared.ErrAlreadyDeleted

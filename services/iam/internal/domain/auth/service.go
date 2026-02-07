@@ -55,11 +55,11 @@ type LoginResult struct {
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    int64
-	User         *AuthUserInfo
+	User         *UserInfo
 }
 
-// AuthUserInfo contains basic user info for authentication context.
-type AuthUserInfo struct {
+// UserInfo contains basic user info for authentication context.
+type UserInfo struct {
 	ID               uuid.UUID
 	Username         string
 	Email            string

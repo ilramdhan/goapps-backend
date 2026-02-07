@@ -81,9 +81,9 @@ func (m *MockSessionRepository) RevokeAllForUser(ctx context.Context, userID uui
 	return args.Error(0)
 }
 
-func (m *MockSessionRepository) ListActive(ctx context.Context, params domainsession.ListParams) ([]*domainsession.SessionInfo, int64, error) {
+func (m *MockSessionRepository) ListActive(ctx context.Context, params domainsession.ListParams) ([]*domainsession.Info, int64, error) {
 	args := m.Called(ctx, params)
-	return args.Get(0).([]*domainsession.SessionInfo), args.Get(1).(int64), args.Error(2)
+	return args.Get(0).([]*domainsession.Info), args.Get(1).(int64), args.Error(2)
 }
 
 func (m *MockSessionRepository) CleanupExpired(ctx context.Context) (int, error) {
@@ -106,7 +106,7 @@ func TestListHandler(t *testing.T) {
 		userID1 := uuid.New()
 		userID2 := uuid.New()
 
-		sessions := []*domainsession.SessionInfo{
+		sessions := []*domainsession.Info{
 			{
 				SessionID:   uuid.New(),
 				UserID:      userID1,
@@ -162,7 +162,7 @@ func TestListHandler(t *testing.T) {
 		mockRepo.On("ListActive", ctx, mock.MatchedBy(func(p domainsession.ListParams) bool {
 			return p.Page == 1 && p.PageSize == 10
 		})).Return(
-			[]*domainsession.SessionInfo{},
+			[]*domainsession.Info{},
 			int64(0),
 			nil,
 		)

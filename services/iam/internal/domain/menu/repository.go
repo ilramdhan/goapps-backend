@@ -23,8 +23,8 @@ type Repository interface {
 	BatchCreate(ctx context.Context, menus []*Menu) (int, error)
 
 	// Menu tree operations
-	GetTree(ctx context.Context, serviceName string, includeInactive, includeHidden bool) ([]*MenuWithChildren, error)
-	GetTreeForUser(ctx context.Context, userID uuid.UUID, serviceName string) ([]*MenuWithChildren, error)
+	GetTree(ctx context.Context, serviceName string, includeInactive, includeHidden bool) ([]*WithChildren, error)
+	GetTreeForUser(ctx context.Context, userID uuid.UUID, serviceName string) ([]*WithChildren, error)
 
 	// Menu-Permission assignment
 	AssignPermissions(ctx context.Context, menuID uuid.UUID, permissionIDs []uuid.UUID, assignedBy string) error

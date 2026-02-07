@@ -86,18 +86,18 @@ type SectionListParams struct {
 	CompanyID    *uuid.UUID
 }
 
-// OrganizationTreeNode represents a node in the organization tree.
-type OrganizationTreeNode struct {
+// TreeNode represents a node in the organization hierarchy tree.
+type TreeNode struct {
 	ID       uuid.UUID
 	ParentID *uuid.UUID
 	Type     string // company, division, department, section
 	Code     string
 	Name     string
 	IsActive bool
-	Children []*OrganizationTreeNode
+	Children []*TreeNode
 }
 
 // TreeRepository provides methods for building organization tree.
 type TreeRepository interface {
-	GetTree(ctx context.Context, companyID *uuid.UUID, includeInactive bool) ([]*OrganizationTreeNode, error)
+	GetTree(ctx context.Context, companyID *uuid.UUID, includeInactive bool) ([]*TreeNode, error)
 }

@@ -145,6 +145,8 @@ func (h *PermissionHandler) ListPermissions(ctx context.Context, req *iamv1.List
 	case iamv1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
 		inactive := false
 		isActive = &inactive
+	case iamv1.ActiveFilter_ACTIVE_FILTER_UNSPECIFIED:
+		// No filter — return all.
 	}
 
 	result, err := h.listHandler.Handle(ctx, permapp.ListQuery{

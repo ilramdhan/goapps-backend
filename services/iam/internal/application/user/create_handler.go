@@ -73,7 +73,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*user.Us
 	}
 
 	// 6. Create user detail domain entity.
-	detail, err := user.NewUserDetail(
+	detail, err := user.NewDetail(
 		entity.ID(),
 		nil,
 		cmd.EmployeeCode,
