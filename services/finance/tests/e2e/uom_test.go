@@ -7,21 +7,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 )
 
-// E2ETestSuite is the end-to-end test suite
+// E2ETestSuite is the end-to-end test suite.
 type E2ETestSuite struct {
 	suite.Suite
 	conn   *grpc.ClientConn
 	client financev1.UOMServiceClient
-	ctx    context.Context
+	ctx    context.Context // authenticated context with JWT
 }
 
 func TestE2ESuite(t *testing.T) {
@@ -33,8 +35,6 @@ func TestE2ESuite(t *testing.T) {
 }
 
 func (s *E2ETestSuite) SetupSuite() {
-	s.ctx = context.Background()
-
 	// Get gRPC server address
 	addr := getEnv("GRPC_ADDR", "localhost:50051")
 
@@ -45,8 +45,45 @@ func (s *E2ETestSuite) SetupSuite() {
 	s.conn = conn
 	s.client = financev1.NewUOMServiceClient(conn)
 
-	// Wait for server to be ready
+	// Generate test JWT and create authenticated context
+	token := s.generateTestToken()
+	md := metadata.Pairs("authorization", "Bearer "+token)
+	s.ctx = metadata.NewOutgoingContext(context.Background(), md)
+
+	// Wait for server to be ready (uses authenticated context)
 	s.waitForServer()
+}
+
+// generateTestToken creates a valid JWT for e2e testing.
+// Uses the same secret as the Finance service (env JWT_ACCESS_SECRET or config default).
+func (s *E2ETestSuite) generateTestToken() string {
+	secret := getEnv("JWT_ACCESS_SECRET", "dev-access-secret-change-in-production")
+
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"token_type": "access",
+		"user_id":    "e2e-test-user-id",
+		"username":   "e2e_tester",
+		"email":      "e2e@test.local",
+		"roles":      []string{"SUPER_ADMIN"},
+		"permissions": []string{
+			"finance.master.uom.create",
+			"finance.master.uom.view",
+			"finance.master.uom.update",
+			"finance.master.uom.delete",
+		},
+		"iss": "goapps-iam",
+		"sub": "e2e-test-user-id",
+		"iat": now.Unix(),
+		"exp": now.Add(1 * time.Hour).Unix(),
+		"jti": "e2e-test-token-id",
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(secret))
+	require.NoError(s.T(), err)
+
+	return signed
 }
 
 func (s *E2ETestSuite) TearDownSuite() {
@@ -242,7 +279,21 @@ func (s *E2ETestSuite) TestExportUOMs() {
 	assert.Contains(s.T(), resp.FileName, ".xlsx")
 }
 
-// Helper function
+func (s *E2ETestSuite) TestUnauthenticated() {
+	// Use a context WITHOUT JWT metadata
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := s.client.ListUOMs(ctx, &financev1.ListUOMsRequest{Page: 1, PageSize: 10})
+
+	// StructuredErrorInterceptor wraps the error into a typed response
+	require.NoError(s.T(), err)
+	assert.NotNil(s.T(), resp.Base)
+	assert.False(s.T(), resp.Base.IsSuccess)
+	assert.Equal(s.T(), "401", resp.Base.StatusCode)
+}
+
+// Helper function.
 func getEnv(key, defaultVal string) string {
 	if val := os.Getenv(key); val != "" {
 		return val

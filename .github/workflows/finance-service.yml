@@ -255,12 +255,14 @@ jobs:
           DATABASE_NAME: finance_db
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: e2e-test-jwt-secret
 
       - name: Run E2E tests
         working-directory: ${{ env.WORKING_DIR }}
         env:
           E2E_TEST: true
           GRPC_ADDR: localhost:50051
+          JWT_ACCESS_SECRET: e2e-test-jwt-secret
         run: go test -v ./tests/e2e/...
 
       - name: Stop services
