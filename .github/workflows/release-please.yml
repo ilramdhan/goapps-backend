@@ -54,7 +54,8 @@ jobs:
       - name: Build and push finance-service
         uses: docker/build-push-action@v5
         with:
-          context: ./services/finance
+          context: .
+          file: ./services/finance/Dockerfile
           push: true
           tags: |
             ghcr.io/mutugading/finance-service:${{ steps.version.outputs.version }}
@@ -88,7 +89,8 @@ jobs:
       - name: Build and push iam-service
         uses: docker/build-push-action@v5
         with:
-          context: ./services/iam
+          context: .
+          file: ./services/iam/Dockerfile
           push: true
           tags: |
             ghcr.io/mutugading/iam-service:${{ steps.version.outputs.version }}
@@ -122,7 +124,8 @@ jobs:
       - name: Build and push hr-service
         uses: docker/build-push-action@v5
         with:
-          context: ./services/hr
+          context: .
+          file: ./services/hr/Dockerfile
           push: true
           tags: |
             ghcr.io/mutugading/hr-service:${{ steps.version.outputs.version }}
