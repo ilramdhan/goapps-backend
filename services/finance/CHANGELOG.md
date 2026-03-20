@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/mutugading/goapps-backend/compare/finance-service/v0.4.0...finance-service/v0.5.0) (2026-03-20)
+
+
+### Features
+
+* Implement session idle timeout, add comprehensive E2E tests, and include a backend run guide. ([5610f2c](https://github.com/mutugading/goapps-backend/commit/5610f2cc28d10f2c2a52db56fb24f539c98962a5))
+
 ## [0.4.0](https://github.com/mutugading/goapps-backend/compare/finance-service/v0.3.0...finance-service/v0.4.0) (2026-02-09)
 
 
