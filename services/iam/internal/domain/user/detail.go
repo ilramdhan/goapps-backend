@@ -32,6 +32,7 @@ func NewDetail(
 	userID uuid.UUID,
 	sectionID *uuid.UUID,
 	employeeCode, fullName, firstName, lastName string,
+	phone, position, address string,
 	createdBy string,
 ) (*Detail, error) {
 	if employeeCode == "" {
@@ -49,6 +50,9 @@ func NewDetail(
 		fullName:     fullName,
 		firstName:    firstName,
 		lastName:     lastName,
+		phone:        phone,
+		position:     position,
+		address:      address,
 		audit:        shared.NewAuditInfo(createdBy),
 	}, nil
 }

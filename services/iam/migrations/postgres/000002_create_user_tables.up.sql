@@ -27,11 +27,13 @@ CREATE TABLE IF NOT EXISTS mst_user (
     updated_by VARCHAR(100),
     deleted_at TIMESTAMP WITH TIME ZONE,
     deleted_by VARCHAR(100),
-    CONSTRAINT uq_user_username UNIQUE (username),
-    CONSTRAINT uq_user_email UNIQUE (email),
     CONSTRAINT chk_username_format CHECK (username ~ '^[a-zA-Z][a-zA-Z0-9_]{2,49}$'),
     CONSTRAINT chk_email_format CHECK (email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 );
+
+-- Partial unique indexes: allow re-creating soft-deleted users with same username/email
+CREATE UNIQUE INDEX uq_user_username ON mst_user(username) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX uq_user_email ON mst_user(email) WHERE deleted_at IS NULL;
 
 -- User indexes
 CREATE INDEX idx_user_username ON mst_user(username) WHERE deleted_at IS NULL;

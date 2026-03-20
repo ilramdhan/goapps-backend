@@ -20,6 +20,7 @@ type Session struct {
 	expiresAt        time.Time
 	createdAt        time.Time
 	revokedAt        *time.Time
+	lastActivityAt   time.Time
 }
 
 // NewSession creates a new Session entity.
@@ -29,6 +30,7 @@ func NewSession(
 	deviceInfo, ipAddress, serviceName string,
 	expiresAt time.Time,
 ) *Session {
+	now := time.Now()
 	return &Session{
 		id:               uuid.New(),
 		userID:           userID,
@@ -37,7 +39,8 @@ func NewSession(
 		ipAddress:        ipAddress,
 		serviceName:      serviceName,
 		expiresAt:        expiresAt,
-		createdAt:        time.Now(),
+		createdAt:        now,
+		lastActivityAt:   now,
 	}
 }
 
@@ -47,6 +50,7 @@ func ReconstructSession(
 	refreshTokenHash, deviceInfo, ipAddress, serviceName string,
 	expiresAt, createdAt time.Time,
 	revokedAt *time.Time,
+	lastActivityAt time.Time,
 ) *Session {
 	return &Session{
 		id:               id,
@@ -58,6 +62,7 @@ func ReconstructSession(
 		expiresAt:        expiresAt,
 		createdAt:        createdAt,
 		revokedAt:        revokedAt,
+		lastActivityAt:   lastActivityAt,
 	}
 }
 
@@ -88,9 +93,25 @@ func (s *Session) CreatedAt() time.Time { return s.createdAt }
 // RevokedAt returns the revocation time.
 func (s *Session) RevokedAt() *time.Time { return s.revokedAt }
 
+// LastActivityAt returns the last activity time.
+func (s *Session) LastActivityAt() time.Time { return s.lastActivityAt }
+
 // IsActive returns true if the session is not revoked and not expired.
 func (s *Session) IsActive() bool {
 	return s.revokedAt == nil && time.Now().Before(s.expiresAt)
+}
+
+// IsIdle returns true if the session has been idle longer than the given timeout.
+func (s *Session) IsIdle(idleTimeout time.Duration) bool {
+	if idleTimeout <= 0 {
+		return false
+	}
+	return time.Since(s.lastActivityAt) > idleTimeout
+}
+
+// TouchActivity updates the last activity timestamp to now.
+func (s *Session) TouchActivity() {
+	s.lastActivityAt = time.Now()
 }
 
 // IsExpired returns true if the session has expired.
@@ -128,14 +149,15 @@ func hashToken(token string) string {
 
 // Info contains minimal session information for display.
 type Info struct {
-	SessionID   uuid.UUID
-	UserID      uuid.UUID
-	Username    string
-	FullName    string
-	DeviceInfo  string
-	IPAddress   string
-	ServiceName string
-	CreatedAt   time.Time
-	ExpiresAt   time.Time
-	RevokedAt   *time.Time
+	SessionID      uuid.UUID
+	UserID         uuid.UUID
+	Username       string
+	FullName       string
+	DeviceInfo     string
+	IPAddress      string
+	ServiceName    string
+	CreatedAt      time.Time
+	ExpiresAt      time.Time
+	RevokedAt      *time.Time
+	LastActivityAt time.Time
 }

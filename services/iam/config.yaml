@@ -68,6 +68,7 @@ security:
   otp_expiry: 5m
   reset_token_expiry: 10m
   single_device_login: true  # Force logout previous session on new login
+  session_idle_timeout: 2h   # Auto-logout after 2 hours of inactivity
 
 tracing:
   enabled: true

@@ -307,10 +307,25 @@ func (r *UserRepository) List(ctx context.Context, params user.ListParams) ([]*u
 		return nil, 0, fmt.Errorf("failed to count users: %w", err)
 	}
 
+	// Map proto sort field names to actual DB column names
+	// Note: full_name and employee_code are in mst_user_detail, not mst_user.
+	// For the List method that only queries mst_user, we fall back to username.
+	sortColumnMap := map[string]string{
+		"username":      "username",
+		"email":         "email",
+		"full_name":     "username", // Fallback: full_name is in mst_user_detail
+		"employee_code": "username", // Fallback: employee_code is in mst_user_detail
+		"created_at":    "created_at",
+	}
+
 	// Build query
 	sortBy := "created_at"
 	if params.SortBy != "" {
-		sortBy = params.SortBy
+		if mapped, ok := sortColumnMap[params.SortBy]; ok {
+			sortBy = mapped
+		} else {
+			sortBy = params.SortBy
+		}
 	}
 	sortOrder := "DESC"
 	if params.SortOrder != "" && (params.SortOrder == "ASC" || params.SortOrder == "asc") {

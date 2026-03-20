@@ -26,6 +26,7 @@ var (
 	// Not found errors
 	ErrNotFound        = errors.New("entity not found")
 	ErrSessionNotFound = errors.New("session not found")
+	ErrSessionExpired  = errors.New("session expired due to inactivity")
 
 	// Authentication errors
 	ErrInvalidCredentials = errors.New("invalid credentials")

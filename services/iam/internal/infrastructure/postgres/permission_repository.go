@@ -201,9 +201,23 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 	}
 
 	// Build query
+	sortColumnMap := map[string]string{
+		"code":       "permission_code",
+		"name":       "permission_name",
+		"service":    "service_name",
+		"module":     "module_name",
+		"action":     "action_type",
+		"status":     "is_active",
+		"created_at": "created_at",
+	}
+
 	sortBy := "permission_code"
 	if params.SortBy != "" {
-		sortBy = params.SortBy
+		if mapped, ok := sortColumnMap[params.SortBy]; ok {
+			sortBy = mapped
+		} else {
+			sortBy = params.SortBy
+		}
 	}
 	sortOrder := sortASC
 	if strings.EqualFold(params.SortOrder, sortDESC) {
@@ -212,10 +226,11 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 
 	offset := (params.Page - 1) * params.PageSize
 	query := fmt.Sprintf(`
-		SELECT permission_id, permission_code, permission_name, description,
-			service_name, module_name, action_type, is_active,
-			created_at, created_by, updated_at, updated_by
-		FROM mst_permission
+		SELECT p.permission_id, p.permission_code, p.permission_name, p.description,
+			p.service_name, p.module_name, p.action_type, p.is_active,
+			p.created_at, p.created_by, p.updated_at, p.updated_by,
+			COALESCE((SELECT COUNT(*) FROM role_permissions rp WHERE rp.permission_id = p.permission_id), 0) AS role_count
+		FROM mst_permission p
 		WHERE %s
 		ORDER BY %s %s
 		LIMIT $%d OFFSET $%d
@@ -236,14 +251,18 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 	var permissions []*role.Permission
 	for rows.Next() {
 		var row permissionRow
+		var roleCount int32
 		if err := rows.Scan(
 			&row.ID, &row.Code, &row.Name, &row.Description,
 			&row.ServiceName, &row.ModuleName, &row.ActionType, &row.IsActive,
 			&row.CreatedAt, &row.CreatedBy, &row.UpdatedAt, &row.UpdatedBy,
+			&roleCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan permission: %w", err)
 		}
-		permissions = append(permissions, row.toDomain())
+		p := row.toDomain()
+		p.SetRoleCount(roleCount)
+		permissions = append(permissions, p)
 	}
 
 	return permissions, total, nil
@@ -293,16 +312,32 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 		activeFilter = ""
 	}
 
-	query := fmt.Sprintf(`
-		SELECT permission_id, permission_code, permission_name, description,
-			service_name, module_name, action_type, is_active,
-			created_at, created_by, updated_at, updated_by
-		FROM mst_permission
-		WHERE service_name = $1 %s
-		ORDER BY module_name, action_type
-	`, activeFilter)
+	var query string
+	var args []interface{}
 
-	rows, err := r.db.QueryContext(ctx, query, serviceName)
+	if serviceName != "" {
+		query = fmt.Sprintf(`
+			SELECT permission_id, permission_code, permission_name, description,
+				service_name, module_name, action_type, is_active,
+				created_at, created_by, updated_at, updated_by
+			FROM mst_permission
+			WHERE service_name = $1 %s
+			ORDER BY service_name, module_name, action_type
+		`, activeFilter)
+		args = append(args, serviceName)
+	} else {
+		// Return ALL services when serviceName is empty
+		query = fmt.Sprintf(`
+			SELECT permission_id, permission_code, permission_name, description,
+				service_name, module_name, action_type, is_active,
+				created_at, created_by, updated_at, updated_by
+			FROM mst_permission
+			WHERE TRUE %s
+			ORDER BY service_name, module_name, action_type
+		`, activeFilter)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get permissions by service: %w", err)
 	}
@@ -312,8 +347,14 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 		}
 	}()
 
-	moduleMap := make(map[string][]*role.Permission)
-	var moduleOrder []string
+	// Group by service_name -> module_name -> permissions
+	type serviceData struct {
+		moduleMap   map[string][]*role.Permission
+		moduleOrder []string
+	}
+	serviceMap := make(map[string]*serviceData)
+	var serviceOrder []string
+
 	for rows.Next() {
 		var row permissionRow
 		if err := rows.Scan(
@@ -323,24 +364,39 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan permission: %w", err)
 		}
-		if _, exists := moduleMap[row.ModuleName]; !exists {
-			moduleOrder = append(moduleOrder, row.ModuleName)
+
+		sd, exists := serviceMap[row.ServiceName]
+		if !exists {
+			sd = &serviceData{
+				moduleMap:   make(map[string][]*role.Permission),
+				moduleOrder: nil,
+			}
+			serviceMap[row.ServiceName] = sd
+			serviceOrder = append(serviceOrder, row.ServiceName)
 		}
-		moduleMap[row.ModuleName] = append(moduleMap[row.ModuleName], row.toDomain())
+
+		if _, modExists := sd.moduleMap[row.ModuleName]; !modExists {
+			sd.moduleOrder = append(sd.moduleOrder, row.ModuleName)
+		}
+		sd.moduleMap[row.ModuleName] = append(sd.moduleMap[row.ModuleName], row.toDomain())
 	}
 
-	modules := make([]*role.ModulePermissions, 0, len(moduleOrder))
-	for _, moduleName := range moduleOrder {
-		modules = append(modules, &role.ModulePermissions{
-			ModuleName:  moduleName,
-			Permissions: moduleMap[moduleName],
+	// Build result
+	result := make([]*role.ServicePermissions, 0, len(serviceOrder))
+	for _, svcName := range serviceOrder {
+		sd := serviceMap[svcName]
+		modules := make([]*role.ModulePermissions, 0, len(sd.moduleOrder))
+		for _, modName := range sd.moduleOrder {
+			modules = append(modules, &role.ModulePermissions{
+				ModuleName:  modName,
+				Permissions: sd.moduleMap[modName],
+			})
+		}
+		result = append(result, &role.ServicePermissions{
+			ServiceName: svcName,
+			Modules:     modules,
 		})
 	}
 
-	return []*role.ServicePermissions{
-		{
-			ServiceName: serviceName,
-			Modules:     modules,
-		},
-	}, nil
+	return result, nil
 }

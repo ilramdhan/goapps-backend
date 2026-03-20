@@ -27,6 +27,9 @@ type Repository interface {
 	// Update updates a session.
 	Update(ctx context.Context, session *Session) error
 
+	// UpdateActivity updates only the last_activity_at timestamp for a session.
+	UpdateActivity(ctx context.Context, userID uuid.UUID) error
+
 	// Revoke revokes a session by ID.
 	Revoke(ctx context.Context, id uuid.UUID) error
 

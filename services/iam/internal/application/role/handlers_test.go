@@ -97,6 +97,14 @@ func (m *MockRoleRepository) GetRolesByPermission(ctx context.Context, permissio
 	return args.Get(0).([]*domainrole.Role), args.Error(1)
 }
 
+func (m *MockRoleRepository) CountUsersByRoles(ctx context.Context, roleIDs []uuid.UUID) (map[uuid.UUID]int32, error) {
+	args := m.Called(ctx, roleIDs)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[uuid.UUID]int32), args.Error(1)
+}
+
 // =============================================================================
 // CreateHandler
 // =============================================================================

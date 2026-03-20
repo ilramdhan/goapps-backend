@@ -139,7 +139,16 @@ func (s *Service) checkRateLimit(ctx context.Context, username string) error {
 }
 
 func (s *Service) authenticateUser(ctx context.Context, input domainAuth.LoginInput) (*user.User, error) {
-	u, err := s.userRepo.GetByUsername(ctx, input.Username)
+	var u *user.User
+	var err error
+
+	// Auto-detect: if the identifier contains '@', treat it as an email address.
+	if strings.Contains(input.Username, "@") {
+		u, err = s.userRepo.GetByEmail(ctx, input.Username)
+	} else {
+		u, err = s.userRepo.GetByUsername(ctx, input.Username)
+	}
+
 	if err != nil {
 		if errors.Is(err, shared.ErrNotFound) {
 			s.recordFailedLogin(ctx, input.Username)
@@ -262,6 +271,16 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domai
 		return nil, shared.ErrSessionNotFound
 	}
 
+	// Check idle timeout: reject refresh if user has been inactive too long
+	if s.securityCfg.SessionIdleTimeout > 0 && sess.IsIdle(s.securityCfg.SessionIdleTimeout) {
+		sess.Revoke()
+		if updateErr := s.sessionRepo.Update(ctx, sess); updateErr != nil {
+			log.Warn().Err(updateErr).Msg("failed to revoke idle session")
+		}
+		s.blacklistToken(ctx, claims.ID, claims.ExpiresAt.Unix())
+		return nil, shared.ErrSessionExpired
+	}
+
 	userID, parseErr := uuid.Parse(claims.UserID)
 	if parseErr != nil {
 		return nil, fmt.Errorf("failed to parse user ID: %w", parseErr)
@@ -284,6 +303,7 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domai
 	s.blacklistToken(ctx, claims.ID, claims.ExpiresAt.Unix())
 
 	sess.UpdateTokenID(tokenPair.TokenID, tokenPair.RefreshExp)
+	sess.TouchActivity()
 	if err := s.sessionRepo.Update(ctx, sess); err != nil {
 		return nil, fmt.Errorf("failed to update session: %w", err)
 	}

@@ -4,6 +4,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	roleapp "github.com/mutugading/goapps-backend/services/iam/internal/application/role"
@@ -22,6 +23,7 @@ type RoleHandler struct {
 	removePermissionsHandler *roleapp.RemovePermissionsHandler
 	getPermissionsHandler    *roleapp.GetPermissionsHandler
 	validationHelper         *ValidationHelper
+	roleRepo                 role.Repository
 }
 
 // NewRoleHandler creates a new RoleHandler.
@@ -36,6 +38,7 @@ func NewRoleHandler(roleRepo role.Repository, validationHelper *ValidationHelper
 		removePermissionsHandler: roleapp.NewRemovePermissionsHandler(roleRepo),
 		getPermissionsHandler:    roleapp.NewGetPermissionsHandler(roleRepo),
 		validationHelper:         validationHelper,
+		roleRepo:                 roleRepo,
 	}
 }
 
@@ -163,9 +166,21 @@ func (h *RoleHandler) ListRoles(ctx context.Context, req *iamv1.ListRolesRequest
 		return &iamv1.ListRolesResponse{Base: domainErrorToBaseResponse(err)}, nil
 	}
 
+	// Collect role IDs for user count lookup.
+	roleIDs := make([]uuid.UUID, len(result.Roles))
+	for i, r := range result.Roles {
+		roleIDs[i] = r.ID()
+	}
+
+	// Get user counts per role.
+	userCounts, _ := h.roleRepo.CountUsersByRoles(ctx, roleIDs)
+
 	protoRoles := make([]*iamv1.Role, len(result.Roles))
 	for i, r := range result.Roles {
 		protoRoles[i] = toRoleProto(r)
+		if userCounts != nil {
+			protoRoles[i].UserCount = userCounts[r.ID()]
+		}
 	}
 
 	return &iamv1.ListRolesResponse{
@@ -303,6 +318,7 @@ func permissionToDetailProto(p *role.Permission) *iamv1.PermissionDetail {
 		ModuleName:     p.ModuleName(),
 		ActionType:     p.ActionType(),
 		IsActive:       p.IsActive(),
+		RoleCount:      p.RoleCount(),
 		Audit:          toAuditProto(p.Audit()),
 	}
 }

@@ -181,10 +181,22 @@ func (r *RoleRepository) List(ctx context.Context, params role.ListParams) ([]*r
 		return nil, 0, fmt.Errorf("failed to count roles: %w", err)
 	}
 
+	// Map proto sort field names to actual DB column names
+	sortColumnMap := map[string]string{
+		"code":       "role_code",
+		"name":       "role_name",
+		"created_at": "created_at",
+		"user_count": "role_code", // Fallback: user_count not directly sortable in this query
+	}
+
 	// Build query
 	sortBy := "role_code"
 	if params.SortBy != "" {
-		sortBy = params.SortBy
+		if mapped, ok := sortColumnMap[params.SortBy]; ok {
+			sortBy = mapped
+		} else {
+			sortBy = params.SortBy
+		}
 	}
 	sortOrder := sortASC
 	if params.SortOrder != "" && (params.SortOrder == sortDESC || params.SortOrder == "desc") {
@@ -226,6 +238,50 @@ func (r *RoleRepository) List(ctx context.Context, params role.ListParams) ([]*r
 	}
 
 	return roles, total, nil
+}
+
+// CountUsersByRoles counts the number of users assigned to each role.
+func (r *RoleRepository) CountUsersByRoles(ctx context.Context, roleIDs []uuid.UUID) (map[uuid.UUID]int32, error) {
+	result := make(map[uuid.UUID]int32, len(roleIDs))
+	if len(roleIDs) == 0 {
+		return result, nil
+	}
+
+	// Build placeholders
+	placeholders := make([]string, len(roleIDs))
+	args := make([]interface{}, len(roleIDs))
+	for i, id := range roleIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT role_id, COUNT(user_id) as user_count
+		FROM user_roles
+		WHERE role_id IN (%s)
+		GROUP BY role_id
+	`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count users by roles: %w", err)
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close rows in count users by roles")
+		}
+	}()
+
+	for rows.Next() {
+		var roleID uuid.UUID
+		var count int32
+		if err := rows.Scan(&roleID, &count); err != nil {
+			return nil, fmt.Errorf("failed to scan user count: %w", err)
+		}
+		result[roleID] = count
+	}
+
+	return result, nil
 }
 
 // ExistsByCode checks if a role code exists.

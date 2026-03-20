@@ -390,13 +390,12 @@ func (r *MenuRepository) GetTreeForUser(ctx context.Context, userID uuid.UUID, s
 
 // AssignPermissions assigns permissions to a menu.
 func (r *MenuRepository) AssignPermissions(ctx context.Context, menuID uuid.UUID, permissionIDs []uuid.UUID, assignedBy string) error {
-	now := time.Now()
 	for _, permID := range permissionIDs {
 		query := `
-			INSERT INTO mst_menu_permission (menu_id, permission_id, created_at, created_by)
-			VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING
+			INSERT INTO menu_permissions (menu_id, permission_id, assigned_by)
+			VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
 		`
-		if _, err := r.db.ExecContext(ctx, query, menuID, permID, now, assignedBy); err != nil {
+		if _, err := r.db.ExecContext(ctx, query, menuID, permID, assignedBy); err != nil {
 			log.Warn().Err(err).
 				Str("menu_id", menuID.String()).
 				Str("permission_id", permID.String()).
@@ -409,7 +408,7 @@ func (r *MenuRepository) AssignPermissions(ctx context.Context, menuID uuid.UUID
 // RemovePermissions removes permissions from a menu.
 func (r *MenuRepository) RemovePermissions(ctx context.Context, menuID uuid.UUID, permissionIDs []uuid.UUID) error {
 	for _, permID := range permissionIDs {
-		query := `DELETE FROM mst_menu_permission WHERE menu_id = $1 AND permission_id = $2`
+		query := `DELETE FROM menu_permissions WHERE menu_id = $1 AND permission_id = $2`
 		if _, err := r.db.ExecContext(ctx, query, menuID, permID); err != nil {
 			log.Warn().Err(err).
 				Str("menu_id", menuID.String()).
@@ -427,7 +426,7 @@ func (r *MenuRepository) GetPermissions(ctx context.Context, menuID uuid.UUID) (
 			p.module_name, p.action_type, p.is_active,
 			p.created_at, p.created_by, p.updated_at, p.updated_by
 		FROM mst_permission p
-		INNER JOIN mst_menu_permission mp ON mp.permission_id = p.permission_id
+		INNER JOIN menu_permissions mp ON mp.permission_id = p.permission_id
 		WHERE mp.menu_id = $1 AND p.is_active = true
 	`
 	rows, err := r.db.QueryContext(ctx, query, menuID)

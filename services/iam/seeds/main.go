@@ -3,7 +3,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -17,6 +19,63 @@ import (
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/password"
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/postgres"
 )
+
+// adminCredentials holds the seed admin user configuration.
+// Values are read from environment variables to avoid hardcoded credentials
+// in source code. Defaults are only suitable for local development.
+type adminCredentials struct {
+	Username string
+	Email    string
+	Password string
+}
+
+// getAdminCredentials reads admin credentials from environment variables.
+// If SEED_ADMIN_PASSWORD is not set in non-development environments,
+// a random password is generated and printed to stdout.
+func getAdminCredentials(appEnv string) adminCredentials {
+	creds := adminCredentials{
+		Username: envOrDefault("SEED_ADMIN_USERNAME", "admin"),
+		Email:    envOrDefault("SEED_ADMIN_EMAIL", "admin@goapps.local"),
+		Password: os.Getenv("SEED_ADMIN_PASSWORD"),
+	}
+
+	if creds.Password == "" {
+		if appEnv == "development" || appEnv == "" {
+			// Local dev: use a known default
+			creds.Password = "admin123" //nolint:gosec // intentional default for local dev only
+		} else {
+			// Staging/production: generate a random password and print it
+			creds.Password = generateRandomPassword(24)
+			log.Warn().
+				Str("env", appEnv).
+				Msg("SEED_ADMIN_PASSWORD not set — generated random password (printed below, save it now!)")
+			fmt.Printf("\n========================================\n")
+			fmt.Printf("  GENERATED ADMIN PASSWORD: %s\n", creds.Password)
+			fmt.Printf("  USERNAME: %s\n", creds.Username)
+			fmt.Printf("  EMAIL: %s\n", creds.Email)
+			fmt.Printf("  ⚠ Save this password now — it will NOT be shown again.\n")
+			fmt.Printf("========================================\n\n")
+		}
+	}
+
+	return creds
+}
+
+func envOrDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func generateRandomPassword(length int) string {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		// Fallback to uuid if crypto/rand fails (extremely unlikely)
+		return uuid.New().String()
+	}
+	return hex.EncodeToString(bytes)[:length]
+}
 
 const (
 	systemUser = "system-seed"
@@ -125,6 +184,13 @@ func defaultPermissions() []permission {
 		{Code: "iam.session.session.view", Name: "View Sessions", ServiceName: "iam", ModuleName: "session", ActionType: "view"},
 		{Code: "iam.session.session.delete", Name: "Delete Session", ServiceName: "iam", ModuleName: "session", ActionType: "delete"},
 
+		// Finance — module-level permissions (used by menu visibility)
+		// Format: service.module.entity.action (4 parts required by DB constraint)
+		{Code: "finance.module.root.view", Name: "Access Finance Module", ServiceName: "finance", ModuleName: "module", ActionType: "view"},
+		{Code: "finance.module.dashboard.view", Name: "View Finance Dashboard", ServiceName: "finance", ModuleName: "module", ActionType: "view"},
+		{Code: "finance.module.master.view", Name: "Access Finance Master", ServiceName: "finance", ModuleName: "module", ActionType: "view"},
+		{Code: "finance.module.transaction.view", Name: "Access Finance Transaction", ServiceName: "finance", ModuleName: "module", ActionType: "view"},
+
 		// Finance - UOM
 		{Code: "finance.master.uom.view", Name: "View UOMs", ServiceName: "finance", ModuleName: "master", ActionType: "view"},
 		{Code: "finance.master.uom.create", Name: "Create UOM", ServiceName: "finance", ModuleName: "master", ActionType: "create"},
@@ -132,6 +198,33 @@ func defaultPermissions() []permission {
 		{Code: "finance.master.uom.delete", Name: "Delete UOM", ServiceName: "finance", ModuleName: "master", ActionType: "delete"},
 		{Code: "finance.master.uom.export", Name: "Export UOMs", ServiceName: "finance", ModuleName: "master", ActionType: "export"},
 		{Code: "finance.master.uom.import", Name: "Import UOMs", ServiceName: "finance", ModuleName: "master", ActionType: "import"},
+
+		// Finance - Parameters
+		{Code: "finance.master.parameters.view", Name: "View Parameters", ServiceName: "finance", ModuleName: "master", ActionType: "view"},
+		{Code: "finance.master.parameters.create", Name: "Create Parameter", ServiceName: "finance", ModuleName: "master", ActionType: "create"},
+		{Code: "finance.master.parameters.update", Name: "Update Parameter", ServiceName: "finance", ModuleName: "master", ActionType: "update"},
+		{Code: "finance.master.parameters.delete", Name: "Delete Parameter", ServiceName: "finance", ModuleName: "master", ActionType: "delete"},
+
+		// Finance - Costing Process
+		{Code: "finance.transaction.costing.view", Name: "View Costing Process", ServiceName: "finance", ModuleName: "transaction", ActionType: "view"},
+		{Code: "finance.transaction.costing.create", Name: "Create Costing Process", ServiceName: "finance", ModuleName: "transaction", ActionType: "create"},
+		{Code: "finance.transaction.costing.update", Name: "Update Costing Process", ServiceName: "finance", ModuleName: "transaction", ActionType: "update"},
+
+		// IT — module-level permissions
+		{Code: "it.module.root.view", Name: "Access IT Module", ServiceName: "it", ModuleName: "module", ActionType: "view"},
+		{Code: "it.module.dashboard.view", Name: "View IT Dashboard", ServiceName: "it", ModuleName: "module", ActionType: "view"},
+
+		// HR — module-level permissions
+		{Code: "hr.module.root.view", Name: "Access HR Module", ServiceName: "hr", ModuleName: "module", ActionType: "view"},
+		{Code: "hr.module.dashboard.view", Name: "View HR Dashboard", ServiceName: "hr", ModuleName: "module", ActionType: "view"},
+
+		// CI — module-level permissions
+		{Code: "ci.module.root.view", Name: "Access CI Module", ServiceName: "ci", ModuleName: "module", ActionType: "view"},
+		{Code: "ci.module.dashboard.view", Name: "View CI Dashboard", ServiceName: "ci", ModuleName: "module", ActionType: "view"},
+
+		// Export Import — module-level permissions
+		{Code: "exsim.module.root.view", Name: "Access Export Import Module", ServiceName: "exsim", ModuleName: "module", ActionType: "view"},
+		{Code: "exsim.module.dashboard.view", Name: "View Export Import Dashboard", ServiceName: "exsim", ModuleName: "module", ActionType: "view"},
 	}
 
 	return perms
@@ -174,6 +267,10 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
+	// Resolve admin credentials from environment
+	appEnv := cfg.App.Env
+	creds := getAdminCredentials(appEnv)
+
 	// Run all seeds in a transaction
 	return db.Transaction(ctx, func(tx *sql.Tx) error {
 		// 1. Seed roles
@@ -193,8 +290,8 @@ func run() error {
 			return fmt.Errorf("failed to seed role permissions: %w", err)
 		}
 
-		// 4. Seed admin user
-		adminUserID, err := seedAdminUser(ctx, tx)
+		// 4. Seed admin user (credentials from env vars)
+		adminUserID, err := seedAdminUser(ctx, tx, creds)
 		if err != nil {
 			return fmt.Errorf("failed to seed admin user: %w", err)
 		}
@@ -202,6 +299,13 @@ func run() error {
 		// 5. Seed user-role assignment
 		if err := seedUserRoles(ctx, tx, adminUserID, roleIDs); err != nil {
 			return fmt.Errorf("failed to seed user roles: %w", err)
+		}
+
+		// 6. Seed menu-permission linkage
+		// (Migration 000009 inserts menu rows but can't link permissions because
+		//  mst_permission is empty at migration time — we fix that here.)
+		if err := seedMenuPermissions(ctx, tx, permIDs); err != nil {
+			return fmt.Errorf("failed to seed menu permissions: %w", err)
 		}
 
 		return nil
@@ -308,16 +412,15 @@ func seedRolePermissions(ctx context.Context, tx *sql.Tx, roleIDs map[string]uui
 	userPerms := make([]string, 0)
 	for _, code := range allPermCodes {
 		parts := strings.Split(code, ".")
-		if len(parts) != 4 {
-			continue
-		}
-		action := parts[3]
-		resource := strings.Join(parts[:3], ".")
+		action := parts[len(parts)-1]
 
 		if action == "view" {
 			userPerms = append(userPerms, code)
-		} else if (action == "create" || action == "update" || action == "export" || action == "import") && !adminResources[resource] {
-			userPerms = append(userPerms, code)
+		} else if len(parts) >= 4 {
+			resource := strings.Join(parts[:3], ".")
+			if (action == "create" || action == "update" || action == "export" || action == "import") && !adminResources[resource] {
+				userPerms = append(userPerms, code)
+			}
 		}
 	}
 
@@ -369,46 +472,49 @@ func seedRolePermissions(ctx context.Context, tx *sql.Tx, roleIDs map[string]uui
 }
 
 // seedAdminUser creates the default admin user and returns the user_id.
-func seedAdminUser(ctx context.Context, tx *sql.Tx) (uuid.UUID, error) {
+// Credentials are read from environment variables (see getAdminCredentials).
+func seedAdminUser(ctx context.Context, tx *sql.Tx, creds adminCredentials) (uuid.UUID, error) {
 	log.Info().Msg("Seeding admin user...")
 
-	// Hash the default password using Argon2id
-	passwordHash, err := password.Hash("admin123")
+	passwordHash, err := password.Hash(creds.Password)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	userID := uuid.New()
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO mst_user (user_id, username, email, password_hash, is_active, created_by)
-		VALUES ($1, $2, $3, $4, true, $5)
-		ON CONFLICT (username) DO NOTHING`,
-		userID, "admin", "admin@goapps.local", passwordHash, systemUser,
-	)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to insert admin user: %w", err)
+	// Check if admin user already exists (partial unique index doesn't support ON CONFLICT)
+	var existingID uuid.UUID
+	err = tx.QueryRowContext(ctx,
+		`SELECT user_id FROM mst_user WHERE username = $1 AND deleted_at IS NULL`, creds.Username,
+	).Scan(&existingID)
+
+	if err == sql.ErrNoRows {
+		// Admin doesn't exist — insert
+		existingID = uuid.New()
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO mst_user (user_id, username, email, password_hash, is_active, created_by)
+			VALUES ($1, $2, $3, $4, true, $5)`,
+			existingID, creds.Username, creds.Email, passwordHash, systemUser,
+		)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("failed to insert admin user: %w", err)
+		}
+	} else if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to check admin user: %w", err)
 	}
 
-	// Retrieve the actual ID (may differ if row already existed)
-	var actualID uuid.UUID
-	err = tx.QueryRowContext(ctx, `SELECT user_id FROM mst_user WHERE username = $1`, "admin").Scan(&actualID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to retrieve admin user_id: %w", err)
-	}
-
-	// Seed admin user detail
+	// Seed admin user detail (uq_user_detail_user is absolute UNIQUE, ON CONFLICT works)
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO mst_user_detail (detail_id, user_id, employee_code, full_name, first_name, last_name, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (user_id) DO NOTHING`,
-		uuid.New(), actualID, "EMP-000", "System Administrator", "System", "Administrator", systemUser,
+		uuid.New(), existingID, "EMP-000", "System Administrator", "System", "Administrator", systemUser,
 	)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to insert admin user detail: %w", err)
 	}
 
-	log.Info().Str("user_id", actualID.String()).Str("username", "admin").Msg("Admin user seeded")
-	return actualID, nil
+	log.Info().Str("user_id", existingID.String()).Str("username", creds.Username).Msg("Admin user seeded")
+	return existingID, nil
 }
 
 // seedUserRoles assigns the SUPER_ADMIN role to the admin user.
@@ -434,5 +540,93 @@ func seedUserRoles(ctx context.Context, tx *sql.Tx, userID uuid.UUID, roleIDs ma
 		Str("user_id", userID.String()).
 		Str("role", "SUPER_ADMIN").
 		Msg("User-role assignment seeded")
+	return nil
+}
+
+// menuPermLink maps a menu_code to the permission codes that gate visibility.
+type menuPermLink struct {
+	MenuCode  string
+	PermCodes []string
+}
+
+// defaultMenuPermissions returns the menu → permission linkage.
+// A user needs ANY ONE of the linked permissions to see the menu.
+// Menus not listed here (e.g., Dashboard) have no requirements → visible to all authenticated users.
+func defaultMenuPermissions() []menuPermLink {
+	return []menuPermLink{
+		// Finance module
+		{MenuCode: "FINANCE", PermCodes: []string{"finance.module.root.view"}},
+		{MenuCode: "FINANCE_DASHBOARD", PermCodes: []string{"finance.module.dashboard.view"}},
+		{MenuCode: "FINANCE_MASTER", PermCodes: []string{"finance.module.master.view"}},
+		{MenuCode: "FINANCE_TRANSACTION", PermCodes: []string{"finance.module.transaction.view"}},
+		{MenuCode: "FINANCE_UOM", PermCodes: []string{"finance.master.uom.view"}},
+		{MenuCode: "FINANCE_PARAMETERS", PermCodes: []string{"finance.master.parameters.view"}},
+		{MenuCode: "FINANCE_COSTING", PermCodes: []string{"finance.transaction.costing.view"}},
+
+		// IT module
+		{MenuCode: "IT", PermCodes: []string{"it.module.root.view"}},
+		{MenuCode: "IT_DASHBOARD", PermCodes: []string{"it.module.dashboard.view"}},
+
+		// HR module
+		{MenuCode: "HR", PermCodes: []string{"hr.module.root.view"}},
+		{MenuCode: "HR_DASHBOARD", PermCodes: []string{"hr.module.dashboard.view"}},
+
+		// CI module
+		{MenuCode: "CI", PermCodes: []string{"ci.module.root.view"}},
+		{MenuCode: "CI_DASHBOARD", PermCodes: []string{"ci.module.dashboard.view"}},
+
+		// Export Import module
+		{MenuCode: "EXSIM", PermCodes: []string{"exsim.module.root.view"}},
+		{MenuCode: "EXSIM_DASHBOARD", PermCodes: []string{"exsim.module.dashboard.view"}},
+
+		// Administrator — requires any one of the IAM management permissions
+		{MenuCode: "ADMINISTRATOR", PermCodes: []string{"iam.user.account.view", "iam.rbac.role.view", "iam.rbac.permission.view", "iam.menu.menu.view"}},
+		{MenuCode: "ADMIN_USERS", PermCodes: []string{"iam.user.account.view"}},
+		{MenuCode: "ADMIN_ROLES", PermCodes: []string{"iam.rbac.role.view"}},
+		{MenuCode: "ADMIN_PERMISSIONS", PermCodes: []string{"iam.rbac.permission.view"}},
+		{MenuCode: "ADMIN_MENUS", PermCodes: []string{"iam.menu.menu.view"}},
+	}
+}
+
+// seedMenuPermissions links menus to their required permissions.
+func seedMenuPermissions(ctx context.Context, tx *sql.Tx, permIDs map[string]uuid.UUID) error {
+	log.Info().Msg("Seeding menu-permission linkage...")
+
+	links := defaultMenuPermissions()
+	totalLinked := 0
+
+	for _, link := range links {
+		// Look up menu_id by menu_code
+		var menuID uuid.UUID
+		err := tx.QueryRowContext(ctx,
+			`SELECT menu_id FROM mst_menu WHERE menu_code = $1`, link.MenuCode,
+		).Scan(&menuID)
+		if err != nil {
+			// Menu may not exist yet (e.g., migrations not run) — skip gracefully
+			log.Warn().Str("menu_code", link.MenuCode).Msg("Menu not found, skipping permission link")
+			continue
+		}
+
+		for _, permCode := range link.PermCodes {
+			permID, ok := permIDs[permCode]
+			if !ok {
+				log.Warn().Str("permission_code", permCode).Msg("Permission not found, skipping")
+				continue
+			}
+
+			_, err := tx.ExecContext(ctx, `
+				INSERT INTO menu_permissions (menu_id, permission_id, assigned_by)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (menu_id, permission_id) DO NOTHING`,
+				menuID, permID, systemUser,
+			)
+			if err != nil {
+				return fmt.Errorf("failed to link permission %s to menu %s: %w", permCode, link.MenuCode, err)
+			}
+			totalLinked++
+		}
+	}
+
+	log.Info().Int("total_links", totalLinked).Msg("Menu-permission linkage seeded")
 	return nil
 }

@@ -17,6 +17,7 @@ type Repository interface {
 	List(ctx context.Context, params ListParams) ([]*Role, int64, error)
 	ExistsByCode(ctx context.Context, code string) (bool, error)
 	BatchCreate(ctx context.Context, roles []*Role) (int, error)
+	CountUsersByRoles(ctx context.Context, roleIDs []uuid.UUID) (map[uuid.UUID]int32, error)
 
 	// Role-Permission assignment
 	AssignPermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID, assignedBy string) error

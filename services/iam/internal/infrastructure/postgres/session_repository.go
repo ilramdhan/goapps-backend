@@ -32,9 +32,11 @@ func NewSessionRepository(db *DB) *SessionRepository {
 func (r *SessionRepository) Create(ctx context.Context, s *session.Session) error {
 	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
 		// Revoke all existing active sessions for this user (single device login policy)
+		// Must revoke ALL un-revoked sessions (including expired ones) to satisfy
+		// the partial unique index idx_user_active_session(user_id) WHERE revoked_at IS NULL
 		revokeQuery := `
 			UPDATE user_sessions SET revoked_at = $1
-			WHERE user_id = $2 AND revoked_at IS NULL AND expires_at > $1
+			WHERE user_id = $2 AND revoked_at IS NULL
 		`
 		if _, err := tx.ExecContext(ctx, revokeQuery, time.Now(), s.UserID()); err != nil {
 			return fmt.Errorf("failed to revoke existing sessions: %w", err)
@@ -44,12 +46,12 @@ func (r *SessionRepository) Create(ctx context.Context, s *session.Session) erro
 		insertQuery := `
 			INSERT INTO user_sessions (
 				session_id, user_id, refresh_token_hash, device_info, ip_address,
-				service_name, expires_at, created_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				service_name, expires_at, created_at, last_activity_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		`
 		_, err := tx.ExecContext(ctx, insertQuery,
 			s.ID(), s.UserID(), s.RefreshTokenHash(), s.DeviceInfo(), s.IPAddress(),
-			s.ServiceName(), s.ExpiresAt(), s.CreatedAt(),
+			s.ServiceName(), s.ExpiresAt(), s.CreatedAt(), s.LastActivityAt(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to insert session: %w", err)
@@ -63,7 +65,7 @@ func (r *SessionRepository) Create(ctx context.Context, s *session.Session) erro
 func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*session.Session, error) {
 	query := `
 		SELECT session_id, user_id, refresh_token_hash, device_info, ip_address,
-			service_name, expires_at, created_at, revoked_at
+			service_name, expires_at, created_at, revoked_at, last_activity_at
 		FROM user_sessions
 		WHERE session_id = $1
 	`
@@ -71,7 +73,7 @@ func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*session
 	var s sessionRow
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&s.ID, &s.UserID, &s.RefreshTokenHash, &s.DeviceInfo, &s.IPAddress,
-		&s.ServiceName, &s.ExpiresAt, &s.CreatedAt, &s.RevokedAt,
+		&s.ServiceName, &s.ExpiresAt, &s.CreatedAt, &s.RevokedAt, &s.LastActivityAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -87,7 +89,7 @@ func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*session
 func (r *SessionRepository) GetByRefreshToken(ctx context.Context, tokenHash string) (*session.Session, error) {
 	query := `
 		SELECT session_id, user_id, refresh_token_hash, device_info, ip_address,
-			service_name, expires_at, created_at, revoked_at
+			service_name, expires_at, created_at, revoked_at, last_activity_at
 		FROM user_sessions
 		WHERE refresh_token_hash = $1
 	`
@@ -95,7 +97,7 @@ func (r *SessionRepository) GetByRefreshToken(ctx context.Context, tokenHash str
 	var s sessionRow
 	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
 		&s.ID, &s.UserID, &s.RefreshTokenHash, &s.DeviceInfo, &s.IPAddress,
-		&s.ServiceName, &s.ExpiresAt, &s.CreatedAt, &s.RevokedAt,
+		&s.ServiceName, &s.ExpiresAt, &s.CreatedAt, &s.RevokedAt, &s.LastActivityAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -111,7 +113,7 @@ func (r *SessionRepository) GetByRefreshToken(ctx context.Context, tokenHash str
 func (r *SessionRepository) GetActiveByUserID(ctx context.Context, userID uuid.UUID) (*session.Session, error) {
 	query := `
 		SELECT session_id, user_id, refresh_token_hash, device_info, ip_address,
-			service_name, expires_at, created_at, revoked_at
+			service_name, expires_at, created_at, revoked_at, last_activity_at
 		FROM user_sessions
 		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > $2
 		ORDER BY created_at DESC
@@ -121,7 +123,7 @@ func (r *SessionRepository) GetActiveByUserID(ctx context.Context, userID uuid.U
 	var s sessionRow
 	err := r.db.QueryRowContext(ctx, query, userID, time.Now()).Scan(
 		&s.ID, &s.UserID, &s.RefreshTokenHash, &s.DeviceInfo, &s.IPAddress,
-		&s.ServiceName, &s.ExpiresAt, &s.CreatedAt, &s.RevokedAt,
+		&s.ServiceName, &s.ExpiresAt, &s.CreatedAt, &s.RevokedAt, &s.LastActivityAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -162,11 +164,11 @@ func (r *SessionRepository) GetByTokenID(ctx context.Context, tokenID string) (*
 func (r *SessionRepository) Update(ctx context.Context, s *session.Session) error {
 	query := `
 		UPDATE user_sessions SET
-			refresh_token_hash = $2, expires_at = $3, revoked_at = $4
+			refresh_token_hash = $2, expires_at = $3, revoked_at = $4, last_activity_at = $5
 		WHERE session_id = $1
 	`
 	result, err := r.db.ExecContext(ctx, query,
-		s.ID(), s.RefreshTokenHash(), s.ExpiresAt(), s.RevokedAt(),
+		s.ID(), s.RefreshTokenHash(), s.ExpiresAt(), s.RevokedAt(), s.LastActivityAt(),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update session: %w", err)
@@ -218,6 +220,16 @@ func hashToken(token string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// UpdateActivity updates the last_activity_at for the active session of a user.
+func (r *SessionRepository) UpdateActivity(ctx context.Context, userID uuid.UUID) error {
+	query := `UPDATE user_sessions SET last_activity_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`
+	_, err := r.db.ExecContext(ctx, query, userID, time.Now())
+	if err != nil {
+		return fmt.Errorf("failed to update session activity: %w", err)
+	}
+	return nil
+}
+
 // ListActive lists all active sessions with pagination.
 func (r *SessionRepository) ListActive(ctx context.Context, params session.ListParams) ([]*session.Info, int64, error) {
 	var conditions []string
@@ -267,7 +279,8 @@ func (r *SessionRepository) ListActive(ctx context.Context, params session.ListP
 	offset := (params.Page - 1) * params.PageSize
 	query := fmt.Sprintf(`
 		SELECT s.session_id, s.user_id, u.username, COALESCE(d.full_name, u.username),
-			s.device_info, s.ip_address, s.service_name, s.created_at, s.expires_at, s.revoked_at
+			s.device_info, s.ip_address, s.service_name, s.created_at, s.expires_at, s.revoked_at,
+			s.last_activity_at
 		FROM user_sessions s
 		LEFT JOIN mst_user u ON s.user_id = u.user_id
 		LEFT JOIN mst_user_detail d ON u.user_id = d.user_id
@@ -294,6 +307,7 @@ func (r *SessionRepository) ListActive(ctx context.Context, params session.ListP
 		if err := rows.Scan(
 			&s.SessionID, &s.UserID, &s.Username, &s.FullName,
 			&s.DeviceInfo, &s.IPAddress, &s.ServiceName, &s.CreatedAt, &s.ExpiresAt, &s.RevokedAt,
+			&s.LastActivityAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan session: %w", err)
 		}
@@ -319,7 +333,7 @@ func (r *SessionRepository) CleanupExpired(ctx context.Context) (int, error) {
 	return int(rows), nil
 }
 
-// Helper struct for scanning
+// Helper struct for scanning.
 type sessionRow struct {
 	ID               uuid.UUID
 	UserID           uuid.UUID
@@ -330,11 +344,12 @@ type sessionRow struct {
 	ExpiresAt        time.Time
 	CreatedAt        time.Time
 	RevokedAt        *time.Time
+	LastActivityAt   time.Time
 }
 
 func (r *sessionRow) toDomain() *session.Session {
 	return session.ReconstructSession(
 		r.ID, r.UserID, r.RefreshTokenHash, r.DeviceInfo.String, r.IPAddress.String,
-		r.ServiceName, r.ExpiresAt, r.CreatedAt, r.RevokedAt,
+		r.ServiceName, r.ExpiresAt, r.CreatedAt, r.RevokedAt, r.LastActivityAt,
 	)
 }

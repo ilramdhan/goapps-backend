@@ -63,8 +63,8 @@ temp/
 # Vendor (uncomment if not vendoring)
 # vendor/
 
-# Air hot reload
-.air.toml
+# Air hot reload temp
+air.log
 
 # Test databases
 *.db

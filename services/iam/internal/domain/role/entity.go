@@ -158,6 +158,7 @@ type Permission struct {
 	moduleName  string
 	actionType  string
 	isActive    bool
+	roleCount   int32
 	audit       shared.AuditInfo
 }
 
@@ -227,6 +228,12 @@ func (p *Permission) ActionType() string { return p.actionType }
 
 // IsActive returns whether the permission is active.
 func (p *Permission) IsActive() bool { return p.isActive }
+
+// RoleCount returns the number of roles using this permission.
+func (p *Permission) RoleCount() int32 { return p.roleCount }
+
+// SetRoleCount sets the role count (populated by list queries).
+func (p *Permission) SetRoleCount(count int32) { p.roleCount = count }
 
 // Audit returns the audit information.
 func (p *Permission) Audit() shared.AuditInfo { return p.audit }

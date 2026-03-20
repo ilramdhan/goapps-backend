@@ -6,12 +6,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"github.com/mutugading/goapps-backend/services/iam/internal/domain/session"
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/jwt"
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/redis"
 )
@@ -50,7 +52,8 @@ func isPublicMethod(fullMethod string) bool {
 
 // AuthInterceptor creates a unary interceptor that validates JWT tokens
 // and populates the context with user information.
-func AuthInterceptor(jwtService *jwt.Service, sessionCache *redis.SessionCache) grpc.UnaryServerInterceptor {
+// sessionRepo is optional — when provided, it updates last_activity_at on each request.
+func AuthInterceptor(jwtService *jwt.Service, sessionCache *redis.SessionCache, sessionRepo session.Repository) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,
@@ -101,6 +104,19 @@ func AuthInterceptor(jwtService *jwt.Service, sessionCache *redis.SessionCache) 
 		ctx = context.WithValue(ctx, EmailKey, claims.Email)
 		ctx = context.WithValue(ctx, RolesKey, claims.Roles)
 		ctx = context.WithValue(ctx, PermissionsKey, claims.Permissions)
+
+		// Update session last_activity_at (fire-and-forget, non-blocking)
+		if sessionRepo != nil {
+			go func() {
+				userID, parseErr := uuid.Parse(claims.UserID)
+				if parseErr != nil {
+					return
+				}
+				if updateErr := sessionRepo.UpdateActivity(context.Background(), userID); updateErr != nil {
+					log.Debug().Err(updateErr).Msg("failed to update session activity")
+				}
+			}()
+		}
 
 		return handler(ctx, req)
 	}

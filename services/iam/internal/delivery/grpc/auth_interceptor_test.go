@@ -126,7 +126,7 @@ func TestExtractBearerToken(t *testing.T) {
 
 func TestAuthInterceptor_PublicMethod(t *testing.T) {
 	jwtSvc := newTestJWTService()
-	interceptor := AuthInterceptor(jwtSvc, nil)
+	interceptor := AuthInterceptor(jwtSvc, nil, nil)
 
 	// Public methods should pass without any token.
 	info := &grpc.UnaryServerInfo{FullMethod: "/iam.v1.AuthService/Login"}
@@ -138,7 +138,7 @@ func TestAuthInterceptor_PublicMethod(t *testing.T) {
 
 func TestAuthInterceptor_MissingToken(t *testing.T) {
 	jwtSvc := newTestJWTService()
-	interceptor := AuthInterceptor(jwtSvc, nil)
+	interceptor := AuthInterceptor(jwtSvc, nil, nil)
 
 	info := &grpc.UnaryServerInfo{FullMethod: "/iam.v1.UserService/ListUsers"}
 	_, err := interceptor(context.Background(), nil, info, noopHandler)
@@ -151,7 +151,7 @@ func TestAuthInterceptor_MissingToken(t *testing.T) {
 
 func TestAuthInterceptor_InvalidToken(t *testing.T) {
 	jwtSvc := newTestJWTService()
-	interceptor := AuthInterceptor(jwtSvc, nil)
+	interceptor := AuthInterceptor(jwtSvc, nil, nil)
 
 	ctx := ctxWithToken("invalid-jwt-token")
 	info := &grpc.UnaryServerInfo{FullMethod: "/iam.v1.UserService/ListUsers"}
@@ -183,7 +183,7 @@ func TestAuthInterceptor_ExpiredToken(t *testing.T) {
 	require.NoError(t, err)
 
 	jwtSvc := newTestJWTService()
-	interceptor := AuthInterceptor(jwtSvc, nil)
+	interceptor := AuthInterceptor(jwtSvc, nil, nil)
 
 	ctx := ctxWithToken(tokenStr)
 	info := &grpc.UnaryServerInfo{FullMethod: "/iam.v1.UserService/ListUsers"}
@@ -199,7 +199,7 @@ func TestAuthInterceptor_ValidToken(t *testing.T) {
 	jwtSvc := newTestJWTService()
 	accessToken := generateTestAccessToken(t, jwtSvc)
 
-	interceptor := AuthInterceptor(jwtSvc, nil)
+	interceptor := AuthInterceptor(jwtSvc, nil, nil)
 
 	ctx := ctxWithToken(accessToken)
 	info := &grpc.UnaryServerInfo{FullMethod: "/iam.v1.UserService/ListUsers"}
@@ -248,7 +248,7 @@ func TestAuthInterceptor_WrongSigningSecret(t *testing.T) {
 
 	// Validate with the correct service (different secret).
 	jwtSvc := newTestJWTService()
-	interceptor := AuthInterceptor(jwtSvc, nil)
+	interceptor := AuthInterceptor(jwtSvc, nil, nil)
 
 	ctx := ctxWithToken(pair.AccessToken)
 	info := &grpc.UnaryServerInfo{FullMethod: "/iam.v1.UserService/ListUsers"}

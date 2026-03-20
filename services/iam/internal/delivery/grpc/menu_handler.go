@@ -243,13 +243,23 @@ func (h *MenuHandler) GetMenuTree(ctx context.Context, req *iamv1.GetMenuTreeReq
 		return &iamv1.GetMenuTreeResponse{Base: baseResp}, nil
 	}
 
-	userID, err := getUserIDFromContext(ctx)
-	if err != nil {
-		// Unauthenticated: will still see menus that have no permission requirements
-		userID = uuid.Nil
+	var (
+		tree []*menu.WithChildren
+		err  error
+	)
+
+	// Super admin bypasses permission filter — sees all active+visible menus.
+	if IsSuperAdmin(ctx) {
+		tree, err = h.menuRepo.GetTree(ctx, req.GetServiceName(), false, false)
+	} else {
+		userID, idErr := getUserIDFromContext(ctx)
+		if idErr != nil {
+			// Unauthenticated: will still see menus that have no permission requirements.
+			userID = uuid.Nil
+		}
+		tree, err = h.menuRepo.GetTreeForUser(ctx, userID, req.GetServiceName())
 	}
 
-	tree, err := h.menuRepo.GetTreeForUser(ctx, userID, req.GetServiceName())
 	if err != nil {
 		return &iamv1.GetMenuTreeResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error returned in response body
 	}

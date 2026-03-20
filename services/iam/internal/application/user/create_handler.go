@@ -17,6 +17,9 @@ type CreateCommand struct {
 	FullName     string
 	FirstName    string
 	LastName     string
+	Phone        string
+	Position     string
+	Address      string
 	CreatedBy    string
 }
 
@@ -80,6 +83,9 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*user.Us
 		cmd.FullName,
 		cmd.FirstName,
 		cmd.LastName,
+		cmd.Phone,
+		cmd.Position,
+		cmd.Address,
 		cmd.CreatedBy,
 	)
 	if err != nil {

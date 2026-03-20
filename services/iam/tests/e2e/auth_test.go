@@ -51,6 +51,43 @@ func TestAuth_Login_Success(t *testing.T) {
 	}
 }
 
+// TestAuth_Login_ByEmail_Success verifies that a user can log in using their email address.
+// The admin seed user's email is admin@goapps.local (set in 000001_seed_admin.up.sql).
+func TestAuth_Login_ByEmail_Success(t *testing.T) {
+	skipIfNoE2E(t)
+	conn := grpcConn(t)
+	client := iamv1.NewAuthServiceClient(conn)
+	ctx := context.Background()
+
+	// Use the admin email. This must match the value in 000001_seed_admin.up.sql.
+	resp, err := client.Login(ctx, &iamv1.LoginRequest{
+		Username:   "admin@goapps.local",
+		Password:   "admin123",
+		DeviceInfo: "e2e-test",
+	})
+	if err != nil {
+		t.Fatalf("Login by email RPC failed: %v", err)
+	}
+
+	if resp.GetBase() == nil || !resp.GetBase().GetIsSuccess() {
+		t.Fatalf("Expected successful login by email, got: %v", resp.GetBase().GetMessage())
+	}
+
+	data := resp.GetData()
+	if data == nil {
+		t.Fatal("Expected login data in response, got nil")
+	}
+	if data.GetAccessToken() == "" {
+		t.Error("Expected non-empty access token")
+	}
+	// The returned user should still be 'admin'.
+	if data.GetUser() == nil {
+		t.Error("Expected user info in login data")
+	} else if data.GetUser().GetUsername() != "admin" {
+		t.Errorf("Expected username 'admin', got %q", data.GetUser().GetUsername())
+	}
+}
+
 func TestAuth_Login_InvalidPassword(t *testing.T) {
 	skipIfNoE2E(t)
 	conn := grpcConn(t)

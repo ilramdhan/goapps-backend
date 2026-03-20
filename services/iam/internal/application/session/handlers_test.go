@@ -91,6 +91,11 @@ func (m *MockSessionRepository) CleanupExpired(ctx context.Context) (int, error)
 	return args.Int(0), args.Error(1)
 }
 
+func (m *MockSessionRepository) UpdateActivity(ctx context.Context, userID uuid.UUID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
 // =============================================================================
 // ListHandler
 // =============================================================================

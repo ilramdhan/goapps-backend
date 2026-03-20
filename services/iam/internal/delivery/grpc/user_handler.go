@@ -14,6 +14,7 @@ import (
 	userapp "github.com/mutugading/goapps-backend/services/iam/internal/application/user"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/user"
+	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/password"
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/storage"
 )
 
@@ -80,14 +81,32 @@ func (h *UserHandler) CreateUser(ctx context.Context, req *iamv1.CreateUserReque
 		return &iamv1.CreateUserResponse{Base: baseResp}, nil
 	}
 
+	// Validate password against policy.
+	if err := password.Validate(req.GetPassword(), password.DefaultPolicy()); err != nil {
+		return &iamv1.CreateUserResponse{
+			Base: ErrorResponse("400", "Password too weak: "+err.Error()),
+		}, nil
+	}
+
+	// Hash the password before storing.
+	hashedPassword, err := password.Hash(req.GetPassword())
+	if err != nil {
+		return &iamv1.CreateUserResponse{
+			Base: InternalErrorResponse("failed to hash password"),
+		}, nil
+	}
+
 	entity, err := h.createHandler.Handle(ctx, userapp.CreateCommand{
 		Username:     req.GetUsername(),
 		Email:        req.GetEmail(),
-		PasswordHash: req.GetPassword(),
+		PasswordHash: hashedPassword,
 		EmployeeCode: req.GetEmployeeCode(),
 		FullName:     req.GetFullName(),
 		FirstName:    req.GetFirstName(),
 		LastName:     req.GetLastName(),
+		Phone:        req.GetPhone(),
+		Position:     req.GetPosition(),
+		Address:      req.GetAddress(),
 		CreatedBy:    h.getActorID(ctx),
 	})
 	if err != nil {

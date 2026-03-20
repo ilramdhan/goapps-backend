@@ -136,8 +136,8 @@ func run() error {
 	departmentHandler := grpcdelivery.NewDepartmentHandler(departmentRepo, validationHelper)
 	sectionHandler := grpcdelivery.NewSectionHandler(sectionRepo, validationHelper)
 
-	// Setup gRPC server with interceptor chain (pass JWT + session cache for auth)
-	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, db, jwtService, sessionCache)
+	// Setup gRPC server with interceptor chain (pass JWT + session cache + session repo for auth & activity tracking)
+	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, db, jwtService, sessionCache, sessionRepo)
 	if err != nil {
 		return err
 	}

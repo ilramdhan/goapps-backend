@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/mutugading/goapps-backend/services/iam/internal/domain/session"
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/config"
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/jwt"
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/postgres"
@@ -30,22 +31,22 @@ type Server struct {
 }
 
 // NewServer creates a new gRPC server with all interceptors.
-func NewServer(cfg *config.ServerConfig, db *postgres.DB, jwtService *jwt.Service, sessionCache *redisinfra.SessionCache) (*Server, error) {
+func NewServer(cfg *config.ServerConfig, db *postgres.DB, jwtService *jwt.Service, sessionCache *redisinfra.SessionCache, sessionRepo session.Repository) (*Server, error) {
 	// Create rate limiter
 	rateLimiter := NewRateLimiter(100) // 100 requests per second default
 
 	// Chain interceptors in order (outermost first)
 	unaryChain := grpc.ChainUnaryInterceptor(
-		StructuredErrorInterceptor(),              // 0. Wrap gRPC errors into BaseResponse
-		RecoveryInterceptor(),                     // 1. Recover from panics first
-		RequestIDInterceptor(),                    // 2. Add request ID
-		TracingInterceptor(),                      // 3. Add tracing span
-		MetricsInterceptor(),                      // 4. Record metrics
-		RateLimitInterceptor(rateLimiter),         // 5. Rate limiting
-		AuthInterceptor(jwtService, sessionCache), // 6. JWT authentication
-		PermissionInterceptor(),                   // 7. RBAC permission check
-		LoggingInterceptor(),                      // 8. Log request
-		TimeoutInterceptor(30*time.Second),        // 9. Enforce timeout
+		StructuredErrorInterceptor(),                           // 0. Wrap gRPC errors into BaseResponse
+		RecoveryInterceptor(),                                  // 1. Recover from panics first
+		RequestIDInterceptor(),                                 // 2. Add request ID
+		TracingInterceptor(),                                   // 3. Add tracing span
+		MetricsInterceptor(),                                   // 4. Record metrics
+		RateLimitInterceptor(rateLimiter),                      // 5. Rate limiting
+		AuthInterceptor(jwtService, sessionCache, sessionRepo), // 6. JWT authentication + activity tracking
+		PermissionInterceptor(),                                // 7. RBAC permission check
+		LoggingInterceptor(),                                   // 8. Log request
+		TimeoutInterceptor(30*time.Second),                     // 9. Enforce timeout
 	)
 
 	// Server options

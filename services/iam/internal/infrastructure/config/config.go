@@ -124,6 +124,7 @@ type SecurityConfig struct {
 	OTPExpiry                time.Duration `mapstructure:"otp_expiry"`
 	ResetTokenExpiry         time.Duration `mapstructure:"reset_token_expiry"`
 	SingleDeviceLogin        bool          `mapstructure:"single_device_login"`
+	SessionIdleTimeout       time.Duration `mapstructure:"session_idle_timeout"`
 }
 
 // RateLimitConfig holds rate limiting configuration.
@@ -261,6 +262,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("security.otp_expiry", 5*time.Minute)
 	v.SetDefault("security.reset_token_expiry", 10*time.Minute)
 	v.SetDefault("security.single_device_login", true)
+	v.SetDefault("security.session_idle_timeout", 2*time.Hour)
 
 	// CORS defaults (comma-separated origins for SSO multi-app)
 	v.SetDefault("cors.allowed_origins", []string{"http://localhost:3000"})

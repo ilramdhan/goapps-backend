@@ -43,16 +43,17 @@ func NewProvider(ctx context.Context, cfg *config.TracingConfig, serviceName, ve
 		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
 	}
 
-	// Create resource with explicit schema to avoid version mismatch
+	// Create resource with explicit schema URL.
+	// Do NOT use resource.WithHost() or resource.WithProcess() — those detectors
+	// internally reference a newer semconv schema URL (e.g. 1.37.0) which conflicts
+	// with this package's schema (1.24.0) and produces a warning on startup.
 	res, err := resource.New(ctx,
 		resource.WithSchemaURL(semconv.SchemaURL),
 		resource.WithAttributes(
 			semconv.ServiceName(serviceName),
 			semconv.ServiceVersion(version),
-			attribute.String("environment", "development"),
+			attribute.String("deployment.environment", "development"),
 		),
-		resource.WithHost(),
-		resource.WithProcess(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
