@@ -29,6 +29,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o /bin/iam-service \
     ./cmd/server/main.go
 
+# Build seeder binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w" \
+    -o /bin/iam-seed \
+    ./seeds/main.go
+
 # Stage 2: Runtime
 FROM alpine:3.20
 
@@ -41,8 +47,9 @@ RUN apk add --no-cache ca-certificates tzdata
 RUN addgroup -g 1000 appgroup && \
     adduser -u 1000 -G appgroup -s /bin/sh -D appuser
 
-# Copy binary from builder
+# Copy binaries from builder
 COPY --from=builder /bin/iam-service /app/iam-service
+COPY --from=builder /bin/iam-seed /app/iam-seed
 
 # Copy config (can be overridden by ConfigMap in Kubernetes)
 COPY services/iam/config.yaml /app/config.yaml
