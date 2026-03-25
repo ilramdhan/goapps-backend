@@ -266,7 +266,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/iamV1DownloadTemplateResponse"
+              "$ref": "#/definitions/v1DownloadTemplateResponse"
             }
           },
           "default": {

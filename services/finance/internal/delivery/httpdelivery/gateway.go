@@ -84,7 +84,11 @@ func (s *Server) Start(ctx context.Context) error {
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
 	if err := financev1.RegisterUOMServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
-		return fmt.Errorf("failed to register gateway: %w", err)
+		return fmt.Errorf("failed to register UOM gateway: %w", err)
+	}
+
+	if err := financev1.RegisterRMCategoryServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register RMCategory gateway: %w", err)
 	}
 
 	// Create main mux

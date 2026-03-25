@@ -46,6 +46,14 @@ var (
 		[]string{"operation", "status"},
 	)
 
+	rmCategoryOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "rm_category_operations_total",
+			Help: "Total number of RM Category operations",
+		},
+		[]string{"operation", "status"},
+	)
+
 	cacheHitsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cache_hits_total",

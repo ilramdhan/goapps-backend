@@ -31,6 +31,308 @@
     }
   ],
   "paths": {
+    "/api/v1/finance/rm-categories": {
+      "get": {
+        "summary": "ListRMCategories lists raw material categories with search, filter, and pagination.",
+        "operationId": "RMCategoryService_ListRMCategories",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMCategoriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, default 1, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100, default 10).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in code, name, description).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = show all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"code\", \"name\", \"created_at\" (default: \"code\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCategoryService"
+        ]
+      },
+      "post": {
+        "summary": "CreateRMCategory creates a new raw material category.",
+        "operationId": "RMCategoryService_CreateRMCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateRMCategoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateRMCategoryRequest is the request for creating a new raw material category.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateRMCategoryRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMCategoryService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-categories/export": {
+      "get": {
+        "summary": "ExportRMCategories exports raw material categories to Excel file.",
+        "operationId": "RMCategoryService_ExportRMCategories",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportRMCategoriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = export all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "RMCategoryService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-categories/import": {
+      "post": {
+        "summary": "ImportRMCategories imports raw material categories from Excel file.",
+        "operationId": "RMCategoryService_ImportRMCategories",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportRMCategoriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportRMCategoriesRequest is the request for importing raw material categories from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportRMCategoriesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMCategoryService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-categories/template": {
+      "get": {
+        "summary": "DownloadRMCategoryTemplate downloads the Excel import template.",
+        "operationId": "RMCategoryService_DownloadRMCategoryTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadRMCategoryTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RMCategoryService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-categories/{rmCategoryId}": {
+      "get": {
+        "summary": "GetRMCategory retrieves a raw material category by ID.",
+        "operationId": "RMCategoryService_GetRMCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRMCategoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "rmCategoryId",
+            "description": "Raw material category ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCategoryService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteRMCategory soft deletes a raw material category.",
+        "operationId": "RMCategoryService_DeleteRMCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteRMCategoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "rmCategoryId",
+            "description": "Raw material category ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCategoryService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateRMCategory updates an existing raw material category.\nNote: category_code is immutable and cannot be changed.",
+        "operationId": "RMCategoryService_UpdateRMCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateRMCategoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "rmCategoryId",
+            "description": "Raw material category ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMCategoryServiceUpdateRMCategoryBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMCategoryService"
+        ]
+      }
+    },
     "/api/v1/finance/uoms": {
       "get": {
         "summary": "ListUOMs lists UOMs with search, filter, and pagination.",
@@ -248,7 +550,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/financeV1DownloadTemplateResponse"
+              "$ref": "#/definitions/v1DownloadTemplateResponse"
             }
           },
           "default": {
@@ -365,16 +667,12 @@
     }
   },
   "definitions": {
-    "UOMServiceUpdateUOMBody": {
+    "RMCategoryServiceUpdateRMCategoryBody": {
       "type": "object",
       "properties": {
-        "uomName": {
+        "categoryName": {
           "type": "string",
-          "description": "New display name (optional, 1-100 chars if provided).\nEmpty string means no change."
-        },
-        "uomCategory": {
-          "$ref": "#/definitions/v1UOMCategory",
-          "description": "New category (optional, cannot be UNSPECIFIED if provided).\nUse has_uom_category to check if this field is set."
+          "description": "New display name (optional, 1-100 chars if provided)."
         },
         "description": {
           "type": "string",
@@ -385,7 +683,7 @@
           "description": "New active status (optional)."
         }
       },
-      "description": "UpdateUOMRequest is the request for updating a UOM.\nNote: uom_code is immutable and cannot be changed after creation."
+      "description": "UpdateRMCategoryRequest is the request for updating a raw material category.\nNote: category_code is immutable and cannot be changed after creation."
     },
     "protobufAny": {
       "type": "object",
@@ -472,6 +770,304 @@
         }
       },
       "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateRMCategoryRequest": {
+      "type": "object",
+      "properties": {
+        "categoryCode": {
+          "type": "string",
+          "description": "Unique code (uppercase, alphanumeric with underscore, 1-20 chars).\nMust start with an uppercase letter. Immutable after creation."
+        },
+        "categoryName": {
+          "type": "string",
+          "description": "Display name (1-100 chars)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 500 chars)."
+        }
+      },
+      "description": "CreateRMCategoryRequest is the request for creating a new raw material category."
+    },
+    "v1CreateRMCategoryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMCategory",
+          "description": "Created raw material category data."
+        }
+      },
+      "description": "CreateRMCategoryResponse is the response for creating a raw material category."
+    },
+    "v1DeleteRMCategoryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteRMCategoryResponse is the response for deleting a raw material category."
+    },
+    "v1DownloadRMCategoryTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "DownloadRMCategoryTemplateResponse is the response containing the template file."
+    },
+    "v1ExportRMCategoriesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportRMCategoriesResponse is the response containing the Excel file."
+    },
+    "v1GetRMCategoryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMCategory",
+          "description": "Raw material category data."
+        }
+      },
+      "description": "GetRMCategoryResponse is the response for getting a raw material category."
+    },
+    "v1ImportError": {
+      "type": "object",
+      "properties": {
+        "rowNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Row number in the Excel file."
+        },
+        "field": {
+          "type": "string",
+          "description": "Field that caused the error."
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message."
+        }
+      },
+      "description": "ImportError represents a single import error."
+    },
+    "v1ImportRMCategoriesRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx or .xls format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original filename (for format detection).\nMust be a simple filename without path separators."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "Required. How to handle duplicates: \"skip\", \"update\", \"error\"."
+        }
+      },
+      "description": "ImportRMCategoriesRequest is the request for importing raw material categories from Excel."
+    },
+    "v1ImportRMCategoriesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully imported records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records (duplicates with skip action)."
+        },
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of updated records (duplicates with update action)."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Details of failed records."
+        }
+      },
+      "description": "ImportRMCategoriesResponse is the response for importing raw material categories."
+    },
+    "v1ListRMCategoriesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMCategory"
+          },
+          "description": "List of raw material categories."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListRMCategoriesResponse is the response for listing raw material categories."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1RMCategory": {
+      "type": "object",
+      "properties": {
+        "rmCategoryId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "categoryCode": {
+          "type": "string",
+          "description": "Unique code (e.g., \"CHIP\", \"OIL\", \"DYES\"). Immutable after creation."
+        },
+        "categoryName": {
+          "type": "string",
+          "description": "Display name (e.g., \"Chips\", \"Oil\", \"Dyes\")."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the category is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "RMCategory represents a Raw Material Category entity.\nUsed to classify raw materials (e.g., Chips, Oil, Dyes, Chemicals)."
+    },
+    "v1UpdateRMCategoryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMCategory",
+          "description": "Updated raw material category data."
+        }
+      },
+      "description": "UpdateRMCategoryResponse is the response for updating a raw material category."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    },
+    "UOMServiceUpdateUOMBody": {
+      "type": "object",
+      "properties": {
+        "uomName": {
+          "type": "string",
+          "description": "New display name (optional, 1-100 chars if provided).\nEmpty string means no change."
+        },
+        "uomCategory": {
+          "$ref": "#/definitions/v1UOMCategory",
+          "description": "New category (optional, cannot be UNSPECIFIED if provided).\nUse has_uom_category to check if this field is set."
+        },
+        "description": {
+          "type": "string",
+          "description": "New description (optional, max 500 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "New active status (optional)."
+        }
+      },
+      "description": "UpdateUOMRequest is the request for updating a UOM.\nNote: uom_code is immutable and cannot be changed after creation."
     },
     "v1CreateUOMRequest": {
       "type": "object",
@@ -571,25 +1167,6 @@
       },
       "description": "GetUOMResponse is the response for getting a UOM."
     },
-    "v1ImportError": {
-      "type": "object",
-      "properties": {
-        "rowNumber": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Row number in the Excel file."
-        },
-        "field": {
-          "type": "string",
-          "description": "Field that caused the error."
-        },
-        "message": {
-          "type": "string",
-          "description": "Error message."
-        }
-      },
-      "description": "ImportError represents a single import error."
-    },
     "v1ImportUOMsRequest": {
       "type": "object",
       "properties": {
@@ -669,32 +1246,6 @@
       },
       "description": "ListUOMsResponse is the response for listing UOMs."
     },
-    "v1PaginationResponse": {
-      "type": "object",
-      "properties": {
-        "currentPage": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Current page number."
-        },
-        "pageSize": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Number of items per page."
-        },
-        "totalItems": {
-          "type": "string",
-          "format": "int64",
-          "description": "Total number of items across all pages."
-        },
-        "totalPages": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Total number of pages."
-        }
-      },
-      "description": "PaginationResponse contains pagination metadata for list responses."
-    },
     "v1UOM": {
       "type": "object",
       "properties": {
@@ -754,23 +1305,12 @@
         }
       },
       "description": "UpdateUOMResponse is the response for updating a UOM."
-    },
-    "v1ValidationError": {
-      "type": "object",
-      "properties": {
-        "field": {
-          "type": "string",
-          "description": "The field name that failed validation."
-        },
-        "message": {
-          "type": "string",
-          "description": "The validation error message."
-        }
-      },
-      "description": "ValidationError represents a single field validation error."
     }
   },
   "tags": [
+    {
+      "name": "RMCategoryService"
+    },
     {
       "name": "UOMService"
     }

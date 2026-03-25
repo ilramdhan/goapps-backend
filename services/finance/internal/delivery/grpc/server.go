@@ -72,6 +72,7 @@ func NewServer(cfg *config.ServerConfig, db *postgres.DB, jwtCfg *config.JWTConf
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("finance.v1.UOMService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("finance.v1.RMCategoryService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	// Enable reflection for development
 	reflection.Register(grpcServer)

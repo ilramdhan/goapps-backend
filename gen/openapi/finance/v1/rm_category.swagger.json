@@ -1,12 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "finance/v1/uom.proto",
+    "title": "finance/v1/rm_category.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "UOMService"
+      "name": "RMCategoryService"
     }
   ],
   "consumes": [
@@ -16,15 +16,15 @@
     "application/json"
   ],
   "paths": {
-    "/api/v1/finance/uoms": {
+    "/api/v1/finance/rm-categories": {
       "get": {
-        "summary": "ListUOMs lists UOMs with search, filter, and pagination.",
-        "operationId": "UOMService_ListUOMs",
+        "summary": "ListRMCategories lists raw material categories with search, filter, and pagination.",
+        "operationId": "RMCategoryService_ListRMCategories",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListUOMsResponse"
+              "$ref": "#/definitions/v1ListRMCategoriesResponse"
             }
           },
           "default": {
@@ -59,21 +59,6 @@
             "type": "string"
           },
           {
-            "name": "category",
-            "description": "Filter by category.\nUOM_CATEGORY_UNSPECIFIED (0) means \"show all categories\" (no filter).\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "UOM_CATEGORY_UNSPECIFIED",
-              "UOM_CATEGORY_WEIGHT",
-              "UOM_CATEGORY_LENGTH",
-              "UOM_CATEGORY_VOLUME",
-              "UOM_CATEGORY_QUANTITY"
-            ],
-            "default": "UOM_CATEGORY_UNSPECIFIED"
-          },
-          {
             "name": "activeFilter",
             "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = show all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
             "in": "query",
@@ -102,17 +87,17 @@
           }
         ],
         "tags": [
-          "UOMService"
+          "RMCategoryService"
         ]
       },
       "post": {
-        "summary": "CreateUOM creates a new UOM.",
-        "operationId": "UOMService_CreateUOM",
+        "summary": "CreateRMCategory creates a new raw material category.",
+        "operationId": "RMCategoryService_CreateRMCategory",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1CreateUOMResponse"
+              "$ref": "#/definitions/v1CreateRMCategoryResponse"
             }
           },
           "default": {
@@ -125,28 +110,28 @@
         "parameters": [
           {
             "name": "body",
-            "description": "CreateUOMRequest is the request for creating a new UOM.",
+            "description": "CreateRMCategoryRequest is the request for creating a new raw material category.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1CreateUOMRequest"
+              "$ref": "#/definitions/v1CreateRMCategoryRequest"
             }
           }
         ],
         "tags": [
-          "UOMService"
+          "RMCategoryService"
         ]
       }
     },
-    "/api/v1/finance/uoms/export": {
+    "/api/v1/finance/rm-categories/export": {
       "get": {
-        "summary": "ExportUOMs exports UOMs to Excel file.",
-        "operationId": "UOMService_ExportUOMs",
+        "summary": "ExportRMCategories exports raw material categories to Excel file.",
+        "operationId": "RMCategoryService_ExportRMCategories",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ExportUOMsResponse"
+              "$ref": "#/definitions/v1ExportRMCategoriesResponse"
             }
           },
           "default": {
@@ -157,21 +142,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "category",
-            "description": "Filter by category.\nUOM_CATEGORY_UNSPECIFIED (0) means \"export all categories\".\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "UOM_CATEGORY_UNSPECIFIED",
-              "UOM_CATEGORY_WEIGHT",
-              "UOM_CATEGORY_LENGTH",
-              "UOM_CATEGORY_VOLUME",
-              "UOM_CATEGORY_QUANTITY"
-            ],
-            "default": "UOM_CATEGORY_UNSPECIFIED"
-          },
           {
             "name": "activeFilter",
             "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = export all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
@@ -187,19 +157,19 @@
           }
         ],
         "tags": [
-          "UOMService"
+          "RMCategoryService"
         ]
       }
     },
-    "/api/v1/finance/uoms/import": {
+    "/api/v1/finance/rm-categories/import": {
       "post": {
-        "summary": "ImportUOMs imports UOMs from Excel file.",
-        "operationId": "UOMService_ImportUOMs",
+        "summary": "ImportRMCategories imports raw material categories from Excel file.",
+        "operationId": "RMCategoryService_ImportRMCategories",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ImportUOMsResponse"
+              "$ref": "#/definitions/v1ImportRMCategoriesResponse"
             }
           },
           "default": {
@@ -212,28 +182,28 @@
         "parameters": [
           {
             "name": "body",
-            "description": "ImportUOMsRequest is the request for importing UOMs from Excel.",
+            "description": "ImportRMCategoriesRequest is the request for importing raw material categories from Excel.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1ImportUOMsRequest"
+              "$ref": "#/definitions/v1ImportRMCategoriesRequest"
             }
           }
         ],
         "tags": [
-          "UOMService"
+          "RMCategoryService"
         ]
       }
     },
-    "/api/v1/finance/uoms/template": {
+    "/api/v1/finance/rm-categories/template": {
       "get": {
-        "summary": "DownloadTemplate downloads the Excel import template.",
-        "operationId": "UOMService_DownloadTemplate",
+        "summary": "DownloadRMCategoryTemplate downloads the Excel import template.",
+        "operationId": "RMCategoryService_DownloadRMCategoryTemplate",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1DownloadTemplateResponse"
+              "$ref": "#/definitions/v1DownloadRMCategoryTemplateResponse"
             }
           },
           "default": {
@@ -244,19 +214,19 @@
           }
         },
         "tags": [
-          "UOMService"
+          "RMCategoryService"
         ]
       }
     },
-    "/api/v1/finance/uoms/{uomId}": {
+    "/api/v1/finance/rm-categories/{rmCategoryId}": {
       "get": {
-        "summary": "GetUOM retrieves a UOM by ID.",
-        "operationId": "UOMService_GetUOM",
+        "summary": "GetRMCategory retrieves a raw material category by ID.",
+        "operationId": "RMCategoryService_GetRMCategory",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetUOMResponse"
+              "$ref": "#/definitions/v1GetRMCategoryResponse"
             }
           },
           "default": {
@@ -268,25 +238,25 @@
         },
         "parameters": [
           {
-            "name": "uomId",
-            "description": "UOM ID (UUID format).",
+            "name": "rmCategoryId",
+            "description": "Raw material category ID (UUID format).",
             "in": "path",
             "required": true,
             "type": "string"
           }
         ],
         "tags": [
-          "UOMService"
+          "RMCategoryService"
         ]
       },
       "delete": {
-        "summary": "DeleteUOM soft deletes a UOM.",
-        "operationId": "UOMService_DeleteUOM",
+        "summary": "DeleteRMCategory soft deletes a raw material category.",
+        "operationId": "RMCategoryService_DeleteRMCategory",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1DeleteUOMResponse"
+              "$ref": "#/definitions/v1DeleteRMCategoryResponse"
             }
           },
           "default": {
@@ -298,25 +268,25 @@
         },
         "parameters": [
           {
-            "name": "uomId",
-            "description": "UOM ID to delete (UUID format).",
+            "name": "rmCategoryId",
+            "description": "Raw material category ID to delete (UUID format).",
             "in": "path",
             "required": true,
             "type": "string"
           }
         ],
         "tags": [
-          "UOMService"
+          "RMCategoryService"
         ]
       },
       "put": {
-        "summary": "UpdateUOM updates an existing UOM.\nNote: uom_code is immutable and cannot be changed.",
-        "operationId": "UOMService_UpdateUOM",
+        "summary": "UpdateRMCategory updates an existing raw material category.\nNote: category_code is immutable and cannot be changed.",
+        "operationId": "RMCategoryService_UpdateRMCategory",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1UpdateUOMResponse"
+              "$ref": "#/definitions/v1UpdateRMCategoryResponse"
             }
           },
           "default": {
@@ -328,8 +298,8 @@
         },
         "parameters": [
           {
-            "name": "uomId",
-            "description": "UOM ID to update (UUID format).",
+            "name": "rmCategoryId",
+            "description": "Raw material category ID to update (UUID format).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -339,27 +309,23 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/UOMServiceUpdateUOMBody"
+              "$ref": "#/definitions/RMCategoryServiceUpdateRMCategoryBody"
             }
           }
         ],
         "tags": [
-          "UOMService"
+          "RMCategoryService"
         ]
       }
     }
   },
   "definitions": {
-    "UOMServiceUpdateUOMBody": {
+    "RMCategoryServiceUpdateRMCategoryBody": {
       "type": "object",
       "properties": {
-        "uomName": {
+        "categoryName": {
           "type": "string",
-          "description": "New display name (optional, 1-100 chars if provided).\nEmpty string means no change."
-        },
-        "uomCategory": {
-          "$ref": "#/definitions/v1UOMCategory",
-          "description": "New category (optional, cannot be UNSPECIFIED if provided).\nUse has_uom_category to check if this field is set."
+          "description": "New display name (optional, 1-100 chars if provided)."
         },
         "description": {
           "type": "string",
@@ -370,7 +336,7 @@
           "description": "New active status (optional)."
         }
       },
-      "description": "UpdateUOMRequest is the request for updating a UOM.\nNote: uom_code is immutable and cannot be changed after creation."
+      "description": "UpdateRMCategoryRequest is the request for updating a raw material category.\nNote: category_code is immutable and cannot be changed after creation."
     },
     "protobufAny": {
       "type": "object",
@@ -458,29 +424,25 @@
       },
       "description": "BaseResponse is the standard response wrapper for all API responses."
     },
-    "v1CreateUOMRequest": {
+    "v1CreateRMCategoryRequest": {
       "type": "object",
       "properties": {
-        "uomCode": {
+        "categoryCode": {
           "type": "string",
           "description": "Unique code (uppercase, alphanumeric with underscore, 1-20 chars).\nMust start with an uppercase letter. Immutable after creation."
         },
-        "uomName": {
+        "categoryName": {
           "type": "string",
           "description": "Display name (1-100 chars)."
-        },
-        "uomCategory": {
-          "$ref": "#/definitions/v1UOMCategory",
-          "description": "Category (required, cannot be UNSPECIFIED)."
         },
         "description": {
           "type": "string",
           "description": "Optional description (max 500 chars)."
         }
       },
-      "description": "CreateUOMRequest is the request for creating a new UOM."
+      "description": "CreateRMCategoryRequest is the request for creating a new raw material category."
     },
-    "v1CreateUOMResponse": {
+    "v1CreateRMCategoryResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -488,13 +450,13 @@
           "description": "Standard response metadata."
         },
         "data": {
-          "$ref": "#/definitions/v1UOM",
-          "description": "Created UOM data."
+          "$ref": "#/definitions/v1RMCategory",
+          "description": "Created raw material category data."
         }
       },
-      "description": "CreateUOMResponse is the response for creating a UOM."
+      "description": "CreateRMCategoryResponse is the response for creating a raw material category."
     },
-    "v1DeleteUOMResponse": {
+    "v1DeleteRMCategoryResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -502,9 +464,9 @@
           "description": "Standard response metadata."
         }
       },
-      "description": "DeleteUOMResponse is the response for deleting a UOM."
+      "description": "DeleteRMCategoryResponse is the response for deleting a raw material category."
     },
-    "v1DownloadTemplateResponse": {
+    "v1DownloadRMCategoryTemplateResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -521,9 +483,9 @@
           "description": "Suggested filename."
         }
       },
-      "description": "DownloadTemplateResponse is the response containing the template file."
+      "description": "DownloadRMCategoryTemplateResponse is the response containing the template file."
     },
-    "v1ExportUOMsResponse": {
+    "v1ExportRMCategoriesResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -540,9 +502,9 @@
           "description": "Suggested filename."
         }
       },
-      "description": "ExportUOMsResponse is the response containing the Excel file."
+      "description": "ExportRMCategoriesResponse is the response containing the Excel file."
     },
-    "v1GetUOMResponse": {
+    "v1GetRMCategoryResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -550,11 +512,11 @@
           "description": "Standard response metadata."
         },
         "data": {
-          "$ref": "#/definitions/v1UOM",
-          "description": "UOM data."
+          "$ref": "#/definitions/v1RMCategory",
+          "description": "Raw material category data."
         }
       },
-      "description": "GetUOMResponse is the response for getting a UOM."
+      "description": "GetRMCategoryResponse is the response for getting a raw material category."
     },
     "v1ImportError": {
       "type": "object",
@@ -575,7 +537,7 @@
       },
       "description": "ImportError represents a single import error."
     },
-    "v1ImportUOMsRequest": {
+    "v1ImportRMCategoriesRequest": {
       "type": "object",
       "properties": {
         "fileContent": {
@@ -592,9 +554,9 @@
           "description": "Required. How to handle duplicates: \"skip\", \"update\", \"error\"."
         }
       },
-      "description": "ImportUOMsRequest is the request for importing UOMs from Excel."
+      "description": "ImportRMCategoriesRequest is the request for importing raw material categories from Excel."
     },
-    "v1ImportUOMsResponse": {
+    "v1ImportRMCategoriesResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -630,9 +592,9 @@
           "description": "Details of failed records."
         }
       },
-      "description": "ImportUOMsResponse is the response for importing UOMs."
+      "description": "ImportRMCategoriesResponse is the response for importing raw material categories."
     },
-    "v1ListUOMsResponse": {
+    "v1ListRMCategoriesResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -643,16 +605,16 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1UOM"
+            "$ref": "#/definitions/v1RMCategory"
           },
-          "description": "List of UOMs."
+          "description": "List of raw material categories."
         },
         "pagination": {
           "$ref": "#/definitions/v1PaginationResponse",
           "description": "Pagination metadata."
         }
       },
-      "description": "ListUOMsResponse is the response for listing UOMs."
+      "description": "ListRMCategoriesResponse is the response for listing raw material categories."
     },
     "v1PaginationResponse": {
       "type": "object",
@@ -680,24 +642,20 @@
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
     },
-    "v1UOM": {
+    "v1RMCategory": {
       "type": "object",
       "properties": {
-        "uomId": {
+        "rmCategoryId": {
           "type": "string",
           "description": "Unique identifier (UUID)."
         },
-        "uomCode": {
+        "categoryCode": {
           "type": "string",
-          "description": "Unique code (e.g., \"KG\", \"MTR\", \"PCS\"). Immutable after creation."
+          "description": "Unique code (e.g., \"CHIP\", \"OIL\", \"DYES\"). Immutable after creation."
         },
-        "uomName": {
+        "categoryName": {
           "type": "string",
-          "description": "Display name (e.g., \"Kilogram\", \"Meter\", \"Pieces\")."
-        },
-        "uomCategory": {
-          "$ref": "#/definitions/v1UOMCategory",
-          "description": "Category of the UOM."
+          "description": "Display name (e.g., \"Chips\", \"Oil\", \"Dyes\")."
         },
         "description": {
           "type": "string",
@@ -705,28 +663,16 @@
         },
         "isActive": {
           "type": "boolean",
-          "description": "Whether the UOM is active."
+          "description": "Whether the category is active."
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit information."
         }
       },
-      "description": "UOM represents a Unit of Measure entity."
+      "description": "RMCategory represents a Raw Material Category entity.\nUsed to classify raw materials (e.g., Chips, Oil, Dyes, Chemicals)."
     },
-    "v1UOMCategory": {
-      "type": "string",
-      "enum": [
-        "UOM_CATEGORY_UNSPECIFIED",
-        "UOM_CATEGORY_WEIGHT",
-        "UOM_CATEGORY_LENGTH",
-        "UOM_CATEGORY_VOLUME",
-        "UOM_CATEGORY_QUANTITY"
-      ],
-      "default": "UOM_CATEGORY_UNSPECIFIED",
-      "description": "UOMCategory represents the category of a unit of measure.\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET)."
-    },
-    "v1UpdateUOMResponse": {
+    "v1UpdateRMCategoryResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -734,11 +680,11 @@
           "description": "Standard response metadata."
         },
         "data": {
-          "$ref": "#/definitions/v1UOM",
-          "description": "Updated UOM data."
+          "$ref": "#/definitions/v1RMCategory",
+          "description": "Updated raw material category data."
         }
       },
-      "description": "UpdateUOMResponse is the response for updating a UOM."
+      "description": "UpdateRMCategoryResponse is the response for updating a raw material category."
     },
     "v1ValidationError": {
       "type": "object",
