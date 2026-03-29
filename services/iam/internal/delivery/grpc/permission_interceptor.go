@@ -137,6 +137,27 @@ var methodPermissions = map[string]PermissionRequirement{
 	"/iam.v1.MenuService/RemoveMenuPermissions": {Permission: "iam.menu.menu.update"},
 	"/iam.v1.MenuService/GetMenuPermissions":    {Permission: "iam.menu.menu.view"},
 	"/iam.v1.MenuService/ReorderMenus":          {Permission: "iam.menu.menu.update"},
+
+	// CMS Page Service
+	"/iam.v1.CMSPageService/CreateCMSPage": {Permission: "iam.cms.page.create"},
+	"/iam.v1.CMSPageService/GetCMSPage":    {Permission: "iam.cms.page.view"},
+	"/iam.v1.CMSPageService/UpdateCMSPage": {Permission: "iam.cms.page.update"},
+	"/iam.v1.CMSPageService/DeleteCMSPage": {Permission: "iam.cms.page.delete"},
+	"/iam.v1.CMSPageService/ListCMSPages":  {Permission: "iam.cms.page.view"},
+
+	// CMS Section Service
+	"/iam.v1.CMSSectionService/CreateCMSSection": {Permission: "iam.cms.section.create"},
+	"/iam.v1.CMSSectionService/GetCMSSection":    {Permission: "iam.cms.section.view"},
+	"/iam.v1.CMSSectionService/UpdateCMSSection": {Permission: "iam.cms.section.update"},
+	"/iam.v1.CMSSectionService/DeleteCMSSection": {Permission: "iam.cms.section.delete"},
+	"/iam.v1.CMSSectionService/ListCMSSections":  {Permission: "iam.cms.section.view"},
+	"/iam.v1.CMSSectionService/UploadCMSImage":   {Permission: "iam.cms.section.create"},
+
+	// CMS Setting Service
+	"/iam.v1.CMSSettingService/GetCMSSetting":         {Permission: "iam.cms.setting.view"},
+	"/iam.v1.CMSSettingService/UpdateCMSSetting":      {Permission: "iam.cms.setting.update"},
+	"/iam.v1.CMSSettingService/ListCMSSettings":       {Permission: "iam.cms.setting.view"},
+	"/iam.v1.CMSSettingService/BulkUpdateCMSSettings": {Permission: "iam.cms.setting.update"},
 }
 
 // PermissionInterceptor creates a unary interceptor that checks if the

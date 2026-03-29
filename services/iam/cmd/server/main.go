@@ -84,6 +84,9 @@ func run() error {
 	divisionRepo := postgres.NewDivisionRepository(db)
 	departmentRepo := postgres.NewDepartmentRepository(db)
 	sectionRepo := postgres.NewSectionRepository(db)
+	cmsPageRepo := postgres.NewCMSPageRepository(db)
+	cmsSectionRepo := postgres.NewCMSSectionRepository(db)
+	cmsSettingRepo := postgres.NewCMSSettingRepository(db)
 
 	// Setup auth service
 	authService := authapp.NewService(
@@ -135,6 +138,9 @@ func run() error {
 	divisionHandler := grpcdelivery.NewDivisionHandler(divisionRepo, validationHelper)
 	departmentHandler := grpcdelivery.NewDepartmentHandler(departmentRepo, validationHelper)
 	sectionHandler := grpcdelivery.NewSectionHandler(sectionRepo, validationHelper)
+	cmsPageHandler := grpcdelivery.NewCMSPageHandler(cmsPageRepo, validationHelper)
+	cmsSectionHandler := grpcdelivery.NewCMSSectionHandler(cmsSectionRepo, cmsSettingRepo, storageSvc, validationHelper)
+	cmsSettingHandler := grpcdelivery.NewCMSSettingHandler(cmsSettingRepo, validationHelper)
 
 	// Setup gRPC server with interceptor chain (pass JWT + session cache + session repo for auth & activity tracking)
 	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, db, jwtService, sessionCache, sessionRepo)
@@ -155,6 +161,9 @@ func run() error {
 	iamv1.RegisterDivisionServiceServer(gs, divisionHandler)
 	iamv1.RegisterDepartmentServiceServer(gs, departmentHandler)
 	iamv1.RegisterSectionServiceServer(gs, sectionHandler)
+	iamv1.RegisterCMSPageServiceServer(gs, cmsPageHandler)
+	iamv1.RegisterCMSSectionServiceServer(gs, cmsSectionHandler)
+	iamv1.RegisterCMSSettingServiceServer(gs, cmsSettingHandler)
 
 	// Start gRPC server
 	go func() {

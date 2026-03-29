@@ -20,6 +20,8 @@ import (
 type Service interface {
 	// UploadProfilePicture uploads a profile picture and returns the object URL.
 	UploadProfilePicture(ctx context.Context, userID string, filename string, data io.Reader, size int64, contentType string) (string, error)
+	// UploadCMSImage uploads a CMS image and returns the object URL.
+	UploadCMSImage(ctx context.Context, folder string, filename string, data io.Reader, size int64, contentType string) (string, error)
 	// DeleteObject deletes a file by its object key.
 	DeleteObject(ctx context.Context, objectKey string) error
 	// ExtractObjectKey extracts the object key from a full URL.
@@ -155,6 +157,39 @@ func (s *MinIOService) UploadProfilePicture(ctx context.Context, userID string, 
 		Str("object", objectName).
 		Str("url", objectURL).
 		Msg("profile picture uploaded")
+
+	return objectURL, nil
+}
+
+// UploadCMSImage uploads a CMS image to MinIO.
+// Files are stored as: {basePath}/cms/{folder}/{uuid}_{filename}
+// Example with basePath="iam": iam/cms/sections/uuid.jpg
+func (s *MinIOService) UploadCMSImage(ctx context.Context, folder string, filename string, data io.Reader, size int64, contentType string) (string, error) {
+	ext := path.Ext(filename)
+	if ext == "" {
+		ext = ".jpg"
+	}
+	objectName := fmt.Sprintf("%s/cms/%s/%s%s", s.basePath, folder, uuid.New().String(), ext)
+
+	_, err := s.client.PutObject(ctx, s.bucket, objectName, data, size, minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to upload CMS image: %w", err)
+	}
+
+	var objectURL string
+	if s.publicURL != "" {
+		objectURL = fmt.Sprintf("%s/%s/%s", strings.TrimRight(s.publicURL, "/"), s.bucket, objectName)
+	} else {
+		objectURL = fmt.Sprintf("%s/%s/%s", s.client.EndpointURL().String(), s.bucket, objectName)
+	}
+
+	log.Debug().
+		Str("folder", folder).
+		Str("object", objectName).
+		Str("url", objectURL).
+		Msg("CMS image uploaded")
 
 	return objectURL, nil
 }

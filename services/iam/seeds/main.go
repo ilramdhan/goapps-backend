@@ -177,6 +177,22 @@ func defaultPermissions() []permission {
 		{Code: "iam.organization.section.export", Name: "Export Sections", ServiceName: "iam", ModuleName: "organization", ActionType: "export"},
 		{Code: "iam.organization.section.import", Name: "Import Sections", ServiceName: "iam", ModuleName: "organization", ActionType: "import"},
 
+		// IAM - CMS Page
+		{Code: "iam.cms.page.view", Name: "View CMS Pages", ServiceName: "iam", ModuleName: "cms", ActionType: "view"},
+		{Code: "iam.cms.page.create", Name: "Create CMS Page", ServiceName: "iam", ModuleName: "cms", ActionType: "create"},
+		{Code: "iam.cms.page.update", Name: "Update CMS Page", ServiceName: "iam", ModuleName: "cms", ActionType: "update"},
+		{Code: "iam.cms.page.delete", Name: "Delete CMS Page", ServiceName: "iam", ModuleName: "cms", ActionType: "delete"},
+
+		// IAM - CMS Section
+		{Code: "iam.cms.section.view", Name: "View CMS Sections", ServiceName: "iam", ModuleName: "cms", ActionType: "view"},
+		{Code: "iam.cms.section.create", Name: "Create CMS Section", ServiceName: "iam", ModuleName: "cms", ActionType: "create"},
+		{Code: "iam.cms.section.update", Name: "Update CMS Section", ServiceName: "iam", ModuleName: "cms", ActionType: "update"},
+		{Code: "iam.cms.section.delete", Name: "Delete CMS Section", ServiceName: "iam", ModuleName: "cms", ActionType: "delete"},
+
+		// IAM - CMS Setting (no create/delete — settings are pre-seeded)
+		{Code: "iam.cms.setting.view", Name: "View CMS Settings", ServiceName: "iam", ModuleName: "cms", ActionType: "view"},
+		{Code: "iam.cms.setting.update", Name: "Update CMS Setting", ServiceName: "iam", ModuleName: "cms", ActionType: "update"},
+
 		// IAM - Audit
 		{Code: "iam.audit.log.view", Name: "View Audit Logs", ServiceName: "iam", ModuleName: "audit", ActionType: "view"},
 		{Code: "iam.audit.log.export", Name: "Export Audit Logs", ServiceName: "iam", ModuleName: "audit", ActionType: "export"},
@@ -184,6 +200,18 @@ func defaultPermissions() []permission {
 		// IAM - Session
 		{Code: "iam.session.session.view", Name: "View Sessions", ServiceName: "iam", ModuleName: "session", ActionType: "view"},
 		{Code: "iam.session.session.delete", Name: "Delete Session", ServiceName: "iam", ModuleName: "session", ActionType: "delete"},
+
+		// IAM - CMS
+		{Code: "iam.cms.page.view", Name: "View CMS Pages", ServiceName: "iam", ModuleName: "cms", ActionType: "view"},
+		{Code: "iam.cms.page.create", Name: "Create CMS Page", ServiceName: "iam", ModuleName: "cms", ActionType: "create"},
+		{Code: "iam.cms.page.update", Name: "Update CMS Page", ServiceName: "iam", ModuleName: "cms", ActionType: "update"},
+		{Code: "iam.cms.page.delete", Name: "Delete CMS Page", ServiceName: "iam", ModuleName: "cms", ActionType: "delete"},
+		{Code: "iam.cms.section.view", Name: "View CMS Sections", ServiceName: "iam", ModuleName: "cms", ActionType: "view"},
+		{Code: "iam.cms.section.create", Name: "Create CMS Section", ServiceName: "iam", ModuleName: "cms", ActionType: "create"},
+		{Code: "iam.cms.section.update", Name: "Update CMS Section", ServiceName: "iam", ModuleName: "cms", ActionType: "update"},
+		{Code: "iam.cms.section.delete", Name: "Delete CMS Section", ServiceName: "iam", ModuleName: "cms", ActionType: "delete"},
+		{Code: "iam.cms.setting.view", Name: "View CMS Settings", ServiceName: "iam", ModuleName: "cms", ActionType: "view"},
+		{Code: "iam.cms.setting.update", Name: "Update CMS Setting", ServiceName: "iam", ModuleName: "cms", ActionType: "update"},
 
 		// Finance — module-level permissions (used by menu visibility)
 		// Format: service.module.entity.action (4 parts required by DB constraint)
@@ -205,6 +233,14 @@ func defaultPermissions() []permission {
 		{Code: "finance.master.parameters.create", Name: "Create Parameter", ServiceName: "finance", ModuleName: "master", ActionType: "create"},
 		{Code: "finance.master.parameters.update", Name: "Update Parameter", ServiceName: "finance", ModuleName: "master", ActionType: "update"},
 		{Code: "finance.master.parameters.delete", Name: "Delete Parameter", ServiceName: "finance", ModuleName: "master", ActionType: "delete"},
+
+		// Finance - RM Category
+		{Code: "finance.master.rmcategory.view", Name: "View RM Categories", ServiceName: "finance", ModuleName: "master", ActionType: "view"},
+		{Code: "finance.master.rmcategory.create", Name: "Create RM Category", ServiceName: "finance", ModuleName: "master", ActionType: "create"},
+		{Code: "finance.master.rmcategory.update", Name: "Update RM Category", ServiceName: "finance", ModuleName: "master", ActionType: "update"},
+		{Code: "finance.master.rmcategory.delete", Name: "Delete RM Category", ServiceName: "finance", ModuleName: "master", ActionType: "delete"},
+		{Code: "finance.master.rmcategory.export", Name: "Export RM Categories", ServiceName: "finance", ModuleName: "master", ActionType: "export"},
+		{Code: "finance.master.rmcategory.import", Name: "Import RM Categories", ServiceName: "finance", ModuleName: "master", ActionType: "import"},
 
 		// Finance - Costing Process
 		{Code: "finance.transaction.costing.view", Name: "View Costing Process", ServiceName: "finance", ModuleName: "transaction", ActionType: "view"},
@@ -307,6 +343,11 @@ func run() error {
 		//  mst_permission is empty at migration time — we fix that here.)
 		if err := seedMenuPermissions(ctx, tx, permIDs); err != nil {
 			return fmt.Errorf("failed to seed menu permissions: %w", err)
+		}
+
+		// 7. Seed CMS content (pages, sections, settings)
+		if err := seedCMSContent(ctx, tx); err != nil {
+			return fmt.Errorf("failed to seed CMS content: %w", err)
 		}
 
 		return nil
@@ -562,6 +603,7 @@ func defaultMenuPermissions() []menuPermLink {
 		{MenuCode: "FINANCE_TRANSACTION", PermCodes: []string{"finance.module.transaction.view"}},
 		{MenuCode: "FINANCE_UOM", PermCodes: []string{"finance.master.uom.view"}},
 		{MenuCode: "FINANCE_PARAMETERS", PermCodes: []string{"finance.master.parameters.view"}},
+		{MenuCode: "FINANCE_RM_CATEGORY", PermCodes: []string{"finance.master.rmcategory.view"}},
 		{MenuCode: "FINANCE_COSTING", PermCodes: []string{"finance.transaction.costing.view"}},
 
 		// IT module
@@ -581,12 +623,253 @@ func defaultMenuPermissions() []menuPermLink {
 		{MenuCode: "EXSIM_DASHBOARD", PermCodes: []string{"exsim.module.dashboard.view"}},
 
 		// Administrator — requires any one of the IAM management permissions
-		{MenuCode: "ADMINISTRATOR", PermCodes: []string{"iam.user.account.view", "iam.rbac.role.view", "iam.rbac.permission.view", "iam.menu.menu.view"}},
+		{MenuCode: "ADMINISTRATOR", PermCodes: []string{"iam.user.account.view", "iam.rbac.role.view", "iam.rbac.permission.view", "iam.menu.menu.view", "iam.cms.page.view", "iam.cms.section.view", "iam.cms.setting.view"}},
 		{MenuCode: "ADMIN_USERS", PermCodes: []string{"iam.user.account.view"}},
 		{MenuCode: "ADMIN_ROLES", PermCodes: []string{"iam.rbac.role.view"}},
 		{MenuCode: "ADMIN_PERMISSIONS", PermCodes: []string{"iam.rbac.permission.view"}},
 		{MenuCode: "ADMIN_MENUS", PermCodes: []string{"iam.menu.menu.view"}},
+		{MenuCode: "ADMIN_CMS", PermCodes: []string{"iam.cms.page.view", "iam.cms.section.view", "iam.cms.setting.view"}},
 	}
+}
+
+// seedCMSContent seeds default CMS pages, sections, and settings.
+func seedCMSContent(ctx context.Context, tx *sql.Tx) error {
+	log.Info().Msg("Seeding CMS content...")
+
+	if err := seedCMSPages(ctx, tx); err != nil {
+		return fmt.Errorf("failed to seed CMS pages: %w", err)
+	}
+	if err := seedCMSSections(ctx, tx); err != nil {
+		return fmt.Errorf("failed to seed CMS sections: %w", err)
+	}
+	if err := seedCMSSettings(ctx, tx); err != nil {
+		return fmt.Errorf("failed to seed CMS settings: %w", err)
+	}
+
+	log.Info().Msg("CMS content seeded")
+	return nil
+}
+
+// seedCMSPages inserts default CMS pages (Privacy Policy, Terms of Service).
+func seedCMSPages(ctx context.Context, tx *sql.Tx) error {
+	pages := []struct {
+		Slug        string
+		Title       string
+		Content     string
+		Description string
+		SortOrder   int
+	}{
+		{
+			Slug:        "privacy",
+			Title:       "Privacy Policy",
+			Description: "GoApps privacy policy for platform users.",
+			SortOrder:   1,
+			Content: `## 1. Information We Collect
+
+GoApps collects information necessary to provide access to the platform and maintain security. This includes:
+
+- **Account information**: name, email address, username, and department assignment provided by your organization.
+- **Authentication data**: hashed passwords, session tokens, and two-factor authentication configurations.
+- **Usage data**: login timestamps, accessed pages, and actions performed (audit trail).
+- **Device information**: browser type, IP address, and device identifiers for session management.
+
+## 2. How We Use Your Information
+
+We use collected information to:
+
+- Authenticate your identity and enforce role-based access controls.
+- Maintain security through audit logging and session management.
+- Provide and improve platform functionality for your organization.
+- Send system notifications related to your account (password resets, security alerts).
+
+## 3. Data Storage and Security
+
+All data is stored on infrastructure managed by your organization. GoApps employs industry-standard security measures including:
+
+- Encrypted connections (TLS) for all data in transit.
+- Bcrypt-hashed passwords — plaintext passwords are never stored.
+- JWT token-based authentication with automatic expiration and refresh.
+- Regular automated database backups with offsite replication.
+
+## 4. Data Sharing
+
+GoApps does not sell, trade, or share your personal data with third parties. Data is only accessible to authorized users within your organization as defined by your administrator's role and permission configurations.
+
+## 5. Data Retention
+
+Account data is retained for the duration of your employment or access authorization. Audit logs are retained according to your organization's compliance policies. Soft-deleted records may be retained for recovery purposes.
+
+## 6. Your Rights
+
+You may request access to, correction of, or deletion of your personal data by contacting your system administrator. Account management operations are available through the platform's user settings.
+
+## 7. Contact
+
+For privacy-related inquiries, please contact your organization's IT department or system administrator.`,
+		},
+		{
+			Slug:        "terms",
+			Title:       "Terms of Service",
+			Description: "GoApps terms of service for platform users.",
+			SortOrder:   2,
+			Content: `## 1. Acceptance of Terms
+
+By accessing and using GoApps, you agree to be bound by these Terms of Service. Access to the platform is granted by your organization's administrator and is subject to these terms and your organization's internal policies.
+
+## 2. Authorized Use
+
+GoApps is provided for authorized business use only. You agree to:
+
+- Use the platform only for legitimate business operations within your assigned role and permissions.
+- Keep your login credentials confidential and not share them with others.
+- Enable two-factor authentication when required by your organization's security policy.
+- Report any security vulnerabilities or unauthorized access to your system administrator immediately.
+
+## 3. Prohibited Activities
+
+You must not:
+
+- Attempt to access modules or data outside your assigned permissions.
+- Share, export, or distribute business data outside authorized channels.
+- Attempt to reverse-engineer, tamper with, or circumvent platform security controls.
+- Use automated tools or scripts to interact with the platform without authorization.
+- Upload malicious files or content through import features.
+
+## 4. Data Accuracy
+
+You are responsible for the accuracy of data you enter into the platform. This includes master data, financial records, and any imported data. Your organization may maintain additional data governance policies that apply.
+
+## 5. Availability
+
+While we strive for high availability, GoApps may experience scheduled maintenance or unplanned downtime. Critical maintenance windows will be communicated in advance when possible. The platform includes automated health monitoring and backup systems to minimize disruptions.
+
+## 6. Audit and Monitoring
+
+All user actions within GoApps are logged for security and compliance purposes. This includes login attempts, data modifications, exports, and administrative actions. Audit logs are accessible to authorized administrators and may be reviewed during compliance audits.
+
+## 7. Account Termination
+
+Your access may be suspended or terminated by your organization's administrator at any time. Upon termination, active sessions will be revoked and access to the platform will be immediately restricted.
+
+## 8. Intellectual Property
+
+GoApps and its associated software, documentation, and branding are the intellectual property of PT Mutu Gading Tekstil. Users are granted a limited, non-transferable license to use the platform for authorized business purposes.
+
+## 9. Limitation of Liability
+
+GoApps is provided "as is" for internal business use. While we maintain robust security and backup systems, we are not liable for data loss resulting from user error, unauthorized access through compromised credentials, or force majeure events.
+
+## 10. Changes to Terms
+
+These terms may be updated periodically. Users will be notified of significant changes. Continued use of the platform after notification constitutes acceptance of the updated terms.
+
+## 11. Contact
+
+For questions about these terms, please contact your organization's IT department or system administrator.`,
+		},
+	}
+
+	for _, p := range pages {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO mst_cms_page (page_id, page_slug, page_title, page_content, meta_description, is_published, published_at, sort_order, created_by)
+			VALUES ($1, $2, $3, $4, $5, true, NOW(), $6, $7)
+			ON CONFLICT (page_slug) WHERE deleted_at IS NULL DO NOTHING`,
+			uuid.New(), p.Slug, p.Title, p.Content, p.Description, p.SortOrder, systemUser,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to insert CMS page %s: %w", p.Slug, err)
+		}
+		log.Info().Str("slug", p.Slug).Msg("CMS page seeded")
+	}
+
+	return nil
+}
+
+// seedCMSSections inserts default landing page sections.
+func seedCMSSections(ctx context.Context, tx *sql.Tx) error { //nolint:gocyclo // seed function with many data entries
+	sections := []struct {
+		Key        string
+		Type       string
+		Title      string
+		Subtitle   string
+		Content    string
+		IconName   string
+		ButtonText string
+		ButtonURL  string
+		SortOrder  int
+	}{
+		// Hero
+		{Key: "landing_hero", Type: "HERO", Title: "Enterprise Platform for Modern Manufacturing", Subtitle: "A unified semi-ERP platform powering Finance, HR, IT, and Operations — built with Go microservices and deployed on Kubernetes for reliability at scale.", ButtonText: "Sign In to Get Started", ButtonURL: "/login", SortOrder: 1},
+
+		// Features
+		{Key: "landing_feature_1", Type: "FEATURE", Title: "Microservice Architecture", Content: "Built on Go gRPC microservices with clean architecture and domain-driven design for reliability and scalability.", IconName: "Server", SortOrder: 10},
+		{Key: "landing_feature_2", Type: "FEATURE", Title: "Enterprise Security", Content: "Role-based access control, two-factor authentication, JWT tokens, and comprehensive audit logging.", IconName: "Shield", SortOrder: 11},
+		{Key: "landing_feature_3", Type: "FEATURE", Title: "Real-time Monitoring", Content: "Prometheus metrics, Grafana dashboards, and distributed tracing with Jaeger for full observability.", IconName: "BarChart3", SortOrder: 12},
+		{Key: "landing_feature_4", Type: "FEATURE", Title: "Multi-department", Content: "Finance, HR, IT, CI, and Export-Import modules with granular permissions per department and role.", IconName: "Users", SortOrder: 13},
+		{Key: "landing_feature_5", Type: "FEATURE", Title: "Kubernetes Native", Content: "Deployed on K3s with ArgoCD GitOps, auto-scaling, automated backups, and zero-downtime deployments.", IconName: "Layers", SortOrder: 14},
+		{Key: "landing_feature_6", Type: "FEATURE", Title: "Modern Frontend", Content: "Next.js 16 with React 19, TailwindCSS 4, and shadcn/ui for a fast, accessible, and responsive interface.", IconName: "Zap", SortOrder: 15},
+
+		// FAQ
+		{Key: "landing_faq_1", Type: "FAQ", Title: "What is GoApps?", Content: "GoApps is a semi-ERP platform designed for manufacturing companies. It provides integrated modules for Finance, HR, IT, Continuous Improvement, and Export-Import operations — all accessible from a single dashboard.", SortOrder: 20},
+		{Key: "landing_faq_2", Type: "FAQ", Title: "Who can access the platform?", Content: "Access is managed through role-based permissions. Each user is assigned roles that determine which modules and features they can use. Administrators can configure roles and permissions from the Administrator panel.", SortOrder: 21},
+		{Key: "landing_faq_3", Type: "FAQ", Title: "What technology powers GoApps?", Content: "The backend uses Go with gRPC microservices following clean architecture patterns. The frontend is built with Next.js 16 and React 19. Everything runs on a Kubernetes cluster with ArgoCD for GitOps deployments.", SortOrder: 22},
+		{Key: "landing_faq_4", Type: "FAQ", Title: "Is my data secure?", Content: "Yes. GoApps uses JWT-based authentication with refresh tokens, optional two-factor authentication (TOTP), encrypted connections (TLS), and maintains a complete audit trail of all user actions.", SortOrder: 23},
+		{Key: "landing_faq_5", Type: "FAQ", Title: "Can I export data?", Content: "Every master data module supports Excel export and import. You can export filtered data, download import templates, and bulk-import records with duplicate handling (skip, update, or error).", SortOrder: 24},
+		{Key: "landing_faq_6", Type: "FAQ", Title: "How do I get started?", Content: "Contact your system administrator to receive login credentials. Once logged in, the dashboard will show the modules available to your role. The sidebar navigation is dynamic and adapts to your permissions.", SortOrder: 25},
+	}
+
+	for _, s := range sections {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO mst_cms_section (section_id, section_type, section_key, title, subtitle, content, icon_name, button_text, button_url, sort_order, is_published, created_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11)
+			ON CONFLICT (section_key) WHERE deleted_at IS NULL DO NOTHING`,
+			uuid.New(), s.Type, s.Key, s.Title, s.Subtitle, s.Content, s.IconName, s.ButtonText, s.ButtonURL, s.SortOrder, systemUser,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to insert CMS section %s: %w", s.Key, err)
+		}
+		log.Debug().Str("key", s.Key).Str("type", s.Type).Msg("CMS section seeded")
+	}
+
+	log.Info().Int("count", len(sections)).Msg("CMS sections seeded")
+	return nil
+}
+
+// seedCMSSettings inserts default site configuration settings.
+func seedCMSSettings(ctx context.Context, tx *sql.Tx) error {
+	settings := []struct {
+		Key         string
+		Value       string
+		Type        string
+		Group       string
+		Description string
+		IsEditable  bool
+	}{
+		{Key: "site_name", Value: "Go Apps", Type: "TEXT", Group: "branding", Description: "Site display name", IsEditable: true},
+		{Key: "site_tagline", Value: "Enterprise Platform", Type: "TEXT", Group: "branding", Description: "Site tagline shown in header", IsEditable: true},
+		{Key: "site_description", Value: "A unified semi-ERP platform for modern manufacturing — Finance, HR, IT, and Operations.", Type: "TEXT", Group: "branding", Description: "Site meta description for SEO", IsEditable: true},
+		{Key: "organization_name", Value: "PT Mutu Gading Tekstil", Type: "TEXT", Group: "branding", Description: "Organization legal name", IsEditable: true},
+		{Key: "footer_copyright", Value: "PT Mutu Gading Tekstil. All rights reserved.", Type: "TEXT", Group: "branding", Description: "Footer copyright text", IsEditable: true},
+		{Key: "hero_cta_text", Value: "Sign In to Get Started", Type: "TEXT", Group: "landing", Description: "Hero section call-to-action button text", IsEditable: true},
+		{Key: "hero_cta_url", Value: "/login", Type: "URL", Group: "landing", Description: "Hero section call-to-action button URL", IsEditable: true},
+		{Key: "features_heading", Value: "Built for Enterprise", Type: "TEXT", Group: "landing", Description: "Features section heading text", IsEditable: true},
+	}
+
+	for _, s := range settings {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO mst_cms_setting (setting_id, setting_key, setting_value, setting_type, setting_group, description, is_editable, created_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			ON CONFLICT (setting_key) DO NOTHING`,
+			uuid.New(), s.Key, s.Value, s.Type, s.Group, s.Description, s.IsEditable, systemUser,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to insert CMS setting %s: %w", s.Key, err)
+		}
+		log.Debug().Str("key", s.Key).Str("group", s.Group).Msg("CMS setting seeded")
+	}
+
+	log.Info().Int("count", len(settings)).Msg("CMS settings seeded")
+	return nil
 }
 
 // seedMenuPermissions links menus to their required permissions.

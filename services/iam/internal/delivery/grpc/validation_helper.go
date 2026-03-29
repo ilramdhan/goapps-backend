@@ -145,29 +145,25 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	switch {
 	case errors.Is(err, shared.ErrNotFound):
 		return NotFoundResponse(err.Error())
-	case errors.Is(err, shared.ErrAlreadyExists):
+	case errors.Is(err, shared.ErrAlreadyExists),
+		errors.Is(err, shared.ErrAlreadyDeleted):
 		return ConflictResponse(err.Error())
-	case errors.Is(err, shared.ErrAlreadyDeleted):
-		return ConflictResponse(err.Error())
-	case errors.Is(err, shared.ErrNotActive):
-		return ErrorResponse("422", err.Error())
 	case errors.Is(err, shared.ErrUnauthorized),
 		errors.Is(err, shared.ErrInvalidCredentials),
 		errors.Is(err, shared.ErrInvalidToken),
 		errors.Is(err, shared.ErrTokenRevoked):
 		return UnauthorizedResponse(err.Error())
-	case errors.Is(err, shared.ErrPermissionDenied):
-		return ForbiddenResponse(err.Error())
-	case errors.Is(err, shared.ErrAccountLocked):
+	case errors.Is(err, shared.ErrPermissionDenied),
+		errors.Is(err, shared.ErrAccountLocked):
 		return ForbiddenResponse(err.Error())
 	case errors.Is(err, shared.ErrTOTPRequired),
 		errors.Is(err, shared.ErrTwoFARequired):
 		return ErrorResponse("428", "2FA required")
-	case errors.Is(err, shared.ErrTOTPInvalid),
+	case errors.Is(err, shared.ErrNotActive),
+		errors.Is(err, shared.ErrTOTPInvalid),
 		errors.Is(err, shared.ErrInvalid2FACode),
-		errors.Is(err, shared.ErrTwoFAAlreadyEnabled):
-		return ErrorResponse("422", err.Error())
-	case errors.Is(err, shared.ErrInvalidOTP):
+		errors.Is(err, shared.ErrTwoFAAlreadyEnabled),
+		errors.Is(err, shared.ErrInvalidOTP):
 		return ErrorResponse("422", err.Error())
 	default:
 		errMsg := err.Error()
@@ -178,6 +174,8 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 			return NotFoundResponse(errMsg)
 		case strings.Contains(errMsg, "already exists"):
 			return ConflictResponse(errMsg)
+		case strings.Contains(errMsg, "not editable"):
+			return ErrorResponse("422", errMsg)
 		default:
 			log.Error().Err(err).Msg("unhandled domain error mapped to 500")
 			return InternalErrorResponse("internal server error")

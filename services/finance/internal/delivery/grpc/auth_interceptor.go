@@ -219,6 +219,16 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.UOMService/DeleteUOM": "finance.master.uom.delete",
 		"/finance.v1.UOMService/ImportUOM": "finance.master.uom.create",
 		"/finance.v1.UOMService/ExportUOM": "finance.master.uom.view",
+
+		// RM Category Service
+		"/finance.v1.RMCategoryService/CreateRMCategory":           "finance.master.rmcategory.create",
+		"/finance.v1.RMCategoryService/GetRMCategory":              "finance.master.rmcategory.view",
+		"/finance.v1.RMCategoryService/ListRMCategories":           "finance.master.rmcategory.view",
+		"/finance.v1.RMCategoryService/UpdateRMCategory":           "finance.master.rmcategory.update",
+		"/finance.v1.RMCategoryService/DeleteRMCategory":           "finance.master.rmcategory.delete",
+		"/finance.v1.RMCategoryService/ImportRMCategories":         "finance.master.rmcategory.import",
+		"/finance.v1.RMCategoryService/ExportRMCategories":         "finance.master.rmcategory.export",
+		"/finance.v1.RMCategoryService/DownloadRMCategoryTemplate": "finance.master.rmcategory.view",
 	}
 
 	return permissions[fullMethod]

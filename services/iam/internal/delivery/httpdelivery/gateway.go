@@ -100,6 +100,9 @@ func (s *Server) Start(ctx context.Context) error {
 		{"department", iamv1.RegisterDepartmentServiceHandlerFromEndpoint},
 		{"section", iamv1.RegisterSectionServiceHandlerFromEndpoint},
 		{"organization", iamv1.RegisterOrganizationServiceHandlerFromEndpoint},
+		{"cms-page", iamv1.RegisterCMSPageServiceHandlerFromEndpoint},
+		{"cms-section", iamv1.RegisterCMSSectionServiceHandlerFromEndpoint},
+		{"cms-setting", iamv1.RegisterCMSSettingServiceHandlerFromEndpoint},
 	}
 
 	for _, reg := range registrations {

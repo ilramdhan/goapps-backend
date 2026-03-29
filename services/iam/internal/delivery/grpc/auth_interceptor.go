@@ -36,6 +36,10 @@ var publicMethods = map[string]bool{
 	"/iam.v1.AuthService/Logout":         true,
 	"/grpc.health.v1.Health/Check":       true,
 	"/grpc.health.v1.Health/Watch":       true,
+
+	// CMS public endpoints (no auth required)
+	"/iam.v1.CMSSectionService/GetPublicLandingContent": true,
+	"/iam.v1.CMSPageService/GetCMSPageBySlug":           true,
 }
 
 // isPublicMethod checks if a gRPC method is public (no auth required).

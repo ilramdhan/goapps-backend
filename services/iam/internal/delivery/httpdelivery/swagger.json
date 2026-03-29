@@ -667,6 +667,614 @@
         "security": []
       }
     },
+    "/api/v1/iam/cms/pages": {
+      "get": {
+        "summary": "ListCMSPages lists CMS pages with search, filter, and pagination.",
+        "operationId": "CMSPageService_ListCMSPages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCMSPagesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in slug, title, content).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "isPublished",
+            "description": "Filter by published status: true = published only, false = draft only.\nIf not set, returns all pages.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"slug\", \"title\", \"sort_order\", \"created_at\" (default: \"sort_order\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSPageService"
+        ]
+      },
+      "post": {
+        "summary": "CreateCMSPage creates a new CMS page.",
+        "operationId": "CMSPageService_CreateCMSPage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCMSPageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateCMSPageRequest is the request for creating a new CMS page.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCMSPageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CMSPageService"
+        ]
+      }
+    },
+    "/api/v1/iam/cms/pages/slug/{slug}": {
+      "get": {
+        "summary": "GetCMSPageBySlug retrieves a CMS page by its URL slug.\nThis is a public endpoint \u2014 no authentication required.",
+        "operationId": "CMSPageService_GetCMSPageBySlug",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCMSPageBySlugResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "slug",
+            "description": "URL slug (e.g., \"privacy\", \"terms\").",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSPageService"
+        ]
+      }
+    },
+    "/api/v1/iam/cms/pages/{pageId}": {
+      "get": {
+        "summary": "GetCMSPage retrieves a CMS page by ID.",
+        "operationId": "CMSPageService_GetCMSPage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCMSPageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageId",
+            "description": "CMS page ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSPageService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteCMSPage soft deletes a CMS page.",
+        "operationId": "CMSPageService_DeleteCMSPage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteCMSPageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageId",
+            "description": "CMS page ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSPageService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateCMSPage updates an existing CMS page.\nNote: page_slug is immutable and cannot be changed.",
+        "operationId": "CMSPageService_UpdateCMSPage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCMSPageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageId",
+            "description": "CMS page ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CMSPageServiceUpdateCMSPageBody"
+            }
+          }
+        ],
+        "tags": [
+          "CMSPageService"
+        ]
+      }
+    },
+    "/api/v1/iam/cms/sections": {
+      "get": {
+        "summary": "ListCMSSections lists CMS sections with search, filter, and pagination.",
+        "operationId": "CMSSectionService_ListCMSSections",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCMSSectionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in key, title, subtitle, content).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sectionType",
+            "description": "Filter by section type.\nCMS_SECTION_TYPE_UNSPECIFIED (0) means \"show all types\" (no filter).\n\n - CMS_SECTION_TYPE_UNSPECIFIED: Default unspecified value.\n - CMS_SECTION_TYPE_HERO: Hero banner section at the top of the landing page.\n - CMS_SECTION_TYPE_FEATURE: Feature card section highlighting platform capabilities.\n - CMS_SECTION_TYPE_FAQ: FAQ accordion section with questions and answers.\n - CMS_SECTION_TYPE_TESTIMONIAL: Testimonial/quote section from users or stakeholders.\n - CMS_SECTION_TYPE_CTA: Call-to-action section with button.\n - CMS_SECTION_TYPE_CUSTOM: Custom freeform section.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "CMS_SECTION_TYPE_UNSPECIFIED",
+              "CMS_SECTION_TYPE_HERO",
+              "CMS_SECTION_TYPE_FEATURE",
+              "CMS_SECTION_TYPE_FAQ",
+              "CMS_SECTION_TYPE_TESTIMONIAL",
+              "CMS_SECTION_TYPE_CTA",
+              "CMS_SECTION_TYPE_CUSTOM"
+            ],
+            "default": "CMS_SECTION_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "isPublished",
+            "description": "Filter by published status: true = published only, false = draft only.\nIf not set, returns all sections.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"key\", \"title\", \"sort_order\", \"created_at\" (default: \"sort_order\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSSectionService"
+        ]
+      },
+      "post": {
+        "summary": "CreateCMSSection creates a new CMS section.",
+        "operationId": "CMSSectionService_CreateCMSSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCMSSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateCMSSectionRequest is the request for creating a new CMS section.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCMSSectionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CMSSectionService"
+        ]
+      }
+    },
+    "/api/v1/iam/cms/sections/{sectionId}": {
+      "get": {
+        "summary": "GetCMSSection retrieves a CMS section by ID.",
+        "operationId": "CMSSectionService_GetCMSSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCMSSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sectionId",
+            "description": "CMS section ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSSectionService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteCMSSection soft deletes a CMS section.",
+        "operationId": "CMSSectionService_DeleteCMSSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteCMSSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sectionId",
+            "description": "CMS section ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSSectionService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateCMSSection updates an existing CMS section.\nNote: section_key is immutable and cannot be changed.",
+        "operationId": "CMSSectionService_UpdateCMSSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCMSSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sectionId",
+            "description": "CMS section ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CMSSectionServiceUpdateCMSSectionBody"
+            }
+          }
+        ],
+        "tags": [
+          "CMSSectionService"
+        ]
+      }
+    },
+    "/api/v1/iam/cms/settings": {
+      "get": {
+        "summary": "ListCMSSettings lists CMS settings, optionally filtered by group.",
+        "operationId": "CMSSettingService_ListCMSSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCMSSettingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "settingGroup",
+            "description": "Filter by setting group (e.g., \"branding\", \"landing\").\nEmpty string means \"show all groups\".",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSSettingService"
+        ]
+      },
+      "put": {
+        "summary": "BulkUpdateCMSSettings updates multiple settings at once.",
+        "operationId": "CMSSettingService_BulkUpdateCMSSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BulkUpdateCMSSettingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BulkUpdateCMSSettingsRequest is the request for updating multiple settings at once.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BulkUpdateCMSSettingsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CMSSettingService"
+        ]
+      }
+    },
+    "/api/v1/iam/cms/settings/{settingKey}": {
+      "get": {
+        "summary": "GetCMSSetting retrieves a CMS setting by key.",
+        "operationId": "CMSSettingService_GetCMSSetting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCMSSettingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "settingKey",
+            "description": "Setting key (e.g., \"site_name\", \"footer_copyright\").",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CMSSettingService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateCMSSetting updates a CMS setting value.",
+        "operationId": "CMSSettingService_UpdateCMSSetting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCMSSettingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "settingKey",
+            "description": "Setting key to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CMSSettingServiceUpdateCMSSettingBody"
+            }
+          }
+        ],
+        "tags": [
+          "CMSSettingService"
+        ]
+      }
+    },
+    "/api/v1/public/landing": {
+      "get": {
+        "summary": "GetPublicLandingContent fetches all published landing page content in one call.\nReturns all published sections + all site settings.\nThis is a public endpoint \u2014 no authentication required.",
+        "operationId": "CMSSectionService_GetPublicLandingContent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPublicLandingContentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CMSSectionService"
+        ]
+      }
+    },
     "/api/v1/iam/menus": {
       "get": {
         "operationId": "MenuService_ListMenus",
@@ -3609,7 +4217,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/iamV1DownloadTemplateResponse"
+              "$ref": "#/definitions/v1DownloadTemplateResponse"
             }
           },
           "default": {
@@ -3749,6 +4357,46 @@
             "in": "path",
             "required": true,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/iam/users/{userId}/avatar": {
+      "post": {
+        "summary": "UploadProfilePicture uploads or replaces a user's profile picture.\nOld picture is automatically deleted when a new one is uploaded.",
+        "operationId": "UserService_UploadProfilePicture",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UploadProfilePictureResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "User ID whose profile picture is being uploaded.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserServiceUploadProfilePictureBody"
+            }
           }
         ],
         "tags": [
@@ -4707,6 +5355,653 @@
       },
       "description": "VerifyResetOTPResponse returns a reset token."
     },
+    "CMSPageServiceUpdateCMSPageBody": {
+      "type": "object",
+      "properties": {
+        "pageTitle": {
+          "type": "string",
+          "description": "New page title (optional, 1-200 chars if provided)."
+        },
+        "pageContent": {
+          "type": "string",
+          "description": "New content (optional)."
+        },
+        "metaDescription": {
+          "type": "string",
+          "description": "New meta description (optional, max 500 chars)."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "New published status (optional)."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "New sort order (optional)."
+        }
+      },
+      "description": "UpdateCMSPageRequest is the request for updating a CMS page.\nNote: page_slug is immutable and cannot be changed after creation."
+    },
+    "CMSSectionServiceUpdateCMSSectionBody": {
+      "type": "object",
+      "properties": {
+        "sectionType": {
+          "$ref": "#/definitions/v1CMSSectionType",
+          "description": "New section type (optional, cannot be UNSPECIFIED if provided)."
+        },
+        "title": {
+          "type": "string",
+          "description": "New title (optional, max 200 chars)."
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "New subtitle (optional, max 500 chars)."
+        },
+        "content": {
+          "type": "string",
+          "description": "New content (optional)."
+        },
+        "iconName": {
+          "type": "string",
+          "description": "New icon name (optional, max 100 chars)."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "New image URL (optional, max 500 chars)."
+        },
+        "buttonText": {
+          "type": "string",
+          "description": "New button text (optional, max 100 chars)."
+        },
+        "buttonUrl": {
+          "type": "string",
+          "description": "New button URL (optional, max 500 chars)."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "New sort order (optional)."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "New published status (optional)."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "New metadata JSON (optional, max 10000 chars)."
+        }
+      },
+      "description": "UpdateCMSSectionRequest is the request for updating a CMS section.\nNote: section_key is immutable and cannot be changed after creation."
+    },
+    "CMSSettingServiceUpdateCMSSettingBody": {
+      "type": "object",
+      "properties": {
+        "settingValue": {
+          "type": "string",
+          "description": "New value."
+        }
+      },
+      "description": "UpdateCMSSettingRequest is the request for updating a CMS setting value."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BulkUpdateCMSSettingsRequest": {
+      "type": "object",
+      "properties": {
+        "settings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CMSSettingUpdate"
+          },
+          "description": "List of settings to update (at least 1)."
+        }
+      },
+      "description": "BulkUpdateCMSSettingsRequest is the request for updating multiple settings at once."
+    },
+    "v1BulkUpdateCMSSettingsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CMSSetting"
+          },
+          "description": "Updated settings."
+        }
+      },
+      "description": "BulkUpdateCMSSettingsResponse is the response for bulk updating settings."
+    },
+    "v1CMSPage": {
+      "type": "object",
+      "properties": {
+        "pageId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "pageSlug": {
+          "type": "string",
+          "description": "URL slug (e.g., \"privacy\", \"terms\", \"about\"). Unique, immutable after creation."
+        },
+        "pageTitle": {
+          "type": "string",
+          "description": "Page title."
+        },
+        "pageContent": {
+          "type": "string",
+          "description": "Rich text content (Markdown or HTML)."
+        },
+        "metaDescription": {
+          "type": "string",
+          "description": "SEO meta description."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether the page is publicly visible."
+        },
+        "publishedAt": {
+          "type": "string",
+          "description": "When the page was published (ISO 8601)."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display order."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "CMSPage represents a full-page CMS content entity (e.g., Privacy Policy, Terms of Service)."
+    },
+    "v1CMSSection": {
+      "type": "object",
+      "properties": {
+        "sectionId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "sectionType": {
+          "$ref": "#/definitions/v1CMSSectionType",
+          "description": "Section type (HERO, FEATURE, FAQ, etc.)."
+        },
+        "sectionKey": {
+          "type": "string",
+          "description": "Unique key (e.g., \"landing_hero\", \"landing_feature_1\"). Immutable after creation."
+        },
+        "title": {
+          "type": "string",
+          "description": "Section title."
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Section subtitle or description."
+        },
+        "content": {
+          "type": "string",
+          "description": "Rich text content body."
+        },
+        "iconName": {
+          "type": "string",
+          "description": "Lucide icon name (for feature cards, e.g., \"Server\", \"Shield\")."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Image URL (MinIO/S3 path)."
+        },
+        "buttonText": {
+          "type": "string",
+          "description": "CTA button text."
+        },
+        "buttonUrl": {
+          "type": "string",
+          "description": "CTA button link."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display order within its type."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether the section is visible on the landing page."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Flexible key-value pairs as JSON string."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "CMSSection represents an individual section of the landing page\n(e.g., hero banner, feature card, FAQ item)."
+    },
+    "v1CMSSectionType": {
+      "type": "string",
+      "enum": [
+        "CMS_SECTION_TYPE_UNSPECIFIED",
+        "CMS_SECTION_TYPE_HERO",
+        "CMS_SECTION_TYPE_FEATURE",
+        "CMS_SECTION_TYPE_FAQ",
+        "CMS_SECTION_TYPE_TESTIMONIAL",
+        "CMS_SECTION_TYPE_CTA",
+        "CMS_SECTION_TYPE_CUSTOM"
+      ],
+      "default": "CMS_SECTION_TYPE_UNSPECIFIED",
+      "description": "CMSSectionType represents the type of a CMS landing page section.\n\n - CMS_SECTION_TYPE_UNSPECIFIED: Default unspecified value.\n - CMS_SECTION_TYPE_HERO: Hero banner section at the top of the landing page.\n - CMS_SECTION_TYPE_FEATURE: Feature card section highlighting platform capabilities.\n - CMS_SECTION_TYPE_FAQ: FAQ accordion section with questions and answers.\n - CMS_SECTION_TYPE_TESTIMONIAL: Testimonial/quote section from users or stakeholders.\n - CMS_SECTION_TYPE_CTA: Call-to-action section with button.\n - CMS_SECTION_TYPE_CUSTOM: Custom freeform section."
+    },
+    "v1CMSSetting": {
+      "type": "object",
+      "properties": {
+        "settingId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "settingKey": {
+          "type": "string",
+          "description": "Unique key (e.g., \"site_name\", \"footer_copyright\"). Immutable."
+        },
+        "settingValue": {
+          "type": "string",
+          "description": "Setting value."
+        },
+        "settingType": {
+          "$ref": "#/definitions/v1CMSSettingType",
+          "description": "Data type of the value."
+        },
+        "settingGroup": {
+          "type": "string",
+          "description": "Group for admin UI organization (e.g., \"general\", \"branding\", \"social\")."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description for admin UI tooltip."
+        },
+        "isEditable": {
+          "type": "boolean",
+          "description": "Whether admins can modify this setting (some are system-locked)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "CMSSetting represents a key-value site configuration\n(e.g., site name, footer text, social links)."
+    },
+    "v1CMSSettingType": {
+      "type": "string",
+      "enum": [
+        "CMS_SETTING_TYPE_UNSPECIFIED",
+        "CMS_SETTING_TYPE_TEXT",
+        "CMS_SETTING_TYPE_RICH_TEXT",
+        "CMS_SETTING_TYPE_IMAGE",
+        "CMS_SETTING_TYPE_URL",
+        "CMS_SETTING_TYPE_JSON"
+      ],
+      "default": "CMS_SETTING_TYPE_UNSPECIFIED",
+      "description": "CMSSettingType represents the data type of a CMS setting value.\n\n - CMS_SETTING_TYPE_UNSPECIFIED: Default unspecified value.\n - CMS_SETTING_TYPE_TEXT: Plain text value.\n - CMS_SETTING_TYPE_RICH_TEXT: Rich text value (Markdown or HTML).\n - CMS_SETTING_TYPE_IMAGE: Image URL or path.\n - CMS_SETTING_TYPE_URL: URL value.\n - CMS_SETTING_TYPE_JSON: JSON structured value."
+    },
+    "v1CMSSettingUpdate": {
+      "type": "object",
+      "properties": {
+        "settingKey": {
+          "type": "string",
+          "description": "Setting key."
+        },
+        "settingValue": {
+          "type": "string",
+          "description": "New value."
+        }
+      },
+      "description": "CMSSettingUpdate represents a single setting key-value pair for bulk update."
+    },
+    "v1CreateCMSPageRequest": {
+      "type": "object",
+      "properties": {
+        "pageSlug": {
+          "type": "string",
+          "description": "URL slug (lowercase, alphanumeric with hyphens, 1-100 chars).\nMust start with a letter. Immutable after creation."
+        },
+        "pageTitle": {
+          "type": "string",
+          "description": "Page title (1-200 chars)."
+        },
+        "pageContent": {
+          "type": "string",
+          "description": "Rich text content (Markdown or HTML)."
+        },
+        "metaDescription": {
+          "type": "string",
+          "description": "SEO meta description (max 500 chars)."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether to publish immediately."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display order."
+        }
+      },
+      "description": "CreateCMSPageRequest is the request for creating a new CMS page."
+    },
+    "v1CreateCMSPageResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSPage",
+          "description": "Created CMS page data."
+        }
+      },
+      "description": "CreateCMSPageResponse is the response for creating a CMS page."
+    },
+    "v1CreateCMSSectionRequest": {
+      "type": "object",
+      "properties": {
+        "sectionType": {
+          "$ref": "#/definitions/v1CMSSectionType",
+          "description": "Section type (required, cannot be UNSPECIFIED)."
+        },
+        "sectionKey": {
+          "type": "string",
+          "description": "Unique key (lowercase with underscores, 1-100 chars).\nMust start with a letter. Immutable after creation."
+        },
+        "title": {
+          "type": "string",
+          "description": "Section title (1-200 chars)."
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Section subtitle (max 500 chars)."
+        },
+        "content": {
+          "type": "string",
+          "description": "Rich text content body."
+        },
+        "iconName": {
+          "type": "string",
+          "description": "Lucide icon name (max 100 chars)."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Image URL (max 500 chars)."
+        },
+        "buttonText": {
+          "type": "string",
+          "description": "CTA button text (max 100 chars)."
+        },
+        "buttonUrl": {
+          "type": "string",
+          "description": "CTA button link (max 500 chars)."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display order within its type."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether to publish immediately."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Flexible metadata as JSON string."
+        }
+      },
+      "description": "CreateCMSSectionRequest is the request for creating a new CMS section."
+    },
+    "v1CreateCMSSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSSection",
+          "description": "Created CMS section data."
+        }
+      },
+      "description": "CreateCMSSectionResponse is the response for creating a CMS section."
+    },
+    "v1DeleteCMSPageResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteCMSPageResponse is the response for deleting a CMS page."
+    },
+    "v1DeleteCMSSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteCMSSectionResponse is the response for deleting a CMS section."
+    },
+    "v1GetCMSPageBySlugResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSPage",
+          "description": "CMS page data."
+        }
+      },
+      "description": "GetCMSPageBySlugResponse is the response for getting a CMS page by slug."
+    },
+    "v1GetCMSPageResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSPage",
+          "description": "CMS page data."
+        }
+      },
+      "description": "GetCMSPageResponse is the response for getting a CMS page."
+    },
+    "v1GetCMSSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSSection",
+          "description": "CMS section data."
+        }
+      },
+      "description": "GetCMSSectionResponse is the response for getting a CMS section."
+    },
+    "v1GetCMSSettingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSSetting",
+          "description": "CMS setting data."
+        }
+      },
+      "description": "GetCMSSettingResponse is the response for getting a CMS setting."
+    },
+    "v1GetPublicLandingContentResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CMSSection"
+          },
+          "description": "All published landing page sections, ordered by sort_order."
+        },
+        "settings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CMSSetting"
+          },
+          "description": "All site settings."
+        }
+      },
+      "description": "GetPublicLandingContentResponse is the response containing all published\nlanding page sections and site settings."
+    },
+    "v1ListCMSPagesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CMSPage"
+          },
+          "description": "List of CMS pages."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListCMSPagesResponse is the response for listing CMS pages."
+    },
+    "v1ListCMSSectionsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CMSSection"
+          },
+          "description": "List of CMS sections."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListCMSSectionsResponse is the response for listing CMS sections."
+    },
+    "v1ListCMSSettingsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CMSSetting"
+          },
+          "description": "List of CMS settings."
+        }
+      },
+      "description": "ListCMSSettingsResponse is the response for listing CMS settings."
+    },
+    "v1UpdateCMSPageResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSPage",
+          "description": "Updated CMS page data."
+        }
+      },
+      "description": "UpdateCMSPageResponse is the response for updating a CMS page."
+    },
+    "v1UpdateCMSSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSSection",
+          "description": "Updated CMS section data."
+        }
+      },
+      "description": "UpdateCMSSectionResponse is the response for updating a CMS section."
+    },
+    "v1UpdateCMSSettingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1CMSSetting",
+          "description": "Updated CMS setting data."
+        }
+      },
+      "description": "UpdateCMSSettingResponse is the response for updating a CMS setting."
+    },
     "MenuServiceAssignMenuPermissionsBody": {
       "type": "object",
       "properties": {
@@ -4771,28 +6066,6 @@
           "$ref": "#/definitions/v1BaseResponse"
         }
       }
-    },
-    "v1AuditInfo": {
-      "type": "object",
-      "properties": {
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the record was created (ISO 8601)."
-        },
-        "createdBy": {
-          "type": "string",
-          "description": "User who created the record."
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the record was last updated (ISO 8601)."
-        },
-        "updatedBy": {
-          "type": "string",
-          "description": "User who last updated the record."
-        }
-      },
-      "description": "AuditInfo contains audit trail information."
     },
     "v1CreateMenuRequest": {
       "type": "object",
@@ -6734,6 +8007,25 @@
       },
       "description": "UpdateUserDetailRequest updates employee details."
     },
+    "UserServiceUploadProfilePictureBody": {
+      "type": "object",
+      "properties": {
+        "fileData": {
+          "type": "string",
+          "format": "byte",
+          "description": "Raw file data (binary).\n\n2MB max"
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original file name (e.g., \"avatar.jpg\")."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "MIME content type (image/jpeg, image/png, image/webp)."
+        }
+      },
+      "description": "UploadProfilePictureRequest is the request for uploading a profile picture."
+    },
     "v1AssignUserPermissionsResponse": {
       "type": "object",
       "properties": {
@@ -7110,6 +8402,19 @@
       },
       "description": "UpdateUserResponse is the response for updating a user."
     },
+    "v1UploadProfilePictureResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "profilePictureUrl": {
+          "type": "string",
+          "description": "The public URL of the uploaded profile picture."
+        }
+      },
+      "description": "UploadProfilePictureResponse is the response for profile picture upload."
+    },
     "v1User": {
       "type": "object",
       "properties": {
@@ -7268,6 +8573,15 @@
     },
     {
       "name": "AuthService"
+    },
+    {
+      "name": "CMSPageService"
+    },
+    {
+      "name": "CMSSectionService"
+    },
+    {
+      "name": "CMSSettingService"
     },
     {
       "name": "MenuService"

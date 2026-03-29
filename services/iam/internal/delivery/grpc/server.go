@@ -85,6 +85,9 @@ func NewServer(cfg *config.ServerConfig, db *postgres.DB, jwtService *jwt.Servic
 	healthServer.SetServingStatus("iam.v1.DivisionService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("iam.v1.DepartmentService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("iam.v1.SectionService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("iam.v1.CMSPageService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("iam.v1.CMSSectionService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("iam.v1.CMSSettingService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	// Enable reflection for development
 	reflection.Register(grpcServer)

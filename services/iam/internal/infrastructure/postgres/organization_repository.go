@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	sortASC  = "ASC"
-	sortDESC = "DESC"
+	sortASC           = "ASC"
+	sortDESC          = "DESC"
+	defaultSortColumn = "created_at"
 )
 
 // =============================================================================
@@ -939,13 +940,13 @@ func sanitizeColumn(column string) string {
 		"section_code":    true,
 		"section_name":    true,
 		"is_active":       true,
-		"created_at":      true,
+		defaultSortColumn: true,
 		"updated_at":      true,
 	}
 	if allowed[column] {
 		return column
 	}
-	return "created_at"
+	return defaultSortColumn
 }
 
 // nullStringValue safely gets string value from sql.NullString

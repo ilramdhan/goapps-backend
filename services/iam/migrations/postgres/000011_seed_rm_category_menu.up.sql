@@ -2,21 +2,21 @@
 -- 000011: Seed RM Category menu and permissions
 --
 -- Adds RM Category as a child of Finance > Master in the sidebar navigation.
--- Also seeds the finance.master.rm-category.* permissions for RBAC.
+-- Also seeds the finance.master.rmcategory.* permissions for RBAC.
 -- All inserts use ON CONFLICT DO NOTHING for idempotency.
 
 -- =============================================================================
--- PERMISSIONS — finance.master.rm-category.*
+-- PERMISSIONS — finance.master.rmcategory.*
 -- =============================================================================
 
-INSERT INTO mst_permission (permission_code, permission_name, description, service_name, is_active, created_by)
+INSERT INTO mst_permission (permission_code, permission_name, description, service_name, module_name, action_type, is_active, created_by)
 VALUES
-    ('finance.master.rm-category.view',   'View RM Categories',   'View raw material categories list and details',   'finance', true, 'seed'),
-    ('finance.master.rm-category.create', 'Create RM Category',   'Create new raw material categories',              'finance', true, 'seed'),
-    ('finance.master.rm-category.update', 'Update RM Category',   'Update existing raw material categories',         'finance', true, 'seed'),
-    ('finance.master.rm-category.delete', 'Delete RM Category',   'Delete raw material categories',                  'finance', true, 'seed'),
-    ('finance.master.rm-category.export', 'Export RM Categories',  'Export raw material categories to Excel',         'finance', true, 'seed'),
-    ('finance.master.rm-category.import', 'Import RM Categories',  'Import raw material categories from Excel',       'finance', true, 'seed')
+    ('finance.master.rmcategory.view',   'View RM Categories',   'View raw material categories list and details',   'finance', 'master', 'view',   true, 'seed'),
+    ('finance.master.rmcategory.create', 'Create RM Category',   'Create new raw material categories',              'finance', 'master', 'create', true, 'seed'),
+    ('finance.master.rmcategory.update', 'Update RM Category',   'Update existing raw material categories',         'finance', 'master', 'update', true, 'seed'),
+    ('finance.master.rmcategory.delete', 'Delete RM Category',   'Delete raw material categories',                  'finance', 'master', 'delete', true, 'seed'),
+    ('finance.master.rmcategory.export', 'Export RM Categories',  'Export raw material categories to Excel',         'finance', 'master', 'export', true, 'seed'),
+    ('finance.master.rmcategory.import', 'Import RM Categories',  'Import raw material categories from Excel',       'finance', 'master', 'import', true, 'seed')
 ON CONFLICT (permission_code) DO NOTHING;
 
 -- =============================================================================
@@ -35,7 +35,7 @@ ON CONFLICT (menu_code) DO NOTHING;
 INSERT INTO menu_permissions (menu_id, permission_id, assigned_by)
 SELECT '00000000-0000-0000-0003-000000000004', permission_id, 'seed'
 FROM mst_permission
-WHERE permission_code = 'finance.master.rm-category.view' AND is_active = true
+WHERE permission_code = 'finance.master.rmcategory.view' AND is_active = true
 ON CONFLICT (menu_id, permission_id) DO NOTHING;
 
 -- =============================================================================
@@ -48,7 +48,7 @@ SELECT r.role_id, p.permission_id, 'seed'
 FROM mst_role r
 CROSS JOIN mst_permission p
 WHERE r.role_code = 'SUPER_ADMIN'
-    AND p.permission_code LIKE 'finance.master.rm-category.%'
+    AND p.permission_code LIKE 'finance.master.rmcategory.%'
     AND r.is_active = true
     AND p.is_active = true
 ON CONFLICT (role_id, permission_id) DO NOTHING;
