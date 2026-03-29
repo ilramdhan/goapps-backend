@@ -582,7 +582,7 @@ func (h *CMSSettingHandler) BulkUpdateCMSSettings(ctx context.Context, req *iamv
 	}
 
 	userID := getUserFromCtx(ctx)
-	var updated []*cms.Setting
+	updated := make([]*cms.Setting, 0, len(req.GetSettings()))
 
 	for _, update := range req.GetSettings() {
 		setting, err := h.repo.GetByKey(ctx, update.GetSettingKey())
@@ -628,7 +628,7 @@ func toCMSPageProto(p *cms.Page) *iamv1.CMSPage {
 		PageContent:     p.Content(),
 		MetaDescription: p.MetaDescription(),
 		IsPublished:     p.IsPublished(),
-		SortOrder:       int32(p.SortOrder()),
+		SortOrder:       safeconv.IntToInt32(p.SortOrder()),
 		Audit:           toAuditProto(p.Audit()),
 	}
 	if p.PublishedAt() != nil {
@@ -660,7 +660,7 @@ func toCMSSectionProto(s *cms.Section) *iamv1.CMSSection {
 		ImageUrl:    s.ImageURL(),
 		ButtonText:  s.ButtonText(),
 		ButtonUrl:   s.ButtonURL(),
-		SortOrder:   int32(s.SortOrder()),
+		SortOrder:   safeconv.IntToInt32(s.SortOrder()),
 		IsPublished: s.IsPublished(),
 		Metadata:    s.Metadata(),
 		Audit:       toAuditProto(s.Audit()),
