@@ -325,9 +325,5 @@ func rmCategoryEntityToProto(entity *rmcategorydomain.RMCategory) *financev1.RMC
 
 // RecordRMCategoryOperation records an RM Category operation metric.
 func RecordRMCategoryOperation(operation string, success bool) {
-	opStatus := "success"
-	if !success {
-		opStatus = "failure"
-	}
-	rmCategoryOperationsTotal.WithLabelValues(operation, opStatus).Inc()
+	rmCategoryOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
 }

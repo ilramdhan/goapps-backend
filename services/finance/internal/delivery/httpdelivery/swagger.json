@@ -31,6 +31,364 @@
     }
   ],
   "paths": {
+    "/api/v1/finance/parameters": {
+      "get": {
+        "summary": "ListParameters lists parameters with search, filter, and pagination.",
+        "operationId": "ParameterService_ListParameters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListParametersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, default 1, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100, default 10).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in code, name, short_name).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "dataType",
+            "description": "Filter by data type.\nDATA_TYPE_UNSPECIFIED (0) means \"show all data types\" (no filter).\n\n - DATA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - DATA_TYPE_NUMBER: Numeric values (integer or decimal).\n - DATA_TYPE_TEXT: Text/string values.\n - DATA_TYPE_BOOLEAN: Boolean (true/false) values.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "DATA_TYPE_UNSPECIFIED",
+              "DATA_TYPE_NUMBER",
+              "DATA_TYPE_TEXT",
+              "DATA_TYPE_BOOLEAN"
+            ],
+            "default": "DATA_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "paramCategory",
+            "description": "Filter by category.\nPARAM_CATEGORY_UNSPECIFIED (0) means \"show all categories\" (no filter).\n\n - PARAM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - PARAM_CATEGORY_INPUT: Input parameter - manually entered values.\n - PARAM_CATEGORY_RATE: Rate parameter - rate/ratio values.\n - PARAM_CATEGORY_CALCULATED: Calculated parameter - computed from other parameters.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "PARAM_CATEGORY_UNSPECIFIED",
+              "PARAM_CATEGORY_INPUT",
+              "PARAM_CATEGORY_RATE",
+              "PARAM_CATEGORY_CALCULATED"
+            ],
+            "default": "PARAM_CATEGORY_UNSPECIFIED"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = show all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"code\", \"name\", \"category\", \"data_type\", \"created_at\" (default: \"code\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ParameterService"
+        ]
+      },
+      "post": {
+        "summary": "CreateParameter creates a new parameter.",
+        "operationId": "ParameterService_CreateParameter",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateParameterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateParameterRequest is the request for creating a new parameter.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateParameterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/parameters/export": {
+      "get": {
+        "summary": "ExportParameters exports parameters to Excel file.",
+        "operationId": "ParameterService_ExportParameters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportParametersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dataType",
+            "description": "Filter by data type.\n\n - DATA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - DATA_TYPE_NUMBER: Numeric values (integer or decimal).\n - DATA_TYPE_TEXT: Text/string values.\n - DATA_TYPE_BOOLEAN: Boolean (true/false) values.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "DATA_TYPE_UNSPECIFIED",
+              "DATA_TYPE_NUMBER",
+              "DATA_TYPE_TEXT",
+              "DATA_TYPE_BOOLEAN"
+            ],
+            "default": "DATA_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "paramCategory",
+            "description": "Filter by category.\n\n - PARAM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - PARAM_CATEGORY_INPUT: Input parameter - manually entered values.\n - PARAM_CATEGORY_RATE: Rate parameter - rate/ratio values.\n - PARAM_CATEGORY_CALCULATED: Calculated parameter - computed from other parameters.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "PARAM_CATEGORY_UNSPECIFIED",
+              "PARAM_CATEGORY_INPUT",
+              "PARAM_CATEGORY_RATE",
+              "PARAM_CATEGORY_CALCULATED"
+            ],
+            "default": "PARAM_CATEGORY_UNSPECIFIED"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "ParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/parameters/import": {
+      "post": {
+        "summary": "ImportParameters imports parameters from Excel file.",
+        "operationId": "ParameterService_ImportParameters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportParametersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportParametersRequest is the request for importing parameters from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportParametersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/parameters/template": {
+      "get": {
+        "summary": "DownloadParameterTemplate downloads the Excel import template.",
+        "operationId": "ParameterService_DownloadParameterTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadParameterTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/parameters/{paramId}": {
+      "get": {
+        "summary": "GetParameter retrieves a parameter by ID.",
+        "operationId": "ParameterService_GetParameter",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetParameterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "paramId",
+            "description": "Parameter ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ParameterService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteParameter soft deletes a parameter.",
+        "operationId": "ParameterService_DeleteParameter",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteParameterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "paramId",
+            "description": "Parameter ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ParameterService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateParameter updates an existing parameter.\nNote: param_code is immutable and cannot be changed.",
+        "operationId": "ParameterService_UpdateParameter",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateParameterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "paramId",
+            "description": "Parameter ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ParameterServiceUpdateParameterBody"
+            }
+          }
+        ],
+        "tags": [
+          "ParameterService"
+        ]
+      }
+    },
     "/api/v1/finance/rm-categories": {
       "get": {
         "summary": "ListRMCategories lists raw material categories with search, filter, and pagination.",
@@ -667,23 +1025,47 @@
     }
   },
   "definitions": {
-    "RMCategoryServiceUpdateRMCategoryBody": {
+    "ParameterServiceUpdateParameterBody": {
       "type": "object",
       "properties": {
-        "categoryName": {
+        "paramName": {
           "type": "string",
-          "description": "New display name (optional, 1-100 chars if provided)."
+          "description": "New display name (optional, 1-200 chars if provided)."
         },
-        "description": {
+        "paramShortName": {
           "type": "string",
-          "description": "New description (optional, max 500 chars)."
+          "description": "New short name (optional, max 50 chars)."
+        },
+        "dataType": {
+          "$ref": "#/definitions/v1DataType",
+          "description": "New data type (optional, cannot be UNSPECIFIED if provided)."
+        },
+        "paramCategory": {
+          "$ref": "#/definitions/v1ParamCategory",
+          "description": "New category (optional, cannot be UNSPECIFIED if provided)."
+        },
+        "uomId": {
+          "type": "string",
+          "description": "New UOM reference (optional, UUID format, empty string to clear)."
+        },
+        "defaultValue": {
+          "type": "string",
+          "description": "New default value (optional)."
+        },
+        "minValue": {
+          "type": "string",
+          "description": "New minimum value (optional)."
+        },
+        "maxValue": {
+          "type": "string",
+          "description": "New maximum value (optional)."
         },
         "isActive": {
           "type": "boolean",
           "description": "New active status (optional)."
         }
       },
-      "description": "UpdateRMCategoryRequest is the request for updating a raw material category.\nNote: category_code is immutable and cannot be changed after creation."
+      "description": "UpdateParameterRequest is the request for updating a parameter.\nNote: param_code is immutable and cannot be changed after creation."
     },
     "protobufAny": {
       "type": "object",
@@ -770,6 +1152,378 @@
         }
       },
       "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateParameterRequest": {
+      "type": "object",
+      "properties": {
+        "paramCode": {
+          "type": "string",
+          "description": "Unique code (uppercase, alphanumeric with underscore, 1-20 chars).\nMust start with an uppercase letter. Immutable after creation."
+        },
+        "paramName": {
+          "type": "string",
+          "description": "Display name (1-200 chars)."
+        },
+        "paramShortName": {
+          "type": "string",
+          "description": "Short name (optional, max 50 chars)."
+        },
+        "dataType": {
+          "$ref": "#/definitions/v1DataType",
+          "description": "Data type (required, cannot be UNSPECIFIED)."
+        },
+        "paramCategory": {
+          "$ref": "#/definitions/v1ParamCategory",
+          "description": "Category (required, cannot be UNSPECIFIED)."
+        },
+        "uomId": {
+          "type": "string",
+          "description": "Optional UOM reference (UUID format, empty string means no UOM)."
+        },
+        "defaultValue": {
+          "type": "string",
+          "description": "Default value (optional, decimal as string)."
+        },
+        "minValue": {
+          "type": "string",
+          "description": "Minimum value (optional, decimal as string)."
+        },
+        "maxValue": {
+          "type": "string",
+          "description": "Maximum value (optional, decimal as string)."
+        }
+      },
+      "description": "CreateParameterRequest is the request for creating a new parameter."
+    },
+    "v1CreateParameterResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Parameter",
+          "description": "Created parameter data."
+        }
+      },
+      "description": "CreateParameterResponse is the response for creating a parameter."
+    },
+    "v1DataType": {
+      "type": "string",
+      "enum": [
+        "DATA_TYPE_UNSPECIFIED",
+        "DATA_TYPE_NUMBER",
+        "DATA_TYPE_TEXT",
+        "DATA_TYPE_BOOLEAN"
+      ],
+      "default": "DATA_TYPE_UNSPECIFIED",
+      "description": "DataType represents the data type of a parameter value.\n\n - DATA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - DATA_TYPE_NUMBER: Numeric values (integer or decimal).\n - DATA_TYPE_TEXT: Text/string values.\n - DATA_TYPE_BOOLEAN: Boolean (true/false) values."
+    },
+    "v1DeleteParameterResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteParameterResponse is the response for deleting a parameter."
+    },
+    "v1DownloadParameterTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "DownloadParameterTemplateResponse is the response containing the template file."
+    },
+    "v1ExportParametersResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportParametersResponse is the response containing the Excel file."
+    },
+    "v1GetParameterResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Parameter",
+          "description": "Parameter data."
+        }
+      },
+      "description": "GetParameterResponse is the response for getting a parameter."
+    },
+    "v1ImportError": {
+      "type": "object",
+      "properties": {
+        "rowNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Row number in the Excel file."
+        },
+        "field": {
+          "type": "string",
+          "description": "Field that caused the error."
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message."
+        }
+      },
+      "description": "ImportError represents a single import error."
+    },
+    "v1ImportParametersRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx or .xls format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original filename (for format detection)."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "Required. How to handle duplicates: \"skip\", \"update\", \"error\"."
+        }
+      },
+      "description": "ImportParametersRequest is the request for importing parameters from Excel."
+    },
+    "v1ImportParametersResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully imported records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records (duplicates with skip action)."
+        },
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of updated records (duplicates with update action)."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Details of failed records."
+        }
+      },
+      "description": "ImportParametersResponse is the response for importing parameters."
+    },
+    "v1ListParametersResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Parameter"
+          },
+          "description": "List of parameters."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListParametersResponse is the response for listing parameters."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1ParamCategory": {
+      "type": "string",
+      "enum": [
+        "PARAM_CATEGORY_UNSPECIFIED",
+        "PARAM_CATEGORY_INPUT",
+        "PARAM_CATEGORY_RATE",
+        "PARAM_CATEGORY_CALCULATED"
+      ],
+      "default": "PARAM_CATEGORY_UNSPECIFIED",
+      "description": "ParamCategory represents the category/purpose of a parameter.\n\n - PARAM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - PARAM_CATEGORY_INPUT: Input parameter - manually entered values.\n - PARAM_CATEGORY_RATE: Rate parameter - rate/ratio values.\n - PARAM_CATEGORY_CALCULATED: Calculated parameter - computed from other parameters."
+    },
+    "v1Parameter": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "paramCode": {
+          "type": "string",
+          "description": "Unique code (e.g., \"SPEED\", \"DENIER\", \"ELEC_RATE\"). Immutable after creation."
+        },
+        "paramName": {
+          "type": "string",
+          "description": "Display name (e.g., \"Speed\", \"Denier\")."
+        },
+        "paramShortName": {
+          "type": "string",
+          "description": "Short name for compact display."
+        },
+        "dataType": {
+          "$ref": "#/definitions/v1DataType",
+          "description": "Data type of the parameter value."
+        },
+        "paramCategory": {
+          "$ref": "#/definitions/v1ParamCategory",
+          "description": "Category/purpose of the parameter."
+        },
+        "defaultValue": {
+          "type": "string",
+          "description": "Default value (decimal, as string for precision)."
+        },
+        "minValue": {
+          "type": "string",
+          "description": "Minimum allowed value (decimal, as string for precision)."
+        },
+        "maxValue": {
+          "type": "string",
+          "description": "Maximum allowed value (decimal, as string for precision)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the parameter is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        },
+        "uomId": {
+          "type": "string",
+          "description": "Optional UOM reference ID (UUID, nullable)."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "Resolved UOM code (read-only, populated from mst_uom join)."
+        },
+        "uomName": {
+          "type": "string",
+          "description": "Resolved UOM name (read-only, populated from mst_uom join)."
+        }
+      },
+      "description": "Parameter represents a master parameter entity for costing calculations."
+    },
+    "v1UpdateParameterResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Parameter",
+          "description": "Updated parameter data."
+        }
+      },
+      "description": "UpdateParameterResponse is the response for updating a parameter."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    },
+    "RMCategoryServiceUpdateRMCategoryBody": {
+      "type": "object",
+      "properties": {
+        "categoryName": {
+          "type": "string",
+          "description": "New display name (optional, 1-100 chars if provided)."
+        },
+        "description": {
+          "type": "string",
+          "description": "New description (optional, max 500 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "New active status (optional)."
+        }
+      },
+      "description": "UpdateRMCategoryRequest is the request for updating a raw material category.\nNote: category_code is immutable and cannot be changed after creation."
     },
     "v1CreateRMCategoryRequest": {
       "type": "object",
@@ -865,25 +1619,6 @@
       },
       "description": "GetRMCategoryResponse is the response for getting a raw material category."
     },
-    "v1ImportError": {
-      "type": "object",
-      "properties": {
-        "rowNumber": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Row number in the Excel file."
-        },
-        "field": {
-          "type": "string",
-          "description": "Field that caused the error."
-        },
-        "message": {
-          "type": "string",
-          "description": "Error message."
-        }
-      },
-      "description": "ImportError represents a single import error."
-    },
     "v1ImportRMCategoriesRequest": {
       "type": "object",
       "properties": {
@@ -963,32 +1698,6 @@
       },
       "description": "ListRMCategoriesResponse is the response for listing raw material categories."
     },
-    "v1PaginationResponse": {
-      "type": "object",
-      "properties": {
-        "currentPage": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Current page number."
-        },
-        "pageSize": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Number of items per page."
-        },
-        "totalItems": {
-          "type": "string",
-          "format": "int64",
-          "description": "Total number of items across all pages."
-        },
-        "totalPages": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Total number of pages."
-        }
-      },
-      "description": "PaginationResponse contains pagination metadata for list responses."
-    },
     "v1RMCategory": {
       "type": "object",
       "properties": {
@@ -1032,20 +1741,6 @@
         }
       },
       "description": "UpdateRMCategoryResponse is the response for updating a raw material category."
-    },
-    "v1ValidationError": {
-      "type": "object",
-      "properties": {
-        "field": {
-          "type": "string",
-          "description": "The field name that failed validation."
-        },
-        "message": {
-          "type": "string",
-          "description": "The validation error message."
-        }
-      },
-      "description": "ValidationError represents a single field validation error."
     },
     "UOMServiceUpdateUOMBody": {
       "type": "object",
@@ -1308,6 +2003,9 @@
     }
   },
   "tags": [
+    {
+      "name": "ParameterService"
+    },
     {
       "name": "RMCategoryService"
     },
