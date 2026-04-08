@@ -44,12 +44,12 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*formula
 		return nil, err
 	}
 
-	formulaType, err := h.parseFormulaType(cmd.FormulaType)
+	formulaType, _, err := h.parseFormulaType(cmd.FormulaType)
 	if err != nil {
 		return nil, err
 	}
 
-	resultParamID, err := h.validateResultParam(ctx, cmd.ResultParamID, entity.ID())
+	resultParamID, _, err := h.validateResultParam(ctx, cmd.ResultParamID, entity.ID())
 	if err != nil {
 		return nil, err
 	}
@@ -75,45 +75,47 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*formula
 }
 
 // parseFormulaType parses an optional FormulaType string.
-func (h *UpdateHandler) parseFormulaType(ft *string) (*formula.Type, error) {
+// Returns (nil, false, nil) when ft is nil (no change requested).
+func (h *UpdateHandler) parseFormulaType(ft *string) (*formula.Type, bool, error) {
 	if ft == nil {
-		return nil, nil
+		return nil, false, nil
 	}
 	parsed, err := formula.NewType(*ft)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return &parsed, nil
+	return &parsed, true, nil
 }
 
 // validateResultParam validates and parses the optional result parameter ID.
-func (h *UpdateHandler) validateResultParam(ctx context.Context, resultParamIDStr *string, entityID uuid.UUID) (*uuid.UUID, error) {
+// Returns (nil, false, nil) when resultParamIDStr is nil (no change requested).
+func (h *UpdateHandler) validateResultParam(ctx context.Context, resultParamIDStr *string, entityID uuid.UUID) (*uuid.UUID, bool, error) {
 	if resultParamIDStr == nil {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	rpID, err := uuid.Parse(*resultParamIDStr)
 	if err != nil {
-		return nil, formula.ErrResultParamNotFound
+		return nil, false, formula.ErrResultParamNotFound
 	}
 
 	exists, err := h.repo.ParamExistsByID(ctx, rpID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !exists {
-		return nil, formula.ErrResultParamNotFound
+		return nil, false, formula.ErrResultParamNotFound
 	}
 
 	used, err := h.repo.ResultParamUsedByOther(ctx, rpID, entityID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if used {
-		return nil, formula.ErrResultParamAlreadyUsed
+		return nil, false, formula.ErrResultParamAlreadyUsed
 	}
 
-	return &rpID, nil
+	return &rpID, true, nil
 }
 
 // validateInputParams validates and parses input parameter IDs.
