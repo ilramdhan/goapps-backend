@@ -128,7 +128,7 @@ func (h *FormulaHandler) UpdateFormula(ctx context.Context, req *financev1.Updat
 	if req.ResultParamId != nil {
 		cmd.ResultParamID = req.ResultParamId
 	}
-	if len(req.InputParamIds) > 0 {
+	if req.InputParamIds != nil {
 		cmd.InputParamIDs = req.InputParamIds
 	}
 	if req.Description != nil {

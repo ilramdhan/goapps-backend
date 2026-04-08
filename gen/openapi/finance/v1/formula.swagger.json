@@ -376,7 +376,7 @@
         },
         "description": {
           "type": "string",
-          "description": "New description (optional)."
+          "description": "New description (optional, max 1000 chars)."
         },
         "isActive": {
           "type": "boolean",

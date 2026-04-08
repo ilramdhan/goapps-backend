@@ -184,6 +184,19 @@ func (h *ImportHandler) processRow(ctx context.Context, row []string, rowNum int
 		return
 	}
 
+	// Check result param not used by another formula
+	used, usedErr := h.repo.ResultParamUsedByOther(ctx, *resultParamID, uuid.Nil)
+	if usedErr != nil {
+		result.FailedCount++
+		result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "result_param_code", Message: fmt.Sprintf("failed to check result param: %v", usedErr)})
+		return
+	}
+	if used {
+		result.FailedCount++
+		result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "result_param_code", Message: "result parameter already used by another formula"})
+		return
+	}
+
 	h.createFormula(ctx, code, data, *resultParamID, inputParamIDs, rowNum, cmd.CreatedBy, result)
 }
 
@@ -242,6 +255,19 @@ func (h *ImportHandler) updateExisting(ctx context.Context, code formula.Code, d
 	if err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "formula_type", Message: err.Error()})
+		return
+	}
+
+	// Check result param not used by another formula (excluding this one)
+	used, usedErr := h.repo.ResultParamUsedByOther(ctx, resultParamID, existing.ID())
+	if usedErr != nil {
+		result.FailedCount++
+		result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "result_param_code", Message: fmt.Sprintf("failed to check result param: %v", usedErr)})
+		return
+	}
+	if used {
+		result.FailedCount++
+		result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "result_param_code", Message: "result parameter already used by another formula"})
 		return
 	}
 

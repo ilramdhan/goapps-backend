@@ -589,7 +589,7 @@ type UpdateFormulaRequest struct {
 	ResultParamId *string `protobuf:"bytes,5,opt,name=result_param_id,json=resultParamId,proto3,oneof" json:"result_param_id,omitempty"`
 	// New input parameter IDs (optional, replaces all existing).
 	InputParamIds []string `protobuf:"bytes,6,rep,name=input_param_ids,json=inputParamIds,proto3" json:"input_param_ids,omitempty"`
-	// New description (optional).
+	// New description (optional, max 1000 chars).
 	Description *string `protobuf:"bytes,7,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	// New active status (optional).
 	IsActive      *bool `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
@@ -1423,7 +1423,7 @@ const file_finance_v1_formula_proto_rawDesc = "" +
 	"formula_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tformulaId\"j\n" +
 	"\x12GetFormulaResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12'\n" +
-	"\x04data\x18\x02 \x01(\v2\x13.finance.v1.FormulaR\x04data\"\xfd\x03\n" +
+	"\x04data\x18\x02 \x01(\v2\x13.finance.v1.FormulaR\x04data\"\x91\x04\n" +
 	"\x14UpdateFormulaRequest\x12'\n" +
 	"\n" +
 	"formula_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tformulaId\x120\n" +
@@ -1431,10 +1431,10 @@ const file_finance_v1_formula_proto_rawDesc = "" +
 	"\fformula_type\x18\x03 \x01(\x0e2\x17.finance.v1.FormulaTypeB\b\xbaH\x05\x82\x01\x02 \x00H\x01R\vformulaType\x88\x01\x01\x12-\n" +
 	"\n" +
 	"expression\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x88'H\x02R\n" +
-	"expression\x88\x01\x01\x12+\n" +
-	"\x0fresult_param_id\x18\x05 \x01(\tH\x03R\rresultParamId\x88\x01\x01\x127\n" +
-	"\x0finput_param_ids\x18\x06 \x03(\tB\x0f\xbaH\f\x92\x01\t\x102\"\x05r\x03\xb0\x01\x01R\rinputParamIds\x12%\n" +
-	"\vdescription\x18\a \x01(\tH\x04R\vdescription\x88\x01\x01\x12 \n" +
+	"expression\x88\x01\x01\x125\n" +
+	"\x0fresult_param_id\x18\x05 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x03R\rresultParamId\x88\x01\x01\x127\n" +
+	"\x0finput_param_ids\x18\x06 \x03(\tB\x0f\xbaH\f\x92\x01\t\x102\"\x05r\x03\xb0\x01\x01R\rinputParamIds\x12/\n" +
+	"\vdescription\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aH\x04R\vdescription\x88\x01\x01\x12 \n" +
 	"\tis_active\x18\b \x01(\bH\x05R\bisActive\x88\x01\x01B\x0f\n" +
 	"\r_formula_nameB\x0f\n" +
 	"\r_formula_typeB\r\n" +
