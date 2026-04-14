@@ -5,12 +5,20 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/config"
+)
+
+// SMTP client timeouts. Kept tight so failures surface fast and never block the request path.
+const (
+	smtpDialTimeout    = 10 * time.Second
+	smtpOverallTimeout = 30 * time.Second
 )
 
 // Service implements the auth.EmailService interface via SMTP.
@@ -70,7 +78,7 @@ func (s *Service) send(ctx context.Context, to, subject, htmlBody string) error 
 
 	var msg strings.Builder
 	for k, v := range headers {
-		fmt.Fprintf(&msg, "%s: %s\r\n", k, v)
+		_, _ = fmt.Fprintf(&msg, "%s: %s\r\n", k, v)
 	}
 	msg.WriteString("\r\n")
 	msg.WriteString(htmlBody)
@@ -96,6 +104,10 @@ func (s *Service) send(ctx context.Context, to, subject, htmlBody string) error 
 }
 
 func (s *Service) sendTLS(ctx context.Context, addr string, auth smtp.Auth, to, msg string) error {
+	// Enforce a bounded overall deadline so no SMTP step can hang indefinitely.
+	ctx, cancel := context.WithTimeout(ctx, smtpOverallTimeout)
+	defer cancel()
+
 	tlsConfig := &tls.Config{
 		ServerName: s.cfg.SMTPHost,
 		MinVersion: tls.VersionTLS12,
@@ -104,10 +116,21 @@ func (s *Service) sendTLS(ctx context.Context, addr string, auth smtp.Auth, to, 
 		tlsConfig.InsecureSkipVerify = true //nolint:gosec // Configurable for dev/self-hosted environments.
 	}
 
-	dialer := &tls.Dialer{Config: tlsConfig}
+	dialer := &tls.Dialer{
+		NetDialer: &net.Dialer{Timeout: smtpDialTimeout},
+		Config:    tlsConfig,
+	}
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to connect to SMTP server: %w", err)
+	}
+
+	// After dial, TCP-level deadlines prevent a stalled server from hanging reads/writes.
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := conn.SetDeadline(deadline); err != nil {
+			_ = conn.Close()
+			return fmt.Errorf("failed to set SMTP connection deadline: %w", err)
+		}
 	}
 
 	client, err := smtp.NewClient(conn, s.cfg.SMTPHost)
