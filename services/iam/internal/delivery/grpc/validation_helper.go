@@ -146,7 +146,8 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	case errors.Is(err, shared.ErrNotFound):
 		return NotFoundResponse(err.Error())
 	case errors.Is(err, shared.ErrAlreadyExists),
-		errors.Is(err, shared.ErrAlreadyDeleted):
+		errors.Is(err, shared.ErrAlreadyDeleted),
+		errors.Is(err, shared.ErrEmailAlreadyVerified):
 		return ConflictResponse(err.Error())
 	case errors.Is(err, shared.ErrUnauthorized),
 		errors.Is(err, shared.ErrInvalidCredentials),
@@ -161,8 +162,6 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 		return ErrorResponse("428", "2FA required")
 	case errors.Is(err, shared.ErrEmailNotVerified):
 		return ErrorResponse("412", err.Error())
-	case errors.Is(err, shared.ErrEmailAlreadyVerified):
-		return ConflictResponse(err.Error())
 	case errors.Is(err, shared.ErrVerificationCooldown):
 		return ErrorResponse("429", err.Error())
 	case errors.Is(err, shared.ErrInvalidVerifyCode):
@@ -174,19 +173,25 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 		errors.Is(err, shared.ErrInvalidOTP):
 		return ErrorResponse("422", err.Error())
 	default:
-		errMsg := err.Error()
-		switch {
-		case strings.Contains(errMsg, "invalid"):
-			return ErrorResponse("400", errMsg)
-		case strings.Contains(errMsg, "not found"):
-			return NotFoundResponse(errMsg)
-		case strings.Contains(errMsg, "already exists"):
-			return ConflictResponse(errMsg)
-		case strings.Contains(errMsg, "not editable"):
-			return ErrorResponse("422", errMsg)
-		default:
-			log.Error().Err(err).Msg("unhandled domain error mapped to 500")
-			return InternalErrorResponse("internal server error")
-		}
+		return mapUnknownError(err)
+	}
+}
+
+// mapUnknownError handles errors not matched by sentinel checks,
+// using error message heuristics as a last resort.
+func mapUnknownError(err error) *commonv1.BaseResponse {
+	errMsg := err.Error()
+	switch {
+	case strings.Contains(errMsg, "invalid"):
+		return ErrorResponse("400", errMsg)
+	case strings.Contains(errMsg, "not found"):
+		return NotFoundResponse(errMsg)
+	case strings.Contains(errMsg, "already exists"):
+		return ConflictResponse(errMsg)
+	case strings.Contains(errMsg, "not editable"):
+		return ErrorResponse("422", errMsg)
+	default:
+		log.Error().Err(err).Msg("unhandled domain error mapped to 500")
+		return InternalErrorResponse("internal server error")
 	}
 }
