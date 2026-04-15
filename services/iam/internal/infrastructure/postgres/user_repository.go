@@ -495,12 +495,20 @@ func (r *UserRepository) GetRolesAndPermissions(ctx context.Context, userID uuid
 		roles = append(roles, &roleRefImpl{id: id, code: code, name: name})
 	}
 
-	// Get direct permissions
+	// Get permissions: direct (user_permissions) + inherited via roles (role_permissions).
 	permQuery := `
-		SELECT p.permission_id, p.permission_code
+		SELECT DISTINCT p.permission_id, p.permission_code
 		FROM mst_permission p
-		INNER JOIN user_permissions up ON p.permission_id = up.permission_id
-		WHERE up.user_id = $1 AND p.is_active = true
+		WHERE p.is_active = true AND (
+			p.permission_id IN (
+				SELECT up.permission_id FROM user_permissions up WHERE up.user_id = $1
+			)
+			OR p.permission_id IN (
+				SELECT rp.permission_id FROM role_permissions rp
+				INNER JOIN user_roles ur ON rp.role_id = ur.role_id
+				WHERE ur.user_id = $1
+			)
+		)
 	`
 
 	permRows, err := r.db.QueryContext(ctx, permQuery, userID)
