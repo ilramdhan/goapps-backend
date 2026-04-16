@@ -1411,6 +1411,308 @@
         ]
       }
     },
+    "/api/v1/iam/employee-groups": {
+      "get": {
+        "summary": "ListEmployeeGroups lists employee groups with search, filter, and pagination.",
+        "operationId": "EmployeeGroupService_ListEmployeeGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListEmployeeGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, default 1, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100, default 10).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in code, name).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status. UNSPECIFIED (0) = show all.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"code\", \"name\", \"created_at\" (default: \"code\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EmployeeGroupService"
+        ]
+      },
+      "post": {
+        "summary": "CreateEmployeeGroup creates a new employee group.",
+        "operationId": "EmployeeGroupService_CreateEmployeeGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateEmployeeGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateEmployeeGroupRequest is the request for creating a new employee group.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateEmployeeGroupRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EmployeeGroupService"
+        ]
+      }
+    },
+    "/api/v1/iam/employee-groups/export": {
+      "get": {
+        "summary": "ExportEmployeeGroups exports employee groups to Excel file.",
+        "operationId": "EmployeeGroupService_ExportEmployeeGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportEmployeeGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status. UNSPECIFIED (0) = export all.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "EmployeeGroupService"
+        ]
+      }
+    },
+    "/api/v1/iam/employee-groups/import": {
+      "post": {
+        "summary": "ImportEmployeeGroups imports employee groups from Excel file.",
+        "operationId": "EmployeeGroupService_ImportEmployeeGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportEmployeeGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportEmployeeGroupsRequest is the request for importing employee groups from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportEmployeeGroupsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EmployeeGroupService"
+        ]
+      }
+    },
+    "/api/v1/iam/employee-groups/template": {
+      "get": {
+        "summary": "DownloadEmployeeGroupTemplate downloads the Excel import template.",
+        "operationId": "EmployeeGroupService_DownloadEmployeeGroupTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadEmployeeGroupTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "EmployeeGroupService"
+        ]
+      }
+    },
+    "/api/v1/iam/employee-groups/{employeeGroupId}": {
+      "get": {
+        "summary": "GetEmployeeGroup retrieves an employee group by ID.",
+        "operationId": "EmployeeGroupService_GetEmployeeGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetEmployeeGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "employeeGroupId",
+            "description": "Employee group ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EmployeeGroupService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteEmployeeGroup soft deletes an employee group.",
+        "operationId": "EmployeeGroupService_DeleteEmployeeGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteEmployeeGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "employeeGroupId",
+            "description": "Employee group ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "EmployeeGroupService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateEmployeeGroup updates an existing employee group.\nNote: code is immutable and cannot be changed.",
+        "operationId": "EmployeeGroupService_UpdateEmployeeGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateEmployeeGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "employeeGroupId",
+            "description": "Employee group ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmployeeGroupServiceUpdateEmployeeGroupBody"
+            }
+          }
+        ],
+        "tags": [
+          "EmployeeGroupService"
+        ]
+      }
+    },
     "/api/v1/iam/employee-levels": {
       "get": {
         "summary": "ListEmployeeLevels lists employee levels with search, filter, and pagination.",
@@ -1483,7 +1785,7 @@
           },
           {
             "name": "workflow",
-            "description": "Filter by workflow state. UNSPECIFIED (0) = no filter.\n\n - EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED: Default / unset.\n - EMPLOYEE_LEVEL_WORKFLOW_DRAFT: Draft \u2014 not yet published.\n - EMPLOYEE_LEVEL_WORKFLOW_RELEASED: Released \u2014 active and in use.\n - EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER: Super user \u2014 reserved for top-level system access.",
+            "description": "Filter by workflow state. UNSPECIFIED (0) = no filter.\n\n - EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED: Default / unset.\n - EMPLOYEE_LEVEL_WORKFLOW_DRAFT: Draft \u2014 not yet published.\n - EMPLOYEE_LEVEL_WORKFLOW_RELEASED: Released \u2014 active and in use.\n - EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER: Super user \u2014 reserved for top-level system access.\n - EMPLOYEE_LEVEL_WORKFLOW_SUBMITTED: Submitted \u2014 pending approval.\n - EMPLOYEE_LEVEL_WORKFLOW_APPROVED: Approved \u2014 approved, pending release.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1491,7 +1793,9 @@
               "EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED",
               "EMPLOYEE_LEVEL_WORKFLOW_DRAFT",
               "EMPLOYEE_LEVEL_WORKFLOW_RELEASED",
-              "EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER"
+              "EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER",
+              "EMPLOYEE_LEVEL_WORKFLOW_SUBMITTED",
+              "EMPLOYEE_LEVEL_WORKFLOW_APPROVED"
             ],
             "default": "EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED"
           },
@@ -1596,7 +1900,7 @@
           },
           {
             "name": "workflow",
-            "description": "Filter by workflow state. UNSPECIFIED (0) = export all.\n\n - EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED: Default / unset.\n - EMPLOYEE_LEVEL_WORKFLOW_DRAFT: Draft \u2014 not yet published.\n - EMPLOYEE_LEVEL_WORKFLOW_RELEASED: Released \u2014 active and in use.\n - EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER: Super user \u2014 reserved for top-level system access.",
+            "description": "Filter by workflow state. UNSPECIFIED (0) = export all.\n\n - EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED: Default / unset.\n - EMPLOYEE_LEVEL_WORKFLOW_DRAFT: Draft \u2014 not yet published.\n - EMPLOYEE_LEVEL_WORKFLOW_RELEASED: Released \u2014 active and in use.\n - EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER: Super user \u2014 reserved for top-level system access.\n - EMPLOYEE_LEVEL_WORKFLOW_SUBMITTED: Submitted \u2014 pending approval.\n - EMPLOYEE_LEVEL_WORKFLOW_APPROVED: Approved \u2014 approved, pending release.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1604,7 +1908,9 @@
               "EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED",
               "EMPLOYEE_LEVEL_WORKFLOW_DRAFT",
               "EMPLOYEE_LEVEL_WORKFLOW_RELEASED",
-              "EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER"
+              "EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER",
+              "EMPLOYEE_LEVEL_WORKFLOW_SUBMITTED",
+              "EMPLOYEE_LEVEL_WORKFLOW_APPROVED"
             ],
             "default": "EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED"
           }
@@ -1763,6 +2069,166 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/EmployeeLevelServiceUpdateEmployeeLevelBody"
+            }
+          }
+        ],
+        "tags": [
+          "EmployeeLevelService"
+        ]
+      }
+    },
+    "/api/v1/iam/employee-levels/{employeeLevelId}/approve": {
+      "post": {
+        "summary": "ApproveEmployeeLevel transitions workflow from SUBMITTED \u2192 APPROVED.",
+        "operationId": "EmployeeLevelService_ApproveEmployeeLevel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApproveEmployeeLevelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "employeeLevelId",
+            "description": "Employee level ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmployeeLevelServiceApproveEmployeeLevelBody"
+            }
+          }
+        ],
+        "tags": [
+          "EmployeeLevelService"
+        ]
+      }
+    },
+    "/api/v1/iam/employee-levels/{employeeLevelId}/bypass-release": {
+      "post": {
+        "summary": "BypassReleaseEmployeeLevel transitions workflow directly to RELEASED from any state.",
+        "operationId": "EmployeeLevelService_BypassReleaseEmployeeLevel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BypassReleaseEmployeeLevelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "employeeLevelId",
+            "description": "Employee level ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmployeeLevelServiceBypassReleaseEmployeeLevelBody"
+            }
+          }
+        ],
+        "tags": [
+          "EmployeeLevelService"
+        ]
+      }
+    },
+    "/api/v1/iam/employee-levels/{employeeLevelId}/release": {
+      "post": {
+        "summary": "ReleaseEmployeeLevel transitions workflow from APPROVED \u2192 RELEASED.",
+        "operationId": "EmployeeLevelService_ReleaseEmployeeLevel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReleaseEmployeeLevelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "employeeLevelId",
+            "description": "Employee level ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmployeeLevelServiceReleaseEmployeeLevelBody"
+            }
+          }
+        ],
+        "tags": [
+          "EmployeeLevelService"
+        ]
+      }
+    },
+    "/api/v1/iam/employee-levels/{employeeLevelId}/submit": {
+      "post": {
+        "summary": "SubmitEmployeeLevel transitions workflow from DRAFT \u2192 SUBMITTED.",
+        "operationId": "EmployeeLevelService_SubmitEmployeeLevel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitEmployeeLevelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "employeeLevelId",
+            "description": "Employee level ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmployeeLevelServiceSubmitEmployeeLevelBody"
             }
           }
         ],
@@ -6609,6 +7075,298 @@
       },
       "description": "UploadCMSImageResponse is the response containing the uploaded image URL."
     },
+    "EmployeeGroupServiceUpdateEmployeeGroupBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "New display name (optional, 1-100 chars if provided)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "New active status (optional)."
+        }
+      },
+      "description": "UpdateEmployeeGroupRequest is the request for updating an employee group.\nNote: code is immutable and cannot be changed after creation."
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1CreateEmployeeGroupRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Unique code (uppercase alphanumeric, 1-20 chars). Must start with uppercase letter.\nImmutable after creation."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name (1-100 chars)."
+        }
+      },
+      "description": "CreateEmployeeGroupRequest is the request for creating a new employee group."
+    },
+    "v1CreateEmployeeGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1EmployeeGroup",
+          "description": "Created employee group data."
+        }
+      },
+      "description": "CreateEmployeeGroupResponse is the response for creating an employee group."
+    },
+    "v1DeleteEmployeeGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteEmployeeGroupResponse is the response for deleting an employee group."
+    },
+    "v1DownloadEmployeeGroupTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "DownloadEmployeeGroupTemplateResponse is the response containing the template file."
+    },
+    "v1EmployeeGroup": {
+      "type": "object",
+      "properties": {
+        "employeeGroupId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "code": {
+          "type": "string",
+          "description": "Unique code (e.g., \"ASM\", \"DYM\", \"MGR\"). Immutable after creation."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name (e.g., \"Assembly\", \"Dynamometer\", \"Manager\")."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the group is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "EmployeeGroup represents an employee group / department category master record.\nSimpler than EmployeeLevel \u2014 groups users by function (e.g., ASM, DYM, DRV, MGR)."
+    },
+    "v1ExportEmployeeGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportEmployeeGroupsResponse is the response containing the Excel file."
+    },
+    "v1GetEmployeeGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1EmployeeGroup",
+          "description": "Employee group data."
+        }
+      },
+      "description": "GetEmployeeGroupResponse is the response for getting an employee group."
+    },
+    "v1ImportEmployeeGroupsRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx or .xls format, max 10MB)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original filename (for format detection). Must be a simple filename without path separators."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "Required. How to handle duplicates: \"skip\", \"update\", \"error\"."
+        }
+      },
+      "description": "ImportEmployeeGroupsRequest is the request for importing employee groups from Excel."
+    },
+    "v1ImportEmployeeGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully imported records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records (duplicates with skip action)."
+        },
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of updated records (duplicates with update action)."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Details of failed records."
+        }
+      },
+      "description": "ImportEmployeeGroupsResponse is the response for importing employee groups."
+    },
+    "v1ImportError": {
+      "type": "object",
+      "properties": {
+        "rowNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Row number in the Excel file."
+        },
+        "field": {
+          "type": "string",
+          "description": "Field that caused the error."
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message."
+        }
+      },
+      "description": "ImportError represents a single import error."
+    },
+    "v1ListEmployeeGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EmployeeGroup"
+          },
+          "description": "List of employee groups."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListEmployeeGroupsResponse is the response for listing employee groups."
+    },
+    "v1UpdateEmployeeGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1EmployeeGroup",
+          "description": "Updated employee group data."
+        }
+      },
+      "description": "UpdateEmployeeGroupResponse is the response for updating an employee group."
+    },
+    "EmployeeLevelServiceApproveEmployeeLevelBody": {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "string",
+          "description": "Optional notes for the transition (audit trail)."
+        }
+      },
+      "description": "ApproveEmployeeLevelRequest transitions workflow SUBMITTED \u2192 APPROVED."
+    },
+    "EmployeeLevelServiceBypassReleaseEmployeeLevelBody": {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "string",
+          "description": "Optional notes for the transition (audit trail)."
+        }
+      },
+      "description": "BypassReleaseEmployeeLevelRequest transitions workflow directly to RELEASED."
+    },
+    "EmployeeLevelServiceReleaseEmployeeLevelBody": {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "string",
+          "description": "Optional notes for the transition (audit trail)."
+        }
+      },
+      "description": "ReleaseEmployeeLevelRequest transitions workflow APPROVED \u2192 RELEASED."
+    },
+    "EmployeeLevelServiceSubmitEmployeeLevelBody": {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "string",
+          "description": "Optional notes for the transition (audit trail)."
+        }
+      },
+      "description": "SubmitEmployeeLevelRequest transitions workflow DRAFT \u2192 SUBMITTED."
+    },
     "EmployeeLevelServiceUpdateEmployeeLevelBody": {
       "type": "object",
       "properties": {
@@ -6641,15 +7399,33 @@
       },
       "description": "UpdateEmployeeLevelRequest is the request for updating an employee level.\nNote: code is immutable and cannot be changed after creation."
     },
-    "v1ActiveFilter": {
-      "type": "string",
-      "enum": [
-        "ACTIVE_FILTER_UNSPECIFIED",
-        "ACTIVE_FILTER_ACTIVE",
-        "ACTIVE_FILTER_INACTIVE"
-      ],
-      "default": "ACTIVE_FILTER_UNSPECIFIED",
-      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    "v1ApproveEmployeeLevelResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1EmployeeLevel",
+          "description": "Updated employee level data."
+        }
+      },
+      "description": "ApproveEmployeeLevelResponse is the response for approving an employee level."
+    },
+    "v1BypassReleaseEmployeeLevelResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1EmployeeLevel",
+          "description": "Updated employee level data."
+        }
+      },
+      "description": "BypassReleaseEmployeeLevelResponse is the response for bypass-releasing an employee level."
     },
     "v1CreateEmployeeLevelRequest": {
       "type": "object",
@@ -6788,10 +7564,12 @@
         "EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED",
         "EMPLOYEE_LEVEL_WORKFLOW_DRAFT",
         "EMPLOYEE_LEVEL_WORKFLOW_RELEASED",
-        "EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER"
+        "EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER",
+        "EMPLOYEE_LEVEL_WORKFLOW_SUBMITTED",
+        "EMPLOYEE_LEVEL_WORKFLOW_APPROVED"
       ],
       "default": "EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED",
-      "description": "EmployeeLevelWorkflow represents the lifecycle state of an employee level.\n\n - EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED: Default / unset.\n - EMPLOYEE_LEVEL_WORKFLOW_DRAFT: Draft \u2014 not yet published.\n - EMPLOYEE_LEVEL_WORKFLOW_RELEASED: Released \u2014 active and in use.\n - EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER: Super user \u2014 reserved for top-level system access."
+      "description": "EmployeeLevelWorkflow represents the lifecycle state of an employee level.\nState machine: DRAFT \u2192 SUBMITTED \u2192 APPROVED \u2192 RELEASED.\nBypass: users with bypass permission can jump from any pre-release state to RELEASED.\n\n - EMPLOYEE_LEVEL_WORKFLOW_UNSPECIFIED: Default / unset.\n - EMPLOYEE_LEVEL_WORKFLOW_DRAFT: Draft \u2014 not yet published.\n - EMPLOYEE_LEVEL_WORKFLOW_RELEASED: Released \u2014 active and in use.\n - EMPLOYEE_LEVEL_WORKFLOW_SUPER_USER: Super user \u2014 reserved for top-level system access.\n - EMPLOYEE_LEVEL_WORKFLOW_SUBMITTED: Submitted \u2014 pending approval.\n - EMPLOYEE_LEVEL_WORKFLOW_APPROVED: Approved \u2014 approved, pending release."
     },
     "v1ExportEmployeeLevelsResponse": {
       "type": "object",
@@ -6883,25 +7661,6 @@
       },
       "description": "ImportEmployeeLevelsResponse is the response for importing employee levels."
     },
-    "v1ImportError": {
-      "type": "object",
-      "properties": {
-        "rowNumber": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Row number in the Excel file."
-        },
-        "field": {
-          "type": "string",
-          "description": "Field that caused the error."
-        },
-        "message": {
-          "type": "string",
-          "description": "Error message."
-        }
-      },
-      "description": "ImportError represents a single import error."
-    },
     "v1ListEmployeeLevelsResponse": {
       "type": "object",
       "properties": {
@@ -6923,6 +7682,34 @@
         }
       },
       "description": "ListEmployeeLevelsResponse is the response for listing employee levels."
+    },
+    "v1ReleaseEmployeeLevelResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1EmployeeLevel",
+          "description": "Updated employee level data."
+        }
+      },
+      "description": "ReleaseEmployeeLevelResponse is the response for releasing an employee level."
+    },
+    "v1SubmitEmployeeLevelResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1EmployeeLevel",
+          "description": "Updated employee level data."
+        }
+      },
+      "description": "SubmitEmployeeLevelResponse is the response for submitting an employee level."
     },
     "v1UpdateEmployeeLevelResponse": {
       "type": "object",
@@ -9489,6 +10276,9 @@
     },
     {
       "name": "CMSSettingService"
+    },
+    {
+      "name": "EmployeeGroupService"
     },
     {
       "name": "EmployeeLevelService"

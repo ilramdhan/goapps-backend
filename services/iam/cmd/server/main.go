@@ -88,6 +88,7 @@ func run() error {
 	cmsSectionRepo := postgres.NewCMSSectionRepository(db)
 	cmsSettingRepo := postgres.NewCMSSettingRepository(db)
 	employeeLevelRepo := postgres.NewEmployeeLevelRepository(db)
+	employeeGroupRepo := postgres.NewEmployeeGroupRepository(db)
 	workflowHistoryRepo := postgres.NewWorkflowHistoryRepository(db)
 
 	// Setup auth service
@@ -144,6 +145,7 @@ func run() error {
 	cmsSectionHandler := grpcdelivery.NewCMSSectionHandler(cmsSectionRepo, cmsSettingRepo, storageSvc, validationHelper)
 	cmsSettingHandler := grpcdelivery.NewCMSSettingHandler(cmsSettingRepo, validationHelper)
 	employeeLevelHandler := grpcdelivery.NewEmployeeLevelHandler(employeeLevelRepo, workflowHistoryRepo, validationHelper)
+	employeeGroupHandler := grpcdelivery.NewEmployeeGroupHandler(employeeGroupRepo, validationHelper)
 
 	// Setup gRPC server with interceptor chain (pass JWT + session cache + session repo for auth & activity tracking)
 	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, db, jwtService, sessionCache, sessionRepo)
@@ -168,6 +170,7 @@ func run() error {
 	iamv1.RegisterCMSSectionServiceServer(gs, cmsSectionHandler)
 	iamv1.RegisterCMSSettingServiceServer(gs, cmsSettingHandler)
 	iamv1.RegisterEmployeeLevelServiceServer(gs, employeeLevelHandler)
+	iamv1.RegisterEmployeeGroupServiceServer(gs, employeeGroupHandler)
 
 	// Start gRPC server
 	go func() {

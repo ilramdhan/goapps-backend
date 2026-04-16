@@ -175,6 +175,16 @@ var methodPermissions = map[string]PermissionRequirement{
 	"/iam.v1.EmployeeLevelService/ApproveEmployeeLevel":          {Permission: "iam.master.employeelevel.approve"},
 	"/iam.v1.EmployeeLevelService/ReleaseEmployeeLevel":          {Permission: "iam.master.employeelevel.release"},
 	"/iam.v1.EmployeeLevelService/BypassReleaseEmployeeLevel":    {Permission: "iam.master.employeelevel.bypass"},
+
+	// Employee Group
+	"/iam.v1.EmployeeGroupService/CreateEmployeeGroup":           {Permission: "iam.master.employeegroup.create"},
+	"/iam.v1.EmployeeGroupService/GetEmployeeGroup":              {Permission: "iam.master.employeegroup.view"},
+	"/iam.v1.EmployeeGroupService/UpdateEmployeeGroup":           {Permission: "iam.master.employeegroup.update"},
+	"/iam.v1.EmployeeGroupService/DeleteEmployeeGroup":           {Permission: "iam.master.employeegroup.delete"},
+	"/iam.v1.EmployeeGroupService/ListEmployeeGroups":            {Permission: "iam.master.employeegroup.view"},
+	"/iam.v1.EmployeeGroupService/ExportEmployeeGroups":          {Permission: "iam.master.employeegroup.export"},
+	"/iam.v1.EmployeeGroupService/ImportEmployeeGroups":          {Permission: "iam.master.employeegroup.import"},
+	"/iam.v1.EmployeeGroupService/DownloadEmployeeGroupTemplate": {Permission: "iam.master.employeegroup.view"},
 }
 
 // PermissionInterceptor creates a unary interceptor that checks if the
