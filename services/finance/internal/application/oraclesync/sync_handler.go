@@ -16,9 +16,9 @@ import (
 
 const (
 	// OracleSchema is the Oracle schema containing the stored procedure.
-	OracleSchema = "MGTAPPS"
+	OracleSchema = "MGTDAT"
 	// OracleProcedure is the stored procedure that refreshes Oracle data.
-	OracleProcedure = "SP_REFRESH_ITEM_CONS_STK_PO"
+	OracleProcedure = "PRC_CST_CONSSTKPO_MGT"
 
 	stepProcedure = "execute_procedure"
 	stepFetch     = "fetch_data"
@@ -125,13 +125,13 @@ func (h *SyncHandler) runSync(ctx context.Context, exec *job.Execution) error {
 
 func (h *SyncHandler) executeProcedure(ctx context.Context, jobID uuid.UUID, period string) error {
 	logEntry := job.NewExecutionLog(jobID, stepProcedure, job.LogStarted,
-		fmt.Sprintf("Executing %s.%s for period %s", OracleSchema, OracleProcedure, period), nil)
+		fmt.Sprintf("Executing %s.%s (auto-period from SYSDATE, requested: %s)", OracleSchema, OracleProcedure, period), nil)
 	if err := h.jobRepo.AddLog(ctx, logEntry); err != nil {
 		h.logger.Warn().Err(err).Msg("Failed to add procedure log")
 	}
 
 	start := time.Now()
-	err := h.oracleRepo.ExecuteProcedureWithParam(ctx, OracleSchema, OracleProcedure, period)
+	err := h.oracleRepo.ExecuteProcedure(ctx, OracleSchema, OracleProcedure)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -263,10 +263,10 @@ func (h *SyncHandler) failJob(ctx context.Context, exec *job.Execution, syncErr 
 }
 
 // ResolvePeriod returns the sync period based on the current date.
-// Day 1-3: previous month, Day 4+: current month.
+// Matches Oracle procedure logic: Day 1-5: previous month, Day 6+: current month.
 // Format: YYYYMM (e.g., "202601").
 func ResolvePeriod(now time.Time) string {
-	if now.Day() <= 3 {
+	if now.Day() <= 5 {
 		prev := now.AddDate(0, -1, 0)
 		return prev.Format("200601")
 	}

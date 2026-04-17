@@ -19,18 +19,18 @@ func TestResolvePeriod(t *testing.T) {
 			expected: "202601",
 		},
 		{
-			name:     "day 2 returns previous month",
-			date:     time.Date(2026, 2, 2, 0, 0, 0, 0, time.UTC),
-			expected: "202601",
-		},
-		{
 			name:     "day 3 returns previous month",
 			date:     time.Date(2026, 2, 3, 0, 0, 0, 0, time.UTC),
 			expected: "202601",
 		},
 		{
-			name:     "day 4 returns current month",
-			date:     time.Date(2026, 2, 4, 0, 0, 0, 0, time.UTC),
+			name:     "day 5 returns previous month",
+			date:     time.Date(2026, 2, 5, 0, 0, 0, 0, time.UTC),
+			expected: "202601",
+		},
+		{
+			name:     "day 6 returns current month",
+			date:     time.Date(2026, 2, 6, 0, 0, 0, 0, time.UTC),
 			expected: "202602",
 		},
 		{
@@ -44,8 +44,8 @@ func TestResolvePeriod(t *testing.T) {
 			expected: "202512",
 		},
 		{
-			name:     "december day 4 returns current month",
-			date:     time.Date(2026, 12, 4, 0, 0, 0, 0, time.UTC),
+			name:     "december day 6 returns current month",
+			date:     time.Date(2026, 12, 6, 0, 0, 0, 0, time.UTC),
 			expected: "202612",
 		},
 	}

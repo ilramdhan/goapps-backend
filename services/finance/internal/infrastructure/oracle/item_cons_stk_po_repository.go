@@ -33,7 +33,7 @@ func (r *ItemConsStockPORepository) ExecuteProcedureWithParam(ctx context.Contex
 }
 
 // oracleColumns lists the explicit columns to SELECT from Oracle (matches scanItemConsStockPO order).
-const oracleColumns = `MICSP_PERIOD, MICSP_ITEM_CODE, MICSP_GRADE_CODE,
+const oracleColumns = `MICSP_PERIOD, MICSP_ITEM_CODE, MICSP_GRADE_CODE_2,
 	MICSP_GRADE_NAME, MICSP_ITEM_NAME, MICSP_UOM,
 	MICSP_CONS_QTY, MICSP_CONS_VAL, MICSP_CONS_RATE,
 	MICSP_STORES_QTY, MICSP_STORES_VAL, MICSP_STORES_RATE,
