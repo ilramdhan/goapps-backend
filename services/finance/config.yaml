@@ -43,6 +43,20 @@ auth_redis:
   password: ""
   db: 1  # Same Redis DB as IAM for shared token blacklist
 
+oracle:
+  host: localhost
+  port: 1521
+  service: ORCLPDB1
+  user: ""        # Override via ORACLE_USER env var
+  password: ""    # Override via ORACLE_PASSWORD env var
+  max_open_conns: 5
+  conn_max_lifetime: 10m
+
+rabbitmq:
+  url: ""         # Override via RABBITMQ_URL env var (e.g. amqp://user:pass@host:5672/)
+  prefetch_count: 1
+  reconnect_delay: 5s
+
 tracing:
   enabled: true
   endpoint: localhost:4317

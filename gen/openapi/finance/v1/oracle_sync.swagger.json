@@ -1,0 +1,800 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/oracle_sync.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "OracleSyncService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/item-cons-stock-po": {
+      "get": {
+        "summary": "ListItemConsStockPO retrieves synced item consumption, stock, and PO data.",
+        "operationId": "OracleSyncService_ListItemConsStockPO",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListItemConsStockPOResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "period",
+            "description": "Filter by period (YYYYMM).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "itemCode",
+            "description": "Filter by item code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search on item name, item code, grade name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/jobs": {
+      "get": {
+        "summary": "ListSyncJobs retrieves a paginated list of sync job executions.",
+        "operationId": "OracleSyncService_ListSyncJobs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSyncJobsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "jobType",
+            "description": "Filter by job type.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "Filter by status.\n\n - JOB_STATUS_UNSPECIFIED: Default unspecified value.\n - JOB_STATUS_QUEUED: Job is queued and waiting for processing.\n - JOB_STATUS_PROCESSING: Job is currently being processed.\n - JOB_STATUS_SUCCESS: Job completed successfully.\n - JOB_STATUS_FAILED: Job failed.\n - JOB_STATUS_CANCELLED: Job was cancelled.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "JOB_STATUS_UNSPECIFIED",
+              "JOB_STATUS_QUEUED",
+              "JOB_STATUS_PROCESSING",
+              "JOB_STATUS_SUCCESS",
+              "JOB_STATUS_FAILED",
+              "JOB_STATUS_CANCELLED"
+            ],
+            "default": "JOB_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "period",
+            "description": "Filter by period (YYYYMM).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Search in job code or error message.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/jobs/{jobId}": {
+      "get": {
+        "summary": "GetSyncJob retrieves a specific sync job by ID with execution logs.",
+        "operationId": "OracleSyncService_GetSyncJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSyncJobResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "description": "Job identifier (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/jobs/{jobId}/cancel": {
+      "post": {
+        "summary": "CancelSyncJob cancels a queued or in-progress sync job.",
+        "operationId": "OracleSyncService_CancelSyncJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelSyncJobResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "description": "Job identifier (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OracleSyncServiceCancelSyncJobBody"
+            }
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/periods": {
+      "get": {
+        "summary": "ListSyncPeriods retrieves all available sync periods.",
+        "operationId": "OracleSyncService_ListSyncPeriods",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSyncPeriodsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/trigger": {
+      "post": {
+        "summary": "TriggerSync initiates a manual Oracle sync job.",
+        "operationId": "OracleSyncService_TriggerSync",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TriggerSyncResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "TriggerSyncRequest initiates an Oracle-to-PostgreSQL sync job.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TriggerSyncRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "OracleSyncServiceCancelSyncJobBody": {
+      "type": "object",
+      "description": "CancelSyncJobRequest cancels a queued or processing sync job."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CancelSyncJobResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SyncJob",
+          "description": "The cancelled sync job."
+        }
+      },
+      "description": "CancelSyncJobResponse returns the cancelled job."
+    },
+    "v1GetSyncJobResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SyncJob",
+          "description": "The sync job with logs."
+        }
+      },
+      "description": "GetSyncJobResponse returns a single sync job with logs."
+    },
+    "v1ItemConsStockPO": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM format)."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Item code."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code."
+        },
+        "gradeName": {
+          "type": "string",
+          "description": "Grade name."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Item name."
+        },
+        "uom": {
+          "type": "string",
+          "description": "Unit of measure."
+        },
+        "consQty": {
+          "type": "number",
+          "format": "double",
+          "description": "Consumption quantity."
+        },
+        "consVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Consumption value."
+        },
+        "consRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Consumption rate."
+        },
+        "storesQty": {
+          "type": "number",
+          "format": "double",
+          "description": "Stores quantity."
+        },
+        "storesVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Stores value."
+        },
+        "storesRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Stores rate."
+        },
+        "deptQty": {
+          "type": "number",
+          "format": "double",
+          "description": "Department quantity."
+        },
+        "deptVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Department value."
+        },
+        "deptRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Department rate."
+        },
+        "lastPoQty1": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 1 quantity."
+        },
+        "lastPoVal1": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 1 value."
+        },
+        "lastPoRate1": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 1 rate."
+        },
+        "lastPoDt1": {
+          "type": "string",
+          "description": "Last PO 1 date (ISO 8601)."
+        },
+        "lastPoQty2": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 2 quantity."
+        },
+        "lastPoVal2": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 2 value."
+        },
+        "lastPoRate2": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 2 rate."
+        },
+        "lastPoDt2": {
+          "type": "string",
+          "description": "Last PO 2 date (ISO 8601)."
+        },
+        "lastPoQty3": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 3 quantity."
+        },
+        "lastPoVal3": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 3 value."
+        },
+        "lastPoRate3": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 3 rate."
+        },
+        "lastPoDt3": {
+          "type": "string",
+          "description": "Last PO 3 date (ISO 8601)."
+        },
+        "syncedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was synced (ISO 8601)."
+        },
+        "syncedByJob": {
+          "type": "string",
+          "description": "Job ID that synced this record (UUID)."
+        }
+      },
+      "description": "ItemConsStockPO represents a synced item consumption, stock, and PO record."
+    },
+    "v1JobLogStatus": {
+      "type": "string",
+      "enum": [
+        "JOB_LOG_STATUS_UNSPECIFIED",
+        "JOB_LOG_STATUS_STARTED",
+        "JOB_LOG_STATUS_SUCCESS",
+        "JOB_LOG_STATUS_FAILED",
+        "JOB_LOG_STATUS_SKIPPED"
+      ],
+      "default": "JOB_LOG_STATUS_UNSPECIFIED",
+      "description": "JobLogStatus represents the status of a job execution log step.\n\n - JOB_LOG_STATUS_UNSPECIFIED: Default unspecified value.\n - JOB_LOG_STATUS_STARTED: Step has started.\n - JOB_LOG_STATUS_SUCCESS: Step completed successfully.\n - JOB_LOG_STATUS_FAILED: Step failed.\n - JOB_LOG_STATUS_SKIPPED: Step was skipped."
+    },
+    "v1JobStatus": {
+      "type": "string",
+      "enum": [
+        "JOB_STATUS_UNSPECIFIED",
+        "JOB_STATUS_QUEUED",
+        "JOB_STATUS_PROCESSING",
+        "JOB_STATUS_SUCCESS",
+        "JOB_STATUS_FAILED",
+        "JOB_STATUS_CANCELLED"
+      ],
+      "default": "JOB_STATUS_UNSPECIFIED",
+      "description": "JobStatus represents the current state of a job execution.\n\n - JOB_STATUS_UNSPECIFIED: Default unspecified value.\n - JOB_STATUS_QUEUED: Job is queued and waiting for processing.\n - JOB_STATUS_PROCESSING: Job is currently being processed.\n - JOB_STATUS_SUCCESS: Job completed successfully.\n - JOB_STATUS_FAILED: Job failed.\n - JOB_STATUS_CANCELLED: Job was cancelled."
+    },
+    "v1ListItemConsStockPOResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ItemConsStockPO"
+          },
+          "description": "List of synced records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListItemConsStockPOResponse returns synced item consumption data."
+    },
+    "v1ListSyncJobsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncJob"
+          },
+          "description": "List of sync jobs."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListSyncJobsResponse returns a paginated list of sync jobs."
+    },
+    "v1ListSyncPeriodsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of periods in YYYYMM format, ordered descending."
+        }
+      },
+      "description": "ListSyncPeriodsResponse returns the list of distinct periods."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1SyncJob": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "description": "Unique job identifier (UUID)."
+        },
+        "jobCode": {
+          "type": "string",
+          "description": "Human-readable job code (e.g., \"ORACLE_SYNC-202601-001\")."
+        },
+        "jobType": {
+          "type": "string",
+          "description": "Job type (e.g., \"oracle_sync\")."
+        },
+        "jobSubtype": {
+          "type": "string",
+          "description": "Job subtype for categorization."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period being synced (YYYYMM format)."
+        },
+        "status": {
+          "$ref": "#/definitions/v1JobStatus",
+          "description": "Current job status."
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Priority (1-10, lower is higher priority)."
+        },
+        "progress": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Progress percentage (0-100)."
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Error message if the job failed."
+        },
+        "resultSummary": {
+          "type": "string",
+          "description": "Result summary as JSON string."
+        },
+        "retryCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of retry attempts."
+        },
+        "maxRetries": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Maximum allowed retries."
+        },
+        "queuedAt": {
+          "type": "string",
+          "description": "Timestamp when the job was queued (ISO 8601)."
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "Timestamp when processing started (ISO 8601)."
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp when the job completed (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the job."
+        },
+        "cancelledBy": {
+          "type": "string",
+          "description": "User who cancelled the job."
+        },
+        "cancelledAt": {
+          "type": "string",
+          "description": "Timestamp when the job was cancelled (ISO 8601)."
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncJobLog"
+          },
+          "description": "Execution logs for this job."
+        }
+      },
+      "description": "SyncJob represents a job execution for Oracle-to-PostgreSQL sync."
+    },
+    "v1SyncJobLog": {
+      "type": "object",
+      "properties": {
+        "logId": {
+          "type": "string",
+          "description": "Unique log identifier (UUID)."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Parent job identifier (UUID)."
+        },
+        "step": {
+          "type": "string",
+          "description": "Step name (e.g., \"execute_procedure\", \"fetch_data\", \"upsert_data\")."
+        },
+        "status": {
+          "$ref": "#/definitions/v1JobLogStatus",
+          "description": "Step status."
+        },
+        "message": {
+          "type": "string",
+          "description": "Log message."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Additional metadata as JSON string."
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "Timestamp when the step started (ISO 8601)."
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp when the step completed (ISO 8601)."
+        },
+        "durationMs": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Duration of the step in milliseconds."
+        }
+      },
+      "description": "SyncJobLog represents a single step log entry within a job execution."
+    },
+    "v1TriggerSyncRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period to sync (YYYYMM format). If empty, auto-resolved based on current date."
+        }
+      },
+      "description": "TriggerSyncRequest initiates an Oracle-to-PostgreSQL sync job."
+    },
+    "v1TriggerSyncResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SyncJob",
+          "description": "The created sync job."
+        }
+      },
+      "description": "TriggerSyncResponse returns the created job."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

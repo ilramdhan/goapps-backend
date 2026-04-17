@@ -12,10 +12,12 @@ import (
 	"github.com/rs/zerolog/log"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
 	redisinfra "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/redis"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/tracing"
 )
@@ -68,12 +70,25 @@ func run() error {
 		defer closeAuthRedis(tokenBlacklist)
 	}
 
+	// Setup RabbitMQ (optional - graceful degradation for publisher)
+	rmqPublisher := setupRabbitMQ(cfg)
+
 	// Setup repositories
 	uomRepo := postgres.NewUOMRepository(db)
 	rmCategoryRepo := postgres.NewRMCategoryRepository(db)
 	parameterRepo := postgres.NewParameterRepository(db)
 	formulaRepo := postgres.NewFormulaRepository(db)
 	uomCategoryRepo := postgres.NewUOMCategoryRepository(db)
+	jobRepo := postgres.NewJobRepository(db)
+	syncDataRepo := postgres.NewSyncDataRepository(db)
+
+	// Setup oracle sync handlers
+	triggerHandler := oraclesync.NewTriggerHandler(jobRepo, rmqPublisher)
+	getJobHandler := oraclesync.NewGetJobHandler(jobRepo)
+	listJobsHandler := oraclesync.NewListJobsHandler(jobRepo)
+	cancelJobHandler := oraclesync.NewCancelJobHandler(jobRepo)
+	listDataHandler := oraclesync.NewListDataHandler(syncDataRepo)
+	listPeriodsHandler := oraclesync.NewListPeriodsHandler(syncDataRepo)
 
 	// Setup gRPC handlers
 	uomHandler, err := grpcdelivery.NewUOMHandler(uomRepo, uomCategoryRepo, uomCache)
@@ -101,8 +116,16 @@ func run() error {
 		return err
 	}
 
+	oracleSyncHandler, err := grpcdelivery.NewOracleSyncHandler(
+		triggerHandler, getJobHandler, listJobsHandler,
+		cancelJobHandler, listDataHandler, listPeriodsHandler,
+	)
+	if err != nil {
+		return err
+	}
+
 	// Setup and start servers
-	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler, tokenBlacklist)
+	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler, oracleSyncHandler, tokenBlacklist)
 }
 
 // setupLogger configures the application logger.
@@ -199,7 +222,7 @@ func closeAuthRedis(bl *redisinfra.TokenBlacklist) {
 }
 
 // startServers starts the gRPC and HTTP servers and handles graceful shutdown.
-func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdelivery.UOMHandler, rmCategoryHandler *grpcdelivery.RMCategoryHandler, parameterHandler *grpcdelivery.ParameterHandler, formulaHandler *grpcdelivery.FormulaHandler, uomCategoryHandler *grpcdelivery.UOMCategoryHandler, tokenBlacklist *redisinfra.TokenBlacklist) error {
+func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdelivery.UOMHandler, rmCategoryHandler *grpcdelivery.RMCategoryHandler, parameterHandler *grpcdelivery.ParameterHandler, formulaHandler *grpcdelivery.FormulaHandler, uomCategoryHandler *grpcdelivery.UOMCategoryHandler, oracleSyncHandler *grpcdelivery.OracleSyncHandler, tokenBlacklist *redisinfra.TokenBlacklist) error {
 	// Setup gRPC server with JWT auth and token blacklist
 	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, nil, &cfg.JWT, tokenBlacklist)
 	if err != nil {
@@ -212,6 +235,7 @@ func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdeliv
 	financev1.RegisterParameterServiceServer(grpcServer.GRPCServer(), parameterHandler)
 	financev1.RegisterFormulaServiceServer(grpcServer.GRPCServer(), formulaHandler)
 	financev1.RegisterUOMCategoryServiceServer(grpcServer.GRPCServer(), uomCategoryHandler)
+	financev1.RegisterOracleSyncServiceServer(grpcServer.GRPCServer(), oracleSyncHandler)
 
 	// Start gRPC server
 	go func() {
@@ -251,4 +275,17 @@ func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdeliv
 
 	log.Info().Msg("Server shutdown complete")
 	return nil
+}
+
+// setupRabbitMQ creates a RabbitMQ connection and publisher (optional - graceful degradation).
+// Returns a JobPublisherAdapter that implements oraclesync.JobPublisher.
+func setupRabbitMQ(cfg *config.Config) *rabbitmq.JobPublisherAdapter {
+	rmqConn, err := rabbitmq.NewConnection(cfg.RabbitMQ, log.Logger)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to connect to RabbitMQ, sync trigger will fail")
+		return nil
+	}
+
+	publisher := rabbitmq.NewPublisher(rmqConn, log.Logger)
+	return rabbitmq.NewJobPublisherAdapter(publisher, log.Logger)
 }

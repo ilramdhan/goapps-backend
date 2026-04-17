@@ -91,6 +91,10 @@ func (s *Server) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to register RMCategory gateway: %w", err)
 	}
 
+	if err := financev1.RegisterOracleSyncServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register OracleSync gateway: %w", err)
+	}
+
 	// Create main mux
 	mux := http.NewServeMux()
 

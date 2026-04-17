@@ -19,8 +19,28 @@ type Config struct {
 	AuthRedis AuthRedisConfig `mapstructure:"auth_redis"`
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	CORS      CORSConfig      `mapstructure:"cors"`
+	Oracle    OracleConfig    `mapstructure:"oracle"`
+	RabbitMQ  RabbitMQConfig  `mapstructure:"rabbitmq"`
 	Tracing   TracingConfig   `mapstructure:"tracing"`
 	Logger    LoggerConfig    `mapstructure:"logger"`
+}
+
+// OracleConfig holds Oracle database connection configuration.
+type OracleConfig struct {
+	Host            string        `mapstructure:"host"`
+	Port            int           `mapstructure:"port"`
+	Service         string        `mapstructure:"service"`
+	User            string        `mapstructure:"user"`
+	Password        string        `mapstructure:"password"`
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+}
+
+// RabbitMQConfig holds RabbitMQ connection configuration.
+type RabbitMQConfig struct {
+	URL            string        `mapstructure:"url"`
+	PrefetchCount  int           `mapstructure:"prefetch_count"`
+	ReconnectDelay time.Duration `mapstructure:"reconnect_delay"`
 }
 
 // CORSConfig holds CORS configuration for SSO multi-app support.
@@ -197,6 +217,20 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("cors.allowed_origins", []string{"http://localhost:3000"})
 	v.SetDefault("cors.max_age", 300)
 
+	// Oracle defaults (credentials must come from env vars — never hardcode)
+	v.SetDefault("oracle.host", "localhost")
+	v.SetDefault("oracle.port", 1521)
+	v.SetDefault("oracle.service", "ORCLPDB1")
+	v.SetDefault("oracle.user", "")
+	v.SetDefault("oracle.password", "")
+	v.SetDefault("oracle.max_open_conns", 5)
+	v.SetDefault("oracle.conn_max_lifetime", 10*time.Minute)
+
+	// RabbitMQ defaults (URL must come from env var — never hardcode credentials)
+	v.SetDefault("rabbitmq.url", "")
+	v.SetDefault("rabbitmq.prefetch_count", 1)
+	v.SetDefault("rabbitmq.reconnect_delay", 5*time.Second)
+
 	// Tracing defaults
 	v.SetDefault("tracing.enabled", true)
 	v.SetDefault("tracing.service_name", "finance-service")
@@ -234,6 +268,14 @@ func bindEnvVars(v *viper.Viper) {
 		{"auth_redis.port", "AUTH_REDIS_PORT"},
 		{"auth_redis.password", "AUTH_REDIS_PASSWORD"},
 		{"auth_redis.db", "AUTH_REDIS_DB"},
+		// Oracle
+		{"oracle.host", "ORACLE_HOST"},
+		{"oracle.port", "ORACLE_PORT"},
+		{"oracle.service", "ORACLE_SERVICE"},
+		{"oracle.user", "ORACLE_MGTDAT_USER"},
+		{"oracle.password", "ORACLE_MGTDAT_PASSWORD"},
+		// RabbitMQ
+		{"rabbitmq.url", "RABBITMQ_URL"},
 		// CORS
 		{"cors.allowed_origins", "CORS_ALLOWED_ORIGINS"},
 		// Tracing

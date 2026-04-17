@@ -90,6 +90,29 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
     networks:
       - goapps
+  # RabbitMQ - Message Queue for async job processing
+  # Management UI: http://localhost:15672 (guest/guest)
+  # AMQP: localhost:5672
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: goapps-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - goapps
+
   # Shared MinIO - S3-compatible Object Storage
   # API: localhost:9000 | Console: http://localhost:9001
   # All services share one bucket (goapps-staging), scoped by STORAGE_BASE_PATH:
@@ -131,6 +154,7 @@ volumes:
   iam_postgres_data:
   finance_postgres_data:
   redis_data:
+  rabbitmq_data:
   minio_data:
 
 
