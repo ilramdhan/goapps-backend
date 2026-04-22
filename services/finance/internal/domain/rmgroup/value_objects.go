@@ -109,7 +109,7 @@ func ParseFlag(raw string) (Flag, error) {
 	}
 }
 
-// IsValid reports whether the flag is one of the recognised values.
+// IsValid reports whether the flag is one of the recognized values.
 func (f Flag) IsValid() bool {
 	switch f {
 	case FlagCons, FlagStores, FlagDept, FlagPO1, FlagPO2, FlagPO3, FlagInit:

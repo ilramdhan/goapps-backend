@@ -69,7 +69,7 @@ func (h *RMCostHandler) TriggerRMCostCalculation(ctx context.Context, req *finan
 			RecordRMCostOperation(opTrigger, false)
 			return &financev1.TriggerRMCostCalculationResponse{
 				Base: ErrorResponse("400", "invalid group_head_id: "+err.Error()),
-			}, nil
+			}, nil //nolint:nilerr // error wrapped in gRPC response proto
 		}
 		cmd.GroupHeadID = &id
 	}
@@ -105,7 +105,7 @@ func (h *RMCostHandler) CalculateRMCost(ctx context.Context, req *financev1.Calc
 			RecordRMCostOperation(opCalculate, false)
 			return &financev1.CalculateRMCostResponse{
 				Base: ErrorResponse("400", "invalid group_head_id: "+err.Error()),
-			}, nil
+			}, nil //nolint:nilerr // error wrapped in gRPC response proto
 		}
 		cmd.GroupHeadID = &id
 	}
@@ -266,7 +266,7 @@ func (h *RMCostHandler) ExportRMCosts(ctx context.Context, req *financev1.Export
 			RecordRMCostOperation(opExport, false)
 			return &financev1.ExportRMCostsResponse{
 				Base: ErrorResponse("400", "invalid group_head_id: "+err.Error()),
-			}, nil
+			}, nil //nolint:nilerr // error wrapped in gRPC response proto
 		}
 		query.GroupHeadID = &id
 	}

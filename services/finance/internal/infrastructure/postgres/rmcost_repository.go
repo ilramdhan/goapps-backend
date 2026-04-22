@@ -140,10 +140,10 @@ func (r *RMCostRepository) List(ctx context.Context, filter rmcost.ListFilter) (
 	}
 
 	orderCol := map[string]string{
-		"period":         "period",
-		"rm_code":        "rm_code",
-		"rm_name":        "rm_name",
-		"calculated_at":  "calculated_at",
+		"period":        "period",
+		"rm_code":       "rm_code",
+		"rm_name":       "rm_name",
+		"calculated_at": "calculated_at",
 	}[filter.SortBy]
 	if orderCol == "" {
 		orderCol = "period"
@@ -162,7 +162,7 @@ func (r *RMCostRepository) List(ctx context.Context, filter rmcost.ListFilter) (
 	if err != nil {
 		return nil, 0, fmt.Errorf("list rm_costs: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer closeRows(rows)
 
 	var out []*rmcost.Cost
 	for rows.Next() {
@@ -187,7 +187,7 @@ func (r *RMCostRepository) ListAll(ctx context.Context, filter rmcost.ExportFilt
 	if err != nil {
 		return nil, fmt.Errorf("list all rm_costs: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer closeRows(rows)
 
 	var out []*rmcost.Cost
 	for rows.Next() {
@@ -278,7 +278,7 @@ func (r *RMCostRepository) ListDistinctPeriods(ctx context.Context) ([]string, e
 	if err != nil {
 		return nil, fmt.Errorf("list distinct cost periods: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer closeRows(rows)
 	var out []string
 	for rows.Next() {
 		var p string
@@ -333,7 +333,7 @@ func (r *RMCostRepository) ListHistory(ctx context.Context, filter rmcost.Histor
 	if err != nil {
 		return nil, 0, fmt.Errorf("list rm_cost history: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer closeRows(rows)
 
 	var out []rmcost.History
 	for rows.Next() {
@@ -471,30 +471,30 @@ const historySelectColumnsSQL = `
 
 func scanHistoryRow(rows *sql.Rows) (rmcost.History, error) {
 	var (
-		h            rmcost.History
-		rmCostID     uuid.NullUUID
-		jobID        uuid.NullUUID
-		groupHeadID  uuid.NullUUID
-		cons         sql.NullFloat64
-		stores       sql.NullFloat64
-		dept         sql.NullFloat64
-		po1          sql.NullFloat64
-		po2          sql.NullFloat64
-		po3          sql.NullFloat64
-		initVal      sql.NullFloat64
-		initMkt      sql.NullFloat64
-		initSim      sql.NullFloat64
-		costVal      sql.NullFloat64
-		costMkt      sql.NullFloat64
-		costSim      sql.NullFloat64
-		rmType       string
-		flagVal      string
-		flagMkt      string
-		flagSim      string
-		flagValUsed  string
-		flagMktUsed  string
-		flagSimUsed  string
-		reason       string
+		h           rmcost.History
+		rmCostID    uuid.NullUUID
+		jobID       uuid.NullUUID
+		groupHeadID uuid.NullUUID
+		cons        sql.NullFloat64
+		stores      sql.NullFloat64
+		dept        sql.NullFloat64
+		po1         sql.NullFloat64
+		po2         sql.NullFloat64
+		po3         sql.NullFloat64
+		initVal     sql.NullFloat64
+		initMkt     sql.NullFloat64
+		initSim     sql.NullFloat64
+		costVal     sql.NullFloat64
+		costMkt     sql.NullFloat64
+		costSim     sql.NullFloat64
+		rmType      string
+		flagVal     string
+		flagMkt     string
+		flagSim     string
+		flagValUsed string
+		flagMktUsed string
+		flagSimUsed string
+		reason      string
 	)
 	if err := rows.Scan(
 		&h.ID, &rmCostID, &jobID, &h.Period, &h.RMCode, &rmType, &groupHeadID,

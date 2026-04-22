@@ -12,9 +12,9 @@ import (
 
 // GetQuery retrieves a head (and optionally its details) by ID.
 type GetQuery struct {
-	HeadID       string
-	WithDetails  bool
-	ActiveOnly   bool
+	HeadID      string
+	WithDetails bool
+	ActiveOnly  bool
 }
 
 // GetResult bundles the head with optional detail rows.

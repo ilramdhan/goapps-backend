@@ -271,18 +271,18 @@ func (r *SyncDataRepository) GetDistinctPeriods(ctx context.Context) ([]string, 
 func (r *SyncDataRepository) scanSyncedRow(rows interface{ Scan(dest ...any) error }) (*syncdata.ItemConsStockPO, error) {
 	var item syncdata.ItemConsStockPO
 	var (
-		gradeName                                             *string
-		itemName                                              *string
-		uom                                                   *string
-		consQty, consVal, consRate                            sql.NullFloat64
-		storesQty, storesVal, storesRate                      sql.NullFloat64
-		deptQty, deptVal, deptRate                            sql.NullFloat64
-		lastPOQty1, lastPOVal1, lastPORate1                   sql.NullFloat64
-		lastPOQty2, lastPOVal2, lastPORate2                   sql.NullFloat64
-		lastPOQty3, lastPOVal3, lastPORate3                   sql.NullFloat64
-		lastPODt1, lastPODt2, lastPODt3                       sql.NullTime
-		syncedAt                                              time.Time
-		syncedByJob                                           *uuid.UUID
+		gradeName                           *string
+		itemName                            *string
+		uom                                 *string
+		consQty, consVal, consRate          sql.NullFloat64
+		storesQty, storesVal, storesRate    sql.NullFloat64
+		deptQty, deptVal, deptRate          sql.NullFloat64
+		lastPOQty1, lastPOVal1, lastPORate1 sql.NullFloat64
+		lastPOQty2, lastPOVal2, lastPORate2 sql.NullFloat64
+		lastPOQty3, lastPOVal3, lastPORate3 sql.NullFloat64
+		lastPODt1, lastPODt2, lastPODt3     sql.NullTime
+		syncedAt                            time.Time
+		syncedByJob                         *uuid.UUID
 	)
 
 	err := rows.Scan(

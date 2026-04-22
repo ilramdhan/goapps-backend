@@ -52,7 +52,7 @@ func (r *SyncDataRepository) GetItemByCodeGrade(ctx context.Context, itemCode, g
 	)
 	if err := row.Scan(&period, &code, &grade, &gradeName, &itemName, &uom); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil // not found — return nil, no error
+			return nil, nil //nolint:nilnil // not found is not an error in this API
 		}
 		return nil, fmt.Errorf("get item by code: %w", err)
 	}

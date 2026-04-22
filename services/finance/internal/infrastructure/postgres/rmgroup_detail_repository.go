@@ -95,7 +95,7 @@ func (r *RMGroupRepository) GetDetailByID(ctx context.Context, id uuid.UUID) (*r
 // matches the Oracle sync feed's (item_code, grade_code) key, so variants
 // with the same item_code but different grade_code are independent.
 // gradeCode "" matches rows with NULL or empty grade_code (mirrors the
-// migration 000018 unique index that COALESCEs NULL to '').
+// migration 000018 unique index that COALESCEs NULL to ”).
 func (r *RMGroupRepository) GetActiveDetailByItemCodeGrade(ctx context.Context, itemCode rmgroup.ItemCode, gradeCode string) (*rmgroup.Detail, error) {
 	return r.scanDetail(r.db.QueryRowContext(ctx,
 		detailSelectSQL+` WHERE item_code=$1 AND COALESCE(grade_code,'')=$2 AND is_active=true AND deleted_at IS NULL LIMIT 1`,

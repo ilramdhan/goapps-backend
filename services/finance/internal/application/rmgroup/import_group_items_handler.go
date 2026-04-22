@@ -60,7 +60,11 @@ func (h *ImportGroupItemsHandler) Handle(ctx context.Context, cmd ImportGroupIte
 	if err != nil {
 		return nil, fmt.Errorf("open excel: %w", err)
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			_ = closeErr // best-effort
+		}
+	}()
 
 	sheet, err := resolveItemsSheet(f)
 	if err != nil {
@@ -143,7 +147,7 @@ func (h *ImportGroupItemsHandler) buildInput(ctx context.Context, row []string) 
 	// Enrich metadata from sync feed when available. Missing rows are still
 	// handed to AddItemsHandler so it can produce the correct "not in sync
 	// feed" skip reason — we do not reject here.
-	if h.lookup != nil {
+	if h.lookup != nil { //nolint:nestif // enrichment block
 		if syncItem, err := h.lookup.GetItemByCode(ctx, itemCodeStr); err == nil && syncItem != nil {
 			if in.ItemName == "" {
 				in.ItemName = syncItem.ItemName

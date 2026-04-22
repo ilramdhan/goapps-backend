@@ -184,8 +184,10 @@ func writeHeaderRow(f *excelize.File, sheet string, headers []string) error {
 		Fill: excelize.Fill{Type: "pattern", Color: []string{"4472C4"}, Pattern: 1},
 	})
 	if err == nil {
-		lastCol, _ := excelize.CoordinatesToCellName(len(headers), 1)
-		_ = f.SetCellStyle(sheet, "A1", lastCol, style)
+		lastCol, colErr := excelize.CoordinatesToCellName(len(headers), 1)
+		if colErr == nil {
+			_ = f.SetCellStyle(sheet, "A1", lastCol, style) //nolint:errcheck // best-effort styling
+		}
 	}
 	return nil
 }

@@ -33,7 +33,7 @@ type AddItemInput struct {
 	SortOrder        int32
 }
 
-// AddItemsResult summarises the outcome of an add-items call.
+// AddItemsResult summarizes the outcome of an add-items call.
 type AddItemsResult struct {
 	HeadID  uuid.UUID
 	Added   []*rmgroup.Detail
@@ -96,7 +96,7 @@ func (h *AddItemsHandler) Handle(ctx context.Context, cmd AddItemsCommand) (*Add
 // processItem validates a single item, checks cross-group ownership, and creates
 // the detail. Returns (detail, nil, nil) on insert, (nil, skipped, nil) when the
 // item is skipped, and (nil, nil, err) on fatal errors.
-func (h *AddItemsHandler) processItem(
+func (h *AddItemsHandler) processItem( //nolint:gocognit // sequential validation
 	ctx context.Context,
 	headID uuid.UUID,
 	createdBy string,
@@ -104,14 +104,14 @@ func (h *AddItemsHandler) processItem(
 ) (*rmgroup.Detail, *SkippedItem, error) {
 	itemCode, err := rmgroup.NewItemCode(in.ItemCode)
 	if err != nil {
-		return nil, &SkippedItem{ItemCode: in.ItemCode, Reason: err.Error()}, nil
+		return nil, &SkippedItem{ItemCode: in.ItemCode, Reason: err.Error()}, nil //nolint:nilerr // skipped item IS the error report
 	}
 
 	existing, err := h.repo.GetActiveDetailByItemCodeGrade(ctx, itemCode, in.GradeCode)
 	if err != nil && !errors.Is(err, rmgroup.ErrDetailNotFound) {
 		return nil, nil, fmt.Errorf("lookup active detail for %q: %w", in.ItemCode, err)
 	}
-	if existing != nil {
+	if existing != nil { //nolint:nestif // ownership check
 		owningGroup := existing.HeadID()
 		owningDetail := existing.ID()
 		reason := rmgroup.ErrItemAlreadyInOtherGroup.Error()

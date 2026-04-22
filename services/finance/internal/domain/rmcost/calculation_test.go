@@ -175,9 +175,9 @@ func TestSelectRate_FlagResolvesDirectly(t *testing.T) {
 	rates := rmcost.StageRates{Cons: 100, Stores: 200, Dept: 300, PO1: 400, PO2: 500, PO3: 600}
 
 	cases := []struct {
-		flag      rmcost.Stage
-		wantRate  float64
-		wantUsed  rmcost.Stage
+		flag     rmcost.Stage
+		wantRate float64
+		wantUsed rmcost.Stage
 	}{
 		{rmcost.StageCons, 100, rmcost.StageCons},
 		{rmcost.StageStores, 200, rmcost.StageStores},
@@ -252,11 +252,11 @@ func TestSelectRate_CascadeOrderIsStable(t *testing.T) {
 func TestLandedCost(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name   string
-		pct    float64
-		rate   float64
-		perKg  float64
-		want   float64
+		name  string
+		pct   float64
+		rate  float64
+		perKg float64
+		want  float64
 	}{
 		{"zero all", 0, 0, 0, 0},
 		{"only per-kg", 0, 0, 50, 50},
@@ -358,12 +358,12 @@ func TestCalculateCost_InitOverride(t *testing.T) {
 	}
 	initVal := 13_000.0
 	h := rmcost.HeaderInputs{
-		CostPercentage:    0.20,
-		CostPerKg:         0.0125,
-		FlagValuation:     rmcost.StageInit,
-		FlagMarketing:     rmcost.StageCons,
-		FlagSimulation:    rmcost.StageCons,
-		InitValValuation:  &initVal,
+		CostPercentage:   0.20,
+		CostPerKg:        0.0125,
+		FlagValuation:    rmcost.StageInit,
+		FlagMarketing:    rmcost.StageCons,
+		FlagSimulation:   rmcost.StageCons,
+		InitValValuation: &initVal,
 	}
 	comp := rmcost.CalculateCost(items, h)
 
@@ -410,11 +410,11 @@ func TestValidatePeriod(t *testing.T) {
 		{"202604", false},
 		{"202001", false},
 		{"202012", false},
-		{"20260", true},      // 5 digits
-		{"2026041", true},    // 7 digits
-		{"202613", true},     // month 13
-		{"202600", true},     // month 00
-		{"20260A", true},     // non-digit
+		{"20260", true},   // 5 digits
+		{"2026041", true}, // 7 digits
+		{"202613", true},  // month 13
+		{"202600", true},  // month 00
+		{"20260A", true},  // non-digit
 		{"", true},
 	}
 	for _, tc := range cases {

@@ -68,7 +68,11 @@ func (h *ImportHandler) Handle(ctx context.Context, cmd ImportCommand) (*ImportR
 	if err != nil {
 		return nil, fmt.Errorf("open excel: %w", err)
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			_ = closeErr // best-effort
+		}
+	}()
 
 	result := &ImportResult{}
 
@@ -108,7 +112,7 @@ func (h *ImportHandler) importGroupsSheet(
 	}
 
 	for i, row := range rows[1:] {
-		rowNum := int32(i + 2)
+		rowNum := int32(i + 2) //nolint:gosec // i is bounded by Excel row count
 		if isBlankRow(row) {
 			continue
 		}
@@ -324,7 +328,7 @@ func (h *ImportHandler) importItemsSheet(
 	}
 
 	for i, row := range rows[1:] {
-		rowNum := int32(i + 2)
+		rowNum := int32(i + 2) //nolint:gosec // i is bounded by Excel row count
 		if isBlankRow(row) {
 			continue
 		}
@@ -340,7 +344,7 @@ func (h *ImportHandler) importItemsSheet(
 	return nil
 }
 
-func (h *ImportHandler) importItemRow(
+func (h *ImportHandler) importItemRow( //nolint:gocyclo // sequential validation steps
 	ctx context.Context,
 	row []string,
 	cmd ImportCommand,
@@ -375,7 +379,7 @@ func (h *ImportHandler) importItemRow(
 	// variants per migration 000018.
 	gradeKey := colStr(row, 2)
 	if gradeKey == "" {
-		if synced, _ := h.itemLookup.GetItemByCode(ctx, itemCodeStr); synced != nil {
+		if synced, lookupErr := h.itemLookup.GetItemByCode(ctx, itemCodeStr); lookupErr == nil && synced != nil {
 			gradeKey = synced.GradeCode
 		}
 	}

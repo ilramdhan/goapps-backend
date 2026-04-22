@@ -27,7 +27,7 @@ func main() {
 	}
 }
 
-func run() error {
+func run() error { //nolint:gocognit // linear setup function
 	setupLogger()
 
 	cfg, err := config.Load()

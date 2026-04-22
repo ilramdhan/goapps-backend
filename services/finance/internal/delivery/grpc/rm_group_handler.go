@@ -204,7 +204,6 @@ func (c *RecalcChain) resolvePeriod(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-
 // NewRMGroupHandler builds an RMGroupHandler.
 func NewRMGroupHandler(
 	repo rmgroupdomain.Repository,
@@ -608,13 +607,13 @@ func rmGroupHeadToProto(h *rmgroupdomain.Head) *financev1.RMGroupHead {
 		CiName:            h.CIName(),
 		CostPercentage:    h.CostPercentage(),
 		CostPerKg:         h.CostPerKg(),
-		FlagValuation:    flagToProto(h.FlagValuation()),
-		FlagMarketing:    flagToProto(h.FlagMarketing()),
-		FlagSimulation:   flagToProto(h.FlagSimulation()),
-		InitValValuation: h.InitValValuation(),
-		InitValMarketing: h.InitValMarketing(),
+		FlagValuation:     flagToProto(h.FlagValuation()),
+		FlagMarketing:     flagToProto(h.FlagMarketing()),
+		FlagSimulation:    flagToProto(h.FlagSimulation()),
+		InitValValuation:  h.InitValValuation(),
+		InitValMarketing:  h.InitValMarketing(),
 		InitValSimulation: h.InitValSimulation(),
-		IsActive: h.IsActive(),
+		IsActive:          h.IsActive(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: h.CreatedAt().Format(time.RFC3339),
 			CreatedBy: h.CreatedBy(),

@@ -72,12 +72,7 @@ func NewUngroupedHandler(reader UngroupedItemsReader) *UngroupedHandler {
 
 // Handle executes the ungrouped-items query.
 func (h *UngroupedHandler) Handle(ctx context.Context, query UngroupedQuery) (*UngroupedResult, error) {
-	filter := UngroupedItemsFilter{
-		Period:   query.Period,
-		Search:   query.Search,
-		Page:     query.Page,
-		PageSize: query.PageSize,
-	}
+	filter := UngroupedItemsFilter(query)
 	filter.Validate()
 
 	items, total, err := h.reader.ListUngroupedItems(ctx, filter)

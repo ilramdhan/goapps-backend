@@ -35,7 +35,7 @@ type CalculateCommand struct {
 	CalculatedBy  string
 }
 
-// CalculateResult summarises the outcome of a calculation pass.
+// CalculateResult summarizes the outcome of a calculation pass.
 type CalculateResult struct {
 	Period    string
 	Processed int
@@ -61,7 +61,7 @@ func NewCalculateHandler(
 
 // Handle validates inputs, expands the target group list, and processes each one
 // independently. A group whose active-detail list is empty produces a row with
-// all-zero rates — this matches the plan's §6 "all-zero edge case" behaviour.
+// all-zero rates — this matches the plan's §6 "all-zero edge case" behavior.
 func (h *CalculateHandler) Handle(ctx context.Context, cmd CalculateCommand) (*CalculateResult, error) {
 	if cmd.CalculatedBy == "" {
 		return nil, rmcost.ErrEmptyCalculatedBy

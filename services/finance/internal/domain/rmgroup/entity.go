@@ -18,7 +18,7 @@ type Head struct {
 	code              Code
 	name              string
 	description       string
-	colourant         string
+	colourant         string //nolint:misspell // domain term (British English)
 	ciName            string
 	costPercentage    float64
 	costPerKg         float64
@@ -85,7 +85,7 @@ func NewHead(
 func ReconstructHead(
 	id uuid.UUID,
 	code Code,
-	name, description, colourant, ciName string,
+	name, description, colourant, ciName string, //nolint:misspell // domain term
 	costPercentage, costPerKg float64,
 	flagValuation, flagMarketing, flagSimulation Flag,
 	initValValuation, initValMarketing, initValSimulation *float64,
@@ -102,7 +102,7 @@ func ReconstructHead(
 		code:              code,
 		name:              name,
 		description:       description,
-		colourant:         colourant,
+		colourant:         colourant, //nolint:misspell // domain term
 		ciName:            ciName,
 		costPercentage:    costPercentage,
 		costPerKg:         costPerKg,
@@ -136,8 +136,8 @@ func (h *Head) Name() string { return h.name }
 // Description returns the free-text description.
 func (h *Head) Description() string { return h.description }
 
-// Colourant returns the optional colourant tag.
-func (h *Head) Colourant() string { return h.colourant }
+// Colourant returns the optional colourant tag. //nolint:misspell // domain term
+func (h *Head) Colourant() string { return h.colourant } //nolint:misspell // domain term
 
 // CIName returns the optional CI name tag.
 func (h *Head) CIName() string { return h.ciName }
@@ -200,7 +200,7 @@ func (h *Head) IsDeleted() bool { return h.deletedAt != nil }
 type UpdateInput struct {
 	Name              *string
 	Description       *string
-	Colourant         *string
+	Colourant         *string //nolint:misspell // domain term
 	CIName            *string
 	CostPercentage    *float64
 	CostPerKg         *float64
@@ -307,8 +307,8 @@ func (h *Head) applyInitValues(in UpdateInput) error {
 	return assignInitVal(&h.initValSimulation, in.InitValSimulation, in.ClearInitValSimulation)
 }
 
-func assignInitVal(target **float64, incoming *float64, clear bool) error {
-	if clear {
+func assignInitVal(target **float64, incoming *float64, reset bool) error {
+	if reset {
 		*target = nil
 		return nil
 	}
