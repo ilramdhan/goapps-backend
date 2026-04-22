@@ -53,7 +53,7 @@ oracle:
   conn_max_lifetime: 10m
 
 rabbitmq:
-  url: ""         # Override via RABBITMQ_URL env var (e.g. amqp://user:pass@host:5672/)
+  url: "amqp://guest:guest@localhost:5672/"  # Override via RABBITMQ_URL env var
   prefetch_count: 1
   reconnect_delay: 5s
 

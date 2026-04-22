@@ -372,7 +372,9 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	switch {
 	case strings.Contains(errMsg, "not found"):
 		return NotFoundResponse(errMsg)
-	case strings.Contains(errMsg, "already exists"):
+	case strings.Contains(errMsg, "already exists"),
+		strings.Contains(errMsg, "cannot be deleted"),
+		strings.Contains(errMsg, "already assigned"):
 		return ConflictResponse(errMsg)
 	case strings.Contains(errMsg, "invalid"):
 		return ErrorResponse("400", errMsg)
@@ -408,8 +410,16 @@ func entityToProto(entity *uomdomain.UOM) *financev1.UOM {
 }
 
 func getUserFromContext(ctx context.Context) string {
+	// Prefer human-readable username from JWT claims (set by AuthInterceptor).
+	if username, ok := ctx.Value(AuthUsernameKey).(string); ok && username != "" {
+		return username
+	}
+	if userID, ok := ctx.Value(AuthUserIDKey).(string); ok && userID != "" {
+		return userID
+	}
+	// Legacy key retained in case any manual population still uses it.
 	if userID, ok := ctx.Value(UserIDKey).(string); ok && userID != "" {
 		return userID
 	}
-	return "system" // Default for now, will be from JWT in IAM service
+	return "system"
 }

@@ -13,6 +13,7 @@ import (
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
+	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
@@ -71,8 +72,17 @@ func run() error {
 	}
 
 	// Setup RabbitMQ (optional - graceful degradation for publisher)
-	rmqPublisher, closeRabbitMQ := setupRabbitMQ(cfg)
+	rmqAdapter, closeRabbitMQ := setupRabbitMQ(cfg)
 	defer closeRabbitMQ()
+
+	// Wrap into explicit interface values so that when RabbitMQ is unavailable
+	// the handlers receive a true nil interface (not a typed-nil pointer).
+	var oracleSyncPublisher oraclesync.JobPublisher
+	var rmCostPublisher apprmcost.JobPublisher
+	if rmqAdapter != nil {
+		oracleSyncPublisher = rmqAdapter
+		rmCostPublisher = rmqAdapter
+	}
 
 	// Setup repositories
 	uomRepo := postgres.NewUOMRepository(db)
@@ -82,9 +92,11 @@ func run() error {
 	uomCategoryRepo := postgres.NewUOMCategoryRepository(db)
 	jobRepo := postgres.NewJobRepository(db)
 	syncDataRepo := postgres.NewSyncDataRepository(db)
+	rmGroupRepo := postgres.NewRMGroupRepository(db)
+	rmCostRepo := postgres.NewRMCostRepository(db)
 
 	// Setup oracle sync handlers
-	triggerHandler := oraclesync.NewTriggerHandler(jobRepo, rmqPublisher)
+	triggerHandler := oraclesync.NewTriggerHandler(jobRepo, oracleSyncPublisher)
 	getJobHandler := oraclesync.NewGetJobHandler(jobRepo)
 	listJobsHandler := oraclesync.NewListJobsHandler(jobRepo)
 	cancelJobHandler := oraclesync.NewCancelJobHandler(jobRepo)
@@ -125,8 +137,34 @@ func run() error {
 		return err
 	}
 
+	recalcChain := grpcdelivery.NewRecalcChain(
+		jobRepo,
+		rmCostPublisher,
+		rmCostRepo.ListDistinctPeriods,
+		syncDataRepo.GetDistinctPeriods,
+	)
+	rmGroupHandler, err := grpcdelivery.NewRMGroupHandler(rmGroupRepo, syncDataRepo, syncDataRepo, syncDataRepo, rmCostRepo, syncDataRepo, recalcChain)
+	if err != nil {
+		return err
+	}
+
+	rmCostTrigger := apprmcost.NewTriggerHandler(jobRepo, rmCostPublisher)
+	rmCostCalculate := apprmcost.NewCalculateHandler(rmGroupRepo, rmCostRepo, syncDataRepo)
+	rmCostGet := apprmcost.NewGetHandler(rmCostRepo)
+	rmCostList := apprmcost.NewListHandler(rmCostRepo)
+	rmCostHistory := apprmcost.NewHistoryHandler(rmCostRepo)
+	rmCostPeriods := apprmcost.NewPeriodsHandler(rmCostRepo)
+	rmCostExport := apprmcost.NewExportHandler(rmCostRepo)
+
+	rmCostHandler, err := grpcdelivery.NewRMCostHandler(
+		rmCostTrigger, rmCostCalculate, rmCostGet, rmCostList, rmCostHistory, rmCostPeriods, rmCostExport,
+	)
+	if err != nil {
+		return err
+	}
+
 	// Setup and start servers
-	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler, oracleSyncHandler, tokenBlacklist)
+	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler, oracleSyncHandler, rmGroupHandler, rmCostHandler, tokenBlacklist)
 }
 
 // setupLogger configures the application logger.
@@ -223,7 +261,7 @@ func closeAuthRedis(bl *redisinfra.TokenBlacklist) {
 }
 
 // startServers starts the gRPC and HTTP servers and handles graceful shutdown.
-func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdelivery.UOMHandler, rmCategoryHandler *grpcdelivery.RMCategoryHandler, parameterHandler *grpcdelivery.ParameterHandler, formulaHandler *grpcdelivery.FormulaHandler, uomCategoryHandler *grpcdelivery.UOMCategoryHandler, oracleSyncHandler *grpcdelivery.OracleSyncHandler, tokenBlacklist *redisinfra.TokenBlacklist) error {
+func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdelivery.UOMHandler, rmCategoryHandler *grpcdelivery.RMCategoryHandler, parameterHandler *grpcdelivery.ParameterHandler, formulaHandler *grpcdelivery.FormulaHandler, uomCategoryHandler *grpcdelivery.UOMCategoryHandler, oracleSyncHandler *grpcdelivery.OracleSyncHandler, rmGroupHandler *grpcdelivery.RMGroupHandler, rmCostHandler *grpcdelivery.RMCostHandler, tokenBlacklist *redisinfra.TokenBlacklist) error {
 	// Setup gRPC server with JWT auth and token blacklist
 	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, nil, &cfg.JWT, tokenBlacklist)
 	if err != nil {
@@ -237,6 +275,8 @@ func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdeliv
 	financev1.RegisterFormulaServiceServer(grpcServer.GRPCServer(), formulaHandler)
 	financev1.RegisterUOMCategoryServiceServer(grpcServer.GRPCServer(), uomCategoryHandler)
 	financev1.RegisterOracleSyncServiceServer(grpcServer.GRPCServer(), oracleSyncHandler)
+	financev1.RegisterRMGroupServiceServer(grpcServer.GRPCServer(), rmGroupHandler)
+	financev1.RegisterRMCostServiceServer(grpcServer.GRPCServer(), rmCostHandler)
 
 	// Start gRPC server
 	go func() {

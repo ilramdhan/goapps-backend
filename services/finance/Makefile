@@ -45,10 +45,18 @@ help:
 run:
 	go run cmd/server/main.go
 
+run-worker:
+	go run cmd/worker/main.go
+
 build:
 	@mkdir -p bin
 	CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=$(VERSION)" -o $(BINARY) cmd/server/main.go
 	@echo "Built $(BINARY)"
+
+build-worker:
+	@mkdir -p bin
+	CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/finance-worker cmd/worker/main.go
+	@echo "Built bin/finance-worker"
 
 dev:
 	air

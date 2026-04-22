@@ -19,6 +19,10 @@ const (
 	QueueOracleSync = "finance.jobs.oracle_sync"
 	// RoutingKeyOracleSync is the routing key for oracle sync messages.
 	RoutingKeyOracleSync = "oracle_sync"
+	// QueueRMCostCalc is the queue for RM landed-cost calculation jobs.
+	QueueRMCostCalc = "finance.jobs.rm_cost_calc"
+	// RoutingKeyRMCostCalc is the routing key for RM cost calculation messages.
+	RoutingKeyRMCostCalc = "rm_cost_calculation"
 	// DeadLetterExchange is the dead letter exchange for failed messages.
 	DeadLetterExchange = "finance.jobs.dlx"
 	// DeadLetterQueue is the dead letter queue.
@@ -142,6 +146,14 @@ func (c *Connection) declareTopology() error {
 	}
 	if err := c.channel.QueueBind(QueueOracleSync, RoutingKeyOracleSync, ExchangeName, false, nil); err != nil {
 		return fmt.Errorf("bind oracle sync queue: %w", err)
+	}
+
+	// RM cost calculation queue with dead-letter routing.
+	if _, err := c.channel.QueueDeclare(QueueRMCostCalc, true, false, false, false, args); err != nil {
+		return fmt.Errorf("declare rm cost calc queue: %w", err)
+	}
+	if err := c.channel.QueueBind(QueueRMCostCalc, RoutingKeyRMCostCalc, ExchangeName, false, nil); err != nil {
+		return fmt.Errorf("bind rm cost calc queue: %w", err)
 	}
 
 	return nil

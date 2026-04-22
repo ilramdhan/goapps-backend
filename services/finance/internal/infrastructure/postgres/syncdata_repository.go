@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -174,9 +175,10 @@ func (r *SyncDataRepository) ListItemConsStockPO(
 	}
 	if filter.Search != "" {
 		conditions = append(conditions, fmt.Sprintf(
-			"to_tsvector('english', coalesce(item_code,'') || ' ' || coalesce(item_name,'') || ' ' || coalesce(grade_name,'')) @@ plainto_tsquery('english', $%d)", argIdx,
+			"(item_code ILIKE $%d OR item_name ILIKE $%d OR grade_name ILIKE $%d OR grade_code ILIKE $%d)",
+			argIdx, argIdx, argIdx, argIdx,
 		))
-		args = append(args, filter.Search)
+		args = append(args, "%"+filter.Search+"%")
 		argIdx++
 	}
 
@@ -269,22 +271,29 @@ func (r *SyncDataRepository) GetDistinctPeriods(ctx context.Context) ([]string, 
 func (r *SyncDataRepository) scanSyncedRow(rows interface{ Scan(dest ...any) error }) (*syncdata.ItemConsStockPO, error) {
 	var item syncdata.ItemConsStockPO
 	var (
-		gradeName   *string
-		itemName    *string
-		uom         *string
-		syncedAt    time.Time
-		syncedByJob *uuid.UUID
+		gradeName                                             *string
+		itemName                                              *string
+		uom                                                   *string
+		consQty, consVal, consRate                            sql.NullFloat64
+		storesQty, storesVal, storesRate                      sql.NullFloat64
+		deptQty, deptVal, deptRate                            sql.NullFloat64
+		lastPOQty1, lastPOVal1, lastPORate1                   sql.NullFloat64
+		lastPOQty2, lastPOVal2, lastPORate2                   sql.NullFloat64
+		lastPOQty3, lastPOVal3, lastPORate3                   sql.NullFloat64
+		lastPODt1, lastPODt2, lastPODt3                       sql.NullTime
+		syncedAt                                              time.Time
+		syncedByJob                                           *uuid.UUID
 	)
 
 	err := rows.Scan(
 		&item.Period, &item.ItemCode, &item.GradeCode,
 		&gradeName, &itemName, &uom,
-		&item.ConsQty, &item.ConsVal, &item.ConsRate,
-		&item.StoresQty, &item.StoresVal, &item.StoresRate,
-		&item.DeptQty, &item.DeptVal, &item.DeptRate,
-		&item.LastPOQty1, &item.LastPOVal1, &item.LastPORate1, &item.LastPODt1,
-		&item.LastPOQty2, &item.LastPOVal2, &item.LastPORate2, &item.LastPODt2,
-		&item.LastPOQty3, &item.LastPOVal3, &item.LastPORate3, &item.LastPODt3,
+		&consQty, &consVal, &consRate,
+		&storesQty, &storesVal, &storesRate,
+		&deptQty, &deptVal, &deptRate,
+		&lastPOQty1, &lastPOVal1, &lastPORate1, &lastPODt1,
+		&lastPOQty2, &lastPOVal2, &lastPORate2, &lastPODt2,
+		&lastPOQty3, &lastPOVal3, &lastPORate3, &lastPODt3,
 		&syncedAt, &syncedByJob,
 	)
 	if err != nil {
@@ -300,10 +309,47 @@ func (r *SyncDataRepository) scanSyncedRow(rows interface{ Scan(dest ...any) err
 	if uom != nil {
 		item.UOM = *uom
 	}
+	item.ConsQty = nullFloat(consQty)
+	item.ConsVal = nullFloat(consVal)
+	item.ConsRate = nullFloat(consRate)
+	item.StoresQty = nullFloat(storesQty)
+	item.StoresVal = nullFloat(storesVal)
+	item.StoresRate = nullFloat(storesRate)
+	item.DeptQty = nullFloat(deptQty)
+	item.DeptVal = nullFloat(deptVal)
+	item.DeptRate = nullFloat(deptRate)
+	item.LastPOQty1 = nullFloat(lastPOQty1)
+	item.LastPOVal1 = nullFloat(lastPOVal1)
+	item.LastPORate1 = nullFloat(lastPORate1)
+	item.LastPOQty2 = nullFloat(lastPOQty2)
+	item.LastPOVal2 = nullFloat(lastPOVal2)
+	item.LastPORate2 = nullFloat(lastPORate2)
+	item.LastPOQty3 = nullFloat(lastPOQty3)
+	item.LastPOVal3 = nullFloat(lastPOVal3)
+	item.LastPORate3 = nullFloat(lastPORate3)
+	item.LastPODt1 = nullTime(lastPODt1)
+	item.LastPODt2 = nullTime(lastPODt2)
+	item.LastPODt3 = nullTime(lastPODt3)
 	item.SyncedAt = &syncedAt
 	item.SyncedByJob = syncedByJob
 
 	return &item, nil
+}
+
+func nullFloat(v sql.NullFloat64) *float64 {
+	if !v.Valid {
+		return nil
+	}
+	f := v.Float64
+	return &f
+}
+
+func nullTime(v sql.NullTime) *time.Time {
+	if !v.Valid {
+		return nil
+	}
+	t := v.Time
+	return &t
 }
 
 func nullStr(s string) *string {

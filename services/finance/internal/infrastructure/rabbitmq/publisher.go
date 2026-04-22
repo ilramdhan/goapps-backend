@@ -18,6 +18,10 @@ type JobMessage struct {
 	Subtype   string `json:"subtype"`
 	Period    string `json:"period"`
 	CreatedBy string `json:"created_by"`
+	// GroupHeadID scopes rm_cost_calculation jobs to a single group. Empty = all active groups.
+	GroupHeadID string `json:"group_head_id,omitempty"`
+	// Reason is the HistoryTriggerReason for rm_cost_calculation jobs.
+	Reason string `json:"reason,omitempty"`
 }
 
 // Publisher publishes messages to RabbitMQ exchanges.

@@ -361,6 +361,275 @@
         ]
       }
     },
+    "/api/v1/finance/item-cons-stock-po": {
+      "get": {
+        "summary": "ListItemConsStockPO retrieves synced item consumption, stock, and PO data.",
+        "operationId": "OracleSyncService_ListItemConsStockPO",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListItemConsStockPOResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "period",
+            "description": "Filter by period (YYYYMM).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "itemCode",
+            "description": "Filter by item code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search on item name, item code, grade name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/jobs": {
+      "get": {
+        "summary": "ListSyncJobs retrieves a paginated list of sync job executions.",
+        "operationId": "OracleSyncService_ListSyncJobs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSyncJobsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "jobType",
+            "description": "Filter by job type.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "Filter by status.\n\n - JOB_STATUS_UNSPECIFIED: Default unspecified value.\n - JOB_STATUS_QUEUED: Job is queued and waiting for processing.\n - JOB_STATUS_PROCESSING: Job is currently being processed.\n - JOB_STATUS_SUCCESS: Job completed successfully.\n - JOB_STATUS_FAILED: Job failed.\n - JOB_STATUS_CANCELLED: Job was cancelled.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "JOB_STATUS_UNSPECIFIED",
+              "JOB_STATUS_QUEUED",
+              "JOB_STATUS_PROCESSING",
+              "JOB_STATUS_SUCCESS",
+              "JOB_STATUS_FAILED",
+              "JOB_STATUS_CANCELLED"
+            ],
+            "default": "JOB_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "period",
+            "description": "Filter by period (YYYYMM).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Search in job code or error message.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/jobs/{jobId}": {
+      "get": {
+        "summary": "GetSyncJob retrieves a specific sync job by ID with execution logs.",
+        "operationId": "OracleSyncService_GetSyncJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSyncJobResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "description": "Job identifier (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/jobs/{jobId}/cancel": {
+      "post": {
+        "summary": "CancelSyncJob cancels a queued or in-progress sync job.",
+        "operationId": "OracleSyncService_CancelSyncJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelSyncJobResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "description": "Job identifier (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OracleSyncServiceCancelSyncJobBody"
+            }
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/periods": {
+      "get": {
+        "summary": "ListSyncPeriods retrieves all available sync periods.",
+        "operationId": "OracleSyncService_ListSyncPeriods",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSyncPeriodsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/oracle-sync/trigger": {
+      "post": {
+        "summary": "TriggerSync initiates a manual Oracle sync job.",
+        "operationId": "OracleSyncService_TriggerSync",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TriggerSyncResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "TriggerSyncRequest initiates an Oracle-to-PostgreSQL sync job.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TriggerSyncRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OracleSyncService"
+        ]
+      }
+    },
     "/api/v1/finance/parameters": {
       "get": {
         "summary": "ListParameters lists parameters with search, filter, and pagination.",
@@ -1018,6 +1287,770 @@
         ],
         "tags": [
           "RMCategoryService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs": {
+      "get": {
+        "summary": "ListRMCosts lists cost rows with filter + pagination.",
+        "operationId": "RMCostService_ListRMCosts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMCostsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "period",
+            "description": "Period filter (YYYYMM). Empty = all periods.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rmType",
+            "description": "Filter by RM type. UNSPECIFIED = all.\n\n - RM_COST_TYPE_UNSPECIFIED: Default zero value. Means \"no filter\" in list requests.\n - RM_COST_TYPE_GROUP: Cost row aggregates a whole RM group.\n - RM_COST_TYPE_ITEM: Cost row is computed for a single item (future phase).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "RM_COST_TYPE_UNSPECIFIED",
+              "RM_COST_TYPE_GROUP",
+              "RM_COST_TYPE_ITEM"
+            ],
+            "default": "RM_COST_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "groupHeadId",
+            "description": "Optional group scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on rm_code + rm_name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/calculate": {
+      "post": {
+        "summary": "CalculateRMCost runs a recalculation synchronously (admin-only).",
+        "operationId": "RMCostService_CalculateRMCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CalculateRMCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CalculateRMCost runs a calculation synchronously and returns the produced rows.\nIntended for admin/troubleshooting use \u2014 production traffic should go through\nTriggerRMCostCalculation.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CalculateRMCostRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/history": {
+      "get": {
+        "summary": "ListRMCostHistory lists audit-history rows with filter + pagination.",
+        "operationId": "RMCostService_ListRMCostHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMCostHistoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "period",
+            "description": "Period filter (YYYYMM). Empty = all periods.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rmCode",
+            "description": "RM code filter (empty = all).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "groupHeadId",
+            "description": "Optional group scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "jobId",
+            "description": "Optional job scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/periods": {
+      "get": {
+        "summary": "ListRMCostPeriods returns distinct periods from cost rows (newest first).",
+        "operationId": "RMCostService_ListRMCostPeriods",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMCostPeriodsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/trigger": {
+      "post": {
+        "summary": "TriggerRMCostCalculation enqueues an async recalculation job.",
+        "operationId": "RMCostService_TriggerRMCostCalculation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TriggerRMCostCalculationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "TriggerRMCostCalculation enqueues a recalculation job. Returns immediately\nwith a job ID the caller can poll via the job-execution endpoint.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TriggerRMCostCalculationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/{period}/{rmCode}": {
+      "get": {
+        "summary": "GetRMCost fetches a single cost row by (period, rm_code).",
+        "operationId": "RMCostService_GetRMCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRMCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "description": "Period (YYYYMM).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "rmCode",
+            "description": "RM code (group or item).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups": {
+      "get": {
+        "summary": "ListRMGroups lists group heads with search + filter + pagination.",
+        "operationId": "RMGroupService_ListRMGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on code, name, description, colourant, ci_name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      },
+      "post": {
+        "summary": "CreateRMGroup creates a new RM group head.",
+        "operationId": "RMGroupService_CreateRMGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateRMGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Create a new RM group head.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateRMGroupRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/export": {
+      "get": {
+        "summary": "ExportRMGroups exports all groups + their items to a 2-sheet Excel.",
+        "operationId": "RMGroupService_ExportRMGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportRMGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active/inactive (UNSPECIFIED = all).\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/import": {
+      "post": {
+        "summary": "ImportRMGroups imports groups and/or items from a 2-sheet Excel. Users can\ninclude only the Groups sheet, only the Items sheet, or both.",
+        "operationId": "RMGroupService_ImportRMGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportRMGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportRMGroupsRequest accepts a 2-sheet Excel. User may include only the\nGroups sheet (header-only import), only the Items sheet (detail-only for\nexisting groups), or both.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportRMGroupsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/template": {
+      "get": {
+        "summary": "DownloadRMGroupTemplate returns a blank 2-sheet Excel with header rows.",
+        "operationId": "RMGroupService_DownloadRMGroupTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadRMGroupTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/ungrouped": {
+      "get": {
+        "summary": "ListUngroupedItems reports items from the sync feed that have no active\ngroup assignment.",
+        "operationId": "RMGroupService_ListUngroupedItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListUngroupedItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "period",
+            "description": "Period filter (YYYYMM). Empty = all periods.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on item_code, item_name, item_type_code, grade_code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}": {
+      "get": {
+        "summary": "GetRMGroup retrieves a group head + its details.",
+        "operationId": "RMGroupService_GetRMGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRMGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteRMGroup soft-deletes a group head (cascade to its details).",
+        "operationId": "RMGroupService_DeleteRMGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteRMGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateRMGroup applies a partial update to a group head.",
+        "operationId": "RMGroupService_UpdateRMGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateRMGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Head UUID to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMGroupServiceUpdateRMGroupBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}/item-rates": {
+      "get": {
+        "summary": "GetRMGroupItemRates returns per-item per-stage rates for every active\ndetail of a group in a given period.",
+        "operationId": "RMGroupService_GetRMGroupItemRates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRMGroupItemRatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Group head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "period",
+            "description": "Period (YYYYMM).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}/items": {
+      "post": {
+        "summary": "AddItems assigns items to a group. Items already in another active group\nare returned in `skipped` instead of failing the batch.",
+        "operationId": "RMGroupService_AddItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Target group head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMGroupServiceAddItemsBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}/items/remove": {
+      "post": {
+        "summary": "RemoveItems removes details from a group (deactivate or soft-delete).",
+        "operationId": "RMGroupService_RemoveItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Owning group head UUID (validated against each detail).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMGroupServiceRemoveItemsBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
         ]
       }
     },
@@ -2130,6 +3163,421 @@
       },
       "description": "ValidationError represents a single field validation error."
     },
+    "OracleSyncServiceCancelSyncJobBody": {
+      "type": "object",
+      "description": "CancelSyncJobRequest cancels a queued or processing sync job."
+    },
+    "v1CancelSyncJobResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SyncJob",
+          "description": "The cancelled sync job."
+        }
+      },
+      "description": "CancelSyncJobResponse returns the cancelled job."
+    },
+    "v1GetSyncJobResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SyncJob",
+          "description": "The sync job with logs."
+        }
+      },
+      "description": "GetSyncJobResponse returns a single sync job with logs."
+    },
+    "v1ItemConsStockPO": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM format)."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Item code."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code."
+        },
+        "gradeName": {
+          "type": "string",
+          "description": "Grade name."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Item name."
+        },
+        "uom": {
+          "type": "string",
+          "description": "Unit of measure."
+        },
+        "consQty": {
+          "type": "number",
+          "format": "double",
+          "description": "Consumption quantity."
+        },
+        "consVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Consumption value."
+        },
+        "consRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Consumption rate."
+        },
+        "storesQty": {
+          "type": "number",
+          "format": "double",
+          "description": "Stores quantity."
+        },
+        "storesVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Stores value."
+        },
+        "storesRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Stores rate."
+        },
+        "deptQty": {
+          "type": "number",
+          "format": "double",
+          "description": "Department quantity."
+        },
+        "deptVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Department value."
+        },
+        "deptRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Department rate."
+        },
+        "lastPoQty1": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 1 quantity."
+        },
+        "lastPoVal1": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 1 value."
+        },
+        "lastPoRate1": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 1 rate."
+        },
+        "lastPoDt1": {
+          "type": "string",
+          "description": "Last PO 1 date (ISO 8601)."
+        },
+        "lastPoQty2": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 2 quantity."
+        },
+        "lastPoVal2": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 2 value."
+        },
+        "lastPoRate2": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 2 rate."
+        },
+        "lastPoDt2": {
+          "type": "string",
+          "description": "Last PO 2 date (ISO 8601)."
+        },
+        "lastPoQty3": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 3 quantity."
+        },
+        "lastPoVal3": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 3 value."
+        },
+        "lastPoRate3": {
+          "type": "number",
+          "format": "double",
+          "description": "Last PO 3 rate."
+        },
+        "lastPoDt3": {
+          "type": "string",
+          "description": "Last PO 3 date (ISO 8601)."
+        },
+        "syncedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was synced (ISO 8601)."
+        },
+        "syncedByJob": {
+          "type": "string",
+          "description": "Job ID that synced this record (UUID)."
+        }
+      },
+      "description": "ItemConsStockPO represents a synced item consumption, stock, and PO record."
+    },
+    "v1JobLogStatus": {
+      "type": "string",
+      "enum": [
+        "JOB_LOG_STATUS_UNSPECIFIED",
+        "JOB_LOG_STATUS_STARTED",
+        "JOB_LOG_STATUS_SUCCESS",
+        "JOB_LOG_STATUS_FAILED",
+        "JOB_LOG_STATUS_SKIPPED"
+      ],
+      "default": "JOB_LOG_STATUS_UNSPECIFIED",
+      "description": "JobLogStatus represents the status of a job execution log step.\n\n - JOB_LOG_STATUS_UNSPECIFIED: Default unspecified value.\n - JOB_LOG_STATUS_STARTED: Step has started.\n - JOB_LOG_STATUS_SUCCESS: Step completed successfully.\n - JOB_LOG_STATUS_FAILED: Step failed.\n - JOB_LOG_STATUS_SKIPPED: Step was skipped."
+    },
+    "v1JobStatus": {
+      "type": "string",
+      "enum": [
+        "JOB_STATUS_UNSPECIFIED",
+        "JOB_STATUS_QUEUED",
+        "JOB_STATUS_PROCESSING",
+        "JOB_STATUS_SUCCESS",
+        "JOB_STATUS_FAILED",
+        "JOB_STATUS_CANCELLED"
+      ],
+      "default": "JOB_STATUS_UNSPECIFIED",
+      "description": "JobStatus represents the current state of a job execution.\n\n - JOB_STATUS_UNSPECIFIED: Default unspecified value.\n - JOB_STATUS_QUEUED: Job is queued and waiting for processing.\n - JOB_STATUS_PROCESSING: Job is currently being processed.\n - JOB_STATUS_SUCCESS: Job completed successfully.\n - JOB_STATUS_FAILED: Job failed.\n - JOB_STATUS_CANCELLED: Job was cancelled."
+    },
+    "v1ListItemConsStockPOResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ItemConsStockPO"
+          },
+          "description": "List of synced records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListItemConsStockPOResponse returns synced item consumption data."
+    },
+    "v1ListSyncJobsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncJob"
+          },
+          "description": "List of sync jobs."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListSyncJobsResponse returns a paginated list of sync jobs."
+    },
+    "v1ListSyncPeriodsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of periods in YYYYMM format, ordered descending."
+        }
+      },
+      "description": "ListSyncPeriodsResponse returns the list of distinct periods."
+    },
+    "v1SyncJob": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "description": "Unique job identifier (UUID)."
+        },
+        "jobCode": {
+          "type": "string",
+          "description": "Human-readable job code (e.g., \"ORACLE_SYNC-202601-001\")."
+        },
+        "jobType": {
+          "type": "string",
+          "description": "Job type (e.g., \"oracle_sync\")."
+        },
+        "jobSubtype": {
+          "type": "string",
+          "description": "Job subtype for categorization."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period being synced (YYYYMM format)."
+        },
+        "status": {
+          "$ref": "#/definitions/v1JobStatus",
+          "description": "Current job status."
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Priority (1-10, lower is higher priority)."
+        },
+        "progress": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Progress percentage (0-100)."
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Error message if the job failed."
+        },
+        "resultSummary": {
+          "type": "string",
+          "description": "Result summary as JSON string."
+        },
+        "retryCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of retry attempts."
+        },
+        "maxRetries": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Maximum allowed retries."
+        },
+        "queuedAt": {
+          "type": "string",
+          "description": "Timestamp when the job was queued (ISO 8601)."
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "Timestamp when processing started (ISO 8601)."
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp when the job completed (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the job."
+        },
+        "cancelledBy": {
+          "type": "string",
+          "description": "User who cancelled the job."
+        },
+        "cancelledAt": {
+          "type": "string",
+          "description": "Timestamp when the job was cancelled (ISO 8601)."
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncJobLog"
+          },
+          "description": "Execution logs for this job."
+        }
+      },
+      "description": "SyncJob represents a job execution for Oracle-to-PostgreSQL sync."
+    },
+    "v1SyncJobLog": {
+      "type": "object",
+      "properties": {
+        "logId": {
+          "type": "string",
+          "description": "Unique log identifier (UUID)."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Parent job identifier (UUID)."
+        },
+        "step": {
+          "type": "string",
+          "description": "Step name (e.g., \"execute_procedure\", \"fetch_data\", \"upsert_data\")."
+        },
+        "status": {
+          "$ref": "#/definitions/v1JobLogStatus",
+          "description": "Step status."
+        },
+        "message": {
+          "type": "string",
+          "description": "Log message."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Additional metadata as JSON string."
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "Timestamp when the step started (ISO 8601)."
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp when the step completed (ISO 8601)."
+        },
+        "durationMs": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Duration of the step in milliseconds."
+        }
+      },
+      "description": "SyncJobLog represents a single step log entry within a job execution."
+    },
+    "v1TriggerSyncRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period to sync (YYYYMM format). If empty, auto-resolved based on current date."
+        }
+      },
+      "description": "TriggerSyncRequest initiates an Oracle-to-PostgreSQL sync job."
+    },
+    "v1TriggerSyncResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SyncJob",
+          "description": "The created sync job."
+        }
+      },
+      "description": "TriggerSyncResponse returns the created job."
+    },
     "ParameterServiceUpdateParameterBody": {
       "type": "object",
       "properties": {
@@ -2702,6 +4150,1271 @@
       },
       "description": "UpdateRMCategoryResponse is the response for updating a raw material category."
     },
+    "v1CalculateRMCostRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM)."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "Optional single-group scope."
+        },
+        "triggerReason": {
+          "$ref": "#/definitions/v1RMCostTriggerReason",
+          "description": "Why this calc was run."
+        }
+      },
+      "description": "CalculateRMCost runs a calculation synchronously and returns the produced rows.\nIntended for admin/troubleshooting use \u2014 production traffic should go through\nTriggerRMCostCalculation."
+    },
+    "v1CalculateRMCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "processed": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads processed."
+        },
+        "skipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads skipped (no active details / no source rows)."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period that was calculated (echoes request)."
+        }
+      },
+      "description": "Calculate response."
+    },
+    "v1GetRMCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMCost",
+          "description": "Cost data."
+        }
+      },
+      "description": "Get response."
+    },
+    "v1ListRMCostHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMCostHistory"
+          },
+          "description": "History rows ordered by calculated_at DESC."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "History response."
+    },
+    "v1ListRMCostPeriodsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Distinct periods ordered DESC (newest first), YYYYMM strings."
+        }
+      },
+      "description": "Response carries the distinct set of calculated periods."
+    },
+    "v1ListRMCostsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMCost"
+          },
+          "description": "Cost rows."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "List response."
+    },
+    "v1RMCost": {
+      "type": "object",
+      "properties": {
+        "rmCostId": {
+          "type": "string",
+          "description": "Cost row UUID."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM)."
+        },
+        "rmCode": {
+          "type": "string",
+          "description": "Group code (rm_type=GROUP) or item code (rm_type=ITEM)."
+        },
+        "rmType": {
+          "$ref": "#/definitions/v1RMCostType",
+          "description": "Discriminator."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "Owning group head UUID (set when rm_type=GROUP)."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Item code (set when rm_type=ITEM)."
+        },
+        "rmName": {
+          "type": "string",
+          "description": "Display name of the RM (group or item)."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "UOM code."
+        },
+        "rates": {
+          "$ref": "#/definitions/v1RMCostRates",
+          "description": "Per-stage rate snapshot."
+        },
+        "costValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed valuation landed cost (nil when never calculated)."
+        },
+        "costMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed marketing landed cost."
+        },
+        "costSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed simulation landed cost."
+        },
+        "flagValuation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Flags configured on the group header at calc time."
+        },
+        "flagMarketing": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Flag configured on the group header at calc time."
+        },
+        "flagSimulation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Flag configured on the group header at calc time."
+        },
+        "flagValuationUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage actually used after cascade / INIT resolution."
+        },
+        "flagMarketingUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage actually used after cascade / INIT resolution."
+        },
+        "flagSimulationUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage actually used after cascade / INIT resolution."
+        },
+        "calculatedAt": {
+          "type": "string",
+          "description": "Last calculation timestamp (RFC3339, empty when never calculated)."
+        },
+        "calculatedBy": {
+          "type": "string",
+          "description": "Last calculator (empty when never calculated)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "RMCost is the landed cost computed for a single (period, rm_code) pair."
+    },
+    "v1RMCostHistory": {
+      "type": "object",
+      "properties": {
+        "historyId": {
+          "type": "string",
+          "description": "History row UUID."
+        },
+        "rmCostId": {
+          "type": "string",
+          "description": "Cost row this history refers to (nil if the cost row was later deleted)."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Job that produced this history row (nil when no job context)."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period."
+        },
+        "rmCode": {
+          "type": "string",
+          "description": "RM code."
+        },
+        "rmType": {
+          "$ref": "#/definitions/v1RMCostType",
+          "description": "Discriminator."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "Owning group head UUID (when rm_type=GROUP)."
+        },
+        "rates": {
+          "$ref": "#/definitions/v1RMCostRates",
+          "description": "Rates captured for this calc pass."
+        },
+        "costPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Snapshot of head.cost_percentage at calc time."
+        },
+        "costPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Snapshot of head.cost_per_kg at calc time."
+        },
+        "flagValuation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Configured flags at calc time."
+        },
+        "flagMarketing": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Configured flags at calc time."
+        },
+        "flagSimulation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Configured flags at calc time."
+        },
+        "initValValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value overrides at calc time."
+        },
+        "initValMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value overrides at calc time."
+        },
+        "initValSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value overrides at calc time."
+        },
+        "costValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed costs at calc time."
+        },
+        "costMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed costs at calc time."
+        },
+        "costSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed costs at calc time."
+        },
+        "flagValuationUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stages resolved at calc time."
+        },
+        "flagMarketingUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stages resolved at calc time."
+        },
+        "flagSimulationUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stages resolved at calc time."
+        },
+        "sourceItemCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Count of source items aggregated."
+        },
+        "triggerReason": {
+          "$ref": "#/definitions/v1RMCostTriggerReason",
+          "description": "Why this calc was triggered."
+        },
+        "calculatedAt": {
+          "type": "string",
+          "description": "When the calc ran (RFC3339)."
+        },
+        "calculatedBy": {
+          "type": "string",
+          "description": "Who ran the calc."
+        }
+      },
+      "description": "RMCostHistory is one row of the append-only audit trail written alongside every\ncalculation pass."
+    },
+    "v1RMCostRates": {
+      "type": "object",
+      "properties": {
+        "cons": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS stage rate."
+        },
+        "stores": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES stage rate."
+        },
+        "dept": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT stage rate."
+        },
+        "po1": {
+          "type": "number",
+          "format": "double",
+          "description": "First PO stage rate."
+        },
+        "po2": {
+          "type": "number",
+          "format": "double",
+          "description": "Second PO stage rate."
+        },
+        "po3": {
+          "type": "number",
+          "format": "double",
+          "description": "Third PO stage rate."
+        }
+      },
+      "description": "RMCostRates is the per-stage snapshot of aggregated rates captured at calc time."
+    },
+    "v1RMCostTriggerReason": {
+      "type": "string",
+      "enum": [
+        "RM_COST_TRIGGER_REASON_UNSPECIFIED",
+        "RM_COST_TRIGGER_REASON_ORACLE_SYNC_CHAIN",
+        "RM_COST_TRIGGER_REASON_GROUP_UPDATE",
+        "RM_COST_TRIGGER_REASON_DETAIL_CHANGE",
+        "RM_COST_TRIGGER_REASON_MANUAL_UI"
+      ],
+      "default": "RM_COST_TRIGGER_REASON_UNSPECIFIED",
+      "description": "RMCostTriggerReason enumerates the reasons a calculation was run. Mirrors\n`rmcost.HistoryTriggerReason`.\n\n - RM_COST_TRIGGER_REASON_UNSPECIFIED: Default zero value. Rejected on trigger requests via not_in: [0].\n - RM_COST_TRIGGER_REASON_ORACLE_SYNC_CHAIN: Auto-chained after a successful Oracle sync for the synced period.\n - RM_COST_TRIGGER_REASON_GROUP_UPDATE: Group header changed.\n - RM_COST_TRIGGER_REASON_DETAIL_CHANGE: An item was added/removed/toggled in the group.\n - RM_COST_TRIGGER_REASON_MANUAL_UI: Explicit user request from the UI."
+    },
+    "v1RMCostType": {
+      "type": "string",
+      "enum": [
+        "RM_COST_TYPE_UNSPECIFIED",
+        "RM_COST_TYPE_GROUP",
+        "RM_COST_TYPE_ITEM"
+      ],
+      "default": "RM_COST_TYPE_UNSPECIFIED",
+      "description": "RMCostType discriminates a group-level cost row from an item-level cost row.\n\n - RM_COST_TYPE_UNSPECIFIED: Default zero value. Means \"no filter\" in list requests.\n - RM_COST_TYPE_GROUP: Cost row aggregates a whole RM group.\n - RM_COST_TYPE_ITEM: Cost row is computed for a single item (future phase)."
+    },
+    "v1RMGroupFlag": {
+      "type": "string",
+      "enum": [
+        "RM_GROUP_FLAG_UNSPECIFIED",
+        "RM_GROUP_FLAG_INIT",
+        "RM_GROUP_FLAG_CONS",
+        "RM_GROUP_FLAG_STORES",
+        "RM_GROUP_FLAG_DEPT",
+        "RM_GROUP_FLAG_PO_1",
+        "RM_GROUP_FLAG_PO_2",
+        "RM_GROUP_FLAG_PO_3"
+      ],
+      "default": "RM_GROUP_FLAG_UNSPECIFIED",
+      "description": "RMGroupFlag identifies which aggregated stage rate feeds a cost purpose\n(valuation / marketing / simulation), or whether the group uses its\nconfigured init override value. Mirrors the `cst_rm_group_head.flag_*`\ndomain constraint.\n\n - RM_GROUP_FLAG_UNSPECIFIED: Default zero value. Rejected on create/update requests via not_in: [0].\n - RM_GROUP_FLAG_INIT: Use the init_val_* override on the head; skips cascade.\n - RM_GROUP_FLAG_CONS: Use the CONS stage rate.\n - RM_GROUP_FLAG_STORES: Use the STORES stage rate.\n - RM_GROUP_FLAG_DEPT: Use the DEPT stage rate.\n - RM_GROUP_FLAG_PO_1: Use the first PO stage rate.\n - RM_GROUP_FLAG_PO_2: Use the second PO stage rate.\n - RM_GROUP_FLAG_PO_3: Use the third PO stage rate."
+    },
+    "v1TriggerRMCostCalculationRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period to recalculate (YYYYMM)."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "When set, scope the calc to a single group. Empty = all active groups."
+        },
+        "triggerReason": {
+          "$ref": "#/definitions/v1RMCostTriggerReason",
+          "description": "Why the recalc was requested."
+        }
+      },
+      "description": "TriggerRMCostCalculation enqueues a recalculation job. Returns immediately\nwith a job ID the caller can poll via the job-execution endpoint."
+    },
+    "v1TriggerRMCostCalculationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Enqueued job UUID."
+        }
+      },
+      "description": "Trigger response."
+    },
+    "RMGroupServiceAddItemsBody": {
+      "type": "object",
+      "properties": {
+        "itemCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Item codes to add (at least 1)."
+        }
+      },
+      "description": "Add one or more items to a group. Items already in another active group are\nreturned in `skipped` rather than erroring the whole batch."
+    },
+    "RMGroupServiceRemoveItemsBody": {
+      "type": "object",
+      "properties": {
+        "groupDetailIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Detail UUIDs to remove."
+        },
+        "mode": {
+          "$ref": "#/definitions/v1RemoveItemsMode",
+          "description": "Disposition mode."
+        }
+      },
+      "description": "Remove items from a group by detail IDs. The mode controls whether the rows\nare deactivated (preserved for history) or soft-deleted."
+    },
+    "RMGroupServiceUpdateRMGroupBody": {
+      "type": "object",
+      "properties": {
+        "groupName": {
+          "type": "string",
+          "description": "New display name."
+        },
+        "description": {
+          "type": "string",
+          "description": "New description."
+        },
+        "colourant": {
+          "type": "string",
+          "description": "New colourant tag."
+        },
+        "ciName": {
+          "type": "string",
+          "description": "New CI name tag."
+        },
+        "costPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "New cost percentage (>= 0)."
+        },
+        "costPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "New per-kg overhead (>= 0)."
+        },
+        "flagValuation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "New valuation flag."
+        },
+        "flagMarketing": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "New marketing flag."
+        },
+        "flagSimulation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "New simulation flag."
+        },
+        "initValValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "New init-val override for valuation (>= 0)."
+        },
+        "initValMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "New init-val override for marketing (>= 0)."
+        },
+        "initValSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "New init-val override for simulation (>= 0)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "New active status."
+        },
+        "clearInitValValuation": {
+          "type": "boolean",
+          "description": "When true, force init_val_valuation to NULL (overrides init_val_valuation field)."
+        },
+        "clearInitValMarketing": {
+          "type": "boolean",
+          "description": "When true, force init_val_marketing to NULL."
+        },
+        "clearInitValSimulation": {
+          "type": "boolean",
+          "description": "When true, force init_val_simulation to NULL."
+        }
+      },
+      "description": "Partial update of an RM group head. Absent fields leave state unchanged.\nClear_* booleans explicitly set nullable fields to NULL."
+    },
+    "v1AddItemsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMGroupDetail"
+          },
+          "description": "Details created by this call."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SkippedItem"
+          },
+          "description": "Items that were skipped because they already belong to another active group."
+        }
+      },
+      "description": "Add items response."
+    },
+    "v1CreateRMGroupRequest": {
+      "type": "object",
+      "properties": {
+        "groupCode": {
+          "type": "string",
+          "description": "Group code (uppercase; spaces + hyphens allowed; 1-30 chars)."
+        },
+        "groupName": {
+          "type": "string",
+          "description": "Display name (1-200 chars)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 1000 chars)."
+        },
+        "colourant": {
+          "type": "string",
+          "description": "Optional colourant tag."
+        },
+        "ciName": {
+          "type": "string",
+          "description": "Optional CI name tag."
+        },
+        "costPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Cost percentage multiplier (>= 0)."
+        },
+        "costPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-kg overhead (>= 0)."
+        }
+      },
+      "description": "Create a new RM group head."
+    },
+    "v1CreateRMGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMGroupHead",
+          "description": "Created head."
+        }
+      },
+      "description": "Create response."
+    },
+    "v1DeleteRMGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        }
+      },
+      "description": "Delete response."
+    },
+    "v1DownloadRMGroupTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content (.xlsx)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "DownloadRMGroupTemplateResponse returns the blank 2-sheet template."
+    },
+    "v1ExportRMGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (.xlsx)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportRMGroupsResponse returns a multi-sheet Excel (Groups + Items)."
+    },
+    "v1GetRMGroupItemRatesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMGroupItemRates"
+          },
+          "description": "Per-item rates, one row per active detail."
+        }
+      },
+      "description": "Group item rates response."
+    },
+    "v1GetRMGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMGroupHeadWithDetails",
+          "description": "Head + details."
+        }
+      },
+      "description": "Get response."
+    },
+    "v1ImportRMGroupsRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (.xlsx / .xls)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original filename (format detected by extension)."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "How to handle existing groups by `group_code`: \"skip\" (default) or \"update\".\nDetail rows always additive: items already active in ANOTHER group are\nreported as skipped errors; items already in the target group are ignored."
+        }
+      },
+      "description": "ImportRMGroupsRequest accepts a 2-sheet Excel. User may include only the\nGroups sheet (header-only import), only the Items sheet (detail-only for\nexisting groups), or both."
+    },
+    "v1ImportRMGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "groupsCreated": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads created."
+        },
+        "groupsUpdated": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads updated (duplicate_action=update)."
+        },
+        "groupsSkipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads skipped (duplicate_action=skip + existed)."
+        },
+        "itemsAdded": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of detail items successfully added."
+        },
+        "itemsSkipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of detail items skipped (already in target group)."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed rows (across both sheets)."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Per-row errors (reuses finance.v1.ImportError)."
+        }
+      },
+      "description": "ImportRMGroupsResponse summarizes the outcome."
+    },
+    "v1ListRMGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMGroupHead"
+          },
+          "description": "Group heads."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "List response."
+    },
+    "v1ListUngroupedItemsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UngroupedItem"
+          },
+          "description": "Ungrouped items for the requested filters."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "Ungrouped items response."
+    },
+    "v1RMGroupDetail": {
+      "type": "object",
+      "properties": {
+        "groupDetailId": {
+          "type": "string",
+          "description": "Detail UUID."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "Owning group head UUID."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Item code."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Item name (snapshot)."
+        },
+        "itemTypeCode": {
+          "type": "string",
+          "description": "Item type code."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code."
+        },
+        "itemGrade": {
+          "type": "string",
+          "description": "Item grade."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "UOM code."
+        },
+        "marketPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-item marketing percentage (nil when unset)."
+        },
+        "marketValueRp": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-item marketing value in rupiah (nil when unset)."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display order within the group."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Contributes to rate aggregation when true."
+        },
+        "isDummy": {
+          "type": "boolean",
+          "description": "Placeholder row (excluded from aggregation regardless of is_active)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "RMGroupDetail is one item's membership in an RM group."
+    },
+    "v1RMGroupHead": {
+      "type": "object",
+      "properties": {
+        "groupHeadId": {
+          "type": "string",
+          "description": "Group head UUID."
+        },
+        "groupCode": {
+          "type": "string",
+          "description": "Unique group code (uppercase; allows spaces + hyphens; 1-30 chars)."
+        },
+        "groupName": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "colourant": {
+          "type": "string",
+          "description": "Optional colourant tag."
+        },
+        "ciName": {
+          "type": "string",
+          "description": "Optional CI name tag."
+        },
+        "costPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Cost percentage multiplier (raw, UI formats for display)."
+        },
+        "costPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-kg overhead added to landed cost."
+        },
+        "flagValuation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage flag used for valuation cost."
+        },
+        "flagMarketing": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage flag used for marketing cost."
+        },
+        "flagSimulation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage flag used for simulation cost."
+        },
+        "initValValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value override for valuation (set when flag_valuation = INIT)."
+        },
+        "initValMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value override for marketing (set when flag_marketing = INIT)."
+        },
+        "initValSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value override for simulation (set when flag_simulation = INIT)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the group is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "RMGroupHead is the aggregate root representing an RM group's cost configuration."
+    },
+    "v1RMGroupHeadWithDetails": {
+      "type": "object",
+      "properties": {
+        "head": {
+          "$ref": "#/definitions/v1RMGroupHead",
+          "description": "Head data."
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMGroupDetail"
+          },
+          "description": "Details owned by the head."
+        }
+      },
+      "description": "RMGroupHeadWithDetails bundles a head and its details for the Get response."
+    },
+    "v1RMGroupItemRates": {
+      "type": "object",
+      "properties": {
+        "itemCode": {
+          "type": "string",
+          "description": "Item code."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Item name (snapshot from detail row)."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code."
+        },
+        "itemGrade": {
+          "type": "string",
+          "description": "Item grade."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "UOM code."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the detail is active."
+        },
+        "isDummy": {
+          "type": "boolean",
+          "description": "Whether the detail is a dummy row."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period the rates apply to (YYYYMM), empty when no sync row was found."
+        },
+        "consQty": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS qty / value / rate."
+        },
+        "consVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "consRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "storesQty": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES qty / value / rate."
+        },
+        "storesVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "storesRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "deptQty": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT qty / value / rate."
+        },
+        "deptVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "deptRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoQty1": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_1 qty / value / rate."
+        },
+        "lastPoVal1": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoRate1": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoQty2": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_2 qty / value / rate."
+        },
+        "lastPoVal2": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoRate2": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoQty3": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_3 qty / value / rate."
+        },
+        "lastPoVal3": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoRate3": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "description": "RMGroupItemRates is one row per item currently in a group with its per-stage\nOracle sync rates for a given period. Items with no sync row for the period\nstill appear (all rates 0)."
+    },
+    "v1RemoveItemsMode": {
+      "type": "string",
+      "enum": [
+        "REMOVE_ITEMS_MODE_UNSPECIFIED",
+        "REMOVE_ITEMS_MODE_DEACTIVATE",
+        "REMOVE_ITEMS_MODE_SOFT_DELETE"
+      ],
+      "default": "REMOVE_ITEMS_MODE_UNSPECIFIED",
+      "description": "RemoveItemsMode controls how RemoveItems disposes of detail rows.\n\n - REMOVE_ITEMS_MODE_UNSPECIFIED: Default zero value. Rejected via not_in: [0].\n - REMOVE_ITEMS_MODE_DEACTIVATE: Mark the details inactive but keep the rows for audit history.\n - REMOVE_ITEMS_MODE_SOFT_DELETE: Soft-delete the details (sets deleted_at/deleted_by)."
+    },
+    "v1RemoveItemsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "removedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of details affected."
+        }
+      },
+      "description": "Remove items response."
+    },
+    "v1SkippedItem": {
+      "type": "object",
+      "properties": {
+        "itemCode": {
+          "type": "string",
+          "description": "Item code that was skipped."
+        },
+        "owningGroupHeadId": {
+          "type": "string",
+          "description": "Owning group head UUID."
+        },
+        "owningGroupDetailId": {
+          "type": "string",
+          "description": "Owning detail UUID."
+        },
+        "owningGroupCode": {
+          "type": "string",
+          "description": "Owning group code (for UI display)."
+        }
+      },
+      "description": "SkippedItem captures items rejected by AddItems because they already belong\nto another active group."
+    },
+    "v1UngroupedItem": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM)."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Item code."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Item name."
+        },
+        "itemTypeCode": {
+          "type": "string",
+          "description": "Item type code."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code."
+        },
+        "itemGrade": {
+          "type": "string",
+          "description": "Item grade."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "UOM code."
+        },
+        "consVal": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS stage value."
+        },
+        "storesVal": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES stage value."
+        },
+        "consQty": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS stage quantity."
+        },
+        "consRate": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS stage rate."
+        },
+        "storesQty": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES stage quantity."
+        },
+        "storesRate": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES stage rate."
+        },
+        "deptQty": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT stage quantity."
+        },
+        "deptVal": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT stage value."
+        },
+        "deptRate": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT stage rate."
+        },
+        "lastPoQty1": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_1 stage quantity."
+        },
+        "lastPoVal1": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_1 stage value."
+        },
+        "lastPoRate1": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_1 stage rate."
+        },
+        "lastPoQty2": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_2 stage quantity."
+        },
+        "lastPoVal2": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_2 stage value."
+        },
+        "lastPoRate2": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_2 stage rate."
+        },
+        "lastPoQty3": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_3 stage quantity."
+        },
+        "lastPoVal3": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_3 stage value."
+        },
+        "lastPoRate3": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_3 stage rate."
+        }
+      },
+      "description": "UngroupedItem is a raw material present in the Oracle sync feed that has no\nactive RM group assignment."
+    },
+    "v1UpdateRMGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMGroupHead",
+          "description": "Updated head."
+        }
+      },
+      "description": "Update response."
+    },
     "UOMServiceUpdateUOMBody": {
       "type": "object",
       "properties": {
@@ -3198,10 +5911,19 @@
       "name": "FormulaService"
     },
     {
+      "name": "OracleSyncService"
+    },
+    {
       "name": "ParameterService"
     },
     {
       "name": "RMCategoryService"
+    },
+    {
+      "name": "RMCostService"
+    },
+    {
+      "name": "RMGroupService"
     },
     {
       "name": "UOMService"

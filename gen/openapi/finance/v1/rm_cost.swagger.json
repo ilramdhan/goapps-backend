@@ -1,0 +1,938 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/rm_cost.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "RMCostService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/rm-costs": {
+      "get": {
+        "summary": "ListRMCosts lists cost rows with filter + pagination.",
+        "operationId": "RMCostService_ListRMCosts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMCostsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "period",
+            "description": "Period filter (YYYYMM). Empty = all periods.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rmType",
+            "description": "Filter by RM type. UNSPECIFIED = all.\n\n - RM_COST_TYPE_UNSPECIFIED: Default zero value. Means \"no filter\" in list requests.\n - RM_COST_TYPE_GROUP: Cost row aggregates a whole RM group.\n - RM_COST_TYPE_ITEM: Cost row is computed for a single item (future phase).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "RM_COST_TYPE_UNSPECIFIED",
+              "RM_COST_TYPE_GROUP",
+              "RM_COST_TYPE_ITEM"
+            ],
+            "default": "RM_COST_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "groupHeadId",
+            "description": "Optional group scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on rm_code + rm_name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/calculate": {
+      "post": {
+        "summary": "CalculateRMCost runs a recalculation synchronously (admin-only).",
+        "operationId": "RMCostService_CalculateRMCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CalculateRMCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CalculateRMCost runs a calculation synchronously and returns the produced rows.\nIntended for admin/troubleshooting use — production traffic should go through\nTriggerRMCostCalculation.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CalculateRMCostRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/export": {
+      "get": {
+        "summary": "ExportRMCosts exports cost rows matching the filter to a single-sheet Excel.",
+        "operationId": "RMCostService_ExportRMCosts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportRMCostsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "description": "Period filter (YYYYMM). Empty = all periods.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rmType",
+            "description": "Filter by RM type. UNSPECIFIED = all.\n\n - RM_COST_TYPE_UNSPECIFIED: Default zero value. Means \"no filter\" in list requests.\n - RM_COST_TYPE_GROUP: Cost row aggregates a whole RM group.\n - RM_COST_TYPE_ITEM: Cost row is computed for a single item (future phase).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "RM_COST_TYPE_UNSPECIFIED",
+              "RM_COST_TYPE_GROUP",
+              "RM_COST_TYPE_ITEM"
+            ],
+            "default": "RM_COST_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "groupHeadId",
+            "description": "Optional group scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on rm_code + rm_name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/history": {
+      "get": {
+        "summary": "ListRMCostHistory lists audit-history rows with filter + pagination.",
+        "operationId": "RMCostService_ListRMCostHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMCostHistoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "period",
+            "description": "Period filter (YYYYMM). Empty = all periods.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rmCode",
+            "description": "RM code filter (empty = all).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "groupHeadId",
+            "description": "Optional group scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "jobId",
+            "description": "Optional job scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/periods": {
+      "get": {
+        "summary": "ListRMCostPeriods returns distinct periods from cost rows (newest first).",
+        "operationId": "RMCostService_ListRMCostPeriods",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMCostPeriodsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/trigger": {
+      "post": {
+        "summary": "TriggerRMCostCalculation enqueues an async recalculation job.",
+        "operationId": "RMCostService_TriggerRMCostCalculation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TriggerRMCostCalculationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "TriggerRMCostCalculation enqueues a recalculation job. Returns immediately\nwith a job ID the caller can poll via the job-execution endpoint.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TriggerRMCostCalculationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/{period}/{rmCode}": {
+      "get": {
+        "summary": "GetRMCost fetches a single cost row by (period, rm_code).",
+        "operationId": "RMCostService_GetRMCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRMCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "description": "Period (YYYYMM).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "rmCode",
+            "description": "RM code (group or item).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CalculateRMCostRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM)."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "Optional single-group scope."
+        },
+        "triggerReason": {
+          "$ref": "#/definitions/v1RMCostTriggerReason",
+          "description": "Why this calc was run."
+        }
+      },
+      "description": "CalculateRMCost runs a calculation synchronously and returns the produced rows.\nIntended for admin/troubleshooting use — production traffic should go through\nTriggerRMCostCalculation."
+    },
+    "v1CalculateRMCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "processed": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads processed."
+        },
+        "skipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads skipped (no active details / no source rows)."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period that was calculated (echoes request)."
+        }
+      },
+      "description": "Calculate response."
+    },
+    "v1ExportRMCostsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (.xlsx)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportRMCostsResponse carries the Excel bytes + filename."
+    },
+    "v1GetRMCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMCost",
+          "description": "Cost data."
+        }
+      },
+      "description": "Get response."
+    },
+    "v1ListRMCostHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMCostHistory"
+          },
+          "description": "History rows ordered by calculated_at DESC."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "History response."
+    },
+    "v1ListRMCostPeriodsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Distinct periods ordered DESC (newest first), YYYYMM strings."
+        }
+      },
+      "description": "Response carries the distinct set of calculated periods."
+    },
+    "v1ListRMCostsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMCost"
+          },
+          "description": "Cost rows."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "List response."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1RMCost": {
+      "type": "object",
+      "properties": {
+        "rmCostId": {
+          "type": "string",
+          "description": "Cost row UUID."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM)."
+        },
+        "rmCode": {
+          "type": "string",
+          "description": "Group code (rm_type=GROUP) or item code (rm_type=ITEM)."
+        },
+        "rmType": {
+          "$ref": "#/definitions/v1RMCostType",
+          "description": "Discriminator."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "Owning group head UUID (set when rm_type=GROUP)."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Item code (set when rm_type=ITEM)."
+        },
+        "rmName": {
+          "type": "string",
+          "description": "Display name of the RM (group or item)."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "UOM code."
+        },
+        "rates": {
+          "$ref": "#/definitions/v1RMCostRates",
+          "description": "Per-stage rate snapshot."
+        },
+        "costValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed valuation landed cost (nil when never calculated)."
+        },
+        "costMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed marketing landed cost."
+        },
+        "costSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed simulation landed cost."
+        },
+        "flagValuation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Flags configured on the group header at calc time."
+        },
+        "flagMarketing": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Flag configured on the group header at calc time."
+        },
+        "flagSimulation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Flag configured on the group header at calc time."
+        },
+        "flagValuationUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage actually used after cascade / INIT resolution."
+        },
+        "flagMarketingUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage actually used after cascade / INIT resolution."
+        },
+        "flagSimulationUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage actually used after cascade / INIT resolution."
+        },
+        "calculatedAt": {
+          "type": "string",
+          "description": "Last calculation timestamp (RFC3339, empty when never calculated)."
+        },
+        "calculatedBy": {
+          "type": "string",
+          "description": "Last calculator (empty when never calculated)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "RMCost is the landed cost computed for a single (period, rm_code) pair."
+    },
+    "v1RMCostHistory": {
+      "type": "object",
+      "properties": {
+        "historyId": {
+          "type": "string",
+          "description": "History row UUID."
+        },
+        "rmCostId": {
+          "type": "string",
+          "description": "Cost row this history refers to (nil if the cost row was later deleted)."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Job that produced this history row (nil when no job context)."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period."
+        },
+        "rmCode": {
+          "type": "string",
+          "description": "RM code."
+        },
+        "rmType": {
+          "$ref": "#/definitions/v1RMCostType",
+          "description": "Discriminator."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "Owning group head UUID (when rm_type=GROUP)."
+        },
+        "rates": {
+          "$ref": "#/definitions/v1RMCostRates",
+          "description": "Rates captured for this calc pass."
+        },
+        "costPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Snapshot of head.cost_percentage at calc time."
+        },
+        "costPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Snapshot of head.cost_per_kg at calc time."
+        },
+        "flagValuation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Configured flags at calc time."
+        },
+        "flagMarketing": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Configured flags at calc time."
+        },
+        "flagSimulation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Configured flags at calc time."
+        },
+        "initValValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value overrides at calc time."
+        },
+        "initValMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value overrides at calc time."
+        },
+        "initValSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value overrides at calc time."
+        },
+        "costValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed costs at calc time."
+        },
+        "costMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed costs at calc time."
+        },
+        "costSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "Computed costs at calc time."
+        },
+        "flagValuationUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stages resolved at calc time."
+        },
+        "flagMarketingUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stages resolved at calc time."
+        },
+        "flagSimulationUsed": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stages resolved at calc time."
+        },
+        "sourceItemCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Count of source items aggregated."
+        },
+        "triggerReason": {
+          "$ref": "#/definitions/v1RMCostTriggerReason",
+          "description": "Why this calc was triggered."
+        },
+        "calculatedAt": {
+          "type": "string",
+          "description": "When the calc ran (RFC3339)."
+        },
+        "calculatedBy": {
+          "type": "string",
+          "description": "Who ran the calc."
+        }
+      },
+      "description": "RMCostHistory is one row of the append-only audit trail written alongside every\ncalculation pass."
+    },
+    "v1RMCostRates": {
+      "type": "object",
+      "properties": {
+        "cons": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS stage rate."
+        },
+        "stores": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES stage rate."
+        },
+        "dept": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT stage rate."
+        },
+        "po1": {
+          "type": "number",
+          "format": "double",
+          "description": "First PO stage rate."
+        },
+        "po2": {
+          "type": "number",
+          "format": "double",
+          "description": "Second PO stage rate."
+        },
+        "po3": {
+          "type": "number",
+          "format": "double",
+          "description": "Third PO stage rate."
+        }
+      },
+      "description": "RMCostRates is the per-stage snapshot of aggregated rates captured at calc time."
+    },
+    "v1RMCostTriggerReason": {
+      "type": "string",
+      "enum": [
+        "RM_COST_TRIGGER_REASON_UNSPECIFIED",
+        "RM_COST_TRIGGER_REASON_ORACLE_SYNC_CHAIN",
+        "RM_COST_TRIGGER_REASON_GROUP_UPDATE",
+        "RM_COST_TRIGGER_REASON_DETAIL_CHANGE",
+        "RM_COST_TRIGGER_REASON_MANUAL_UI"
+      ],
+      "default": "RM_COST_TRIGGER_REASON_UNSPECIFIED",
+      "description": "RMCostTriggerReason enumerates the reasons a calculation was run. Mirrors\n`rmcost.HistoryTriggerReason`.\n\n - RM_COST_TRIGGER_REASON_UNSPECIFIED: Default zero value. Rejected on trigger requests via not_in: [0].\n - RM_COST_TRIGGER_REASON_ORACLE_SYNC_CHAIN: Auto-chained after a successful Oracle sync for the synced period.\n - RM_COST_TRIGGER_REASON_GROUP_UPDATE: Group header changed.\n - RM_COST_TRIGGER_REASON_DETAIL_CHANGE: An item was added/removed/toggled in the group.\n - RM_COST_TRIGGER_REASON_MANUAL_UI: Explicit user request from the UI."
+    },
+    "v1RMCostType": {
+      "type": "string",
+      "enum": [
+        "RM_COST_TYPE_UNSPECIFIED",
+        "RM_COST_TYPE_GROUP",
+        "RM_COST_TYPE_ITEM"
+      ],
+      "default": "RM_COST_TYPE_UNSPECIFIED",
+      "description": "RMCostType discriminates a group-level cost row from an item-level cost row.\n\n - RM_COST_TYPE_UNSPECIFIED: Default zero value. Means \"no filter\" in list requests.\n - RM_COST_TYPE_GROUP: Cost row aggregates a whole RM group.\n - RM_COST_TYPE_ITEM: Cost row is computed for a single item (future phase)."
+    },
+    "v1RMGroupFlag": {
+      "type": "string",
+      "enum": [
+        "RM_GROUP_FLAG_UNSPECIFIED",
+        "RM_GROUP_FLAG_INIT",
+        "RM_GROUP_FLAG_CONS",
+        "RM_GROUP_FLAG_STORES",
+        "RM_GROUP_FLAG_DEPT",
+        "RM_GROUP_FLAG_PO_1",
+        "RM_GROUP_FLAG_PO_2",
+        "RM_GROUP_FLAG_PO_3"
+      ],
+      "default": "RM_GROUP_FLAG_UNSPECIFIED",
+      "description": "RMGroupFlag identifies which aggregated stage rate feeds a cost purpose\n(valuation / marketing / simulation), or whether the group uses its\nconfigured init override value. Mirrors the `cst_rm_group_head.flag_*`\ndomain constraint.\n\n - RM_GROUP_FLAG_UNSPECIFIED: Default zero value. Rejected on create/update requests via not_in: [0].\n - RM_GROUP_FLAG_INIT: Use the init_val_* override on the head; skips cascade.\n - RM_GROUP_FLAG_CONS: Use the CONS stage rate.\n - RM_GROUP_FLAG_STORES: Use the STORES stage rate.\n - RM_GROUP_FLAG_DEPT: Use the DEPT stage rate.\n - RM_GROUP_FLAG_PO_1: Use the first PO stage rate.\n - RM_GROUP_FLAG_PO_2: Use the second PO stage rate.\n - RM_GROUP_FLAG_PO_3: Use the third PO stage rate."
+    },
+    "v1TriggerRMCostCalculationRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period to recalculate (YYYYMM)."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "When set, scope the calc to a single group. Empty = all active groups."
+        },
+        "triggerReason": {
+          "$ref": "#/definitions/v1RMCostTriggerReason",
+          "description": "Why the recalc was requested."
+        }
+      },
+      "description": "TriggerRMCostCalculation enqueues a recalculation job. Returns immediately\nwith a job ID the caller can poll via the job-execution endpoint."
+    },
+    "v1TriggerRMCostCalculationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Enqueued job UUID."
+        }
+      },
+      "description": "Trigger response."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

@@ -25,11 +25,19 @@ const (
 	stepUpsert    = "upsert_data"
 )
 
+// ChainPublisher publishes a follow-up RM cost calculation job after a
+// successful Oracle sync. Matches the rabbitmq.JobPublisherAdapter method set.
+// Nil is allowed — chaining is then skipped (useful for tests / dry runs).
+type ChainPublisher interface {
+	PublishRMCostCalculation(ctx context.Context, jobID, period string, groupHeadID *uuid.UUID, reason, createdBy string) error
+}
+
 // SyncHandler orchestrates the Oracle sync process.
 type SyncHandler struct {
 	jobRepo    job.Repository
 	oracleRepo syncdata.OracleSourceRepository
 	pgRepo     syncdata.PostgresTargetRepository
+	chainPub   ChainPublisher
 	logger     zerolog.Logger
 }
 
@@ -46,6 +54,13 @@ func NewSyncHandler(
 		pgRepo:     pgRepo,
 		logger:     logger,
 	}
+}
+
+// WithChainPublisher installs the follow-up publisher so that a successful sync
+// automatically enqueues an RM cost recalculation for the synced period.
+func (h *SyncHandler) WithChainPublisher(pub ChainPublisher) *SyncHandler {
+	h.chainPub = pub
+	return h
 }
 
 // Execute runs the full sync workflow for a given job.
@@ -120,7 +135,47 @@ func (h *SyncHandler) runSync(ctx context.Context, exec *job.Execution) error {
 	}
 
 	// Complete the job with result summary.
-	return h.completeJob(ctx, exec, result)
+	if err := h.completeJob(ctx, exec, result); err != nil {
+		return err
+	}
+
+	// Chain-trigger RM cost recalculation for the synced period. Failure here
+	// does not fail the sync job — operators can re-run cost calc manually.
+	h.publishCostChain(ctx, exec.Period(), exec.CreatedBy())
+	return nil
+}
+
+func (h *SyncHandler) publishCostChain(ctx context.Context, period, createdBy string) {
+	if h.chainPub == nil {
+		return
+	}
+
+	chainExec, err := job.NewExecution(job.TypeRMCostCalculation, "landed_cost", period, createdBy, 5, nil)
+	if err != nil {
+		h.logger.Warn().Err(err).Str("period", period).Msg("Failed to build chained rm cost job")
+		return
+	}
+	if err := h.jobRepo.Create(ctx, chainExec); err != nil {
+		h.logger.Warn().Err(err).Str("period", period).Msg("Failed to persist chained rm cost job")
+		return
+	}
+
+	if err := h.chainPub.PublishRMCostCalculation(ctx, chainExec.ID().String(), period, nil, "oracle-sync-chain", createdBy); err != nil {
+		// Compensate: mark the created job as failed so it doesn't linger as queued.
+		if failErr := chainExec.Fail(err.Error()); failErr == nil {
+			if updErr := h.jobRepo.UpdateStatus(ctx, chainExec); updErr != nil {
+				h.logger.Warn().Err(updErr).Msg("Failed to mark chained job as failed")
+			}
+		}
+		h.logger.Warn().Err(err).
+			Str("period", period).
+			Msg("Failed to chain-trigger RM cost calculation (operator can run manually)")
+		return
+	}
+	h.logger.Info().
+		Str("chain_job_id", chainExec.ID().String()).
+		Str("period", period).
+		Msg("Chained RM cost calculation job enqueued")
 }
 
 func (h *SyncHandler) executeProcedure(ctx context.Context, jobID uuid.UUID, period string) error {

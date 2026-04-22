@@ -1,0 +1,1707 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/rm_group.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "RMGroupService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/rm-groups": {
+      "get": {
+        "summary": "ListRMGroups lists group heads with search + filter + pagination.",
+        "operationId": "RMGroupService_ListRMGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on code, name, description, colourant, ci_name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      },
+      "post": {
+        "summary": "CreateRMGroup creates a new RM group head.",
+        "operationId": "RMGroupService_CreateRMGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateRMGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Create a new RM group head.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateRMGroupRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/export": {
+      "get": {
+        "summary": "ExportRMGroups exports all groups + their items to a 2-sheet Excel.",
+        "operationId": "RMGroupService_ExportRMGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportRMGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active/inactive (UNSPECIFIED = all).\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/import": {
+      "post": {
+        "summary": "ImportRMGroups imports groups and/or items from a 2-sheet Excel. Users can\ninclude only the Groups sheet, only the Items sheet, or both.",
+        "operationId": "RMGroupService_ImportRMGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportRMGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportRMGroupsRequest accepts a 2-sheet Excel. User may include only the\nGroups sheet (header-only import), only the Items sheet (detail-only for\nexisting groups), or both.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportRMGroupsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/items/template": {
+      "get": {
+        "summary": "DownloadGroupItemsTemplate returns a blank one-sheet Excel with just\nthe columns ImportGroupItems expects. Paired with ImportGroupItems.",
+        "operationId": "RMGroupService_DownloadGroupItemsTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadGroupItemsTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/template": {
+      "get": {
+        "summary": "DownloadRMGroupTemplate returns a blank 2-sheet Excel with header rows.",
+        "operationId": "RMGroupService_DownloadRMGroupTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadRMGroupTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/ungrouped": {
+      "get": {
+        "summary": "ListUngroupedItems reports items from the sync feed that have no active\ngroup assignment.",
+        "operationId": "RMGroupService_ListUngroupedItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListUngroupedItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "period",
+            "description": "Period filter (YYYYMM). Empty = all periods.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on item_code, item_name, item_type_code, grade_code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/ungrouped/export": {
+      "get": {
+        "summary": "ExportUngroupedItems exports ungrouped items matching the filter to Excel.",
+        "operationId": "RMGroupService_ExportUngroupedItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportUngroupedItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "description": "Period filter (YYYYMM). Empty = all periods.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on item_code, item_name, item_type_code, grade_code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}": {
+      "get": {
+        "summary": "GetRMGroup retrieves a group head + its details.",
+        "operationId": "RMGroupService_GetRMGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRMGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteRMGroup soft-deletes a group head (cascade to its details).",
+        "operationId": "RMGroupService_DeleteRMGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteRMGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateRMGroup applies a partial update to a group head.",
+        "operationId": "RMGroupService_UpdateRMGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateRMGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Head UUID to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMGroupServiceUpdateRMGroupBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}/item-rates": {
+      "get": {
+        "summary": "GetRMGroupItemRates returns per-item per-stage rates for every active\ndetail of a group in a given period.",
+        "operationId": "RMGroupService_GetRMGroupItemRates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRMGroupItemRatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Group head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "period",
+            "description": "Period (YYYYMM).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}/items": {
+      "post": {
+        "summary": "AddItems assigns items to a group. Items already in another active group\nare returned in `skipped` instead of failing the batch.",
+        "operationId": "RMGroupService_AddItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Target group head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMGroupServiceAddItemsBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}/items/import": {
+      "post": {
+        "summary": "ImportGroupItems bulk-assigns items to ONE existing group from a\none-sheet Excel. Uses the same validation as the interactive AddItems\nflow (one item / one active group, sync-feed lookup, idempotent re-add).",
+        "operationId": "RMGroupService_ImportGroupItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportGroupItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Target group head ID (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMGroupServiceImportGroupItemsBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}/items/remove": {
+      "post": {
+        "summary": "RemoveItems removes details from a group (deactivate or soft-delete).",
+        "operationId": "RMGroupService_RemoveItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Owning group head UUID (validated against each detail).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMGroupServiceRemoveItemsBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "RMGroupServiceAddItemsBody": {
+      "type": "object",
+      "properties": {
+        "itemCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Item codes to add (legacy: grade_code is resolved server-side)."
+        },
+        "selections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AddItemSelection"
+          },
+          "description": "Structured selections carrying grade_code. Preferred over item_codes."
+        }
+      },
+      "description": "Add one or more items to a group. Items already in another active group are\nreturned in `skipped` rather than erroring the whole batch.\n\nPrefer `selections` — it carries grade_code which is required to correctly\ndisambiguate multi-variant items. `item_codes` is retained for backwards\ncompatibility; when both are supplied, `selections` wins."
+    },
+    "RMGroupServiceImportGroupItemsBody": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (.xlsx / .xls). Expected \"Items\" sheet with columns\nitem_code (required), grade_code (optional), sort_order (optional)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original filename (format detected by extension)."
+        }
+      },
+      "description": "ImportGroupItemsRequest bulk-adds items to a specific existing group."
+    },
+    "RMGroupServiceRemoveItemsBody": {
+      "type": "object",
+      "properties": {
+        "groupDetailIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Detail UUIDs to remove."
+        },
+        "mode": {
+          "$ref": "#/definitions/v1RemoveItemsMode",
+          "description": "Disposition mode."
+        }
+      },
+      "description": "Remove items from a group by detail IDs. The mode controls whether the rows\nare deactivated (preserved for history) or soft-deleted."
+    },
+    "RMGroupServiceUpdateRMGroupBody": {
+      "type": "object",
+      "properties": {
+        "groupName": {
+          "type": "string",
+          "description": "New display name."
+        },
+        "description": {
+          "type": "string",
+          "description": "New description."
+        },
+        "colourant": {
+          "type": "string",
+          "description": "New colourant tag."
+        },
+        "ciName": {
+          "type": "string",
+          "description": "New CI name tag."
+        },
+        "costPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "New cost percentage (\u003e= 0)."
+        },
+        "costPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "New per-kg overhead (\u003e= 0)."
+        },
+        "flagValuation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "New valuation flag."
+        },
+        "flagMarketing": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "New marketing flag."
+        },
+        "flagSimulation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "New simulation flag."
+        },
+        "initValValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "New init-val override for valuation (\u003e= 0)."
+        },
+        "initValMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "New init-val override for marketing (\u003e= 0)."
+        },
+        "initValSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "New init-val override for simulation (\u003e= 0)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "New active status."
+        },
+        "clearInitValValuation": {
+          "type": "boolean",
+          "description": "When true, force init_val_valuation to NULL (overrides init_val_valuation field)."
+        },
+        "clearInitValMarketing": {
+          "type": "boolean",
+          "description": "When true, force init_val_marketing to NULL."
+        },
+        "clearInitValSimulation": {
+          "type": "boolean",
+          "description": "When true, force init_val_simulation to NULL."
+        }
+      },
+      "description": "Partial update of an RM group head. Absent fields leave state unchanged.\nClear_* booleans explicitly set nullable fields to NULL."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AddItemSelection": {
+      "type": "object",
+      "properties": {
+        "itemCode": {
+          "type": "string",
+          "description": "Item code (required)."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code (optional). Empty matches the variant with NULL / empty\ngrade_code in the sync feed. Use \"\" when the row has a single variant."
+        }
+      },
+      "description": "AddItemSelection identifies one RM variant to assign to a group. The\n(item_code, grade_code) pair is the natural key: an item_code with\nmultiple grade_code variants in the sync feed represents distinct\nrows that can be grouped independently."
+    },
+    "v1AddItemsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMGroupDetail"
+          },
+          "description": "Details created by this call."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SkippedItem"
+          },
+          "description": "Items that were skipped because they already belong to another active group."
+        }
+      },
+      "description": "Add items response."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateRMGroupRequest": {
+      "type": "object",
+      "properties": {
+        "groupCode": {
+          "type": "string",
+          "description": "Group code (uppercase; spaces + hyphens allowed; 1-30 chars)."
+        },
+        "groupName": {
+          "type": "string",
+          "description": "Display name (1-200 chars)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 1000 chars)."
+        },
+        "colourant": {
+          "type": "string",
+          "description": "Optional colourant tag."
+        },
+        "ciName": {
+          "type": "string",
+          "description": "Optional CI name tag."
+        },
+        "costPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Cost percentage multiplier (\u003e= 0)."
+        },
+        "costPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-kg overhead (\u003e= 0)."
+        }
+      },
+      "description": "Create a new RM group head."
+    },
+    "v1CreateRMGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMGroupHead",
+          "description": "Created head."
+        }
+      },
+      "description": "Create response."
+    },
+    "v1DeleteRMGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        }
+      },
+      "description": "Delete response."
+    },
+    "v1DownloadGroupItemsTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (.xlsx)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "DownloadGroupItemsTemplateResponse carries the blank template bytes."
+    },
+    "v1DownloadRMGroupTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content (.xlsx)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "DownloadRMGroupTemplateResponse returns the blank 2-sheet template."
+    },
+    "v1ExportRMGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (.xlsx)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportRMGroupsResponse returns a multi-sheet Excel (Groups + Items)."
+    },
+    "v1ExportUngroupedItemsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (.xlsx)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportUngroupedItemsResponse carries the Excel bytes + filename."
+    },
+    "v1GetRMGroupItemRatesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMGroupItemRates"
+          },
+          "description": "Per-item rates, one row per active detail."
+        }
+      },
+      "description": "Group item rates response."
+    },
+    "v1GetRMGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMGroupHeadWithDetails",
+          "description": "Head + details."
+        }
+      },
+      "description": "Get response."
+    },
+    "v1ImportError": {
+      "type": "object",
+      "properties": {
+        "rowNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Row number in the Excel file."
+        },
+        "field": {
+          "type": "string",
+          "description": "Field that caused the error."
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message."
+        }
+      },
+      "description": "ImportError represents a single import error."
+    },
+    "v1ImportGroupItemsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "itemsAdded": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items successfully added."
+        },
+        "itemsSkipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items skipped (already in this or another group, or invalid)."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of rows that failed to parse at the Excel layer."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Parse-level errors (bad item_code format, etc)."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SkippedItem"
+          },
+          "description": "Skip details propagated from AddItems (ownership collisions, etc)."
+        }
+      },
+      "description": "ImportGroupItemsResponse summarizes the outcome."
+    },
+    "v1ImportRMGroupsRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (.xlsx / .xls)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original filename (format detected by extension)."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "How to handle existing groups by `group_code`: \"skip\" (default) or \"update\".\nDetail rows always additive: items already active in ANOTHER group are\nreported as skipped errors; items already in the target group are ignored."
+        }
+      },
+      "description": "ImportRMGroupsRequest accepts a 2-sheet Excel. User may include only the\nGroups sheet (header-only import), only the Items sheet (detail-only for\nexisting groups), or both."
+    },
+    "v1ImportRMGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "groupsCreated": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads created."
+        },
+        "groupsUpdated": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads updated (duplicate_action=update)."
+        },
+        "groupsSkipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of group heads skipped (duplicate_action=skip + existed)."
+        },
+        "itemsAdded": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of detail items successfully added."
+        },
+        "itemsSkipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of detail items skipped (already in target group)."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed rows (across both sheets)."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Per-row errors (reuses finance.v1.ImportError)."
+        }
+      },
+      "description": "ImportRMGroupsResponse summarizes the outcome."
+    },
+    "v1ListRMGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMGroupHead"
+          },
+          "description": "Group heads."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "List response."
+    },
+    "v1ListUngroupedItemsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UngroupedItem"
+          },
+          "description": "Ungrouped items for the requested filters."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "Ungrouped items response."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1RMGroupDetail": {
+      "type": "object",
+      "properties": {
+        "groupDetailId": {
+          "type": "string",
+          "description": "Detail UUID."
+        },
+        "groupHeadId": {
+          "type": "string",
+          "description": "Owning group head UUID."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Item code."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Item name (snapshot)."
+        },
+        "itemTypeCode": {
+          "type": "string",
+          "description": "Item type code."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code."
+        },
+        "itemGrade": {
+          "type": "string",
+          "description": "Item grade."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "UOM code."
+        },
+        "marketPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-item marketing percentage (nil when unset)."
+        },
+        "marketValueRp": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-item marketing value in rupiah (nil when unset)."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display order within the group."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Contributes to rate aggregation when true."
+        },
+        "isDummy": {
+          "type": "boolean",
+          "description": "Placeholder row (excluded from aggregation regardless of is_active)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "RMGroupDetail is one item's membership in an RM group."
+    },
+    "v1RMGroupFlag": {
+      "type": "string",
+      "enum": [
+        "RM_GROUP_FLAG_UNSPECIFIED",
+        "RM_GROUP_FLAG_INIT",
+        "RM_GROUP_FLAG_CONS",
+        "RM_GROUP_FLAG_STORES",
+        "RM_GROUP_FLAG_DEPT",
+        "RM_GROUP_FLAG_PO_1",
+        "RM_GROUP_FLAG_PO_2",
+        "RM_GROUP_FLAG_PO_3"
+      ],
+      "default": "RM_GROUP_FLAG_UNSPECIFIED",
+      "description": "RMGroupFlag identifies which aggregated stage rate feeds a cost purpose\n(valuation / marketing / simulation), or whether the group uses its\nconfigured init override value. Mirrors the `cst_rm_group_head.flag_*`\ndomain constraint.\n\n - RM_GROUP_FLAG_UNSPECIFIED: Default zero value. Rejected on create/update requests via not_in: [0].\n - RM_GROUP_FLAG_INIT: Use the init_val_* override on the head; skips cascade.\n - RM_GROUP_FLAG_CONS: Use the CONS stage rate.\n - RM_GROUP_FLAG_STORES: Use the STORES stage rate.\n - RM_GROUP_FLAG_DEPT: Use the DEPT stage rate.\n - RM_GROUP_FLAG_PO_1: Use the first PO stage rate.\n - RM_GROUP_FLAG_PO_2: Use the second PO stage rate.\n - RM_GROUP_FLAG_PO_3: Use the third PO stage rate."
+    },
+    "v1RMGroupHead": {
+      "type": "object",
+      "properties": {
+        "groupHeadId": {
+          "type": "string",
+          "description": "Group head UUID."
+        },
+        "groupCode": {
+          "type": "string",
+          "description": "Unique group code (uppercase; allows spaces + hyphens; 1-30 chars)."
+        },
+        "groupName": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "colourant": {
+          "type": "string",
+          "description": "Optional colourant tag."
+        },
+        "ciName": {
+          "type": "string",
+          "description": "Optional CI name tag."
+        },
+        "costPercentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Cost percentage multiplier (raw, UI formats for display)."
+        },
+        "costPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-kg overhead added to landed cost."
+        },
+        "flagValuation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage flag used for valuation cost."
+        },
+        "flagMarketing": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage flag used for marketing cost."
+        },
+        "flagSimulation": {
+          "$ref": "#/definitions/v1RMGroupFlag",
+          "description": "Stage flag used for simulation cost."
+        },
+        "initValValuation": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value override for valuation (set when flag_valuation = INIT)."
+        },
+        "initValMarketing": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value override for marketing (set when flag_marketing = INIT)."
+        },
+        "initValSimulation": {
+          "type": "number",
+          "format": "double",
+          "description": "Init-value override for simulation (set when flag_simulation = INIT)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the group is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "RMGroupHead is the aggregate root representing an RM group's cost configuration."
+    },
+    "v1RMGroupHeadWithDetails": {
+      "type": "object",
+      "properties": {
+        "head": {
+          "$ref": "#/definitions/v1RMGroupHead",
+          "description": "Head data."
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMGroupDetail"
+          },
+          "description": "Details owned by the head."
+        }
+      },
+      "description": "RMGroupHeadWithDetails bundles a head and its details for the Get response."
+    },
+    "v1RMGroupItemRates": {
+      "type": "object",
+      "properties": {
+        "itemCode": {
+          "type": "string",
+          "description": "Item code."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Item name (snapshot from detail row)."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code."
+        },
+        "itemGrade": {
+          "type": "string",
+          "description": "Item grade."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "UOM code."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the detail is active."
+        },
+        "isDummy": {
+          "type": "boolean",
+          "description": "Whether the detail is a dummy row."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period the rates apply to (YYYYMM), empty when no sync row was found."
+        },
+        "consQty": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS qty / value / rate."
+        },
+        "consVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "consRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "storesQty": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES qty / value / rate."
+        },
+        "storesVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "storesRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "deptQty": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT qty / value / rate."
+        },
+        "deptVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "deptRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoQty1": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_1 qty / value / rate."
+        },
+        "lastPoVal1": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoRate1": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoQty2": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_2 qty / value / rate."
+        },
+        "lastPoVal2": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoRate2": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoQty3": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_3 qty / value / rate."
+        },
+        "lastPoVal3": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastPoRate3": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "description": "RMGroupItemRates is one row per item currently in a group with its per-stage\nOracle sync rates for a given period. Items with no sync row for the period\nstill appear (all rates 0)."
+    },
+    "v1RemoveItemsMode": {
+      "type": "string",
+      "enum": [
+        "REMOVE_ITEMS_MODE_UNSPECIFIED",
+        "REMOVE_ITEMS_MODE_DEACTIVATE",
+        "REMOVE_ITEMS_MODE_SOFT_DELETE"
+      ],
+      "default": "REMOVE_ITEMS_MODE_UNSPECIFIED",
+      "description": "RemoveItemsMode controls how RemoveItems disposes of detail rows.\n\n - REMOVE_ITEMS_MODE_UNSPECIFIED: Default zero value. Rejected via not_in: [0].\n - REMOVE_ITEMS_MODE_DEACTIVATE: Mark the details inactive but keep the rows for audit history.\n - REMOVE_ITEMS_MODE_SOFT_DELETE: Soft-delete the details (sets deleted_at/deleted_by)."
+    },
+    "v1RemoveItemsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "removedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of details affected."
+        }
+      },
+      "description": "Remove items response."
+    },
+    "v1SkippedItem": {
+      "type": "object",
+      "properties": {
+        "itemCode": {
+          "type": "string",
+          "description": "Item code that was skipped."
+        },
+        "owningGroupHeadId": {
+          "type": "string",
+          "description": "Owning group head UUID."
+        },
+        "owningGroupDetailId": {
+          "type": "string",
+          "description": "Owning detail UUID."
+        },
+        "owningGroupCode": {
+          "type": "string",
+          "description": "Owning group code (for UI display)."
+        }
+      },
+      "description": "SkippedItem captures items rejected by AddItems because they already belong\nto another active group."
+    },
+    "v1UngroupedItem": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM)."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Item code."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Item name."
+        },
+        "itemTypeCode": {
+          "type": "string",
+          "description": "Item type code."
+        },
+        "gradeCode": {
+          "type": "string",
+          "description": "Grade code."
+        },
+        "itemGrade": {
+          "type": "string",
+          "description": "Item grade."
+        },
+        "uomCode": {
+          "type": "string",
+          "description": "UOM code."
+        },
+        "consVal": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS stage value."
+        },
+        "storesVal": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES stage value."
+        },
+        "consQty": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS stage quantity."
+        },
+        "consRate": {
+          "type": "number",
+          "format": "double",
+          "description": "CONS stage rate."
+        },
+        "storesQty": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES stage quantity."
+        },
+        "storesRate": {
+          "type": "number",
+          "format": "double",
+          "description": "STORES stage rate."
+        },
+        "deptQty": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT stage quantity."
+        },
+        "deptVal": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT stage value."
+        },
+        "deptRate": {
+          "type": "number",
+          "format": "double",
+          "description": "DEPT stage rate."
+        },
+        "lastPoQty1": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_1 stage quantity."
+        },
+        "lastPoVal1": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_1 stage value."
+        },
+        "lastPoRate1": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_1 stage rate."
+        },
+        "lastPoQty2": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_2 stage quantity."
+        },
+        "lastPoVal2": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_2 stage value."
+        },
+        "lastPoRate2": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_2 stage rate."
+        },
+        "lastPoQty3": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_3 stage quantity."
+        },
+        "lastPoVal3": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_3 stage value."
+        },
+        "lastPoRate3": {
+          "type": "number",
+          "format": "double",
+          "description": "PO_3 stage rate."
+        }
+      },
+      "description": "UngroupedItem is a raw material present in the Oracle sync feed that has no\nactive RM group assignment."
+    },
+    "v1UpdateRMGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMGroupHead",
+          "description": "Updated head."
+        }
+      },
+      "description": "Update response."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

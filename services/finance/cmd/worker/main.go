@@ -13,6 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
+	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/oracle"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
@@ -54,17 +56,18 @@ func run() error {
 		Int("port", cfg.Database.Port).
 		Msg("Database connected")
 
-	// Setup Oracle.
+	// Setup Oracle (optional - graceful degradation; RM cost jobs don't need it).
 	oracleClient, err := oracle.NewClient(cfg.Oracle, log.Logger)
 	if err != nil {
-		return err
+		log.Warn().Err(err).Msg("Oracle unavailable; oracle_sync jobs will be skipped")
+		oracleClient = nil
+	} else {
+		defer closeResource("oracle", oracleClient)
+		log.Info().
+			Str("host", cfg.Oracle.Host).
+			Int("port", cfg.Oracle.Port).
+			Msg("Oracle connected")
 	}
-	defer closeResource("oracle", oracleClient)
-
-	log.Info().
-		Str("host", cfg.Oracle.Host).
-		Int("port", cfg.Oracle.Port).
-		Msg("Oracle connected")
 
 	// Setup RabbitMQ.
 	rmqConn, err := rabbitmq.NewConnection(cfg.RabbitMQ, log.Logger)
@@ -75,14 +78,35 @@ func run() error {
 
 	// Create repositories.
 	jobRepo := postgres.NewJobRepository(db)
-	oracleRepo := oracle.NewItemConsStockPORepository(oracleClient)
+	var oracleRepo *oracle.ItemConsStockPORepository
+	if oracleClient != nil {
+		oracleRepo = oracle.NewItemConsStockPORepository(oracleClient)
+	}
 	syncDataRepo := postgres.NewSyncDataRepository(db)
+	rmGroupRepo := postgres.NewRMGroupRepository(db)
+	rmCostRepo := postgres.NewRMCostRepository(db)
 
-	// Create sync handler.
-	syncHandler := oraclesync.NewSyncHandler(jobRepo, oracleRepo, syncDataRepo, log.Logger)
+	// RabbitMQ publisher (also used by sync handler to chain-trigger rm cost).
+	rmqPublisher := rabbitmq.NewPublisher(rmqConn, log.Logger)
+	rmqJobPub := rabbitmq.NewJobPublisherAdapter(rmqPublisher, log.Logger)
 
-	// Create message handler.
-	handler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+	// Create sync handler with chain publisher (only when Oracle is available).
+	var syncHandler *oraclesync.SyncHandler
+	if oracleRepo != nil {
+		syncHandler = oraclesync.NewSyncHandler(jobRepo, oracleRepo, syncDataRepo, log.Logger).
+			WithChainPublisher(rmqJobPub)
+	}
+
+	// Create rm cost calculation handler.
+	rmCostCalc := apprmcost.NewCalculateHandler(rmGroupRepo, rmCostRepo, syncDataRepo)
+	rmCostExec := apprmcost.NewExecuteHandler(jobRepo, rmCostCalc, log.Logger)
+
+	// Oracle sync message handler.
+	syncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		if syncHandler == nil {
+			log.Warn().Str("job_id", msg.JobID).Msg("Oracle sync job received but Oracle unavailable; skipping")
+			return nil
+		}
 		jobID, parseErr := uuid.Parse(msg.JobID)
 		if parseErr != nil {
 			log.Error().Err(parseErr).Str("job_id", msg.JobID).Msg("Invalid job ID in message")
@@ -91,16 +115,44 @@ func run() error {
 		return syncHandler.Execute(ctx, jobID)
 	}
 
-	// Start consumer.
-	consumer := rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueOracleSync, handler, log.Logger)
+	// RM cost calculation message handler.
+	rmCostMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		jobID, parseErr := uuid.Parse(msg.JobID)
+		if parseErr != nil {
+			log.Error().Err(parseErr).Str("job_id", msg.JobID).Msg("Invalid rm cost job ID")
+			return parseErr
+		}
+		cmd := apprmcost.ExecuteCommand{
+			JobID:         jobID,
+			Period:        msg.Period,
+			CalculatedBy:  msg.CreatedBy,
+			TriggerReason: rmcost.HistoryTriggerReason(msg.Reason),
+		}
+		if msg.GroupHeadID != "" {
+			gid, parseErr := uuid.Parse(msg.GroupHeadID)
+			if parseErr != nil {
+				log.Error().Err(parseErr).Str("group_head_id", msg.GroupHeadID).Msg("Invalid group head id in rm cost message")
+				return parseErr
+			}
+			cmd.GroupHeadID = &gid
+		}
+		return rmCostExec.Execute(ctx, cmd)
+	}
+
+	// Start consumers.
+	syncConsumer := rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueOracleSync, syncMsgHandler, log.Logger)
+	rmCostConsumer := rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostCalc, rmCostMsgHandler, log.Logger)
 
 	// Log connection close events.
 	go watchConnection(ctx, rmqConn)
 
-	// Start consuming in a goroutine.
-	errCh := make(chan error, 1)
+	// Start consuming in goroutines.
+	errCh := make(chan error, 2)
 	go func() {
-		errCh <- consumer.Start(ctx)
+		errCh <- syncConsumer.Start(ctx)
+	}()
+	go func() {
+		errCh <- rmCostConsumer.Start(ctx)
 	}()
 
 	// Wait for shutdown signal or consumer error.
