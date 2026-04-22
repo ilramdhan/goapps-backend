@@ -225,7 +225,14 @@ jobs:
         run: |
           docker compose -f deployments/docker-compose.yaml up -d postgres redis
           echo "Waiting for PostgreSQL to be healthy..."
-          sleep 10
+          for i in $(seq 1 30); do
+            if docker compose -f deployments/docker-compose.yaml exec -T postgres pg_isready -U finance -d finance_db > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Attempt $i/30 — waiting 2s..."
+            sleep 2
+          done
 
       - name: Install golang-migrate
         run: |
