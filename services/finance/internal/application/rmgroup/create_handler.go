@@ -15,7 +15,7 @@ type CreateCommand struct {
 	Code           string
 	Name           string
 	Description    string
-	Colourant      string
+	Colorant       string
 	CIName         string
 	CostPercentage float64
 	CostPerKg      float64
@@ -52,13 +52,13 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*rmgroup
 		return nil, err
 	}
 
-	// Carry optional text fields and leading colourant/ciName via Update so the
+	// Carry optional text fields and leading colorant/ciName via Update so the
 	// single code path enforces validation and audit stamping.
-	if cmd.Colourant != "" || cmd.CIName != "" {
+	if cmd.Colorant != "" || cmd.CIName != "" {
 		in := rmgroup.UpdateInput{}
-		if cmd.Colourant != "" {
-			v := cmd.Colourant
-			in.Colourant = &v
+		if cmd.Colorant != "" {
+			v := cmd.Colorant
+			in.Colorant = &v
 		}
 		if cmd.CIName != "" {
 			v := cmd.CIName

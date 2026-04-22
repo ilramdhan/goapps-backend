@@ -104,7 +104,7 @@ func buildGroupsSheet(f *excelize.File, heads []*rmgroup.Head) error {
 			head.Code().String(),
 			head.Name(),
 			head.Description(),
-			head.Colourant(),
+			head.Colorant(),
 			head.CIName(),
 			head.CostPercentage(),
 			head.CostPerKg(),

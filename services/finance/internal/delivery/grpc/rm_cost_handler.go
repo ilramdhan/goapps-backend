@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
@@ -64,12 +65,12 @@ func (h *RMCostHandler) TriggerRMCostCalculation(ctx context.Context, req *finan
 		CreatedBy: getUserFromContext(ctx),
 	}
 	if req.GroupHeadId != nil && *req.GroupHeadId != "" {
-		id, err := uuid.Parse(*req.GroupHeadId)
-		if err != nil {
+		id, parseErr := uuid.Parse(*req.GroupHeadId)
+		if parseErr != nil {
 			RecordRMCostOperation(opTrigger, false)
 			return &financev1.TriggerRMCostCalculationResponse{
-				Base: ErrorResponse("400", "invalid group_head_id: "+err.Error()),
-			}, nil //nolint:nilerr // error wrapped in gRPC response proto
+				Base: ErrorResponse("400", "invalid group_head_id: "+parseErr.Error()),
+			}, nil
 		}
 		cmd.GroupHeadID = &id
 	}
@@ -100,12 +101,12 @@ func (h *RMCostHandler) CalculateRMCost(ctx context.Context, req *financev1.Calc
 		CalculatedBy:  getUserFromContext(ctx),
 	}
 	if req.GroupHeadId != nil && *req.GroupHeadId != "" {
-		id, err := uuid.Parse(*req.GroupHeadId)
-		if err != nil {
+		id, parseErr := uuid.Parse(*req.GroupHeadId)
+		if parseErr != nil {
 			RecordRMCostOperation(opCalculate, false)
 			return &financev1.CalculateRMCostResponse{
-				Base: ErrorResponse("400", "invalid group_head_id: "+err.Error()),
-			}, nil //nolint:nilerr // error wrapped in gRPC response proto
+				Base: ErrorResponse("400", "invalid group_head_id: "+parseErr.Error()),
+			}, nil
 		}
 		cmd.GroupHeadID = &id
 	}
@@ -261,12 +262,12 @@ func (h *RMCostHandler) ExportRMCosts(ctx context.Context, req *financev1.Export
 		Search: req.Search,
 	}
 	if req.GroupHeadId != nil && *req.GroupHeadId != "" {
-		id, err := uuid.Parse(*req.GroupHeadId)
-		if err != nil {
+		id, parseErr := uuid.Parse(*req.GroupHeadId)
+		if parseErr != nil {
 			RecordRMCostOperation(opExport, false)
 			return &financev1.ExportRMCostsResponse{
-				Base: ErrorResponse("400", "invalid group_head_id: "+err.Error()),
-			}, nil //nolint:nilerr // error wrapped in gRPC response proto
+				Base: ErrorResponse("400", "invalid group_head_id: "+parseErr.Error()),
+			}, nil
 		}
 		query.GroupHeadID = &id
 	}

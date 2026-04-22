@@ -209,7 +209,7 @@ func TestHead_Update_FieldChanges(t *testing.T) {
 
 	newName := "Updated"
 	newDescription := "desc"
-	newColourant := "red"
+	newColorant := "red"
 	newCI := "ci"
 	newCostPct := 20.0
 	newCostPerKg := 200.0
@@ -219,7 +219,7 @@ func TestHead_Update_FieldChanges(t *testing.T) {
 	err := h.Update(rmgroup.UpdateInput{
 		Name:           &newName,
 		Description:    &newDescription,
-		Colourant:      &newColourant,
+		Colorant:       &newColorant,
 		CIName:         &newCI,
 		CostPercentage: &newCostPct,
 		CostPerKg:      &newCostPerKg,
@@ -229,7 +229,7 @@ func TestHead_Update_FieldChanges(t *testing.T) {
 
 	assert.Equal(t, newName, h.Name())
 	assert.Equal(t, newDescription, h.Description())
-	assert.Equal(t, newColourant, h.Colourant())
+	assert.Equal(t, newColorant, h.Colorant())
 	assert.Equal(t, newCI, h.CIName())
 	assert.Equal(t, newCostPct, h.CostPercentage())
 	assert.Equal(t, newCostPerKg, h.CostPerKg())

@@ -75,7 +75,7 @@ type Repository interface {
 
 // ListFilter describes pagination, search, and sort options for ListHeads.
 type ListFilter struct {
-	// Search matches against code, name, description, colourant, ci_name.
+	// Search matches against code, name, description, colorant, ci_name.
 	Search string
 
 	// IsActive filters by the is_active flag when non-nil.

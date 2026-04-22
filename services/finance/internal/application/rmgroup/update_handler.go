@@ -18,7 +18,7 @@ type UpdateCommand struct {
 
 	Name           *string
 	Description    *string
-	Colourant      *string
+	Colorant       *string
 	CIName         *string
 	CostPercentage *float64
 	CostPerKg      *float64
@@ -82,7 +82,7 @@ func buildHeadUpdateInput(cmd UpdateCommand) (rmgroup.UpdateInput, error) {
 	in := rmgroup.UpdateInput{
 		Name:                   cmd.Name,
 		Description:            cmd.Description,
-		Colourant:              cmd.Colourant,
+		Colorant:               cmd.Colorant,
 		CIName:                 cmd.CIName,
 		CostPercentage:         cmd.CostPercentage,
 		CostPerKg:              cmd.CostPerKg,

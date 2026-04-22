@@ -42,7 +42,7 @@ func (r *RMGroupRepository) CreateHead(ctx context.Context, head *rmgroup.Head) 
 		`
 		_, err := tx.ExecContext(ctx, query,
 			head.ID(), head.Code().String(), head.Name(), head.Description(),
-			nullableString(head.Colourant()), nullableString(head.CIName()),
+			nullableString(head.Colorant()), nullableString(head.CIName()),
 			head.CostPercentage(), head.CostPerKg(),
 			head.FlagValuation().String(), head.FlagMarketing().String(), head.FlagSimulation().String(),
 			head.InitValValuation(), head.InitValMarketing(), head.InitValSimulation(),
@@ -120,7 +120,7 @@ func (r *RMGroupRepository) ListHeads(ctx context.Context, filter rmgroup.ListFi
 	if err != nil {
 		return nil, 0, fmt.Errorf("list rm group heads: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer closeRows(rows)
 
 	var heads []*rmgroup.Head
 	for rows.Next() {
@@ -150,7 +150,7 @@ func (r *RMGroupRepository) ListAllHeads(ctx context.Context, activeFilter *bool
 	if err != nil {
 		return nil, fmt.Errorf("list all rm group heads: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer closeRows(rows)
 
 	var out []*rmgroup.Head
 	for rows.Next() {
@@ -180,7 +180,7 @@ func (r *RMGroupRepository) UpdateHead(ctx context.Context, head *rmgroup.Head) 
 		`
 		res, err := tx.ExecContext(ctx, query,
 			head.ID(), head.Name(), head.Description(),
-			nullableString(head.Colourant()), nullableString(head.CIName()),
+			nullableString(head.Colorant()), nullableString(head.CIName()),
 			head.CostPercentage(), head.CostPerKg(),
 			head.FlagValuation().String(), head.FlagMarketing().String(), head.FlagSimulation().String(),
 			head.InitValValuation(), head.InitValMarketing(), head.InitValSimulation(),
@@ -298,7 +298,7 @@ type headDTO struct {
 	Code              string
 	Name              string
 	Description       sql.NullString
-	Colourant         sql.NullString
+	Colorant          sql.NullString
 	CIName            sql.NullString
 	CostPercentage    float64
 	CostPerKg         float64
@@ -336,7 +336,7 @@ func (d *headDTO) toEntity() (*rmgroup.Head, error) {
 	}
 	return rmgroup.ReconstructHead(
 		d.ID, code, d.Name,
-		nullStringVal(d.Description), nullStringVal(d.Colourant), nullStringVal(d.CIName),
+		nullStringVal(d.Description), nullStringVal(d.Colorant), nullStringVal(d.CIName),
 		d.CostPercentage, d.CostPerKg,
 		flagV, flagM, flagS,
 		nullFloatPtr(d.InitValValuation), nullFloatPtr(d.InitValMarketing), nullFloatPtr(d.InitValSimulation),
@@ -349,7 +349,7 @@ func (d *headDTO) toEntity() (*rmgroup.Head, error) {
 func (r *RMGroupRepository) scanHead(row *sql.Row) (*rmgroup.Head, error) {
 	var d headDTO
 	err := row.Scan(
-		&d.ID, &d.Code, &d.Name, &d.Description, &d.Colourant, &d.CIName,
+		&d.ID, &d.Code, &d.Name, &d.Description, &d.Colorant, &d.CIName,
 		&d.CostPercentage, &d.CostPerKg,
 		&d.FlagValuation, &d.FlagMarketing, &d.FlagSimulation,
 		&d.InitValValuation, &d.InitValMarketing, &d.InitValSimulation,
@@ -368,7 +368,7 @@ func (r *RMGroupRepository) scanHead(row *sql.Row) (*rmgroup.Head, error) {
 func (r *RMGroupRepository) scanHeadRow(rows *sql.Rows) (*rmgroup.Head, error) {
 	var d headDTO
 	err := rows.Scan(
-		&d.ID, &d.Code, &d.Name, &d.Description, &d.Colourant, &d.CIName,
+		&d.ID, &d.Code, &d.Name, &d.Description, &d.Colorant, &d.CIName,
 		&d.CostPercentage, &d.CostPerKg,
 		&d.FlagValuation, &d.FlagMarketing, &d.FlagSimulation,
 		&d.InitValValuation, &d.InitValMarketing, &d.InitValSimulation,

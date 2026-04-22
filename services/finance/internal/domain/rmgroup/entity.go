@@ -18,7 +18,7 @@ type Head struct {
 	code              Code
 	name              string
 	description       string
-	colourant         string //nolint:misspell // domain term (British English)
+	colorant          string
 	ciName            string
 	costPercentage    float64
 	costPerKg         float64
@@ -85,7 +85,7 @@ func NewHead(
 func ReconstructHead(
 	id uuid.UUID,
 	code Code,
-	name, description, colourant, ciName string, //nolint:misspell // domain term
+	name, description, colorant, ciName string,
 	costPercentage, costPerKg float64,
 	flagValuation, flagMarketing, flagSimulation Flag,
 	initValValuation, initValMarketing, initValSimulation *float64,
@@ -102,7 +102,7 @@ func ReconstructHead(
 		code:              code,
 		name:              name,
 		description:       description,
-		colourant:         colourant, //nolint:misspell // domain term
+		colorant:          colorant,
 		ciName:            ciName,
 		costPercentage:    costPercentage,
 		costPerKg:         costPerKg,
@@ -136,8 +136,8 @@ func (h *Head) Name() string { return h.name }
 // Description returns the free-text description.
 func (h *Head) Description() string { return h.description }
 
-// Colourant returns the optional colourant tag. //nolint:misspell // domain term
-func (h *Head) Colourant() string { return h.colourant } //nolint:misspell // domain term
+// Colorant returns the optional colorant tag.
+func (h *Head) Colorant() string { return h.colorant }
 
 // CIName returns the optional CI name tag.
 func (h *Head) CIName() string { return h.ciName }
@@ -200,7 +200,7 @@ func (h *Head) IsDeleted() bool { return h.deletedAt != nil }
 type UpdateInput struct {
 	Name              *string
 	Description       *string
-	Colourant         *string //nolint:misspell // domain term
+	Colorant          *string
 	CIName            *string
 	CostPercentage    *float64
 	CostPerKg         *float64
@@ -232,7 +232,7 @@ func (h *Head) Update(in UpdateInput, updatedBy string) error {
 	if err := h.applyNameField(in.Name); err != nil {
 		return err
 	}
-	h.applyTextFields(in.Description, in.Colourant, in.CIName)
+	h.applyTextFields(in.Description, in.Colorant, in.CIName)
 	if err := h.applyCostFields(in.CostPercentage, in.CostPerKg); err != nil {
 		return err
 	}
@@ -269,12 +269,12 @@ func (h *Head) applyNameField(name *string) error {
 	return nil
 }
 
-func (h *Head) applyTextFields(description, colourant, ciName *string) {
+func (h *Head) applyTextFields(description, colorant, ciName *string) {
 	if description != nil {
 		h.description = *description
 	}
-	if colourant != nil {
-		h.colourant = *colourant
+	if colorant != nil {
+		h.colorant = *colorant
 	}
 	if ciName != nil {
 		h.ciName = *ciName

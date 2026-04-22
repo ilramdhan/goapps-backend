@@ -206,7 +206,7 @@ func (h *ImportHandler) createHead(
 		return fmt.Errorf("new head: %w", err)
 	}
 
-	// Apply optional fields via Update (colourant, flags, inits, is_active).
+	// Apply optional fields via Update (colorant, flags, inits, is_active).
 	in, perr := parseGroupUpdateInput(row)
 	if perr != nil {
 		return perr
@@ -236,7 +236,7 @@ func parseGroupUpdateInput(row []string) (rmgroup.UpdateInput, error) {
 		in.Description = &v
 	}
 	if v := colStr(row, 3); v != "" {
-		in.Colourant = &v
+		in.Colorant = &v
 	}
 	if v := colStr(row, 4); v != "" {
 		in.CIName = &v
@@ -344,7 +344,7 @@ func (h *ImportHandler) importItemsSheet(
 	return nil
 }
 
-func (h *ImportHandler) importItemRow( //nolint:gocyclo // sequential validation steps
+func (h *ImportHandler) importItemRow( //nolint:gocyclo,gocognit // sequential validation steps
 	ctx context.Context,
 	row []string,
 	cmd ImportCommand,

@@ -216,7 +216,7 @@ func (r *RMGroupRepository) listDetails(ctx context.Context, query string, args 
 	if err != nil {
 		return nil, fmt.Errorf("list rm group details: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer closeRows(rows)
 
 	var out []*rmgroup.Detail
 	for rows.Next() {
