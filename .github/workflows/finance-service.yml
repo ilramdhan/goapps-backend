@@ -223,12 +223,17 @@ jobs:
       - name: Start infrastructure with Docker Compose
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          docker compose -f deployments/docker-compose.yaml up -d postgres redis
-          echo "Waiting for PostgreSQL to be healthy..."
+          docker compose -f deployments/docker-compose.yaml up -d --wait postgres redis || true
+          echo "Verifying PostgreSQL is reachable on host port 5434..."
           for i in $(seq 1 30); do
-            if docker compose -f deployments/docker-compose.yaml exec -T postgres pg_isready -U finance -d finance_db > /dev/null 2>&1; then
+            if pg_isready -h localhost -p 5434 -U finance > /dev/null 2>&1; then
               echo "PostgreSQL is ready!"
               break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "PostgreSQL failed to become ready — dumping container logs:"
+              docker compose -f deployments/docker-compose.yaml logs postgres
+              exit 1
             fi
             echo "Attempt $i/30 — waiting 2s..."
             sleep 2
