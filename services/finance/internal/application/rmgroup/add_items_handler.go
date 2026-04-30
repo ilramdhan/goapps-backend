@@ -31,6 +31,12 @@ type AddItemInput struct {
 	MarketPercentage *float64
 	MarketValueRp    *float64
 	SortOrder        int32
+	// V2 valuation inputs.
+	ValuationFreightRate    *float64
+	ValuationAntiDumpingPct *float64
+	ValuationDutyPct        *float64
+	ValuationTransportRate  *float64
+	ValuationDefaultValue   *float64
 }
 
 // AddItemsResult summarizes the outcome of an add-items call.
@@ -191,10 +197,26 @@ func applyItemMetadata(detail *rmgroup.Detail, in AddItemInput, createdBy string
 		v := in.SortOrder
 		upd.SortOrder = &v
 	}
-	if upd.ItemName == nil && upd.ItemTypeCode == nil && upd.GradeCode == nil &&
-		upd.ItemGrade == nil && upd.UOMCode == nil && upd.SortOrder == nil &&
-		upd.MarketPercentage == nil && upd.MarketValueRp == nil {
-		return nil
+	hasV1Patch := upd.ItemName != nil || upd.ItemTypeCode != nil || upd.GradeCode != nil ||
+		upd.ItemGrade != nil || upd.UOMCode != nil || upd.SortOrder != nil ||
+		upd.MarketPercentage != nil || upd.MarketValueRp != nil
+	if hasV1Patch {
+		if err := detail.Update(upd, createdBy); err != nil {
+			return err
+		}
 	}
-	return detail.Update(upd, createdBy)
+	// V2 valuation inputs (apply if any provided).
+	if in.ValuationFreightRate != nil || in.ValuationAntiDumpingPct != nil ||
+		in.ValuationDutyPct != nil || in.ValuationTransportRate != nil || in.ValuationDefaultValue != nil {
+		if err := detail.AttachValuationInputs(rmgroup.ValuationInputs{
+			FreightRate:    in.ValuationFreightRate,
+			AntiDumpingPct: in.ValuationAntiDumpingPct,
+			DutyPct:        in.ValuationDutyPct,
+			TransportRate:  in.ValuationTransportRate,
+			DefaultValue:   in.ValuationDefaultValue,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

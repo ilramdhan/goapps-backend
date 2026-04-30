@@ -16,14 +16,17 @@ import (
 // RMCostHandler implements the RMCostServiceServer interface.
 type RMCostHandler struct {
 	financev1.UnimplementedRMCostServiceServer
-	triggerHandler   *apprmcost.TriggerHandler
-	calculateHandler *apprmcost.CalculateHandler
-	getHandler       *apprmcost.GetHandler
-	listHandler      *apprmcost.ListHandler
-	historyHandler   *apprmcost.HistoryHandler
-	periodsHandler   *apprmcost.PeriodsHandler
-	exportHandler    *apprmcost.ExportHandler
-	validationHelper *ValidationHelper
+	triggerHandler    *apprmcost.TriggerHandler
+	calculateHandler  *apprmcost.CalculateHandler
+	getHandler        *apprmcost.GetHandler
+	listHandler       *apprmcost.ListHandler
+	historyHandler    *apprmcost.HistoryHandler
+	periodsHandler    *apprmcost.PeriodsHandler
+	exportHandler     *apprmcost.ExportHandler
+	costDetailRepo    rmcostdomain.CostDetailRepository
+	editInputsHandler *apprmcost.EditInputsHandler
+	editFixRateHandler *apprmcost.EditFixRateHandler
+	validationHelper  *ValidationHelper
 }
 
 // NewRMCostHandler builds an RMCostHandler.
@@ -35,20 +38,26 @@ func NewRMCostHandler(
 	history *apprmcost.HistoryHandler,
 	periods *apprmcost.PeriodsHandler,
 	export *apprmcost.ExportHandler,
+	costDetailRepo rmcostdomain.CostDetailRepository,
+	editInputs *apprmcost.EditInputsHandler,
+	editFixRate *apprmcost.EditFixRateHandler,
 ) (*RMCostHandler, error) {
 	v, err := NewValidationHelper()
 	if err != nil {
 		return nil, err
 	}
 	return &RMCostHandler{
-		triggerHandler:   trigger,
-		calculateHandler: calculate,
-		getHandler:       get,
-		listHandler:      list,
-		historyHandler:   history,
-		periodsHandler:   periods,
-		exportHandler:    export,
-		validationHelper: v,
+		triggerHandler:     trigger,
+		calculateHandler:   calculate,
+		getHandler:         get,
+		listHandler:        list,
+		historyHandler:     history,
+		periodsHandler:     periods,
+		exportHandler:      export,
+		costDetailRepo:     costDetailRepo,
+		editInputsHandler:  editInputs,
+		editFixRateHandler: editFixRate,
+		validationHelper:   v,
 	}, nil
 }
 
@@ -321,7 +330,63 @@ func rmCostToProto(c *rmcostdomain.Cost) *financev1.RMCost {
 	if by := c.UpdatedBy(); by != nil {
 		out.Audit.UpdatedBy = *by
 	}
+	// V2 fields.
+	if v2 := c.V2Inputs(); v2 != nil {
+		out.MarketingFreightRate = v2.MarketingFreightRate
+		out.MarketingAntiDumpingPct = v2.MarketingAntiDumpingPct
+		out.MarketingDutyPct = v2.MarketingDutyPct
+		out.MarketingTransportRate = v2.MarketingTransportRate
+		out.MarketingDefaultValue = v2.MarketingDefaultValue
+		out.SimulationRate = v2.SimulationRate
+		out.ValuationFlag = parseProtoValuationFlag(v2.ValuationFlag)
+		out.MarketingFlag = parseProtoMarketingFlag(v2.MarketingFlag)
+	}
+	if r := c.V2Rates(); r != nil {
+		out.ClRate = r.CL
+		out.SlRate = r.SL
+		out.FlRate = r.FL
+		out.SpRate = r.SP
+		out.PpRate = r.PP
+		out.FpRate = r.FP
+		out.CrRate = r.CR
+		out.SrRate = r.SR
+		out.PrRate = r.PR
+	}
 	return out
+}
+
+// parseProtoValuationFlag maps the string form ("AUTO"/"CR"/...) to the proto enum.
+func parseProtoValuationFlag(s string) financev1.RMValuationFlag {
+	switch s {
+	case "CR":
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_CR
+	case "SR":
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_SR
+	case "PR":
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_PR
+	case "CL":
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_CL
+	case "SL":
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_SL
+	case "FL":
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_FL
+	default:
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_UNSPECIFIED
+	}
+}
+
+// parseProtoMarketingFlag maps "AUTO"/"SP"/... to the proto enum.
+func parseProtoMarketingFlag(s string) financev1.RMMarketingFlag {
+	switch s {
+	case "SP":
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_SP
+	case "PP":
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_PP
+	case "FP":
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_FP
+	default:
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_UNSPECIFIED
+	}
 }
 
 func rmCostHistoryToProto(h *rmcostdomain.History) *financev1.RMCostHistory {

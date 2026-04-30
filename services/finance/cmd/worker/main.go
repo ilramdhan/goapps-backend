@@ -85,6 +85,7 @@ func run() error { //nolint:gocognit // linear setup function
 	syncDataRepo := postgres.NewSyncDataRepository(db)
 	rmGroupRepo := postgres.NewRMGroupRepository(db)
 	rmCostRepo := postgres.NewRMCostRepository(db)
+	rmCostDetailRepo := postgres.NewRMCostDetailRepository(db)
 
 	// RabbitMQ publisher (also used by sync handler to chain-trigger rm cost).
 	rmqPublisher := rabbitmq.NewPublisher(rmqConn, log.Logger)
@@ -97,9 +98,9 @@ func run() error { //nolint:gocognit // linear setup function
 			WithChainPublisher(rmqJobPub)
 	}
 
-	// Create rm cost calculation handler.
-	rmCostCalc := apprmcost.NewCalculateHandler(rmGroupRepo, rmCostRepo, syncDataRepo)
-	rmCostExec := apprmcost.NewExecuteHandler(jobRepo, rmCostCalc, log.Logger)
+	// Create rm cost calculation handler (V2 engine).
+	rmCostCalcV2 := apprmcost.NewCalculateHandlerV2(rmGroupRepo, rmCostRepo, rmCostDetailRepo, syncDataRepo, syncDataRepo)
+	rmCostExec := apprmcost.NewExecuteHandlerV2(jobRepo, rmGroupRepo, rmCostCalcV2, log.Logger)
 
 	// Oracle sync message handler.
 	syncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {

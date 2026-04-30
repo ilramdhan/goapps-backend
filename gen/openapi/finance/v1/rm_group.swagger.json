@@ -593,6 +593,53 @@
           "RMGroupService"
         ]
       }
+    },
+    "/api/v1/finance/rm-groups/{groupHeadId}/items/{groupDetailId}": {
+      "put": {
+        "summary": "V2: UpdateGroupItem updates one detail row's valuation fields + sort/active.",
+        "operationId": "RMGroupService_UpdateGroupItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateGroupItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupHeadId",
+            "description": "Owning group head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupDetailId",
+            "description": "Detail UUID to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMGroupServiceUpdateGroupItemBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMGroupService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -648,6 +695,55 @@
         }
       },
       "description": "Remove items from a group by detail IDs. The mode controls whether the rows\nare deactivated (preserved for history) or soft-deleted."
+    },
+    "RMGroupServiceUpdateGroupItemBody": {
+      "type": "object",
+      "properties": {
+        "valuationFreightRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationAntiDumpingPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationDutyPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationTransportRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationDefaultValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "clearValuationFreightRate": {
+          "type": "boolean",
+          "description": "Clear flags for nullable valuation fields (force NULL)."
+        },
+        "clearValuationAntiDumpingPct": {
+          "type": "boolean"
+        },
+        "clearValuationDutyPct": {
+          "type": "boolean"
+        },
+        "clearValuationTransportRate": {
+          "type": "boolean"
+        },
+        "clearValuationDefaultValue": {
+          "type": "boolean"
+        }
+      },
+      "description": "V2: Partial update of one detail row's valuation fields + sort_order/is_active."
     },
     "RMGroupServiceUpdateRMGroupBody": {
       "type": "object",
@@ -720,6 +816,39 @@
         "clearInitValSimulation": {
           "type": "boolean",
           "description": "When true, force init_val_simulation to NULL."
+        },
+        "marketingFreightRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing freight rate."
+        },
+        "marketingAntiDumpingPct": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing anti-dumping % (whole percent)."
+        },
+        "marketingDefaultValue": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing default value."
+        },
+        "valuationFlag": {
+          "$ref": "#/definitions/v1RMValuationFlag",
+          "description": "V2: Valuation flag."
+        },
+        "marketingFlag": {
+          "$ref": "#/definitions/v1RMMarketingFlag",
+          "description": "V2: Marketing flag."
+        },
+        "clearMarketingFreightRate": {
+          "type": "boolean",
+          "description": "V2 clear flags for nullable marketing fields."
+        },
+        "clearMarketingAntiDumpingPct": {
+          "type": "boolean"
+        },
+        "clearMarketingDefaultValue": {
+          "type": "boolean"
         }
       },
       "description": "Partial update of an RM group head. Absent fields leave state unchanged.\nClear_* booleans explicitly set nullable fields to NULL."
@@ -772,6 +901,27 @@
         "gradeCode": {
           "type": "string",
           "description": "Grade code (optional). Empty matches the variant with NULL / empty\ngrade_code in the sync feed. Use \"\" when the row has a single variant."
+        },
+        "valuationFreightRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2 optional valuation inputs (per-detail). Backend stores NULL when omitted."
+        },
+        "valuationAntiDumpingPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationDutyPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationTransportRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationDefaultValue": {
+          "type": "number",
+          "format": "double"
         }
       },
       "description": "AddItemSelection identifies one RM variant to assign to a group. The\n(item_code, grade_code) pair is the natural key: an item_code with\nmultiple grade_code variants in the sync feed represents distinct\nrows that can be grouped independently."
@@ -876,12 +1026,35 @@
         "costPercentage": {
           "type": "number",
           "format": "double",
-          "description": "Cost percentage multiplier (\u003e= 0)."
+          "description": "Cost percentage multiplier (\u003e= 0). Aliased as Marketing Duty %."
         },
         "costPerKg": {
           "type": "number",
           "format": "double",
-          "description": "Per-kg overhead (\u003e= 0)."
+          "description": "Per-kg overhead (\u003e= 0). Aliased as Marketing Transport Rate."
+        },
+        "marketingFreightRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing freight rate."
+        },
+        "marketingAntiDumpingPct": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing anti-dumping percentage (whole percent)."
+        },
+        "marketingDefaultValue": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing default value."
+        },
+        "valuationFlag": {
+          "$ref": "#/definitions/v1RMValuationFlag",
+          "description": "V2: Valuation flag."
+        },
+        "marketingFlag": {
+          "$ref": "#/definitions/v1RMMarketingFlag",
+          "description": "V2: Marketing flag."
         }
       },
       "description": "Create a new RM group head."
@@ -1273,9 +1446,34 @@
           "type": "boolean",
           "description": "Placeholder row (excluded from aggregation regardless of is_active)."
         },
+        "valuationFreightRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Valuation freight rate (per detail; feeds CL/SL/FL formulas)."
+        },
+        "valuationAntiDumpingPct": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Valuation anti-dumping percentage (decimal, e.g. 0.10 = 10%)."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
+        },
+        "valuationDutyPct": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Valuation duty percentage (decimal)."
+        },
+        "valuationTransportRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Valuation transport rate (per detail)."
+        },
+        "valuationDefaultValue": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Valuation default value (per detail; drives FL)."
         }
       },
       "description": "RMGroupDetail is one item's membership in an RM group."
@@ -1366,6 +1564,29 @@
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
+        },
+        "marketingFreightRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing freight rate (added to base rate before duty/anti)."
+        },
+        "marketingAntiDumpingPct": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing anti-dumping percentage (whole percent, e.g. 5 = 5%)."
+        },
+        "marketingDefaultValue": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing default value (drives FP projection when set)."
+        },
+        "valuationFlag": {
+          "$ref": "#/definitions/v1RMValuationFlag",
+          "description": "V2: Valuation flag (CR/SR/PR/CL/SL/FL) — replaces flag_valuation semantics\nfor the new engine. When UNSPECIFIED uses AUTO fallback CL→SL→FL."
+        },
+        "marketingFlag": {
+          "$ref": "#/definitions/v1RMMarketingFlag",
+          "description": "V2: Marketing flag (SP/PP/FP) — replaces flag_marketing semantics.\nWhen UNSPECIFIED uses AUTO fallback SP→PP→FP."
         }
       },
       "description": "RMGroupHead is the aggregate root representing an RM group's cost configuration."
@@ -1503,6 +1724,31 @@
         }
       },
       "description": "RMGroupItemRates is one row per item currently in a group with its per-stage\nOracle sync rates for a given period. Items with no sync row for the period\nstill appear (all rates 0)."
+    },
+    "v1RMMarketingFlag": {
+      "type": "string",
+      "enum": [
+        "RM_MARKETING_FLAG_UNSPECIFIED",
+        "RM_MARKETING_FLAG_SP",
+        "RM_MARKETING_FLAG_PP",
+        "RM_MARKETING_FLAG_FP"
+      ],
+      "default": "RM_MARKETING_FLAG_UNSPECIFIED",
+      "description": "RMMarketingFlag selects which computed marketing projection becomes\n`cost_mark`. UNSPECIFIED behaves as AUTO (SP → PP → FP fallback).\n\n - RM_MARKETING_FLAG_UNSPECIFIED: Default zero value. Treated as AUTO (SP→PP→FP fallback).\n - RM_MARKETING_FLAG_SP: Projection Stock Landed Cost.\n - RM_MARKETING_FLAG_PP: Projection PO Landed Cost.\n - RM_MARKETING_FLAG_FP: Projection Fix Value Landed Cost."
+    },
+    "v1RMValuationFlag": {
+      "type": "string",
+      "enum": [
+        "RM_VALUATION_FLAG_UNSPECIFIED",
+        "RM_VALUATION_FLAG_CR",
+        "RM_VALUATION_FLAG_SR",
+        "RM_VALUATION_FLAG_PR",
+        "RM_VALUATION_FLAG_CL",
+        "RM_VALUATION_FLAG_SL",
+        "RM_VALUATION_FLAG_FL"
+      ],
+      "default": "RM_VALUATION_FLAG_UNSPECIFIED",
+      "description": "RMValuationFlag selects which computed rate becomes `cost_val` in the\nRM Cost row. UNSPECIFIED behaves as AUTO (CL → SL → FL fallback, where\nFL incorporates the per-detail valuation_default_value).\n\n - RM_VALUATION_FLAG_UNSPECIFIED: Default zero value. Treated as AUTO (CL→SL→FL fallback).\n - RM_VALUATION_FLAG_CR: Use Consumption Rate (CR) — group-total cons_val / cons_qty.\n - RM_VALUATION_FLAG_SR: Use Stock Rate (SR) — group-total stock_val / stock_qty.\n - RM_VALUATION_FLAG_PR: Use PO Rate (PR) — group-total po_val / po_qty.\n - RM_VALUATION_FLAG_CL: Use Consumption Landed Cost (CL) — group-total CL aggregate.\n - RM_VALUATION_FLAG_SL: Use Stock Landed Cost (SL) — group-total SL aggregate.\n - RM_VALUATION_FLAG_FL: Use Fix Landed Cost (FL) — MAX of per-detail FL."
     },
     "v1RemoveItemsMode": {
       "type": "string",
@@ -1674,6 +1920,18 @@
         }
       },
       "description": "UngroupedItem is a raw material present in the Oracle sync feed that has no\nactive RM group assignment."
+    },
+    "v1UpdateGroupItemResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMGroupDetail"
+        }
+      },
+      "description": "V2: Update one detail response."
     },
     "v1UpdateRMGroupResponse": {
       "type": "object",

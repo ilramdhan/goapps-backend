@@ -94,6 +94,8 @@ func run() error {
 	syncDataRepo := postgres.NewSyncDataRepository(db)
 	rmGroupRepo := postgres.NewRMGroupRepository(db)
 	rmCostRepo := postgres.NewRMCostRepository(db)
+	rmCostDetailRepo := postgres.NewRMCostDetailRepository(db)
+	rmCostInputsRepo := postgres.NewRMCostInputsRepository(db)
 
 	// Setup oracle sync handlers
 	triggerHandler := oraclesync.NewTriggerHandler(jobRepo, oracleSyncPublisher)
@@ -156,8 +158,12 @@ func run() error {
 	rmCostPeriods := apprmcost.NewPeriodsHandler(rmCostRepo)
 	rmCostExport := apprmcost.NewExportHandler(rmCostRepo)
 
+	editInputsHandler := apprmcost.NewEditInputsHandler(rmCostRepo, rmCostInputsRepo)
+	editFixRateHandler := apprmcost.NewEditFixRateHandler(rmCostRepo, rmCostDetailRepo, rmCostInputsRepo)
+
 	rmCostHandler, err := grpcdelivery.NewRMCostHandler(
 		rmCostTrigger, rmCostCalculate, rmCostGet, rmCostList, rmCostHistory, rmCostPeriods, rmCostExport,
+		rmCostDetailRepo, editInputsHandler, editFixRateHandler,
 	)
 	if err != nil {
 		return err

@@ -26,6 +26,9 @@ const (
 	RMCostService_ListRMCostHistory_FullMethodName        = "/finance.v1.RMCostService/ListRMCostHistory"
 	RMCostService_ListRMCostPeriods_FullMethodName        = "/finance.v1.RMCostService/ListRMCostPeriods"
 	RMCostService_ExportRMCosts_FullMethodName            = "/finance.v1.RMCostService/ExportRMCosts"
+	RMCostService_ListCostDetails_FullMethodName          = "/finance.v1.RMCostService/ListCostDetails"
+	RMCostService_UpdateRMCostInputs_FullMethodName       = "/finance.v1.RMCostService/UpdateRMCostInputs"
+	RMCostService_UpdateCostDetailFixRate_FullMethodName  = "/finance.v1.RMCostService/UpdateCostDetailFixRate"
 )
 
 // RMCostServiceClient is the client API for RMCostService service.
@@ -49,6 +52,17 @@ type RMCostServiceClient interface {
 	ListRMCostPeriods(ctx context.Context, in *ListRMCostPeriodsRequest, opts ...grpc.CallOption) (*ListRMCostPeriodsResponse, error)
 	// ExportRMCosts exports cost rows matching the filter to a single-sheet Excel.
 	ExportRMCosts(ctx context.Context, in *ExportRMCostsRequest, opts ...grpc.CallOption) (*ExportRMCostsResponse, error)
+	// V2: ListCostDetails returns per-item snapshot rows for a cost row.
+	ListCostDetails(ctx context.Context, in *ListCostDetailsRequest, opts ...grpc.CallOption) (*ListCostDetailsResponse, error)
+	// V2: UpdateRMCostInputs edits any of the per-row marketing snapshot inputs
+	// (freight/anti/duty/transport/default), simulation_rate, or flags. Triggers
+	// in-place recompute of SP/PP/FP/cost_mark and cost_sim from stored snapshots.
+	// No full pipeline recalc required.
+	UpdateRMCostInputs(ctx context.Context, in *UpdateRMCostInputsRequest, opts ...grpc.CallOption) (*UpdateRMCostInputsResponse, error)
+	// V2: UpdateCostDetailFixRate sets fix_rate on one detail row, recomputes
+	// its fix-stage chain, recomputes parent cost row's fl_rate (=MAX) and
+	// cost_val if valuation_flag is AUTO/FL.
+	UpdateCostDetailFixRate(ctx context.Context, in *UpdateCostDetailFixRateRequest, opts ...grpc.CallOption) (*UpdateCostDetailFixRateResponse, error)
 }
 
 type rMCostServiceClient struct {
@@ -129,6 +143,36 @@ func (c *rMCostServiceClient) ExportRMCosts(ctx context.Context, in *ExportRMCos
 	return out, nil
 }
 
+func (c *rMCostServiceClient) ListCostDetails(ctx context.Context, in *ListCostDetailsRequest, opts ...grpc.CallOption) (*ListCostDetailsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCostDetailsResponse)
+	err := c.cc.Invoke(ctx, RMCostService_ListCostDetails_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rMCostServiceClient) UpdateRMCostInputs(ctx context.Context, in *UpdateRMCostInputsRequest, opts ...grpc.CallOption) (*UpdateRMCostInputsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateRMCostInputsResponse)
+	err := c.cc.Invoke(ctx, RMCostService_UpdateRMCostInputs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rMCostServiceClient) UpdateCostDetailFixRate(ctx context.Context, in *UpdateCostDetailFixRateRequest, opts ...grpc.CallOption) (*UpdateCostDetailFixRateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateCostDetailFixRateResponse)
+	err := c.cc.Invoke(ctx, RMCostService_UpdateCostDetailFixRate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RMCostServiceServer is the server API for RMCostService service.
 // All implementations must embed UnimplementedRMCostServiceServer
 // for forward compatibility.
@@ -150,6 +194,17 @@ type RMCostServiceServer interface {
 	ListRMCostPeriods(context.Context, *ListRMCostPeriodsRequest) (*ListRMCostPeriodsResponse, error)
 	// ExportRMCosts exports cost rows matching the filter to a single-sheet Excel.
 	ExportRMCosts(context.Context, *ExportRMCostsRequest) (*ExportRMCostsResponse, error)
+	// V2: ListCostDetails returns per-item snapshot rows for a cost row.
+	ListCostDetails(context.Context, *ListCostDetailsRequest) (*ListCostDetailsResponse, error)
+	// V2: UpdateRMCostInputs edits any of the per-row marketing snapshot inputs
+	// (freight/anti/duty/transport/default), simulation_rate, or flags. Triggers
+	// in-place recompute of SP/PP/FP/cost_mark and cost_sim from stored snapshots.
+	// No full pipeline recalc required.
+	UpdateRMCostInputs(context.Context, *UpdateRMCostInputsRequest) (*UpdateRMCostInputsResponse, error)
+	// V2: UpdateCostDetailFixRate sets fix_rate on one detail row, recomputes
+	// its fix-stage chain, recomputes parent cost row's fl_rate (=MAX) and
+	// cost_val if valuation_flag is AUTO/FL.
+	UpdateCostDetailFixRate(context.Context, *UpdateCostDetailFixRateRequest) (*UpdateCostDetailFixRateResponse, error)
 	mustEmbedUnimplementedRMCostServiceServer()
 }
 
@@ -180,6 +235,15 @@ func (UnimplementedRMCostServiceServer) ListRMCostPeriods(context.Context, *List
 }
 func (UnimplementedRMCostServiceServer) ExportRMCosts(context.Context, *ExportRMCostsRequest) (*ExportRMCostsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportRMCosts not implemented")
+}
+func (UnimplementedRMCostServiceServer) ListCostDetails(context.Context, *ListCostDetailsRequest) (*ListCostDetailsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCostDetails not implemented")
+}
+func (UnimplementedRMCostServiceServer) UpdateRMCostInputs(context.Context, *UpdateRMCostInputsRequest) (*UpdateRMCostInputsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateRMCostInputs not implemented")
+}
+func (UnimplementedRMCostServiceServer) UpdateCostDetailFixRate(context.Context, *UpdateCostDetailFixRateRequest) (*UpdateCostDetailFixRateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateCostDetailFixRate not implemented")
 }
 func (UnimplementedRMCostServiceServer) mustEmbedUnimplementedRMCostServiceServer() {}
 func (UnimplementedRMCostServiceServer) testEmbeddedByValue()                       {}
@@ -328,6 +392,60 @@ func _RMCostService_ExportRMCosts_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RMCostService_ListCostDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCostDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RMCostServiceServer).ListCostDetails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RMCostService_ListCostDetails_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RMCostServiceServer).ListCostDetails(ctx, req.(*ListCostDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RMCostService_UpdateRMCostInputs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRMCostInputsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RMCostServiceServer).UpdateRMCostInputs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RMCostService_UpdateRMCostInputs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RMCostServiceServer).UpdateRMCostInputs(ctx, req.(*UpdateRMCostInputsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RMCostService_UpdateCostDetailFixRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCostDetailFixRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RMCostServiceServer).UpdateCostDetailFixRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RMCostService_UpdateCostDetailFixRate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RMCostServiceServer).UpdateCostDetailFixRate(ctx, req.(*UpdateCostDetailFixRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RMCostService_ServiceDesc is the grpc.ServiceDesc for RMCostService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -362,6 +480,18 @@ var RMCostService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExportRMCosts",
 			Handler:    _RMCostService_ExportRMCosts_Handler,
+		},
+		{
+			MethodName: "ListCostDetails",
+			Handler:    _RMCostService_ListCostDetails_Handler,
+		},
+		{
+			MethodName: "UpdateRMCostInputs",
+			Handler:    _RMCostService_UpdateRMCostInputs_Handler,
+		},
+		{
+			MethodName: "UpdateCostDetailFixRate",
+			Handler:    _RMCostService_UpdateCostDetailFixRate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

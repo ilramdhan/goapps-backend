@@ -139,6 +139,45 @@
         ]
       }
     },
+    "/api/v1/finance/rm-costs/details/{costDetailId}/fix-rate": {
+      "put": {
+        "summary": "V2: UpdateCostDetailFixRate sets fix_rate on one detail row, recomputes\nits fix-stage chain, recomputes parent cost row's fl_rate (=MAX) and\ncost_val if valuation_flag is AUTO/FL.",
+        "operationId": "RMCostService_UpdateCostDetailFixRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCostDetailFixRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "costDetailId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMCostServiceUpdateCostDetailFixRateBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
     "/api/v1/finance/rm-costs/export": {
       "get": {
         "summary": "ExportRMCosts exports cost rows matching the filter to a single-sheet Excel.",
@@ -362,9 +401,144 @@
           "RMCostService"
         ]
       }
+    },
+    "/api/v1/finance/rm-costs/{rmCostId}/details": {
+      "get": {
+        "summary": "V2: ListCostDetails returns per-item snapshot rows for a cost row.",
+        "operationId": "RMCostService_ListCostDetails",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCostDetailsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "rmCostId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/rm-costs/{rmCostId}/inputs": {
+      "put": {
+        "summary": "V2: UpdateRMCostInputs edits any of the per-row marketing snapshot inputs\n(freight/anti/duty/transport/default), simulation_rate, or flags. Triggers\nin-place recompute of SP/PP/FP/cost_mark and cost_sim from stored snapshots.\nNo full pipeline recalc required.",
+        "operationId": "RMCostService_UpdateRMCostInputs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateRMCostInputsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "rmCostId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RMCostServiceUpdateRMCostInputsBody"
+            }
+          }
+        ],
+        "tags": [
+          "RMCostService"
+        ]
+      }
     }
   },
   "definitions": {
+    "RMCostServiceUpdateCostDetailFixRateBody": {
+      "type": "object",
+      "properties": {
+        "fixRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Empty/0 clears the fix override (FL chain → 0)."
+        }
+      },
+      "description": "UpdateCostDetailFixRate sets fix_rate on one detail row."
+    },
+    "RMCostServiceUpdateRMCostInputsBody": {
+      "type": "object",
+      "properties": {
+        "marketingFreightRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "marketingAntiDumpingPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "marketingDutyPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "marketingTransportRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "marketingDefaultValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "simulationRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationFlag": {
+          "$ref": "#/definitions/v1RMValuationFlag"
+        },
+        "marketingFlag": {
+          "$ref": "#/definitions/v1RMMarketingFlag"
+        },
+        "clearMarketingFreightRate": {
+          "type": "boolean"
+        },
+        "clearMarketingAntiDumpingPct": {
+          "type": "boolean"
+        },
+        "clearMarketingDutyPct": {
+          "type": "boolean"
+        },
+        "clearMarketingTransportRate": {
+          "type": "boolean"
+        },
+        "clearMarketingDefaultValue": {
+          "type": "boolean"
+        },
+        "clearSimulationRate": {
+          "type": "boolean"
+        }
+      },
+      "description": "UpdateRMCostInputs edits the editable per-row marketing inputs, simulation\nrate, and flags. All fields optional; absent = no change. Use clear_* to\nforce a nullable field back to NULL."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -515,6 +689,22 @@
         }
       },
       "description": "Get response."
+    },
+    "v1ListCostDetailsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMCostDetail"
+          }
+        }
+      },
+      "description": "List response."
     },
     "v1ListRMCostHistoryResponse": {
       "type": "object",
@@ -692,9 +882,284 @@
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
+        },
+        "valuationFlag": {
+          "$ref": "#/definitions/v1RMValuationFlag",
+          "description": "V2: Valuation flag (CR/SR/PR/CL/SL/FL or AUTO)."
+        },
+        "marketingFlag": {
+          "$ref": "#/definitions/v1RMMarketingFlag",
+          "description": "V2: Marketing flag (SP/PP/FP or AUTO)."
+        },
+        "marketingFreightRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Marketing input snapshots at calc time."
+        },
+        "marketingAntiDumpingPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "marketingDutyPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "marketingTransportRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "marketingDefaultValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "simulationRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Editable per-row simulation rate; 0/NULL → cost_sim = 0."
+        },
+        "clRate": {
+          "type": "number",
+          "format": "double",
+          "description": "V2: Computed group-total rates (snapshots)."
+        },
+        "slRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "flRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "spRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "ppRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "fpRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "crRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "srRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "prRate": {
+          "type": "number",
+          "format": "double"
         }
       },
       "description": "RMCost is the landed cost computed for a single (period, rm_code) pair."
+    },
+    "v1RMCostDetail": {
+      "type": "object",
+      "properties": {
+        "costDetailId": {
+          "type": "string"
+        },
+        "costId": {
+          "type": "string"
+        },
+        "period": {
+          "type": "string"
+        },
+        "groupHeadId": {
+          "type": "string"
+        },
+        "groupDetailId": {
+          "type": "string"
+        },
+        "itemCode": {
+          "type": "string"
+        },
+        "itemName": {
+          "type": "string"
+        },
+        "gradeCode": {
+          "type": "string"
+        },
+        "freightRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Per-detail input snapshot (from group_detail at calc time)."
+        },
+        "antiDumpingPct": {
+          "type": "number",
+          "format": "double",
+          "title": "decimal (0.10 = 10%)"
+        },
+        "dutyPct": {
+          "type": "number",
+          "format": "double",
+          "title": "decimal"
+        },
+        "transportRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "valuationDefaultValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "consVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Consumption stage."
+        },
+        "consQty": {
+          "type": "number",
+          "format": "double"
+        },
+        "consRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "consFreightVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "consValBased": {
+          "type": "number",
+          "format": "double"
+        },
+        "consRateBased": {
+          "type": "number",
+          "format": "double"
+        },
+        "consAntiDumpingVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "consAntiDumpingRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "consDutyVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "consDutyRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "consTransportVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "consTransportRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "consLandedCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Stock stage."
+        },
+        "stockQty": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockFreightVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockValBased": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockRateBased": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockAntiDumpingVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockAntiDumpingRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockDutyVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockDutyRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockTransportVal": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockTransportRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "stockLandedCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "poVal": {
+          "type": "number",
+          "format": "double",
+          "description": "PO stage."
+        },
+        "poQty": {
+          "type": "number",
+          "format": "double"
+        },
+        "poRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "fixRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Fix stage."
+        },
+        "fixFreightRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "fixRateBased": {
+          "type": "number",
+          "format": "double"
+        },
+        "fixAntiDumpingRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "fixDutyRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "fixTransportRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "fixLandedCost": {
+          "type": "number",
+          "format": "double"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      },
+      "description": "V2: RMCostDetail is one row per (cost_id, item_code, grade_code) — full\nsnapshot of intermediate columns from the Excel reference (rows 9–11)."
     },
     "v1RMCostHistory": {
       "type": "object",
@@ -888,6 +1353,31 @@
       "default": "RM_GROUP_FLAG_UNSPECIFIED",
       "description": "RMGroupFlag identifies which aggregated stage rate feeds a cost purpose\n(valuation / marketing / simulation), or whether the group uses its\nconfigured init override value. Mirrors the `cst_rm_group_head.flag_*`\ndomain constraint.\n\n - RM_GROUP_FLAG_UNSPECIFIED: Default zero value. Rejected on create/update requests via not_in: [0].\n - RM_GROUP_FLAG_INIT: Use the init_val_* override on the head; skips cascade.\n - RM_GROUP_FLAG_CONS: Use the CONS stage rate.\n - RM_GROUP_FLAG_STORES: Use the STORES stage rate.\n - RM_GROUP_FLAG_DEPT: Use the DEPT stage rate.\n - RM_GROUP_FLAG_PO_1: Use the first PO stage rate.\n - RM_GROUP_FLAG_PO_2: Use the second PO stage rate.\n - RM_GROUP_FLAG_PO_3: Use the third PO stage rate."
     },
+    "v1RMMarketingFlag": {
+      "type": "string",
+      "enum": [
+        "RM_MARKETING_FLAG_UNSPECIFIED",
+        "RM_MARKETING_FLAG_SP",
+        "RM_MARKETING_FLAG_PP",
+        "RM_MARKETING_FLAG_FP"
+      ],
+      "default": "RM_MARKETING_FLAG_UNSPECIFIED",
+      "description": "RMMarketingFlag selects which computed marketing projection becomes\n`cost_mark`. UNSPECIFIED behaves as AUTO (SP → PP → FP fallback).\n\n - RM_MARKETING_FLAG_UNSPECIFIED: Default zero value. Treated as AUTO (SP→PP→FP fallback).\n - RM_MARKETING_FLAG_SP: Projection Stock Landed Cost.\n - RM_MARKETING_FLAG_PP: Projection PO Landed Cost.\n - RM_MARKETING_FLAG_FP: Projection Fix Value Landed Cost."
+    },
+    "v1RMValuationFlag": {
+      "type": "string",
+      "enum": [
+        "RM_VALUATION_FLAG_UNSPECIFIED",
+        "RM_VALUATION_FLAG_CR",
+        "RM_VALUATION_FLAG_SR",
+        "RM_VALUATION_FLAG_PR",
+        "RM_VALUATION_FLAG_CL",
+        "RM_VALUATION_FLAG_SL",
+        "RM_VALUATION_FLAG_FL"
+      ],
+      "default": "RM_VALUATION_FLAG_UNSPECIFIED",
+      "description": "RMValuationFlag selects which computed rate becomes `cost_val` in the\nRM Cost row. UNSPECIFIED behaves as AUTO (CL → SL → FL fallback, where\nFL incorporates the per-detail valuation_default_value).\n\n - RM_VALUATION_FLAG_UNSPECIFIED: Default zero value. Treated as AUTO (CL→SL→FL fallback).\n - RM_VALUATION_FLAG_CR: Use Consumption Rate (CR) — group-total cons_val / cons_qty.\n - RM_VALUATION_FLAG_SR: Use Stock Rate (SR) — group-total stock_val / stock_qty.\n - RM_VALUATION_FLAG_PR: Use PO Rate (PR) — group-total po_val / po_qty.\n - RM_VALUATION_FLAG_CL: Use Consumption Landed Cost (CL) — group-total CL aggregate.\n - RM_VALUATION_FLAG_SL: Use Stock Landed Cost (SL) — group-total SL aggregate.\n - RM_VALUATION_FLAG_FL: Use Fix Landed Cost (FL) — MAX of per-detail FL."
+    },
     "v1TriggerRMCostCalculationRequest": {
       "type": "object",
       "properties": {
@@ -919,6 +1409,33 @@
         }
       },
       "description": "Trigger response."
+    },
+    "v1UpdateCostDetailFixRateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "detail": {
+          "$ref": "#/definitions/v1RMCostDetail"
+        },
+        "parentCost": {
+          "$ref": "#/definitions/v1RMCost"
+        }
+      },
+      "description": "Update response carries both the updated detail and the parent cost row."
+    },
+    "v1UpdateRMCostInputsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMCost"
+        }
+      },
+      "description": "Update response carries the recomputed cost row."
     },
     "v1ValidationError": {
       "type": "object",

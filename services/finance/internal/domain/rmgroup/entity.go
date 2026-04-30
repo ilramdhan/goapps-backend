@@ -35,6 +35,12 @@ type Head struct {
 	updatedBy         *string
 	deletedAt         *time.Time
 	deletedBy         *string
+	// V2 marketing-projection inputs.
+	marketingFreightRate    *float64
+	marketingAntiDumpingPct *float64
+	marketingDefaultValue   *float64
+	valuationFlagV2         ValuationFlag
+	marketingFlagV2         MarketingFlag
 }
 
 // NewHead creates a new Head with validation. Defaults: flags = CONS, isActive = true.
@@ -189,6 +195,60 @@ func (h *Head) DeletedBy() *string { return h.deletedBy }
 
 // IsDeleted reports whether the group is soft-deleted.
 func (h *Head) IsDeleted() bool { return h.deletedAt != nil }
+
+// MarketingFreightRate returns the V2 marketing freight rate (nil when unset).
+func (h *Head) MarketingFreightRate() *float64 { return h.marketingFreightRate }
+
+// MarketingAntiDumpingPct returns the V2 marketing anti-dumping % (nil when unset).
+func (h *Head) MarketingAntiDumpingPct() *float64 { return h.marketingAntiDumpingPct }
+
+// MarketingDefaultValue returns the V2 marketing default value (nil when unset).
+func (h *Head) MarketingDefaultValue() *float64 { return h.marketingDefaultValue }
+
+// ValuationFlagV2 returns the V2 valuation flag (AUTO when unset).
+func (h *Head) ValuationFlagV2() ValuationFlag {
+	if h.valuationFlagV2 == "" {
+		return ValuationFlagAuto
+	}
+	return h.valuationFlagV2
+}
+
+// MarketingFlagV2 returns the V2 marketing flag (AUTO when unset).
+func (h *Head) MarketingFlagV2() MarketingFlag {
+	if h.marketingFlagV2 == "" {
+		return MarketingFlagAuto
+	}
+	return h.marketingFlagV2
+}
+
+// MarketingInputs returns the V2 marketing inputs as a single struct.
+func (h *Head) MarketingInputs() MarketingInputs {
+	return MarketingInputs{
+		FreightRate:    h.marketingFreightRate,
+		AntiDumpingPct: h.marketingAntiDumpingPct,
+		DefaultValue:   h.marketingDefaultValue,
+		ValuationFlag:  h.ValuationFlagV2(),
+		MarketingFlag:  h.MarketingFlagV2(),
+	}
+}
+
+// AttachMarketingInputs sets the V2 marketing inputs on Reconstruct. Used by
+// repositories during entity hydration. Validates that flags (when set) are
+// among the recognized values.
+func (h *Head) AttachMarketingInputs(in MarketingInputs) error {
+	if in.ValuationFlag != "" && !in.ValuationFlag.IsValid() {
+		return ErrInvalidFlag
+	}
+	if in.MarketingFlag != "" && !in.MarketingFlag.IsValid() {
+		return ErrInvalidFlag
+	}
+	h.marketingFreightRate = in.FreightRate
+	h.marketingAntiDumpingPct = in.AntiDumpingPct
+	h.marketingDefaultValue = in.DefaultValue
+	h.valuationFlagV2 = in.ValuationFlag
+	h.marketingFlagV2 = in.MarketingFlag
+	return nil
+}
 
 // =============================================================================
 // Head — behavior methods
@@ -400,6 +460,12 @@ type Detail struct {
 	updatedBy        *string
 	deletedAt        *time.Time
 	deletedBy        *string
+	// V2 valuation inputs.
+	valuationFreightRate    *float64
+	valuationAntiDumpingPct *float64
+	valuationDutyPct        *float64
+	valuationTransportRate  *float64
+	valuationDefaultValue   *float64
 }
 
 // NewDetail creates a new Detail with validation. Defaults: isActive = true, isDummy = false.
@@ -521,6 +587,48 @@ func (d *Detail) DeletedBy() *string { return d.deletedBy }
 
 // IsDeleted reports whether the detail is soft-deleted.
 func (d *Detail) IsDeleted() bool { return d.deletedAt != nil }
+
+// ValuationFreightRate returns the V2 per-detail freight rate (nil when unset).
+func (d *Detail) ValuationFreightRate() *float64 { return d.valuationFreightRate }
+
+// ValuationAntiDumpingPct returns the V2 per-detail anti-dumping % (nil when unset).
+func (d *Detail) ValuationAntiDumpingPct() *float64 { return d.valuationAntiDumpingPct }
+
+// ValuationDutyPct returns the V2 per-detail duty % (nil when unset).
+func (d *Detail) ValuationDutyPct() *float64 { return d.valuationDutyPct }
+
+// ValuationTransportRate returns the V2 per-detail transport rate (nil when unset).
+func (d *Detail) ValuationTransportRate() *float64 { return d.valuationTransportRate }
+
+// ValuationDefaultValue returns the V2 per-detail default value (nil when unset).
+func (d *Detail) ValuationDefaultValue() *float64 { return d.valuationDefaultValue }
+
+// ValuationInputs returns the V2 valuation inputs as a single struct.
+func (d *Detail) ValuationInputs() ValuationInputs {
+	return ValuationInputs{
+		FreightRate:    d.valuationFreightRate,
+		AntiDumpingPct: d.valuationAntiDumpingPct,
+		DutyPct:        d.valuationDutyPct,
+		TransportRate:  d.valuationTransportRate,
+		DefaultValue:   d.valuationDefaultValue,
+	}
+}
+
+// AttachValuationInputs sets the V2 valuation inputs on Reconstruct or Add.
+// All non-nil values are validated as non-negative.
+func (d *Detail) AttachValuationInputs(in ValuationInputs) error {
+	for _, p := range []*float64{in.FreightRate, in.AntiDumpingPct, in.DutyPct, in.TransportRate, in.DefaultValue} {
+		if p != nil && *p < 0 {
+			return ErrNegativeMarketValue
+		}
+	}
+	d.valuationFreightRate = in.FreightRate
+	d.valuationAntiDumpingPct = in.AntiDumpingPct
+	d.valuationDutyPct = in.DutyPct
+	d.valuationTransportRate = in.TransportRate
+	d.valuationDefaultValue = in.DefaultValue
+	return nil
+}
 
 // =============================================================================
 // Detail — behavior methods

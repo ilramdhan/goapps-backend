@@ -100,6 +100,135 @@ func (RMGroupFlag) EnumDescriptor() ([]byte, []int) {
 	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{0}
 }
 
+// RMValuationFlag selects which computed rate becomes `cost_val` in the
+// RM Cost row. UNSPECIFIED behaves as AUTO (CL → SL → FL fallback, where
+// FL incorporates the per-detail valuation_default_value).
+type RMValuationFlag int32
+
+const (
+	// Default zero value. Treated as AUTO (CL→SL→FL fallback).
+	RMValuationFlag_RM_VALUATION_FLAG_UNSPECIFIED RMValuationFlag = 0
+	// Use Consumption Rate (CR) — group-total cons_val / cons_qty.
+	RMValuationFlag_RM_VALUATION_FLAG_CR RMValuationFlag = 1
+	// Use Stock Rate (SR) — group-total stock_val / stock_qty.
+	RMValuationFlag_RM_VALUATION_FLAG_SR RMValuationFlag = 2
+	// Use PO Rate (PR) — group-total po_val / po_qty.
+	RMValuationFlag_RM_VALUATION_FLAG_PR RMValuationFlag = 3
+	// Use Consumption Landed Cost (CL) — group-total CL aggregate.
+	RMValuationFlag_RM_VALUATION_FLAG_CL RMValuationFlag = 4
+	// Use Stock Landed Cost (SL) — group-total SL aggregate.
+	RMValuationFlag_RM_VALUATION_FLAG_SL RMValuationFlag = 5
+	// Use Fix Landed Cost (FL) — MAX of per-detail FL.
+	RMValuationFlag_RM_VALUATION_FLAG_FL RMValuationFlag = 6
+)
+
+// Enum value maps for RMValuationFlag.
+var (
+	RMValuationFlag_name = map[int32]string{
+		0: "RM_VALUATION_FLAG_UNSPECIFIED",
+		1: "RM_VALUATION_FLAG_CR",
+		2: "RM_VALUATION_FLAG_SR",
+		3: "RM_VALUATION_FLAG_PR",
+		4: "RM_VALUATION_FLAG_CL",
+		5: "RM_VALUATION_FLAG_SL",
+		6: "RM_VALUATION_FLAG_FL",
+	}
+	RMValuationFlag_value = map[string]int32{
+		"RM_VALUATION_FLAG_UNSPECIFIED": 0,
+		"RM_VALUATION_FLAG_CR":          1,
+		"RM_VALUATION_FLAG_SR":          2,
+		"RM_VALUATION_FLAG_PR":          3,
+		"RM_VALUATION_FLAG_CL":          4,
+		"RM_VALUATION_FLAG_SL":          5,
+		"RM_VALUATION_FLAG_FL":          6,
+	}
+)
+
+func (x RMValuationFlag) Enum() *RMValuationFlag {
+	p := new(RMValuationFlag)
+	*p = x
+	return p
+}
+
+func (x RMValuationFlag) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RMValuationFlag) Descriptor() protoreflect.EnumDescriptor {
+	return file_finance_v1_rm_group_proto_enumTypes[1].Descriptor()
+}
+
+func (RMValuationFlag) Type() protoreflect.EnumType {
+	return &file_finance_v1_rm_group_proto_enumTypes[1]
+}
+
+func (x RMValuationFlag) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RMValuationFlag.Descriptor instead.
+func (RMValuationFlag) EnumDescriptor() ([]byte, []int) {
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{1}
+}
+
+// RMMarketingFlag selects which computed marketing projection becomes
+// `cost_mark`. UNSPECIFIED behaves as AUTO (SP → PP → FP fallback).
+type RMMarketingFlag int32
+
+const (
+	// Default zero value. Treated as AUTO (SP→PP→FP fallback).
+	RMMarketingFlag_RM_MARKETING_FLAG_UNSPECIFIED RMMarketingFlag = 0
+	// Projection Stock Landed Cost.
+	RMMarketingFlag_RM_MARKETING_FLAG_SP RMMarketingFlag = 1
+	// Projection PO Landed Cost.
+	RMMarketingFlag_RM_MARKETING_FLAG_PP RMMarketingFlag = 2
+	// Projection Fix Value Landed Cost.
+	RMMarketingFlag_RM_MARKETING_FLAG_FP RMMarketingFlag = 3
+)
+
+// Enum value maps for RMMarketingFlag.
+var (
+	RMMarketingFlag_name = map[int32]string{
+		0: "RM_MARKETING_FLAG_UNSPECIFIED",
+		1: "RM_MARKETING_FLAG_SP",
+		2: "RM_MARKETING_FLAG_PP",
+		3: "RM_MARKETING_FLAG_FP",
+	}
+	RMMarketingFlag_value = map[string]int32{
+		"RM_MARKETING_FLAG_UNSPECIFIED": 0,
+		"RM_MARKETING_FLAG_SP":          1,
+		"RM_MARKETING_FLAG_PP":          2,
+		"RM_MARKETING_FLAG_FP":          3,
+	}
+)
+
+func (x RMMarketingFlag) Enum() *RMMarketingFlag {
+	p := new(RMMarketingFlag)
+	*p = x
+	return p
+}
+
+func (x RMMarketingFlag) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RMMarketingFlag) Descriptor() protoreflect.EnumDescriptor {
+	return file_finance_v1_rm_group_proto_enumTypes[2].Descriptor()
+}
+
+func (RMMarketingFlag) Type() protoreflect.EnumType {
+	return &file_finance_v1_rm_group_proto_enumTypes[2]
+}
+
+func (x RMMarketingFlag) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RMMarketingFlag.Descriptor instead.
+func (RMMarketingFlag) EnumDescriptor() ([]byte, []int) {
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{2}
+}
+
 // RemoveItemsMode controls how RemoveItems disposes of detail rows.
 type RemoveItemsMode int32
 
@@ -137,11 +266,11 @@ func (x RemoveItemsMode) String() string {
 }
 
 func (RemoveItemsMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_finance_v1_rm_group_proto_enumTypes[1].Descriptor()
+	return file_finance_v1_rm_group_proto_enumTypes[3].Descriptor()
 }
 
 func (RemoveItemsMode) Type() protoreflect.EnumType {
-	return &file_finance_v1_rm_group_proto_enumTypes[1]
+	return &file_finance_v1_rm_group_proto_enumTypes[3]
 }
 
 func (x RemoveItemsMode) Number() protoreflect.EnumNumber {
@@ -150,7 +279,7 @@ func (x RemoveItemsMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RemoveItemsMode.Descriptor instead.
 func (RemoveItemsMode) EnumDescriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{1}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{3}
 }
 
 // RMGroupHead is the aggregate root representing an RM group's cost configuration.
@@ -187,7 +316,19 @@ type RMGroupHead struct {
 	// Whether the group is active.
 	IsActive bool `protobuf:"varint,15,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	// Audit metadata.
-	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	Audit *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	// V2: Marketing freight rate (added to base rate before duty/anti).
+	MarketingFreightRate *float64 `protobuf:"fixed64,17,opt,name=marketing_freight_rate,json=marketingFreightRate,proto3,oneof" json:"marketing_freight_rate,omitempty"`
+	// V2: Marketing anti-dumping percentage (whole percent, e.g. 5 = 5%).
+	MarketingAntiDumpingPct *float64 `protobuf:"fixed64,18,opt,name=marketing_anti_dumping_pct,json=marketingAntiDumpingPct,proto3,oneof" json:"marketing_anti_dumping_pct,omitempty"`
+	// V2: Marketing default value (drives FP projection when set).
+	MarketingDefaultValue *float64 `protobuf:"fixed64,19,opt,name=marketing_default_value,json=marketingDefaultValue,proto3,oneof" json:"marketing_default_value,omitempty"`
+	// V2: Valuation flag (CR/SR/PR/CL/SL/FL) — replaces flag_valuation semantics
+	// for the new engine. When UNSPECIFIED uses AUTO fallback CL→SL→FL.
+	ValuationFlag RMValuationFlag `protobuf:"varint,20,opt,name=valuation_flag,json=valuationFlag,proto3,enum=finance.v1.RMValuationFlag" json:"valuation_flag,omitempty"`
+	// V2: Marketing flag (SP/PP/FP) — replaces flag_marketing semantics.
+	// When UNSPECIFIED uses AUTO fallback SP→PP→FP.
+	MarketingFlag RMMarketingFlag `protobuf:"varint,21,opt,name=marketing_flag,json=marketingFlag,proto3,enum=finance.v1.RMMarketingFlag" json:"marketing_flag,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -334,6 +475,41 @@ func (x *RMGroupHead) GetAudit() *v1.AuditInfo {
 	return nil
 }
 
+func (x *RMGroupHead) GetMarketingFreightRate() float64 {
+	if x != nil && x.MarketingFreightRate != nil {
+		return *x.MarketingFreightRate
+	}
+	return 0
+}
+
+func (x *RMGroupHead) GetMarketingAntiDumpingPct() float64 {
+	if x != nil && x.MarketingAntiDumpingPct != nil {
+		return *x.MarketingAntiDumpingPct
+	}
+	return 0
+}
+
+func (x *RMGroupHead) GetMarketingDefaultValue() float64 {
+	if x != nil && x.MarketingDefaultValue != nil {
+		return *x.MarketingDefaultValue
+	}
+	return 0
+}
+
+func (x *RMGroupHead) GetValuationFlag() RMValuationFlag {
+	if x != nil {
+		return x.ValuationFlag
+	}
+	return RMValuationFlag_RM_VALUATION_FLAG_UNSPECIFIED
+}
+
+func (x *RMGroupHead) GetMarketingFlag() RMMarketingFlag {
+	if x != nil {
+		return x.MarketingFlag
+	}
+	return RMMarketingFlag_RM_MARKETING_FLAG_UNSPECIFIED
+}
+
 // RMGroupDetail is one item's membership in an RM group.
 type RMGroupDetail struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -363,10 +539,20 @@ type RMGroupDetail struct {
 	IsActive bool `protobuf:"varint,12,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	// Placeholder row (excluded from aggregation regardless of is_active).
 	IsDummy bool `protobuf:"varint,13,opt,name=is_dummy,json=isDummy,proto3" json:"is_dummy,omitempty"`
+	// V2: Valuation freight rate (per detail; feeds CL/SL/FL formulas).
+	ValuationFreightRate *float64 `protobuf:"fixed64,14,opt,name=valuation_freight_rate,json=valuationFreightRate,proto3,oneof" json:"valuation_freight_rate,omitempty"`
+	// V2: Valuation anti-dumping percentage (decimal, e.g. 0.10 = 10%).
+	ValuationAntiDumpingPct *float64 `protobuf:"fixed64,15,opt,name=valuation_anti_dumping_pct,json=valuationAntiDumpingPct,proto3,oneof" json:"valuation_anti_dumping_pct,omitempty"`
 	// Audit metadata.
-	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Audit *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	// V2: Valuation duty percentage (decimal).
+	ValuationDutyPct *float64 `protobuf:"fixed64,17,opt,name=valuation_duty_pct,json=valuationDutyPct,proto3,oneof" json:"valuation_duty_pct,omitempty"`
+	// V2: Valuation transport rate (per detail).
+	ValuationTransportRate *float64 `protobuf:"fixed64,18,opt,name=valuation_transport_rate,json=valuationTransportRate,proto3,oneof" json:"valuation_transport_rate,omitempty"`
+	// V2: Valuation default value (per detail; drives FL).
+	ValuationDefaultValue *float64 `protobuf:"fixed64,19,opt,name=valuation_default_value,json=valuationDefaultValue,proto3,oneof" json:"valuation_default_value,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *RMGroupDetail) Reset() {
@@ -490,11 +676,46 @@ func (x *RMGroupDetail) GetIsDummy() bool {
 	return false
 }
 
+func (x *RMGroupDetail) GetValuationFreightRate() float64 {
+	if x != nil && x.ValuationFreightRate != nil {
+		return *x.ValuationFreightRate
+	}
+	return 0
+}
+
+func (x *RMGroupDetail) GetValuationAntiDumpingPct() float64 {
+	if x != nil && x.ValuationAntiDumpingPct != nil {
+		return *x.ValuationAntiDumpingPct
+	}
+	return 0
+}
+
 func (x *RMGroupDetail) GetAudit() *v1.AuditInfo {
 	if x != nil {
 		return x.Audit
 	}
 	return nil
+}
+
+func (x *RMGroupDetail) GetValuationDutyPct() float64 {
+	if x != nil && x.ValuationDutyPct != nil {
+		return *x.ValuationDutyPct
+	}
+	return 0
+}
+
+func (x *RMGroupDetail) GetValuationTransportRate() float64 {
+	if x != nil && x.ValuationTransportRate != nil {
+		return *x.ValuationTransportRate
+	}
+	return 0
+}
+
+func (x *RMGroupDetail) GetValuationDefaultValue() float64 {
+	if x != nil && x.ValuationDefaultValue != nil {
+		return *x.ValuationDefaultValue
+	}
+	return 0
 }
 
 // RMGroupHeadWithDetails bundles a head and its details for the Get response.
@@ -902,10 +1123,20 @@ type CreateRMGroupRequest struct {
 	Colourant string `protobuf:"bytes,4,opt,name=colourant,proto3" json:"colourant,omitempty"`
 	// Optional CI name tag.
 	CiName string `protobuf:"bytes,5,opt,name=ci_name,json=ciName,proto3" json:"ci_name,omitempty"`
-	// Cost percentage multiplier (>= 0).
+	// Cost percentage multiplier (>= 0). Aliased as Marketing Duty %.
 	CostPercentage float64 `protobuf:"fixed64,6,opt,name=cost_percentage,json=costPercentage,proto3" json:"cost_percentage,omitempty"`
-	// Per-kg overhead (>= 0).
-	CostPerKg     float64 `protobuf:"fixed64,7,opt,name=cost_per_kg,json=costPerKg,proto3" json:"cost_per_kg,omitempty"`
+	// Per-kg overhead (>= 0). Aliased as Marketing Transport Rate.
+	CostPerKg float64 `protobuf:"fixed64,7,opt,name=cost_per_kg,json=costPerKg,proto3" json:"cost_per_kg,omitempty"`
+	// V2: Marketing freight rate.
+	MarketingFreightRate *float64 `protobuf:"fixed64,8,opt,name=marketing_freight_rate,json=marketingFreightRate,proto3,oneof" json:"marketing_freight_rate,omitempty"`
+	// V2: Marketing anti-dumping percentage (whole percent).
+	MarketingAntiDumpingPct *float64 `protobuf:"fixed64,9,opt,name=marketing_anti_dumping_pct,json=marketingAntiDumpingPct,proto3,oneof" json:"marketing_anti_dumping_pct,omitempty"`
+	// V2: Marketing default value.
+	MarketingDefaultValue *float64 `protobuf:"fixed64,10,opt,name=marketing_default_value,json=marketingDefaultValue,proto3,oneof" json:"marketing_default_value,omitempty"`
+	// V2: Valuation flag.
+	ValuationFlag RMValuationFlag `protobuf:"varint,11,opt,name=valuation_flag,json=valuationFlag,proto3,enum=finance.v1.RMValuationFlag" json:"valuation_flag,omitempty"`
+	// V2: Marketing flag.
+	MarketingFlag RMMarketingFlag `protobuf:"varint,12,opt,name=marketing_flag,json=marketingFlag,proto3,enum=finance.v1.RMMarketingFlag" json:"marketing_flag,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -987,6 +1218,41 @@ func (x *CreateRMGroupRequest) GetCostPerKg() float64 {
 		return x.CostPerKg
 	}
 	return 0
+}
+
+func (x *CreateRMGroupRequest) GetMarketingFreightRate() float64 {
+	if x != nil && x.MarketingFreightRate != nil {
+		return *x.MarketingFreightRate
+	}
+	return 0
+}
+
+func (x *CreateRMGroupRequest) GetMarketingAntiDumpingPct() float64 {
+	if x != nil && x.MarketingAntiDumpingPct != nil {
+		return *x.MarketingAntiDumpingPct
+	}
+	return 0
+}
+
+func (x *CreateRMGroupRequest) GetMarketingDefaultValue() float64 {
+	if x != nil && x.MarketingDefaultValue != nil {
+		return *x.MarketingDefaultValue
+	}
+	return 0
+}
+
+func (x *CreateRMGroupRequest) GetValuationFlag() RMValuationFlag {
+	if x != nil {
+		return x.ValuationFlag
+	}
+	return RMValuationFlag_RM_VALUATION_FLAG_UNSPECIFIED
+}
+
+func (x *CreateRMGroupRequest) GetMarketingFlag() RMMarketingFlag {
+	if x != nil {
+		return x.MarketingFlag
+	}
+	return RMMarketingFlag_RM_MARKETING_FLAG_UNSPECIFIED
 }
 
 // Create response.
@@ -1183,8 +1449,22 @@ type UpdateRMGroupRequest struct {
 	ClearInitValMarketing bool `protobuf:"varint,16,opt,name=clear_init_val_marketing,json=clearInitValMarketing,proto3" json:"clear_init_val_marketing,omitempty"`
 	// When true, force init_val_simulation to NULL.
 	ClearInitValSimulation bool `protobuf:"varint,17,opt,name=clear_init_val_simulation,json=clearInitValSimulation,proto3" json:"clear_init_val_simulation,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// V2: Marketing freight rate.
+	MarketingFreightRate *float64 `protobuf:"fixed64,18,opt,name=marketing_freight_rate,json=marketingFreightRate,proto3,oneof" json:"marketing_freight_rate,omitempty"`
+	// V2: Marketing anti-dumping % (whole percent).
+	MarketingAntiDumpingPct *float64 `protobuf:"fixed64,19,opt,name=marketing_anti_dumping_pct,json=marketingAntiDumpingPct,proto3,oneof" json:"marketing_anti_dumping_pct,omitempty"`
+	// V2: Marketing default value.
+	MarketingDefaultValue *float64 `protobuf:"fixed64,20,opt,name=marketing_default_value,json=marketingDefaultValue,proto3,oneof" json:"marketing_default_value,omitempty"`
+	// V2: Valuation flag.
+	ValuationFlag *RMValuationFlag `protobuf:"varint,21,opt,name=valuation_flag,json=valuationFlag,proto3,enum=finance.v1.RMValuationFlag,oneof" json:"valuation_flag,omitempty"`
+	// V2: Marketing flag.
+	MarketingFlag *RMMarketingFlag `protobuf:"varint,22,opt,name=marketing_flag,json=marketingFlag,proto3,enum=finance.v1.RMMarketingFlag,oneof" json:"marketing_flag,omitempty"`
+	// V2 clear flags for nullable marketing fields.
+	ClearMarketingFreightRate    bool `protobuf:"varint,23,opt,name=clear_marketing_freight_rate,json=clearMarketingFreightRate,proto3" json:"clear_marketing_freight_rate,omitempty"`
+	ClearMarketingAntiDumpingPct bool `protobuf:"varint,24,opt,name=clear_marketing_anti_dumping_pct,json=clearMarketingAntiDumpingPct,proto3" json:"clear_marketing_anti_dumping_pct,omitempty"`
+	ClearMarketingDefaultValue   bool `protobuf:"varint,25,opt,name=clear_marketing_default_value,json=clearMarketingDefaultValue,proto3" json:"clear_marketing_default_value,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
 }
 
 func (x *UpdateRMGroupRequest) Reset() {
@@ -1332,6 +1612,62 @@ func (x *UpdateRMGroupRequest) GetClearInitValMarketing() bool {
 func (x *UpdateRMGroupRequest) GetClearInitValSimulation() bool {
 	if x != nil {
 		return x.ClearInitValSimulation
+	}
+	return false
+}
+
+func (x *UpdateRMGroupRequest) GetMarketingFreightRate() float64 {
+	if x != nil && x.MarketingFreightRate != nil {
+		return *x.MarketingFreightRate
+	}
+	return 0
+}
+
+func (x *UpdateRMGroupRequest) GetMarketingAntiDumpingPct() float64 {
+	if x != nil && x.MarketingAntiDumpingPct != nil {
+		return *x.MarketingAntiDumpingPct
+	}
+	return 0
+}
+
+func (x *UpdateRMGroupRequest) GetMarketingDefaultValue() float64 {
+	if x != nil && x.MarketingDefaultValue != nil {
+		return *x.MarketingDefaultValue
+	}
+	return 0
+}
+
+func (x *UpdateRMGroupRequest) GetValuationFlag() RMValuationFlag {
+	if x != nil && x.ValuationFlag != nil {
+		return *x.ValuationFlag
+	}
+	return RMValuationFlag_RM_VALUATION_FLAG_UNSPECIFIED
+}
+
+func (x *UpdateRMGroupRequest) GetMarketingFlag() RMMarketingFlag {
+	if x != nil && x.MarketingFlag != nil {
+		return *x.MarketingFlag
+	}
+	return RMMarketingFlag_RM_MARKETING_FLAG_UNSPECIFIED
+}
+
+func (x *UpdateRMGroupRequest) GetClearMarketingFreightRate() bool {
+	if x != nil {
+		return x.ClearMarketingFreightRate
+	}
+	return false
+}
+
+func (x *UpdateRMGroupRequest) GetClearMarketingAntiDumpingPct() bool {
+	if x != nil {
+		return x.ClearMarketingAntiDumpingPct
+	}
+	return false
+}
+
+func (x *UpdateRMGroupRequest) GetClearMarketingDefaultValue() bool {
+	if x != nil {
+		return x.ClearMarketingDefaultValue
 	}
 	return false
 }
@@ -1648,9 +1984,15 @@ type AddItemSelection struct {
 	ItemCode string `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty"`
 	// Grade code (optional). Empty matches the variant with NULL / empty
 	// grade_code in the sync feed. Use "" when the row has a single variant.
-	GradeCode     string `protobuf:"bytes,2,opt,name=grade_code,json=gradeCode,proto3" json:"grade_code,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	GradeCode string `protobuf:"bytes,2,opt,name=grade_code,json=gradeCode,proto3" json:"grade_code,omitempty"`
+	// V2 optional valuation inputs (per-detail). Backend stores NULL when omitted.
+	ValuationFreightRate    *float64 `protobuf:"fixed64,3,opt,name=valuation_freight_rate,json=valuationFreightRate,proto3,oneof" json:"valuation_freight_rate,omitempty"`
+	ValuationAntiDumpingPct *float64 `protobuf:"fixed64,4,opt,name=valuation_anti_dumping_pct,json=valuationAntiDumpingPct,proto3,oneof" json:"valuation_anti_dumping_pct,omitempty"`
+	ValuationDutyPct        *float64 `protobuf:"fixed64,5,opt,name=valuation_duty_pct,json=valuationDutyPct,proto3,oneof" json:"valuation_duty_pct,omitempty"`
+	ValuationTransportRate  *float64 `protobuf:"fixed64,6,opt,name=valuation_transport_rate,json=valuationTransportRate,proto3,oneof" json:"valuation_transport_rate,omitempty"`
+	ValuationDefaultValue   *float64 `protobuf:"fixed64,7,opt,name=valuation_default_value,json=valuationDefaultValue,proto3,oneof" json:"valuation_default_value,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *AddItemSelection) Reset() {
@@ -1695,6 +2037,41 @@ func (x *AddItemSelection) GetGradeCode() string {
 		return x.GradeCode
 	}
 	return ""
+}
+
+func (x *AddItemSelection) GetValuationFreightRate() float64 {
+	if x != nil && x.ValuationFreightRate != nil {
+		return *x.ValuationFreightRate
+	}
+	return 0
+}
+
+func (x *AddItemSelection) GetValuationAntiDumpingPct() float64 {
+	if x != nil && x.ValuationAntiDumpingPct != nil {
+		return *x.ValuationAntiDumpingPct
+	}
+	return 0
+}
+
+func (x *AddItemSelection) GetValuationDutyPct() float64 {
+	if x != nil && x.ValuationDutyPct != nil {
+		return *x.ValuationDutyPct
+	}
+	return 0
+}
+
+func (x *AddItemSelection) GetValuationTransportRate() float64 {
+	if x != nil && x.ValuationTransportRate != nil {
+		return *x.ValuationTransportRate
+	}
+	return 0
+}
+
+func (x *AddItemSelection) GetValuationDefaultValue() float64 {
+	if x != nil && x.ValuationDefaultValue != nil {
+		return *x.ValuationDefaultValue
+	}
+	return 0
 }
 
 // Add one or more items to a group. Items already in another active group are
@@ -1950,6 +2327,211 @@ func (x *RemoveItemsResponse) GetRemovedCount() int32 {
 	return 0
 }
 
+// V2: Partial update of one detail row's valuation fields + sort_order/is_active.
+type UpdateGroupItemRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Owning group head UUID.
+	GroupHeadId string `protobuf:"bytes,1,opt,name=group_head_id,json=groupHeadId,proto3" json:"group_head_id,omitempty"`
+	// Detail UUID to update.
+	GroupDetailId           string   `protobuf:"bytes,2,opt,name=group_detail_id,json=groupDetailId,proto3" json:"group_detail_id,omitempty"`
+	ValuationFreightRate    *float64 `protobuf:"fixed64,3,opt,name=valuation_freight_rate,json=valuationFreightRate,proto3,oneof" json:"valuation_freight_rate,omitempty"`
+	ValuationAntiDumpingPct *float64 `protobuf:"fixed64,4,opt,name=valuation_anti_dumping_pct,json=valuationAntiDumpingPct,proto3,oneof" json:"valuation_anti_dumping_pct,omitempty"`
+	ValuationDutyPct        *float64 `protobuf:"fixed64,5,opt,name=valuation_duty_pct,json=valuationDutyPct,proto3,oneof" json:"valuation_duty_pct,omitempty"`
+	ValuationTransportRate  *float64 `protobuf:"fixed64,6,opt,name=valuation_transport_rate,json=valuationTransportRate,proto3,oneof" json:"valuation_transport_rate,omitempty"`
+	ValuationDefaultValue   *float64 `protobuf:"fixed64,7,opt,name=valuation_default_value,json=valuationDefaultValue,proto3,oneof" json:"valuation_default_value,omitempty"`
+	SortOrder               *int32   `protobuf:"varint,8,opt,name=sort_order,json=sortOrder,proto3,oneof" json:"sort_order,omitempty"`
+	IsActive                *bool    `protobuf:"varint,9,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// Clear flags for nullable valuation fields (force NULL).
+	ClearValuationFreightRate    bool `protobuf:"varint,10,opt,name=clear_valuation_freight_rate,json=clearValuationFreightRate,proto3" json:"clear_valuation_freight_rate,omitempty"`
+	ClearValuationAntiDumpingPct bool `protobuf:"varint,11,opt,name=clear_valuation_anti_dumping_pct,json=clearValuationAntiDumpingPct,proto3" json:"clear_valuation_anti_dumping_pct,omitempty"`
+	ClearValuationDutyPct        bool `protobuf:"varint,12,opt,name=clear_valuation_duty_pct,json=clearValuationDutyPct,proto3" json:"clear_valuation_duty_pct,omitempty"`
+	ClearValuationTransportRate  bool `protobuf:"varint,13,opt,name=clear_valuation_transport_rate,json=clearValuationTransportRate,proto3" json:"clear_valuation_transport_rate,omitempty"`
+	ClearValuationDefaultValue   bool `protobuf:"varint,14,opt,name=clear_valuation_default_value,json=clearValuationDefaultValue,proto3" json:"clear_valuation_default_value,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *UpdateGroupItemRequest) Reset() {
+	*x = UpdateGroupItemRequest{}
+	mi := &file_finance_v1_rm_group_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateGroupItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateGroupItemRequest) ProtoMessage() {}
+
+func (x *UpdateGroupItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_rm_group_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateGroupItemRequest.ProtoReflect.Descriptor instead.
+func (*UpdateGroupItemRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *UpdateGroupItemRequest) GetGroupHeadId() string {
+	if x != nil {
+		return x.GroupHeadId
+	}
+	return ""
+}
+
+func (x *UpdateGroupItemRequest) GetGroupDetailId() string {
+	if x != nil {
+		return x.GroupDetailId
+	}
+	return ""
+}
+
+func (x *UpdateGroupItemRequest) GetValuationFreightRate() float64 {
+	if x != nil && x.ValuationFreightRate != nil {
+		return *x.ValuationFreightRate
+	}
+	return 0
+}
+
+func (x *UpdateGroupItemRequest) GetValuationAntiDumpingPct() float64 {
+	if x != nil && x.ValuationAntiDumpingPct != nil {
+		return *x.ValuationAntiDumpingPct
+	}
+	return 0
+}
+
+func (x *UpdateGroupItemRequest) GetValuationDutyPct() float64 {
+	if x != nil && x.ValuationDutyPct != nil {
+		return *x.ValuationDutyPct
+	}
+	return 0
+}
+
+func (x *UpdateGroupItemRequest) GetValuationTransportRate() float64 {
+	if x != nil && x.ValuationTransportRate != nil {
+		return *x.ValuationTransportRate
+	}
+	return 0
+}
+
+func (x *UpdateGroupItemRequest) GetValuationDefaultValue() float64 {
+	if x != nil && x.ValuationDefaultValue != nil {
+		return *x.ValuationDefaultValue
+	}
+	return 0
+}
+
+func (x *UpdateGroupItemRequest) GetSortOrder() int32 {
+	if x != nil && x.SortOrder != nil {
+		return *x.SortOrder
+	}
+	return 0
+}
+
+func (x *UpdateGroupItemRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
+}
+
+func (x *UpdateGroupItemRequest) GetClearValuationFreightRate() bool {
+	if x != nil {
+		return x.ClearValuationFreightRate
+	}
+	return false
+}
+
+func (x *UpdateGroupItemRequest) GetClearValuationAntiDumpingPct() bool {
+	if x != nil {
+		return x.ClearValuationAntiDumpingPct
+	}
+	return false
+}
+
+func (x *UpdateGroupItemRequest) GetClearValuationDutyPct() bool {
+	if x != nil {
+		return x.ClearValuationDutyPct
+	}
+	return false
+}
+
+func (x *UpdateGroupItemRequest) GetClearValuationTransportRate() bool {
+	if x != nil {
+		return x.ClearValuationTransportRate
+	}
+	return false
+}
+
+func (x *UpdateGroupItemRequest) GetClearValuationDefaultValue() bool {
+	if x != nil {
+		return x.ClearValuationDefaultValue
+	}
+	return false
+}
+
+// V2: Update one detail response.
+type UpdateGroupItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Data          *RMGroupDetail         `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateGroupItemResponse) Reset() {
+	*x = UpdateGroupItemResponse{}
+	mi := &file_finance_v1_rm_group_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateGroupItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateGroupItemResponse) ProtoMessage() {}
+
+func (x *UpdateGroupItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_rm_group_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateGroupItemResponse.ProtoReflect.Descriptor instead.
+func (*UpdateGroupItemResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *UpdateGroupItemResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *UpdateGroupItemResponse) GetData() *RMGroupDetail {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 // List items from the Oracle sync feed that have no active RM group assignment.
 type ListUngroupedItemsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1967,7 +2549,7 @@ type ListUngroupedItemsRequest struct {
 
 func (x *ListUngroupedItemsRequest) Reset() {
 	*x = ListUngroupedItemsRequest{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[20]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1979,7 +2561,7 @@ func (x *ListUngroupedItemsRequest) String() string {
 func (*ListUngroupedItemsRequest) ProtoMessage() {}
 
 func (x *ListUngroupedItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[20]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1992,7 +2574,7 @@ func (x *ListUngroupedItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUngroupedItemsRequest.ProtoReflect.Descriptor instead.
 func (*ListUngroupedItemsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{20}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListUngroupedItemsRequest) GetPage() int32 {
@@ -2039,7 +2621,7 @@ type ImportGroupItemsRequest struct {
 
 func (x *ImportGroupItemsRequest) Reset() {
 	*x = ImportGroupItemsRequest{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[21]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2051,7 +2633,7 @@ func (x *ImportGroupItemsRequest) String() string {
 func (*ImportGroupItemsRequest) ProtoMessage() {}
 
 func (x *ImportGroupItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[21]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2064,7 +2646,7 @@ func (x *ImportGroupItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportGroupItemsRequest.ProtoReflect.Descriptor instead.
 func (*ImportGroupItemsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{21}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ImportGroupItemsRequest) GetGroupHeadId() string {
@@ -2109,7 +2691,7 @@ type ImportGroupItemsResponse struct {
 
 func (x *ImportGroupItemsResponse) Reset() {
 	*x = ImportGroupItemsResponse{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[22]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2121,7 +2703,7 @@ func (x *ImportGroupItemsResponse) String() string {
 func (*ImportGroupItemsResponse) ProtoMessage() {}
 
 func (x *ImportGroupItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[22]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2134,7 +2716,7 @@ func (x *ImportGroupItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportGroupItemsResponse.ProtoReflect.Descriptor instead.
 func (*ImportGroupItemsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{22}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ImportGroupItemsResponse) GetBase() *v1.BaseResponse {
@@ -2188,7 +2770,7 @@ type DownloadGroupItemsTemplateRequest struct {
 
 func (x *DownloadGroupItemsTemplateRequest) Reset() {
 	*x = DownloadGroupItemsTemplateRequest{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[23]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2200,7 +2782,7 @@ func (x *DownloadGroupItemsTemplateRequest) String() string {
 func (*DownloadGroupItemsTemplateRequest) ProtoMessage() {}
 
 func (x *DownloadGroupItemsTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[23]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2213,7 +2795,7 @@ func (x *DownloadGroupItemsTemplateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use DownloadGroupItemsTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DownloadGroupItemsTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{23}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{25}
 }
 
 // DownloadGroupItemsTemplateResponse carries the blank template bytes.
@@ -2231,7 +2813,7 @@ type DownloadGroupItemsTemplateResponse struct {
 
 func (x *DownloadGroupItemsTemplateResponse) Reset() {
 	*x = DownloadGroupItemsTemplateResponse{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[24]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2243,7 +2825,7 @@ func (x *DownloadGroupItemsTemplateResponse) String() string {
 func (*DownloadGroupItemsTemplateResponse) ProtoMessage() {}
 
 func (x *DownloadGroupItemsTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[24]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2256,7 +2838,7 @@ func (x *DownloadGroupItemsTemplateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use DownloadGroupItemsTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DownloadGroupItemsTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{24}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *DownloadGroupItemsTemplateResponse) GetBase() *v1.BaseResponse {
@@ -2293,7 +2875,7 @@ type ExportUngroupedItemsRequest struct {
 
 func (x *ExportUngroupedItemsRequest) Reset() {
 	*x = ExportUngroupedItemsRequest{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[25]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2305,7 +2887,7 @@ func (x *ExportUngroupedItemsRequest) String() string {
 func (*ExportUngroupedItemsRequest) ProtoMessage() {}
 
 func (x *ExportUngroupedItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[25]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2318,7 +2900,7 @@ func (x *ExportUngroupedItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportUngroupedItemsRequest.ProtoReflect.Descriptor instead.
 func (*ExportUngroupedItemsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{25}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ExportUngroupedItemsRequest) GetPeriod() string {
@@ -2350,7 +2932,7 @@ type ExportUngroupedItemsResponse struct {
 
 func (x *ExportUngroupedItemsResponse) Reset() {
 	*x = ExportUngroupedItemsResponse{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[26]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2362,7 +2944,7 @@ func (x *ExportUngroupedItemsResponse) String() string {
 func (*ExportUngroupedItemsResponse) ProtoMessage() {}
 
 func (x *ExportUngroupedItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[26]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2375,7 +2957,7 @@ func (x *ExportUngroupedItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportUngroupedItemsResponse.ProtoReflect.Descriptor instead.
 func (*ExportUngroupedItemsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{26}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ExportUngroupedItemsResponse) GetBase() *v1.BaseResponse {
@@ -2414,7 +2996,7 @@ type ListUngroupedItemsResponse struct {
 
 func (x *ListUngroupedItemsResponse) Reset() {
 	*x = ListUngroupedItemsResponse{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[27]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2426,7 +3008,7 @@ func (x *ListUngroupedItemsResponse) String() string {
 func (*ListUngroupedItemsResponse) ProtoMessage() {}
 
 func (x *ListUngroupedItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[27]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2439,7 +3021,7 @@ func (x *ListUngroupedItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUngroupedItemsResponse.ProtoReflect.Descriptor instead.
 func (*ListUngroupedItemsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{27}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListUngroupedItemsResponse) GetBase() *v1.BaseResponse {
@@ -2514,7 +3096,7 @@ type RMGroupItemRates struct {
 
 func (x *RMGroupItemRates) Reset() {
 	*x = RMGroupItemRates{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[28]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2526,7 +3108,7 @@ func (x *RMGroupItemRates) String() string {
 func (*RMGroupItemRates) ProtoMessage() {}
 
 func (x *RMGroupItemRates) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[28]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2539,7 +3121,7 @@ func (x *RMGroupItemRates) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RMGroupItemRates.ProtoReflect.Descriptor instead.
 func (*RMGroupItemRates) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{28}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RMGroupItemRates) GetItemCode() string {
@@ -2737,7 +3319,7 @@ type GetRMGroupItemRatesRequest struct {
 
 func (x *GetRMGroupItemRatesRequest) Reset() {
 	*x = GetRMGroupItemRatesRequest{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[29]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2749,7 +3331,7 @@ func (x *GetRMGroupItemRatesRequest) String() string {
 func (*GetRMGroupItemRatesRequest) ProtoMessage() {}
 
 func (x *GetRMGroupItemRatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[29]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2762,7 +3344,7 @@ func (x *GetRMGroupItemRatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRMGroupItemRatesRequest.ProtoReflect.Descriptor instead.
 func (*GetRMGroupItemRatesRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{29}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetRMGroupItemRatesRequest) GetGroupHeadId() string {
@@ -2792,7 +3374,7 @@ type GetRMGroupItemRatesResponse struct {
 
 func (x *GetRMGroupItemRatesResponse) Reset() {
 	*x = GetRMGroupItemRatesResponse{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[30]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2804,7 +3386,7 @@ func (x *GetRMGroupItemRatesResponse) String() string {
 func (*GetRMGroupItemRatesResponse) ProtoMessage() {}
 
 func (x *GetRMGroupItemRatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[30]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2817,7 +3399,7 @@ func (x *GetRMGroupItemRatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRMGroupItemRatesResponse.ProtoReflect.Descriptor instead.
 func (*GetRMGroupItemRatesResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{30}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GetRMGroupItemRatesResponse) GetBase() *v1.BaseResponse {
@@ -2845,7 +3427,7 @@ type ExportRMGroupsRequest struct {
 
 func (x *ExportRMGroupsRequest) Reset() {
 	*x = ExportRMGroupsRequest{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[31]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2857,7 +3439,7 @@ func (x *ExportRMGroupsRequest) String() string {
 func (*ExportRMGroupsRequest) ProtoMessage() {}
 
 func (x *ExportRMGroupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[31]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2870,7 +3452,7 @@ func (x *ExportRMGroupsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportRMGroupsRequest.ProtoReflect.Descriptor instead.
 func (*ExportRMGroupsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{31}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ExportRMGroupsRequest) GetActiveFilter() ActiveFilter {
@@ -2895,7 +3477,7 @@ type ExportRMGroupsResponse struct {
 
 func (x *ExportRMGroupsResponse) Reset() {
 	*x = ExportRMGroupsResponse{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[32]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2907,7 +3489,7 @@ func (x *ExportRMGroupsResponse) String() string {
 func (*ExportRMGroupsResponse) ProtoMessage() {}
 
 func (x *ExportRMGroupsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[32]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2920,7 +3502,7 @@ func (x *ExportRMGroupsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportRMGroupsResponse.ProtoReflect.Descriptor instead.
 func (*ExportRMGroupsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{32}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ExportRMGroupsResponse) GetBase() *v1.BaseResponse {
@@ -2963,7 +3545,7 @@ type ImportRMGroupsRequest struct {
 
 func (x *ImportRMGroupsRequest) Reset() {
 	*x = ImportRMGroupsRequest{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[33]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2975,7 +3557,7 @@ func (x *ImportRMGroupsRequest) String() string {
 func (*ImportRMGroupsRequest) ProtoMessage() {}
 
 func (x *ImportRMGroupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[33]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2988,7 +3570,7 @@ func (x *ImportRMGroupsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportRMGroupsRequest.ProtoReflect.Descriptor instead.
 func (*ImportRMGroupsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{33}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ImportRMGroupsRequest) GetFileContent() []byte {
@@ -3037,7 +3619,7 @@ type ImportRMGroupsResponse struct {
 
 func (x *ImportRMGroupsResponse) Reset() {
 	*x = ImportRMGroupsResponse{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[34]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3049,7 +3631,7 @@ func (x *ImportRMGroupsResponse) String() string {
 func (*ImportRMGroupsResponse) ProtoMessage() {}
 
 func (x *ImportRMGroupsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[34]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3062,7 +3644,7 @@ func (x *ImportRMGroupsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportRMGroupsResponse.ProtoReflect.Descriptor instead.
 func (*ImportRMGroupsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{34}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ImportRMGroupsResponse) GetBase() *v1.BaseResponse {
@@ -3130,7 +3712,7 @@ type DownloadRMGroupTemplateRequest struct {
 
 func (x *DownloadRMGroupTemplateRequest) Reset() {
 	*x = DownloadRMGroupTemplateRequest{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[35]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3142,7 +3724,7 @@ func (x *DownloadRMGroupTemplateRequest) String() string {
 func (*DownloadRMGroupTemplateRequest) ProtoMessage() {}
 
 func (x *DownloadRMGroupTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[35]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3155,7 +3737,7 @@ func (x *DownloadRMGroupTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadRMGroupTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DownloadRMGroupTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{35}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{37}
 }
 
 // DownloadRMGroupTemplateResponse returns the blank 2-sheet template.
@@ -3173,7 +3755,7 @@ type DownloadRMGroupTemplateResponse struct {
 
 func (x *DownloadRMGroupTemplateResponse) Reset() {
 	*x = DownloadRMGroupTemplateResponse{}
-	mi := &file_finance_v1_rm_group_proto_msgTypes[36]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3185,7 +3767,7 @@ func (x *DownloadRMGroupTemplateResponse) String() string {
 func (*DownloadRMGroupTemplateResponse) ProtoMessage() {}
 
 func (x *DownloadRMGroupTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_group_proto_msgTypes[36]
+	mi := &file_finance_v1_rm_group_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3198,7 +3780,7 @@ func (x *DownloadRMGroupTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadRMGroupTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DownloadRMGroupTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{36}
+	return file_finance_v1_rm_group_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *DownloadRMGroupTemplateResponse) GetBase() *v1.BaseResponse {
@@ -3227,7 +3809,7 @@ var File_finance_v1_rm_group_proto protoreflect.FileDescriptor
 const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\n" +
 	"\x19finance/v1/rm_group.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xfd\x05\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\x95\t\n" +
 	"\vRMGroupHead\x12\"\n" +
 	"\rgroup_head_id\x18\x01 \x01(\tR\vgroupHeadId\x12\x1d\n" +
 	"\n" +
@@ -3247,10 +3829,18 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x12init_val_marketing\x18\r \x01(\x01H\x01R\x10initValMarketing\x88\x01\x01\x123\n" +
 	"\x13init_val_simulation\x18\x0e \x01(\x01H\x02R\x11initValSimulation\x88\x01\x01\x12\x1b\n" +
 	"\tis_active\x18\x0f \x01(\bR\bisActive\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\x15\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x129\n" +
+	"\x16marketing_freight_rate\x18\x11 \x01(\x01H\x03R\x14marketingFreightRate\x88\x01\x01\x12@\n" +
+	"\x1amarketing_anti_dumping_pct\x18\x12 \x01(\x01H\x04R\x17marketingAntiDumpingPct\x88\x01\x01\x12;\n" +
+	"\x17marketing_default_value\x18\x13 \x01(\x01H\x05R\x15marketingDefaultValue\x88\x01\x01\x12B\n" +
+	"\x0evaluation_flag\x18\x14 \x01(\x0e2\x1b.finance.v1.RMValuationFlagR\rvaluationFlag\x12B\n" +
+	"\x0emarketing_flag\x18\x15 \x01(\x0e2\x1b.finance.v1.RMMarketingFlagR\rmarketingFlagB\x15\n" +
 	"\x13_init_val_valuationB\x15\n" +
 	"\x13_init_val_marketingB\x16\n" +
-	"\x14_init_val_simulation\"\xa0\x04\n" +
+	"\x14_init_val_simulationB\x19\n" +
+	"\x17_marketing_freight_rateB\x1d\n" +
+	"\x1b_marketing_anti_dumping_pctB\x1a\n" +
+	"\x18_marketing_default_value\"\xd6\a\n" +
 	"\rRMGroupDetail\x12&\n" +
 	"\x0fgroup_detail_id\x18\x01 \x01(\tR\rgroupDetailId\x12\"\n" +
 	"\rgroup_head_id\x18\x02 \x01(\tR\vgroupHeadId\x12\x1b\n" +
@@ -3268,10 +3858,20 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\n" +
 	"sort_order\x18\v \x01(\x05R\tsortOrder\x12\x1b\n" +
 	"\tis_active\x18\f \x01(\bR\bisActive\x12\x19\n" +
-	"\bis_dummy\x18\r \x01(\bR\aisDummy\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\x14\n" +
+	"\bis_dummy\x18\r \x01(\bR\aisDummy\x129\n" +
+	"\x16valuation_freight_rate\x18\x0e \x01(\x01H\x02R\x14valuationFreightRate\x88\x01\x01\x12@\n" +
+	"\x1avaluation_anti_dumping_pct\x18\x0f \x01(\x01H\x03R\x17valuationAntiDumpingPct\x88\x01\x01\x12*\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x121\n" +
+	"\x12valuation_duty_pct\x18\x11 \x01(\x01H\x04R\x10valuationDutyPct\x88\x01\x01\x12=\n" +
+	"\x18valuation_transport_rate\x18\x12 \x01(\x01H\x05R\x16valuationTransportRate\x88\x01\x01\x12;\n" +
+	"\x17valuation_default_value\x18\x13 \x01(\x01H\x06R\x15valuationDefaultValue\x88\x01\x01B\x14\n" +
 	"\x12_market_percentageB\x12\n" +
-	"\x10_market_value_rp\"z\n" +
+	"\x10_market_value_rpB\x19\n" +
+	"\x17_valuation_freight_rateB\x1d\n" +
+	"\x1b_valuation_anti_dumping_pctB\x15\n" +
+	"\x13_valuation_duty_pctB\x1b\n" +
+	"\x19_valuation_transport_rateB\x1a\n" +
+	"\x18_valuation_default_value\"z\n" +
 	"\x16RMGroupHeadWithDetails\x12+\n" +
 	"\x04head\x18\x01 \x01(\v2\x17.finance.v1.RMGroupHeadR\x04head\x123\n" +
 	"\adetails\x18\x02 \x03(\v2\x19.finance.v1.RMGroupDetailR\adetails\"\x9d\x06\n" +
@@ -3317,7 +3917,7 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12/\n" +
 	"\x14owning_group_head_id\x18\x02 \x01(\tR\x11owningGroupHeadId\x123\n" +
 	"\x16owning_group_detail_id\x18\x03 \x01(\tR\x13owningGroupDetailId\x12*\n" +
-	"\x11owning_group_code\x18\x04 \x01(\tR\x0fowningGroupCode\"\xe6\x02\n" +
+	"\x11owning_group_code\x18\x04 \x01(\tR\x0fowningGroupCode\"\xae\x06\n" +
 	"\x14CreateRMGroupRequest\x12E\n" +
 	"\n" +
 	"group_code\x18\x01 \x01(\tB&\xbaH#r!\x10\x01\x18\x1e2\x1b^[A-Z0-9][A-Z0-9 \\-]{0,29}$R\tgroupCode\x12)\n" +
@@ -3328,7 +3928,16 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\tcolourant\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\tcolourant\x12 \n" +
 	"\aci_name\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06ciName\x127\n" +
 	"\x0fcost_percentage\x18\x06 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x0ecostPercentage\x12.\n" +
-	"\vcost_per_kg\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\tcostPerKg\"q\n" +
+	"\vcost_per_kg\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\tcostPerKg\x12I\n" +
+	"\x16marketing_freight_rate\x18\b \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x00R\x14marketingFreightRate\x88\x01\x01\x12P\n" +
+	"\x1amarketing_anti_dumping_pct\x18\t \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x01R\x17marketingAntiDumpingPct\x88\x01\x01\x12K\n" +
+	"\x17marketing_default_value\x18\n" +
+	" \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x02R\x15marketingDefaultValue\x88\x01\x01\x12B\n" +
+	"\x0evaluation_flag\x18\v \x01(\x0e2\x1b.finance.v1.RMValuationFlagR\rvaluationFlag\x12B\n" +
+	"\x0emarketing_flag\x18\f \x01(\x0e2\x1b.finance.v1.RMMarketingFlagR\rmarketingFlagB\x19\n" +
+	"\x17_marketing_freight_rateB\x1d\n" +
+	"\x1b_marketing_anti_dumping_pctB\x1a\n" +
+	"\x18_marketing_default_value\"q\n" +
 	"\x15CreateRMGroupResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
 	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.RMGroupHeadR\x04data\"A\n" +
@@ -3336,7 +3945,7 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\"y\n" +
 	"\x12GetRMGroupResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x126\n" +
-	"\x04data\x18\x02 \x01(\v2\".finance.v1.RMGroupHeadWithDetailsR\x04data\"\xdd\t\n" +
+	"\x04data\x18\x02 \x01(\v2\".finance.v1.RMGroupHeadWithDetailsR\x04data\"\xa1\x0f\n" +
 	"\x14UpdateRMGroupRequest\x12,\n" +
 	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x12,\n" +
 	"\n" +
@@ -3357,7 +3966,15 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\tis_active\x18\x0e \x01(\bH\fR\bisActive\x88\x01\x01\x127\n" +
 	"\x18clear_init_val_valuation\x18\x0f \x01(\bR\x15clearInitValValuation\x127\n" +
 	"\x18clear_init_val_marketing\x18\x10 \x01(\bR\x15clearInitValMarketing\x129\n" +
-	"\x19clear_init_val_simulation\x18\x11 \x01(\bR\x16clearInitValSimulationB\r\n" +
+	"\x19clear_init_val_simulation\x18\x11 \x01(\bR\x16clearInitValSimulation\x12I\n" +
+	"\x16marketing_freight_rate\x18\x12 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\rR\x14marketingFreightRate\x88\x01\x01\x12P\n" +
+	"\x1amarketing_anti_dumping_pct\x18\x13 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x0eR\x17marketingAntiDumpingPct\x88\x01\x01\x12K\n" +
+	"\x17marketing_default_value\x18\x14 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x0fR\x15marketingDefaultValue\x88\x01\x01\x12G\n" +
+	"\x0evaluation_flag\x18\x15 \x01(\x0e2\x1b.finance.v1.RMValuationFlagH\x10R\rvaluationFlag\x88\x01\x01\x12G\n" +
+	"\x0emarketing_flag\x18\x16 \x01(\x0e2\x1b.finance.v1.RMMarketingFlagH\x11R\rmarketingFlag\x88\x01\x01\x12?\n" +
+	"\x1cclear_marketing_freight_rate\x18\x17 \x01(\bR\x19clearMarketingFreightRate\x12F\n" +
+	" clear_marketing_anti_dumping_pct\x18\x18 \x01(\bR\x1cclearMarketingAntiDumpingPct\x12A\n" +
+	"\x1dclear_marketing_default_value\x18\x19 \x01(\bR\x1aclearMarketingDefaultValueB\r\n" +
 	"\v_group_nameB\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
@@ -3373,7 +3990,12 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x13_init_val_marketingB\x16\n" +
 	"\x14_init_val_simulationB\f\n" +
 	"\n" +
-	"_is_active\"q\n" +
+	"_is_activeB\x19\n" +
+	"\x17_marketing_freight_rateB\x1d\n" +
+	"\x1b_marketing_anti_dumping_pctB\x1a\n" +
+	"\x18_marketing_default_valueB\x11\n" +
+	"\x0f_valuation_flagB\x11\n" +
+	"\x0f_marketing_flag\"q\n" +
 	"\x15UpdateRMGroupResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
 	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.RMGroupHeadR\x04data\"D\n" +
@@ -3397,11 +4019,21 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x04data\x18\x02 \x03(\v2\x17.finance.v1.RMGroupHeadR\x04data\x12=\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"b\n" +
+	"pagination\"\xe8\x04\n" +
 	"\x10AddItemSelection\x12&\n" +
 	"\titem_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\bitemCode\x12&\n" +
 	"\n" +
-	"grade_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18(R\tgradeCode\"\xba\x01\n" +
+	"grade_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18(R\tgradeCode\x12I\n" +
+	"\x16valuation_freight_rate\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x00R\x14valuationFreightRate\x88\x01\x01\x12P\n" +
+	"\x1avaluation_anti_dumping_pct\x18\x04 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x01R\x17valuationAntiDumpingPct\x88\x01\x01\x12A\n" +
+	"\x12valuation_duty_pct\x18\x05 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x02R\x10valuationDutyPct\x88\x01\x01\x12M\n" +
+	"\x18valuation_transport_rate\x18\x06 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x03R\x16valuationTransportRate\x88\x01\x01\x12K\n" +
+	"\x17valuation_default_value\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x04R\x15valuationDefaultValue\x88\x01\x01B\x19\n" +
+	"\x17_valuation_freight_rateB\x1d\n" +
+	"\x1b_valuation_anti_dumping_pctB\x15\n" +
+	"\x13_valuation_duty_pctB\x1b\n" +
+	"\x19_valuation_transport_rateB\x1a\n" +
+	"\x18_valuation_default_value\"\xba\x01\n" +
 	"\x0fAddItemsRequest\x12,\n" +
 	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x120\n" +
 	"\n" +
@@ -3419,7 +4051,35 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x04mode\x18\x03 \x01(\x0e2\x1b.finance.v1.RemoveItemsModeB\b\xbaH\x05\x82\x01\x02 \x00R\x04mode\"g\n" +
 	"\x13RemoveItemsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12#\n" +
-	"\rremoved_count\x18\x02 \x01(\x05R\fremovedCount\"\xae\x01\n" +
+	"\rremoved_count\x18\x02 \x01(\x05R\fremovedCount\"\xb4\b\n" +
+	"\x16UpdateGroupItemRequest\x12,\n" +
+	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x120\n" +
+	"\x0fgroup_detail_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rgroupDetailId\x12I\n" +
+	"\x16valuation_freight_rate\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x00R\x14valuationFreightRate\x88\x01\x01\x12P\n" +
+	"\x1avaluation_anti_dumping_pct\x18\x04 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x01R\x17valuationAntiDumpingPct\x88\x01\x01\x12A\n" +
+	"\x12valuation_duty_pct\x18\x05 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x02R\x10valuationDutyPct\x88\x01\x01\x12M\n" +
+	"\x18valuation_transport_rate\x18\x06 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x03R\x16valuationTransportRate\x88\x01\x01\x12K\n" +
+	"\x17valuation_default_value\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x04R\x15valuationDefaultValue\x88\x01\x01\x12+\n" +
+	"\n" +
+	"sort_order\x18\b \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x05R\tsortOrder\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\t \x01(\bH\x06R\bisActive\x88\x01\x01\x12?\n" +
+	"\x1cclear_valuation_freight_rate\x18\n" +
+	" \x01(\bR\x19clearValuationFreightRate\x12F\n" +
+	" clear_valuation_anti_dumping_pct\x18\v \x01(\bR\x1cclearValuationAntiDumpingPct\x127\n" +
+	"\x18clear_valuation_duty_pct\x18\f \x01(\bR\x15clearValuationDutyPct\x12C\n" +
+	"\x1eclear_valuation_transport_rate\x18\r \x01(\bR\x1bclearValuationTransportRate\x12A\n" +
+	"\x1dclear_valuation_default_value\x18\x0e \x01(\bR\x1aclearValuationDefaultValueB\x19\n" +
+	"\x17_valuation_freight_rateB\x1d\n" +
+	"\x1b_valuation_anti_dumping_pctB\x15\n" +
+	"\x13_valuation_duty_pctB\x1b\n" +
+	"\x19_valuation_transport_rateB\x1a\n" +
+	"\x18_valuation_default_valueB\r\n" +
+	"\v_sort_orderB\f\n" +
+	"\n" +
+	"_is_active\"u\n" +
+	"\x17UpdateGroupItemResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
+	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.RMGroupDetailR\x04data\"\xae\x01\n" +
 	"\x19ListUngroupedItemsRequest\x12\x1b\n" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\x12+\n" +
@@ -3535,11 +4195,24 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x12RM_GROUP_FLAG_DEPT\x10\x04\x12\x16\n" +
 	"\x12RM_GROUP_FLAG_PO_1\x10\x05\x12\x16\n" +
 	"\x12RM_GROUP_FLAG_PO_2\x10\x06\x12\x16\n" +
-	"\x12RM_GROUP_FLAG_PO_3\x10\a*y\n" +
+	"\x12RM_GROUP_FLAG_PO_3\x10\a*\xd0\x01\n" +
+	"\x0fRMValuationFlag\x12!\n" +
+	"\x1dRM_VALUATION_FLAG_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14RM_VALUATION_FLAG_CR\x10\x01\x12\x18\n" +
+	"\x14RM_VALUATION_FLAG_SR\x10\x02\x12\x18\n" +
+	"\x14RM_VALUATION_FLAG_PR\x10\x03\x12\x18\n" +
+	"\x14RM_VALUATION_FLAG_CL\x10\x04\x12\x18\n" +
+	"\x14RM_VALUATION_FLAG_SL\x10\x05\x12\x18\n" +
+	"\x14RM_VALUATION_FLAG_FL\x10\x06*\x82\x01\n" +
+	"\x0fRMMarketingFlag\x12!\n" +
+	"\x1dRM_MARKETING_FLAG_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14RM_MARKETING_FLAG_SP\x10\x01\x12\x18\n" +
+	"\x14RM_MARKETING_FLAG_PP\x10\x02\x12\x18\n" +
+	"\x14RM_MARKETING_FLAG_FP\x10\x03*y\n" +
 	"\x0fRemoveItemsMode\x12!\n" +
 	"\x1dREMOVE_ITEMS_MODE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cREMOVE_ITEMS_MODE_DEACTIVATE\x10\x01\x12!\n" +
-	"\x1dREMOVE_ITEMS_MODE_SOFT_DELETE\x10\x022\x8a\x11\n" +
+	"\x1dREMOVE_ITEMS_MODE_SOFT_DELETE\x10\x022\xb5\x12\n" +
 	"\x0eRMGroupService\x12z\n" +
 	"\rCreateRMGroup\x12 .finance.v1.CreateRMGroupRequest\x1a!.finance.v1.CreateRMGroupResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/finance/rm-groups\x12~\n" +
 	"\n" +
@@ -3548,7 +4221,8 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\rDeleteRMGroup\x12 .finance.v1.DeleteRMGroupRequest\x1a!.finance.v1.DeleteRMGroupResponse\"1\x82\xd3\xe4\x93\x02+*)/api/v1/finance/rm-groups/{group_head_id}\x12t\n" +
 	"\fListRMGroups\x12\x1f.finance.v1.ListRMGroupsRequest\x1a .finance.v1.ListRMGroupsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/api/v1/finance/rm-groups\x12\x81\x01\n" +
 	"\bAddItems\x12\x1b.finance.v1.AddItemsRequest\x1a\x1c.finance.v1.AddItemsResponse\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/finance/rm-groups/{group_head_id}/items\x12\x91\x01\n" +
-	"\vRemoveItems\x12\x1e.finance.v1.RemoveItemsRequest\x1a\x1f.finance.v1.RemoveItemsResponse\"A\x82\xd3\xe4\x93\x02;:\x01*\"6/api/v1/finance/rm-groups/{group_head_id}/items/remove\x12\x90\x01\n" +
+	"\vRemoveItems\x12\x1e.finance.v1.RemoveItemsRequest\x1a\x1f.finance.v1.RemoveItemsResponse\"A\x82\xd3\xe4\x93\x02;:\x01*\"6/api/v1/finance/rm-groups/{group_head_id}/items/remove\x12\xa8\x01\n" +
+	"\x0fUpdateGroupItem\x12\".finance.v1.UpdateGroupItemRequest\x1a#.finance.v1.UpdateGroupItemResponse\"L\x82\xd3\xe4\x93\x02F:\x01*\x1aA/api/v1/finance/rm-groups/{group_head_id}/items/{group_detail_id}\x12\x90\x01\n" +
 	"\x12ListUngroupedItems\x12%.finance.v1.ListUngroupedItemsRequest\x1a&.finance.v1.ListUngroupedItemsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/v1/finance/rm-groups/ungrouped\x12\xa4\x01\n" +
 	"\x13GetRMGroupItemRates\x12&.finance.v1.GetRMGroupItemRatesRequest\x1a'.finance.v1.GetRMGroupItemRatesResponse\"<\x82\xd3\xe4\x93\x026\x124/api/v1/finance/rm-groups/{group_head_id}/item-rates\x12\x81\x01\n" +
 	"\x0eExportRMGroups\x12!.finance.v1.ExportRMGroupsRequest\x1a\".finance.v1.ExportRMGroupsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/v1/finance/rm-groups/export\x12\x84\x01\n" +
@@ -3573,132 +4247,146 @@ func file_finance_v1_rm_group_proto_rawDescGZIP() []byte {
 	return file_finance_v1_rm_group_proto_rawDescData
 }
 
-var file_finance_v1_rm_group_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_finance_v1_rm_group_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
+var file_finance_v1_rm_group_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_finance_v1_rm_group_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_finance_v1_rm_group_proto_goTypes = []any{
 	(RMGroupFlag)(0),                           // 0: finance.v1.RMGroupFlag
-	(RemoveItemsMode)(0),                       // 1: finance.v1.RemoveItemsMode
-	(*RMGroupHead)(nil),                        // 2: finance.v1.RMGroupHead
-	(*RMGroupDetail)(nil),                      // 3: finance.v1.RMGroupDetail
-	(*RMGroupHeadWithDetails)(nil),             // 4: finance.v1.RMGroupHeadWithDetails
-	(*UngroupedItem)(nil),                      // 5: finance.v1.UngroupedItem
-	(*SkippedItem)(nil),                        // 6: finance.v1.SkippedItem
-	(*CreateRMGroupRequest)(nil),               // 7: finance.v1.CreateRMGroupRequest
-	(*CreateRMGroupResponse)(nil),              // 8: finance.v1.CreateRMGroupResponse
-	(*GetRMGroupRequest)(nil),                  // 9: finance.v1.GetRMGroupRequest
-	(*GetRMGroupResponse)(nil),                 // 10: finance.v1.GetRMGroupResponse
-	(*UpdateRMGroupRequest)(nil),               // 11: finance.v1.UpdateRMGroupRequest
-	(*UpdateRMGroupResponse)(nil),              // 12: finance.v1.UpdateRMGroupResponse
-	(*DeleteRMGroupRequest)(nil),               // 13: finance.v1.DeleteRMGroupRequest
-	(*DeleteRMGroupResponse)(nil),              // 14: finance.v1.DeleteRMGroupResponse
-	(*ListRMGroupsRequest)(nil),                // 15: finance.v1.ListRMGroupsRequest
-	(*ListRMGroupsResponse)(nil),               // 16: finance.v1.ListRMGroupsResponse
-	(*AddItemSelection)(nil),                   // 17: finance.v1.AddItemSelection
-	(*AddItemsRequest)(nil),                    // 18: finance.v1.AddItemsRequest
-	(*AddItemsResponse)(nil),                   // 19: finance.v1.AddItemsResponse
-	(*RemoveItemsRequest)(nil),                 // 20: finance.v1.RemoveItemsRequest
-	(*RemoveItemsResponse)(nil),                // 21: finance.v1.RemoveItemsResponse
-	(*ListUngroupedItemsRequest)(nil),          // 22: finance.v1.ListUngroupedItemsRequest
-	(*ImportGroupItemsRequest)(nil),            // 23: finance.v1.ImportGroupItemsRequest
-	(*ImportGroupItemsResponse)(nil),           // 24: finance.v1.ImportGroupItemsResponse
-	(*DownloadGroupItemsTemplateRequest)(nil),  // 25: finance.v1.DownloadGroupItemsTemplateRequest
-	(*DownloadGroupItemsTemplateResponse)(nil), // 26: finance.v1.DownloadGroupItemsTemplateResponse
-	(*ExportUngroupedItemsRequest)(nil),        // 27: finance.v1.ExportUngroupedItemsRequest
-	(*ExportUngroupedItemsResponse)(nil),       // 28: finance.v1.ExportUngroupedItemsResponse
-	(*ListUngroupedItemsResponse)(nil),         // 29: finance.v1.ListUngroupedItemsResponse
-	(*RMGroupItemRates)(nil),                   // 30: finance.v1.RMGroupItemRates
-	(*GetRMGroupItemRatesRequest)(nil),         // 31: finance.v1.GetRMGroupItemRatesRequest
-	(*GetRMGroupItemRatesResponse)(nil),        // 32: finance.v1.GetRMGroupItemRatesResponse
-	(*ExportRMGroupsRequest)(nil),              // 33: finance.v1.ExportRMGroupsRequest
-	(*ExportRMGroupsResponse)(nil),             // 34: finance.v1.ExportRMGroupsResponse
-	(*ImportRMGroupsRequest)(nil),              // 35: finance.v1.ImportRMGroupsRequest
-	(*ImportRMGroupsResponse)(nil),             // 36: finance.v1.ImportRMGroupsResponse
-	(*DownloadRMGroupTemplateRequest)(nil),     // 37: finance.v1.DownloadRMGroupTemplateRequest
-	(*DownloadRMGroupTemplateResponse)(nil),    // 38: finance.v1.DownloadRMGroupTemplateResponse
-	(*v1.AuditInfo)(nil),                       // 39: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),                    // 40: common.v1.BaseResponse
-	(ActiveFilter)(0),                          // 41: finance.v1.ActiveFilter
-	(*v1.PaginationResponse)(nil),              // 42: common.v1.PaginationResponse
-	(*ImportError)(nil),                        // 43: finance.v1.ImportError
+	(RMValuationFlag)(0),                       // 1: finance.v1.RMValuationFlag
+	(RMMarketingFlag)(0),                       // 2: finance.v1.RMMarketingFlag
+	(RemoveItemsMode)(0),                       // 3: finance.v1.RemoveItemsMode
+	(*RMGroupHead)(nil),                        // 4: finance.v1.RMGroupHead
+	(*RMGroupDetail)(nil),                      // 5: finance.v1.RMGroupDetail
+	(*RMGroupHeadWithDetails)(nil),             // 6: finance.v1.RMGroupHeadWithDetails
+	(*UngroupedItem)(nil),                      // 7: finance.v1.UngroupedItem
+	(*SkippedItem)(nil),                        // 8: finance.v1.SkippedItem
+	(*CreateRMGroupRequest)(nil),               // 9: finance.v1.CreateRMGroupRequest
+	(*CreateRMGroupResponse)(nil),              // 10: finance.v1.CreateRMGroupResponse
+	(*GetRMGroupRequest)(nil),                  // 11: finance.v1.GetRMGroupRequest
+	(*GetRMGroupResponse)(nil),                 // 12: finance.v1.GetRMGroupResponse
+	(*UpdateRMGroupRequest)(nil),               // 13: finance.v1.UpdateRMGroupRequest
+	(*UpdateRMGroupResponse)(nil),              // 14: finance.v1.UpdateRMGroupResponse
+	(*DeleteRMGroupRequest)(nil),               // 15: finance.v1.DeleteRMGroupRequest
+	(*DeleteRMGroupResponse)(nil),              // 16: finance.v1.DeleteRMGroupResponse
+	(*ListRMGroupsRequest)(nil),                // 17: finance.v1.ListRMGroupsRequest
+	(*ListRMGroupsResponse)(nil),               // 18: finance.v1.ListRMGroupsResponse
+	(*AddItemSelection)(nil),                   // 19: finance.v1.AddItemSelection
+	(*AddItemsRequest)(nil),                    // 20: finance.v1.AddItemsRequest
+	(*AddItemsResponse)(nil),                   // 21: finance.v1.AddItemsResponse
+	(*RemoveItemsRequest)(nil),                 // 22: finance.v1.RemoveItemsRequest
+	(*RemoveItemsResponse)(nil),                // 23: finance.v1.RemoveItemsResponse
+	(*UpdateGroupItemRequest)(nil),             // 24: finance.v1.UpdateGroupItemRequest
+	(*UpdateGroupItemResponse)(nil),            // 25: finance.v1.UpdateGroupItemResponse
+	(*ListUngroupedItemsRequest)(nil),          // 26: finance.v1.ListUngroupedItemsRequest
+	(*ImportGroupItemsRequest)(nil),            // 27: finance.v1.ImportGroupItemsRequest
+	(*ImportGroupItemsResponse)(nil),           // 28: finance.v1.ImportGroupItemsResponse
+	(*DownloadGroupItemsTemplateRequest)(nil),  // 29: finance.v1.DownloadGroupItemsTemplateRequest
+	(*DownloadGroupItemsTemplateResponse)(nil), // 30: finance.v1.DownloadGroupItemsTemplateResponse
+	(*ExportUngroupedItemsRequest)(nil),        // 31: finance.v1.ExportUngroupedItemsRequest
+	(*ExportUngroupedItemsResponse)(nil),       // 32: finance.v1.ExportUngroupedItemsResponse
+	(*ListUngroupedItemsResponse)(nil),         // 33: finance.v1.ListUngroupedItemsResponse
+	(*RMGroupItemRates)(nil),                   // 34: finance.v1.RMGroupItemRates
+	(*GetRMGroupItemRatesRequest)(nil),         // 35: finance.v1.GetRMGroupItemRatesRequest
+	(*GetRMGroupItemRatesResponse)(nil),        // 36: finance.v1.GetRMGroupItemRatesResponse
+	(*ExportRMGroupsRequest)(nil),              // 37: finance.v1.ExportRMGroupsRequest
+	(*ExportRMGroupsResponse)(nil),             // 38: finance.v1.ExportRMGroupsResponse
+	(*ImportRMGroupsRequest)(nil),              // 39: finance.v1.ImportRMGroupsRequest
+	(*ImportRMGroupsResponse)(nil),             // 40: finance.v1.ImportRMGroupsResponse
+	(*DownloadRMGroupTemplateRequest)(nil),     // 41: finance.v1.DownloadRMGroupTemplateRequest
+	(*DownloadRMGroupTemplateResponse)(nil),    // 42: finance.v1.DownloadRMGroupTemplateResponse
+	(*v1.AuditInfo)(nil),                       // 43: common.v1.AuditInfo
+	(*v1.BaseResponse)(nil),                    // 44: common.v1.BaseResponse
+	(ActiveFilter)(0),                          // 45: finance.v1.ActiveFilter
+	(*v1.PaginationResponse)(nil),              // 46: common.v1.PaginationResponse
+	(*ImportError)(nil),                        // 47: finance.v1.ImportError
 }
 var file_finance_v1_rm_group_proto_depIdxs = []int32{
 	0,  // 0: finance.v1.RMGroupHead.flag_valuation:type_name -> finance.v1.RMGroupFlag
 	0,  // 1: finance.v1.RMGroupHead.flag_marketing:type_name -> finance.v1.RMGroupFlag
 	0,  // 2: finance.v1.RMGroupHead.flag_simulation:type_name -> finance.v1.RMGroupFlag
-	39, // 3: finance.v1.RMGroupHead.audit:type_name -> common.v1.AuditInfo
-	39, // 4: finance.v1.RMGroupDetail.audit:type_name -> common.v1.AuditInfo
-	2,  // 5: finance.v1.RMGroupHeadWithDetails.head:type_name -> finance.v1.RMGroupHead
-	3,  // 6: finance.v1.RMGroupHeadWithDetails.details:type_name -> finance.v1.RMGroupDetail
-	40, // 7: finance.v1.CreateRMGroupResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 8: finance.v1.CreateRMGroupResponse.data:type_name -> finance.v1.RMGroupHead
-	40, // 9: finance.v1.GetRMGroupResponse.base:type_name -> common.v1.BaseResponse
-	4,  // 10: finance.v1.GetRMGroupResponse.data:type_name -> finance.v1.RMGroupHeadWithDetails
-	0,  // 11: finance.v1.UpdateRMGroupRequest.flag_valuation:type_name -> finance.v1.RMGroupFlag
-	0,  // 12: finance.v1.UpdateRMGroupRequest.flag_marketing:type_name -> finance.v1.RMGroupFlag
-	0,  // 13: finance.v1.UpdateRMGroupRequest.flag_simulation:type_name -> finance.v1.RMGroupFlag
-	40, // 14: finance.v1.UpdateRMGroupResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 15: finance.v1.UpdateRMGroupResponse.data:type_name -> finance.v1.RMGroupHead
-	40, // 16: finance.v1.DeleteRMGroupResponse.base:type_name -> common.v1.BaseResponse
-	41, // 17: finance.v1.ListRMGroupsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	40, // 18: finance.v1.ListRMGroupsResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 19: finance.v1.ListRMGroupsResponse.data:type_name -> finance.v1.RMGroupHead
-	42, // 20: finance.v1.ListRMGroupsResponse.pagination:type_name -> common.v1.PaginationResponse
-	17, // 21: finance.v1.AddItemsRequest.selections:type_name -> finance.v1.AddItemSelection
-	40, // 22: finance.v1.AddItemsResponse.base:type_name -> common.v1.BaseResponse
-	3,  // 23: finance.v1.AddItemsResponse.added:type_name -> finance.v1.RMGroupDetail
-	6,  // 24: finance.v1.AddItemsResponse.skipped:type_name -> finance.v1.SkippedItem
-	1,  // 25: finance.v1.RemoveItemsRequest.mode:type_name -> finance.v1.RemoveItemsMode
-	40, // 26: finance.v1.RemoveItemsResponse.base:type_name -> common.v1.BaseResponse
-	40, // 27: finance.v1.ImportGroupItemsResponse.base:type_name -> common.v1.BaseResponse
-	43, // 28: finance.v1.ImportGroupItemsResponse.errors:type_name -> finance.v1.ImportError
-	6,  // 29: finance.v1.ImportGroupItemsResponse.skipped:type_name -> finance.v1.SkippedItem
-	40, // 30: finance.v1.DownloadGroupItemsTemplateResponse.base:type_name -> common.v1.BaseResponse
-	40, // 31: finance.v1.ExportUngroupedItemsResponse.base:type_name -> common.v1.BaseResponse
-	40, // 32: finance.v1.ListUngroupedItemsResponse.base:type_name -> common.v1.BaseResponse
-	5,  // 33: finance.v1.ListUngroupedItemsResponse.data:type_name -> finance.v1.UngroupedItem
-	42, // 34: finance.v1.ListUngroupedItemsResponse.pagination:type_name -> common.v1.PaginationResponse
-	40, // 35: finance.v1.GetRMGroupItemRatesResponse.base:type_name -> common.v1.BaseResponse
-	30, // 36: finance.v1.GetRMGroupItemRatesResponse.data:type_name -> finance.v1.RMGroupItemRates
-	41, // 37: finance.v1.ExportRMGroupsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	40, // 38: finance.v1.ExportRMGroupsResponse.base:type_name -> common.v1.BaseResponse
-	40, // 39: finance.v1.ImportRMGroupsResponse.base:type_name -> common.v1.BaseResponse
-	43, // 40: finance.v1.ImportRMGroupsResponse.errors:type_name -> finance.v1.ImportError
-	40, // 41: finance.v1.DownloadRMGroupTemplateResponse.base:type_name -> common.v1.BaseResponse
-	7,  // 42: finance.v1.RMGroupService.CreateRMGroup:input_type -> finance.v1.CreateRMGroupRequest
-	9,  // 43: finance.v1.RMGroupService.GetRMGroup:input_type -> finance.v1.GetRMGroupRequest
-	11, // 44: finance.v1.RMGroupService.UpdateRMGroup:input_type -> finance.v1.UpdateRMGroupRequest
-	13, // 45: finance.v1.RMGroupService.DeleteRMGroup:input_type -> finance.v1.DeleteRMGroupRequest
-	15, // 46: finance.v1.RMGroupService.ListRMGroups:input_type -> finance.v1.ListRMGroupsRequest
-	18, // 47: finance.v1.RMGroupService.AddItems:input_type -> finance.v1.AddItemsRequest
-	20, // 48: finance.v1.RMGroupService.RemoveItems:input_type -> finance.v1.RemoveItemsRequest
-	22, // 49: finance.v1.RMGroupService.ListUngroupedItems:input_type -> finance.v1.ListUngroupedItemsRequest
-	31, // 50: finance.v1.RMGroupService.GetRMGroupItemRates:input_type -> finance.v1.GetRMGroupItemRatesRequest
-	33, // 51: finance.v1.RMGroupService.ExportRMGroups:input_type -> finance.v1.ExportRMGroupsRequest
-	35, // 52: finance.v1.RMGroupService.ImportRMGroups:input_type -> finance.v1.ImportRMGroupsRequest
-	37, // 53: finance.v1.RMGroupService.DownloadRMGroupTemplate:input_type -> finance.v1.DownloadRMGroupTemplateRequest
-	27, // 54: finance.v1.RMGroupService.ExportUngroupedItems:input_type -> finance.v1.ExportUngroupedItemsRequest
-	23, // 55: finance.v1.RMGroupService.ImportGroupItems:input_type -> finance.v1.ImportGroupItemsRequest
-	25, // 56: finance.v1.RMGroupService.DownloadGroupItemsTemplate:input_type -> finance.v1.DownloadGroupItemsTemplateRequest
-	8,  // 57: finance.v1.RMGroupService.CreateRMGroup:output_type -> finance.v1.CreateRMGroupResponse
-	10, // 58: finance.v1.RMGroupService.GetRMGroup:output_type -> finance.v1.GetRMGroupResponse
-	12, // 59: finance.v1.RMGroupService.UpdateRMGroup:output_type -> finance.v1.UpdateRMGroupResponse
-	14, // 60: finance.v1.RMGroupService.DeleteRMGroup:output_type -> finance.v1.DeleteRMGroupResponse
-	16, // 61: finance.v1.RMGroupService.ListRMGroups:output_type -> finance.v1.ListRMGroupsResponse
-	19, // 62: finance.v1.RMGroupService.AddItems:output_type -> finance.v1.AddItemsResponse
-	21, // 63: finance.v1.RMGroupService.RemoveItems:output_type -> finance.v1.RemoveItemsResponse
-	29, // 64: finance.v1.RMGroupService.ListUngroupedItems:output_type -> finance.v1.ListUngroupedItemsResponse
-	32, // 65: finance.v1.RMGroupService.GetRMGroupItemRates:output_type -> finance.v1.GetRMGroupItemRatesResponse
-	34, // 66: finance.v1.RMGroupService.ExportRMGroups:output_type -> finance.v1.ExportRMGroupsResponse
-	36, // 67: finance.v1.RMGroupService.ImportRMGroups:output_type -> finance.v1.ImportRMGroupsResponse
-	38, // 68: finance.v1.RMGroupService.DownloadRMGroupTemplate:output_type -> finance.v1.DownloadRMGroupTemplateResponse
-	28, // 69: finance.v1.RMGroupService.ExportUngroupedItems:output_type -> finance.v1.ExportUngroupedItemsResponse
-	24, // 70: finance.v1.RMGroupService.ImportGroupItems:output_type -> finance.v1.ImportGroupItemsResponse
-	26, // 71: finance.v1.RMGroupService.DownloadGroupItemsTemplate:output_type -> finance.v1.DownloadGroupItemsTemplateResponse
-	57, // [57:72] is the sub-list for method output_type
-	42, // [42:57] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	43, // 3: finance.v1.RMGroupHead.audit:type_name -> common.v1.AuditInfo
+	1,  // 4: finance.v1.RMGroupHead.valuation_flag:type_name -> finance.v1.RMValuationFlag
+	2,  // 5: finance.v1.RMGroupHead.marketing_flag:type_name -> finance.v1.RMMarketingFlag
+	43, // 6: finance.v1.RMGroupDetail.audit:type_name -> common.v1.AuditInfo
+	4,  // 7: finance.v1.RMGroupHeadWithDetails.head:type_name -> finance.v1.RMGroupHead
+	5,  // 8: finance.v1.RMGroupHeadWithDetails.details:type_name -> finance.v1.RMGroupDetail
+	1,  // 9: finance.v1.CreateRMGroupRequest.valuation_flag:type_name -> finance.v1.RMValuationFlag
+	2,  // 10: finance.v1.CreateRMGroupRequest.marketing_flag:type_name -> finance.v1.RMMarketingFlag
+	44, // 11: finance.v1.CreateRMGroupResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 12: finance.v1.CreateRMGroupResponse.data:type_name -> finance.v1.RMGroupHead
+	44, // 13: finance.v1.GetRMGroupResponse.base:type_name -> common.v1.BaseResponse
+	6,  // 14: finance.v1.GetRMGroupResponse.data:type_name -> finance.v1.RMGroupHeadWithDetails
+	0,  // 15: finance.v1.UpdateRMGroupRequest.flag_valuation:type_name -> finance.v1.RMGroupFlag
+	0,  // 16: finance.v1.UpdateRMGroupRequest.flag_marketing:type_name -> finance.v1.RMGroupFlag
+	0,  // 17: finance.v1.UpdateRMGroupRequest.flag_simulation:type_name -> finance.v1.RMGroupFlag
+	1,  // 18: finance.v1.UpdateRMGroupRequest.valuation_flag:type_name -> finance.v1.RMValuationFlag
+	2,  // 19: finance.v1.UpdateRMGroupRequest.marketing_flag:type_name -> finance.v1.RMMarketingFlag
+	44, // 20: finance.v1.UpdateRMGroupResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 21: finance.v1.UpdateRMGroupResponse.data:type_name -> finance.v1.RMGroupHead
+	44, // 22: finance.v1.DeleteRMGroupResponse.base:type_name -> common.v1.BaseResponse
+	45, // 23: finance.v1.ListRMGroupsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	44, // 24: finance.v1.ListRMGroupsResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 25: finance.v1.ListRMGroupsResponse.data:type_name -> finance.v1.RMGroupHead
+	46, // 26: finance.v1.ListRMGroupsResponse.pagination:type_name -> common.v1.PaginationResponse
+	19, // 27: finance.v1.AddItemsRequest.selections:type_name -> finance.v1.AddItemSelection
+	44, // 28: finance.v1.AddItemsResponse.base:type_name -> common.v1.BaseResponse
+	5,  // 29: finance.v1.AddItemsResponse.added:type_name -> finance.v1.RMGroupDetail
+	8,  // 30: finance.v1.AddItemsResponse.skipped:type_name -> finance.v1.SkippedItem
+	3,  // 31: finance.v1.RemoveItemsRequest.mode:type_name -> finance.v1.RemoveItemsMode
+	44, // 32: finance.v1.RemoveItemsResponse.base:type_name -> common.v1.BaseResponse
+	44, // 33: finance.v1.UpdateGroupItemResponse.base:type_name -> common.v1.BaseResponse
+	5,  // 34: finance.v1.UpdateGroupItemResponse.data:type_name -> finance.v1.RMGroupDetail
+	44, // 35: finance.v1.ImportGroupItemsResponse.base:type_name -> common.v1.BaseResponse
+	47, // 36: finance.v1.ImportGroupItemsResponse.errors:type_name -> finance.v1.ImportError
+	8,  // 37: finance.v1.ImportGroupItemsResponse.skipped:type_name -> finance.v1.SkippedItem
+	44, // 38: finance.v1.DownloadGroupItemsTemplateResponse.base:type_name -> common.v1.BaseResponse
+	44, // 39: finance.v1.ExportUngroupedItemsResponse.base:type_name -> common.v1.BaseResponse
+	44, // 40: finance.v1.ListUngroupedItemsResponse.base:type_name -> common.v1.BaseResponse
+	7,  // 41: finance.v1.ListUngroupedItemsResponse.data:type_name -> finance.v1.UngroupedItem
+	46, // 42: finance.v1.ListUngroupedItemsResponse.pagination:type_name -> common.v1.PaginationResponse
+	44, // 43: finance.v1.GetRMGroupItemRatesResponse.base:type_name -> common.v1.BaseResponse
+	34, // 44: finance.v1.GetRMGroupItemRatesResponse.data:type_name -> finance.v1.RMGroupItemRates
+	45, // 45: finance.v1.ExportRMGroupsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	44, // 46: finance.v1.ExportRMGroupsResponse.base:type_name -> common.v1.BaseResponse
+	44, // 47: finance.v1.ImportRMGroupsResponse.base:type_name -> common.v1.BaseResponse
+	47, // 48: finance.v1.ImportRMGroupsResponse.errors:type_name -> finance.v1.ImportError
+	44, // 49: finance.v1.DownloadRMGroupTemplateResponse.base:type_name -> common.v1.BaseResponse
+	9,  // 50: finance.v1.RMGroupService.CreateRMGroup:input_type -> finance.v1.CreateRMGroupRequest
+	11, // 51: finance.v1.RMGroupService.GetRMGroup:input_type -> finance.v1.GetRMGroupRequest
+	13, // 52: finance.v1.RMGroupService.UpdateRMGroup:input_type -> finance.v1.UpdateRMGroupRequest
+	15, // 53: finance.v1.RMGroupService.DeleteRMGroup:input_type -> finance.v1.DeleteRMGroupRequest
+	17, // 54: finance.v1.RMGroupService.ListRMGroups:input_type -> finance.v1.ListRMGroupsRequest
+	20, // 55: finance.v1.RMGroupService.AddItems:input_type -> finance.v1.AddItemsRequest
+	22, // 56: finance.v1.RMGroupService.RemoveItems:input_type -> finance.v1.RemoveItemsRequest
+	24, // 57: finance.v1.RMGroupService.UpdateGroupItem:input_type -> finance.v1.UpdateGroupItemRequest
+	26, // 58: finance.v1.RMGroupService.ListUngroupedItems:input_type -> finance.v1.ListUngroupedItemsRequest
+	35, // 59: finance.v1.RMGroupService.GetRMGroupItemRates:input_type -> finance.v1.GetRMGroupItemRatesRequest
+	37, // 60: finance.v1.RMGroupService.ExportRMGroups:input_type -> finance.v1.ExportRMGroupsRequest
+	39, // 61: finance.v1.RMGroupService.ImportRMGroups:input_type -> finance.v1.ImportRMGroupsRequest
+	41, // 62: finance.v1.RMGroupService.DownloadRMGroupTemplate:input_type -> finance.v1.DownloadRMGroupTemplateRequest
+	31, // 63: finance.v1.RMGroupService.ExportUngroupedItems:input_type -> finance.v1.ExportUngroupedItemsRequest
+	27, // 64: finance.v1.RMGroupService.ImportGroupItems:input_type -> finance.v1.ImportGroupItemsRequest
+	29, // 65: finance.v1.RMGroupService.DownloadGroupItemsTemplate:input_type -> finance.v1.DownloadGroupItemsTemplateRequest
+	10, // 66: finance.v1.RMGroupService.CreateRMGroup:output_type -> finance.v1.CreateRMGroupResponse
+	12, // 67: finance.v1.RMGroupService.GetRMGroup:output_type -> finance.v1.GetRMGroupResponse
+	14, // 68: finance.v1.RMGroupService.UpdateRMGroup:output_type -> finance.v1.UpdateRMGroupResponse
+	16, // 69: finance.v1.RMGroupService.DeleteRMGroup:output_type -> finance.v1.DeleteRMGroupResponse
+	18, // 70: finance.v1.RMGroupService.ListRMGroups:output_type -> finance.v1.ListRMGroupsResponse
+	21, // 71: finance.v1.RMGroupService.AddItems:output_type -> finance.v1.AddItemsResponse
+	23, // 72: finance.v1.RMGroupService.RemoveItems:output_type -> finance.v1.RemoveItemsResponse
+	25, // 73: finance.v1.RMGroupService.UpdateGroupItem:output_type -> finance.v1.UpdateGroupItemResponse
+	33, // 74: finance.v1.RMGroupService.ListUngroupedItems:output_type -> finance.v1.ListUngroupedItemsResponse
+	36, // 75: finance.v1.RMGroupService.GetRMGroupItemRates:output_type -> finance.v1.GetRMGroupItemRatesResponse
+	38, // 76: finance.v1.RMGroupService.ExportRMGroups:output_type -> finance.v1.ExportRMGroupsResponse
+	40, // 77: finance.v1.RMGroupService.ImportRMGroups:output_type -> finance.v1.ImportRMGroupsResponse
+	42, // 78: finance.v1.RMGroupService.DownloadRMGroupTemplate:output_type -> finance.v1.DownloadRMGroupTemplateResponse
+	32, // 79: finance.v1.RMGroupService.ExportUngroupedItems:output_type -> finance.v1.ExportUngroupedItemsResponse
+	28, // 80: finance.v1.RMGroupService.ImportGroupItems:output_type -> finance.v1.ImportGroupItemsResponse
+	30, // 81: finance.v1.RMGroupService.DownloadGroupItemsTemplate:output_type -> finance.v1.DownloadGroupItemsTemplateResponse
+	66, // [66:82] is the sub-list for method output_type
+	50, // [50:66] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_rm_group_proto_init() }
@@ -3709,14 +4397,17 @@ func file_finance_v1_rm_group_proto_init() {
 	file_finance_v1_uom_proto_init()
 	file_finance_v1_rm_group_proto_msgTypes[0].OneofWrappers = []any{}
 	file_finance_v1_rm_group_proto_msgTypes[1].OneofWrappers = []any{}
+	file_finance_v1_rm_group_proto_msgTypes[5].OneofWrappers = []any{}
 	file_finance_v1_rm_group_proto_msgTypes[9].OneofWrappers = []any{}
+	file_finance_v1_rm_group_proto_msgTypes[15].OneofWrappers = []any{}
+	file_finance_v1_rm_group_proto_msgTypes[20].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_rm_group_proto_rawDesc), len(file_finance_v1_rm_group_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   37,
+			NumEnums:      4,
+			NumMessages:   39,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

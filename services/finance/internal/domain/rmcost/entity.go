@@ -89,6 +89,10 @@ type Cost struct {
 	createdBy string
 	updatedAt *time.Time
 	updatedBy *string
+
+	// V2 snapshot fields. Populated only on V2 calc path.
+	v2Inputs *V2Inputs
+	v2Rates  *V2Rates
 }
 
 // Computed carries the output of one calculation pass. Construct via CalculateCost,

@@ -57,7 +57,14 @@ func (h *RMGroupHandler) buildAddItemInputs(ctx context.Context, req *financev1.
 	if len(req.Selections) > 0 {
 		out := make([]appgroup.AddItemInput, len(req.Selections))
 		for i, sel := range req.Selections {
-			out[i] = h.enrichItemInput(ctx, sel.ItemCode, sel.GradeCode)
+			in := h.enrichItemInput(ctx, sel.ItemCode, sel.GradeCode)
+			// V2 valuation inputs from selection.
+			in.ValuationFreightRate = sel.ValuationFreightRate
+			in.ValuationAntiDumpingPct = sel.ValuationAntiDumpingPct
+			in.ValuationDutyPct = sel.ValuationDutyPct
+			in.ValuationTransportRate = sel.ValuationTransportRate
+			in.ValuationDefaultValue = sel.ValuationDefaultValue
+			out[i] = in
 		}
 		return out
 	}
@@ -104,6 +111,7 @@ type RMGroupHandler struct {
 	importItemsHandler *appgroup.ImportGroupItemsHandler
 	templateHandler    *appgroup.TemplateHandler
 	itemsTemplate      *appgroup.GroupItemsTemplateHandler
+	updateItemHandler  *appgroup.UpdateItemHandler
 	itemLookup         ItemMetadataLookup
 	recalc             *RecalcChain
 	validationHelper   *ValidationHelper
@@ -234,6 +242,7 @@ func NewRMGroupHandler(
 		importItemsHandler: appgroup.NewImportGroupItemsHandler(appgroup.NewAddItemsHandler(repo), importLookup),
 		templateHandler:    appgroup.NewTemplateHandler(),
 		itemsTemplate:      appgroup.NewGroupItemsTemplateHandler(),
+		updateItemHandler:  appgroup.NewUpdateItemHandler(repo),
 		itemLookup:         itemLookup,
 		recalc:             recalc,
 		validationHelper:   v,
@@ -248,14 +257,19 @@ func (h *RMGroupHandler) CreateRMGroup(ctx context.Context, req *financev1.Creat
 	}
 
 	head, err := h.createHandler.Handle(ctx, appgroup.CreateCommand{
-		Code:           req.GroupCode,
-		Name:           req.GroupName,
-		Description:    req.Description,
-		Colorant:       req.Colourant,
-		CIName:         req.CiName,
-		CostPercentage: req.CostPercentage,
-		CostPerKg:      req.CostPerKg,
-		CreatedBy:      getUserFromContext(ctx),
+		Code:                    req.GroupCode,
+		Name:                    req.GroupName,
+		Description:             req.Description,
+		Colorant:                req.Colourant,
+		CIName:                  req.CiName,
+		CostPercentage:          req.CostPercentage,
+		CostPerKg:               req.CostPerKg,
+		CreatedBy:               getUserFromContext(ctx),
+		MarketingFreightRate:    req.MarketingFreightRate,
+		MarketingAntiDumpingPct: req.MarketingAntiDumpingPct,
+		MarketingDefaultValue:   req.MarketingDefaultValue,
+		ValuationFlag:           protoValuationFlagToString(req.ValuationFlag),
+		MarketingFlag:           protoMarketingFlagToString(req.MarketingFlag),
 	})
 	if err != nil {
 		RecordRMGroupOperation(opCreate, false)
@@ -337,6 +351,21 @@ func (h *RMGroupHandler) UpdateRMGroup(ctx context.Context, req *financev1.Updat
 	if req.FlagSimulation != nil {
 		s := protoFlagToString(*req.FlagSimulation)
 		cmd.FlagSimulation = &s
+	}
+	// V2 fields.
+	cmd.MarketingFreightRate = req.MarketingFreightRate
+	cmd.MarketingAntiDumpingPct = req.MarketingAntiDumpingPct
+	cmd.MarketingDefaultValue = req.MarketingDefaultValue
+	cmd.ClearMarketingFreightRate = req.ClearMarketingFreightRate
+	cmd.ClearMarketingAntiDumpingPct = req.ClearMarketingAntiDumpingPct
+	cmd.ClearMarketingDefaultValue = req.ClearMarketingDefaultValue
+	if req.ValuationFlag != nil {
+		s := protoValuationFlagToString(*req.ValuationFlag)
+		cmd.ValuationFlag = &s
+	}
+	if req.MarketingFlag != nil {
+		s := protoMarketingFlagToString(*req.MarketingFlag)
+		cmd.MarketingFlag = &s
 	}
 
 	head, err := h.updateHandler.Handle(ctx, cmd)
@@ -498,6 +527,44 @@ func (h *RMGroupHandler) RemoveItems(ctx context.Context, req *financev1.RemoveI
 	}, nil
 }
 
+// UpdateGroupItem patches one detail row's V2 valuation fields + sort/active.
+func (h *RMGroupHandler) UpdateGroupItem(ctx context.Context, req *financev1.UpdateGroupItemRequest) (*financev1.UpdateGroupItemResponse, error) {
+	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
+		RecordRMGroupOperation(opUpdate, false)
+		return &financev1.UpdateGroupItemResponse{Base: baseResp}, nil
+	}
+	cmd := appgroup.UpdateItemCommand{
+		HeadID:                       req.GroupHeadId,
+		GroupDetailID:                req.GroupDetailId,
+		ValuationFreightRate:         req.ValuationFreightRate,
+		ValuationAntiDumpingPct:      req.ValuationAntiDumpingPct,
+		ValuationDutyPct:             req.ValuationDutyPct,
+		ValuationTransportRate:       req.ValuationTransportRate,
+		ValuationDefaultValue:        req.ValuationDefaultValue,
+		SortOrder:                    req.SortOrder,
+		IsActive:                     req.IsActive,
+		ClearValuationFreightRate:    req.ClearValuationFreightRate,
+		ClearValuationAntiDumpingPct: req.ClearValuationAntiDumpingPct,
+		ClearValuationDutyPct:        req.ClearValuationDutyPct,
+		ClearValuationTransportRate:  req.ClearValuationTransportRate,
+		ClearValuationDefaultValue:   req.ClearValuationDefaultValue,
+		UpdatedBy:                    getUserFromContext(ctx),
+	}
+	d, err := h.updateItemHandler.Handle(ctx, cmd)
+	if err != nil {
+		RecordRMGroupOperation(opUpdate, false)
+		return &financev1.UpdateGroupItemResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	RecordRMGroupOperation(opUpdate, true)
+	if headID, parseErr := uuid.Parse(req.GroupHeadId); parseErr == nil {
+		h.recalc.Publish(ctx, headID, string(apprmcost.TriggerDetailChange), getUserFromContext(ctx))
+	}
+	return &financev1.UpdateGroupItemResponse{
+		Base: successResponse("Group item updated"),
+		Data: rmGroupDetailToProto(d),
+	}, nil
+}
+
 // ListUngroupedItems returns items from the sync feed with no active group.
 func (h *RMGroupHandler) ListUngroupedItems(ctx context.Context, req *financev1.ListUngroupedItemsRequest) (*financev1.ListUngroupedItemsResponse, error) {
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
@@ -625,6 +692,13 @@ func rmGroupHeadToProto(h *rmgroupdomain.Head) *financev1.RMGroupHead {
 	if h.UpdatedBy() != nil {
 		out.Audit.UpdatedBy = *h.UpdatedBy()
 	}
+	// V2 fields.
+	mi := h.MarketingInputs()
+	out.MarketingFreightRate = mi.FreightRate
+	out.MarketingAntiDumpingPct = mi.AntiDumpingPct
+	out.MarketingDefaultValue = mi.DefaultValue
+	out.ValuationFlag = valuationFlagToProto(mi.ValuationFlag)
+	out.MarketingFlag = marketingFlagToProto(mi.MarketingFlag)
 	return out
 }
 
@@ -654,7 +728,83 @@ func rmGroupDetailToProto(d *rmgroupdomain.Detail) *financev1.RMGroupDetail {
 	if d.UpdatedBy() != nil {
 		out.Audit.UpdatedBy = *d.UpdatedBy()
 	}
+	// V2 fields.
+	vi := d.ValuationInputs()
+	out.ValuationFreightRate = vi.FreightRate
+	out.ValuationAntiDumpingPct = vi.AntiDumpingPct
+	out.ValuationDutyPct = vi.DutyPct
+	out.ValuationTransportRate = vi.TransportRate
+	out.ValuationDefaultValue = vi.DefaultValue
 	return out
+}
+
+// valuationFlagToProto maps a domain ValuationFlag to its proto enum.
+func valuationFlagToProto(f rmgroupdomain.ValuationFlag) financev1.RMValuationFlag {
+	switch f {
+	case rmgroupdomain.ValuationFlagCR:
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_CR
+	case rmgroupdomain.ValuationFlagSR:
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_SR
+	case rmgroupdomain.ValuationFlagPR:
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_PR
+	case rmgroupdomain.ValuationFlagCL:
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_CL
+	case rmgroupdomain.ValuationFlagSL:
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_SL
+	case rmgroupdomain.ValuationFlagFL:
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_FL
+	default:
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_UNSPECIFIED
+	}
+}
+
+// marketingFlagToProto maps a domain MarketingFlag to its proto enum.
+func marketingFlagToProto(f rmgroupdomain.MarketingFlag) financev1.RMMarketingFlag {
+	switch f {
+	case rmgroupdomain.MarketingFlagSP:
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_SP
+	case rmgroupdomain.MarketingFlagPP:
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_PP
+	case rmgroupdomain.MarketingFlagFP:
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_FP
+	default:
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_UNSPECIFIED
+	}
+}
+
+// protoValuationFlagToString converts proto enum to the domain string form
+// (returns "" for UNSPECIFIED so AUTO is the default).
+func protoValuationFlagToString(f financev1.RMValuationFlag) string {
+	switch f {
+	case financev1.RMValuationFlag_RM_VALUATION_FLAG_CR:
+		return "CR"
+	case financev1.RMValuationFlag_RM_VALUATION_FLAG_SR:
+		return "SR"
+	case financev1.RMValuationFlag_RM_VALUATION_FLAG_PR:
+		return "PR"
+	case financev1.RMValuationFlag_RM_VALUATION_FLAG_CL:
+		return "CL"
+	case financev1.RMValuationFlag_RM_VALUATION_FLAG_SL:
+		return "SL"
+	case financev1.RMValuationFlag_RM_VALUATION_FLAG_FL:
+		return "FL"
+	default:
+		return ""
+	}
+}
+
+// protoMarketingFlagToString converts proto enum to the domain string form.
+func protoMarketingFlagToString(f financev1.RMMarketingFlag) string {
+	switch f {
+	case financev1.RMMarketingFlag_RM_MARKETING_FLAG_SP:
+		return "SP"
+	case financev1.RMMarketingFlag_RM_MARKETING_FLAG_PP:
+		return "PP"
+	case financev1.RMMarketingFlag_RM_MARKETING_FLAG_FP:
+		return "FP"
+	default:
+		return ""
+	}
 }
 
 func ungroupedItemToProto(it *syncdata.ItemConsStockPO) *financev1.UngroupedItem {

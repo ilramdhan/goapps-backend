@@ -56,6 +56,11 @@ func NewConnection(cfg *config.DatabaseConfig) (*DB, error) {
 	return &DB{db}, nil
 }
 
+// NewDBFromSQL wraps an existing *sql.DB. Used by integration tests.
+func NewDBFromSQL(db *sql.DB) *DB {
+	return &DB{db}
+}
+
 // Close closes the database connection.
 func (db *DB) Close() error {
 	if err := db.DB.Close(); err != nil {

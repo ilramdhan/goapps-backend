@@ -26,6 +26,7 @@ const (
 	RMGroupService_ListRMGroups_FullMethodName               = "/finance.v1.RMGroupService/ListRMGroups"
 	RMGroupService_AddItems_FullMethodName                   = "/finance.v1.RMGroupService/AddItems"
 	RMGroupService_RemoveItems_FullMethodName                = "/finance.v1.RMGroupService/RemoveItems"
+	RMGroupService_UpdateGroupItem_FullMethodName            = "/finance.v1.RMGroupService/UpdateGroupItem"
 	RMGroupService_ListUngroupedItems_FullMethodName         = "/finance.v1.RMGroupService/ListUngroupedItems"
 	RMGroupService_GetRMGroupItemRates_FullMethodName        = "/finance.v1.RMGroupService/GetRMGroupItemRates"
 	RMGroupService_ExportRMGroups_FullMethodName             = "/finance.v1.RMGroupService/ExportRMGroups"
@@ -58,6 +59,8 @@ type RMGroupServiceClient interface {
 	AddItems(ctx context.Context, in *AddItemsRequest, opts ...grpc.CallOption) (*AddItemsResponse, error)
 	// RemoveItems removes details from a group (deactivate or soft-delete).
 	RemoveItems(ctx context.Context, in *RemoveItemsRequest, opts ...grpc.CallOption) (*RemoveItemsResponse, error)
+	// V2: UpdateGroupItem updates one detail row's valuation fields + sort/active.
+	UpdateGroupItem(ctx context.Context, in *UpdateGroupItemRequest, opts ...grpc.CallOption) (*UpdateGroupItemResponse, error)
 	// ListUngroupedItems reports items from the sync feed that have no active
 	// group assignment.
 	ListUngroupedItems(ctx context.Context, in *ListUngroupedItemsRequest, opts ...grpc.CallOption) (*ListUngroupedItemsResponse, error)
@@ -154,6 +157,16 @@ func (c *rMGroupServiceClient) RemoveItems(ctx context.Context, in *RemoveItemsR
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RemoveItemsResponse)
 	err := c.cc.Invoke(ctx, RMGroupService_RemoveItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rMGroupServiceClient) UpdateGroupItem(ctx context.Context, in *UpdateGroupItemRequest, opts ...grpc.CallOption) (*UpdateGroupItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateGroupItemResponse)
+	err := c.cc.Invoke(ctx, RMGroupService_UpdateGroupItem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -262,6 +275,8 @@ type RMGroupServiceServer interface {
 	AddItems(context.Context, *AddItemsRequest) (*AddItemsResponse, error)
 	// RemoveItems removes details from a group (deactivate or soft-delete).
 	RemoveItems(context.Context, *RemoveItemsRequest) (*RemoveItemsResponse, error)
+	// V2: UpdateGroupItem updates one detail row's valuation fields + sort/active.
+	UpdateGroupItem(context.Context, *UpdateGroupItemRequest) (*UpdateGroupItemResponse, error)
 	// ListUngroupedItems reports items from the sync feed that have no active
 	// group assignment.
 	ListUngroupedItems(context.Context, *ListUngroupedItemsRequest) (*ListUngroupedItemsResponse, error)
@@ -314,6 +329,9 @@ func (UnimplementedRMGroupServiceServer) AddItems(context.Context, *AddItemsRequ
 }
 func (UnimplementedRMGroupServiceServer) RemoveItems(context.Context, *RemoveItemsRequest) (*RemoveItemsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveItems not implemented")
+}
+func (UnimplementedRMGroupServiceServer) UpdateGroupItem(context.Context, *UpdateGroupItemRequest) (*UpdateGroupItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateGroupItem not implemented")
 }
 func (UnimplementedRMGroupServiceServer) ListUngroupedItems(context.Context, *ListUngroupedItemsRequest) (*ListUngroupedItemsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUngroupedItems not implemented")
@@ -482,6 +500,24 @@ func _RMGroupService_RemoveItems_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RMGroupServiceServer).RemoveItems(ctx, req.(*RemoveItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RMGroupService_UpdateGroupItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateGroupItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RMGroupServiceServer).UpdateGroupItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RMGroupService_UpdateGroupItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RMGroupServiceServer).UpdateGroupItem(ctx, req.(*UpdateGroupItemRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -664,6 +700,10 @@ var RMGroupService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveItems",
 			Handler:    _RMGroupService_RemoveItems_Handler,
+		},
+		{
+			MethodName: "UpdateGroupItem",
+			Handler:    _RMGroupService_UpdateGroupItem_Handler,
 		},
 		{
 			MethodName: "ListUngroupedItems",

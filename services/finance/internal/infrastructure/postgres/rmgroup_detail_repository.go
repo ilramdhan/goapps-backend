@@ -28,9 +28,12 @@ func (r *RMGroupRepository) AddDetail(ctx context.Context, detail *rmgroup.Detai
 				group_detail_id, group_head_id, item_code, item_name, item_type_code,
 				grade_code, item_grade, uom_code,
 				market_percentage, market_value_rp,
-				sort_order, is_active, is_dummy, created_at, created_by
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+				sort_order, is_active, is_dummy, created_at, created_by,
+				valuation_freight_rate, valuation_anti_dumping_pct, valuation_duty_pct,
+				valuation_transport_rate, valuation_default_value
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
 		`
+		vi := detail.ValuationInputs()
 		_, err := tx.ExecContext(ctx, query,
 			detail.ID(), detail.HeadID(), detail.ItemCode().String(),
 			nullableString(detail.ItemName()), nullableString(detail.ItemTypeCode()),
@@ -38,6 +41,7 @@ func (r *RMGroupRepository) AddDetail(ctx context.Context, detail *rmgroup.Detai
 			detail.MarketPercentage(), detail.MarketValueRp(),
 			detail.SortOrder(), detail.IsActive(), detail.IsDummy(),
 			detail.CreatedAt(), detail.CreatedBy(),
+			vi.FreightRate, vi.AntiDumpingPct, vi.DutyPct, vi.TransportRate, vi.DefaultValue,
 		)
 		if err != nil {
 			if isUniqueViolation(err) {
@@ -57,9 +61,12 @@ func (r *RMGroupRepository) UpdateDetail(ctx context.Context, detail *rmgroup.De
 				item_name=$2, item_type_code=$3, grade_code=$4, item_grade=$5, uom_code=$6,
 				market_percentage=$7, market_value_rp=$8,
 				sort_order=$9, is_active=$10, is_dummy=$11,
-				updated_at=$12, updated_by=$13
+				updated_at=$12, updated_by=$13,
+				valuation_freight_rate=$14, valuation_anti_dumping_pct=$15, valuation_duty_pct=$16,
+				valuation_transport_rate=$17, valuation_default_value=$18
 			WHERE group_detail_id=$1 AND deleted_at IS NULL
 		`
+		vi := detail.ValuationInputs()
 		res, err := tx.ExecContext(ctx, query,
 			detail.ID(),
 			nullableString(detail.ItemName()), nullableString(detail.ItemTypeCode()),
@@ -67,6 +74,7 @@ func (r *RMGroupRepository) UpdateDetail(ctx context.Context, detail *rmgroup.De
 			detail.MarketPercentage(), detail.MarketValueRp(),
 			detail.SortOrder(), detail.IsActive(), detail.IsDummy(),
 			detail.UpdatedAt(), detail.UpdatedBy(),
+			vi.FreightRate, vi.AntiDumpingPct, vi.DutyPct, vi.TransportRate, vi.DefaultValue,
 		)
 		if err != nil {
 			if isUniqueViolation(err) {
@@ -102,17 +110,24 @@ func (r *RMGroupRepository) GetActiveDetailByItemCodeGrade(ctx context.Context, 
 		itemCode.String(), gradeCode))
 }
 
+// detailListOrderBy is a stable ordering for detail listings. Without the
+// trailing tiebreakers, PostgreSQL returns ties (e.g. rows that share
+// sort_order and item_code, differing only by grade_code) in physical-heap
+// order, which shifts whenever a row is updated and rewritten by MVCC.
+const detailListOrderBy = ` ORDER BY sort_order ASC, item_code ASC,
+	COALESCE(grade_code,'') ASC, created_at ASC, group_detail_id ASC`
+
 // ListDetailsByHeadID returns every non-deleted detail for the given head, ordered by sort_order.
 func (r *RMGroupRepository) ListDetailsByHeadID(ctx context.Context, headID uuid.UUID) ([]*rmgroup.Detail, error) {
 	return r.listDetails(ctx,
-		detailSelectSQL+` WHERE group_head_id=$1 AND deleted_at IS NULL ORDER BY sort_order ASC, item_code ASC`,
+		detailSelectSQL+` WHERE group_head_id=$1 AND deleted_at IS NULL`+detailListOrderBy,
 		headID)
 }
 
 // ListActiveDetailsByHeadID returns only active, non-deleted details (used by the calc engine).
 func (r *RMGroupRepository) ListActiveDetailsByHeadID(ctx context.Context, headID uuid.UUID) ([]*rmgroup.Detail, error) {
 	return r.listDetails(ctx,
-		detailSelectSQL+` WHERE group_head_id=$1 AND is_active=true AND deleted_at IS NULL ORDER BY sort_order ASC, item_code ASC`,
+		detailSelectSQL+` WHERE group_head_id=$1 AND is_active=true AND deleted_at IS NULL`+detailListOrderBy,
 		headID)
 }
 
@@ -151,29 +166,36 @@ const detailSelectSQL = `
 	       grade_code, item_grade, uom_code,
 	       market_percentage, market_value_rp,
 	       sort_order, is_active, is_dummy, created_at, created_by,
-	       updated_at, updated_by, deleted_at, deleted_by
+	       updated_at, updated_by, deleted_at, deleted_by,
+	       valuation_freight_rate, valuation_anti_dumping_pct, valuation_duty_pct,
+	       valuation_transport_rate, valuation_default_value
 	FROM cst_rm_group_detail`
 
 type detailDTO struct {
-	ID               uuid.UUID
-	HeadID           uuid.UUID
-	ItemCode         string
-	ItemName         sql.NullString
-	ItemTypeCode     sql.NullString
-	GradeCode        sql.NullString
-	ItemGrade        sql.NullString
-	UOMCode          sql.NullString
-	MarketPercentage sql.NullFloat64
-	MarketValueRp    sql.NullFloat64
-	SortOrder        int32
-	IsActive         bool
-	IsDummy          bool
-	CreatedAt        time.Time
-	CreatedBy        string
-	UpdatedAt        sql.NullTime
-	UpdatedBy        sql.NullString
-	DeletedAt        sql.NullTime
-	DeletedBy        sql.NullString
+	ID                       uuid.UUID
+	HeadID                   uuid.UUID
+	ItemCode                 string
+	ItemName                 sql.NullString
+	ItemTypeCode             sql.NullString
+	GradeCode                sql.NullString
+	ItemGrade                sql.NullString
+	UOMCode                  sql.NullString
+	MarketPercentage         sql.NullFloat64
+	MarketValueRp            sql.NullFloat64
+	SortOrder                int32
+	IsActive                 bool
+	IsDummy                  bool
+	CreatedAt                time.Time
+	CreatedBy                string
+	UpdatedAt                sql.NullTime
+	UpdatedBy                sql.NullString
+	DeletedAt                sql.NullTime
+	DeletedBy                sql.NullString
+	ValuationFreightRate     sql.NullFloat64
+	ValuationAntiDumpingPct  sql.NullFloat64
+	ValuationDutyPct         sql.NullFloat64
+	ValuationTransportRate   sql.NullFloat64
+	ValuationDefaultValue    sql.NullFloat64
 }
 
 func (d *detailDTO) toEntity() (*rmgroup.Detail, error) {
@@ -181,7 +203,7 @@ func (d *detailDTO) toEntity() (*rmgroup.Detail, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid item_code from db: %w", err)
 	}
-	return rmgroup.ReconstructDetail(
+	detail := rmgroup.ReconstructDetail(
 		d.ID, d.HeadID, itemCode,
 		nullStringVal(d.ItemName), nullStringVal(d.ItemTypeCode),
 		nullStringVal(d.GradeCode), nullStringVal(d.ItemGrade), nullStringVal(d.UOMCode),
@@ -190,7 +212,17 @@ func (d *detailDTO) toEntity() (*rmgroup.Detail, error) {
 		d.CreatedAt, d.CreatedBy,
 		nullTimePtr(d.UpdatedAt), nullStringPtr(d.UpdatedBy),
 		nullTimePtr(d.DeletedAt), nullStringPtr(d.DeletedBy),
-	), nil
+	)
+	if err := detail.AttachValuationInputs(rmgroup.ValuationInputs{
+		FreightRate:    nullFloatPtr(d.ValuationFreightRate),
+		AntiDumpingPct: nullFloatPtr(d.ValuationAntiDumpingPct),
+		DutyPct:        nullFloatPtr(d.ValuationDutyPct),
+		TransportRate:  nullFloatPtr(d.ValuationTransportRate),
+		DefaultValue:   nullFloatPtr(d.ValuationDefaultValue),
+	}); err != nil {
+		return nil, fmt.Errorf("attach valuation inputs from db: %w", err)
+	}
+	return detail, nil
 }
 
 func (r *RMGroupRepository) scanDetail(row *sql.Row) (*rmgroup.Detail, error) {
@@ -201,6 +233,8 @@ func (r *RMGroupRepository) scanDetail(row *sql.Row) (*rmgroup.Detail, error) {
 		&d.MarketPercentage, &d.MarketValueRp,
 		&d.SortOrder, &d.IsActive, &d.IsDummy, &d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
+		&d.ValuationFreightRate, &d.ValuationAntiDumpingPct, &d.ValuationDutyPct,
+		&d.ValuationTransportRate, &d.ValuationDefaultValue,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, rmgroup.ErrDetailNotFound
@@ -227,6 +261,8 @@ func (r *RMGroupRepository) listDetails(ctx context.Context, query string, args 
 			&d.MarketPercentage, &d.MarketValueRp,
 			&d.SortOrder, &d.IsActive, &d.IsDummy, &d.CreatedAt, &d.CreatedBy,
 			&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
+			&d.ValuationFreightRate, &d.ValuationAntiDumpingPct, &d.ValuationDutyPct,
+			&d.ValuationTransportRate, &d.ValuationDefaultValue,
 		); err != nil {
 			return nil, fmt.Errorf("scan detail row: %w", err)
 		}

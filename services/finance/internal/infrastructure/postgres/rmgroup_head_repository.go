@@ -37,9 +37,12 @@ func (r *RMGroupRepository) CreateHead(ctx context.Context, head *rmgroup.Head) 
 				cost_percentage, cost_per_kg,
 				flag_valuation, flag_marketing, flag_simulation,
 				init_val_valuation, init_val_marketing, init_val_simulation,
-				is_active, created_at, created_by
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+				is_active, created_at, created_by,
+				marketing_freight_rate, marketing_anti_dumping_pct, marketing_default_value,
+				valuation_flag, marketing_flag
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
 		`
+		mi := head.MarketingInputs()
 		_, err := tx.ExecContext(ctx, query,
 			head.ID(), head.Code().String(), head.Name(), head.Description(),
 			nullableString(head.Colorant()), nullableString(head.CIName()),
@@ -47,6 +50,8 @@ func (r *RMGroupRepository) CreateHead(ctx context.Context, head *rmgroup.Head) 
 			head.FlagValuation().String(), head.FlagMarketing().String(), head.FlagSimulation().String(),
 			head.InitValValuation(), head.InitValMarketing(), head.InitValSimulation(),
 			head.IsActive(), head.CreatedAt(), head.CreatedBy(),
+			mi.FreightRate, mi.AntiDumpingPct, mi.DefaultValue,
+			nullableFlagString(string(mi.ValuationFlag)), nullableFlagString(string(mi.MarketingFlag)),
 		)
 		if err != nil {
 			if isUniqueViolation(err) {
@@ -175,9 +180,12 @@ func (r *RMGroupRepository) UpdateHead(ctx context.Context, head *rmgroup.Head) 
 				cost_percentage = $6, cost_per_kg = $7,
 				flag_valuation = $8, flag_marketing = $9, flag_simulation = $10,
 				init_val_valuation = $11, init_val_marketing = $12, init_val_simulation = $13,
-				is_active = $14, updated_at = $15, updated_by = $16
+				is_active = $14, updated_at = $15, updated_by = $16,
+				marketing_freight_rate = $17, marketing_anti_dumping_pct = $18, marketing_default_value = $19,
+				valuation_flag = $20, marketing_flag = $21
 			WHERE group_head_id = $1 AND deleted_at IS NULL
 		`
+		mi := head.MarketingInputs()
 		res, err := tx.ExecContext(ctx, query,
 			head.ID(), head.Name(), head.Description(),
 			nullableString(head.Colorant()), nullableString(head.CIName()),
@@ -185,6 +193,8 @@ func (r *RMGroupRepository) UpdateHead(ctx context.Context, head *rmgroup.Head) 
 			head.FlagValuation().String(), head.FlagMarketing().String(), head.FlagSimulation().String(),
 			head.InitValValuation(), head.InitValMarketing(), head.InitValSimulation(),
 			head.IsActive(), head.UpdatedAt(), head.UpdatedBy(),
+			mi.FreightRate, mi.AntiDumpingPct, mi.DefaultValue,
+			nullableFlagString(string(mi.ValuationFlag)), nullableFlagString(string(mi.MarketingFlag)),
 		)
 		if err != nil {
 			return fmt.Errorf("update rm group head: %w", err)
@@ -290,31 +300,38 @@ const headSelectSQL = `
 	       cost_percentage, cost_per_kg,
 	       flag_valuation, flag_marketing, flag_simulation,
 	       init_val_valuation, init_val_marketing, init_val_simulation,
-	       is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
+	       is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by,
+	       marketing_freight_rate, marketing_anti_dumping_pct, marketing_default_value,
+	       valuation_flag, marketing_flag
 	FROM cst_rm_group_head`
 
 type headDTO struct {
-	ID                uuid.UUID
-	Code              string
-	Name              string
-	Description       sql.NullString
-	Colorant          sql.NullString
-	CIName            sql.NullString
-	CostPercentage    float64
-	CostPerKg         float64
-	FlagValuation     string
-	FlagMarketing     string
-	FlagSimulation    string
-	InitValValuation  sql.NullFloat64
-	InitValMarketing  sql.NullFloat64
-	InitValSimulation sql.NullFloat64
-	IsActive          bool
-	CreatedAt         time.Time
-	CreatedBy         string
-	UpdatedAt         sql.NullTime
-	UpdatedBy         sql.NullString
-	DeletedAt         sql.NullTime
-	DeletedBy         sql.NullString
+	ID                       uuid.UUID
+	Code                     string
+	Name                     string
+	Description              sql.NullString
+	Colorant                 sql.NullString
+	CIName                   sql.NullString
+	CostPercentage           float64
+	CostPerKg                float64
+	FlagValuation            string
+	FlagMarketing            string
+	FlagSimulation           string
+	InitValValuation         sql.NullFloat64
+	InitValMarketing         sql.NullFloat64
+	InitValSimulation        sql.NullFloat64
+	IsActive                 bool
+	CreatedAt                time.Time
+	CreatedBy                string
+	UpdatedAt                sql.NullTime
+	UpdatedBy                sql.NullString
+	DeletedAt                sql.NullTime
+	DeletedBy                sql.NullString
+	MarketingFreightRate     sql.NullFloat64
+	MarketingAntiDumpingPct  sql.NullFloat64
+	MarketingDefaultValue    sql.NullFloat64
+	ValuationFlagV2          sql.NullString
+	MarketingFlagV2          sql.NullString
 }
 
 func (d *headDTO) toEntity() (*rmgroup.Head, error) {
@@ -334,7 +351,7 @@ func (d *headDTO) toEntity() (*rmgroup.Head, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid flag_simulation from db: %w", err)
 	}
-	return rmgroup.ReconstructHead(
+	head := rmgroup.ReconstructHead(
 		d.ID, code, d.Name,
 		nullStringVal(d.Description), nullStringVal(d.Colorant), nullStringVal(d.CIName),
 		d.CostPercentage, d.CostPerKg,
@@ -343,7 +360,25 @@ func (d *headDTO) toEntity() (*rmgroup.Head, error) {
 		d.IsActive, d.CreatedAt, d.CreatedBy,
 		nullTimePtr(d.UpdatedAt), nullStringPtr(d.UpdatedBy),
 		nullTimePtr(d.DeletedAt), nullStringPtr(d.DeletedBy),
-	), nil
+	)
+	valFlag, err := rmgroup.ParseValuationFlag(nullStringVal(d.ValuationFlagV2))
+	if err != nil {
+		return nil, fmt.Errorf("invalid valuation_flag from db: %w", err)
+	}
+	mktFlag, err := rmgroup.ParseMarketingFlag(nullStringVal(d.MarketingFlagV2))
+	if err != nil {
+		return nil, fmt.Errorf("invalid marketing_flag from db: %w", err)
+	}
+	if err := head.AttachMarketingInputs(rmgroup.MarketingInputs{
+		FreightRate:    nullFloatPtr(d.MarketingFreightRate),
+		AntiDumpingPct: nullFloatPtr(d.MarketingAntiDumpingPct),
+		DefaultValue:   nullFloatPtr(d.MarketingDefaultValue),
+		ValuationFlag:  valFlag,
+		MarketingFlag:  mktFlag,
+	}); err != nil {
+		return nil, fmt.Errorf("attach marketing inputs from db: %w", err)
+	}
+	return head, nil
 }
 
 func (r *RMGroupRepository) scanHead(row *sql.Row) (*rmgroup.Head, error) {
@@ -355,6 +390,8 @@ func (r *RMGroupRepository) scanHead(row *sql.Row) (*rmgroup.Head, error) {
 		&d.InitValValuation, &d.InitValMarketing, &d.InitValSimulation,
 		&d.IsActive, &d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
+		&d.MarketingFreightRate, &d.MarketingAntiDumpingPct, &d.MarketingDefaultValue,
+		&d.ValuationFlagV2, &d.MarketingFlagV2,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, rmgroup.ErrNotFound
@@ -374,6 +411,8 @@ func (r *RMGroupRepository) scanHeadRow(rows *sql.Rows) (*rmgroup.Head, error) {
 		&d.InitValValuation, &d.InitValMarketing, &d.InitValSimulation,
 		&d.IsActive, &d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
+		&d.MarketingFreightRate, &d.MarketingAntiDumpingPct, &d.MarketingDefaultValue,
+		&d.ValuationFlagV2, &d.MarketingFlagV2,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan rm group head row: %w", err)
@@ -387,6 +426,15 @@ func (r *RMGroupRepository) scanHeadRow(rows *sql.Rows) (*rmgroup.Head, error) {
 
 func nullableString(s string) sql.NullString {
 	if s == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: s, Valid: true}
+}
+
+// nullableFlagString stores AUTO/empty as NULL so the DB column is NULL when
+// the user has not picked an explicit flag. Other values (CR/SL/SP/...) round-trip.
+func nullableFlagString(s string) sql.NullString {
+	if s == "" || s == "AUTO" {
 		return sql.NullString{}
 	}
 	return sql.NullString{String: s, Valid: true}

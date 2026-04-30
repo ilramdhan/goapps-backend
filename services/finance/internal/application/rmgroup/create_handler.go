@@ -20,6 +20,12 @@ type CreateCommand struct {
 	CostPercentage float64
 	CostPerKg      float64
 	CreatedBy      string
+	// V2 optional marketing inputs.
+	MarketingFreightRate    *float64
+	MarketingAntiDumpingPct *float64
+	MarketingDefaultValue   *float64
+	ValuationFlag           string // "" / "AUTO" / "CR" / ...
+	MarketingFlag           string
 }
 
 // CreateHandler handles CreateHead commands.
@@ -65,6 +71,28 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*rmgroup
 			in.CIName = &v
 		}
 		if err := head.Update(in, cmd.CreatedBy); err != nil {
+			return nil, err
+		}
+	}
+
+	// V2 marketing inputs.
+	if cmd.MarketingFreightRate != nil || cmd.MarketingAntiDumpingPct != nil || cmd.MarketingDefaultValue != nil ||
+		cmd.ValuationFlag != "" || cmd.MarketingFlag != "" {
+		valFlag, err := rmgroup.ParseValuationFlag(cmd.ValuationFlag)
+		if err != nil {
+			return nil, err
+		}
+		mktFlag, err := rmgroup.ParseMarketingFlag(cmd.MarketingFlag)
+		if err != nil {
+			return nil, err
+		}
+		if err := head.AttachMarketingInputs(rmgroup.MarketingInputs{
+			FreightRate:    cmd.MarketingFreightRate,
+			AntiDumpingPct: cmd.MarketingAntiDumpingPct,
+			DefaultValue:   cmd.MarketingDefaultValue,
+			ValuationFlag:  valFlag,
+			MarketingFlag:  mktFlag,
+		}); err != nil {
 			return nil, err
 		}
 	}

@@ -38,6 +38,17 @@ type UpdateCommand struct {
 	IsActive *bool
 
 	UpdatedBy string
+
+	// V2 marketing fields.
+	MarketingFreightRate    *float64
+	MarketingAntiDumpingPct *float64
+	MarketingDefaultValue   *float64
+	ValuationFlag           *string // explicit "" allowed = AUTO
+	MarketingFlag           *string
+
+	ClearMarketingFreightRate    bool
+	ClearMarketingAntiDumpingPct bool
+	ClearMarketingDefaultValue   bool
 }
 
 // UpdateHandler handles UpdateHead commands.
@@ -70,10 +81,52 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*rmgroup
 		return nil, err
 	}
 
+	// V2 marketing inputs — apply on top of the V1 update if any V2 patch present.
+	if hasV2MarketingPatch(cmd) {
+		mi := head.MarketingInputs()
+		mi.FreightRate = patchOptFloat(mi.FreightRate, cmd.MarketingFreightRate, cmd.ClearMarketingFreightRate)
+		mi.AntiDumpingPct = patchOptFloat(mi.AntiDumpingPct, cmd.MarketingAntiDumpingPct, cmd.ClearMarketingAntiDumpingPct)
+		mi.DefaultValue = patchOptFloat(mi.DefaultValue, cmd.MarketingDefaultValue, cmd.ClearMarketingDefaultValue)
+		if cmd.ValuationFlag != nil {
+			vf, err := rmgroup.ParseValuationFlag(*cmd.ValuationFlag)
+			if err != nil {
+				return nil, err
+			}
+			mi.ValuationFlag = vf
+		}
+		if cmd.MarketingFlag != nil {
+			mf, err := rmgroup.ParseMarketingFlag(*cmd.MarketingFlag)
+			if err != nil {
+				return nil, err
+			}
+			mi.MarketingFlag = mf
+		}
+		if err := head.AttachMarketingInputs(mi); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := h.repo.UpdateHead(ctx, head); err != nil {
 		return nil, fmt.Errorf("persist head update: %w", err)
 	}
 	return head, nil
+}
+
+func hasV2MarketingPatch(cmd UpdateCommand) bool {
+	return cmd.MarketingFreightRate != nil || cmd.MarketingAntiDumpingPct != nil || cmd.MarketingDefaultValue != nil ||
+		cmd.ValuationFlag != nil || cmd.MarketingFlag != nil ||
+		cmd.ClearMarketingFreightRate || cmd.ClearMarketingAntiDumpingPct || cmd.ClearMarketingDefaultValue
+}
+
+func patchOptFloat(cur, in *float64, clear bool) *float64 {
+	if clear {
+		return nil
+	}
+	if in == nil {
+		return cur
+	}
+	v := *in
+	return &v
 }
 
 // buildHeadUpdateInput maps command pointers to the domain UpdateInput, parsing

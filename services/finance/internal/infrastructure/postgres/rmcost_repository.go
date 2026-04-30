@@ -41,6 +41,8 @@ func (r *RMCostRepository) Upsert(ctx context.Context, cost *rmcost.Cost, hist r
 
 func upsertCost(ctx context.Context, tx *sql.Tx, c *rmcost.Cost) error {
 	rates := c.Rates()
+	v2In := c.V2Inputs()
+	v2Rates := c.V2Rates()
 	query := `
 		INSERT INTO cst_rm_cost (
 			rm_cost_id, period, rm_code, rm_type, group_head_id, item_code, rm_name, uom_code,
@@ -48,8 +50,14 @@ func upsertCost(ctx context.Context, tx *sql.Tx, c *rmcost.Cost) error {
 			cost_val, cost_mark, cost_sim,
 			flag_valuation, flag_marketing, flag_simulation,
 			flag_valuation_used, flag_marketing_used, flag_simulation_used,
-			calculated_at, calculated_by, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+			calculated_at, calculated_by, created_at, created_by,
+			valuation_flag_v2, marketing_flag_v2,
+			marketing_freight_rate, marketing_anti_dumping_pct, marketing_duty_pct,
+			marketing_transport_rate, marketing_default_value, simulation_rate,
+			cl_rate, sl_rate, fl_rate, sp_rate, pp_rate, fp_rate,
+			cr_rate, sr_rate, pr_rate
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,
+			$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44)
 		ON CONFLICT (period, rm_code) DO UPDATE SET
 			group_head_id = EXCLUDED.group_head_id,
 			item_code = EXCLUDED.item_code,
@@ -73,8 +81,45 @@ func upsertCost(ctx context.Context, tx *sql.Tx, c *rmcost.Cost) error {
 			calculated_at = EXCLUDED.calculated_at,
 			calculated_by = EXCLUDED.calculated_by,
 			updated_at = EXCLUDED.calculated_at,
-			updated_by = EXCLUDED.calculated_by
+			updated_by = EXCLUDED.calculated_by,
+			valuation_flag_v2 = EXCLUDED.valuation_flag_v2,
+			marketing_flag_v2 = EXCLUDED.marketing_flag_v2,
+			marketing_freight_rate = EXCLUDED.marketing_freight_rate,
+			marketing_anti_dumping_pct = EXCLUDED.marketing_anti_dumping_pct,
+			marketing_duty_pct = EXCLUDED.marketing_duty_pct,
+			marketing_transport_rate = EXCLUDED.marketing_transport_rate,
+			marketing_default_value = EXCLUDED.marketing_default_value,
+			simulation_rate = EXCLUDED.simulation_rate,
+			cl_rate = EXCLUDED.cl_rate,
+			sl_rate = EXCLUDED.sl_rate,
+			fl_rate = EXCLUDED.fl_rate,
+			sp_rate = EXCLUDED.sp_rate,
+			pp_rate = EXCLUDED.pp_rate,
+			fp_rate = EXCLUDED.fp_rate,
+			cr_rate = EXCLUDED.cr_rate,
+			sr_rate = EXCLUDED.sr_rate,
+			pr_rate = EXCLUDED.pr_rate
 	`
+	var (
+		valFlag, mktFlag                                       sql.NullString
+		mFreight, mAnti, mDuty, mTransport, mDefault, simRate  *float64
+		cl, sl, fl, sp, pp, fp, cr, sr, pr                     *float64
+	)
+	if v2In != nil {
+		valFlag = nullableFlagString(v2In.ValuationFlag)
+		mktFlag = nullableFlagString(v2In.MarketingFlag)
+		mFreight = v2In.MarketingFreightRate
+		mAnti = v2In.MarketingAntiDumpingPct
+		mDuty = v2In.MarketingDutyPct
+		mTransport = v2In.MarketingTransportRate
+		mDefault = v2In.MarketingDefaultValue
+		simRate = v2In.SimulationRate
+	}
+	if v2Rates != nil {
+		cl, sl, fl = v2Rates.CL, v2Rates.SL, v2Rates.FL
+		sp, pp, fp = v2Rates.SP, v2Rates.PP, v2Rates.FP
+		cr, sr, pr = v2Rates.CR, v2Rates.SR, v2Rates.PR
+	}
 	_, err := tx.ExecContext(ctx, query,
 		c.ID(), c.Period(), c.RMCode(), c.RMType().String(),
 		c.GroupHeadID(), c.ItemCode(), nullableString(c.RMName()), nullableString(c.UOMCode()),
@@ -83,6 +128,9 @@ func upsertCost(ctx context.Context, tx *sql.Tx, c *rmcost.Cost) error {
 		c.FlagValuation().String(), c.FlagMarketing().String(), c.FlagSimulation().String(),
 		c.FlagValuationUsed().String(), c.FlagMarketingUsed().String(), c.FlagSimulationUsed().String(),
 		c.CalculatedAt(), c.CalculatedBy(), c.CreatedAt(), c.CreatedBy(),
+		valFlag, mktFlag,
+		mFreight, mAnti, mDuty, mTransport, mDefault, simRate,
+		cl, sl, fl, sp, pp, fp, cr, sr, pr,
 	)
 	if err != nil {
 		return fmt.Errorf("upsert rm_cost: %w", err)
@@ -359,40 +407,63 @@ const costSelectColumnsSQL = `
 	       cost_val, cost_mark, cost_sim,
 	       flag_valuation, flag_marketing, flag_simulation,
 	       flag_valuation_used, flag_marketing_used, flag_simulation_used,
-	       calculated_at, calculated_by, created_at, created_by, updated_at, updated_by`
+	       calculated_at, calculated_by, created_at, created_by, updated_at, updated_by,
+	       valuation_flag_v2, marketing_flag_v2,
+	       marketing_freight_rate, marketing_anti_dumping_pct, marketing_duty_pct,
+	       marketing_transport_rate, marketing_default_value, simulation_rate,
+	       cl_rate, sl_rate, fl_rate, sp_rate, pp_rate, fp_rate,
+	       cr_rate, sr_rate, pr_rate`
 
 const costSelectSQL = costSelectColumnsSQL + ` FROM cst_rm_cost`
 
 type costDTO struct {
-	ID                 uuid.UUID
-	Period             string
-	RMCode             string
-	RMType             string
-	GroupHeadID        uuid.NullUUID
-	ItemCode           sql.NullString
-	RMName             sql.NullString
-	UOMCode            sql.NullString
-	ConsRate           sql.NullFloat64
-	StoresRate         sql.NullFloat64
-	DeptRate           sql.NullFloat64
-	PO1Rate            sql.NullFloat64
-	PO2Rate            sql.NullFloat64
-	PO3Rate            sql.NullFloat64
-	CostVal            sql.NullFloat64
-	CostMark           sql.NullFloat64
-	CostSim            sql.NullFloat64
-	FlagValuation      string
-	FlagMarketing      string
-	FlagSimulation     string
-	FlagValuationUsed  string
-	FlagMarketingUsed  string
-	FlagSimulationUsed string
-	CalculatedAt       sql.NullTime
-	CalculatedBy       sql.NullString
-	CreatedAt          time.Time
-	CreatedBy          string
-	UpdatedAt          sql.NullTime
-	UpdatedBy          sql.NullString
+	ID                       uuid.UUID
+	Period                   string
+	RMCode                   string
+	RMType                   string
+	GroupHeadID              uuid.NullUUID
+	ItemCode                 sql.NullString
+	RMName                   sql.NullString
+	UOMCode                  sql.NullString
+	ConsRate                 sql.NullFloat64
+	StoresRate               sql.NullFloat64
+	DeptRate                 sql.NullFloat64
+	PO1Rate                  sql.NullFloat64
+	PO2Rate                  sql.NullFloat64
+	PO3Rate                  sql.NullFloat64
+	CostVal                  sql.NullFloat64
+	CostMark                 sql.NullFloat64
+	CostSim                  sql.NullFloat64
+	FlagValuation            string
+	FlagMarketing            string
+	FlagSimulation           string
+	FlagValuationUsed        string
+	FlagMarketingUsed        string
+	FlagSimulationUsed       string
+	CalculatedAt             sql.NullTime
+	CalculatedBy             sql.NullString
+	CreatedAt                time.Time
+	CreatedBy                string
+	UpdatedAt                sql.NullTime
+	UpdatedBy                sql.NullString
+	// V2 columns.
+	ValuationFlagV2          sql.NullString
+	MarketingFlagV2          sql.NullString
+	MarketingFreightRate     sql.NullFloat64
+	MarketingAntiDumpingPct  sql.NullFloat64
+	MarketingDutyPct         sql.NullFloat64
+	MarketingTransportRate   sql.NullFloat64
+	MarketingDefaultValue    sql.NullFloat64
+	SimulationRate           sql.NullFloat64
+	CLRate                   sql.NullFloat64
+	SLRate                   sql.NullFloat64
+	FLRate                   sql.NullFloat64
+	SPRate                   sql.NullFloat64
+	PPRate                   sql.NullFloat64
+	FPRate                   sql.NullFloat64
+	CRRate                   sql.NullFloat64
+	SRRate                   sql.NullFloat64
+	PRRate                   sql.NullFloat64
 }
 
 func (d *costDTO) toEntity() *rmcost.Cost {
@@ -409,7 +480,7 @@ func (d *costDTO) toEntity() *rmcost.Cost {
 		id := d.GroupHeadID.UUID
 		groupID = &id
 	}
-	return rmcost.ReconstructCost(
+	cost := rmcost.ReconstructCost(
 		d.ID, d.Period, d.RMCode, rmcost.RMType(d.RMType), groupID,
 		nullStringPtr(d.ItemCode), nullStringVal(d.RMName), nullStringVal(d.UOMCode),
 		rates,
@@ -420,6 +491,44 @@ func (d *costDTO) toEntity() *rmcost.Cost {
 		d.CreatedAt, d.CreatedBy,
 		nullTimePtr(d.UpdatedAt), nullStringPtr(d.UpdatedBy),
 	)
+	// Hydrate V2 snapshots when present.
+	if d.ValuationFlagV2.Valid || d.MarketingFlagV2.Valid || d.SimulationRate.Valid ||
+		d.MarketingFreightRate.Valid || d.MarketingAntiDumpingPct.Valid ||
+		d.MarketingDutyPct.Valid || d.MarketingTransportRate.Valid || d.MarketingDefaultValue.Valid ||
+		d.CLRate.Valid || d.SLRate.Valid || d.FLRate.Valid {
+		cost.AttachV2(
+			rmcost.V2Inputs{
+				MarketingFreightRate:    nullFloatPtr(d.MarketingFreightRate),
+				MarketingAntiDumpingPct: nullFloatPtr(d.MarketingAntiDumpingPct),
+				MarketingDutyPct:        nullFloatPtr(d.MarketingDutyPct),
+				MarketingTransportRate:  nullFloatPtr(d.MarketingTransportRate),
+				MarketingDefaultValue:   nullFloatPtr(d.MarketingDefaultValue),
+				SimulationRate:          nullFloatPtr(d.SimulationRate),
+				ValuationFlag:           nullStringValOrAuto(d.ValuationFlagV2),
+				MarketingFlag:           nullStringValOrAuto(d.MarketingFlagV2),
+			},
+			rmcost.V2Rates{
+				CL: nullFloatPtr(d.CLRate),
+				SL: nullFloatPtr(d.SLRate),
+				FL: nullFloatPtr(d.FLRate),
+				SP: nullFloatPtr(d.SPRate),
+				PP: nullFloatPtr(d.PPRate),
+				FP: nullFloatPtr(d.FPRate),
+				CR: nullFloatPtr(d.CRRate),
+				SR: nullFloatPtr(d.SRRate),
+				PR: nullFloatPtr(d.PRRate),
+			},
+		)
+	}
+	return cost
+}
+
+// nullStringValOrAuto returns the string value or "AUTO" if NULL/empty.
+func nullStringValOrAuto(v sql.NullString) string {
+	if !v.Valid || v.String == "" {
+		return "AUTO"
+	}
+	return v.String
 }
 
 func (r *RMCostRepository) scanCost(row *sql.Row) (*rmcost.Cost, error) {
@@ -452,6 +561,11 @@ func scanCostInto(scan scanFn, d *costDTO) error {
 		&d.FlagValuation, &d.FlagMarketing, &d.FlagSimulation,
 		&d.FlagValuationUsed, &d.FlagMarketingUsed, &d.FlagSimulationUsed,
 		&d.CalculatedAt, &d.CalculatedBy, &d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy,
+		&d.ValuationFlagV2, &d.MarketingFlagV2,
+		&d.MarketingFreightRate, &d.MarketingAntiDumpingPct, &d.MarketingDutyPct,
+		&d.MarketingTransportRate, &d.MarketingDefaultValue, &d.SimulationRate,
+		&d.CLRate, &d.SLRate, &d.FLRate, &d.SPRate, &d.PPRate, &d.FPRate,
+		&d.CRRate, &d.SRRate, &d.PRRate,
 	)
 }
 
