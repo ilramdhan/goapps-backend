@@ -93,9 +93,10 @@ jobs:
 
       - name: Install golang-migrate
         run: |
-          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
-          sudo mv migrate /usr/local/bin/migrate
-          migrate --version
+          # Install via `go install` (more reliable than the GitHub release
+          # tarball, which has hit transient redirect failures from CI runners).
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+          migrate -version
 
       - name: Run database migrations
         working-directory: ${{ env.WORKING_DIR }}
@@ -241,8 +242,10 @@ jobs:
 
       - name: Install golang-migrate
         run: |
-          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
-          sudo mv migrate /usr/local/bin/migrate
+          # Install via `go install` (more reliable than the GitHub release
+          # tarball, which has hit transient redirect failures from CI runners).
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+          migrate -version
 
       - name: Run database migrations
         working-directory: ${{ env.WORKING_DIR }}
