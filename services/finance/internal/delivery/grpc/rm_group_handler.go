@@ -936,11 +936,12 @@ func (h *RMGroupHandler) ExportRMGroups(ctx context.Context, req *financev1.Expo
 		id, perr := uuid.Parse(idStr)
 		if perr != nil {
 			RecordRMGroupOperation(opExport, false)
-			return &financev1.ExportRMGroupsResponse{Base: &commonv1.BaseResponse{
+			resp := &financev1.ExportRMGroupsResponse{Base: &commonv1.BaseResponse{
 				IsSuccess:  false,
 				StatusCode: "400",
 				Message:    "invalid group_head_id: " + idStr,
-			}}, nil //nolint:nilerr // validation error returned via BaseResponse
+			}}
+			return resp, nil //nolint:nilerr // validation error returned via BaseResponse
 		}
 		query.GroupHeadIDs = append(query.GroupHeadIDs, id)
 	}

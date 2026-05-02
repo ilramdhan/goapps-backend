@@ -24,7 +24,11 @@ func (r *SyncDataRepository) ListItemsByCode(ctx context.Context, itemCode strin
 	if err != nil {
 		return nil, fmt.Errorf("list items by code: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
 
 	var out []*syncdata.ItemConsStockPO
 	for rows.Next() {
