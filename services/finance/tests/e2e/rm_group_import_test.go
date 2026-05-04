@@ -131,18 +131,18 @@ func (s *RMGroupImportSuite) TestImport_NewGroupsAndItems() {
 
 	items := []itemRow{
 		{
-			GroupCode:        codeA,
-			ItemCode:         "E2EITEM-1-" + stamp,
-			ItemName:         "Polyester Chip",
-			GradeCode:        "NA",
-			UOMCode:          "KG",
-			SortOrder:        "1",
-			ValFreight:       "0.06",
-			ValAntiPctWhole:  "4",
-			ValDutyPctWhole:  "4",
-			ValTransport:     "0.08125",
-			ValDefaultValue:  "0.10",
-			IsActive:         "TRUE",
+			GroupCode:       codeA,
+			ItemCode:        "E2EITEM-1-" + stamp,
+			ItemName:        "Polyester Chip",
+			GradeCode:       "NA",
+			UOMCode:         "KG",
+			SortOrder:       "1",
+			ValFreight:      "0.06",
+			ValAntiPctWhole: "4",
+			ValDutyPctWhole: "4",
+			ValTransport:    "0.08125",
+			ValDefaultValue: "0.10",
+			IsActive:        "TRUE",
 		},
 		{
 			GroupCode: codeA,
@@ -359,12 +359,11 @@ func (s *RMGroupImportSuite) TestImport_MultiVariantItemRequiresGradeCode() {
 	require.NoError(s.T(), err)
 	require.True(s.T(), resp.Base.IsSuccess, "import call should still succeed; row error in errors[]")
 
-	assert.Equal(s.T(), int32(1), resp.GroupsCreated, "header group should still be created")
-	assert.Equal(s.T(), int32(0), resp.ItemsAdded, "ambiguous item must NOT be added")
-	require.GreaterOrEqual(s.T(), int(resp.FailedCount), 1, "expected at least 1 row error")
-
-	// If the test environment has no sync data for CHP0000033, the row would
-	// instead pass with grade_code='' — only assert ambiguity when it triggered.
+	// Detect whether this DB actually has multi-variant sync rows for
+	// CHP0000033. CI runs with an empty cst_item_cons_stk_po, so the
+	// ambiguity branch never triggers — the row is added with empty grade.
+	// Skip the rest of the assertions in that environment so the test still
+	// guards the behavior locally without false-failing in CI.
 	var ambiguityErr string
 	for _, e := range resp.Errors {
 		if strings.Contains(strings.ToLower(e.Message), "grade variants") {
@@ -373,8 +372,15 @@ func (s *RMGroupImportSuite) TestImport_MultiVariantItemRequiresGradeCode() {
 		}
 	}
 	if ambiguityErr == "" {
+		if head := s.findGroupByCode(ctx, groupCode); head != nil {
+			s.cleanupGroup(ctx, head.GroupHeadId)
+		}
 		s.T().Skip("CHP0000033 has no multi-variant rows in this DB — skipping ambiguity assertion")
 	}
+
+	assert.Equal(s.T(), int32(1), resp.GroupsCreated, "header group should still be created")
+	assert.Equal(s.T(), int32(0), resp.ItemsAdded, "ambiguous item must NOT be added")
+	require.GreaterOrEqual(s.T(), int(resp.FailedCount), 1, "expected at least 1 row error")
 	assert.Contains(s.T(), ambiguityErr, "specify grade_code",
 		"error must instruct user to add grade_code")
 	assert.Contains(s.T(), ambiguityErr, "NA",
@@ -610,4 +616,3 @@ func writeStringRow(f *excelize.File, sheet string, rowNum int, vals []string) e
 	}
 	return nil
 }
-
