@@ -712,6 +712,56 @@ if err != nil { return fmt.Errorf("parse code: %w", err) }
 
 `if → for → if → if → if` = 5 levels = FAILS. Extract the inner block to a helper function.
 
+### Pattern 7 — convertible struct literal (staticcheck S1016)
+
+When two named struct types have **identical field names, types, and order**, copying them via field-by-field struct literal triggers `S1016: should convert ... instead of using struct literal`. Use a direct type conversion instead.
+
+```go
+// ❌ FAILS CI — staticcheck S1016
+type UngroupedQuery struct {
+    Search    string
+    Scope     GroupingScope
+    Page      int
+    PageSize  int
+    SortBy    string
+    SortOrder string
+}
+type UngroupedItemsFilter struct {
+    Search    string
+    Scope     GroupingScope
+    Page      int
+    PageSize  int
+    SortBy    string
+    SortOrder string
+}
+
+func (h *Handler) Handle(_ context.Context, q UngroupedQuery) error {
+    filter := UngroupedItemsFilter{
+        Search:    q.Search,
+        Scope:     q.Scope,
+        Page:      q.Page,
+        PageSize:  q.PageSize,
+        SortBy:    q.SortBy,
+        SortOrder: q.SortOrder,
+    }
+    // ...
+}
+
+// ✅ Fix — direct conversion
+filter := UngroupedItemsFilter(q)
+```
+
+**Common spot**: Application-layer `XxxQuery` / `XxxCommand` structs that mirror an infrastructure-layer `XxxFilter`. Two options:
+
+1. **Direct conversion** when the layers should stay decoupled but happen to have the same shape — staticcheck is happy, and adding a future field to one struct breaks the conversion at compile time so you can decide what to do.
+2. **Type alias** (`type Filter = Query`) when you've decided the two are conceptually the same — eliminates the duplication entirely.
+
+**When the structs DIVERGE** (different fields, different order, different types), keep the struct literal — staticcheck won't complain. If only the field order is different but contents match, **reorder the fields in one of the types** to match, then convert.
+
+Watch this when:
+- Adding a new field to a `Query`/`Command` struct that's also in `Filter` — keep the order matching.
+- Refactoring a handler that just forwards a query to a repository.
+
 ### Pre-Commit Verification
 
 Before declaring any backend task complete, run **all** of these. Finding even one issue blocks completion:
@@ -726,7 +776,7 @@ goimports -w .                      # formatting
 # since local golangci-lint v1.62.2 will not catch v2-only rules.
 ```
 
-If a handler or domain file adds new int32 casts, repeated strings, or enum `String()` methods, **always** inspect them against Patterns 1-3 before committing.
+If a handler or domain file adds new int32 casts, repeated strings, or enum `String()` methods, **always** inspect them against Patterns 1-3 before committing. If two struct types share identical shapes, inspect against Pattern 7.
 
 ---
 

@@ -114,14 +114,10 @@ func NewUngroupedHandler(reader UngroupedItemsReader) *UngroupedHandler {
 
 // Handle executes the grouping-monitor query.
 func (h *UngroupedHandler) Handle(ctx context.Context, query UngroupedQuery) (*UngroupedResult, error) {
-	filter := UngroupedItemsFilter{
-		Search:    query.Search,
-		Scope:     query.Scope,
-		Page:      query.Page,
-		PageSize:  query.PageSize,
-		SortBy:    query.SortBy,
-		SortOrder: query.SortOrder,
-	}
+	// UngroupedQuery and UngroupedItemsFilter have identical field
+	// shapes — staticcheck S1016 requires direct conversion over a
+	// field-by-field struct literal.
+	filter := UngroupedItemsFilter(query)
 	filter.Validate()
 
 	items, total, err := h.reader.ListGroupingMonitor(ctx, filter)
