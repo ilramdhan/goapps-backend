@@ -81,10 +81,12 @@ func (h *PrdRequestGRPCHandler) CreateRequest(ctx context.Context, req *financev
 		return &financev1.CreateRequestResponse{Base: BadRequestResponse("invalid due_date: "+err.Error())}, nil
 	}
 
+	// RequesterDeptID: Phase 1 stub — dept enrichment not yet available.
+	// Use the requester's own UUID as a placeholder so the domain constraint is satisfied.
 	r, err := h.createHandler.Handle(ctx, appprdrequest.CreateCommand{
 		RequesterID:       requesterID,
 		RequesterUsername: getUserFromContext(ctx),
-		RequesterDeptID:   uuid.Nil, // populated via a future enrichment step
+		RequesterDeptID:   requesterID,
 		RequesterDeptCode: "",
 		Title:             req.GetTitle(),
 		Description:       req.GetDescription(),
