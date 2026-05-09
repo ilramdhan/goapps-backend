@@ -103,6 +103,14 @@ func (s *Server) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to register RMCost gateway: %w", err)
 	}
 
+	if err := financev1.RegisterProductServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register Product gateway: %w", err)
+	}
+
+	if err := financev1.RegisterProductRequestServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register ProductRequest gateway: %w", err)
+	}
+
 	// Create main mux
 	mux := http.NewServeMux()
 

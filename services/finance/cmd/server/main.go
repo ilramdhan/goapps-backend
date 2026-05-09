@@ -13,6 +13,8 @@ import (
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
+	appproduct "github.com/mutugading/goapps-backend/services/finance/internal/application/product"
+	appprdrequest "github.com/mutugading/goapps-backend/services/finance/internal/application/prdrequest"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
@@ -99,6 +101,9 @@ func run() error {
 	rmCostRepo := postgres.NewRMCostRepository(db)
 	rmCostDetailRepo := postgres.NewRMCostDetailRepository(db)
 	rmCostInputsRepo := postgres.NewRMCostInputsRepository(db)
+	productRepo := postgres.NewProductRepository(db)
+	prdRequestRepo := postgres.NewPrdRequestRepository(db)
+	ticketNoGen := postgres.NewPrdRequestTicketNoGenerator(db)
 
 	// Setup oracle sync handlers
 	triggerHandler := oraclesync.NewTriggerHandler(jobRepo, oracleSyncPublisher)
@@ -190,8 +195,44 @@ func run() error {
 		return err
 	}
 
+	// Application handlers — product
+	productCreate := appproduct.NewCreateHandler(productRepo)
+	productGet := appproduct.NewGetHandler(productRepo)
+	productList := appproduct.NewListHandler(productRepo)
+	productUpdate := appproduct.NewUpdateHandler(productRepo)
+	productDelete := appproduct.NewDeleteHandler(productRepo)
+	productDuplicate := appproduct.NewDuplicateHandler(productRepo)
+
+	// gRPC handler — product
+	productHandler, err := grpcdelivery.NewProductGRPCHandler(
+		productCreate, productGet, productList, productUpdate, productDelete, productDuplicate,
+		productRepo,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Application handlers — prdrequest
+	prCreate := appprdrequest.NewCreateHandler(prdRequestRepo, ticketNoGen)
+	prGet := appprdrequest.NewGetHandler(prdRequestRepo)
+	prList := appprdrequest.NewListHandler(prdRequestRepo)
+	prUpdate := appprdrequest.NewUpdateHandler(prdRequestRepo)
+	prDelete := appprdrequest.NewDeleteHandler(prdRequestRepo)
+	prAssign := appprdrequest.NewAssignHandler(prdRequestRepo)
+	prResolve := appprdrequest.NewResolveHandler(prdRequestRepo)
+	prReject := appprdrequest.NewRejectHandler(prdRequestRepo)
+	prSearch := appprdrequest.NewSearchExistingHandler(productRepo)
+
+	// gRPC handler — prdrequest
+	prdRequestHandler, err := grpcdelivery.NewPrdRequestGRPCHandler(
+		prCreate, prGet, prList, prUpdate, prDelete, prAssign, prResolve, prReject, prSearch,
+	)
+	if err != nil {
+		return err
+	}
+
 	// Setup and start servers
-	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler, oracleSyncHandler, rmGroupHandler, rmCostHandler, tokenBlacklist)
+	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler, oracleSyncHandler, rmGroupHandler, rmCostHandler, productHandler, prdRequestHandler, tokenBlacklist)
 }
 
 // setupLogger configures the application logger.
@@ -288,7 +329,7 @@ func closeAuthRedis(bl *redisinfra.TokenBlacklist) {
 }
 
 // startServers starts the gRPC and HTTP servers and handles graceful shutdown.
-func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdelivery.UOMHandler, rmCategoryHandler *grpcdelivery.RMCategoryHandler, parameterHandler *grpcdelivery.ParameterHandler, formulaHandler *grpcdelivery.FormulaHandler, uomCategoryHandler *grpcdelivery.UOMCategoryHandler, oracleSyncHandler *grpcdelivery.OracleSyncHandler, rmGroupHandler *grpcdelivery.RMGroupHandler, rmCostHandler *grpcdelivery.RMCostHandler, tokenBlacklist *redisinfra.TokenBlacklist) error {
+func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdelivery.UOMHandler, rmCategoryHandler *grpcdelivery.RMCategoryHandler, parameterHandler *grpcdelivery.ParameterHandler, formulaHandler *grpcdelivery.FormulaHandler, uomCategoryHandler *grpcdelivery.UOMCategoryHandler, oracleSyncHandler *grpcdelivery.OracleSyncHandler, rmGroupHandler *grpcdelivery.RMGroupHandler, rmCostHandler *grpcdelivery.RMCostHandler, productHandler *grpcdelivery.ProductGRPCHandler, prdRequestHandler *grpcdelivery.PrdRequestGRPCHandler, tokenBlacklist *redisinfra.TokenBlacklist) error {
 	// Setup gRPC server with JWT auth and token blacklist
 	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, nil, &cfg.JWT, tokenBlacklist)
 	if err != nil {
@@ -304,6 +345,8 @@ func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdeliv
 	financev1.RegisterOracleSyncServiceServer(grpcServer.GRPCServer(), oracleSyncHandler)
 	financev1.RegisterRMGroupServiceServer(grpcServer.GRPCServer(), rmGroupHandler)
 	financev1.RegisterRMCostServiceServer(grpcServer.GRPCServer(), rmCostHandler)
+	financev1.RegisterProductServiceServer(grpcServer.GRPCServer(), productHandler)
+	financev1.RegisterProductRequestServiceServer(grpcServer.GRPCServer(), prdRequestHandler)
 
 	// Start gRPC server
 	go func() {
