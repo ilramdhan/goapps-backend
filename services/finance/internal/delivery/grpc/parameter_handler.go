@@ -56,16 +56,22 @@ func (h *ParameterHandler) CreateParameter(ctx context.Context, req *financev1.C
 	}
 
 	cmd := paramapp.CreateCommand{
-		ParamCode:      req.ParamCode,
-		ParamName:      req.ParamName,
-		ParamShortName: req.ParamShortName,
-		DataType:       protoDataTypeToString(req.DataType),
-		ParamCategory:  protoParamCategoryToString(req.ParamCategory),
-		UOMID:          req.UomId,
-		DefaultValue:   req.DefaultValue,
-		MinValue:       req.MinValue,
-		MaxValue:       req.MaxValue,
-		CreatedBy:      getUserFromContext(ctx),
+		ParamCode:            req.ParamCode,
+		ParamName:            req.ParamName,
+		ParamShortName:       req.ParamShortName,
+		DataType:             protoDataTypeToString(req.DataType),
+		ParamCategory:        protoParamCategoryToString(req.ParamCategory),
+		UOMID:                req.UomId,
+		DefaultValue:         req.DefaultValue,
+		MinValue:             req.MinValue,
+		MaxValue:             req.MaxValue,
+		OwnerDepartment:      req.OwnerDepartment,
+		IsRequiredForCosting: req.IsRequiredForCosting,
+		IsPeriodDependent:    req.IsPeriodDependent,
+		LookupMasterCode:     req.LookupMasterCode,
+		DisplayOrder:         req.DisplayOrder,
+		DisplayGroup:         req.DisplayGroup,
+		CreatedBy:            getUserFromContext(ctx),
 	}
 
 	entity, err := h.createHandler.Handle(ctx, cmd)
@@ -144,6 +150,24 @@ func (h *ParameterHandler) UpdateParameter(ctx context.Context, req *financev1.U
 	}
 	if req.IsActive != nil {
 		cmd.IsActive = req.IsActive
+	}
+	if req.OwnerDepartment != nil {
+		cmd.OwnerDepartment = req.OwnerDepartment
+	}
+	if req.IsRequiredForCosting != nil {
+		cmd.IsRequiredForCosting = req.IsRequiredForCosting
+	}
+	if req.IsPeriodDependent != nil {
+		cmd.IsPeriodDependent = req.IsPeriodDependent
+	}
+	if req.LookupMasterCode != nil {
+		cmd.LookupMasterCode = req.LookupMasterCode
+	}
+	if req.DisplayOrder != nil {
+		cmd.DisplayOrder = req.DisplayOrder
+	}
+	if req.DisplayGroup != nil {
+		cmd.DisplayGroup = req.DisplayGroup
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, cmd)
@@ -430,15 +454,21 @@ func stringToProtoParamCategory(cat string) financev1.ParamCategory {
 
 func paramEntityToProto(entity *parameter.Parameter) *financev1.Parameter {
 	proto := &financev1.Parameter{
-		ParamId:        entity.ID().String(),
-		ParamCode:      entity.Code().String(),
-		ParamName:      entity.Name(),
-		ParamShortName: entity.ShortName(),
-		DataType:       stringToProtoDataType(entity.DataType().String()),
-		ParamCategory:  stringToProtoParamCategory(entity.ParamCategory().String()),
-		IsActive:       entity.IsActive(),
-		UomCode:        entity.UOMCode(),
-		UomName:        entity.UOMName(),
+		ParamId:              entity.ID().String(),
+		ParamCode:            entity.Code().String(),
+		ParamName:            entity.Name(),
+		ParamShortName:       entity.ShortName(),
+		DataType:             stringToProtoDataType(entity.DataType().String()),
+		ParamCategory:        stringToProtoParamCategory(entity.ParamCategory().String()),
+		IsActive:             entity.IsActive(),
+		UomCode:              entity.UOMCode(),
+		UomName:              entity.UOMName(),
+		OwnerDepartment:      entity.OwnerDepartment(),
+		IsRequiredForCosting: entity.IsRequiredForCosting(),
+		IsPeriodDependent:    entity.IsPeriodDependent(),
+		LookupMasterCode:     entity.LookupMasterCode(),
+		DisplayOrder:         entity.DisplayOrder(),
+		DisplayGroup:         entity.DisplayGroup(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: entity.CreatedAt().Format(time.RFC3339),
 			CreatedBy: entity.CreatedBy(),

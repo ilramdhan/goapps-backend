@@ -38,6 +38,9 @@ type Service interface {
 	PutObject(ctx context.Context, key string, reader io.Reader, size int64, contentType string) error
 	// PresignedGetURL returns a signed download URL valid for `validity`.
 	PresignedGetURL(ctx context.Context, key string, validity time.Duration, downloadName string) (string, error)
+	// PresignedGetURLWithDisposition returns a signed URL with the explicit
+	// Content-Disposition header (e.g. "inline" for in-browser preview).
+	PresignedGetURLWithDisposition(ctx context.Context, key string, validity time.Duration, downloadName, disposition string) (string, error)
 	// RemoveObject deletes an object. No-op if it doesn't exist.
 	RemoveObject(ctx context.Context, key string) error
 	// Bucket returns the configured bucket name.
@@ -136,9 +139,19 @@ func (m *MinIOClient) PutObject(ctx context.Context, key string, reader io.Reade
 // PresignedGetURL implements Service. Signed against the public endpoint so
 // the browser-supplied Host header matches what was signed.
 func (m *MinIOClient) PresignedGetURL(ctx context.Context, key string, validity time.Duration, downloadName string) (string, error) {
+	return m.PresignedGetURLWithDisposition(ctx, key, validity, downloadName, "attachment")
+}
+
+// PresignedGetURLWithDisposition is the explicit-disposition variant used by
+// the attachments handler to switch between inline (in-browser preview) and
+// attachment (force download) based on the file's MIME type.
+func (m *MinIOClient) PresignedGetURLWithDisposition(ctx context.Context, key string, validity time.Duration, downloadName, disposition string) (string, error) {
+	if disposition == "" {
+		disposition = "attachment"
+	}
 	reqParams := url.Values{}
 	if downloadName != "" {
-		reqParams.Set("response-content-disposition", fmt.Sprintf(`attachment; filename="%s"`, sanitizeDownloadName(downloadName)))
+		reqParams.Set("response-content-disposition", fmt.Sprintf(`%s; filename="%s"`, disposition, sanitizeDownloadName(downloadName)))
 	}
 	u, err := m.presign.PresignedGetObject(ctx, m.bucket, key, validity, reqParams)
 	if err != nil {

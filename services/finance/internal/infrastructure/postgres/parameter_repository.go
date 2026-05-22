@@ -35,8 +35,11 @@ func (r *ParameterRepository) Create(ctx context.Context, entity *parameter.Para
 			id, param_code, param_name, param_short_name,
 			data_type, param_category, uom_id,
 			default_value, min_value, max_value,
-			is_active, created_at, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			is_active,
+			owner_department, is_required_for_costing, is_period_dependent,
+			lookup_master_code, display_order, display_group,
+			created_at, created_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -51,6 +54,12 @@ func (r *ParameterRepository) Create(ctx context.Context, entity *parameter.Para
 		entity.MinValue(),
 		entity.MaxValue(),
 		entity.IsActive(),
+		nullableString(entity.OwnerDepartment()),
+		entity.IsRequiredForCosting(),
+		entity.IsPeriodDependent(),
+		nullableString(entity.LookupMasterCode()),
+		entity.DisplayOrder(),
+		nullableString(entity.DisplayGroup()),
 		entity.CreatedAt(),
 		entity.CreatedBy(),
 	)
@@ -73,7 +82,10 @@ func selectWithUOMJoin() string {
 			   COALESCE(u.uom_code, '') AS uom_code,
 			   COALESCE(u.uom_name, '') AS uom_name,
 			   p.default_value, p.min_value, p.max_value,
-			   p.is_active, p.created_at, p.created_by,
+			   p.is_active,
+			   p.owner_department, p.is_required_for_costing, p.is_period_dependent,
+			   p.lookup_master_code, p.display_order, p.display_group,
+			   p.created_at, p.created_by,
 			   p.updated_at, p.updated_by, p.deleted_at, p.deleted_by
 		FROM mst_parameter p
 		LEFT JOIN mst_uom u ON p.uom_id = u.uom_id AND u.deleted_at IS NULL
@@ -166,7 +178,10 @@ func (r *ParameterRepository) List(ctx context.Context, filter parameter.ListFil
 			   COALESCE(u.uom_code, '') AS uom_code,
 			   COALESCE(u.uom_name, '') AS uom_name,
 			   p.default_value, p.min_value, p.max_value,
-			   p.is_active, p.created_at, p.created_by,
+			   p.is_active,
+			   p.owner_department, p.is_required_for_costing, p.is_period_dependent,
+			   p.lookup_master_code, p.display_order, p.display_group,
+			   p.created_at, p.created_by,
 			   p.updated_at, p.updated_by, p.deleted_at, p.deleted_by
 	` + baseQuery + fmt.Sprintf(
 		` ORDER BY %s %s LIMIT $%d OFFSET $%d`,
@@ -214,8 +229,14 @@ func (r *ParameterRepository) Update(ctx context.Context, entity *parameter.Para
 			min_value = $8,
 			max_value = $9,
 			is_active = $10,
-			updated_at = $11,
-			updated_by = $12
+			owner_department = $11,
+			is_required_for_costing = $12,
+			is_period_dependent = $13,
+			lookup_master_code = $14,
+			display_order = $15,
+			display_group = $16,
+			updated_at = $17,
+			updated_by = $18
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
@@ -230,6 +251,12 @@ func (r *ParameterRepository) Update(ctx context.Context, entity *parameter.Para
 		entity.MinValue(),
 		entity.MaxValue(),
 		entity.IsActive(),
+		nullableString(entity.OwnerDepartment()),
+		entity.IsRequiredForCosting(),
+		entity.IsPeriodDependent(),
+		nullableString(entity.LookupMasterCode()),
+		entity.DisplayOrder(),
+		nullableString(entity.DisplayGroup()),
 		entity.UpdatedAt(),
 		entity.UpdatedBy(),
 	)
@@ -388,6 +415,12 @@ func (r *ParameterRepository) scanParameter(row *sql.Row) (*parameter.Parameter,
 		&dto.MinValue,
 		&dto.MaxValue,
 		&dto.IsActive,
+		&dto.OwnerDepartment,
+		&dto.IsRequiredForCosting,
+		&dto.IsPeriodDependent,
+		&dto.LookupMasterCode,
+		&dto.DisplayOrder,
+		&dto.DisplayGroup,
 		&dto.CreatedAt,
 		&dto.CreatedBy,
 		&dto.UpdatedAt,
@@ -422,6 +455,12 @@ func (r *ParameterRepository) scanParameterFromRows(rows *sql.Rows) (*parameter.
 		&dto.MinValue,
 		&dto.MaxValue,
 		&dto.IsActive,
+		&dto.OwnerDepartment,
+		&dto.IsRequiredForCosting,
+		&dto.IsPeriodDependent,
+		&dto.LookupMasterCode,
+		&dto.DisplayOrder,
+		&dto.DisplayGroup,
 		&dto.CreatedAt,
 		&dto.CreatedBy,
 		&dto.UpdatedAt,
@@ -438,25 +477,31 @@ func (r *ParameterRepository) scanParameterFromRows(rows *sql.Rows) (*parameter.
 
 // parameterDTO is a data transfer object for database operations.
 type parameterDTO struct {
-	ID            uuid.UUID
-	Code          string
-	Name          string
-	ShortName     string
-	DataType      string
-	ParamCategory string
-	UOMID         *uuid.UUID
-	UOMCode       string
-	UOMName       string
-	DefaultValue  sql.NullString
-	MinValue      sql.NullString
-	MaxValue      sql.NullString
-	IsActive      bool
-	CreatedAt     time.Time
-	CreatedBy     string
-	UpdatedAt     sql.NullTime
-	UpdatedBy     sql.NullString
-	DeletedAt     sql.NullTime
-	DeletedBy     sql.NullString
+	ID                   uuid.UUID
+	Code                 string
+	Name                 string
+	ShortName            string
+	DataType             string
+	ParamCategory        string
+	UOMID                *uuid.UUID
+	UOMCode              string
+	UOMName              string
+	DefaultValue         sql.NullString
+	MinValue             sql.NullString
+	MaxValue             sql.NullString
+	IsActive             bool
+	OwnerDepartment      sql.NullString
+	IsRequiredForCosting bool
+	IsPeriodDependent    bool
+	LookupMasterCode     sql.NullString
+	DisplayOrder         int32
+	DisplayGroup         sql.NullString
+	CreatedAt            time.Time
+	CreatedBy            string
+	UpdatedAt            sql.NullTime
+	UpdatedBy            sql.NullString
+	DeletedAt            sql.NullTime
+	DeletedBy            sql.NullString
 }
 
 // ToEntity converts DTO to domain entity.
@@ -507,6 +552,15 @@ func (d *parameterDTO) ToEntity() (*parameter.Parameter, error) {
 		deletedBy = &d.DeletedBy.String
 	}
 
+	costing := parameter.CostingMetadata{
+		OwnerDepartment:      d.OwnerDepartment.String,
+		IsRequiredForCosting: d.IsRequiredForCosting,
+		IsPeriodDependent:    d.IsPeriodDependent,
+		LookupMasterCode:     d.LookupMasterCode.String,
+		DisplayOrder:         d.DisplayOrder,
+		DisplayGroup:         d.DisplayGroup.String,
+	}
+
 	return parameter.ReconstructParameter(
 		d.ID,
 		code,
@@ -521,6 +575,7 @@ func (d *parameterDTO) ToEntity() (*parameter.Parameter, error) {
 		minValue,
 		maxValue,
 		d.IsActive,
+		costing,
 		d.CreatedAt,
 		d.CreatedBy,
 		updatedAt,

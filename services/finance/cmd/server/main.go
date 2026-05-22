@@ -12,9 +12,10 @@ import (
 	"github.com/rs/zerolog/log"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/auditadapter"
+	auditapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costauditlog"
+	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
-	appproduct "github.com/mutugading/goapps-backend/services/finance/internal/application/product"
-	appprdrequest "github.com/mutugading/goapps-backend/services/finance/internal/application/prdrequest"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
@@ -101,9 +102,8 @@ func run() error {
 	rmCostRepo := postgres.NewRMCostRepository(db)
 	rmCostDetailRepo := postgres.NewRMCostDetailRepository(db)
 	rmCostInputsRepo := postgres.NewRMCostInputsRepository(db)
-	productRepo := postgres.NewProductRepository(db)
-	prdRequestRepo := postgres.NewPrdRequestRepository(db)
-	ticketNoGen := postgres.NewPrdRequestTicketNoGenerator(db)
+	// NOTE: legacy productRepo / prdRequestRepo wired to dropped tables — removed.
+	// Canonical Phase B (cost_product_master, cost_product_order) wiring added in S2.8-S2.10.
 
 	// Setup oracle sync handlers
 	triggerHandler := oraclesync.NewTriggerHandler(jobRepo, oracleSyncPublisher)
@@ -167,9 +167,10 @@ func run() error {
 	rmCostExport := apprmcost.NewExportHandler(rmCostRepo)
 	rmCostRequestExport := apprmcost.NewRequestExportHandler(jobRepo, rmCostExportPublisher)
 
-	// MinIO storage for presigning export downloads (graceful: nil disables URL handler).
+	// MinIO storage — shared between RM Cost export downloads and Phase A attachments.
 	var rmCostExportURL *apprmcost.GetExportURLHandler
-	if storageClient, sErr := storage.NewMinIOClient(storage.Config{
+	var storageSvc storage.Service
+	if client, sErr := storage.NewMinIOClient(storage.Config{
 		Endpoint:           cfg.Storage.Endpoint,
 		AccessKey:          cfg.Storage.AccessKey,
 		SecretKey:          cfg.Storage.SecretKey,
@@ -179,9 +180,10 @@ func run() error {
 		Region:             cfg.Storage.Region,
 		PublicURL:          cfg.Storage.PublicURL,
 	}); sErr != nil {
-		log.Warn().Err(sErr).Msg("MinIO unavailable; export download URLs will return 503")
+		log.Warn().Err(sErr).Msg("MinIO unavailable; export download URLs + attachments will return 503")
 	} else {
-		rmCostExportURL = apprmcost.NewGetExportURLHandler(jobRepo, storageClient, 5*time.Minute)
+		storageSvc = client
+		rmCostExportURL = apprmcost.NewGetExportURLHandler(jobRepo, client, 5*time.Minute)
 	}
 
 	editInputsHandler := apprmcost.NewEditInputsHandler(rmCostRepo, rmCostInputsRepo)
@@ -195,44 +197,90 @@ func run() error {
 		return err
 	}
 
-	// Application handlers — product
-	productCreate := appproduct.NewCreateHandler(productRepo)
-	productGet := appproduct.NewGetHandler(productRepo)
-	productList := appproduct.NewListHandler(productRepo)
-	productUpdate := appproduct.NewUpdateHandler(productRepo)
-	productDelete := appproduct.NewDeleteHandler(productRepo)
-	productDuplicate := appproduct.NewDuplicateHandler(productRepo)
+	// Canonical Phase B (cost_*) repositories + handlers.
+	costProductTypeRepo := postgres.NewCostProductTypeRepository(db)
+	costRmTypeRepo := postgres.NewCostRmTypeRepository(db)
+	costErpRepo := postgres.NewCostErpRepository(db)
+	costProductMasterRepo := postgres.NewCostProductMasterRepository(db)
+	costRouteRepo := postgres.NewCostRouteRepository(db)
+	// Canonical Phase A (PRD §7.1) repositories.
+	costRequestTypeRepo := postgres.NewCostRequestTypeRepository(db)
+	costPaperTubeTypeRepo := postgres.NewCostPaperTubeTypeRepository(db)
+	costProductRequestRepo := postgres.NewCostProductRequestRepository(db)
+	costRequestCommentRepo := postgres.NewCostRequestCommentRepository(db)
+	costAttachmentRepo := postgres.NewCostAttachmentRepository(db)
+	costRoutingRuleRepo := postgres.NewCostRoutingRuleRepository(db)
+	costAuditLogRepo := postgres.NewCostAuditLogRepository(db)
+	costNotificationRepo := postgres.NewCostNotificationRepository(db)
+	costProductParameterRepo := postgres.NewCostProductParameterRepository(db)
 
-	// gRPC handler — product
-	productHandler, err := grpcdelivery.NewProductGRPCHandler(
-		productCreate, productGet, productList, productUpdate, productDelete, productDuplicate,
-		productRepo,
-	)
+	costProductTypeHandler, err := grpcdelivery.NewCostProductTypeHandler(costProductTypeRepo)
 	if err != nil {
 		return err
 	}
-
-	// Application handlers — prdrequest
-	prCreate := appprdrequest.NewCreateHandler(prdRequestRepo, ticketNoGen)
-	prGet := appprdrequest.NewGetHandler(prdRequestRepo)
-	prList := appprdrequest.NewListHandler(prdRequestRepo)
-	prUpdate := appprdrequest.NewUpdateHandler(prdRequestRepo)
-	prDelete := appprdrequest.NewDeleteHandler(prdRequestRepo)
-	prAssign := appprdrequest.NewAssignHandler(prdRequestRepo)
-	prResolve := appprdrequest.NewResolveHandler(prdRequestRepo)
-	prReject := appprdrequest.NewRejectHandler(prdRequestRepo)
-	prSearch := appprdrequest.NewSearchExistingHandler(productRepo)
-
-	// gRPC handler — prdrequest
-	prdRequestHandler, err := grpcdelivery.NewPrdRequestGRPCHandler(
-		prCreate, prGet, prList, prUpdate, prDelete, prAssign, prResolve, prReject, prSearch,
-	)
+	costRmTypeHandler, err := grpcdelivery.NewCostRmTypeHandler(costRmTypeRepo)
 	if err != nil {
 		return err
 	}
+	costErpHandler, err := grpcdelivery.NewCostErpHandler(costErpRepo)
+	if err != nil {
+		return err
+	}
+	costProductMasterHandler, err := grpcdelivery.NewCostProductMasterHandler(costProductMasterRepo)
+	if err != nil {
+		return err
+	}
+	costRouteHandler, err := grpcdelivery.NewCostRouteHandler(costRouteRepo)
+	if err != nil {
+		return err
+	}
+	costRequestTypeHandler, err := grpcdelivery.NewCostRequestTypeHandler(costRequestTypeRepo)
+	if err != nil {
+		return err
+	}
+	costPaperTubeTypeHandler, err := grpcdelivery.NewCostPaperTubeTypeHandler(costPaperTubeTypeRepo)
+	if err != nil {
+		return err
+	}
+	// Audit emitter — appends CAL_ rows from request state transitions (S7.5).
+	auditEmitter := auditadapter.NewCprEmitter(auditapp.NewEmitter(costAuditLogRepo))
+	costProductRequestHandler, err := grpcdelivery.NewCostProductRequestHandler(costProductRequestRepo, costRouteRepo, auditEmitter)
+	if err != nil {
+		return err
+	}
+	costRequestCommentHandler, err := grpcdelivery.NewCostRequestCommentHandler(costRequestCommentRepo)
+	if err != nil {
+		return err
+	}
+	costAttachmentHandler, err := grpcdelivery.NewCostAttachmentHandler(costAttachmentRepo, storageSvc)
+	if err != nil {
+		return err
+	}
+	costRoutingRuleHandler, err := grpcdelivery.NewCostRoutingRuleHandler(costRoutingRuleRepo)
+	if err != nil {
+		return err
+	}
+	costAuditLogHandler, err := grpcdelivery.NewCostAuditLogHandler(costAuditLogRepo)
+	if err != nil {
+		return err
+	}
+	costNotificationHandler, err := grpcdelivery.NewCostNotificationHandler(costNotificationRepo)
+	if err != nil {
+		return err
+	}
+	costProductParameterApp := cppapp.New(costProductParameterRepo)
+	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp)
 
 	// Setup and start servers
-	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler, oracleSyncHandler, rmGroupHandler, rmCostHandler, productHandler, prdRequestHandler, tokenBlacklist)
+	return startServers(ctx, cfg,
+		uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler,
+		oracleSyncHandler, rmGroupHandler, rmCostHandler,
+		costProductTypeHandler, costRmTypeHandler, costErpHandler, costProductMasterHandler, costRouteHandler,
+		costRequestTypeHandler, costPaperTubeTypeHandler, costProductRequestHandler,
+		costRequestCommentHandler, costAttachmentHandler,
+		costRoutingRuleHandler, costAuditLogHandler, costNotificationHandler,
+		costProductParameterHandler,
+		tokenBlacklist)
 }
 
 // setupLogger configures the application logger.
@@ -329,7 +377,31 @@ func closeAuthRedis(bl *redisinfra.TokenBlacklist) {
 }
 
 // startServers starts the gRPC and HTTP servers and handles graceful shutdown.
-func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdelivery.UOMHandler, rmCategoryHandler *grpcdelivery.RMCategoryHandler, parameterHandler *grpcdelivery.ParameterHandler, formulaHandler *grpcdelivery.FormulaHandler, uomCategoryHandler *grpcdelivery.UOMCategoryHandler, oracleSyncHandler *grpcdelivery.OracleSyncHandler, rmGroupHandler *grpcdelivery.RMGroupHandler, rmCostHandler *grpcdelivery.RMCostHandler, productHandler *grpcdelivery.ProductGRPCHandler, prdRequestHandler *grpcdelivery.PrdRequestGRPCHandler, tokenBlacklist *redisinfra.TokenBlacklist) error {
+func startServers(ctx context.Context, cfg *config.Config,
+	uomHandler *grpcdelivery.UOMHandler,
+	rmCategoryHandler *grpcdelivery.RMCategoryHandler,
+	parameterHandler *grpcdelivery.ParameterHandler,
+	formulaHandler *grpcdelivery.FormulaHandler,
+	uomCategoryHandler *grpcdelivery.UOMCategoryHandler,
+	oracleSyncHandler *grpcdelivery.OracleSyncHandler,
+	rmGroupHandler *grpcdelivery.RMGroupHandler,
+	rmCostHandler *grpcdelivery.RMCostHandler,
+	costProductTypeHandler *grpcdelivery.CostProductTypeHandler,
+	costRmTypeHandler *grpcdelivery.CostRmTypeHandler,
+	costErpHandler *grpcdelivery.CostErpHandler,
+	costProductMasterHandler *grpcdelivery.CostProductMasterHandler,
+	costRouteHandler *grpcdelivery.CostRouteHandler,
+	costRequestTypeHandler *grpcdelivery.CostRequestTypeHandler,
+	costPaperTubeTypeHandler *grpcdelivery.CostPaperTubeTypeHandler,
+	costProductRequestHandler *grpcdelivery.CostProductRequestHandler,
+	costRequestCommentHandler *grpcdelivery.CostRequestCommentHandler,
+	costAttachmentHandler *grpcdelivery.CostAttachmentHandler,
+	costRoutingRuleHandler *grpcdelivery.CostRoutingRuleHandler,
+	costAuditLogHandler *grpcdelivery.CostAuditLogHandler,
+	costNotificationHandler *grpcdelivery.CostNotificationHandler,
+	costProductParameterHandler *grpcdelivery.CostProductParameterHandler,
+	tokenBlacklist *redisinfra.TokenBlacklist,
+) error {
 	// Setup gRPC server with JWT auth and token blacklist
 	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, nil, &cfg.JWT, tokenBlacklist)
 	if err != nil {
@@ -345,8 +417,22 @@ func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdeliv
 	financev1.RegisterOracleSyncServiceServer(grpcServer.GRPCServer(), oracleSyncHandler)
 	financev1.RegisterRMGroupServiceServer(grpcServer.GRPCServer(), rmGroupHandler)
 	financev1.RegisterRMCostServiceServer(grpcServer.GRPCServer(), rmCostHandler)
-	financev1.RegisterProductServiceServer(grpcServer.GRPCServer(), productHandler)
-	financev1.RegisterProductRequestServiceServer(grpcServer.GRPCServer(), prdRequestHandler)
+	// Canonical Phase B services (PRD §7.2-§7.3).
+	financev1.RegisterCostProductTypeServiceServer(grpcServer.GRPCServer(), costProductTypeHandler)
+	financev1.RegisterCostRmTypeServiceServer(grpcServer.GRPCServer(), costRmTypeHandler)
+	financev1.RegisterCostErpLookupServiceServer(grpcServer.GRPCServer(), costErpHandler)
+	financev1.RegisterCostProductMasterServiceServer(grpcServer.GRPCServer(), costProductMasterHandler)
+	financev1.RegisterCostRouteServiceServer(grpcServer.GRPCServer(), costRouteHandler)
+	// Canonical Phase A services (PRD §7.1).
+	financev1.RegisterCostRequestTypeServiceServer(grpcServer.GRPCServer(), costRequestTypeHandler)
+	financev1.RegisterCostPaperTubeTypeServiceServer(grpcServer.GRPCServer(), costPaperTubeTypeHandler)
+	financev1.RegisterCostProductRequestServiceServer(grpcServer.GRPCServer(), costProductRequestHandler)
+	financev1.RegisterCostRequestCommentServiceServer(grpcServer.GRPCServer(), costRequestCommentHandler)
+	financev1.RegisterCostAttachmentServiceServer(grpcServer.GRPCServer(), costAttachmentHandler)
+	financev1.RegisterCostRoutingRuleServiceServer(grpcServer.GRPCServer(), costRoutingRuleHandler)
+	financev1.RegisterCostAuditLogServiceServer(grpcServer.GRPCServer(), costAuditLogHandler)
+	financev1.RegisterCostNotificationServiceServer(grpcServer.GRPCServer(), costNotificationHandler)
+	financev1.RegisterCostProductParameterServiceServer(grpcServer.GRPCServer(), costProductParameterHandler)
 
 	// Start gRPC server
 	go func() {

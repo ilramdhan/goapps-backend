@@ -108,7 +108,7 @@ func TestNewParameter(t *testing.T) {
 		minVal := "0"
 		maxVal := "9999"
 
-		entity, err := parameter.NewParameter(code, "Speed", "Spd", dt, cat, nil, &defVal, &minVal, &maxVal, "admin")
+		entity, err := parameter.NewParameter(code, "Speed", "Spd", dt, cat, nil, &defVal, &minVal, &maxVal, parameter.CostingMetadata{}, "admin")
 
 		require.NoError(t, err)
 		assert.NotEqual(t, uuid.Nil, entity.ID())
@@ -132,7 +132,7 @@ func TestNewParameter(t *testing.T) {
 		cat, _ := parameter.NewParamCategory("INPUT")
 		uomID := uuid.New()
 
-		entity, err := parameter.NewParameter(code, "Denier", "", dt, cat, &uomID, nil, nil, nil, "admin")
+		entity, err := parameter.NewParameter(code, "Denier", "", dt, cat, &uomID, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 		require.NoError(t, err)
 		assert.NotNil(t, entity.UOMID())
@@ -144,7 +144,7 @@ func TestNewParameter(t *testing.T) {
 		dt, _ := parameter.NewDataType("NUMBER")
 		cat, _ := parameter.NewParamCategory("INPUT")
 
-		_, err := parameter.NewParameter(code, "", "", dt, cat, nil, nil, nil, nil, "admin")
+		_, err := parameter.NewParameter(code, "", "", dt, cat, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, parameter.ErrEmptyName)
@@ -156,7 +156,7 @@ func TestNewParameter(t *testing.T) {
 		cat, _ := parameter.NewParamCategory("INPUT")
 		longName := string(make([]byte, 201))
 
-		_, err := parameter.NewParameter(code, longName, "", dt, cat, nil, nil, nil, nil, "admin")
+		_, err := parameter.NewParameter(code, longName, "", dt, cat, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, parameter.ErrNameTooLong)
@@ -168,7 +168,7 @@ func TestNewParameter(t *testing.T) {
 		cat, _ := parameter.NewParamCategory("INPUT")
 		longShort := string(make([]byte, 51))
 
-		_, err := parameter.NewParameter(code, "Speed", longShort, dt, cat, nil, nil, nil, nil, "admin")
+		_, err := parameter.NewParameter(code, "Speed", longShort, dt, cat, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, parameter.ErrShortNameTooLong)
@@ -179,7 +179,7 @@ func TestNewParameter(t *testing.T) {
 		dt, _ := parameter.NewDataType("NUMBER")
 		cat, _ := parameter.NewParamCategory("INPUT")
 
-		_, err := parameter.NewParameter(code, "Speed", "", dt, cat, nil, nil, nil, nil, "")
+		_, err := parameter.NewParameter(code, "Speed", "", dt, cat, nil, nil, nil, nil, parameter.CostingMetadata{}, "")
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, parameter.ErrEmptyCreatedBy)
@@ -190,11 +190,11 @@ func TestParameter_Update(t *testing.T) {
 	code, _ := parameter.NewCode("SPEED")
 	dt, _ := parameter.NewDataType("NUMBER")
 	cat, _ := parameter.NewParamCategory("INPUT")
-	entity, _ := parameter.NewParameter(code, "Speed", "Spd", dt, cat, nil, nil, nil, nil, "admin")
+	entity, _ := parameter.NewParameter(code, "Speed", "Spd", dt, cat, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 	t.Run("update name", func(t *testing.T) {
 		newName := "Speed Updated"
-		err := entity.Update(&newName, nil, nil, nil, nil, nil, nil, nil, nil, "editor")
+		err := entity.Update(&newName, nil, nil, nil, nil, nil, nil, nil, nil, parameter.CostingUpdate{}, "editor")
 
 		require.NoError(t, err)
 		assert.Equal(t, "Speed Updated", entity.Name())
@@ -204,7 +204,7 @@ func TestParameter_Update(t *testing.T) {
 
 	t.Run("update data type", func(t *testing.T) {
 		newDT, _ := parameter.NewDataType("TEXT")
-		err := entity.Update(nil, nil, &newDT, nil, nil, nil, nil, nil, nil, "editor2")
+		err := entity.Update(nil, nil, &newDT, nil, nil, nil, nil, nil, nil, parameter.CostingUpdate{}, "editor2")
 
 		require.NoError(t, err)
 		assert.Equal(t, "TEXT", entity.DataType().String())
@@ -212,7 +212,7 @@ func TestParameter_Update(t *testing.T) {
 
 	t.Run("update category", func(t *testing.T) {
 		newCat, _ := parameter.NewParamCategory("RATE")
-		err := entity.Update(nil, nil, nil, &newCat, nil, nil, nil, nil, nil, "editor3")
+		err := entity.Update(nil, nil, nil, &newCat, nil, nil, nil, nil, nil, parameter.CostingUpdate{}, "editor3")
 
 		require.NoError(t, err)
 		assert.Equal(t, "RATE", entity.ParamCategory().String())
@@ -221,7 +221,7 @@ func TestParameter_Update(t *testing.T) {
 	t.Run("update uom reference", func(t *testing.T) {
 		uomID := uuid.New()
 		uomIDPtr := &uomID
-		err := entity.Update(nil, nil, nil, nil, &uomIDPtr, nil, nil, nil, nil, "editor4")
+		err := entity.Update(nil, nil, nil, nil, &uomIDPtr, nil, nil, nil, nil, parameter.CostingUpdate{}, "editor4")
 
 		require.NoError(t, err)
 		assert.NotNil(t, entity.UOMID())
@@ -230,7 +230,7 @@ func TestParameter_Update(t *testing.T) {
 
 	t.Run("clear uom reference", func(t *testing.T) {
 		var nilUOM *uuid.UUID
-		err := entity.Update(nil, nil, nil, nil, &nilUOM, nil, nil, nil, nil, "editor5")
+		err := entity.Update(nil, nil, nil, nil, &nilUOM, nil, nil, nil, nil, parameter.CostingUpdate{}, "editor5")
 
 		require.NoError(t, err)
 		assert.Nil(t, entity.UOMID())
@@ -238,7 +238,7 @@ func TestParameter_Update(t *testing.T) {
 
 	t.Run("update is_active", func(t *testing.T) {
 		inactive := false
-		err := entity.Update(nil, nil, nil, nil, nil, nil, nil, nil, &inactive, "editor6")
+		err := entity.Update(nil, nil, nil, nil, nil, nil, nil, nil, &inactive, parameter.CostingUpdate{}, "editor6")
 
 		require.NoError(t, err)
 		assert.False(t, entity.IsActive())
@@ -247,7 +247,7 @@ func TestParameter_Update(t *testing.T) {
 	t.Run("update default value", func(t *testing.T) {
 		newDefault := "200.5"
 		newDefaultPtr := &newDefault
-		err := entity.Update(nil, nil, nil, nil, nil, &newDefaultPtr, nil, nil, nil, "editor7")
+		err := entity.Update(nil, nil, nil, nil, nil, &newDefaultPtr, nil, nil, nil, parameter.CostingUpdate{}, "editor7")
 
 		require.NoError(t, err)
 		assert.Equal(t, "200.5", *entity.DefaultValue())
@@ -271,7 +271,7 @@ func TestReconstructParameter(t *testing.T) {
 		id, code, "Electricity Rate", "Elec", dt, cat,
 		&uomID, "KWH", "Kilowatt Hour",
 		&defVal, &minVal, &maxVal,
-		true, createdAt, "creator",
+		true, parameter.CostingMetadata{}, createdAt, "creator",
 		&updatedAt, &updatedBy, nil, nil,
 	)
 
@@ -299,7 +299,7 @@ func TestParameter_SoftDelete(t *testing.T) {
 	code, _ := parameter.NewCode("SPEED")
 	dt, _ := parameter.NewDataType("NUMBER")
 	cat, _ := parameter.NewParamCategory("INPUT")
-	entity, _ := parameter.NewParameter(code, "Speed", "", dt, cat, nil, nil, nil, nil, "admin")
+	entity, _ := parameter.NewParameter(code, "Speed", "", dt, cat, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 	t.Run("success", func(t *testing.T) {
 		err := entity.SoftDelete("deleter")

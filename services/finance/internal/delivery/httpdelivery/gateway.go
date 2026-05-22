@@ -103,12 +103,49 @@ func (s *Server) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to register RMCost gateway: %w", err)
 	}
 
-	if err := financev1.RegisterProductServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
-		return fmt.Errorf("failed to register Product gateway: %w", err)
+	// Canonical Phase B gateway registrations (PRD §7.2-§7.3).
+	if err := financev1.RegisterCostProductTypeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostProductType gateway: %w", err)
 	}
-
-	if err := financev1.RegisterProductRequestServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
-		return fmt.Errorf("failed to register ProductRequest gateway: %w", err)
+	if err := financev1.RegisterCostRmTypeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostRmType gateway: %w", err)
+	}
+	if err := financev1.RegisterCostErpLookupServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostErpLookup gateway: %w", err)
+	}
+	if err := financev1.RegisterCostProductMasterServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostProductMaster gateway: %w", err)
+	}
+	if err := financev1.RegisterCostRouteServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostRoute gateway: %w", err)
+	}
+	// Canonical Phase A gateway registrations (PRD §7.1).
+	if err := financev1.RegisterCostRequestTypeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostRequestType gateway: %w", err)
+	}
+	if err := financev1.RegisterCostPaperTubeTypeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostPaperTubeType gateway: %w", err)
+	}
+	if err := financev1.RegisterCostProductRequestServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostProductRequest gateway: %w", err)
+	}
+	if err := financev1.RegisterCostRequestCommentServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostRequestComment gateway: %w", err)
+	}
+	if err := financev1.RegisterCostAttachmentServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostAttachment gateway: %w", err)
+	}
+	if err := financev1.RegisterCostRoutingRuleServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostRoutingRule gateway: %w", err)
+	}
+	if err := financev1.RegisterCostAuditLogServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostAuditLog gateway: %w", err)
+	}
+	if err := financev1.RegisterCostNotificationServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostNotification gateway: %w", err)
+	}
+	if err := financev1.RegisterCostProductParameterServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostProductParameter gateway: %w", err)
 	}
 
 	// Create main mux

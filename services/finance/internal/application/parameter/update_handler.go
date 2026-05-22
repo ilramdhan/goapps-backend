@@ -21,7 +21,16 @@ type UpdateCommand struct {
 	MinValue       *string // nil=not set, pointer to ""=clear, pointer to value=set
 	MaxValue       *string // nil=not set, pointer to ""=clear, pointer to value=set
 	IsActive       *bool
-	UpdatedBy      string
+
+	// Phase B costing metadata patches. nil = leave unchanged.
+	OwnerDepartment      *string
+	IsRequiredForCosting *bool
+	IsPeriodDependent    *bool
+	LookupMasterCode     *string
+	DisplayOrder         *int32
+	DisplayGroup         *string
+
+	UpdatedBy string
 }
 
 // UpdateHandler handles the UpdateParameter command.
@@ -61,13 +70,22 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*paramet
 		return nil, err
 	}
 
+	costingUpdate := parameter.CostingUpdate{
+		OwnerDepartment:      cmd.OwnerDepartment,
+		IsRequiredForCosting: cmd.IsRequiredForCosting,
+		IsPeriodDependent:    cmd.IsPeriodDependent,
+		LookupMasterCode:     cmd.LookupMasterCode,
+		DisplayOrder:         cmd.DisplayOrder,
+		DisplayGroup:         cmd.DisplayGroup,
+	}
+
 	if err := entity.Update(
 		cmd.ParamName, cmd.ParamShortName,
 		dataType, paramCategory, uomID,
 		toDoublePointer(cmd.DefaultValue),
 		toDoublePointer(cmd.MinValue),
 		toDoublePointer(cmd.MaxValue),
-		cmd.IsActive, cmd.UpdatedBy,
+		cmd.IsActive, costingUpdate, cmd.UpdatedBy,
 	); err != nil {
 		return nil, err
 	}
