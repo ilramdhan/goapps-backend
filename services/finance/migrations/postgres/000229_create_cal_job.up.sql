@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE TABLE IF NOT EXISTS cal_job (
     cj_job_id            BIGSERIAL PRIMARY KEY,
     cj_job_code          VARCHAR(40) NOT NULL UNIQUE,
@@ -54,3 +56,13 @@ BEGIN
     RETURN 'JOB-' || v_ym || '-' || LPAD(v_n::TEXT, 4, '0');
 END;
 $$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION generate_cal_job_code(TIMESTAMPTZ) IS
+'Generates JOB-YYYYMM-NNNN codes. Uses MAX(cj_job_code) + cal_job_code_counter row with
+GREATEST() self-heal logic — counter row converges with table state if they ever diverge
+(e.g. seeded data, manual inserts, or partial rollbacks). Race condition window exists for
+the very first concurrent calls of a new month before the counter row is initialized;
+consider an advisory lock or moving MAX scan inside the ON CONFLICT RETURNING for strict
+atomicity if needed.';
+
+COMMIT;

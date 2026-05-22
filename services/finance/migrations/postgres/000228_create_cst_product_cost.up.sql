@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE TABLE IF NOT EXISTS cst_product_cost (
     cpc_cost_id              BIGSERIAL PRIMARY KEY,
     cpc_product_sys_id       BIGINT NOT NULL REFERENCES cost_product_master(cpm_product_sys_id),
@@ -38,3 +40,5 @@ CREATE INDEX IF NOT EXISTS idx_cpc_period_type_status
 CREATE INDEX IF NOT EXISTS idx_cpc_job              ON cst_product_cost (cpc_job_id) WHERE cpc_job_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_cpc_product_history  ON cst_product_cost (cpc_product_sys_id, cpc_period, cpc_calculation_type, cpc_version DESC);
 CREATE INDEX IF NOT EXISTS idx_cpc_route_head       ON cst_product_cost (cpc_route_head_id);
+
+COMMIT;

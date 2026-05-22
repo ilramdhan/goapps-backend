@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE TABLE IF NOT EXISTS cal_job_product (
     cjp_job_product_id  BIGSERIAL PRIMARY KEY,
     cjp_job_id          BIGINT NOT NULL REFERENCES cal_job(cj_job_id) ON DELETE CASCADE,
@@ -13,9 +15,11 @@ CREATE TABLE IF NOT EXISTS cal_job_product (
     cjp_cost_id         BIGINT REFERENCES cst_product_cost(cpc_cost_id),
     cjp_error_message   TEXT,
     cjp_calculation_log JSONB,
-    UNIQUE (cjp_job_id, cjp_product_sys_id),
+    CONSTRAINT uk_cjp_job_product UNIQUE (cjp_job_id, cjp_product_sys_id),
     CONSTRAINT chk_cjp_status CHECK (cjp_status IN ('PENDING','READY','CALCULATING','SUCCESS','FAILED','BLOCKED','SKIPPED'))
 );
 CREATE INDEX IF NOT EXISTS idx_cjp_job_status     ON cal_job_product (cjp_job_id, cjp_status);
 CREATE INDEX IF NOT EXISTS idx_cjp_chunk          ON cal_job_product (cjp_chunk_id);
 CREATE INDEX IF NOT EXISTS idx_cjp_product_recent ON cal_job_product (cjp_product_sys_id, cjp_completed_at DESC NULLS LAST);
+
+COMMIT;
