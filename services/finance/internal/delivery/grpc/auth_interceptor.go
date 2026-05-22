@@ -229,6 +229,19 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.RMCategoryService/ImportRMCategories":         "finance.master.rmcategory.import",
 		"/finance.v1.RMCategoryService/ExportRMCategories":         "finance.master.rmcategory.export",
 		"/finance.v1.RMCategoryService/DownloadRMCategoryTemplate": "finance.master.rmcategory.view",
+
+		// CostCalc Service (S8a foundation; stubs return Unimplemented).
+		"/finance.v1.CostCalcService/TriggerCalcJob":      "finance.cost.caljob.trigger",
+		"/finance.v1.CostCalcService/GetCalcJob":          "finance.cost.caljob.view",
+		"/finance.v1.CostCalcService/ListCalcJobs":        "finance.cost.caljob.view",
+		"/finance.v1.CostCalcService/ListCalcJobChunks":   "finance.cost.caljob.view",
+		"/finance.v1.CostCalcService/ListCalcJobProducts": "finance.cost.caljob.view",
+		"/finance.v1.CostCalcService/CancelCalcJob":       "finance.cost.caljob.cancel",
+		"/finance.v1.CostCalcService/GetCostResult":       "finance.cost.result.view",
+		"/finance.v1.CostCalcService/GetCostBreakdown":    "finance.cost.result.view",
+		"/finance.v1.CostCalcService/ListCostHistory":     "finance.cost.history.view",
+		"/finance.v1.CostCalcService/VerifyCostResult":    "finance.cost.result.verify",
+		"/finance.v1.CostCalcService/ApproveCostResult":   "finance.cost.result.approve",
 	}
 
 	return permissions[fullMethod]
