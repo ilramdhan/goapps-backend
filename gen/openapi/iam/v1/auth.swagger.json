@@ -555,6 +555,14 @@
         "emailVerified": {
           "type": "boolean",
           "description": "Whether the user has verified their email address (true if email_verified_at IS NOT NULL)."
+        },
+        "sectionId": {
+          "type": "string",
+          "description": "Section UUID assigned to the user via user_detail (empty if not assigned)."
+        },
+        "departmentId": {
+          "type": "string",
+          "description": "Department UUID derived from the user's section (empty if no section assigned)."
         }
       },
       "description": "AuthUser contains basic user info for authentication context."

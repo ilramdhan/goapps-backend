@@ -7,6 +7,7 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costroute"
+	cprDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
 	costroute "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,21 +34,23 @@ type CostRouteHandler struct {
 	list         *app.ListHandler
 	duplicate          *app.DuplicateHandler
 	listLinkedRequests *app.ListLinkedRequestsHandler
+	createFromProduct  *app.CreateFromProductHandler
 }
 
 // NewCostRouteHandler constructs a handler.
-func NewCostRouteHandler(repo costroute.Repository) (*CostRouteHandler, error) {
+func NewCostRouteHandler(repo costroute.Repository, cprRepo cprDomain.Repository) (*CostRouteHandler, error) {
 	return &CostRouteHandler{
-		getByProduct: app.NewGetByProductHandler(repo),
-		getGraph:     app.NewGetGraphHandler(repo),
-		saveGraph:    app.NewSaveGraphHandler(repo),
-		markComplete: app.NewMarkCompleteHandler(repo),
-		lock:         app.NewLockHandler(repo),
-		unlock:       app.NewUnlockHandler(repo),
-		del:          app.NewDeleteHandler(repo),
-		list:         app.NewListHandler(repo),
+		getByProduct:       app.NewGetByProductHandler(repo),
+		getGraph:           app.NewGetGraphHandler(repo),
+		saveGraph:          app.NewSaveGraphHandler(repo),
+		markComplete:       app.NewMarkCompleteHandler(repo),
+		lock:               app.NewLockHandler(repo),
+		unlock:             app.NewUnlockHandler(repo),
+		del:                app.NewDeleteHandler(repo),
+		list:               app.NewListHandler(repo),
 		duplicate:          app.NewDuplicateHandler(repo),
 		listLinkedRequests: app.NewListLinkedRequestsHandler(repo),
+		createFromProduct:  app.NewCreateFromProductHandler(repo, cprRepo),
 	}, nil
 }
 
@@ -199,6 +202,23 @@ func (h *CostRouteHandler) ListLinkedRequests(ctx context.Context, req *financev
 	return &financev1.ListLinkedRequestsResponse{
 		Base: successResponse("OK"),
 		Data: data,
+	}, nil
+}
+
+// CreateRouteFromProduct creates a fresh route head from an existing product master.
+func (h *CostRouteHandler) CreateRouteFromProduct(ctx context.Context, req *financev1.CreateRouteFromProductRequest) (*financev1.CreateRouteFromProductResponse, error) {
+	headID, err := h.createFromProduct.Handle(ctx, app.CreateFromProductInput{
+		ProductSysID:    req.GetProductSysId(),
+		LinkedRequestID: req.GetLinkedRequestId(),
+		CylTypeID:       req.GetCylTypeId(),
+		ActorUserID:     actorFromCtx(ctx),
+	})
+	if err != nil {
+		return &financev1.CreateRouteFromProductResponse{Base: routeErrToBase(err)}, nil
+	}
+	return &financev1.CreateRouteFromProductResponse{
+		Base:   successResponse("Route created"),
+		HeadId: headID,
 	}, nil
 }
 

@@ -230,7 +230,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	costRouteHandler, err := grpcdelivery.NewCostRouteHandler(costRouteRepo)
+	costRouteHandler, err := grpcdelivery.NewCostRouteHandler(costRouteRepo, costProductRequestRepo)
 	if err != nil {
 		return err
 	}

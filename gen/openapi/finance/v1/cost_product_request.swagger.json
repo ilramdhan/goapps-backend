@@ -1,0 +1,1454 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_product_request.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostProductRequestService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/cost-product-requests": {
+      "get": {
+        "operationId": "CostProductRequestService_ListCostProductRequests",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCostProductRequestsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "requestTypeId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "requesterUserId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "assigneeUserId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      },
+      "post": {
+        "operationId": "CostProductRequestService_CreateCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostProductRequestRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/by-no/{requestNo}": {
+      "get": {
+        "operationId": "CostProductRequestService_GetCostProductRequestByNo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCostProductRequestByNoResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}": {
+      "get": {
+        "operationId": "CostProductRequestService_GetCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      },
+      "put": {
+        "operationId": "CostProductRequestService_UpdateCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceUpdateCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/assign": {
+      "post": {
+        "operationId": "CostProductRequestService_AssignCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AssignCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceAssignCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/cancel": {
+      "post": {
+        "operationId": "CostProductRequestService_CancelCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceCancelCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/close": {
+      "post": {
+        "operationId": "CostProductRequestService_CloseCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CloseCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceCloseCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/decide-feasibility": {
+      "post": {
+        "operationId": "CostProductRequestService_DecideCostProductRequestFeasibility",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DecideCostProductRequestFeasibilityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceDecideCostProductRequestFeasibilityBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/link-route": {
+      "post": {
+        "summary": "LinkExistingRoute attaches an existing route_head to the request.",
+        "operationId": "CostProductRequestService_LinkExistingRoute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LinkExistingRouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceLinkExistingRouteBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/mark-parameter-complete": {
+      "post": {
+        "summary": "MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE\nafter verifying all promoted products have required params filled.",
+        "operationId": "CostProductRequestService_MarkParameterComplete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MarkParameterCompleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceMarkParameterCompleteBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/reject": {
+      "post": {
+        "operationId": "CostProductRequestService_RejectCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RejectCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceRejectCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/revise": {
+      "post": {
+        "operationId": "CostProductRequestService_ReviseCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReviseCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceReviseCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/start-review": {
+      "post": {
+        "operationId": "CostProductRequestService_StartCostProductRequestReview",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartCostProductRequestReviewResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceStartCostProductRequestReviewBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/submit": {
+      "post": {
+        "operationId": "CostProductRequestService_SubmitCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceSubmitCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/unlink-route": {
+      "post": {
+        "summary": "UnlinkRoute clears both existing-product and linked-route fields.",
+        "operationId": "CostProductRequestService_UnlinkRoute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnlinkRouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceUnlinkRouteBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/use-existing-costing": {
+      "post": {
+        "operationId": "CostProductRequestService_UseExistingCostingForCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UseExistingCostingForCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceUseExistingCostingForCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/verify-classification": {
+      "post": {
+        "operationId": "CostProductRequestService_VerifyCostProductRequestClassification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VerifyCostProductRequestClassificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceVerifyCostProductRequestClassificationBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CostProductRequestServiceAssignCostProductRequestBody": {
+      "type": "object",
+      "properties": {
+        "assigneeUserId": {
+          "type": "string"
+        }
+      }
+    },
+    "CostProductRequestServiceCancelCostProductRequestBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "CostProductRequestServiceCloseCostProductRequestBody": {
+      "type": "object",
+      "properties": {
+        "closedSubstatus": {
+          "type": "string"
+        }
+      }
+    },
+    "CostProductRequestServiceDecideCostProductRequestFeasibilityBody": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "CostProductRequestServiceLinkExistingRouteBody": {
+      "type": "object",
+      "properties": {
+        "routeHeadId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "CostProductRequestServiceMarkParameterCompleteBody": {
+      "type": "object",
+      "description": "MarkParameterComplete moves PARAMETER_PENDING → PARAMETER_COMPLETE.\nThe handler verifies all promoted products have their required CAPP params\nfilled before allowing the transition."
+    },
+    "CostProductRequestServiceRejectCostProductRequestBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "CostProductRequestServiceReviseCostProductRequestBody": {
+      "type": "object"
+    },
+    "CostProductRequestServiceStartCostProductRequestReviewBody": {
+      "type": "object"
+    },
+    "CostProductRequestServiceSubmitCostProductRequestBody": {
+      "type": "object"
+    },
+    "CostProductRequestServiceUnlinkRouteBody": {
+      "type": "object"
+    },
+    "CostProductRequestServiceUpdateCostProductRequestBody": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "customerCode": {
+          "type": "string"
+        },
+        "productClassification": {
+          "type": "string"
+        },
+        "targetVolume": {
+          "type": "string"
+        },
+        "targetPriceRange": {
+          "type": "string"
+        },
+        "urgencyLevel": {
+          "type": "string"
+        },
+        "neededByDate": {
+          "type": "string"
+        },
+        "spec": {
+          "$ref": "#/definitions/v1SpecInput"
+        }
+      }
+    },
+    "CostProductRequestServiceUseExistingCostingForCostProductRequestBody": {
+      "type": "object",
+      "properties": {
+        "existingProductSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Existing product the request reuses costing from — recorded on the\nrequest so QUOTE_READY traces back to a concrete product master."
+        }
+      }
+    },
+    "CostProductRequestServiceVerifyCostProductRequestClassificationBody": {
+      "type": "object",
+      "properties": {
+        "verifiedClassification": {
+          "type": "string"
+        },
+        "overrideReason": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AssignCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CancelCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1CloseCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1CostProductRequest": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "requestNo": {
+          "type": "string",
+          "title": "REQ-YYYYMM-NNNN"
+        },
+        "requestTypeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "requestTypeCode": {
+          "type": "string",
+          "title": "denormalized"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "customerCode": {
+          "type": "string"
+        },
+        "productClassification": {
+          "type": "string",
+          "title": "existing | new"
+        },
+        "verifiedClassification": {
+          "type": "string"
+        },
+        "classificationOverrideReason": {
+          "type": "string"
+        },
+        "targetVolume": {
+          "type": "string",
+          "title": "decimal stringified"
+        },
+        "targetPriceRange": {
+          "type": "string"
+        },
+        "urgencyLevel": {
+          "type": "string",
+          "title": "low | medium | high"
+        },
+        "neededByDate": {
+          "type": "string",
+          "title": "YYYY-MM-DD"
+        },
+        "status": {
+          "type": "string"
+        },
+        "closedSubstatus": {
+          "type": "string"
+        },
+        "feasibilityDecision": {
+          "type": "string",
+          "title": "FEASIBLE | NOT_FEASIBLE"
+        },
+        "feasibilityNote": {
+          "type": "string"
+        },
+        "feasibilityBy": {
+          "type": "string"
+        },
+        "feasibilityAt": {
+          "type": "string"
+        },
+        "rejectReason": {
+          "type": "string"
+        },
+        "cancelReason": {
+          "type": "string"
+        },
+        "assignedToUserId": {
+          "type": "string"
+        },
+        "requesterUserId": {
+          "type": "string"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        },
+        "spec": {
+          "$ref": "#/definitions/v1CostProductSpec"
+        },
+        "existingProductSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "When UseExistingCosting was invoked, points to the product master whose costing is reused. 0 = none."
+        },
+        "linkedRouteHeadId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Active route head linked to this request (many requests → one route head when spec matches)."
+        }
+      }
+    },
+    "v1CostProductSpec": {
+      "type": "object",
+      "properties": {
+        "specId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "requestId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rawMaterialType": {
+          "type": "string",
+          "description": "POY_BOUGHTOUT | CHIPS_SD | CHIPS_BRT | CHIPS_RECYCLE."
+        },
+        "productDescription": {
+          "type": "string"
+        },
+        "shadeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "shadeCustomText": {
+          "type": "string"
+        },
+        "paperTubeTypeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "paperTubeLabel": {
+          "type": "string",
+          "title": "denormalized"
+        },
+        "weightPerBobbinKg": {
+          "type": "string",
+          "title": "decimal stringified to preserve precision"
+        },
+        "boxType": {
+          "type": "string",
+          "description": "JUMBO | NORMAL | PALLET."
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateCostProductRequestRequest": {
+      "type": "object",
+      "properties": {
+        "requestTypeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "customerCode": {
+          "type": "string"
+        },
+        "productClassification": {
+          "type": "string"
+        },
+        "targetVolume": {
+          "type": "string"
+        },
+        "targetPriceRange": {
+          "type": "string"
+        },
+        "urgencyLevel": {
+          "type": "string"
+        },
+        "neededByDate": {
+          "type": "string"
+        },
+        "spec": {
+          "$ref": "#/definitions/v1SpecInput"
+        }
+      }
+    },
+    "v1CreateCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1DecideCostProductRequestFeasibilityResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1GetCostProductRequestByNoResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1GetCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1LinkExistingRouteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1ListCostProductRequestsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductRequest"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1MarkParameterCompleteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        },
+        "missingProducts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MissingProductParams"
+          },
+          "description": "missing_products lists product_sys_ids that still have required params unfilled\nwhen the transition is blocked. Empty when the response is_success = true."
+        }
+      }
+    },
+    "v1MissingProductParams": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        },
+        "missingParamCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1PaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Page number (1-indexed)."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        }
+      },
+      "description": "PaginationRequest contains pagination parameters for list requests."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1RejectCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1ReviseCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1SpecInput": {
+      "type": "object",
+      "properties": {
+        "rawMaterialType": {
+          "type": "string"
+        },
+        "productDescription": {
+          "type": "string"
+        },
+        "shadeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "shadeCustomText": {
+          "type": "string"
+        },
+        "paperTubeTypeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "weightPerBobbinKg": {
+          "type": "string"
+        },
+        "boxType": {
+          "type": "string"
+        }
+      }
+    },
+    "v1StartCostProductRequestReviewResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1SubmitCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1UnlinkRouteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1UpdateCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1UseExistingCostingForCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    },
+    "v1VerifyCostProductRequestClassificationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    }
+  }
+}

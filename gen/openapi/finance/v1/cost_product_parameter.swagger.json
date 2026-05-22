@@ -1,0 +1,800 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_product_parameter.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostProductParameterService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/cost-product-parameters/applicable/add": {
+      "post": {
+        "summary": "AddApplicableParam marks a parameter as applicable to the product.",
+        "operationId": "CostProductParameterService_AddApplicableParam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddApplicableParamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AddApplicableParamRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/applicable/remove": {
+      "post": {
+        "summary": "RemoveApplicableParam removes a parameter from a product (deletes value too).",
+        "operationId": "CostProductParameterService_RemoveApplicableParam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveApplicableParamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RemoveApplicableParamRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/applicable/update": {
+      "post": {
+        "summary": "UpdateApplicableParam patches per-product override fields (is_required, display_order).",
+        "operationId": "CostProductParameterService_UpdateApplicableParam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateApplicableParamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateApplicableParamRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/delete": {
+      "post": {
+        "summary": "DeleteProductParamValue clears a single value (back to unbound state).",
+        "operationId": "CostProductParameterService_DeleteProductParamValue",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteProductParamValueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DeleteProductParamValueRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/products/{productSysId}": {
+      "get": {
+        "summary": "ListProductRequiredParams returns the parameter form contents for a\nproduct — every active mst_parameter row (optionally filtered to\nis_required_for_costing) joined with the existing CPP value when present.",
+        "operationId": "CostProductParameterService_ListProductRequiredParams",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProductRequiredParamsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "requiredOnly",
+            "description": "When TRUE, only is_required_for_costing rows are returned. Default FALSE = all.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/products/{productSysId}/available": {
+      "get": {
+        "summary": "ListAvailableParams returns mst_parameter rows NOT yet applicable for the\nproduct — feeds the \"Add parameter\" picker on the Parameters tab.",
+        "operationId": "CostProductParameterService_ListAvailableParams",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAvailableParamsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/products/{productSysId}/missing": {
+      "get": {
+        "summary": "CheckMissingRequiredParams returns required params with no value yet.\nUsed by the request state machine to gate PARAMETER_PENDING → PARAMETER_COMPLETE.",
+        "operationId": "CostProductParameterService_CheckMissingRequiredParams",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CheckMissingRequiredParamsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/upsert": {
+      "post": {
+        "summary": "UpsertProductParamValue creates or updates a single param value for a product.",
+        "operationId": "CostProductParameterService_UpsertProductParamValue",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertProductParamValueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertProductParamValueRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/upsert-batch": {
+      "post": {
+        "summary": "UpsertProductParamValuesBatch upserts multiple values atomically.",
+        "operationId": "CostProductParameterService_UpsertProductParamValuesBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertProductParamValuesBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertProductParamValuesBatchRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AddApplicableParamRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramId": {
+          "type": "string"
+        },
+        "isRequired": {
+          "type": "boolean"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "0 means inherit mst_parameter.display_order."
+        }
+      }
+    },
+    "v1AddApplicableParamResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1AvailableParamEntry": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string"
+        },
+        "paramCode": {
+          "type": "string"
+        },
+        "paramName": {
+          "type": "string"
+        },
+        "paramShortName": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string"
+        },
+        "paramCategory": {
+          "type": "string"
+        },
+        "uomCode": {
+          "type": "string"
+        },
+        "ownerDepartment": {
+          "type": "string"
+        },
+        "isRequiredForCosting": {
+          "type": "boolean",
+          "title": "global default"
+        },
+        "lookupMasterCode": {
+          "type": "string"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "displayGroup": {
+          "type": "string"
+        }
+      }
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CheckMissingRequiredParamsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MissingParam"
+          },
+          "description": "Empty slice = all required params are filled."
+        }
+      }
+    },
+    "v1CostProductParameterValue": {
+      "type": "object",
+      "properties": {
+        "valueId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramId": {
+          "type": "string",
+          "description": "Parameter UUID from mst_parameter.id."
+        },
+        "paramCode": {
+          "type": "string",
+          "description": "Resolved metadata (read-only join from mst_parameter)."
+        },
+        "paramName": {
+          "type": "string"
+        },
+        "paramShortName": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string",
+          "description": "NUMBER / TEXT / BOOLEAN — matches mst_parameter.data_type."
+        },
+        "paramCategory": {
+          "type": "string"
+        },
+        "uomCode": {
+          "type": "string"
+        },
+        "ownerDepartment": {
+          "type": "string"
+        },
+        "isRequiredForCosting": {
+          "type": "boolean"
+        },
+        "lookupMasterCode": {
+          "type": "string"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "displayGroup": {
+          "type": "string"
+        },
+        "valueNumeric": {
+          "type": "string",
+          "description": "Value columns — only one is populated per row."
+        },
+        "valueText": {
+          "type": "string"
+        },
+        "valueFlag": {
+          "type": "boolean"
+        },
+        "filledAt": {
+          "type": "string",
+          "description": "Tracks who filled the value last."
+        },
+        "filledBy": {
+          "type": "string"
+        }
+      },
+      "description": "CostProductParameterValue is a single param value bound to a product.\nExactly one of value_numeric / value_text / value_flag is populated per row,\nmatching the data_type of the referenced parameter."
+    },
+    "v1DeleteProductParamValueRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteProductParamValueResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1ListAvailableParamsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AvailableParamEntry"
+          }
+        }
+      }
+    },
+    "v1ListProductRequiredParamsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RequiredParamEntry"
+          }
+        }
+      }
+    },
+    "v1MissingParam": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string"
+        },
+        "paramCode": {
+          "type": "string"
+        },
+        "paramName": {
+          "type": "string"
+        },
+        "displayGroup": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RemoveApplicableParamRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RemoveApplicableParamResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1RequiredParamEntry": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string"
+        },
+        "paramCode": {
+          "type": "string"
+        },
+        "paramName": {
+          "type": "string"
+        },
+        "paramShortName": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string"
+        },
+        "paramCategory": {
+          "type": "string"
+        },
+        "uomCode": {
+          "type": "string"
+        },
+        "ownerDepartment": {
+          "type": "string"
+        },
+        "isRequiredForCosting": {
+          "type": "boolean"
+        },
+        "lookupMasterCode": {
+          "type": "string"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "displayGroup": {
+          "type": "string"
+        },
+        "hasValue": {
+          "type": "boolean",
+          "description": "Existing value (zero/empty when not yet bound)."
+        },
+        "valueNumeric": {
+          "type": "string"
+        },
+        "valueText": {
+          "type": "string"
+        },
+        "valueFlag": {
+          "type": "boolean"
+        },
+        "filledAt": {
+          "type": "string"
+        },
+        "filledBy": {
+          "type": "string"
+        }
+      },
+      "description": "RequiredParamEntry surfaces a required mst_parameter row that may or may not\nyet have a value bound for the product (used by ListProductRequiredParams)."
+    },
+    "v1UpdateApplicableParamRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramId": {
+          "type": "string"
+        },
+        "isRequired": {
+          "type": "boolean"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1UpdateApplicableParamResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1UpsertProductParamValueRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramId": {
+          "type": "string"
+        },
+        "valueNumeric": {
+          "type": "string",
+          "description": "Value as string (decimals as text for precision). One of these must be set."
+        },
+        "valueText": {
+          "type": "string"
+        },
+        "valueFlag": {
+          "type": "boolean",
+          "description": "value_flag is a real bool — we cannot distinguish \"unset\" from FALSE, so\ncallers must use has_value_flag to opt in."
+        },
+        "hasValueFlag": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1UpsertProductParamValueResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductParameterValue"
+        }
+      }
+    },
+    "v1UpsertProductParamValuesBatchRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UpsertProductParamValueRequest"
+          }
+        }
+      }
+    },
+    "v1UpsertProductParamValuesBatchResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "upsertedCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "failedParamCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

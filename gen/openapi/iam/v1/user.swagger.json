@@ -453,6 +453,113 @@
         ]
       }
     },
+    "/api/v1/iam/users/{userId}/company-mappings": {
+      "get": {
+        "summary": "GetUserCompanyMappings lists all company mappings assigned to a user.",
+        "operationId": "UserService_GetUserCompanyMappings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetUserCompanyMappingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      },
+      "post": {
+        "summary": "AssignUserCompanyMapping assigns a company mapping to a user.",
+        "operationId": "UserService_AssignUserCompanyMapping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AssignUserCompanyMappingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserServiceAssignUserCompanyMappingBody"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/api/v1/iam/users/{userId}/company-mappings/remove": {
+      "post": {
+        "summary": "RemoveUserCompanyMapping removes a company mapping from a user.",
+        "operationId": "UserService_RemoveUserCompanyMapping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveUserCompanyMappingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserServiceRemoveUserCompanyMappingBody"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
     "/api/v1/iam/users/{userId}/detail": {
       "get": {
         "summary": "GetUserDetail retrieves user with full employee details.",
@@ -685,6 +792,19 @@
     }
   },
   "definitions": {
+    "UserServiceAssignUserCompanyMappingBody": {
+      "type": "object",
+      "properties": {
+        "companyMappingId": {
+          "type": "string"
+        },
+        "isPrimary": {
+          "type": "boolean",
+          "description": "If true, the mapping becomes the user's primary mapping (any existing\nprimary is unset transactionally)."
+        }
+      },
+      "description": "AssignUserCompanyMappingRequest assigns a mapping to a user."
+    },
     "UserServiceAssignUserPermissionsBody": {
       "type": "object",
       "properties": {
@@ -710,6 +830,15 @@
         }
       },
       "description": "AssignUserRolesRequest assigns roles to a user."
+    },
+    "UserServiceRemoveUserCompanyMappingBody": {
+      "type": "object",
+      "properties": {
+        "companyMappingId": {
+          "type": "string"
+        }
+      },
+      "description": "RemoveUserCompanyMappingRequest removes a mapping from a user."
     },
     "UserServiceRemoveUserPermissionsBody": {
       "type": "object",
@@ -755,6 +884,18 @@
         "unlockAccount": {
           "type": "boolean",
           "description": "Unlock account (optional)."
+        },
+        "employeeLevelId": {
+          "type": "string",
+          "description": "Employee level ID (optional, UUID; clears when omitted from request body)."
+        },
+        "employeeGroupId": {
+          "type": "string",
+          "description": "Employee group ID (optional, UUID)."
+        },
+        "companyMappingId": {
+          "type": "string",
+          "description": "Primary company-mapping ID (optional, UUID)."
         }
       },
       "description": "UpdateUserRequest updates user credentials."
@@ -861,6 +1002,15 @@
       ],
       "default": "ACTIVE_FILTER_UNSPECIFIED",
       "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AssignUserCompanyMappingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      },
+      "description": "AssignUserCompanyMappingResponse is the response for assigning a mapping."
     },
     "v1AssignUserPermissionsResponse": {
       "type": "object",
@@ -987,6 +1137,18 @@
             "type": "string"
           },
           "description": "Initial role IDs to assign."
+        },
+        "employeeLevelId": {
+          "type": "string",
+          "description": "Employee level ID to assign (optional, UUID)."
+        },
+        "employeeGroupId": {
+          "type": "string",
+          "description": "Employee group ID to assign (optional, UUID)."
+        },
+        "companyMappingId": {
+          "type": "string",
+          "description": "Primary company-mapping ID to assign on creation (optional, UUID)."
         }
       },
       "description": "CreateUserRequest creates a new user with employee details."
@@ -1052,6 +1214,26 @@
         }
       },
       "description": "ExportUsersResponse contains the Excel file."
+    },
+    "v1GetUserCompanyMappingsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UserCompanyMappingRef"
+          }
+        },
+        "primaryCompanyMappingId": {
+          "type": "string",
+          "description": "Primary mapping ID (empty if user has no primary mapping)."
+        }
+      },
+      "description": "GetUserCompanyMappingsResponse contains a user's mapping list."
     },
     "v1GetUserDetailResponse": {
       "type": "object",
@@ -1243,6 +1425,15 @@
       },
       "description": "Permission represents a permission entity."
     },
+    "v1RemoveUserCompanyMappingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      },
+      "description": "RemoveUserCompanyMappingResponse is the response for removing a mapping."
+    },
     "v1RemoveUserPermissionsResponse": {
       "type": "object",
       "properties": {
@@ -1402,6 +1593,40 @@
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit information."
+        },
+        "employeeLevelId": {
+          "type": "string",
+          "description": "Employee level reference (optional)."
+        },
+        "employeeLevelCode": {
+          "type": "string",
+          "description": "Employee level code (denormalized for read)."
+        },
+        "employeeGroupId": {
+          "type": "string",
+          "description": "Employee group reference (optional)."
+        },
+        "employeeGroupCode": {
+          "type": "string",
+          "description": "Employee group code (denormalized for read)."
+        },
+        "primaryCompanyMappingId": {
+          "type": "string",
+          "description": "Primary company-mapping reference (optional)."
+        },
+        "primaryCompanyName": {
+          "type": "string",
+          "description": "Primary company-mapping denormalized fields (empty if no primary mapping)."
+        },
+        "primaryDivisionName": {
+          "type": "string"
+        },
+        "primaryDepartmentName": {
+          "type": "string"
+        },
+        "primarySectionName": {
+          "type": "string",
+          "description": "Primary section name (empty when the primary mapping has no section)."
         }
       },
       "description": "User represents a user entity."
@@ -1438,6 +1663,37 @@
         }
       },
       "description": "UserAccessInfo contains roles and permissions for a user."
+    },
+    "v1UserCompanyMappingRef": {
+      "type": "object",
+      "properties": {
+        "companyMappingId": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "companyName": {
+          "type": "string"
+        },
+        "divisionName": {
+          "type": "string"
+        },
+        "departmentName": {
+          "type": "string"
+        },
+        "sectionName": {
+          "type": "string",
+          "description": "Section name (empty if mapping has no section)."
+        },
+        "isPrimary": {
+          "type": "boolean"
+        }
+      },
+      "description": "UserCompanyMappingRef is a thin reference to a CompanyMapping with the\ndenormalized hierarchy and the user-junction is_primary flag for display."
     },
     "v1UserDetail": {
       "type": "object",

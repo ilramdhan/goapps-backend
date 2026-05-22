@@ -1,0 +1,556 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "iam/v1/company_mapping.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CompanyMappingService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/iam/company-mappings": {
+      "get": {
+        "summary": "ListCompanyMappings lists mappings with search, filter, and pagination.",
+        "operationId": "CompanyMappingService_ListCompanyMappings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCompanyMappingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search across code, name, and denormalized hierarchy names.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "divisionId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "departmentId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sectionId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": " - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CompanyMappingService"
+        ]
+      },
+      "post": {
+        "summary": "CreateCompanyMapping creates a new mapping.",
+        "operationId": "CompanyMappingService_CreateCompanyMapping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCompanyMappingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateCompanyMappingRequest is the request for creating a new mapping.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCompanyMappingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CompanyMappingService"
+        ]
+      }
+    },
+    "/api/v1/iam/company-mappings/{companyMappingId}": {
+      "get": {
+        "summary": "GetCompanyMapping fetches a mapping by ID.",
+        "operationId": "CompanyMappingService_GetCompanyMapping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCompanyMappingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "companyMappingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CompanyMappingService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteCompanyMapping soft-deletes a mapping.",
+        "operationId": "CompanyMappingService_DeleteCompanyMapping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteCompanyMappingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "companyMappingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CompanyMappingService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateCompanyMapping updates an existing mapping. Code is immutable.",
+        "operationId": "CompanyMappingService_UpdateCompanyMapping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCompanyMappingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "companyMappingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CompanyMappingServiceUpdateCompanyMappingBody"
+            }
+          }
+        ],
+        "tags": [
+          "CompanyMappingService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CompanyMappingServiceUpdateCompanyMappingBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "divisionId": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string"
+        },
+        "sectionId": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "description": "UpdateCompanyMappingRequest updates an existing mapping. Code is immutable."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CompanyMapping": {
+      "type": "object",
+      "properties": {
+        "companyMappingId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "code": {
+          "type": "string",
+          "description": "Unique business code (uppercase, digits, hyphen). Immutable after creation."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name (1-200 chars)."
+        },
+        "companyId": {
+          "type": "string",
+          "description": "Company reference (required) and denormalized fields for read-side display."
+        },
+        "companyCode": {
+          "type": "string"
+        },
+        "companyName": {
+          "type": "string"
+        },
+        "divisionId": {
+          "type": "string",
+          "description": "Division reference (required) and denormalized fields."
+        },
+        "divisionCode": {
+          "type": "string"
+        },
+        "divisionName": {
+          "type": "string"
+        },
+        "departmentId": {
+          "type": "string",
+          "description": "Department reference (required) and denormalized fields."
+        },
+        "departmentCode": {
+          "type": "string"
+        },
+        "departmentName": {
+          "type": "string"
+        },
+        "sectionId": {
+          "type": "string",
+          "description": "Section reference (optional) and denormalized fields. Empty when no section."
+        },
+        "sectionCode": {
+          "type": "string"
+        },
+        "sectionName": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the mapping is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "CompanyMapping represents a denormalized organizational path\n(Company → Division → Department → optional Section) bundled under a single\nhuman-friendly code. Section is optional. Used to assign users to one or\nmore organizational positions."
+    },
+    "v1CreateCompanyMappingRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Unique code (1-50 chars, uppercase letters, digits and hyphens).\nImmutable after creation."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name (1-200 chars)."
+        },
+        "companyId": {
+          "type": "string",
+          "description": "Company ID (UUID, required)."
+        },
+        "divisionId": {
+          "type": "string",
+          "description": "Division ID (UUID, required)."
+        },
+        "departmentId": {
+          "type": "string",
+          "description": "Department ID (UUID, required)."
+        },
+        "sectionId": {
+          "type": "string",
+          "description": "Section ID (UUID, optional)."
+        }
+      },
+      "description": "CreateCompanyMappingRequest is the request for creating a new mapping."
+    },
+    "v1CreateCompanyMappingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CompanyMapping"
+        }
+      },
+      "description": "CreateCompanyMappingResponse is the response for creating a mapping."
+    },
+    "v1DeleteCompanyMappingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      },
+      "description": "DeleteCompanyMappingResponse is the response for deleting a mapping."
+    },
+    "v1GetCompanyMappingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CompanyMapping"
+        }
+      },
+      "description": "GetCompanyMappingResponse is the response for fetching a mapping."
+    },
+    "v1ListCompanyMappingsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CompanyMapping"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      },
+      "description": "ListCompanyMappingsResponse is the response for listing mappings."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1UpdateCompanyMappingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CompanyMapping"
+        }
+      },
+      "description": "UpdateCompanyMappingResponse is the response for updating a mapping."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

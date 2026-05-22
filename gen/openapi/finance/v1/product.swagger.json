@@ -1,0 +1,957 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/product.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ProductService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/product-requests/{requestId}/products": {
+      "get": {
+        "summary": "ListProductsByRequest lists products associated with a specific product request.",
+        "operationId": "ProductService_ListProductsByRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProductsByRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "description": "Product-request UUID to filter by.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/api/v1/finance/products": {
+      "get": {
+        "summary": "ListProducts lists products with filters and pagination.",
+        "operationId": "ProductService_ListProducts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProductsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Free-text search on code, name, item code, shade code/name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workflowStatus",
+            "description": "Filter by workflow status (empty = no filter).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "productStatus",
+            "description": "Filter by product status (empty = no filter).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "purpose",
+            "description": "Filter by purpose (empty = no filter).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "createdByDeptId",
+            "description": "Filter by creating department UUID (empty = no filter).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      },
+      "post": {
+        "summary": "CreateProduct creates a new product.",
+        "operationId": "ProductService_CreateProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateProductRequest is the request for creating a new product.\n\nv1.3 note (PRD §0.1 D4): if product_type_id is supplied, the server will\nauto-generate product_code via the CodeGenerator (CST{TYPE}{YY}{MM}{SEQ:6})\nand any client-supplied product_code is ignored. If product_type_id is\nempty, product_code must be supplied manually (legacy Phase 1 path).",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateProductRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/api/v1/finance/products/{productId}": {
+      "get": {
+        "summary": "GetProduct retrieves a product by ID.",
+        "operationId": "ProductService_GetProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "description": "Product ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteProduct soft-deletes a product.",
+        "operationId": "ProductService_DeleteProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "description": "Product ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateProduct updates a product's mutable fields.",
+        "operationId": "ProductService_UpdateProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "description": "Product ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductServiceUpdateProductBody"
+            }
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/api/v1/finance/products/{productId}/lock": {
+      "post": {
+        "summary": "LockProduct marks an APPROVED product LOCKED (last workflow step done).\nTypically called by the workflow callback, but exposed for admin override.",
+        "operationId": "ProductService_LockProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LockProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductServiceLockProductBody"
+            }
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/api/v1/finance/products/{productId}/submit": {
+      "post": {
+        "summary": "SubmitProduct transitions a DRAFT product to SUBMITTED and starts the\nPRODUCT_COSTING workflow via IAM. PRD v1.3 §0.1 D6.",
+        "operationId": "ProductService_SubmitProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductServiceSubmitProductBody"
+            }
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/api/v1/finance/products/{productId}/unlock": {
+      "post": {
+        "summary": "UnlockProduct releases a LOCKED product back to DRAFT.\nRequires a non-empty unlock_reason; password validation is done at the\nBFF/permission layer (PRD v1.3 §0.1 D6 require_password_on_unlock).",
+        "operationId": "ProductService_UnlockProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnlockProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductServiceUnlockProductBody"
+            }
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/api/v1/finance/products/{sourceProductId}/duplicate": {
+      "post": {
+        "summary": "DuplicateProduct creates a new product by copying an existing one.",
+        "operationId": "ProductService_DuplicateProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DuplicateProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sourceProductId",
+            "description": "Source product to duplicate (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductServiceDuplicateProductBody"
+            }
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ProductServiceDuplicateProductBody": {
+      "type": "object",
+      "properties": {
+        "productCode": {
+          "type": "string",
+          "description": "Code for the new product (1-30 chars)."
+        },
+        "productName": {
+          "type": "string",
+          "description": "Name for the new product (1-200 chars)."
+        },
+        "duplicationNote": {
+          "type": "string",
+          "description": "Optional note explaining the reason/scope of the duplication (max 200 chars)."
+        },
+        "options": {
+          "$ref": "#/definitions/v1CopyOptions",
+          "description": "Which sections to copy from the source product."
+        },
+        "currentRequestId": {
+          "type": "string",
+          "description": "Optional associated product-request UUID."
+        }
+      },
+      "description": "DuplicateProductRequest creates a new product by copying an existing one."
+    },
+    "ProductServiceLockProductBody": {
+      "type": "object",
+      "properties": {
+        "lockedPeriod": {
+          "type": "string",
+          "description": "Period this lock applies to (YYYYMM)."
+        }
+      },
+      "description": "LockProductRequest locks a product. period is required and stamped on the lock."
+    },
+    "ProductServiceSubmitProductBody": {
+      "type": "object",
+      "properties": {
+        "comment": {
+          "type": "string",
+          "description": "Optional comment recorded as the first step's initial comment."
+        }
+      },
+      "description": "SubmitProductRequest submits a product to start the costing workflow."
+    },
+    "ProductServiceUnlockProductBody": {
+      "type": "object",
+      "properties": {
+        "unlockReason": {
+          "type": "string",
+          "description": "Required reason for unlocking, audited."
+        }
+      },
+      "description": "UnlockProductRequest releases a locked product back to DRAFT."
+    },
+    "ProductServiceUpdateProductBody": {
+      "type": "object",
+      "properties": {
+        "productName": {
+          "type": "string",
+          "description": "New display name (1-200 chars)."
+        },
+        "productShadeCode": {
+          "type": "string",
+          "description": "New shade code (optional, max 30 chars)."
+        },
+        "productShadeName": {
+          "type": "string",
+          "description": "New shade name (optional, max 100 chars)."
+        },
+        "purpose": {
+          "type": "string",
+          "description": "New purpose: COMMERCIAL, TESTING, or TRIAL."
+        },
+        "productKind": {
+          "type": "string",
+          "description": "Updated product kind (PRD v1.3 §0.1 D1)."
+        },
+        "oracleSysId": {
+          "type": "string",
+          "description": "Updated Oracle product sys_id (lazy link, empty string = clear)."
+        }
+      },
+      "description": "UpdateProductRequest is the request for updating a product.\nNote: product_code and product_item_code are immutable."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CopyOptions": {
+      "type": "object",
+      "properties": {
+        "includeValues": {
+          "type": "boolean",
+          "description": "Copy parameter values from the source product."
+        },
+        "includeRouting": {
+          "type": "boolean",
+          "description": "Copy routing data from the source product."
+        },
+        "includeRm": {
+          "type": "boolean",
+          "description": "Copy raw material (RM) data from the source product."
+        },
+        "includeAttachments": {
+          "type": "boolean",
+          "description": "Copy attachments from the source product."
+        }
+      },
+      "description": "CopyOptions controls which sections are copied during a product duplication."
+    },
+    "v1CreateProductRequest": {
+      "type": "object",
+      "properties": {
+        "productCode": {
+          "type": "string",
+          "description": "Unique product code (legacy manual path). Optional in v1.3 when product_type_id is supplied."
+        },
+        "productName": {
+          "type": "string",
+          "description": "Display name (1-200 chars)."
+        },
+        "productItemCode": {
+          "type": "string",
+          "description": "Oracle item code (1-30 chars)."
+        },
+        "productShadeCode": {
+          "type": "string",
+          "description": "Shade code (optional, max 30 chars)."
+        },
+        "productShadeName": {
+          "type": "string",
+          "description": "Shade name (optional, max 100 chars)."
+        },
+        "createdByDeptId": {
+          "type": "string",
+          "description": "Department UUID that owns this product."
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Product purpose: COMMERCIAL, TESTING, or TRIAL."
+        },
+        "currentRequestId": {
+          "type": "string",
+          "description": "Optional associated product-request UUID.\nWhen provided, must be a valid UUID (validated server-side when non-empty)."
+        },
+        "productKind": {
+          "type": "string",
+          "description": "Product kind: \"FG\" or \"INTERMEDIATE\" (default FG when empty)."
+        },
+        "productTypeId": {
+          "type": "string",
+          "description": "Product type UUID. When supplied, product_code is auto-generated."
+        },
+        "oracleSysId": {
+          "type": "string",
+          "description": "Oracle product sys_id (optional lazy link, max 50 chars)."
+        }
+      },
+      "description": "CreateProductRequest is the request for creating a new product.\n\nv1.3 note (PRD §0.1 D4): if product_type_id is supplied, the server will\nauto-generate product_code via the CodeGenerator (CST{TYPE}{YY}{MM}{SEQ:6})\nand any client-supplied product_code is ignored. If product_type_id is\nempty, product_code must be supplied manually (legacy Phase 1 path)."
+    },
+    "v1CreateProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Product",
+          "description": "Created product data."
+        }
+      },
+      "description": "CreateProductResponse is the response for creating a product."
+    },
+    "v1DeleteProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteProductResponse is the response for deleting a product."
+    },
+    "v1DuplicateProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Product",
+          "description": "Newly created product data."
+        }
+      },
+      "description": "DuplicateProductResponse is the response for duplicating a product."
+    },
+    "v1GetProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Product",
+          "description": "Product data."
+        }
+      },
+      "description": "GetProductResponse is the response for getting a product."
+    },
+    "v1ListProductsByRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Product"
+          },
+          "description": "List of products."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListProductsByRequestResponse is the response for listing products by request."
+    },
+    "v1ListProductsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Product"
+          },
+          "description": "List of products."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListProductsResponse is the response for listing products."
+    },
+    "v1LockProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Product"
+        }
+      },
+      "description": "LockProductResponse returns the locked product."
+    },
+    "v1PaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Page number (1-indexed)."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        }
+      },
+      "description": "PaginationRequest contains pagination parameters for list requests."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1Product": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "productCode": {
+          "type": "string",
+          "description": "Unique product code (immutable after creation)."
+        },
+        "productName": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "productItemCode": {
+          "type": "string",
+          "description": "Oracle item code linked to this product."
+        },
+        "productShadeCode": {
+          "type": "string",
+          "description": "Shade code (optional)."
+        },
+        "productShadeName": {
+          "type": "string",
+          "description": "Shade name (optional)."
+        },
+        "productStatus": {
+          "type": "string",
+          "description": "Product lifecycle status: DRAFT, PARAM_PENDING, ACTIVE, INACTIVE."
+        },
+        "workflowStatus": {
+          "type": "string",
+          "description": "Workflow status: DRAFT, SUBMITTED, CONFIRMED, LOCKED, UNLOCK_REQUESTED.\nPhase 1 only emits DRAFT."
+        },
+        "createdByDeptId": {
+          "type": "string",
+          "description": "Department that created this product (UUID)."
+        },
+        "createdByDeptCode": {
+          "type": "string",
+          "description": "Department code (denormalized)."
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Product purpose: COMMERCIAL, TESTING, TRIAL."
+        },
+        "duplicatedFromId": {
+          "type": "string",
+          "description": "UUID of the product this was duplicated from (empty when not a duplicate)."
+        },
+        "duplicationNote": {
+          "type": "string",
+          "description": "Note describing the reason or scope of the duplication."
+        },
+        "copiedWithOptions": {
+          "$ref": "#/definitions/v1CopyOptions",
+          "description": "Which sections were copied during duplication."
+        },
+        "currentRequestId": {
+          "type": "string",
+          "description": "The product-request ticket currently associated with this product (optional)."
+        },
+        "productKind": {
+          "type": "string",
+          "description": "Product kind: \"FG\" | \"INTERMEDIATE\" (PRD v1.3 §0.1 D1)."
+        },
+        "productTypeId": {
+          "type": "string",
+          "description": "Product type UUID — drives auto-generated code prefix (PRD v1.3 §0.1 D4)."
+        },
+        "oracleSysId": {
+          "type": "string",
+          "description": "Oracle product sys_id (nullable lazy link per PRD v1.3 §0.1 D5)."
+        },
+        "currentWorkflowInstanceId": {
+          "type": "string",
+          "description": "UUID of the in-progress workflow instance attached to this product (PRD v1.3 §0.1 D6)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "Product represents a product costing entity."
+    },
+    "v1SubmitProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Product"
+        }
+      },
+      "description": "SubmitProductResponse returns the updated product (with current_workflow_instance_id set)."
+    },
+    "v1UnlockProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Product"
+        }
+      },
+      "description": "UnlockProductResponse returns the unlocked product (status reset to DRAFT)."
+    },
+    "v1UpdateProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Product",
+          "description": "Updated product data."
+        }
+      },
+      "description": "UpdateProductResponse is the response for updating a product."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

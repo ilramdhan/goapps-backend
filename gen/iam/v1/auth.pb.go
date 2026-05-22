@@ -275,6 +275,10 @@ type AuthUser struct {
 	TwoFactorEnabled bool `protobuf:"varint,8,opt,name=two_factor_enabled,json=twoFactorEnabled,proto3" json:"two_factor_enabled,omitempty"`
 	// Whether the user has verified their email address (true if email_verified_at IS NOT NULL).
 	EmailVerified bool `protobuf:"varint,9,opt,name=email_verified,json=emailVerified,proto3" json:"email_verified,omitempty"`
+	// Section UUID assigned to the user via user_detail (empty if not assigned).
+	SectionId string `protobuf:"bytes,10,opt,name=section_id,json=sectionId,proto3" json:"section_id,omitempty"`
+	// Department UUID derived from the user's section (empty if no section assigned).
+	DepartmentId  string `protobuf:"bytes,11,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -370,6 +374,20 @@ func (x *AuthUser) GetEmailVerified() bool {
 		return x.EmailVerified
 	}
 	return false
+}
+
+func (x *AuthUser) GetSectionId() string {
+	if x != nil {
+		return x.SectionId
+	}
+	return ""
+}
+
+func (x *AuthUser) GetDepartmentId() string {
+	if x != nil {
+		return x.DepartmentId
+	}
+	return ""
 }
 
 // LogoutRequest is the request for logout.
@@ -1847,7 +1865,7 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"token_type\x18\x04 \x01(\tR\ttokenType\x12$\n" +
 	"\x04user\x18\x05 \x01(\v2\x10.iam.v1.AuthUserR\x04user\x12!\n" +
 	"\frequires_2fa\x18\x06 \x01(\bR\vrequires2fa\x12>\n" +
-	"\x1brequires_email_verification\x18\a \x01(\bR\x19requiresEmailVerification\"\xaf\x02\n" +
+	"\x1brequires_email_verification\x18\a \x01(\bR\x19requiresEmailVerification\"\xf3\x02\n" +
 	"\bAuthUser\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -1857,7 +1875,11 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"\x05roles\x18\x06 \x03(\tR\x05roles\x12 \n" +
 	"\vpermissions\x18\a \x03(\tR\vpermissions\x12,\n" +
 	"\x12two_factor_enabled\x18\b \x01(\bR\x10twoFactorEnabled\x12%\n" +
-	"\x0eemail_verified\x18\t \x01(\bR\remailVerified\"K\n" +
+	"\x0eemail_verified\x18\t \x01(\bR\remailVerified\x12\x1d\n" +
+	"\n" +
+	"section_id\x18\n" +
+	" \x01(\tR\tsectionId\x12#\n" +
+	"\rdepartment_id\x18\v \x01(\tR\fdepartmentId\"K\n" +
 	"\rLogoutRequest\x12(\n" +
 	"\rrefresh_token\x18\x01 \x01(\tH\x00R\frefreshToken\x88\x01\x01B\x10\n" +
 	"\x0e_refresh_token\"=\n" +

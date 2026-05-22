@@ -1,0 +1,875 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_product_order.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostProductOrderService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/cost-product-order-versions/{versionId}": {
+      "get": {
+        "operationId": "CostProductOrderService_GetVersion",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-orders": {
+      "get": {
+        "operationId": "CostProductOrderService_ListCostProductOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCostProductOrdersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "productSysId",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "activeFilter",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      },
+      "post": {
+        "operationId": "CostProductOrderService_CreateCostProductOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostProductOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostProductOrderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-orders/{orderId}": {
+      "get": {
+        "operationId": "CostProductOrderService_GetCostProductOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCostProductOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      },
+      "delete": {
+        "operationId": "CostProductOrderService_DeactivateCostProductOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeactivateCostProductOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      },
+      "put": {
+        "operationId": "CostProductOrderService_UpdateCostProductOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCostProductOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductOrderServiceUpdateCostProductOrderBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-orders/{orderId}/commit-version": {
+      "post": {
+        "operationId": "CostProductOrderService_CommitVersion",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CommitVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductOrderServiceCommitVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-orders/{orderId}/draft-components": {
+      "put": {
+        "operationId": "CostProductOrderService_SaveDraftComponents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SaveDraftComponentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductOrderServiceSaveDraftComponentsBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-orders/{orderId}/versions": {
+      "get": {
+        "operationId": "CostProductOrderService_ListVersions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListVersionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductOrderService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CostProductOrderServiceCommitVersionBody": {
+      "type": "object",
+      "properties": {
+        "allowCycleOverride": {
+          "type": "boolean"
+        }
+      }
+    },
+    "CostProductOrderServiceSaveDraftComponentsBody": {
+      "type": "object",
+      "properties": {
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SaveComponentInput"
+          }
+        }
+      }
+    },
+    "CostProductOrderServiceUpdateCostProductOrderBody": {
+      "type": "object",
+      "properties": {
+        "cylTypeId": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CommitVersionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "committed": {
+          "type": "boolean"
+        },
+        "cycleDetected": {
+          "type": "boolean"
+        },
+        "cycles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CycleDetectionEntry"
+          }
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductOrder",
+          "title": "populated when committed"
+        },
+        "version": {
+          "$ref": "#/definitions/v1CostProductOrderVersion",
+          "title": "populated when committed"
+        }
+      }
+    },
+    "v1CostProductOrder": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string",
+          "title": "denormalized for UI"
+        },
+        "productName": {
+          "type": "string",
+          "title": "denormalized for UI"
+        },
+        "cylTypeId": {
+          "type": "integer",
+          "format": "int32",
+          "title": "optional FK to ERP cyl_type master"
+        },
+        "currentVersionId": {
+          "type": "string",
+          "format": "int64",
+          "title": "set after first commit"
+        },
+        "currentVersionNo": {
+          "type": "integer",
+          "format": "int32",
+          "title": "denormalized for UI"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      }
+    },
+    "v1CostProductOrderComponent": {
+      "type": "object",
+      "properties": {
+        "componentId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "versionId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sequenceNo": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "subSequence": {
+          "type": "integer",
+          "format": "int32",
+          "title": "for Multi-Yarn-like types"
+        },
+        "subType": {
+          "type": "string"
+        },
+        "rmTypeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "rmTypeCode": {
+          "type": "string",
+          "title": "denormalized"
+        },
+        "rmTypeReferenceTarget": {
+          "type": "string",
+          "title": "denormalized: PRODUCT | MASTER"
+        },
+        "rmProductSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Dual FK — at most one populated; if both null then rm_description must be present."
+        },
+        "rmProductCode": {
+          "type": "string",
+          "title": "denormalized when rm_product_sys_id set"
+        },
+        "rmProductName": {
+          "type": "string"
+        },
+        "rmMasterItemId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmMasterItemCode": {
+          "type": "string",
+          "title": "denormalized when rm_master_item_id set"
+        },
+        "rmMasterItemName": {
+          "type": "string"
+        },
+        "rmDescription": {
+          "type": "string",
+          "title": "free-text fallback"
+        }
+      }
+    },
+    "v1CostProductOrderVersion": {
+      "type": "object",
+      "properties": {
+        "versionId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "orderId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "versionNo": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "string",
+          "title": "draft | active | superseded"
+        },
+        "effectiveFrom": {
+          "type": "string"
+        },
+        "effectiveTo": {
+          "type": "string"
+        },
+        "cycleOverride": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateCostProductOrderRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cylTypeId": {
+          "type": "integer",
+          "format": "int32",
+          "title": "optional"
+        }
+      }
+    },
+    "v1CreateCostProductOrderResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductOrder"
+        },
+        "draftVersion": {
+          "$ref": "#/definitions/v1CostProductOrderVersion"
+        }
+      }
+    },
+    "v1CycleDetectionEntry": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          },
+          "description": "Sequence of product_sys_ids forming the cycle, root-first."
+        },
+        "pathLabels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Human-readable trail (product codes), same order."
+        }
+      }
+    },
+    "v1DeactivateCostProductOrderResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1GetCostProductOrderResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductOrder"
+        },
+        "currentVersion": {
+          "$ref": "#/definitions/v1CostProductOrderVersion",
+          "title": "active version, may be null if only draft exists"
+        },
+        "draftVersion": {
+          "$ref": "#/definitions/v1CostProductOrderVersion",
+          "title": "current draft version if any"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductOrderComponent"
+          },
+          "title": "from current_version or draft (caller passes which)"
+        }
+      }
+    },
+    "v1GetVersionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "version": {
+          "$ref": "#/definitions/v1CostProductOrderVersion"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductOrderComponent"
+          }
+        }
+      }
+    },
+    "v1ListCostProductOrdersResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductOrder"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListVersionsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductOrderVersion"
+          }
+        }
+      }
+    },
+    "v1PaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Page number (1-indexed)."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        }
+      },
+      "description": "PaginationRequest contains pagination parameters for list requests."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1SaveComponentInput": {
+      "type": "object",
+      "properties": {
+        "sequenceNo": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "subSequence": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "subType": {
+          "type": "string"
+        },
+        "rmTypeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "rmProductSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "At most one of these set. If both empty, rm_description must be non-empty."
+        },
+        "rmMasterItemId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmDescription": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SaveDraftComponentsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "draftVersion": {
+          "$ref": "#/definitions/v1CostProductOrderVersion"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductOrderComponent"
+          }
+        }
+      }
+    },
+    "v1UpdateCostProductOrderResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductOrder"
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

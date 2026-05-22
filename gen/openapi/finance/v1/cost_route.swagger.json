@@ -1,0 +1,953 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_route.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostRouteService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/routes": {
+      "get": {
+        "operationId": "CostRouteService_ListRoutes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRoutesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "Empty / DRAFT / COMPLETE / LOCKED",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/by-product/{productSysId}": {
+      "get": {
+        "operationId": "CostRouteService_GetRouteByProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRouteByProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/from-product": {
+      "post": {
+        "operationId": "CostRouteService_CreateRouteFromProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateRouteFromProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateRouteFromProductRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/{headId}": {
+      "delete": {
+        "operationId": "CostRouteService_DeleteRoute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteRouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "headId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/{headId}/complete": {
+      "post": {
+        "operationId": "CostRouteService_CompleteRoute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CompleteRouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "headId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostRouteServiceCompleteRouteBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/{headId}/duplicate": {
+      "post": {
+        "operationId": "CostRouteService_DuplicateRoute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DuplicateRouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "headId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostRouteServiceDuplicateRouteBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/{headId}/graph": {
+      "get": {
+        "operationId": "CostRouteService_GetRouteGraph",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRouteGraphResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "headId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      },
+      "post": {
+        "operationId": "CostRouteService_SaveRouteGraph",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SaveRouteGraphResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "headId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostRouteServiceSaveRouteGraphBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/{headId}/linked-requests": {
+      "get": {
+        "operationId": "CostRouteService_ListLinkedRequests",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListLinkedRequestsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "headId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/{headId}/lock": {
+      "post": {
+        "operationId": "CostRouteService_LockRoute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LockRouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "headId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostRouteServiceLockRouteBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
+    "/api/v1/finance/routes/{headId}/unlock": {
+      "post": {
+        "operationId": "CostRouteService_UnlockRoute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnlockRouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "headId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostRouteServiceUnlockRouteBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CostRouteServiceCompleteRouteBody": {
+      "type": "object"
+    },
+    "CostRouteServiceDuplicateRouteBody": {
+      "type": "object",
+      "properties": {
+        "includeRouting": {
+          "type": "boolean"
+        },
+        "includeUpstream": {
+          "type": "boolean"
+        },
+        "includeApplicability": {
+          "type": "boolean"
+        },
+        "includeValues": {
+          "type": "boolean"
+        },
+        "newCodePrefix": {
+          "type": "string"
+        },
+        "linkedRequestId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "CostRouteServiceLockRouteBody": {
+      "type": "object"
+    },
+    "CostRouteServiceSaveRouteGraphBody": {
+      "type": "object",
+      "properties": {
+        "graph": {
+          "$ref": "#/definitions/v1RouteGraph"
+        }
+      }
+    },
+    "CostRouteServiceUnlockRouteBody": {
+      "type": "object"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CompleteRouteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostRouteHead"
+        }
+      }
+    },
+    "v1CostRouteHead": {
+      "type": "object",
+      "properties": {
+        "headId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string",
+          "title": "denorm for list views"
+        },
+        "productName": {
+          "type": "string",
+          "title": "denorm"
+        },
+        "routingStatus": {
+          "type": "string",
+          "title": "DRAFT | COMPLETE | LOCKED"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "promotedFromDraftId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cylTypeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      },
+      "description": "CostRouteHead is the per-product released routing aggregate.\nOne non-LOCKED head per product (UK by cpm_product_sys_id)."
+    },
+    "v1CostRouteRm": {
+      "type": "object",
+      "properties": {
+        "rmId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "seqId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "parentProductSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmType": {
+          "type": "string",
+          "title": "PRODUCT | ITEM | GROUP"
+        },
+        "rmProductSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmItemCode": {
+          "type": "string"
+        },
+        "rmGroupCode": {
+          "type": "string"
+        },
+        "routeRmName": {
+          "type": "string"
+        },
+        "routeRmItemCode": {
+          "type": "string"
+        },
+        "routeRmShadeCode": {
+          "type": "string"
+        },
+        "routeRmShadeName": {
+          "type": "string"
+        },
+        "routeRmRatio": {
+          "type": "number",
+          "format": "double"
+        },
+        "uomId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "subType": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "description": "CostRouteRm is one input edge feeding a SEQ.\nExactly one of (rm_product_sys_id, rm_item_code, rm_group_code) is set,\nmatching rm_type."
+    },
+    "v1CostRouteSeq": {
+      "type": "object",
+      "properties": {
+        "seqId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "headId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string",
+          "title": "denorm"
+        },
+        "productName": {
+          "type": "string",
+          "title": "denorm"
+        },
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32",
+          "title": "1 = FG; 2..N upstream"
+        },
+        "routeSeq": {
+          "type": "integer",
+          "format": "int32",
+          "title": "ordering within level"
+        },
+        "routeName": {
+          "type": "string"
+        },
+        "routeItemCode": {
+          "type": "string"
+        },
+        "routeShadeCode": {
+          "type": "string"
+        },
+        "routeShadeName": {
+          "type": "string"
+        },
+        "positionX": {
+          "type": "number",
+          "format": "double"
+        },
+        "positionY": {
+          "type": "number",
+          "format": "double"
+        },
+        "rms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostRouteRm"
+          },
+          "description": "RMs that feed this stage (rendered inline on graph fetch)."
+        }
+      },
+      "description": "CostRouteSeq is one stage of the route at a given level + ordering."
+    },
+    "v1CreateRouteFromProductRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "linkedRequestId": {
+          "type": "string",
+          "format": "int64",
+          "description": "optional, atomically links the request on success."
+        },
+        "cylTypeId": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1CreateRouteFromProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "headId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1DeleteRouteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1DuplicateRouteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "newHeadId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "newProductSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "newProductCode": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetRouteByProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostRouteHead"
+        }
+      }
+    },
+    "v1GetRouteGraphResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1RouteGraph"
+        }
+      }
+    },
+    "v1LinkedRequest": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "requestNo": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "productTop2": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListLinkedRequestsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LinkedRequest"
+          }
+        }
+      }
+    },
+    "v1ListRoutesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostRouteHead"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1LockRouteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostRouteHead"
+        }
+      }
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1RouteGraph": {
+      "type": "object",
+      "properties": {
+        "head": {
+          "$ref": "#/definitions/v1CostRouteHead"
+        },
+        "seqs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostRouteSeq"
+          }
+        }
+      },
+      "description": "RouteGraph bundles the head + all seqs (with rms inline)."
+    },
+    "v1SaveRouteGraphResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1RouteGraph"
+        }
+      }
+    },
+    "v1UnlockRouteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostRouteHead"
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}
