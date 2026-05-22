@@ -31,6 +31,8 @@ type CostRouteHandler struct {
 	unlock       *app.UnlockHandler
 	del          *app.DeleteHandler
 	list         *app.ListHandler
+	duplicate          *app.DuplicateHandler
+	listLinkedRequests *app.ListLinkedRequestsHandler
 }
 
 // NewCostRouteHandler constructs a handler.
@@ -44,6 +46,8 @@ func NewCostRouteHandler(repo costroute.Repository) (*CostRouteHandler, error) {
 		unlock:       app.NewUnlockHandler(repo),
 		del:          app.NewDeleteHandler(repo),
 		list:         app.NewListHandler(repo),
+		duplicate:          app.NewDuplicateHandler(repo),
+		listLinkedRequests: app.NewListLinkedRequestsHandler(repo),
 	}, nil
 }
 
@@ -149,6 +153,52 @@ func (h *CostRouteHandler) ListRoutes(ctx context.Context, req *financev1.ListRo
 			TotalItems:  total,
 			TotalPages:  totalPages,
 		},
+	}, nil
+}
+
+// DuplicateRoute deep-copies the route per the requested toggles.
+func (h *CostRouteHandler) DuplicateRoute(ctx context.Context, req *financev1.DuplicateRouteRequest) (*financev1.DuplicateRouteResponse, error) {
+	out, err := h.duplicate.Handle(ctx, costroute.DuplicateInput{
+		SourceHeadID:         req.GetHeadId(),
+		IncludeRouting:       req.GetIncludeRouting(),
+		IncludeUpstream:      req.GetIncludeUpstream(),
+		IncludeApplicability: req.GetIncludeApplicability(),
+		IncludeValues:        req.GetIncludeValues(),
+		NewCodePrefix:        req.GetNewCodePrefix(),
+		LinkedRequestID:      req.GetLinkedRequestId(),
+		ActorUserID:          actorFromCtx(ctx),
+	})
+	if err != nil {
+		return &financev1.DuplicateRouteResponse{Base: routeErrToBase(err)}, nil
+	}
+	return &financev1.DuplicateRouteResponse{
+		Base:            successResponse("Route duplicated"),
+		NewHeadId:       out.NewHeadID,
+		NewProductSysId: out.NewProductSysID,
+		NewProductCode:  out.NewProductCode,
+	}, nil
+}
+
+// ListLinkedRequests returns requests linking to this route head.
+func (h *CostRouteHandler) ListLinkedRequests(ctx context.Context, req *financev1.ListLinkedRequestsRequest) (*financev1.ListLinkedRequestsResponse, error) {
+	rows, err := h.listLinkedRequests.Handle(ctx, req.GetHeadId())
+	if err != nil {
+		return &financev1.ListLinkedRequestsResponse{Base: routeErrToBase(err)}, nil
+	}
+	data := make([]*financev1.LinkedRequest, 0, len(rows))
+	for _, lr := range rows {
+		data = append(data, &financev1.LinkedRequest{
+			RequestId:    lr.RequestID,
+			RequestNo:    lr.RequestNo,
+			Status:       lr.Status,
+			ProductTop_2: lr.ProductTop2,
+			CreatedBy:    lr.CreatedBy,
+			CreatedAt:    lr.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+		})
+	}
+	return &financev1.ListLinkedRequestsResponse{
+		Base: successResponse("OK"),
+		Data: data,
 	}, nil
 }
 

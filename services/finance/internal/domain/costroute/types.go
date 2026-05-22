@@ -106,6 +106,35 @@ var (
 	ErrInvalidStatusTransition = errors.New("invalid route status transition")
 )
 
+// DuplicateInput is the use-case payload for a deep-fork of a route.
+type DuplicateInput struct {
+	SourceHeadID         int64
+	IncludeRouting       bool
+	IncludeUpstream      bool
+	IncludeApplicability bool
+	IncludeValues        bool
+	NewCodePrefix        string
+	LinkedRequestID      int64 // when >0, atomically set cpr_linked_route_head_id
+	ActorUserID          string
+}
+
+// DuplicateOutput is the result returned by DuplicateRoute.
+type DuplicateOutput struct {
+	NewHeadID       int64
+	NewProductSysID int64
+	NewProductCode  string
+}
+
+// LinkedRequest is the read model for ListLinkedRequests.
+type LinkedRequest struct {
+	RequestID   int64
+	RequestNo   string
+	Status      string
+	ProductTop2 string
+	CreatedBy   string
+	CreatedAt   time.Time
+}
+
 // Filter drives ListHeads.
 type Filter struct {
 	Search    string
@@ -145,4 +174,8 @@ type Repository interface {
 	DeleteHead(ctx context.Context, headID int64, actor string) error
 	// ListHeads applies a search/filter and returns paginated heads.
 	ListHeads(ctx context.Context, f Filter) (rows []*Head, total int64, err error)
+	// DuplicateRoute deep-forks a route per the requested toggles, all in one tx.
+	DuplicateRoute(ctx context.Context, in DuplicateInput) (DuplicateOutput, error)
+	// ListLinkedRequests returns requests linking to this route head.
+	ListLinkedRequests(ctx context.Context, headID int64) ([]LinkedRequest, error)
 }

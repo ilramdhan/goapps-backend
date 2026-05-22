@@ -590,3 +590,399 @@ func (r *CostRouteRepository) ListHeads(ctx context.Context, f costroute.Filter)
 	}
 	return out, total, nil
 }
+
+// =============================================================================
+// DuplicateRoute / ListLinkedRequests
+// =============================================================================
+
+// DuplicateRoute performs a transactional deep-copy per DuplicateInput's toggles.
+func (r *CostRouteRepository) DuplicateRoute(ctx context.Context, in costroute.DuplicateInput) (costroute.DuplicateOutput, error) {
+	if !in.IncludeApplicability && in.IncludeValues {
+		return costroute.DuplicateOutput{}, fmt.Errorf("invalid input: values requested without applicability")
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return costroute.DuplicateOutput{}, fmt.Errorf("begin tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	// 1. Load source head.
+	var sourceHead struct {
+		productSysID int64
+		productCode  string
+		productName  string
+		cylTypeID    int32
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT h.crh_product_sys_id, COALESCE(p.cpm_product_code,''), COALESCE(p.cpm_product_name,''), COALESCE(h.crh_cyl_type_id, 0)
+		FROM cost_route_head h
+		LEFT JOIN cost_product_master p ON p.cpm_product_sys_id = h.crh_product_sys_id
+		WHERE h.crh_head_id = $1 AND h.crh_deleted_at IS NULL`, in.SourceHeadID,
+	).Scan(&sourceHead.productSysID, &sourceHead.productCode, &sourceHead.productName, &sourceHead.cylTypeID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return costroute.DuplicateOutput{}, costroute.ErrNotFound
+		}
+		return costroute.DuplicateOutput{}, fmt.Errorf("load source head: %w", err)
+	}
+
+	// 2. Generate FG fork code.
+	newFGCode, err := r.generateForkedCode(ctx, tx, in.NewCodePrefix, sourceHead.productCode)
+	if err != nil {
+		return costroute.DuplicateOutput{}, err
+	}
+
+	// 3. BFS upstream products only if both flags on.
+	upstreamProductIDs := []int64{}
+	if in.IncludeUpstream && in.IncludeRouting {
+		seen := map[int64]bool{sourceHead.productSysID: true}
+		queue := []int64{sourceHead.productSysID}
+		for len(queue) > 0 {
+			pid := queue[0]
+			queue = queue[1:]
+			rows, qErr := tx.QueryContext(ctx, `
+				SELECT DISTINCT rm.crm_rm_product_sys_id
+				FROM cost_route_seq s
+				JOIN cost_route_rm rm ON rm.crm_seq_id = s.crs_seq_id
+				WHERE s.crs_head_id = $1
+				  AND s.crs_product_sys_id = $2
+				  AND rm.crm_rm_type = 'PRODUCT'
+				  AND rm.crm_rm_product_sys_id IS NOT NULL`,
+				in.SourceHeadID, pid)
+			if qErr != nil {
+				return costroute.DuplicateOutput{}, fmt.Errorf("walk upstream of %d: %w", pid, qErr)
+			}
+			for rows.Next() {
+				var upstream int64
+				if sErr := rows.Scan(&upstream); sErr != nil {
+					if cErr := rows.Close(); cErr != nil {
+						_ = cErr
+					}
+					return costroute.DuplicateOutput{}, fmt.Errorf("scan upstream: %w", sErr)
+				}
+				if !seen[upstream] {
+					seen[upstream] = true
+					upstreamProductIDs = append(upstreamProductIDs, upstream)
+					queue = append(queue, upstream)
+				}
+			}
+			if cErr := rows.Close(); cErr != nil {
+				_ = cErr
+			}
+		}
+	}
+
+	// 4. Duplicate FG product master.
+	productMap := map[int64]int64{}
+	newFGSysID, err := r.duplicateProductTx(ctx, tx, sourceHead.productSysID, newFGCode, in.IncludeApplicability, in.IncludeValues, in.ActorUserID)
+	if err != nil {
+		return costroute.DuplicateOutput{}, err
+	}
+	productMap[sourceHead.productSysID] = newFGSysID
+
+	// 5. Duplicate upstream products.
+	for _, upstream := range upstreamProductIDs {
+		newCode, gErr := r.generateForkedCode(ctx, tx, in.NewCodePrefix, "")
+		if gErr != nil {
+			return costroute.DuplicateOutput{}, gErr
+		}
+		newID, dErr := r.duplicateProductTx(ctx, tx, upstream, newCode, in.IncludeApplicability, in.IncludeValues, in.ActorUserID)
+		if dErr != nil {
+			return costroute.DuplicateOutput{}, dErr
+		}
+		productMap[upstream] = newID
+	}
+
+	// 6. Create new route head.
+	var newHeadID int64
+	if err := tx.QueryRowContext(ctx, `
+		INSERT INTO cost_route_head (
+			crh_product_sys_id, crh_routing_status, crh_version,
+			crh_cyl_type_id, crh_forked_from_head_id,
+			crh_created_by, crh_updated_by
+		) VALUES ($1, 'DRAFT', 1, NULLIF($2,0)::integer, $3, $4, $4)
+		RETURNING crh_head_id`,
+		newFGSysID, sourceHead.cylTypeID, in.SourceHeadID, in.ActorUserID,
+	).Scan(&newHeadID); err != nil {
+		if isRouteUniqueViolation(err) {
+			return costroute.DuplicateOutput{}, costroute.ErrAlreadyExists
+		}
+		return costroute.DuplicateOutput{}, fmt.Errorf("insert forked head: %w", err)
+	}
+
+	// 7. Optionally copy seqs + rms (remapping product references).
+	if in.IncludeRouting {
+		if err := r.duplicateGraphTx(ctx, tx, in.SourceHeadID, newHeadID, productMap, in.ActorUserID); err != nil {
+			return costroute.DuplicateOutput{}, err
+		}
+	}
+
+	// 8. Optionally update linked request atomically.
+	if in.LinkedRequestID > 0 {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE cost_product_request
+			SET cpr_linked_route_head_id = $2,
+			    cpr_existing_product_sys_id = NULL,
+			    cpr_updated_at = now()
+			WHERE cpr_request_id = $1`,
+			in.LinkedRequestID, newHeadID); err != nil {
+			return costroute.DuplicateOutput{}, fmt.Errorf("update linked request: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return costroute.DuplicateOutput{}, fmt.Errorf("commit duplicate tx: %w", err)
+	}
+	committed = true
+
+	return costroute.DuplicateOutput{
+		NewHeadID:       newHeadID,
+		NewProductSysID: newFGSysID,
+		NewProductCode:  newFGCode,
+	}, nil
+}
+
+// generateForkedCode finds the next unique product code with the given prefix.
+func (r *CostRouteRepository) generateForkedCode(ctx context.Context, tx *sql.Tx, prefix, sourceCode string) (string, error) {
+	base := prefix
+	if base == "" {
+		if sourceCode != "" {
+			base = sourceCode + "_F"
+		} else {
+			base = "FORK"
+		}
+	}
+	for n := 1; n <= 9999; n++ {
+		candidate := fmt.Sprintf("%s%d", base, n)
+		if len(candidate) > 20 {
+			candidate = candidate[:20]
+		}
+		var taken bool
+		if err := tx.QueryRowContext(ctx,
+			`SELECT EXISTS(SELECT 1 FROM cost_product_master WHERE cpm_product_code=$1)`,
+			candidate,
+		).Scan(&taken); err != nil {
+			return "", fmt.Errorf("check candidate code: %w", err)
+		}
+		if !taken {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("could not generate unique forked code from base %q", base)
+}
+
+// duplicateProductTx copies a product master + optional applicability + values.
+func (r *CostRouteRepository) duplicateProductTx(
+	ctx context.Context, tx *sql.Tx,
+	sourceProductSysID int64, newCode string,
+	includeApplicability, includeValues bool,
+	actor string,
+) (int64, error) {
+	var newSysID int64
+	if err := tx.QueryRowContext(ctx, `
+		INSERT INTO cost_product_master (
+			cpm_product_code, cpm_product_type_id, cpm_product_name,
+			cpm_shade_code, cpm_grade_code, cpm_description,
+			cpm_is_active, cpm_created_by, cpm_updated_by
+		)
+		SELECT $1, cpm_product_type_id, cpm_product_name,
+		       cpm_shade_code, cpm_grade_code, cpm_description,
+		       TRUE, $2, $2
+		FROM cost_product_master
+		WHERE cpm_product_sys_id = $3
+		RETURNING cpm_product_sys_id`,
+		newCode, actor, sourceProductSysID,
+	).Scan(&newSysID); err != nil {
+		return 0, fmt.Errorf("duplicate product master %d: %w", sourceProductSysID, err)
+	}
+	if includeApplicability {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO cost_product_applicable_param (
+				capp_product_sys_id, capp_param_id, capp_is_required, capp_display_order, capp_created_by
+			)
+			SELECT $1, capp_param_id, capp_is_required, capp_display_order, $2
+			FROM cost_product_applicable_param
+			WHERE capp_product_sys_id = $3`,
+			newSysID, actor, sourceProductSysID); err != nil {
+			return 0, fmt.Errorf("copy capp applicability: %w", err)
+		}
+	}
+	if includeValues {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO cost_product_parameter (
+				cpp_product_sys_id, cpp_param_id, cpp_value_numeric, cpp_value_text, cpp_value_flag,
+				cpp_filled_by, cpp_created_by
+			)
+			SELECT $1, cpp_param_id, cpp_value_numeric, cpp_value_text, cpp_value_flag, $2, $2
+			FROM cost_product_parameter
+			WHERE cpp_product_sys_id = $3`,
+			newSysID, actor, sourceProductSysID); err != nil {
+			return 0, fmt.Errorf("copy capp values: %w", err)
+		}
+	}
+	return newSysID, nil
+}
+
+// duplicateGraphTx copies seqs + rms, remapping product references via productMap.
+func (r *CostRouteRepository) duplicateGraphTx(
+	ctx context.Context, tx *sql.Tx,
+	sourceHeadID, newHeadID int64,
+	productMap map[int64]int64,
+	actor string,
+) error {
+	type srcSeq struct {
+		id             int64
+		productID      int64
+		level, seq     int32
+		name, itemC    string
+		shadeC, shadeN string
+		x, y           float64
+	}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT crs_seq_id, crs_product_sys_id, crs_route_level, crs_route_seq,
+		       COALESCE(crs_route_name,''), COALESCE(crs_route_item_code,''),
+		       COALESCE(crs_route_shade_code,''), COALESCE(crs_route_shade_name,''),
+		       crs_position_x, crs_position_y
+		FROM cost_route_seq
+		WHERE crs_head_id = $1 AND crs_deleted_at IS NULL
+		ORDER BY crs_route_level, crs_route_seq`, sourceHeadID)
+	if err != nil {
+		return fmt.Errorf("load source seqs: %w", err)
+	}
+	seqs := []srcSeq{}
+	for rows.Next() {
+		var s srcSeq
+		if scanErr := rows.Scan(&s.id, &s.productID, &s.level, &s.seq, &s.name, &s.itemC, &s.shadeC, &s.shadeN, &s.x, &s.y); scanErr != nil {
+			if cErr := rows.Close(); cErr != nil {
+				_ = cErr
+			}
+			return fmt.Errorf("scan seq: %w", scanErr)
+		}
+		seqs = append(seqs, s)
+	}
+	if cErr := rows.Close(); cErr != nil {
+		_ = cErr
+	}
+
+	seqMap := map[int64]int64{}
+	for _, s := range seqs {
+		newProductID := s.productID
+		if mapped, ok := productMap[s.productID]; ok {
+			newProductID = mapped
+		}
+		var newSeqID int64
+		if err := tx.QueryRowContext(ctx, `
+			INSERT INTO cost_route_seq (
+				crs_head_id, crs_product_sys_id, crs_route_level, crs_route_seq,
+				crs_route_name, crs_route_item_code, crs_route_shade_code, crs_route_shade_name,
+				crs_position_x, crs_position_y,
+				crs_created_by, crs_updated_by
+			) VALUES ($1,$2,$3,$4,NULLIF($5,''),NULLIF($6,''),NULLIF($7,''),NULLIF($8,''),$9,$10,$11,$11)
+			RETURNING crs_seq_id`,
+			newHeadID, newProductID, s.level, s.seq, s.name, s.itemC, s.shadeC, s.shadeN, s.x, s.y, actor,
+		).Scan(&newSeqID); err != nil {
+			return fmt.Errorf("insert duplicated seq L%d/%d: %w", s.level, s.seq, err)
+		}
+		seqMap[s.id] = newSeqID
+	}
+
+	// Copy RMs, remapping product references.
+	rmRows, err := tx.QueryContext(ctx, `
+		SELECT rm.crm_seq_id, rm.crm_parent_product_sys_id,
+		       rm.crm_rm_product_sys_id, COALESCE(rm.crm_rm_item_code,''), COALESCE(rm.crm_rm_group_code,''),
+		       rm.crm_rm_type,
+		       COALESCE(rm.crm_route_rm_name,''), COALESCE(rm.crm_route_rm_item_code,''),
+		       COALESCE(rm.crm_route_rm_shade_code,''), COALESCE(rm.crm_route_rm_shade_name,''),
+		       rm.crm_route_rm_ratio, COALESCE(rm.crm_uom_id, 0), COALESCE(rm.crm_sub_type,''), COALESCE(rm.crm_notes,'')
+		FROM cost_route_rm rm
+		JOIN cost_route_seq s ON s.crs_seq_id = rm.crm_seq_id
+		WHERE s.crs_head_id = $1`, sourceHeadID)
+	if err != nil {
+		return fmt.Errorf("load source rms: %w", err)
+	}
+	defer func() {
+		if cErr := rmRows.Close(); cErr != nil {
+			_ = cErr
+		}
+	}()
+	for rmRows.Next() {
+		var (
+			oldSeqID, parentProd                                int64
+			rmProd                                              sql.NullInt64
+			itemC, groupC                                       string
+			rmType, name, itemCode, shadeC, shadeN, subT, notes string
+			ratio                                               float64
+			uomID                                               int32
+		)
+		if err := rmRows.Scan(&oldSeqID, &parentProd, &rmProd, &itemC, &groupC, &rmType,
+			&name, &itemCode, &shadeC, &shadeN, &ratio, &uomID, &subT, &notes); err != nil {
+			return fmt.Errorf("scan rm: %w", err)
+		}
+		newSeqID := seqMap[oldSeqID]
+		newParent := parentProd
+		if mapped, ok := productMap[parentProd]; ok {
+			newParent = mapped
+		}
+		var newRmProdSysID sql.NullInt64
+		if rmProd.Valid {
+			if mapped, ok := productMap[rmProd.Int64]; ok {
+				newRmProdSysID = sql.NullInt64{Int64: mapped, Valid: true}
+			} else {
+				newRmProdSysID = rmProd
+			}
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO cost_route_rm (
+				crm_seq_id, crm_parent_product_sys_id,
+				crm_rm_product_sys_id, crm_rm_item_code, crm_rm_group_code,
+				crm_rm_type,
+				crm_route_rm_name, crm_route_rm_item_code, crm_route_rm_shade_code, crm_route_rm_shade_name,
+				crm_route_rm_ratio, crm_uom_id, crm_sub_type, crm_notes,
+				crm_created_by, crm_updated_by
+			) VALUES ($1,$2,$3,NULLIF($4,''),NULLIF($5,''),$6,
+			          NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),
+			          $11,NULLIF($12,0)::integer,NULLIF($13,''),NULLIF($14,''),$15,$15)`,
+			newSeqID, newParent, newRmProdSysID, itemC, groupC, rmType,
+			name, itemCode, shadeC, shadeN, ratio, uomID, subT, notes, actor); err != nil {
+			return fmt.Errorf("insert duplicated rm: %w", err)
+		}
+	}
+	return rmRows.Err()
+}
+
+// ListLinkedRequests returns all requests linking to this route head.
+// NOTE: cost_product_request has no cpr_product_top_2 column in this schema;
+// the LinkedRequest.ProductTop2 field is left empty.
+func (r *CostRouteRepository) ListLinkedRequests(ctx context.Context, headID int64) ([]costroute.LinkedRequest, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT cpr_request_id, cpr_request_no, cpr_status,
+		       cpr_requester_user_id, cpr_created_at
+		FROM cost_product_request
+		WHERE cpr_linked_route_head_id = $1
+		ORDER BY cpr_created_at DESC
+		LIMIT 200`, headID)
+	if err != nil {
+		return nil, fmt.Errorf("list linked requests: %w", err)
+	}
+	defer func() {
+		if cErr := rows.Close(); cErr != nil {
+			_ = cErr
+		}
+	}()
+	out := []costroute.LinkedRequest{}
+	for rows.Next() {
+		var lr costroute.LinkedRequest
+		if err := rows.Scan(&lr.RequestID, &lr.RequestNo, &lr.Status, &lr.CreatedBy, &lr.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan linked request: %w", err)
+		}
+		out = append(out, lr)
+	}
+	return out, rows.Err()
+}
