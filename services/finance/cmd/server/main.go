@@ -14,6 +14,8 @@ import (
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/auditadapter"
 	auditapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costauditlog"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc/evaluator"
 	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
@@ -270,8 +272,34 @@ func run() error {
 	}
 	costProductParameterApp := cppapp.New(costProductParameterRepo)
 	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp)
-	// S8a foundation: stub CostCalcService (real handlers land in S8b).
-	costCalcHandler := grpcdelivery.NewCostCalcHandler()
+
+	// S8b: real CostCalcService wiring. Service holds 5 repos + loader + evaluator
+	// cache; 11 application handlers wrap individual use cases. Audit emitter is
+	// nil for now (cost_audit_log integration lands in S8c orchestrator).
+	calcJobRepo := postgres.NewCostCalcJobRepository(db)
+	calcChunkRepo := postgres.NewCostCalcChunkRepository(db)
+	calcJobProductRepo := postgres.NewCostCalcJobProductRepository(db)
+	costResultRepo := postgres.NewCostResultRepository(db)
+	costAuditHistoryRepo := postgres.NewCostAuditHistoryRepository(db)
+	calcEvalCache := evaluator.NewCache()
+	calcLoader := costcalc.NewProductLoader(db.DB)
+	calcSvc := costcalc.NewService(
+		calcJobRepo, calcChunkRepo, calcJobProductRepo, costResultRepo, costAuditHistoryRepo,
+		calcLoader, calcEvalCache, nil,
+	)
+	costCalcHandler := grpcdelivery.NewCostCalcHandler(
+		costcalc.NewTriggerJobHandler(calcSvc),
+		costcalc.NewGetJobHandler(calcSvc),
+		costcalc.NewListJobsHandler(calcSvc),
+		costcalc.NewListChunksHandler(calcSvc),
+		costcalc.NewListJobProductsHandler(calcSvc),
+		costcalc.NewCancelJobHandler(calcSvc),
+		costcalc.NewGetCostResultHandler(calcSvc),
+		costcalc.NewGetCostBreakdownHandler(calcSvc),
+		costcalc.NewListCostHistoryHandler(calcSvc),
+		costcalc.NewVerifyCostHandler(calcSvc),
+		costcalc.NewApproveCostHandler(calcSvc),
+	)
 
 	// Setup and start servers
 	return startServers(ctx, cfg,
