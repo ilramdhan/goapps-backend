@@ -1,6 +1,6 @@
 package costcalc
 
-import "sort"
+import "slices"
 
 // DependencyGraph models product-level dependencies.
 // edges[d] = list of upstream products that d depends on (i.e. d's RMs that are products).
@@ -33,7 +33,7 @@ func (g *DependencyGraph) Nodes() []int64 {
 	for id := range g.nodes {
 		out = append(out, id)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	slices.Sort(out)
 	return out
 }
 

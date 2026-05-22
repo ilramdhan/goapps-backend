@@ -1,6 +1,6 @@
 package costcalc
 
-import "sort"
+import "slices"
 
 // Wave is a single layer of the topological plan.
 type Wave struct {
@@ -48,7 +48,7 @@ func PlanWaves(g *DependencyGraph) *WavePlan {
 			current = append(current, n)
 		}
 	}
-	sort.Slice(current, func(i, j int) bool { return current[i] < current[j] })
+	slices.Sort(current)
 
 	plan := &WavePlan{}
 	waveNo := 0
@@ -68,7 +68,7 @@ func PlanWaves(g *DependencyGraph) *WavePlan {
 				}
 			}
 		}
-		sort.Slice(next, func(i, j int) bool { return next[i] < next[j] })
+		slices.Sort(next)
 		current = next
 		waveNo++
 	}
@@ -79,6 +79,6 @@ func PlanWaves(g *DependencyGraph) *WavePlan {
 			plan.Cyclic = append(plan.Cyclic, n)
 		}
 	}
-	sort.Slice(plan.Cyclic, func(i, j int) bool { return plan.Cyclic[i] < plan.Cyclic[j] })
+	slices.Sort(plan.Cyclic)
 	return plan
 }
