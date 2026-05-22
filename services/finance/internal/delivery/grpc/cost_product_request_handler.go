@@ -9,22 +9,26 @@ import (
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
+	routeDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 )
 
 // CostProductRequestHandler implements financev1.CostProductRequestServiceServer.
 type CostProductRequestHandler struct {
 	financev1.UnimplementedCostProductRequestServiceServer
-	createHandler     *app.CreateHandler
-	getHandler        *app.GetHandler
-	updateHandler     *app.UpdateHandler
-	listHandler       *app.ListHandler
-	transitionHandler *app.TransitionHandler
-	validation        *ValidationHelper
+	createHandler      *app.CreateHandler
+	getHandler         *app.GetHandler
+	updateHandler      *app.UpdateHandler
+	listHandler        *app.ListHandler
+	transitionHandler  *app.TransitionHandler
+	linkRouteHandler   *app.LinkRouteHandler
+	unlinkRouteHandler *app.UnlinkRouteHandler
+	validation         *ValidationHelper
 }
 
 // NewCostProductRequestHandler constructs the handler. Pass auditEmitter=nil to
-// disable audit log emission on state transitions.
-func NewCostProductRequestHandler(repo domain.Repository, auditEmitter app.AuditEmitter) (*CostProductRequestHandler, error) {
+// disable audit log emission on state transitions. The routeRepo is used to
+// validate route head existence on LinkExistingRoute.
+func NewCostProductRequestHandler(repo domain.Repository, routeRepo routeDomain.Repository, auditEmitter app.AuditEmitter) (*CostProductRequestHandler, error) {
 	v, err := NewValidationHelper()
 	if err != nil {
 		return nil, err
@@ -34,12 +38,14 @@ func NewCostProductRequestHandler(repo domain.Repository, auditEmitter app.Audit
 		transition = transition.WithAudit(auditEmitter)
 	}
 	return &CostProductRequestHandler{
-		createHandler:     app.NewCreateHandler(repo),
-		getHandler:        app.NewGetHandler(repo),
-		updateHandler:     app.NewUpdateHandler(repo),
-		listHandler:       app.NewListHandler(repo),
-		transitionHandler: transition,
-		validation:        v,
+		createHandler:      app.NewCreateHandler(repo),
+		getHandler:         app.NewGetHandler(repo),
+		updateHandler:      app.NewUpdateHandler(repo),
+		listHandler:        app.NewListHandler(repo),
+		transitionHandler:  transition,
+		linkRouteHandler:   app.NewLinkRouteHandler(repo, routeRepo),
+		unlinkRouteHandler: app.NewUnlinkRouteHandler(repo),
+		validation:         v,
 	}, nil
 }
 
@@ -365,6 +371,7 @@ func requestToProto(r *domain.Request) *financev1.CostProductRequest {
 		AssignedToUserId:             r.AssignedToUserID(),
 		RequesterUserId:              r.RequesterUserID(),
 		ExistingProductSysId:         r.ExistingProductSysID(),
+		LinkedRouteHeadId:            r.LinkedRouteHeadID(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: r.CreatedAt().Format(time.RFC3339),
 			CreatedBy: r.RequesterUserID(),
@@ -392,6 +399,45 @@ func requestToProto(r *domain.Request) *financev1.CostProductRequest {
 		}
 	}
 	return out
+}
+
+// LinkExistingRoute attaches an existing route_head to the request.
+func (h *CostProductRequestHandler) LinkExistingRoute(ctx context.Context, req *financev1.LinkExistingRouteRequest) (*financev1.LinkExistingRouteResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.LinkExistingRouteResponse{Base: baseResp}, nil
+	}
+	actor, _ := GetUserIDFromCtx(ctx)
+	res, err := h.linkRouteHandler.Handle(ctx, app.LinkRouteCommand{
+		RequestID:   req.GetRequestId(),
+		RouteHeadID: req.GetRouteHeadId(),
+		ActorUserID: actor,
+	})
+	if err != nil {
+		return &financev1.LinkExistingRouteResponse{Base: requestErrToBase(err)}, nil
+	}
+	return &financev1.LinkExistingRouteResponse{
+		Base: successResponse("Route linked"),
+		Data: requestToProto(res),
+	}, nil
+}
+
+// UnlinkRoute clears any linked route head from the request.
+func (h *CostProductRequestHandler) UnlinkRoute(ctx context.Context, req *financev1.UnlinkRouteRequest) (*financev1.UnlinkRouteResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.UnlinkRouteResponse{Base: baseResp}, nil
+	}
+	actor, _ := GetUserIDFromCtx(ctx)
+	res, err := h.unlinkRouteHandler.Handle(ctx, app.UnlinkRouteCommand{
+		RequestID:   req.GetRequestId(),
+		ActorUserID: actor,
+	})
+	if err != nil {
+		return &financev1.UnlinkRouteResponse{Base: requestErrToBase(err)}, nil
+	}
+	return &financev1.UnlinkRouteResponse{
+		Base: successResponse("Route unlinked"),
+		Data: requestToProto(res),
+	}, nil
 }
 
 func requestErrToBase(err error) *commonv1.BaseResponse {
