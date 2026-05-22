@@ -270,6 +270,8 @@ func run() error {
 	}
 	costProductParameterApp := cppapp.New(costProductParameterRepo)
 	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp)
+	// S8a foundation: stub CostCalcService (real handlers land in S8b).
+	costCalcHandler := grpcdelivery.NewCostCalcHandler()
 
 	// Setup and start servers
 	return startServers(ctx, cfg,
@@ -280,6 +282,7 @@ func run() error {
 		costRequestCommentHandler, costAttachmentHandler,
 		costRoutingRuleHandler, costAuditLogHandler, costNotificationHandler,
 		costProductParameterHandler,
+		costCalcHandler,
 		tokenBlacklist)
 }
 
@@ -400,6 +403,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	costAuditLogHandler *grpcdelivery.CostAuditLogHandler,
 	costNotificationHandler *grpcdelivery.CostNotificationHandler,
 	costProductParameterHandler *grpcdelivery.CostProductParameterHandler,
+	costCalcHandler *grpcdelivery.CostCalcHandler,
 	tokenBlacklist *redisinfra.TokenBlacklist,
 ) error {
 	// Setup gRPC server with JWT auth and token blacklist
@@ -433,6 +437,8 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterCostAuditLogServiceServer(grpcServer.GRPCServer(), costAuditLogHandler)
 	financev1.RegisterCostNotificationServiceServer(grpcServer.GRPCServer(), costNotificationHandler)
 	financev1.RegisterCostProductParameterServiceServer(grpcServer.GRPCServer(), costProductParameterHandler)
+	// S8a foundation: CostCalcService stub.
+	financev1.RegisterCostCalcServiceServer(grpcServer.GRPCServer(), costCalcHandler)
 
 	// Start gRPC server
 	go func() {

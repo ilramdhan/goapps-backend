@@ -147,6 +147,10 @@ func (s *Server) Start(ctx context.Context) error {
 	if err := financev1.RegisterCostProductParameterServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register CostProductParameter gateway: %w", err)
 	}
+	// S8a foundation: CostCalcService stub gateway.
+	if err := financev1.RegisterCostCalcServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostCalc gateway: %w", err)
+	}
 
 	// Create main mux
 	mux := http.NewServeMux()
