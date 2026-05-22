@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS aud_cost_history CASCADE;
