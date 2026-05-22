@@ -411,6 +411,6 @@ func waitDB(db *sql.DB, timeout time.Duration) error {
 }
 
 // int64ToArray wraps pq.Array for terse cleanup statements.
-func int64ToArray(ids []int64) interface{} {
+func int64ToArray(ids []int64) any {
 	return pq.Array(ids)
 }
