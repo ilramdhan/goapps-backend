@@ -3,6 +3,7 @@
 package costproductrequest
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -42,8 +43,11 @@ type Request struct {
 	requesterUserID               string
 	// When UseExistingCosting is invoked, points to the reused product master.
 	existingProductSysID int64
-	createdAt            time.Time
-	updatedAt            time.Time
+	// LinkedRouteHeadID is the FK to the unified routing head currently attached
+	// to this request (0 = unlinked). Set by LinkRoute, cleared by UnlinkRoute.
+	linkedRouteHeadID int64
+	createdAt         time.Time
+	updatedAt         time.Time
 
 	// Optional embedded spec (when productClassification = new).
 	spec *Spec
@@ -146,6 +150,7 @@ type ReconstructInput struct {
 	AssignedToUserID             string
 	RequesterUserID              string
 	ExistingProductSysID         int64
+	LinkedRouteHeadID            int64
 	CreatedAt                    time.Time
 	UpdatedAt                    time.Time
 	Spec                         *Spec
@@ -179,6 +184,7 @@ func Reconstruct(in ReconstructInput) *Request {
 		assignedToUserID:             in.AssignedToUserID,
 		requesterUserID:              in.RequesterUserID,
 		existingProductSysID:         in.ExistingProductSysID,
+		linkedRouteHeadID:            in.LinkedRouteHeadID,
 		createdAt:                    in.CreatedAt,
 		updatedAt:                    in.UpdatedAt,
 		spec:                         in.Spec,
@@ -375,6 +381,36 @@ func (r *Request) UseExistingCosting(existingProductSysID int64) error {
 
 // ExistingProductSysID returns the FK to cost_product_master (0 = none).
 func (r *Request) ExistingProductSysID() int64 { return r.existingProductSysID }
+
+// LinkedRouteHeadID returns the linked route head id or 0 if not linked.
+func (r *Request) LinkedRouteHeadID() int64 { return r.linkedRouteHeadID }
+
+// LinkRoute attaches a route head to this request. Allowed only while the request
+// is still in a pre-terminal state. Idempotent re-link is allowed.
+func (r *Request) LinkRoute(headID int64) error {
+	if headID <= 0 {
+		return fmt.Errorf("link route: invalid head id %d", headID)
+	}
+	switch r.status {
+	case StatusDraft, StatusSubmitted, StatusUnderReview,
+		StatusRoutingDefined, StatusParameterPending, StatusParameterComplete:
+		r.linkedRouteHeadID = headID
+		r.touch()
+		return nil
+	}
+	return ErrInvalidTransition
+}
+
+// UnlinkRoute clears the linked route head. Allowed in any non-terminal state.
+func (r *Request) UnlinkRoute() error {
+	switch r.status {
+	case StatusCostingDone, StatusRejected, StatusClosed:
+		return ErrInvalidTransition
+	}
+	r.linkedRouteHeadID = 0
+	r.touch()
+	return nil
+}
 
 // MarkParameterPending advances ROUTING_DEFINED → PARAMETER_PENDING. Invoked
 // automatically by PromoteHandler once at least one routing draft is promoted,

@@ -31,7 +31,8 @@ const cprCols = `
 	cpr_feasibility_decision,cpr_feasibility_note,cpr_feasibility_by,cpr_feasibility_at,
 	cpr_reject_reason,cpr_cancel_reason,cpr_assigned_to_user_id,cpr_requester_user_id,
 	cpr_created_at,cpr_updated_at,
-	COALESCE(cpr_existing_product_sys_id, 0)`
+	COALESCE(cpr_existing_product_sys_id, 0),
+	COALESCE(cpr_linked_route_head_id, 0)`
 
 const cpsCols = `
 	cps_spec_id,cps_request_id,cps_raw_material_type,cps_product_description,
@@ -52,12 +53,14 @@ func (r *CostProductRequestRepository) Create(ctx context.Context, req *costprod
 			cpr_customer_name,cpr_customer_code,cpr_product_classification,
 			cpr_target_volume,cpr_target_price_range,cpr_urgency_level,
 			cpr_needed_by_date,cpr_status,cpr_requester_user_id,
+			cpr_linked_route_head_id,
 			cpr_created_at,cpr_updated_at
 		) VALUES (
 			generate_cost_request_no($13),
 			$1, $2, NULLIF($3,''), $4, NULLIF($5,''), $6,
 			NULLIF($7,'')::numeric, NULLIF($8,''), $9,
 			NULLIF($10,'')::date, $11, $12,
+			NULLIF($14, 0)::bigint,
 			$13, $13
 		)
 		RETURNING cpr_request_id,cpr_request_no`
@@ -69,6 +72,7 @@ func (r *CostProductRequestRepository) Create(ctx context.Context, req *costprod
 		req.TargetVolume(), req.TargetPriceRange(), req.UrgencyLevel(),
 		req.NeededByDate(), req.Status(), req.RequesterUserID(),
 		req.CreatedAt(),
+		req.LinkedRouteHeadID(),
 	).Scan(&requestID, &requestNo); err != nil {
 		if isCprUniqueViolation(err) {
 			return costproductrequest.ErrAlreadyExists
@@ -113,7 +117,8 @@ func (r *CostProductRequestRepository) Save(ctx context.Context, req *costproduc
 			cpr_reject_reason=NULLIF($20,''), cpr_cancel_reason=NULLIF($21,''),
 			cpr_assigned_to_user_id=NULLIF($22,''),
 			cpr_existing_product_sys_id=NULLIF($23, 0)::bigint,
-			cpr_updated_at=$24
+			cpr_linked_route_head_id=NULLIF($24, 0)::bigint,
+			cpr_updated_at=$25
 		WHERE cpr_request_id=$1`
 	res, err := tx.ExecContext(ctx, qUpd,
 		req.RequestID(),
@@ -129,6 +134,7 @@ func (r *CostProductRequestRepository) Save(ctx context.Context, req *costproduc
 		req.RejectReason(), req.CancelReason(),
 		req.AssignedToUserID(),
 		req.ExistingProductSysID(),
+		req.LinkedRouteHeadID(),
 		req.UpdatedAt(),
 	)
 	if err != nil {
@@ -337,6 +343,7 @@ func scanCpr(scan func(...any) error) (costproductrequest.ReconstructInput, erro
 		requester                                                         string
 		createdAt, updatedAt                                              time.Time
 		existingProductSysID                                              int64
+		linkedRouteHeadID                                                 int64
 	)
 	if err := scan(
 		&requestID, &requestNo, &requestTypeID, &title, &description,
@@ -347,6 +354,7 @@ func scanCpr(scan func(...any) error) (costproductrequest.ReconstructInput, erro
 		&rejectReason, &cancelReason, &assignee, &requester,
 		&createdAt, &updatedAt,
 		&existingProductSysID,
+		&linkedRouteHeadID,
 	); err != nil {
 		return costproductrequest.ReconstructInput{}, err
 	}
@@ -374,6 +382,7 @@ func scanCpr(scan func(...any) error) (costproductrequest.ReconstructInput, erro
 		AssignedToUserID:             assignee.String,
 		RequesterUserID:              requester,
 		ExistingProductSysID:         existingProductSysID,
+		LinkedRouteHeadID:            linkedRouteHeadID,
 		CreatedAt:                    createdAt,
 		UpdatedAt:                    updatedAt,
 	}
