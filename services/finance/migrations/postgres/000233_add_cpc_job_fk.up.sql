@@ -1,3 +1,5 @@
+BEGIN;
+
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -10,3 +12,5 @@ BEGIN
     END IF;
 END
 $$;
+
+COMMIT;
