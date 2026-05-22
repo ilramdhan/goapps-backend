@@ -211,7 +211,7 @@ func jobCompletionEvent(status costcalcdom.JobStatus) string {
 	case costcalcdom.JobStatusSuccess:
 		return "COST_CALC_JOB_SUCCESS"
 	case costcalcdom.JobStatusPartialFailed:
-		return "COST_CALC_JOB_PARTIAL"
+		return "COST_CALC_JOB_PARTIAL_FAILED"
 	case costcalcdom.JobStatusFailed:
 		return "COST_CALC_JOB_FAILED"
 	default:

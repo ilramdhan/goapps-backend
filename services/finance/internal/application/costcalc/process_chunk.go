@@ -177,26 +177,46 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 	return productOutcomeSuccess
 }
 
+// auditEntityKindProduct is the EntityKind value for COST_CALC_PRODUCT_* audit events.
+const auditEntityKindProduct = "COST_CALC_PRODUCT"
+
 // recordComputeError maps sentinel domain errors to BLOCKED with a structured
 // block_reason; everything else marks FAILED.
 func (s *Service) recordComputeError(ctx context.Context, in ProcessChunkInput, pid int64, err error) productOutcome {
 	switch {
 	case errors.Is(err, costcalcdom.ErrMissingCAPPValue):
 		_ = s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonMissingCAPP, logBytes(err))
+		s.emitProductBlocked(ctx, in, pid, blockReasonMissingCAPP, err)
 		return productOutcomeBlocked
 	case errors.Is(err, costcalcdom.ErrMissingRMCost):
 		_ = s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonMissingRMCost, logBytes(err))
+		s.emitProductBlocked(ctx, in, pid, blockReasonMissingRMCost, err)
 		return productOutcomeBlocked
 	case errors.Is(err, costcalcdom.ErrMissingUpstreamCost):
 		_ = s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonMissingUpstream, logBytes(err))
+		s.emitProductBlocked(ctx, in, pid, blockReasonMissingUpstream, err)
 		return productOutcomeBlocked
 	case errors.Is(err, costcalcdom.ErrFormulaEval):
 		_ = s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonFormulaError, logBytes(err))
+		s.emitProductBlocked(ctx, in, pid, blockReasonFormulaError, err)
 		return productOutcomeBlocked
 	default:
 		_ = s.productRepo.MarkFailed(ctx, in.JobID, pid, err.Error(), logBytes(err))
 		return productOutcomeFailed
 	}
+}
+
+// emitProductBlocked is a best-effort audit emission for per-product BLOCKED
+// transitions. Errors are swallowed inside emitAudit so the calc continues even
+// if the audit sink is down.
+func (s *Service) emitProductBlocked(ctx context.Context, in ProcessChunkInput, pid int64, reason string, err error) {
+	s.emitAudit(ctx, AuditEvent{
+		EventType:  "COST_CALC_PRODUCT_BLOCKED",
+		EntityKind: auditEntityKindProduct,
+		EntityID:   fmt.Sprintf("%d", pid),
+		Actor:      in.Actor,
+		Message:    fmt.Sprintf("product %d blocked job=%d reason=%s: %s", pid, in.JobID, reason, err.Error()),
+	})
 }
 
 // persistResult upserts the cost result, writes audit-history on supersede,
