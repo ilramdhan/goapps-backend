@@ -1,0 +1,39 @@
+app:
+  name: finance-cost-worker
+  version: 0.1.0
+  env: development
+
+server:
+  metrics_port: 8093
+  health_port: 8083
+
+database:
+  host: localhost
+  port: 5434
+  user: finance
+  password: finance123
+  name: finance_db
+  ssl_mode: disable
+  max_open_conns: 6
+  max_idle_conns: 2
+  conn_max_lifetime: 15m
+  conn_max_idle_time: 5m
+
+rabbitmq:
+  url: amqp://guest:guest@localhost:5672/
+  prefetch_count: 1
+  reconnect_delay: 5s
+
+worker:
+  worker_id: ""  # auto-generated at runtime (hostname-pid) if empty
+
+tracing:
+  enabled: false
+  service_name: finance-cost-worker
+  endpoint: localhost:4317
+  insecure: true
+
+logger:
+  level: info
+  format: json
+  pretty_json: false
