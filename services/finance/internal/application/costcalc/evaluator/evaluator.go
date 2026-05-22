@@ -52,7 +52,7 @@ func Compile(formulaCode, expression string) (*Evaluator, error) {
 // Run executes the compiled program with the provided variable scope.
 // All scope values must be numeric (int, float, or convertible) — expr will coerce.
 // Returns the float64 result or an error.
-func (e *Evaluator) Run(scope map[string]interface{}) (float64, error) {
+func (e *Evaluator) Run(scope map[string]any) (float64, error) {
 	out, err := expr.Run(e.program, scope)
 	if err != nil {
 		return 0, fmt.Errorf("run %s: %w", e.formulaCode, err)

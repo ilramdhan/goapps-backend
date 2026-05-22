@@ -10,7 +10,7 @@ import (
 func TestEvaluator_BasicArithmetic(t *testing.T) {
 	ev, err := Compile("F1", "(a + b) * c")
 	require.NoError(t, err)
-	out, err := ev.Run(map[string]interface{}{"a": 2.0, "b": 3.0, "c": 4.0})
+	out, err := ev.Run(map[string]any{"a": 2.0, "b": 3.0, "c": 4.0})
 	require.NoError(t, err)
 	require.Equal(t, 20.0, out)
 }
@@ -18,7 +18,7 @@ func TestEvaluator_BasicArithmetic(t *testing.T) {
 func TestEvaluator_IntegersCoerced(t *testing.T) {
 	ev, err := Compile("F2", "a + b")
 	require.NoError(t, err)
-	out, err := ev.Run(map[string]interface{}{"a": 5, "b": 7})
+	out, err := ev.Run(map[string]any{"a": 5, "b": 7})
 	require.NoError(t, err)
 	require.Equal(t, 12.0, out)
 }
@@ -27,7 +27,7 @@ func TestEvaluator_PercentExpression(t *testing.T) {
 	// Realistic: cost + waste percentage
 	ev, err := Compile("FCOST", "RM_COST * (1 + WASTE_PCT / 100)")
 	require.NoError(t, err)
-	out, err := ev.Run(map[string]interface{}{"RM_COST": 1000.0, "WASTE_PCT": 5.0})
+	out, err := ev.Run(map[string]any{"RM_COST": 1000.0, "WASTE_PCT": 5.0})
 	require.NoError(t, err)
 	require.InDelta(t, 1050.0, out, 0.0001)
 }
@@ -51,7 +51,7 @@ func TestEvaluator_DivByZeroReturnsError(t *testing.T) {
 	require.NoError(t, err)
 	// expr's float division of x/0 yields +Inf rather than a runtime error,
 	// so Run() guards against non-finite results explicitly.
-	_, err = ev.Run(map[string]interface{}{"a": 1.0, "b": 0.0})
+	_, err = ev.Run(map[string]any{"a": 1.0, "b": 0.0})
 	require.ErrorIs(t, err, ErrNonFiniteResult)
 }
 
@@ -60,7 +60,7 @@ func TestEvaluator_UndefinedVariableYieldsError(t *testing.T) {
 	require.NoError(t, err)
 	// AllowUndefinedVariables means compile passes, but at runtime the missing
 	// var is nil → arithmetic with nil fails.
-	_, err = ev.Run(map[string]interface{}{"a": 1.0})
+	_, err = ev.Run(map[string]any{"a": 1.0})
 	require.Error(t, err)
 }
 
@@ -92,7 +92,7 @@ func TestCache_CompileErrorNotCached(t *testing.T) {
 func TestCache_ConcurrentAccess(t *testing.T) {
 	c := NewCache()
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
