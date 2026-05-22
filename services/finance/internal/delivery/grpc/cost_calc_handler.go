@@ -32,10 +32,16 @@ type CostCalcHandler struct {
 	listHistoryH     *costcalc.ListCostHistoryHandler
 	verifyH          *costcalc.VerifyCostHandler
 	approveH         *costcalc.ApproveCostHandler
+	// svc gives ProcessChunkInternal direct access to Service.ProcessChunk;
+	// the worker invokes this RPC with the chunk payload off the RMQ queue.
+	svc *costcalc.Service
 }
 
-// NewCostCalcHandler wires the 11 application handlers behind the gRPC service.
+// NewCostCalcHandler wires the 11 application handlers + the Service behind the
+// gRPC service. The Service is required so the worker-facing
+// ProcessChunkInternal RPC can call Service.ProcessChunk directly.
 func NewCostCalcHandler(
+	svc *costcalc.Service,
 	triggerH *costcalc.TriggerJobHandler,
 	getJobH *costcalc.GetJobHandler,
 	listJobsH *costcalc.ListJobsHandler,
@@ -49,6 +55,7 @@ func NewCostCalcHandler(
 	approveH *costcalc.ApproveCostHandler,
 ) *CostCalcHandler {
 	return &CostCalcHandler{
+		svc:              svc,
 		triggerH:         triggerH,
 		getJobH:          getJobH,
 		listJobsH:        listJobsH,
@@ -275,6 +282,30 @@ func (h *CostCalcHandler) ApproveCostResult(ctx context.Context, req *financev1.
 	}
 	return &financev1.ApproveCostResultResponse{
 		Base: successResponse("cost result approved"),
+	}, nil
+}
+
+// ProcessChunkInternal computes one chunk of products synchronously.
+// Called by finance-cost-worker after consuming a chunk message from RMQ.
+// This is a passthrough to Service.ProcessChunk — the chunk row lifecycle and
+// per-product persistence are handled inside the application layer.
+func (h *CostCalcHandler) ProcessChunkInternal(ctx context.Context, req *financev1.ProcessChunkInternalRequest) (*financev1.ProcessChunkInternalResponse, error) {
+	out, err := h.svc.ProcessChunk(ctx, costcalc.ProcessChunkInput{
+		JobID:    req.GetJobId(),
+		ChunkID:  req.GetChunkId(),
+		Period:   req.GetPeriod(),
+		CalcType: protoToCalcType(req.GetCalculationType()),
+		Products: req.GetProductIds(),
+		Actor:    req.GetActor(),
+	})
+	if err != nil {
+		return &financev1.ProcessChunkInternalResponse{Base: costCalcErrToBase(err)}, nil
+	}
+	return &financev1.ProcessChunkInternalResponse{
+		Base:         successResponse("chunk processed"),
+		SuccessCount: safeIntToInt32(out.Success),
+		FailedCount:  safeIntToInt32(out.Failed),
+		BlockedCount: safeIntToInt32(out.Blocked),
 	}, nil
 }
 

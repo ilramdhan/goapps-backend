@@ -19,17 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CostCalcService_TriggerCalcJob_FullMethodName      = "/finance.v1.CostCalcService/TriggerCalcJob"
-	CostCalcService_GetCalcJob_FullMethodName          = "/finance.v1.CostCalcService/GetCalcJob"
-	CostCalcService_ListCalcJobs_FullMethodName        = "/finance.v1.CostCalcService/ListCalcJobs"
-	CostCalcService_ListCalcJobChunks_FullMethodName   = "/finance.v1.CostCalcService/ListCalcJobChunks"
-	CostCalcService_ListCalcJobProducts_FullMethodName = "/finance.v1.CostCalcService/ListCalcJobProducts"
-	CostCalcService_CancelCalcJob_FullMethodName       = "/finance.v1.CostCalcService/CancelCalcJob"
-	CostCalcService_GetCostResult_FullMethodName       = "/finance.v1.CostCalcService/GetCostResult"
-	CostCalcService_GetCostBreakdown_FullMethodName    = "/finance.v1.CostCalcService/GetCostBreakdown"
-	CostCalcService_ListCostHistory_FullMethodName     = "/finance.v1.CostCalcService/ListCostHistory"
-	CostCalcService_VerifyCostResult_FullMethodName    = "/finance.v1.CostCalcService/VerifyCostResult"
-	CostCalcService_ApproveCostResult_FullMethodName   = "/finance.v1.CostCalcService/ApproveCostResult"
+	CostCalcService_TriggerCalcJob_FullMethodName       = "/finance.v1.CostCalcService/TriggerCalcJob"
+	CostCalcService_GetCalcJob_FullMethodName           = "/finance.v1.CostCalcService/GetCalcJob"
+	CostCalcService_ListCalcJobs_FullMethodName         = "/finance.v1.CostCalcService/ListCalcJobs"
+	CostCalcService_ListCalcJobChunks_FullMethodName    = "/finance.v1.CostCalcService/ListCalcJobChunks"
+	CostCalcService_ListCalcJobProducts_FullMethodName  = "/finance.v1.CostCalcService/ListCalcJobProducts"
+	CostCalcService_CancelCalcJob_FullMethodName        = "/finance.v1.CostCalcService/CancelCalcJob"
+	CostCalcService_GetCostResult_FullMethodName        = "/finance.v1.CostCalcService/GetCostResult"
+	CostCalcService_GetCostBreakdown_FullMethodName     = "/finance.v1.CostCalcService/GetCostBreakdown"
+	CostCalcService_ListCostHistory_FullMethodName      = "/finance.v1.CostCalcService/ListCostHistory"
+	CostCalcService_VerifyCostResult_FullMethodName     = "/finance.v1.CostCalcService/VerifyCostResult"
+	CostCalcService_ApproveCostResult_FullMethodName    = "/finance.v1.CostCalcService/ApproveCostResult"
+	CostCalcService_ProcessChunkInternal_FullMethodName = "/finance.v1.CostCalcService/ProcessChunkInternal"
 )
 
 // CostCalcServiceClient is the client API for CostCalcService service.
@@ -72,6 +73,11 @@ type CostCalcServiceClient interface {
 	// ApproveCostResult marks a cost result as approved.
 	// Required permission: finance.cost.result.approve.
 	ApproveCostResult(ctx context.Context, in *ApproveCostResultRequest, opts ...grpc.CallOption) (*ApproveCostResultResponse, error)
+	// ProcessChunkInternal computes one chunk of products synchronously.
+	// Invoked by finance-cost-worker after consuming a chunk message from RMQ.
+	// NOT exposed via REST gateway; intended for service-to-service traffic only.
+	// Required permission: finance.cost.caljob.trigger.
+	ProcessChunkInternal(ctx context.Context, in *ProcessChunkInternalRequest, opts ...grpc.CallOption) (*ProcessChunkInternalResponse, error)
 }
 
 type costCalcServiceClient struct {
@@ -192,6 +198,16 @@ func (c *costCalcServiceClient) ApproveCostResult(ctx context.Context, in *Appro
 	return out, nil
 }
 
+func (c *costCalcServiceClient) ProcessChunkInternal(ctx context.Context, in *ProcessChunkInternalRequest, opts ...grpc.CallOption) (*ProcessChunkInternalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProcessChunkInternalResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_ProcessChunkInternal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostCalcServiceServer is the server API for CostCalcService service.
 // All implementations must embed UnimplementedCostCalcServiceServer
 // for forward compatibility.
@@ -232,6 +248,11 @@ type CostCalcServiceServer interface {
 	// ApproveCostResult marks a cost result as approved.
 	// Required permission: finance.cost.result.approve.
 	ApproveCostResult(context.Context, *ApproveCostResultRequest) (*ApproveCostResultResponse, error)
+	// ProcessChunkInternal computes one chunk of products synchronously.
+	// Invoked by finance-cost-worker after consuming a chunk message from RMQ.
+	// NOT exposed via REST gateway; intended for service-to-service traffic only.
+	// Required permission: finance.cost.caljob.trigger.
+	ProcessChunkInternal(context.Context, *ProcessChunkInternalRequest) (*ProcessChunkInternalResponse, error)
 	mustEmbedUnimplementedCostCalcServiceServer()
 }
 
@@ -274,6 +295,9 @@ func (UnimplementedCostCalcServiceServer) VerifyCostResult(context.Context, *Ver
 }
 func (UnimplementedCostCalcServiceServer) ApproveCostResult(context.Context, *ApproveCostResultRequest) (*ApproveCostResultResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveCostResult not implemented")
+}
+func (UnimplementedCostCalcServiceServer) ProcessChunkInternal(context.Context, *ProcessChunkInternalRequest) (*ProcessChunkInternalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ProcessChunkInternal not implemented")
 }
 func (UnimplementedCostCalcServiceServer) mustEmbedUnimplementedCostCalcServiceServer() {}
 func (UnimplementedCostCalcServiceServer) testEmbeddedByValue()                         {}
@@ -494,6 +518,24 @@ func _CostCalcService_ApproveCostResult_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostCalcService_ProcessChunkInternal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessChunkInternalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).ProcessChunkInternal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_ProcessChunkInternal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).ProcessChunkInternal(ctx, req.(*ProcessChunkInternalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostCalcService_ServiceDesc is the grpc.ServiceDesc for CostCalcService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -544,6 +586,10 @@ var CostCalcService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApproveCostResult",
 			Handler:    _CostCalcService_ApproveCostResult_Handler,
+		},
+		{
+			MethodName: "ProcessChunkInternal",
+			Handler:    _CostCalcService_ProcessChunkInternal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

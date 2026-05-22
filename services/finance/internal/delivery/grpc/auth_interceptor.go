@@ -242,6 +242,8 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostCalcService/ListCostHistory":     "finance.cost.history.view",
 		"/finance.v1.CostCalcService/VerifyCostResult":    "finance.cost.result.verify",
 		"/finance.v1.CostCalcService/ApproveCostResult":   "finance.cost.result.approve",
+		// Service-to-service: invoked by finance-cost-worker. Same scope as triggering a job.
+		"/finance.v1.CostCalcService/ProcessChunkInternal": "finance.cost.caljob.trigger",
 	}
 
 	return permissions[fullMethod]

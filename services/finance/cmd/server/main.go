@@ -292,6 +292,7 @@ func run() error {
 		calcLoader, calcEvalCache, nil, costCalcJobTriggerPub,
 	)
 	costCalcHandler := grpcdelivery.NewCostCalcHandler(
+		calcSvc,
 		costcalc.NewTriggerJobHandler(calcSvc),
 		costcalc.NewGetJobHandler(calcSvc),
 		costcalc.NewListJobsHandler(calcSvc),
