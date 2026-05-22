@@ -42,7 +42,7 @@ func Connect(url string) (*Connection, error) {
 // Useful for local dev so the service exits in bounded time when RMQ is down.
 func ConnectWithRetry(url string, maxAttempts int, delay time.Duration) (*Connection, error) {
 	var last error
-	for i := 0; i < maxAttempts; i++ {
+	for i := range maxAttempts {
 		c, err := Connect(url)
 		if err == nil {
 			return c, nil
