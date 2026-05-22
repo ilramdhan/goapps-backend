@@ -14,6 +14,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -22,11 +23,13 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/config"
+	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/infrastructure/financeclient"
 	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/infrastructure/rmq"
 	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/worker"
 )
@@ -69,10 +72,44 @@ func run() error {
 	}()
 	log.Info().Msg("RabbitMQ connected")
 
-	// DB connection deferred to S8c.7.
+	// PostgreSQL connection (used only for the cal_job_chunk lifecycle SQL
+	// performed by the worker; finance owns calc state otherwise).
+	db, err := sql.Open("postgres", cfg.Database.ConnectionString())
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("close db")
+		}
+	}()
+	db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
+	db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(cfg.Database.ConnMaxIdleTime)
+	pingCtx, pingCancel := context.WithTimeout(ctx, 5*time.Second)
+	if err := db.PingContext(pingCtx); err != nil {
+		pingCancel()
+		return fmt.Errorf("ping db: %w", err)
+	}
+	pingCancel()
+	log.Info().Msg("PostgreSQL connected")
+
+	// Finance gRPC client (used to call CostCalcService/ProcessChunkInternal
+	// for each chunk consumed off the queue).
+	fin, err := financeclient.New(cfg.Finance.GRPCHost, cfg.Finance.GRPCPort, cfg.Finance.ServiceAuthToken, cfg.Finance.CallTimeout)
+	if err != nil {
+		return fmt.Errorf("dial finance: %w", err)
+	}
+	defer func() {
+		if closeErr := fin.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("close finance client")
+		}
+	}()
+	log.Info().Str("finance", fmt.Sprintf("%s:%d", cfg.Finance.GRPCHost, cfg.Finance.GRPCPort)).Msg("finance gRPC client ready")
 
 	// Start worker loop.
-	w := worker.New(cfg, rmqConn, workerID)
+	w := worker.New(cfg, workerID, db, rmqConn, fin)
 	workerErrCh := make(chan error, 1)
 	go func() { workerErrCh <- w.Run(ctx) }()
 

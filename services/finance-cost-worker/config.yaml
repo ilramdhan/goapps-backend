@@ -27,6 +27,12 @@ rabbitmq:
 worker:
   worker_id: ""  # auto-generated at runtime (hostname-pid) if empty
 
+finance:
+  grpc_host: localhost
+  grpc_port: 50051
+  service_auth_token: ""   # set via SERVICE_AUTH_TOKEN env -- bearer JWT for finance.cost.caljob.trigger
+  call_timeout: 60s
+
 tracing:
   enabled: false
   service_name: finance-cost-worker

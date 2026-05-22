@@ -17,8 +17,18 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	RabbitMQ RabbitMQConfig `mapstructure:"rabbitmq"`
 	Worker   WorkerConfig   `mapstructure:"worker"`
+	Finance  FinanceConfig  `mapstructure:"finance"`
 	Tracing  TracingConfig  `mapstructure:"tracing"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
+}
+
+// FinanceConfig holds the gRPC client config for calling finance's
+// CostCalcService/ProcessChunkInternal.
+type FinanceConfig struct {
+	GRPCHost         string        `mapstructure:"grpc_host"`
+	GRPCPort         int           `mapstructure:"grpc_port"`
+	ServiceAuthToken string        `mapstructure:"service_auth_token"`
+	CallTimeout      time.Duration `mapstructure:"call_timeout"`
 }
 
 // AppConfig holds application-level configuration.
@@ -141,6 +151,11 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("worker.worker_id", "")
 
+	v.SetDefault("finance.grpc_host", "localhost")
+	v.SetDefault("finance.grpc_port", 50051)
+	v.SetDefault("finance.service_auth_token", "")
+	v.SetDefault("finance.call_timeout", 60*time.Second)
+
 	v.SetDefault("tracing.enabled", false)
 	v.SetDefault("tracing.service_name", "finance-cost-worker")
 	v.SetDefault("tracing.endpoint", "localhost:4317")
@@ -163,6 +178,9 @@ func bindEnvVars(v *viper.Viper) {
 		{"database.name", "DATABASE_NAME"},
 		{"rabbitmq.url", "RABBITMQ_URL"},
 		{"worker.worker_id", "WORKER_ID"},
+		{"finance.grpc_host", "FINANCE_GRPC_HOST"},
+		{"finance.grpc_port", "FINANCE_GRPC_PORT"},
+		{"finance.service_auth_token", "SERVICE_AUTH_TOKEN"},
 		{"app.env", "APP_ENV"},
 		{"logger.level", "LOG_LEVEL"},
 	}
