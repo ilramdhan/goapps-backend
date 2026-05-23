@@ -344,16 +344,36 @@ func (r *JobProductRepo) BulkInsert(ctx context.Context, rows []*JobProductRow) 
 }
 
 // ResolveProductRouteMap returns map[productSysID]=routeHeadID for the active
-// COMPLETE/LOCKED route head per product. Products without an active route are
-// omitted; the coordinator will record them as BLOCKED later via the worker.
+// COMPLETE/LOCKED route head per product.
+//
+// Two cases (self-contained DAG model — see migration 000244):
+//
+//  1. The product is the head of its own route (FG-level products): match via
+//     cost_route_head.crh_product_sys_id.
+//  2. The product is an intermediate that exists only as a seq inside another
+//     FG's route_head: match via cost_route_seq.crs_product_sys_id and return
+//     the seq's owning head id.
+//
+// UNION ALL and DISTINCT ON (priority FG-as-head over seq-membership) ensures
+// each product resolves to ONE route_head.
 func (r *JobProductRepo) ResolveProductRouteMap(ctx context.Context, productSysIDs []int64) (map[int64]int64, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT DISTINCT ON (crh_product_sys_id) crh_product_sys_id, crh_head_id
-		FROM cost_route_head
-		WHERE crh_routing_status IN ('COMPLETE','LOCKED')
-		  AND crh_deleted_at IS NULL
-		  AND crh_product_sys_id = ANY($1)
-		ORDER BY crh_product_sys_id, crh_head_id DESC
+		SELECT DISTINCT ON (product_sys_id) product_sys_id, head_id
+		FROM (
+		  SELECT crh.crh_product_sys_id AS product_sys_id, crh.crh_head_id AS head_id, 0 AS rank
+		  FROM cost_route_head crh
+		  WHERE crh.crh_routing_status IN ('COMPLETE','LOCKED')
+		    AND crh.crh_deleted_at IS NULL
+		    AND crh.crh_product_sys_id = ANY($1)
+		  UNION ALL
+		  SELECT crs.crs_product_sys_id AS product_sys_id, crs.crs_head_id AS head_id, 1 AS rank
+		  FROM cost_route_seq crs
+		  JOIN cost_route_head crh ON crh.crh_head_id = crs.crs_head_id
+		  WHERE crh.crh_routing_status IN ('COMPLETE','LOCKED')
+		    AND crh.crh_deleted_at IS NULL
+		    AND crs.crs_product_sys_id = ANY($1)
+		) t
+		ORDER BY product_sys_id, rank ASC, head_id DESC
 	`, pq.Array(productSysIDs))
 	if err != nil {
 		return nil, fmt.Errorf("resolve route map: %w", err)
