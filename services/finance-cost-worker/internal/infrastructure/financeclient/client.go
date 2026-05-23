@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -62,9 +64,48 @@ func (c *Client) ProcessChunk(ctx context.Context, req *financev1.ProcessChunkIn
 	if c.authToken != "" {
 		callCtx = metadata.AppendToOutgoingContext(callCtx, "x-service-secret", c.authToken)
 	}
+	// Inject the active trace context into the outgoing gRPC metadata so the
+	// finance server can continue the trace (the cost_calc.product span becomes
+	// a child of the worker's cost_calc.chunk span). No-op when tracing is off.
+	md, ok := metadata.FromOutgoingContext(callCtx)
+	if !ok {
+		md = metadata.MD{}
+	} else {
+		md = md.Copy()
+	}
+	otel.GetTextMapPropagator().Inject(callCtx, propagation.TextMapCarrier(metadataCarrier(md)))
+	callCtx = metadata.NewOutgoingContext(callCtx, md)
+
 	resp, err := c.cc.ProcessChunkInternal(callCtx, req)
 	if err != nil {
 		return nil, fmt.Errorf("process chunk internal: %w", err)
 	}
 	return resp, nil
+}
+
+// metadataCarrier adapts gRPC metadata.MD to propagation.TextMapCarrier so the
+// W3C TraceContext propagator can write trace headers into outgoing metadata.
+type metadataCarrier metadata.MD
+
+// Get returns the first value for key, or "" if absent.
+func (c metadataCarrier) Get(key string) string {
+	vals := metadata.MD(c).Get(key)
+	if len(vals) == 0 {
+		return ""
+	}
+	return vals[0]
+}
+
+// Set overwrites key with value.
+func (c metadataCarrier) Set(key, value string) {
+	metadata.MD(c).Set(key, value)
+}
+
+// Keys returns all metadata keys.
+func (c metadataCarrier) Keys() []string {
+	keys := make([]string, 0, len(c))
+	for k := range c {
+		keys = append(keys, k)
+	}
+	return keys
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // Publisher publishes JSON messages to the finance.cost exchange.
@@ -25,9 +27,15 @@ func (p *Publisher) Publish(ctx context.Context, routingKey string, payload any)
 	if err != nil {
 		return fmt.Errorf("marshal payload: %w", err)
 	}
+	// Inject the current span's trace context so the orchestrator can link the
+	// chunk-completed handling back to the same trace. When tracing is disabled
+	// the propagator is the global no-op and writes nothing.
+	headers := amqp.Table{}
+	otel.GetTextMapPropagator().Inject(ctx, propagation.TextMapCarrier(HeaderCarrier(headers)))
 	pub := amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
+		Headers:      headers,
 		Body:         body,
 	}
 	if err := p.conn.Channel().PublishWithContext(ctx, ExchangeCost, routingKey, false, false, pub); err != nil {

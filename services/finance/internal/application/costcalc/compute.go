@@ -8,10 +8,23 @@ import (
 	"slices"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/mutugading/goapps-backend/pkg/costcalc/metrics"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc/evaluator"
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
+)
+
+// tracerName is the instrumentation scope for cost-calc compute spans.
+const tracerName = "finance-service"
+
+// Span names for the compute-level trace hierarchy.
+const (
+	spanCostCalcProduct     = "cost_calc.product"
+	spanCostCalcFormulaEval = "cost_calc.formula_eval"
 )
 
 // Reserved scope keys produced by ComputeProduct before formula evaluation.
@@ -87,16 +100,30 @@ type ComputeOutput struct {
 // ComputeProduct executes the cost calculation for one product. Pure function;
 // safe to invoke concurrently across products provided each call gets its own
 // ComputeInput. The evaluator cache is internally synchronized.
-func ComputeProduct(_ context.Context, in ComputeInput) (*ComputeOutput, error) {
+func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error) {
 	start := time.Now()
 	defer func() {
 		metrics.ProductComputeSeconds.Observe(time.Since(start).Seconds())
 	}()
+
+	// Start the per-product span. When tracing is disabled this is the no-op
+	// tracer and adds no allocation beyond the cheap Start/End calls.
+	ctx, span := otel.Tracer(tracerName).Start(ctx, spanCostCalcProduct, trace.WithSpanKind(trace.SpanKindInternal))
+	defer span.End()
+	span.SetAttributes(attribute.Int64("product_sys_id", in.ProductSysID))
+	if in.Route != nil && in.Route.Head != nil {
+		span.SetAttributes(attribute.Int64("route_head_id", in.Route.Head.HeadID))
+	}
+
 	if in.Route == nil {
-		return nil, fmt.Errorf("compute product %d: route is nil", in.ProductSysID)
+		err := fmt.Errorf("compute product %d: route is nil", in.ProductSysID)
+		recordProductSpanError(span, err)
+		return nil, err
 	}
 	if in.EvalCache == nil {
-		return nil, fmt.Errorf("compute product %d: eval cache is nil", in.ProductSysID)
+		err := fmt.Errorf("compute product %d: eval cache is nil", in.ProductSysID)
+		recordProductSpanError(span, err)
+		return nil, err
 	}
 
 	// 1. Initialize scope from CAPP values.
@@ -108,6 +135,7 @@ func ComputeProduct(_ context.Context, in ComputeInput) (*ComputeOutput, error) 
 	// 2. Aggregate RM cost across every sequence in the route.
 	totalRM, rmDetail, levelMap, err := aggregateRMCost(in)
 	if err != nil {
+		recordProductSpanError(span, err)
 		return nil, err
 	}
 	scope[ScopeKeyCostRMTotal] = totalRM
@@ -115,23 +143,28 @@ func ComputeProduct(_ context.Context, in ComputeInput) (*ComputeOutput, error) 
 	// 3. Evaluate formulas in topo order (loader pre-sorted).
 	formulaTrace := make([]FormulaEvalTrace, 0, len(in.Formulas))
 	for _, f := range in.Formulas {
-		trace, evalErr := evalOneFormula(in.EvalCache, f, scope)
+		formulaResult, evalErr := evalOneFormula(ctx, in.EvalCache, f, scope)
 		if evalErr != nil {
-			return nil, fmt.Errorf("%w: %s for product %d: %v",
+			wrapped := fmt.Errorf("%w: %s for product %d: %v",
 				costcalcdom.ErrFormulaEval, f.FormulaCode, in.ProductSysID, evalErr)
+			recordProductSpanError(span, wrapped)
+			return nil, wrapped
 		}
-		formulaTrace = append(formulaTrace, trace)
-		scope[f.ResultParamCode] = trace.Output
+		formulaTrace = append(formulaTrace, formulaResult)
+		scope[f.ResultParamCode] = formulaResult.Output
 	}
 
 	// 4. Extract final cost + optional conversion.
 	finalCost, ok := scopeFloat(scope, ScopeKeyFinalCost)
 	if !ok {
-		return nil, fmt.Errorf("compute product %d: formula chain did not produce %s",
+		err := fmt.Errorf("compute product %d: formula chain did not produce %s",
 			in.ProductSysID, ScopeKeyFinalCost)
+		recordProductSpanError(span, err)
+		return nil, err
 	}
 	conv, _ := scopeFloat(scope, ScopeKeyConversion)
 
+	span.SetAttributes(attribute.String("status", "success"))
 	return &ComputeOutput{
 		CostPerUnit:     finalCost,
 		TotalRMCost:     totalRM,
@@ -233,11 +266,29 @@ func rmRefCode(rm *costroute.Rm) string {
 	}
 }
 
-func evalOneFormula(cache *evaluator.Cache, f Formula, scope map[string]any) (FormulaEvalTrace, error) {
+// recordProductSpanError marks the product span failed and tags it with the
+// error status. The blocked-vs-failed nuance is classified by the caller
+// (recordComputeError); here we only distinguish success from non-success.
+func recordProductSpanError(span trace.Span, err error) {
+	span.RecordError(err)
+	span.SetAttributes(attribute.String("status", "error"))
+}
+
+func evalOneFormula(ctx context.Context, cache *evaluator.Cache, f Formula, scope map[string]any) (FormulaEvalTrace, error) {
 	start := time.Now()
 	defer func() {
 		metrics.FormulaEvalSeconds.WithLabelValues(f.FormulaCode).Observe(time.Since(start).Seconds())
 	}()
+
+	// Formula evaluation is a hot path (thousands/sec). Only allocate a span
+	// when the parent is actually recording (i.e. the trace is sampled),
+	// otherwise skip span creation entirely for zero overhead.
+	if trace.SpanFromContext(ctx).IsRecording() {
+		_, span := otel.Tracer(tracerName).Start(ctx, spanCostCalcFormulaEval,
+			trace.WithAttributes(attribute.String("formula_code", f.FormulaCode)))
+		defer span.End()
+	}
+
 	prevSize := cache.Size()
 	ev, err := cache.GetOrCompile(f.FormulaCode, f.Expression)
 	if err != nil {

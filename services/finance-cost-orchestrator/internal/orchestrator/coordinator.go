@@ -13,6 +13,9 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/mutugading/goapps-backend/pkg/costcalc"
 	"github.com/mutugading/goapps-backend/pkg/costcalc/metrics"
@@ -95,14 +98,25 @@ func (c *Coordinator) handleJobTriggered(ctx context.Context, d amqp.Delivery) e
 // planAndDispatch is the full job-bootstrap pipeline. Each step is sequential
 // and aborts on first error; partial state is left for ops to inspect.
 func (c *Coordinator) planAndDispatch(ctx context.Context, jobID int64) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, spanCostCalcJob, trace.WithSpanKind(trace.SpanKindInternal))
+	defer span.End()
+
 	job, err := c.jobRepo.GetByID(ctx, jobID)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("get job: %w", err)
 	}
 	if job.Status != statusQueued {
 		log.Warn().Int64("job_id", jobID).Str("status", job.Status).Msg("duplicate job_triggered; ignoring")
 		return nil
 	}
+	span.SetAttributes(
+		attribute.Int64("job_id", jobID),
+		attribute.String("job_code", job.JobCode),
+		attribute.String("period", job.Period),
+		attribute.String("calc_type", string(job.CalcType)),
+		attribute.String("scope", string(job.Scope)),
+	)
 	if err := c.jobRepo.UpdateStatus(ctx, jobID, statusPlanning); err != nil {
 		return fmt.Errorf("update status PLANNING: %w", err)
 	}
@@ -142,6 +156,11 @@ func (c *Coordinator) planAndDispatch(ctx context.Context, jobID int64) error {
 	if err != nil {
 		return fmt.Errorf("persist wave plan: %w", err)
 	}
+
+	span.SetAttributes(
+		attribute.Int("total_products", len(productIDs)),
+		attribute.Int("total_chunks", totalChunks),
+	)
 
 	if err := c.jobRepo.UpdateTotals(ctx, jobID, len(productIDs), totalChunks, len(waves)); err != nil {
 		return fmt.Errorf("update totals: %w", err)

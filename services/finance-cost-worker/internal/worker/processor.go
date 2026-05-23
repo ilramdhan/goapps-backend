@@ -16,6 +16,10 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/pkg/costcalc/metrics"
@@ -81,6 +85,22 @@ func (w *Worker) handleChunk(ctx context.Context, d amqp.Delivery) error {
 		}
 		return nil
 	}
+
+	// Continue the orchestrator's trace: extract the propagated context from the
+	// AMQP headers, then open the per-chunk span as a child of the job span. The
+	// span's context is threaded into the gRPC call so finance continues the
+	// trace. When tracing is disabled extraction yields the no-op context and
+	// span creation costs nothing.
+	parentCtx := otel.GetTextMapPropagator().Extract(ctx, propagation.TextMapCarrier(rmq.HeaderCarrier(d.Headers)))
+	ctx, span := otel.Tracer(tracerName).Start(parentCtx, spanCostCalcChunk, trace.WithSpanKind(trace.SpanKindConsumer))
+	defer span.End()
+	span.SetAttributes(
+		attribute.Int64("chunk_id", msg.ChunkID),
+		attribute.Int64("job_id", msg.JobID),
+		attribute.Int("wave_no", msg.WaveNo),
+		attribute.Int("product_count", len(msg.ProductIDs)),
+		attribute.String("worker_id", w.workerID),
+	)
 
 	if cur, err := w.chunks.GetStatus(ctx, msg.ChunkID); err == nil && isTerminal(cur) {
 		log.Info().Int64("chunk_id", msg.ChunkID).Str("status", cur).Msg("duplicate delivery for terminal chunk; acking")

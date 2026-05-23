@@ -32,6 +32,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/config"
 	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/infrastructure/financeclient"
 	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/infrastructure/rmq"
+	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/infrastructure/tracing"
 	"github.com/mutugading/goapps-backend/services/finance-cost-worker/internal/worker"
 )
 
@@ -74,6 +75,29 @@ func run() error {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+
+	// OpenTelemetry tracing. No-op when disabled (the default).
+	shutdownTracer, err := tracing.InitTracer(
+		ctx,
+		cfg.Tracing.Enabled,
+		cfg.Tracing.ServiceName,
+		cfg.App.Version,
+		cfg.Tracing.Endpoint,
+		cfg.Tracing.Insecure,
+	)
+	if err != nil {
+		return fmt.Errorf("init tracer: %w", err)
+	}
+	defer func() {
+		shutCtx, shutCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutCancel()
+		if shutErr := shutdownTracer(shutCtx); shutErr != nil {
+			log.Warn().Err(shutErr).Msg("shutdown tracer")
+		}
+	}()
+	if cfg.Tracing.Enabled {
+		log.Info().Str("endpoint", cfg.Tracing.Endpoint).Msg("OpenTelemetry tracing enabled")
+	}
 
 	// RabbitMQ connection (with bounded retry so we exit fast when RMQ is down).
 	rmqConn, err := rmq.ConnectWithRetry(cfg.RabbitMQ.URL, 3, cfg.RabbitMQ.ReconnectDelay)
