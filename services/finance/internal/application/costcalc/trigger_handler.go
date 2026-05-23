@@ -49,12 +49,23 @@ var ErrProductRequired = errors.New("product_sys_id required for SINGLE_PRODUCT 
 
 // Handle creates a job + chunk + job_product row, runs ProcessChunk inline,
 // finalizes the job, and returns the fully-resolved Job aggregate.
+//
+// For SINGLE_PRODUCT scope the inline path only computes the target product
+// and assumes upstream costs exist in cst_product_cost. That assumption fails
+// for fresh products whose upstream chain has never been calculated. So when
+// the orchestrator (RMQ + DAG builder) is available, we delegate SINGLE_PRODUCT
+// there too — the orchestrator walks the full upstream DAG and computes
+// intermediates first. Only fall back to the inline path when RMQ is offline.
 func (h *TriggerJobHandler) Handle(ctx context.Context, cmd TriggerCommand) (*costcalcdom.Job, error) {
 	if cmd.Scope != costcalcdom.ScopeSingleProduct {
 		return h.dispatchToOrchestrator(ctx, cmd)
 	}
 	if cmd.ProductSysID == 0 {
 		return nil, ErrProductRequired
+	}
+	if h.svc.jobTriggerPub != nil {
+		// Prefer orchestrator path so upstream DAG is computed automatically.
+		return h.dispatchToOrchestrator(ctx, cmd)
 	}
 
 	job, err := costcalcdom.NewJob(cmd.Period, cmd.CalcType, cmd.Scope, cmd.Filter, cmd.TriggeredBy, cmd.Actor)
