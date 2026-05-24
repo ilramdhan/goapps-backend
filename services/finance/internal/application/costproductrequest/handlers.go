@@ -308,6 +308,11 @@ func (h *TransitionHandler) Revise(ctx context.Context, requestID int64, actor s
 	return h.apply(ctx, requestID, func(r *domain.Request) error { return r.Revise() }, applyOpts{operation: auditOpStatusChange, actorID: actor})
 }
 
+// Reopen moves a CLOSED request back to DRAFT.
+func (h *TransitionHandler) Reopen(ctx context.Context, requestID int64, actor string) (*domain.Request, error) {
+	return h.apply(ctx, requestID, func(r *domain.Request) error { return r.Reopen() }, applyOpts{operation: auditOpStatusChange, actorID: actor})
+}
+
 // Cancel closes a non-CLOSED request with closed_substatus = cancelled.
 func (h *TransitionHandler) Cancel(ctx context.Context, requestID int64, reason, actor string) (*domain.Request, error) {
 	return h.apply(ctx, requestID, func(r *domain.Request) error { return r.Cancel(reason) }, applyOpts{operation: auditOpStatusChange, actorID: actor})

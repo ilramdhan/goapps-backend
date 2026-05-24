@@ -82,7 +82,9 @@ var allowedTransitions = map[string]map[string]struct{}{
 		StatusSubmitted: {}, // Revise
 		StatusClosed:    {}, // Cancel
 	},
-	// StatusClosed is terminal — no outbound edges.
+	StatusClosed: {
+		StatusDraft: {}, // Reopen (admin) — re-enter the lifecycle
+	},
 }
 
 func canTransition(from, to string) bool {

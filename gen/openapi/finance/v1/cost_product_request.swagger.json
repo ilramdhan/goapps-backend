@@ -502,6 +502,46 @@
         ]
       }
     },
+    "/api/v1/finance/cost-product-requests/{requestId}/reopen": {
+      "post": {
+        "summary": "ReopenCostProductRequest moves a CLOSED request back to DRAFT.",
+        "operationId": "CostProductRequestService_ReopenCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReopenCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceReopenCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
     "/api/v1/finance/cost-product-requests/{requestId}/revise": {
       "post": {
         "operationId": "CostProductRequestService_ReviseCostProductRequest",
@@ -794,6 +834,10 @@
           "type": "string"
         }
       }
+    },
+    "CostProductRequestServiceReopenCostProductRequestBody": {
+      "type": "object",
+      "description": "Reopen moves a terminal CLOSED request back to DRAFT so it can re-enter the\nlifecycle. Restricted to admins at the delivery layer."
     },
     "CostProductRequestServiceReviseCostProductRequestBody": {
       "type": "object"
@@ -1321,6 +1365,17 @@
       "description": "PaginationResponse contains pagination metadata for list responses."
     },
     "v1RejectCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1ReopenCostProductRequestResponse": {
       "type": "object",
       "properties": {
         "base": {

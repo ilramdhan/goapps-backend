@@ -31,6 +31,7 @@ const (
 	CostProductRequestService_UseExistingCostingForCostProductRequest_FullMethodName = "/finance.v1.CostProductRequestService/UseExistingCostingForCostProductRequest"
 	CostProductRequestService_RejectCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/RejectCostProductRequest"
 	CostProductRequestService_ReviseCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/ReviseCostProductRequest"
+	CostProductRequestService_ReopenCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/ReopenCostProductRequest"
 	CostProductRequestService_MarkParameterComplete_FullMethodName                   = "/finance.v1.CostProductRequestService/MarkParameterComplete"
 	CostProductRequestService_CancelCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/CancelCostProductRequest"
 	CostProductRequestService_CloseCostProductRequest_FullMethodName                 = "/finance.v1.CostProductRequestService/CloseCostProductRequest"
@@ -55,6 +56,8 @@ type CostProductRequestServiceClient interface {
 	UseExistingCostingForCostProductRequest(ctx context.Context, in *UseExistingCostingForCostProductRequestRequest, opts ...grpc.CallOption) (*UseExistingCostingForCostProductRequestResponse, error)
 	RejectCostProductRequest(ctx context.Context, in *RejectCostProductRequestRequest, opts ...grpc.CallOption) (*RejectCostProductRequestResponse, error)
 	ReviseCostProductRequest(ctx context.Context, in *ReviseCostProductRequestRequest, opts ...grpc.CallOption) (*ReviseCostProductRequestResponse, error)
+	// ReopenCostProductRequest moves a CLOSED request back to DRAFT.
+	ReopenCostProductRequest(ctx context.Context, in *ReopenCostProductRequestRequest, opts ...grpc.CallOption) (*ReopenCostProductRequestResponse, error)
 	// MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE
 	// after verifying all promoted products have required params filled.
 	MarkParameterComplete(ctx context.Context, in *MarkParameterCompleteRequest, opts ...grpc.CallOption) (*MarkParameterCompleteResponse, error)
@@ -195,6 +198,16 @@ func (c *costProductRequestServiceClient) ReviseCostProductRequest(ctx context.C
 	return out, nil
 }
 
+func (c *costProductRequestServiceClient) ReopenCostProductRequest(ctx context.Context, in *ReopenCostProductRequestRequest, opts ...grpc.CallOption) (*ReopenCostProductRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReopenCostProductRequestResponse)
+	err := c.cc.Invoke(ctx, CostProductRequestService_ReopenCostProductRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *costProductRequestServiceClient) MarkParameterComplete(ctx context.Context, in *MarkParameterCompleteRequest, opts ...grpc.CallOption) (*MarkParameterCompleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MarkParameterCompleteResponse)
@@ -271,6 +284,8 @@ type CostProductRequestServiceServer interface {
 	UseExistingCostingForCostProductRequest(context.Context, *UseExistingCostingForCostProductRequestRequest) (*UseExistingCostingForCostProductRequestResponse, error)
 	RejectCostProductRequest(context.Context, *RejectCostProductRequestRequest) (*RejectCostProductRequestResponse, error)
 	ReviseCostProductRequest(context.Context, *ReviseCostProductRequestRequest) (*ReviseCostProductRequestResponse, error)
+	// ReopenCostProductRequest moves a CLOSED request back to DRAFT.
+	ReopenCostProductRequest(context.Context, *ReopenCostProductRequestRequest) (*ReopenCostProductRequestResponse, error)
 	// MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE
 	// after verifying all promoted products have required params filled.
 	MarkParameterComplete(context.Context, *MarkParameterCompleteRequest) (*MarkParameterCompleteResponse, error)
@@ -326,6 +341,9 @@ func (UnimplementedCostProductRequestServiceServer) RejectCostProductRequest(con
 }
 func (UnimplementedCostProductRequestServiceServer) ReviseCostProductRequest(context.Context, *ReviseCostProductRequestRequest) (*ReviseCostProductRequestResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReviseCostProductRequest not implemented")
+}
+func (UnimplementedCostProductRequestServiceServer) ReopenCostProductRequest(context.Context, *ReopenCostProductRequestRequest) (*ReopenCostProductRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReopenCostProductRequest not implemented")
 }
 func (UnimplementedCostProductRequestServiceServer) MarkParameterComplete(context.Context, *MarkParameterCompleteRequest) (*MarkParameterCompleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MarkParameterComplete not implemented")
@@ -583,6 +601,24 @@ func _CostProductRequestService_ReviseCostProductRequest_Handler(srv interface{}
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductRequestService_ReopenCostProductRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReopenCostProductRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductRequestServiceServer).ReopenCostProductRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductRequestService_ReopenCostProductRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductRequestServiceServer).ReopenCostProductRequest(ctx, req.(*ReopenCostProductRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CostProductRequestService_MarkParameterComplete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MarkParameterCompleteRequest)
 	if err := dec(in); err != nil {
@@ -745,6 +781,10 @@ var CostProductRequestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReviseCostProductRequest",
 			Handler:    _CostProductRequestService_ReviseCostProductRequest_Handler,
+		},
+		{
+			MethodName: "ReopenCostProductRequest",
+			Handler:    _CostProductRequestService_ReopenCostProductRequest_Handler,
 		},
 		{
 			MethodName: "MarkParameterComplete",

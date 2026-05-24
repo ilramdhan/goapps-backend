@@ -287,6 +287,19 @@ func (h *CostProductRequestHandler) ReviseCostProductRequest(ctx context.Context
 	return &financev1.ReviseCostProductRequestResponse{Base: successResponse("Revised; back to SUBMITTED"), Data: requestToProto(r)}, nil
 }
 
+// ReopenCostProductRequest moves a CLOSED request back to DRAFT.
+func (h *CostProductRequestHandler) ReopenCostProductRequest(ctx context.Context, req *financev1.ReopenCostProductRequestRequest) (*financev1.ReopenCostProductRequestResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.ReopenCostProductRequestResponse{Base: baseResp}, nil
+	}
+	actor, _ := GetUserIDFromCtx(ctx)
+	r, err := h.transitionHandler.Reopen(ctx, req.GetRequestId(), actor)
+	if err != nil {
+		return &financev1.ReopenCostProductRequestResponse{Base: requestErrToBase(err)}, nil
+	}
+	return &financev1.ReopenCostProductRequestResponse{Base: successResponse("Reopened; back to DRAFT"), Data: requestToProto(r)}, nil
+}
+
 // CancelCostProductRequest closes with substatus=cancelled.
 func (h *CostProductRequestHandler) CancelCostProductRequest(ctx context.Context, req *financev1.CancelCostProductRequestRequest) (*financev1.CancelCostProductRequestResponse, error) {
 	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {

@@ -468,6 +468,19 @@ func (r *Request) Revise() error {
 	return nil
 }
 
+// Reopen moves a CLOSED request back to DRAFT so it can re-enter the lifecycle.
+// Clears the closed substatus + cancel reason so the new cycle starts clean.
+func (r *Request) Reopen() error {
+	if !canTransition(r.status, StatusDraft) {
+		return ErrInvalidTransition
+	}
+	r.status = StatusDraft
+	r.closedSubstatus = ""
+	r.cancelReason = ""
+	r.touch()
+	return nil
+}
+
 // Cancel from any non-CLOSED status with a reason → CLOSED:cancelled.
 func (r *Request) Cancel(reason string) error {
 	if strings.TrimSpace(reason) == "" {
