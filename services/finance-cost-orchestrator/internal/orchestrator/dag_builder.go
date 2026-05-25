@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/lib/pq"
+
 	"github.com/mutugading/goapps-backend/pkg/costcalc"
 )
 
@@ -160,7 +161,11 @@ func (b *DagBuilder) loadProductRMEdges(ctx context.Context, productSysIDs []int
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if e := rows.Close(); e != nil {
+			_ = e
+		}
+	}()
 
 	var edges []edge
 	for rows.Next() {
@@ -179,7 +184,11 @@ func (b *DagBuilder) scanInt64s(ctx context.Context, q string, args ...any) ([]i
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if e := rows.Close(); e != nil {
+			_ = e
+		}
+	}()
 
 	var out []int64
 	for rows.Next() {

@@ -56,7 +56,9 @@ func (c *Connection) Channel() *amqp.Channel { return c.ch }
 // Close shuts down both the channel and the connection.
 func (c *Connection) Close() error {
 	if c.ch != nil {
-		_ = c.ch.Close()
+		if e := c.ch.Close(); e != nil {
+			_ = e
+		}
 	}
 	if c.conn != nil {
 		if err := c.conn.Close(); err != nil {

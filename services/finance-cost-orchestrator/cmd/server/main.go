@@ -54,7 +54,7 @@ func main() {
 	}
 }
 
-func run() error {
+func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
@@ -222,7 +222,9 @@ func openDB(ctx context.Context, cfg *config.Config) (*sql.DB, error) {
 	pingCtx, pingCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer pingCancel()
 	if err := db.PingContext(pingCtx); err != nil {
-		_ = db.Close()
+		if e := db.Close(); e != nil {
+			_ = e
+		}
 		return nil, fmt.Errorf("ping: %w", err)
 	}
 	return db, nil
@@ -233,7 +235,9 @@ func newHTTPServer(port int) *http.Server {
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+		if _, e := w.Write([]byte("ok")); e != nil {
+			_ = e
+		}
 	})
 	return &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),

@@ -3,8 +3,9 @@ package orchestrator
 import (
 	"testing"
 
-	"github.com/mutugading/goapps-backend/pkg/costcalc"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mutugading/goapps-backend/pkg/costcalc"
 )
 
 func TestPackChunks_EmptyPlan(t *testing.T) {

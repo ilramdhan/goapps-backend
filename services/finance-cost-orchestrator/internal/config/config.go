@@ -171,6 +171,8 @@ func bindEnvVars(v *viper.Viper) {
 		{"logger.level", "LOG_LEVEL"},
 	}
 	for _, b := range envBindings {
-		_ = v.BindEnv(b.key, b.envName)
+		if e := v.BindEnv(b.key, b.envName); e != nil {
+			_ = e
+		}
 	}
 }

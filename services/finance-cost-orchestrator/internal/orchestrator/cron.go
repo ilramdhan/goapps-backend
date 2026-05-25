@@ -1,4 +1,4 @@
-// Package orchestrator: cron auto-trigger for the monthly ALL-scope calc job.
+// Package orchestrator cron auto-trigger for the monthly ALL-scope calc job.
 //
 // S8e.6 of the Phase C Calc Engine plan: on the 5th day of each month at
 // 02:00 Asia/Jakarta, insert a QUEUED cal_job row for the previous month and

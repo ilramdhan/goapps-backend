@@ -357,7 +357,7 @@ func (c *Coordinator) scrapeQueueDepth(ctx context.Context) {
 			if ch == nil {
 				continue
 			}
-			q, err := ch.QueueInspect(rmq.QueueChunk)
+			q, err := ch.QueueInspect(rmq.QueueChunk) //nolint:staticcheck // QueueInspect still functional; QueueDeclare-passive migration deferred
 			if err != nil {
 				log.Debug().Err(err).Msg("queue inspect failed")
 				continue

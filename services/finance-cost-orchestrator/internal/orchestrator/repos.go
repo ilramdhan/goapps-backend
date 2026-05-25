@@ -231,7 +231,11 @@ func (r *ChunkRepo) BulkInsert(ctx context.Context, rows []*ChunkRow) error {
 	if err != nil {
 		return fmt.Errorf("bulk insert chunks: %w", err)
 	}
-	defer func() { _ = dbRows.Close() }()
+	defer func() {
+		if e := dbRows.Close(); e != nil {
+			_ = e
+		}
+	}()
 	i := 0
 	for dbRows.Next() {
 		if err := dbRows.Scan(&rows[i].ChunkID); err != nil {
@@ -300,7 +304,11 @@ func (r *ChunkRepo) ListChunksOfWave(ctx context.Context, jobID int64, wave int)
 	if err != nil {
 		return nil, fmt.Errorf("list chunks of wave: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if e := rows.Close(); e != nil {
+			_ = e
+		}
+	}()
 	var out []*ChunkRow
 	for rows.Next() {
 		var c ChunkRow
@@ -397,7 +405,11 @@ func (r *JobProductRepo) ResolveProductRouteMap(ctx context.Context, productSysI
 	if err != nil {
 		return nil, fmt.Errorf("resolve route map: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if e := rows.Close(); e != nil {
+			_ = e
+		}
+	}()
 	out := map[int64]int64{}
 	for rows.Next() {
 		var pid, hid int64
