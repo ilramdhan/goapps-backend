@@ -1,0 +1,1868 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/bi.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "DashboardService"
+    },
+    {
+      "name": "ChartDataService"
+    },
+    {
+      "name": "DataSourceService"
+    },
+    {
+      "name": "BiJobService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/bi/dashboards": {
+      "get": {
+        "summary": "ListDashboards returns paginated dashboards for admin.",
+        "operationId": "DashboardService_ListDashboards",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDashboardsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "groupId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "filterType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      },
+      "post": {
+        "summary": "CreateDashboard creates a new dashboard definition.",
+        "operationId": "DashboardService_CreateDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateDashboardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/dashboards/accessible": {
+      "get": {
+        "summary": "ListAccessibleDashboards returns dashboards visible to the calling user (for viewer sidebar).",
+        "operationId": "DashboardService_ListAccessibleDashboards",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAccessibleDashboardsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/dashboards/by-code/{dashboardCode}": {
+      "get": {
+        "summary": "GetDashboardByCode returns a dashboard by its business code.",
+        "operationId": "DashboardService_GetDashboardByCode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDashboardByCodeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/dashboards/{dashboardCode}/data": {
+      "get": {
+        "summary": "GetDashboardData resolves dashboard config + filters and returns chart-ready data.",
+        "operationId": "ChartDataService_GetDashboardData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDashboardDataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "periodPreset",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "periodFrom",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "periodTo",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "COMPARE_MODE_UNSPECIFIED",
+              "COMPARE_MODE_NONE",
+              "COMPARE_MODE_MOM",
+              "COMPARE_MODE_QOQ",
+              "COMPARE_MODE_YOY",
+              "COMPARE_MODE_YTD",
+              "COMPARE_MODE_R12"
+            ],
+            "default": "COMPARE_MODE_UNSPECIFIED"
+          },
+          {
+            "name": "drillPath",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "ChartDataService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/dashboards/{dashboardId}": {
+      "get": {
+        "summary": "GetDashboard returns a dashboard by ID.",
+        "operationId": "DashboardService_GetDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteDashboard soft-deletes a dashboard.",
+        "operationId": "DashboardService_DeleteDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateDashboard mutates an existing dashboard.",
+        "operationId": "DashboardService_UpdateDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DashboardServiceUpdateDashboardBody"
+            }
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/dashboards/{dashboardId}/duplicate": {
+      "post": {
+        "summary": "DuplicateDashboard clones a dashboard with a new code/title.",
+        "operationId": "DashboardService_DuplicateDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DuplicateDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DashboardServiceDuplicateDashboardBody"
+            }
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/dashboards/{dashboardId}/roles": {
+      "put": {
+        "summary": "SetDashboardRoles overwrites the dashboard's role whitelist.",
+        "operationId": "DashboardService_SetDashboardRoles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetDashboardRolesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DashboardServiceSetDashboardRolesBody"
+            }
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/data-sources": {
+      "get": {
+        "summary": "ListDataSources returns all data sources.",
+        "operationId": "DataSourceService_ListDataSources",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDataSourcesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "DataSourceService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/fact/distincts": {
+      "get": {
+        "summary": "GetFactDistincts returns distinct type/group_1/group_2/group_3 values for an optional type filter.",
+        "operationId": "DataSourceService_GetFactDistincts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetFactDistinctsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DataSourceService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/groups": {
+      "get": {
+        "summary": "ListDashboardGroups returns dashboard groups.",
+        "operationId": "DashboardService_ListDashboardGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDashboardGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      },
+      "post": {
+        "summary": "CreateDashboardGroup creates a new dashboard group.",
+        "operationId": "DashboardService_CreateDashboardGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateDashboardGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateDashboardGroupRequest"
+            }
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/groups/{groupId}": {
+      "delete": {
+        "summary": "DeleteDashboardGroup soft-deletes a group.",
+        "operationId": "DashboardService_DeleteDashboardGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteDashboardGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateDashboardGroup mutates a group.",
+        "operationId": "DashboardService_UpdateDashboardGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateDashboardGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DashboardServiceUpdateDashboardGroupBody"
+            }
+          }
+        ],
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/jobs": {
+      "get": {
+        "summary": "ListJobs returns ETL job registry entries.",
+        "operationId": "BiJobService_ListJobs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListJobsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "BiJobService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/jobs/{jobId}/logs": {
+      "get": {
+        "summary": "ListJobLogs returns logs for a specific job.",
+        "operationId": "BiJobService_ListJobLogs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListJobLogsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "BiJobService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/jobs/{jobId}/trigger": {
+      "post": {
+        "summary": "TriggerJob manually triggers an ETL job run.",
+        "operationId": "BiJobService_TriggerJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TriggerJobResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BiJobServiceTriggerJobBody"
+            }
+          }
+        ],
+        "tags": [
+          "BiJobService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/preview": {
+      "post": {
+        "summary": "PreviewDashboard renders an unsaved dashboard config against real fact data (admin only).",
+        "operationId": "ChartDataService_PreviewDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PreviewDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1PreviewDashboardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ChartDataService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "BiJobServiceTriggerJobBody": {
+      "type": "object"
+    },
+    "DashboardServiceDuplicateDashboardBody": {
+      "type": "object",
+      "properties": {
+        "newCode": {
+          "type": "string"
+        },
+        "newTitle": {
+          "type": "string"
+        }
+      }
+    },
+    "DashboardServiceSetDashboardRolesBody": {
+      "type": "object",
+      "properties": {
+        "roleCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "DashboardServiceUpdateDashboardBody": {
+      "type": "object",
+      "properties": {
+        "dashboardTitle": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "filterType": {
+          "type": "string"
+        },
+        "filterGroup1": {
+          "type": "string"
+        },
+        "periodeGrain": {
+          "$ref": "#/definitions/v1PeriodeGrain"
+        },
+        "defaultPeriod": {
+          "type": "string"
+        },
+        "chartType": {
+          "$ref": "#/definitions/v1ChartType"
+        },
+        "chartConfig": {
+          "type": "object"
+        },
+        "layoutConfig": {
+          "type": "object"
+        },
+        "compareModes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1CompareMode"
+          }
+        },
+        "kpiConfig": {
+          "type": "object"
+        },
+        "drillEnabled": {
+          "type": "boolean"
+        },
+        "maxDrillLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cacheTtlSec": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "refreshIntervalSec": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "groupId": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      }
+    },
+    "DashboardServiceUpdateDashboardGroupBody": {
+      "type": "object",
+      "properties": {
+        "groupName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1BiJob": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        },
+        "jobName": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "sourceCode": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string"
+        },
+        "scheduleCron": {
+          "type": "string"
+        },
+        "oracleProcedure": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "lastStatus": {
+          "type": "string"
+        },
+        "lastRunAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastDurationMs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      }
+    },
+    "v1BiJobLog": {
+      "type": "object",
+      "properties": {
+        "logId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "jobName": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string"
+        },
+        "rowsAffected": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "errorMessage": {
+          "type": "string"
+        },
+        "triggeredBy": {
+          "type": "string"
+        },
+        "durationMs": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ChartDataResponse": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "object"
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Series"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kpis": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1KpiResult"
+          }
+        },
+        "drillContext": {
+          "$ref": "#/definitions/v1DrillContext"
+        },
+        "meta": {
+          "$ref": "#/definitions/v1Meta"
+        }
+      }
+    },
+    "v1ChartType": {
+      "type": "string",
+      "enum": [
+        "CHART_TYPE_UNSPECIFIED",
+        "CHART_TYPE_BAR",
+        "CHART_TYPE_HORIZONTAL_BAR",
+        "CHART_TYPE_STACKED_BAR",
+        "CHART_TYPE_LINE",
+        "CHART_TYPE_AREA",
+        "CHART_TYPE_WATERFALL",
+        "CHART_TYPE_DONUT",
+        "CHART_TYPE_KPI_CARD",
+        "CHART_TYPE_TREEMAP",
+        "CHART_TYPE_HEATMAP",
+        "CHART_TYPE_SCATTER",
+        "CHART_TYPE_MIXED",
+        "CHART_TYPE_DATA_TABLE"
+      ],
+      "default": "CHART_TYPE_UNSPECIFIED"
+    },
+    "v1CompareMode": {
+      "type": "string",
+      "enum": [
+        "COMPARE_MODE_UNSPECIFIED",
+        "COMPARE_MODE_NONE",
+        "COMPARE_MODE_MOM",
+        "COMPARE_MODE_QOQ",
+        "COMPARE_MODE_YOY",
+        "COMPARE_MODE_YTD",
+        "COMPARE_MODE_R12"
+      ],
+      "default": "COMPARE_MODE_UNSPECIFIED"
+    },
+    "v1CreateDashboardGroupRequest": {
+      "type": "object",
+      "properties": {
+        "groupCode": {
+          "type": "string"
+        },
+        "groupName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1CreateDashboardGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1DashboardGroup"
+        }
+      }
+    },
+    "v1CreateDashboardRequest": {
+      "type": "object",
+      "properties": {
+        "dashboardCode": {
+          "type": "string"
+        },
+        "dashboardTitle": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "filterType": {
+          "type": "string"
+        },
+        "filterGroup1": {
+          "type": "string"
+        },
+        "periodeGrain": {
+          "$ref": "#/definitions/v1PeriodeGrain"
+        },
+        "defaultPeriod": {
+          "type": "string"
+        },
+        "chartType": {
+          "$ref": "#/definitions/v1ChartType"
+        },
+        "chartConfig": {
+          "type": "object"
+        },
+        "layoutConfig": {
+          "type": "object"
+        },
+        "compareModes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1CompareMode"
+          }
+        },
+        "kpiConfig": {
+          "type": "object"
+        },
+        "drillEnabled": {
+          "type": "boolean"
+        },
+        "maxDrillLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cacheTtlSec": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "refreshIntervalSec": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "groupId": {
+          "type": "string"
+        },
+        "allowedRoleCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1CreateDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Dashboard"
+        }
+      }
+    },
+    "v1Dashboard": {
+      "type": "object",
+      "properties": {
+        "dashboardId": {
+          "type": "string"
+        },
+        "dashboardCode": {
+          "type": "string"
+        },
+        "dashboardTitle": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "filterType": {
+          "type": "string"
+        },
+        "filterGroup1": {
+          "type": "string"
+        },
+        "periodeGrain": {
+          "$ref": "#/definitions/v1PeriodeGrain"
+        },
+        "defaultPeriod": {
+          "type": "string"
+        },
+        "chartType": {
+          "$ref": "#/definitions/v1ChartType"
+        },
+        "chartConfig": {
+          "type": "object"
+        },
+        "layoutConfig": {
+          "type": "object"
+        },
+        "compareModes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1CompareMode"
+          }
+        },
+        "kpiConfig": {
+          "type": "object"
+        },
+        "drillEnabled": {
+          "type": "boolean"
+        },
+        "maxDrillLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cacheTtlSec": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "refreshIntervalSec": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "groupId": {
+          "type": "string"
+        },
+        "groupName": {
+          "type": "string"
+        },
+        "groupIcon": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "allowedRoleCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      }
+    },
+    "v1DashboardGroup": {
+      "type": "object",
+      "properties": {
+        "groupId": {
+          "type": "string"
+        },
+        "groupCode": {
+          "type": "string"
+        },
+        "groupName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      },
+      "title": "=================== Entity Messages ==================="
+    },
+    "v1DataPoint": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number",
+          "format": "double"
+        },
+        "label": {
+          "type": "string"
+        },
+        "meta": {
+          "type": "object"
+        }
+      }
+    },
+    "v1DataSource": {
+      "type": "object",
+      "properties": {
+        "sourceId": {
+          "type": "string"
+        },
+        "sourceCode": {
+          "type": "string"
+        },
+        "sourceName": {
+          "type": "string"
+        },
+        "sourceType": {
+          "$ref": "#/definitions/v1DataSourceType"
+        },
+        "description": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      }
+    },
+    "v1DataSourceType": {
+      "type": "string",
+      "enum": [
+        "DATA_SOURCE_TYPE_UNSPECIFIED",
+        "DATA_SOURCE_TYPE_ORACLE",
+        "DATA_SOURCE_TYPE_LARAVEL",
+        "DATA_SOURCE_TYPE_EXCEL",
+        "DATA_SOURCE_TYPE_MANUAL",
+        "DATA_SOURCE_TYPE_API"
+      ],
+      "default": "DATA_SOURCE_TYPE_UNSPECIFIED"
+    },
+    "v1DeleteDashboardGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1DeleteDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1DrillContext": {
+      "type": "object",
+      "properties": {
+        "currentPath": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nextField": {
+          "type": "string"
+        },
+        "nextValues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "canDrill": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1DuplicateDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Dashboard"
+        }
+      }
+    },
+    "v1FactMetricDistinct": {
+      "type": "object",
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "group1s": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "group2s": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "group3s": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dimensionKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1GetDashboardByCodeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Dashboard"
+        }
+      }
+    },
+    "v1GetDashboardDataResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ChartDataResponse"
+        }
+      }
+    },
+    "v1GetDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Dashboard"
+        }
+      }
+    },
+    "v1GetFactDistinctsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1FactMetricDistinct"
+        }
+      }
+    },
+    "v1KpiResult": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number",
+          "format": "double"
+        },
+        "valueFormatted": {
+          "type": "string"
+        },
+        "compareValue": {
+          "type": "number",
+          "format": "double"
+        },
+        "deltaAbs": {
+          "type": "number",
+          "format": "double"
+        },
+        "deltaPct": {
+          "type": "number",
+          "format": "double"
+        },
+        "comparePeriodLabel": {
+          "type": "string"
+        },
+        "improving": {
+          "type": "boolean"
+        },
+        "sparkline": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      }
+    },
+    "v1ListAccessibleDashboardsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Dashboard"
+          }
+        }
+      }
+    },
+    "v1ListDashboardGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DashboardGroup"
+          }
+        }
+      }
+    },
+    "v1ListDashboardsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Dashboard"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListDataSourcesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DataSource"
+          }
+        }
+      }
+    },
+    "v1ListJobLogsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BiJobLog"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListJobsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BiJob"
+          }
+        }
+      }
+    },
+    "v1Meta": {
+      "type": "object",
+      "properties": {
+        "asOf": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rowCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cacheHit": {
+          "type": "boolean"
+        },
+        "queryHash": {
+          "type": "string"
+        }
+      }
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1PeriodeGrain": {
+      "type": "string",
+      "enum": [
+        "PERIODE_GRAIN_UNSPECIFIED",
+        "PERIODE_GRAIN_DAILY",
+        "PERIODE_GRAIN_MONTHLY",
+        "PERIODE_GRAIN_QUARTERLY",
+        "PERIODE_GRAIN_YEARLY"
+      ],
+      "default": "PERIODE_GRAIN_UNSPECIFIED",
+      "title": "=================== Enums ==================="
+    },
+    "v1PreviewDashboardRequest": {
+      "type": "object",
+      "properties": {
+        "filterType": {
+          "type": "string"
+        },
+        "filterGroup1": {
+          "type": "string"
+        },
+        "periodeGrain": {
+          "$ref": "#/definitions/v1PeriodeGrain"
+        },
+        "chartType": {
+          "$ref": "#/definitions/v1ChartType"
+        },
+        "chartConfig": {
+          "type": "object"
+        },
+        "kpiConfig": {
+          "type": "object"
+        },
+        "compareModes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1CompareMode"
+          }
+        }
+      }
+    },
+    "v1PreviewDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ChartDataResponse"
+        }
+      }
+    },
+    "v1Series": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "libHint": {
+          "type": "string"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DataPoint"
+          }
+        }
+      }
+    },
+    "v1SetDashboardRolesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "roleCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1TriggerJobResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1BiJobLog"
+        }
+      }
+    },
+    "v1UpdateDashboardGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1DashboardGroup"
+        }
+      }
+    },
+    "v1UpdateDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Dashboard"
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}
