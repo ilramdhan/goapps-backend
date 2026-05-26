@@ -12,6 +12,11 @@ import (
 	"github.com/rs/zerolog/log"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	chartdataapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/chartdata"
+	dashboardapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/dashboard"
+	datasourceapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/datasource"
+	groupapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/group"
+	jobapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/job"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
@@ -73,6 +78,14 @@ func run() error {
 	rmCategoryRepo := postgres.NewRMCategoryRepository(db)
 	parameterRepo := postgres.NewParameterRepository(db)
 
+	// BI repositories + cache
+	biDashboardRepo := postgres.NewBiDashboardRepository(db)
+	biGroupRepo := postgres.NewBiDashboardGroupRepository(db)
+	biFactRepo := postgres.NewBiFactMetricRepository(db)
+	biDataSourceRepo := postgres.NewBiDataSourceRepository(db)
+	biJobRepo := postgres.NewBiJobRepository(db)
+	biChartCache := redisinfra.NewChartCache(redisClient)
+
 	// Setup gRPC handlers
 	uomHandler, err := grpcdelivery.NewUOMHandler(uomRepo, uomCache)
 	if err != nil {
@@ -89,8 +102,54 @@ func run() error {
 		return err
 	}
 
+	// BI gRPC handlers
+	biDashboardHandler, err := grpcdelivery.NewBIDashboardHandler(
+		dashboardapp.NewCreateHandler(biDashboardRepo),
+		dashboardapp.NewGetHandler(biDashboardRepo),
+		dashboardapp.NewListHandler(biDashboardRepo),
+		dashboardapp.NewUpdateHandler(biDashboardRepo, biChartCache),
+		dashboardapp.NewDeleteHandler(biDashboardRepo, biChartCache),
+		dashboardapp.NewDuplicateHandler(biDashboardRepo),
+		dashboardapp.NewSetRolesHandler(biDashboardRepo, biChartCache),
+		dashboardapp.NewListAccessibleHandler(biDashboardRepo),
+		groupapp.NewCreateHandler(biGroupRepo),
+		groupapp.NewListHandler(biGroupRepo),
+		groupapp.NewUpdateHandler(biGroupRepo),
+		groupapp.NewDeleteHandler(biGroupRepo),
+	)
+	if err != nil {
+		return err
+	}
+
+	biChartDataHandler, err := grpcdelivery.NewBIChartDataHandler(
+		chartdataapp.NewGetDataHandler(biDashboardRepo, biFactRepo, biChartCache, redisinfra.HashFilters),
+		chartdataapp.NewPreviewHandler(biFactRepo),
+	)
+	if err != nil {
+		return err
+	}
+
+	biDataSourceHandler, err := grpcdelivery.NewBIDataSourceHandler(
+		datasourceapp.NewListHandler(biDataSourceRepo),
+		datasourceapp.NewGetDistinctsHandler(biFactRepo),
+	)
+	if err != nil {
+		return err
+	}
+
+	biJobHandler, err := grpcdelivery.NewBIJobHandler(
+		jobapp.NewListHandler(biJobRepo),
+		jobapp.NewListLogsHandler(biJobRepo),
+		jobapp.NewTriggerHandler(biJobRepo),
+	)
+	if err != nil {
+		return err
+	}
+
 	// Setup and start servers
-	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler, tokenBlacklist)
+	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler,
+		biDashboardHandler, biChartDataHandler, biDataSourceHandler, biJobHandler,
+		tokenBlacklist)
 }
 
 // setupLogger configures the application logger.
@@ -187,7 +246,18 @@ func closeAuthRedis(bl *redisinfra.TokenBlacklist) {
 }
 
 // startServers starts the gRPC and HTTP servers and handles graceful shutdown.
-func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdelivery.UOMHandler, rmCategoryHandler *grpcdelivery.RMCategoryHandler, parameterHandler *grpcdelivery.ParameterHandler, tokenBlacklist *redisinfra.TokenBlacklist) error {
+func startServers(
+	ctx context.Context,
+	cfg *config.Config,
+	uomHandler *grpcdelivery.UOMHandler,
+	rmCategoryHandler *grpcdelivery.RMCategoryHandler,
+	parameterHandler *grpcdelivery.ParameterHandler,
+	biDashboardHandler *grpcdelivery.BIDashboardHandler,
+	biChartDataHandler *grpcdelivery.BIChartDataHandler,
+	biDataSourceHandler *grpcdelivery.BIDataSourceHandler,
+	biJobHandler *grpcdelivery.BIJobHandler,
+	tokenBlacklist *redisinfra.TokenBlacklist,
+) error {
 	// Setup gRPC server with JWT auth and token blacklist
 	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, nil, &cfg.JWT, tokenBlacklist)
 	if err != nil {
@@ -198,6 +268,12 @@ func startServers(ctx context.Context, cfg *config.Config, uomHandler *grpcdeliv
 	financev1.RegisterUOMServiceServer(grpcServer.GRPCServer(), uomHandler)
 	financev1.RegisterRMCategoryServiceServer(grpcServer.GRPCServer(), rmCategoryHandler)
 	financev1.RegisterParameterServiceServer(grpcServer.GRPCServer(), parameterHandler)
+
+	// BI services
+	financev1.RegisterDashboardServiceServer(grpcServer.GRPCServer(), biDashboardHandler)
+	financev1.RegisterChartDataServiceServer(grpcServer.GRPCServer(), biChartDataHandler)
+	financev1.RegisterDataSourceServiceServer(grpcServer.GRPCServer(), biDataSourceHandler)
+	financev1.RegisterBiJobServiceServer(grpcServer.GRPCServer(), biJobHandler)
 
 	// Start gRPC server
 	go func() {
