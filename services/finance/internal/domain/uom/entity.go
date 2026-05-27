@@ -9,22 +9,22 @@ import (
 
 // UOM is the aggregate root for Unit of Measure domain.
 type UOM struct {
-	id          uuid.UUID
-	code        Code
-	name        string
-	category    Category
-	description string
-	isActive    bool
-	createdAt   time.Time
-	createdBy   string
-	updatedAt   *time.Time
-	updatedBy   *string
-	deletedAt   *time.Time
-	deletedBy   *string
+	id           uuid.UUID
+	code         Code
+	name         string
+	categoryInfo CategoryInfo
+	description  string
+	isActive     bool
+	createdAt    time.Time
+	createdBy    string
+	updatedAt    *time.Time
+	updatedBy    *string
+	deletedAt    *time.Time
+	deletedBy    *string
 }
 
 // NewUOM creates a new UOM entity with validation.
-func NewUOM(code Code, name string, category Category, description string, createdBy string) (*UOM, error) {
+func NewUOM(code Code, name string, categoryID uuid.UUID, description string, createdBy string) (*UOM, error) {
 	if name == "" {
 		return nil, ErrEmptyName
 	}
@@ -34,19 +34,19 @@ func NewUOM(code Code, name string, category Category, description string, creat
 	if createdBy == "" {
 		return nil, ErrEmptyCreatedBy
 	}
-	if !category.IsValid() {
+	if categoryID == uuid.Nil {
 		return nil, ErrInvalidCategory
 	}
 
 	return &UOM{
-		id:          uuid.New(),
-		code:        code,
-		name:        name,
-		category:    category,
-		description: description,
-		isActive:    true,
-		createdAt:   time.Now(),
-		createdBy:   createdBy,
+		id:           uuid.New(),
+		code:         code,
+		name:         name,
+		categoryInfo: CategoryInfo{id: categoryID},
+		description:  description,
+		isActive:     true,
+		createdAt:    time.Now(),
+		createdBy:    createdBy,
 	}, nil
 }
 
@@ -56,7 +56,7 @@ func ReconstructUOM(
 	id uuid.UUID,
 	code Code,
 	name string,
-	category Category,
+	categoryInfo CategoryInfo,
 	description string,
 	isActive bool,
 	createdAt time.Time,
@@ -67,18 +67,18 @@ func ReconstructUOM(
 	deletedBy *string,
 ) *UOM {
 	return &UOM{
-		id:          id,
-		code:        code,
-		name:        name,
-		category:    category,
-		description: description,
-		isActive:    isActive,
-		createdAt:   createdAt,
-		createdBy:   createdBy,
-		updatedAt:   updatedAt,
-		updatedBy:   updatedBy,
-		deletedAt:   deletedAt,
-		deletedBy:   deletedBy,
+		id:           id,
+		code:         code,
+		name:         name,
+		categoryInfo: categoryInfo,
+		description:  description,
+		isActive:     isActive,
+		createdAt:    createdAt,
+		createdBy:    createdBy,
+		updatedAt:    updatedAt,
+		updatedBy:    updatedBy,
+		deletedAt:    deletedAt,
+		deletedBy:    deletedBy,
 	}
 }
 
@@ -95,8 +95,11 @@ func (u *UOM) Code() Code { return u.code }
 // Name returns the display name.
 func (u *UOM) Name() string { return u.name }
 
-// Category returns the category.
-func (u *UOM) Category() Category { return u.category }
+// CategoryInfo returns the category info.
+func (u *UOM) CategoryInfo() CategoryInfo { return u.categoryInfo }
+
+// CategoryID returns the category UUID.
+func (u *UOM) CategoryID() uuid.UUID { return u.categoryInfo.id }
 
 // Description returns the description.
 func (u *UOM) Description() string { return u.description }
@@ -130,7 +133,7 @@ func (u *UOM) IsDeleted() bool { return u.deletedAt != nil }
 // =============================================================================
 
 // Update updates the UOM with new values.
-func (u *UOM) Update(name *string, category *Category, description *string, isActive *bool, updatedBy string) error {
+func (u *UOM) Update(name *string, categoryID *uuid.UUID, description *string, isActive *bool, updatedBy string) error {
 	if u.IsDeleted() {
 		return ErrAlreadyDeleted
 	}
@@ -142,11 +145,11 @@ func (u *UOM) Update(name *string, category *Category, description *string, isAc
 		u.name = *name
 	}
 
-	if category != nil {
-		if !category.IsValid() {
+	if categoryID != nil {
+		if *categoryID == uuid.Nil {
 			return ErrInvalidCategory
 		}
-		u.category = *category
+		u.categoryInfo = CategoryInfo{id: *categoryID}
 	}
 
 	if description != nil {

@@ -95,9 +95,25 @@ type User struct {
 	// Last login timestamp (ISO 8601).
 	LastLoginAt *string `protobuf:"bytes,7,opt,name=last_login_at,json=lastLoginAt,proto3,oneof" json:"last_login_at,omitempty"`
 	// Audit information.
-	Audit         *v1.AuditInfo `protobuf:"bytes,8,opt,name=audit,proto3" json:"audit,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Audit *v1.AuditInfo `protobuf:"bytes,8,opt,name=audit,proto3" json:"audit,omitempty"`
+	// Employee level reference (optional).
+	EmployeeLevelId string `protobuf:"bytes,9,opt,name=employee_level_id,json=employeeLevelId,proto3" json:"employee_level_id,omitempty"`
+	// Employee level code (denormalized for read).
+	EmployeeLevelCode string `protobuf:"bytes,10,opt,name=employee_level_code,json=employeeLevelCode,proto3" json:"employee_level_code,omitempty"`
+	// Employee group reference (optional).
+	EmployeeGroupId string `protobuf:"bytes,11,opt,name=employee_group_id,json=employeeGroupId,proto3" json:"employee_group_id,omitempty"`
+	// Employee group code (denormalized for read).
+	EmployeeGroupCode string `protobuf:"bytes,12,opt,name=employee_group_code,json=employeeGroupCode,proto3" json:"employee_group_code,omitempty"`
+	// Primary company-mapping reference (optional).
+	PrimaryCompanyMappingId string `protobuf:"bytes,13,opt,name=primary_company_mapping_id,json=primaryCompanyMappingId,proto3" json:"primary_company_mapping_id,omitempty"`
+	// Primary company-mapping denormalized fields (empty if no primary mapping).
+	PrimaryCompanyName    string `protobuf:"bytes,14,opt,name=primary_company_name,json=primaryCompanyName,proto3" json:"primary_company_name,omitempty"`
+	PrimaryDivisionName   string `protobuf:"bytes,15,opt,name=primary_division_name,json=primaryDivisionName,proto3" json:"primary_division_name,omitempty"`
+	PrimaryDepartmentName string `protobuf:"bytes,16,opt,name=primary_department_name,json=primaryDepartmentName,proto3" json:"primary_department_name,omitempty"`
+	// Primary section name (empty when the primary mapping has no section).
+	PrimarySectionName string `protobuf:"bytes,17,opt,name=primary_section_name,json=primarySectionName,proto3" json:"primary_section_name,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
@@ -184,6 +200,69 @@ func (x *User) GetAudit() *v1.AuditInfo {
 		return x.Audit
 	}
 	return nil
+}
+
+func (x *User) GetEmployeeLevelId() string {
+	if x != nil {
+		return x.EmployeeLevelId
+	}
+	return ""
+}
+
+func (x *User) GetEmployeeLevelCode() string {
+	if x != nil {
+		return x.EmployeeLevelCode
+	}
+	return ""
+}
+
+func (x *User) GetEmployeeGroupId() string {
+	if x != nil {
+		return x.EmployeeGroupId
+	}
+	return ""
+}
+
+func (x *User) GetEmployeeGroupCode() string {
+	if x != nil {
+		return x.EmployeeGroupCode
+	}
+	return ""
+}
+
+func (x *User) GetPrimaryCompanyMappingId() string {
+	if x != nil {
+		return x.PrimaryCompanyMappingId
+	}
+	return ""
+}
+
+func (x *User) GetPrimaryCompanyName() string {
+	if x != nil {
+		return x.PrimaryCompanyName
+	}
+	return ""
+}
+
+func (x *User) GetPrimaryDivisionName() string {
+	if x != nil {
+		return x.PrimaryDivisionName
+	}
+	return ""
+}
+
+func (x *User) GetPrimaryDepartmentName() string {
+	if x != nil {
+		return x.PrimaryDepartmentName
+	}
+	return ""
+}
+
+func (x *User) GetPrimarySectionName() string {
+	if x != nil {
+		return x.PrimarySectionName
+	}
+	return ""
 }
 
 // UserDetail represents employee details.
@@ -571,9 +650,15 @@ type CreateUserRequest struct {
 	// Address (optional).
 	Address *string `protobuf:"bytes,12,opt,name=address,proto3,oneof" json:"address,omitempty"`
 	// Initial role IDs to assign.
-	RoleIds       []string `protobuf:"bytes,13,rep,name=role_ids,json=roleIds,proto3" json:"role_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	RoleIds []string `protobuf:"bytes,13,rep,name=role_ids,json=roleIds,proto3" json:"role_ids,omitempty"`
+	// Employee level ID to assign (optional, UUID).
+	EmployeeLevelId *string `protobuf:"bytes,14,opt,name=employee_level_id,json=employeeLevelId,proto3,oneof" json:"employee_level_id,omitempty"`
+	// Employee group ID to assign (optional, UUID).
+	EmployeeGroupId *string `protobuf:"bytes,15,opt,name=employee_group_id,json=employeeGroupId,proto3,oneof" json:"employee_group_id,omitempty"`
+	// Primary company-mapping ID to assign on creation (optional, UUID).
+	CompanyMappingId *string `protobuf:"bytes,16,opt,name=company_mapping_id,json=companyMappingId,proto3,oneof" json:"company_mapping_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CreateUserRequest) Reset() {
@@ -695,6 +780,27 @@ func (x *CreateUserRequest) GetRoleIds() []string {
 		return x.RoleIds
 	}
 	return nil
+}
+
+func (x *CreateUserRequest) GetEmployeeLevelId() string {
+	if x != nil && x.EmployeeLevelId != nil {
+		return *x.EmployeeLevelId
+	}
+	return ""
+}
+
+func (x *CreateUserRequest) GetEmployeeGroupId() string {
+	if x != nil && x.EmployeeGroupId != nil {
+		return *x.EmployeeGroupId
+	}
+	return ""
+}
+
+func (x *CreateUserRequest) GetCompanyMappingId() string {
+	if x != nil && x.CompanyMappingId != nil {
+		return *x.CompanyMappingId
+	}
+	return ""
 }
 
 // CreateUserResponse is the response for creating a user.
@@ -967,8 +1073,14 @@ type UpdateUserRequest struct {
 	IsActive *bool `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	// Unlock account (optional).
 	UnlockAccount *bool `protobuf:"varint,5,opt,name=unlock_account,json=unlockAccount,proto3,oneof" json:"unlock_account,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Employee level ID (optional, UUID; clears when omitted from request body).
+	EmployeeLevelId *string `protobuf:"bytes,6,opt,name=employee_level_id,json=employeeLevelId,proto3,oneof" json:"employee_level_id,omitempty"`
+	// Employee group ID (optional, UUID).
+	EmployeeGroupId *string `protobuf:"bytes,7,opt,name=employee_group_id,json=employeeGroupId,proto3,oneof" json:"employee_group_id,omitempty"`
+	// Primary company-mapping ID (optional, UUID).
+	CompanyMappingId *string `protobuf:"bytes,8,opt,name=company_mapping_id,json=companyMappingId,proto3,oneof" json:"company_mapping_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *UpdateUserRequest) Reset() {
@@ -1034,6 +1146,27 @@ func (x *UpdateUserRequest) GetUnlockAccount() bool {
 		return *x.UnlockAccount
 	}
 	return false
+}
+
+func (x *UpdateUserRequest) GetEmployeeLevelId() string {
+	if x != nil && x.EmployeeLevelId != nil {
+		return *x.EmployeeLevelId
+	}
+	return ""
+}
+
+func (x *UpdateUserRequest) GetEmployeeGroupId() string {
+	if x != nil && x.EmployeeGroupId != nil {
+		return *x.EmployeeGroupId
+	}
+	return ""
+}
+
+func (x *UpdateUserRequest) GetCompanyMappingId() string {
+	if x != nil && x.CompanyMappingId != nil {
+		return *x.CompanyMappingId
+	}
+	return ""
 }
 
 // UpdateUserResponse is the response for updating a user.
@@ -2899,11 +3032,427 @@ func (x *UploadProfilePictureResponse) GetProfilePictureUrl() string {
 	return ""
 }
 
+// UserCompanyMappingRef is a thin reference to a CompanyMapping with the
+// denormalized hierarchy and the user-junction is_primary flag for display.
+type UserCompanyMappingRef struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	CompanyMappingId string                 `protobuf:"bytes,1,opt,name=company_mapping_id,json=companyMappingId,proto3" json:"company_mapping_id,omitempty"`
+	Code             string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	Name             string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	CompanyName      string                 `protobuf:"bytes,4,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty"`
+	DivisionName     string                 `protobuf:"bytes,5,opt,name=division_name,json=divisionName,proto3" json:"division_name,omitempty"`
+	DepartmentName   string                 `protobuf:"bytes,6,opt,name=department_name,json=departmentName,proto3" json:"department_name,omitempty"`
+	// Section name (empty if mapping has no section).
+	SectionName   string `protobuf:"bytes,7,opt,name=section_name,json=sectionName,proto3" json:"section_name,omitempty"`
+	IsPrimary     bool   `protobuf:"varint,8,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserCompanyMappingRef) Reset() {
+	*x = UserCompanyMappingRef{}
+	mi := &file_iam_v1_user_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserCompanyMappingRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserCompanyMappingRef) ProtoMessage() {}
+
+func (x *UserCompanyMappingRef) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_user_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserCompanyMappingRef.ProtoReflect.Descriptor instead.
+func (*UserCompanyMappingRef) Descriptor() ([]byte, []int) {
+	return file_iam_v1_user_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *UserCompanyMappingRef) GetCompanyMappingId() string {
+	if x != nil {
+		return x.CompanyMappingId
+	}
+	return ""
+}
+
+func (x *UserCompanyMappingRef) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *UserCompanyMappingRef) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UserCompanyMappingRef) GetCompanyName() string {
+	if x != nil {
+		return x.CompanyName
+	}
+	return ""
+}
+
+func (x *UserCompanyMappingRef) GetDivisionName() string {
+	if x != nil {
+		return x.DivisionName
+	}
+	return ""
+}
+
+func (x *UserCompanyMappingRef) GetDepartmentName() string {
+	if x != nil {
+		return x.DepartmentName
+	}
+	return ""
+}
+
+func (x *UserCompanyMappingRef) GetSectionName() string {
+	if x != nil {
+		return x.SectionName
+	}
+	return ""
+}
+
+func (x *UserCompanyMappingRef) GetIsPrimary() bool {
+	if x != nil {
+		return x.IsPrimary
+	}
+	return false
+}
+
+// AssignUserCompanyMappingRequest assigns a mapping to a user.
+type AssignUserCompanyMappingRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	UserId           string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	CompanyMappingId string                 `protobuf:"bytes,2,opt,name=company_mapping_id,json=companyMappingId,proto3" json:"company_mapping_id,omitempty"`
+	// If true, the mapping becomes the user's primary mapping (any existing
+	// primary is unset transactionally).
+	IsPrimary     bool `protobuf:"varint,3,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AssignUserCompanyMappingRequest) Reset() {
+	*x = AssignUserCompanyMappingRequest{}
+	mi := &file_iam_v1_user_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssignUserCompanyMappingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssignUserCompanyMappingRequest) ProtoMessage() {}
+
+func (x *AssignUserCompanyMappingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_user_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AssignUserCompanyMappingRequest.ProtoReflect.Descriptor instead.
+func (*AssignUserCompanyMappingRequest) Descriptor() ([]byte, []int) {
+	return file_iam_v1_user_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *AssignUserCompanyMappingRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AssignUserCompanyMappingRequest) GetCompanyMappingId() string {
+	if x != nil {
+		return x.CompanyMappingId
+	}
+	return ""
+}
+
+func (x *AssignUserCompanyMappingRequest) GetIsPrimary() bool {
+	if x != nil {
+		return x.IsPrimary
+	}
+	return false
+}
+
+// AssignUserCompanyMappingResponse is the response for assigning a mapping.
+type AssignUserCompanyMappingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AssignUserCompanyMappingResponse) Reset() {
+	*x = AssignUserCompanyMappingResponse{}
+	mi := &file_iam_v1_user_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssignUserCompanyMappingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssignUserCompanyMappingResponse) ProtoMessage() {}
+
+func (x *AssignUserCompanyMappingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_user_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AssignUserCompanyMappingResponse.ProtoReflect.Descriptor instead.
+func (*AssignUserCompanyMappingResponse) Descriptor() ([]byte, []int) {
+	return file_iam_v1_user_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *AssignUserCompanyMappingResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+// RemoveUserCompanyMappingRequest removes a mapping from a user.
+type RemoveUserCompanyMappingRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	UserId           string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	CompanyMappingId string                 `protobuf:"bytes,2,opt,name=company_mapping_id,json=companyMappingId,proto3" json:"company_mapping_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *RemoveUserCompanyMappingRequest) Reset() {
+	*x = RemoveUserCompanyMappingRequest{}
+	mi := &file_iam_v1_user_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveUserCompanyMappingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveUserCompanyMappingRequest) ProtoMessage() {}
+
+func (x *RemoveUserCompanyMappingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_user_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveUserCompanyMappingRequest.ProtoReflect.Descriptor instead.
+func (*RemoveUserCompanyMappingRequest) Descriptor() ([]byte, []int) {
+	return file_iam_v1_user_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *RemoveUserCompanyMappingRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *RemoveUserCompanyMappingRequest) GetCompanyMappingId() string {
+	if x != nil {
+		return x.CompanyMappingId
+	}
+	return ""
+}
+
+// RemoveUserCompanyMappingResponse is the response for removing a mapping.
+type RemoveUserCompanyMappingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveUserCompanyMappingResponse) Reset() {
+	*x = RemoveUserCompanyMappingResponse{}
+	mi := &file_iam_v1_user_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveUserCompanyMappingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveUserCompanyMappingResponse) ProtoMessage() {}
+
+func (x *RemoveUserCompanyMappingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_user_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveUserCompanyMappingResponse.ProtoReflect.Descriptor instead.
+func (*RemoveUserCompanyMappingResponse) Descriptor() ([]byte, []int) {
+	return file_iam_v1_user_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *RemoveUserCompanyMappingResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+// GetUserCompanyMappingsRequest fetches the mappings assigned to a user.
+type GetUserCompanyMappingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUserCompanyMappingsRequest) Reset() {
+	*x = GetUserCompanyMappingsRequest{}
+	mi := &file_iam_v1_user_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserCompanyMappingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserCompanyMappingsRequest) ProtoMessage() {}
+
+func (x *GetUserCompanyMappingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_user_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserCompanyMappingsRequest.ProtoReflect.Descriptor instead.
+func (*GetUserCompanyMappingsRequest) Descriptor() ([]byte, []int) {
+	return file_iam_v1_user_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *GetUserCompanyMappingsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+// GetUserCompanyMappingsResponse contains a user's mapping list.
+type GetUserCompanyMappingsResponse struct {
+	state protoimpl.MessageState   `protogen:"open.v1"`
+	Base  *v1.BaseResponse         `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Data  []*UserCompanyMappingRef `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+	// Primary mapping ID (empty if user has no primary mapping).
+	PrimaryCompanyMappingId string `protobuf:"bytes,3,opt,name=primary_company_mapping_id,json=primaryCompanyMappingId,proto3" json:"primary_company_mapping_id,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *GetUserCompanyMappingsResponse) Reset() {
+	*x = GetUserCompanyMappingsResponse{}
+	mi := &file_iam_v1_user_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserCompanyMappingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserCompanyMappingsResponse) ProtoMessage() {}
+
+func (x *GetUserCompanyMappingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_user_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserCompanyMappingsResponse.ProtoReflect.Descriptor instead.
+func (*GetUserCompanyMappingsResponse) Descriptor() ([]byte, []int) {
+	return file_iam_v1_user_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *GetUserCompanyMappingsResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetUserCompanyMappingsResponse) GetData() []*UserCompanyMappingRef {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *GetUserCompanyMappingsResponse) GetPrimaryCompanyMappingId() string {
+	if x != nil {
+		return x.PrimaryCompanyMappingId
+	}
+	return ""
+}
+
 var File_iam_v1_user_proto protoreflect.FileDescriptor
 
 const file_iam_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x11iam/v1/user.proto\x12\x06iam.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xa0\x02\n" +
+	"\x11iam/v1/user.proto\x12\x06iam.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xe5\x05\n" +
 	"\x04User\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -2912,7 +3461,17 @@ const file_iam_v1_user_proto_rawDesc = "" +
 	"\tis_locked\x18\x05 \x01(\bR\bisLocked\x12,\n" +
 	"\x12two_factor_enabled\x18\x06 \x01(\bR\x10twoFactorEnabled\x12'\n" +
 	"\rlast_login_at\x18\a \x01(\tH\x00R\vlastLoginAt\x88\x01\x01\x12*\n" +
-	"\x05audit\x18\b \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\x10\n" +
+	"\x05audit\x18\b \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12*\n" +
+	"\x11employee_level_id\x18\t \x01(\tR\x0femployeeLevelId\x12.\n" +
+	"\x13employee_level_code\x18\n" +
+	" \x01(\tR\x11employeeLevelCode\x12*\n" +
+	"\x11employee_group_id\x18\v \x01(\tR\x0femployeeGroupId\x12.\n" +
+	"\x13employee_group_code\x18\f \x01(\tR\x11employeeGroupCode\x12;\n" +
+	"\x1aprimary_company_mapping_id\x18\r \x01(\tR\x17primaryCompanyMappingId\x120\n" +
+	"\x14primary_company_name\x18\x0e \x01(\tR\x12primaryCompanyName\x122\n" +
+	"\x15primary_division_name\x18\x0f \x01(\tR\x13primaryDivisionName\x126\n" +
+	"\x17primary_department_name\x18\x10 \x01(\tR\x15primaryDepartmentName\x120\n" +
+	"\x14primary_section_name\x18\x11 \x01(\tR\x12primarySectionNameB\x10\n" +
 	"\x0e_last_login_at\"\xe5\x04\n" +
 	"\n" +
 	"UserDetail\x12\x1b\n" +
@@ -2963,7 +3522,7 @@ const file_iam_v1_user_proto_rawDesc = "" +
 	"\x04user\x18\x01 \x01(\v2\f.iam.v1.UserR\x04user\x12*\n" +
 	"\x06detail\x18\x02 \x01(\v2\x12.iam.v1.UserDetailR\x06detail\x12\x1d\n" +
 	"\n" +
-	"role_codes\x18\x03 \x03(\tR\troleCodes\"\xa5\x05\n" +
+	"role_codes\x18\x03 \x03(\tR\troleCodes\"\x9b\a\n" +
 	"\x11CreateUserRequest\x12>\n" +
 	"\busername\x18\x01 \x01(\tB\"\xbaH\x1fr\x1d\x10\x03\x1822\x17^[a-zA-Z][a-zA-Z0-9_]*$R\busername\x12R\n" +
 	"\x05email\x18\x02 \x01(\tB<\xbaH9r7\x10\x01\x18\xff\x0120^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$R\x05email\x12%\n" +
@@ -2980,13 +3539,19 @@ const file_iam_v1_user_proto_rawDesc = "" +
 	" \x01(\tB\a\xbaH\x04r\x02\x182H\x02R\bposition\x88\x01\x01\x12'\n" +
 	"\rdate_of_birth\x18\v \x01(\tH\x03R\vdateOfBirth\x88\x01\x01\x12'\n" +
 	"\aaddress\x18\f \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03H\x04R\aaddress\x88\x01\x01\x12\x19\n" +
-	"\brole_ids\x18\r \x03(\tR\aroleIdsB\r\n" +
+	"\brole_ids\x18\r \x03(\tR\aroleIds\x129\n" +
+	"\x11employee_level_id\x18\x0e \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x05R\x0femployeeLevelId\x88\x01\x01\x129\n" +
+	"\x11employee_group_id\x18\x0f \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x06R\x0femployeeGroupId\x88\x01\x01\x12;\n" +
+	"\x12company_mapping_id\x18\x10 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\aR\x10companyMappingId\x88\x01\x01B\r\n" +
 	"\v_section_idB\b\n" +
 	"\x06_phoneB\v\n" +
 	"\t_positionB\x10\n" +
 	"\x0e_date_of_birthB\n" +
 	"\n" +
-	"\b_address\"m\n" +
+	"\b_addressB\x14\n" +
+	"\x12_employee_level_idB\x14\n" +
+	"\x12_employee_group_idB\x15\n" +
+	"\x13_company_mapping_id\"m\n" +
 	"\x12CreateUserResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12*\n" +
 	"\x04data\x18\x02 \x01(\v2\x16.iam.v1.UserWithDetailR\x04data\"3\n" +
@@ -2999,18 +3564,24 @@ const file_iam_v1_user_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"p\n" +
 	"\x15GetUserDetailResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12*\n" +
-	"\x04data\x18\x02 \x01(\v2\x16.iam.v1.UserWithDetailR\x04data\"\xd8\x02\n" +
+	"\x04data\x18\x02 \x01(\v2\x16.iam.v1.UserWithDetailR\x04data\"\xce\x04\n" +
 	"\x11UpdateUserRequest\x12!\n" +
 	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12C\n" +
 	"\busername\x18\x02 \x01(\tB\"\xbaH\x1fr\x1d\x10\x03\x1822\x17^[a-zA-Z][a-zA-Z0-9_]*$H\x00R\busername\x88\x01\x01\x12U\n" +
 	"\x05email\x18\x03 \x01(\tB:\xbaH7r5\x18\xff\x0120^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$H\x01R\x05email\x88\x01\x01\x12 \n" +
 	"\tis_active\x18\x04 \x01(\bH\x02R\bisActive\x88\x01\x01\x12*\n" +
-	"\x0eunlock_account\x18\x05 \x01(\bH\x03R\runlockAccount\x88\x01\x01B\v\n" +
+	"\x0eunlock_account\x18\x05 \x01(\bH\x03R\runlockAccount\x88\x01\x01\x129\n" +
+	"\x11employee_level_id\x18\x06 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x04R\x0femployeeLevelId\x88\x01\x01\x129\n" +
+	"\x11employee_group_id\x18\a \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x05R\x0femployeeGroupId\x88\x01\x01\x12;\n" +
+	"\x12company_mapping_id\x18\b \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x06R\x10companyMappingId\x88\x01\x01B\v\n" +
 	"\t_usernameB\b\n" +
 	"\x06_emailB\f\n" +
 	"\n" +
 	"_is_activeB\x11\n" +
-	"\x0f_unlock_account\"c\n" +
+	"\x0f_unlock_accountB\x14\n" +
+	"\x12_employee_level_idB\x14\n" +
+	"\x12_employee_group_idB\x15\n" +
+	"\x13_company_mapping_id\"c\n" +
 	"\x12UpdateUserResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12 \n" +
 	"\x04data\x18\x02 \x01(\v2\f.iam.v1.UserR\x04data\"\x98\x05\n" +
@@ -3172,11 +3743,39 @@ const file_iam_v1_user_proto_rawDesc = "" +
 	"image/webpR\vcontentType\"{\n" +
 	"\x1cUploadProfilePictureResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
-	"\x13profile_picture_url\x18\x02 \x01(\tR\x11profilePictureUrl*c\n" +
+	"\x13profile_picture_url\x18\x02 \x01(\tR\x11profilePictureUrl\"\xa0\x02\n" +
+	"\x15UserCompanyMappingRef\x12,\n" +
+	"\x12company_mapping_id\x18\x01 \x01(\tR\x10companyMappingId\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12!\n" +
+	"\fcompany_name\x18\x04 \x01(\tR\vcompanyName\x12#\n" +
+	"\rdivision_name\x18\x05 \x01(\tR\fdivisionName\x12'\n" +
+	"\x0fdepartment_name\x18\x06 \x01(\tR\x0edepartmentName\x12!\n" +
+	"\fsection_name\x18\a \x01(\tR\vsectionName\x12\x1d\n" +
+	"\n" +
+	"is_primary\x18\b \x01(\bR\tisPrimary\"\x9b\x01\n" +
+	"\x1fAssignUserCompanyMappingRequest\x12!\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x126\n" +
+	"\x12company_mapping_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x10companyMappingId\x12\x1d\n" +
+	"\n" +
+	"is_primary\x18\x03 \x01(\bR\tisPrimary\"O\n" +
+	" AssignUserCompanyMappingResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"|\n" +
+	"\x1fRemoveUserCompanyMappingRequest\x12!\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x126\n" +
+	"\x12company_mapping_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x10companyMappingId\"O\n" +
+	" RemoveUserCompanyMappingResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"B\n" +
+	"\x1dGetUserCompanyMappingsRequest\x12!\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"\xbd\x01\n" +
+	"\x1eGetUserCompanyMappingsResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
+	"\x04data\x18\x02 \x03(\v2\x1d.iam.v1.UserCompanyMappingRefR\x04data\x12;\n" +
+	"\x1aprimary_company_mapping_id\x18\x03 \x01(\tR\x17primaryCompanyMappingId*c\n" +
 	"\fActiveFilter\x12\x1d\n" +
 	"\x19ACTIVE_FILTER_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14ACTIVE_FILTER_ACTIVE\x10\x01\x12\x1a\n" +
-	"\x16ACTIVE_FILTER_INACTIVE\x10\x022\xd7\x0f\n" +
+	"\x16ACTIVE_FILTER_INACTIVE\x10\x022\xd0\x13\n" +
 	"\vUserService\x12a\n" +
 	"\n" +
 	"CreateUser\x12\x19.iam.v1.CreateUserRequest\x1a\x1a.iam.v1.CreateUserResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/api/v1/iam/users\x12_\n" +
@@ -3196,7 +3795,10 @@ const file_iam_v1_user_proto_rawDesc = "" +
 	"\x15AssignUserPermissions\x12$.iam.v1.AssignUserPermissionsRequest\x1a%.iam.v1.AssignUserPermissionsResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/v1/iam/users/{user_id}/permissions\x12\x9f\x01\n" +
 	"\x15RemoveUserPermissions\x12$.iam.v1.RemoveUserPermissionsRequest\x1a%.iam.v1.RemoveUserPermissionsResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/iam/users/{user_id}/permissions/remove\x12\x9f\x01\n" +
 	"\x1aGetUserRolesAndPermissions\x12).iam.v1.GetUserRolesAndPermissionsRequest\x1a*.iam.v1.GetUserRolesAndPermissionsResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/iam/users/{user_id}/access\x12\x90\x01\n" +
-	"\x14UploadProfilePicture\x12#.iam.v1.UploadProfilePictureRequest\x1a$.iam.v1.UploadProfilePictureResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/iam/users/{user_id}/avatarB\x87\x01\n" +
+	"\x14UploadProfilePicture\x12#.iam.v1.UploadProfilePictureRequest\x1a$.iam.v1.UploadProfilePictureResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/iam/users/{user_id}/avatar\x12\xa6\x01\n" +
+	"\x18AssignUserCompanyMapping\x12'.iam.v1.AssignUserCompanyMappingRequest\x1a(.iam.v1.AssignUserCompanyMappingResponse\"7\x82\xd3\xe4\x93\x021:\x01*\",/api/v1/iam/users/{user_id}/company-mappings\x12\xad\x01\n" +
+	"\x18RemoveUserCompanyMapping\x12'.iam.v1.RemoveUserCompanyMappingRequest\x1a(.iam.v1.RemoveUserCompanyMappingResponse\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/iam/users/{user_id}/company-mappings/remove\x12\x9d\x01\n" +
+	"\x16GetUserCompanyMappings\x12%.iam.v1.GetUserCompanyMappingsRequest\x1a&.iam.v1.GetUserCompanyMappingsResponse\"4\x82\xd3\xe4\x93\x02.\x12,/api/v1/iam/users/{user_id}/company-mappingsB\x87\x01\n" +
 	"\n" +
 	"com.iam.v1B\tUserProtoP\x01Z5github.com/mutugading/goapps-backend/gen/iam/v1;iamv1\xa2\x02\x03IXX\xaa\x02\x06Iam.V1\xca\x02\x06Iam\\V1\xe2\x02\x12Iam\\V1\\GPBMetadata\xea\x02\aIam::V1b\x06proto3"
 
@@ -3213,7 +3815,7 @@ func file_iam_v1_user_proto_rawDescGZIP() []byte {
 }
 
 var file_iam_v1_user_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_iam_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
+var file_iam_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_iam_v1_user_proto_goTypes = []any{
 	(ActiveFilter)(0),                          // 0: iam.v1.ActiveFilter
 	(*User)(nil),                               // 1: iam.v1.User
@@ -3256,83 +3858,100 @@ var file_iam_v1_user_proto_goTypes = []any{
 	(*Permission)(nil),                         // 38: iam.v1.Permission
 	(*UploadProfilePictureRequest)(nil),        // 39: iam.v1.UploadProfilePictureRequest
 	(*UploadProfilePictureResponse)(nil),       // 40: iam.v1.UploadProfilePictureResponse
-	(*v1.AuditInfo)(nil),                       // 41: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),                    // 42: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),              // 43: common.v1.PaginationResponse
+	(*UserCompanyMappingRef)(nil),              // 41: iam.v1.UserCompanyMappingRef
+	(*AssignUserCompanyMappingRequest)(nil),    // 42: iam.v1.AssignUserCompanyMappingRequest
+	(*AssignUserCompanyMappingResponse)(nil),   // 43: iam.v1.AssignUserCompanyMappingResponse
+	(*RemoveUserCompanyMappingRequest)(nil),    // 44: iam.v1.RemoveUserCompanyMappingRequest
+	(*RemoveUserCompanyMappingResponse)(nil),   // 45: iam.v1.RemoveUserCompanyMappingResponse
+	(*GetUserCompanyMappingsRequest)(nil),      // 46: iam.v1.GetUserCompanyMappingsRequest
+	(*GetUserCompanyMappingsResponse)(nil),     // 47: iam.v1.GetUserCompanyMappingsResponse
+	(*v1.AuditInfo)(nil),                       // 48: common.v1.AuditInfo
+	(*v1.BaseResponse)(nil),                    // 49: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),              // 50: common.v1.PaginationResponse
 }
 var file_iam_v1_user_proto_depIdxs = []int32{
-	41, // 0: iam.v1.User.audit:type_name -> common.v1.AuditInfo
+	48, // 0: iam.v1.User.audit:type_name -> common.v1.AuditInfo
 	3,  // 1: iam.v1.UserDetail.section:type_name -> iam.v1.SectionInfo
-	41, // 2: iam.v1.UserDetail.audit:type_name -> common.v1.AuditInfo
+	48, // 2: iam.v1.UserDetail.audit:type_name -> common.v1.AuditInfo
 	1,  // 3: iam.v1.UserWithDetail.user:type_name -> iam.v1.User
 	2,  // 4: iam.v1.UserWithDetail.detail:type_name -> iam.v1.UserDetail
-	42, // 5: iam.v1.CreateUserResponse.base:type_name -> common.v1.BaseResponse
+	49, // 5: iam.v1.CreateUserResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 6: iam.v1.CreateUserResponse.data:type_name -> iam.v1.UserWithDetail
-	42, // 7: iam.v1.GetUserResponse.base:type_name -> common.v1.BaseResponse
+	49, // 7: iam.v1.GetUserResponse.base:type_name -> common.v1.BaseResponse
 	1,  // 8: iam.v1.GetUserResponse.data:type_name -> iam.v1.User
-	42, // 9: iam.v1.GetUserDetailResponse.base:type_name -> common.v1.BaseResponse
+	49, // 9: iam.v1.GetUserDetailResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 10: iam.v1.GetUserDetailResponse.data:type_name -> iam.v1.UserWithDetail
-	42, // 11: iam.v1.UpdateUserResponse.base:type_name -> common.v1.BaseResponse
+	49, // 11: iam.v1.UpdateUserResponse.base:type_name -> common.v1.BaseResponse
 	1,  // 12: iam.v1.UpdateUserResponse.data:type_name -> iam.v1.User
-	42, // 13: iam.v1.UpdateUserDetailResponse.base:type_name -> common.v1.BaseResponse
+	49, // 13: iam.v1.UpdateUserDetailResponse.base:type_name -> common.v1.BaseResponse
 	2,  // 14: iam.v1.UpdateUserDetailResponse.data:type_name -> iam.v1.UserDetail
-	42, // 15: iam.v1.DeleteUserResponse.base:type_name -> common.v1.BaseResponse
+	49, // 15: iam.v1.DeleteUserResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 16: iam.v1.ListUsersRequest.active_filter:type_name -> iam.v1.ActiveFilter
-	42, // 17: iam.v1.ListUsersResponse.base:type_name -> common.v1.BaseResponse
+	49, // 17: iam.v1.ListUsersResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 18: iam.v1.ListUsersResponse.data:type_name -> iam.v1.UserWithDetail
-	43, // 19: iam.v1.ListUsersResponse.pagination:type_name -> common.v1.PaginationResponse
+	50, // 19: iam.v1.ListUsersResponse.pagination:type_name -> common.v1.PaginationResponse
 	0,  // 20: iam.v1.ExportUsersRequest.active_filter:type_name -> iam.v1.ActiveFilter
-	42, // 21: iam.v1.ExportUsersResponse.base:type_name -> common.v1.BaseResponse
-	42, // 22: iam.v1.ImportUsersResponse.base:type_name -> common.v1.BaseResponse
+	49, // 21: iam.v1.ExportUsersResponse.base:type_name -> common.v1.BaseResponse
+	49, // 22: iam.v1.ImportUsersResponse.base:type_name -> common.v1.BaseResponse
 	23, // 23: iam.v1.ImportUsersResponse.errors:type_name -> iam.v1.ImportError
-	42, // 24: iam.v1.DownloadTemplateResponse.base:type_name -> common.v1.BaseResponse
-	42, // 25: iam.v1.AssignUserRolesResponse.base:type_name -> common.v1.BaseResponse
-	42, // 26: iam.v1.RemoveUserRolesResponse.base:type_name -> common.v1.BaseResponse
-	42, // 27: iam.v1.AssignUserPermissionsResponse.base:type_name -> common.v1.BaseResponse
-	42, // 28: iam.v1.RemoveUserPermissionsResponse.base:type_name -> common.v1.BaseResponse
-	42, // 29: iam.v1.GetUserRolesAndPermissionsResponse.base:type_name -> common.v1.BaseResponse
+	49, // 24: iam.v1.DownloadTemplateResponse.base:type_name -> common.v1.BaseResponse
+	49, // 25: iam.v1.AssignUserRolesResponse.base:type_name -> common.v1.BaseResponse
+	49, // 26: iam.v1.RemoveUserRolesResponse.base:type_name -> common.v1.BaseResponse
+	49, // 27: iam.v1.AssignUserPermissionsResponse.base:type_name -> common.v1.BaseResponse
+	49, // 28: iam.v1.RemoveUserPermissionsResponse.base:type_name -> common.v1.BaseResponse
+	49, // 29: iam.v1.GetUserRolesAndPermissionsResponse.base:type_name -> common.v1.BaseResponse
 	36, // 30: iam.v1.GetUserRolesAndPermissionsResponse.data:type_name -> iam.v1.UserAccessInfo
 	37, // 31: iam.v1.UserAccessInfo.roles:type_name -> iam.v1.RoleWithPermissions
 	38, // 32: iam.v1.UserAccessInfo.direct_permissions:type_name -> iam.v1.Permission
 	38, // 33: iam.v1.RoleWithPermissions.permissions:type_name -> iam.v1.Permission
-	42, // 34: iam.v1.UploadProfilePictureResponse.base:type_name -> common.v1.BaseResponse
-	5,  // 35: iam.v1.UserService.CreateUser:input_type -> iam.v1.CreateUserRequest
-	7,  // 36: iam.v1.UserService.GetUser:input_type -> iam.v1.GetUserRequest
-	9,  // 37: iam.v1.UserService.GetUserDetail:input_type -> iam.v1.GetUserDetailRequest
-	11, // 38: iam.v1.UserService.UpdateUser:input_type -> iam.v1.UpdateUserRequest
-	13, // 39: iam.v1.UserService.UpdateUserDetail:input_type -> iam.v1.UpdateUserDetailRequest
-	15, // 40: iam.v1.UserService.DeleteUser:input_type -> iam.v1.DeleteUserRequest
-	17, // 41: iam.v1.UserService.ListUsers:input_type -> iam.v1.ListUsersRequest
-	19, // 42: iam.v1.UserService.ExportUsers:input_type -> iam.v1.ExportUsersRequest
-	21, // 43: iam.v1.UserService.ImportUsers:input_type -> iam.v1.ImportUsersRequest
-	24, // 44: iam.v1.UserService.DownloadTemplate:input_type -> iam.v1.DownloadTemplateRequest
-	26, // 45: iam.v1.UserService.AssignUserRoles:input_type -> iam.v1.AssignUserRolesRequest
-	28, // 46: iam.v1.UserService.RemoveUserRoles:input_type -> iam.v1.RemoveUserRolesRequest
-	30, // 47: iam.v1.UserService.AssignUserPermissions:input_type -> iam.v1.AssignUserPermissionsRequest
-	32, // 48: iam.v1.UserService.RemoveUserPermissions:input_type -> iam.v1.RemoveUserPermissionsRequest
-	34, // 49: iam.v1.UserService.GetUserRolesAndPermissions:input_type -> iam.v1.GetUserRolesAndPermissionsRequest
-	39, // 50: iam.v1.UserService.UploadProfilePicture:input_type -> iam.v1.UploadProfilePictureRequest
-	6,  // 51: iam.v1.UserService.CreateUser:output_type -> iam.v1.CreateUserResponse
-	8,  // 52: iam.v1.UserService.GetUser:output_type -> iam.v1.GetUserResponse
-	10, // 53: iam.v1.UserService.GetUserDetail:output_type -> iam.v1.GetUserDetailResponse
-	12, // 54: iam.v1.UserService.UpdateUser:output_type -> iam.v1.UpdateUserResponse
-	14, // 55: iam.v1.UserService.UpdateUserDetail:output_type -> iam.v1.UpdateUserDetailResponse
-	16, // 56: iam.v1.UserService.DeleteUser:output_type -> iam.v1.DeleteUserResponse
-	18, // 57: iam.v1.UserService.ListUsers:output_type -> iam.v1.ListUsersResponse
-	20, // 58: iam.v1.UserService.ExportUsers:output_type -> iam.v1.ExportUsersResponse
-	22, // 59: iam.v1.UserService.ImportUsers:output_type -> iam.v1.ImportUsersResponse
-	25, // 60: iam.v1.UserService.DownloadTemplate:output_type -> iam.v1.DownloadTemplateResponse
-	27, // 61: iam.v1.UserService.AssignUserRoles:output_type -> iam.v1.AssignUserRolesResponse
-	29, // 62: iam.v1.UserService.RemoveUserRoles:output_type -> iam.v1.RemoveUserRolesResponse
-	31, // 63: iam.v1.UserService.AssignUserPermissions:output_type -> iam.v1.AssignUserPermissionsResponse
-	33, // 64: iam.v1.UserService.RemoveUserPermissions:output_type -> iam.v1.RemoveUserPermissionsResponse
-	35, // 65: iam.v1.UserService.GetUserRolesAndPermissions:output_type -> iam.v1.GetUserRolesAndPermissionsResponse
-	40, // 66: iam.v1.UserService.UploadProfilePicture:output_type -> iam.v1.UploadProfilePictureResponse
-	51, // [51:67] is the sub-list for method output_type
-	35, // [35:51] is the sub-list for method input_type
-	35, // [35:35] is the sub-list for extension type_name
-	35, // [35:35] is the sub-list for extension extendee
-	0,  // [0:35] is the sub-list for field type_name
+	49, // 34: iam.v1.UploadProfilePictureResponse.base:type_name -> common.v1.BaseResponse
+	49, // 35: iam.v1.AssignUserCompanyMappingResponse.base:type_name -> common.v1.BaseResponse
+	49, // 36: iam.v1.RemoveUserCompanyMappingResponse.base:type_name -> common.v1.BaseResponse
+	49, // 37: iam.v1.GetUserCompanyMappingsResponse.base:type_name -> common.v1.BaseResponse
+	41, // 38: iam.v1.GetUserCompanyMappingsResponse.data:type_name -> iam.v1.UserCompanyMappingRef
+	5,  // 39: iam.v1.UserService.CreateUser:input_type -> iam.v1.CreateUserRequest
+	7,  // 40: iam.v1.UserService.GetUser:input_type -> iam.v1.GetUserRequest
+	9,  // 41: iam.v1.UserService.GetUserDetail:input_type -> iam.v1.GetUserDetailRequest
+	11, // 42: iam.v1.UserService.UpdateUser:input_type -> iam.v1.UpdateUserRequest
+	13, // 43: iam.v1.UserService.UpdateUserDetail:input_type -> iam.v1.UpdateUserDetailRequest
+	15, // 44: iam.v1.UserService.DeleteUser:input_type -> iam.v1.DeleteUserRequest
+	17, // 45: iam.v1.UserService.ListUsers:input_type -> iam.v1.ListUsersRequest
+	19, // 46: iam.v1.UserService.ExportUsers:input_type -> iam.v1.ExportUsersRequest
+	21, // 47: iam.v1.UserService.ImportUsers:input_type -> iam.v1.ImportUsersRequest
+	24, // 48: iam.v1.UserService.DownloadTemplate:input_type -> iam.v1.DownloadTemplateRequest
+	26, // 49: iam.v1.UserService.AssignUserRoles:input_type -> iam.v1.AssignUserRolesRequest
+	28, // 50: iam.v1.UserService.RemoveUserRoles:input_type -> iam.v1.RemoveUserRolesRequest
+	30, // 51: iam.v1.UserService.AssignUserPermissions:input_type -> iam.v1.AssignUserPermissionsRequest
+	32, // 52: iam.v1.UserService.RemoveUserPermissions:input_type -> iam.v1.RemoveUserPermissionsRequest
+	34, // 53: iam.v1.UserService.GetUserRolesAndPermissions:input_type -> iam.v1.GetUserRolesAndPermissionsRequest
+	39, // 54: iam.v1.UserService.UploadProfilePicture:input_type -> iam.v1.UploadProfilePictureRequest
+	42, // 55: iam.v1.UserService.AssignUserCompanyMapping:input_type -> iam.v1.AssignUserCompanyMappingRequest
+	44, // 56: iam.v1.UserService.RemoveUserCompanyMapping:input_type -> iam.v1.RemoveUserCompanyMappingRequest
+	46, // 57: iam.v1.UserService.GetUserCompanyMappings:input_type -> iam.v1.GetUserCompanyMappingsRequest
+	6,  // 58: iam.v1.UserService.CreateUser:output_type -> iam.v1.CreateUserResponse
+	8,  // 59: iam.v1.UserService.GetUser:output_type -> iam.v1.GetUserResponse
+	10, // 60: iam.v1.UserService.GetUserDetail:output_type -> iam.v1.GetUserDetailResponse
+	12, // 61: iam.v1.UserService.UpdateUser:output_type -> iam.v1.UpdateUserResponse
+	14, // 62: iam.v1.UserService.UpdateUserDetail:output_type -> iam.v1.UpdateUserDetailResponse
+	16, // 63: iam.v1.UserService.DeleteUser:output_type -> iam.v1.DeleteUserResponse
+	18, // 64: iam.v1.UserService.ListUsers:output_type -> iam.v1.ListUsersResponse
+	20, // 65: iam.v1.UserService.ExportUsers:output_type -> iam.v1.ExportUsersResponse
+	22, // 66: iam.v1.UserService.ImportUsers:output_type -> iam.v1.ImportUsersResponse
+	25, // 67: iam.v1.UserService.DownloadTemplate:output_type -> iam.v1.DownloadTemplateResponse
+	27, // 68: iam.v1.UserService.AssignUserRoles:output_type -> iam.v1.AssignUserRolesResponse
+	29, // 69: iam.v1.UserService.RemoveUserRoles:output_type -> iam.v1.RemoveUserRolesResponse
+	31, // 70: iam.v1.UserService.AssignUserPermissions:output_type -> iam.v1.AssignUserPermissionsResponse
+	33, // 71: iam.v1.UserService.RemoveUserPermissions:output_type -> iam.v1.RemoveUserPermissionsResponse
+	35, // 72: iam.v1.UserService.GetUserRolesAndPermissions:output_type -> iam.v1.GetUserRolesAndPermissionsResponse
+	40, // 73: iam.v1.UserService.UploadProfilePicture:output_type -> iam.v1.UploadProfilePictureResponse
+	43, // 74: iam.v1.UserService.AssignUserCompanyMapping:output_type -> iam.v1.AssignUserCompanyMappingResponse
+	45, // 75: iam.v1.UserService.RemoveUserCompanyMapping:output_type -> iam.v1.RemoveUserCompanyMappingResponse
+	47, // 76: iam.v1.UserService.GetUserCompanyMappings:output_type -> iam.v1.GetUserCompanyMappingsResponse
+	58, // [58:77] is the sub-list for method output_type
+	39, // [39:58] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_iam_v1_user_proto_init() }
@@ -3353,7 +3972,7 @@ func file_iam_v1_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_iam_v1_user_proto_rawDesc), len(file_iam_v1_user_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   40,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

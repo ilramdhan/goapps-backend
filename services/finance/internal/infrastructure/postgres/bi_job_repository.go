@@ -135,7 +135,7 @@ INSERT INTO bi_job_log (
 RETURNING log_id`
 	row := r.db.QueryRowContext(ctx, q,
 		l.JobID, l.StartedAt, nullableTime(l.EndedAt), l.Status, nullableInt(l.RowsAffected),
-		nullableString(l.ErrorMessage), nullableString(l.TriggeredBy), nullableInt(l.DurationMs))
+		biNullableString(l.ErrorMessage), biNullableString(l.TriggeredBy), nullableInt(l.DurationMs))
 	if err := row.Scan(&l.LogID); err != nil {
 		return fmt.Errorf("insert job log: %w", err)
 	}
@@ -150,7 +150,7 @@ UPDATE bi_job_log SET
 WHERE log_id = $1`
 	res, err := r.db.ExecContext(ctx, q,
 		l.LogID, nullableTime(l.EndedAt), l.Status, nullableInt(l.RowsAffected),
-		nullableString(l.ErrorMessage), nullableInt(l.DurationMs))
+		biNullableString(l.ErrorMessage), nullableInt(l.DurationMs))
 	if err != nil {
 		return fmt.Errorf("update job log: %w", err)
 	}

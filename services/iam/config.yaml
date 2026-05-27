@@ -33,7 +33,7 @@ redis:
 jwt:
   access_token_secret: "dev-access-secret-change-in-production"
   refresh_token_secret: "dev-refresh-secret-change-in-production"
-  access_token_ttl: 15m
+  access_token_ttl: 60m
   refresh_token_ttl: 168h  # 7 days
   issuer: "goapps-iam"
 

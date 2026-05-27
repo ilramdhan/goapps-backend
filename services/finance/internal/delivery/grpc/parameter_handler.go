@@ -56,16 +56,22 @@ func (h *ParameterHandler) CreateParameter(ctx context.Context, req *financev1.C
 	}
 
 	cmd := paramapp.CreateCommand{
-		ParamCode:      req.ParamCode,
-		ParamName:      req.ParamName,
-		ParamShortName: req.ParamShortName,
-		DataType:       protoDataTypeToString(req.DataType),
-		ParamCategory:  protoParamCategoryToString(req.ParamCategory),
-		UOMID:          req.UomId,
-		DefaultValue:   req.DefaultValue,
-		MinValue:       req.MinValue,
-		MaxValue:       req.MaxValue,
-		CreatedBy:      getUserFromContext(ctx),
+		ParamCode:            req.ParamCode,
+		ParamName:            req.ParamName,
+		ParamShortName:       req.ParamShortName,
+		DataType:             protoDataTypeToString(req.DataType),
+		ParamCategory:        protoParamCategoryToString(req.ParamCategory),
+		UOMID:                req.UomId,
+		DefaultValue:         req.DefaultValue,
+		MinValue:             req.MinValue,
+		MaxValue:             req.MaxValue,
+		OwnerDepartment:      req.OwnerDepartment,
+		IsRequiredForCosting: req.IsRequiredForCosting,
+		IsPeriodDependent:    req.IsPeriodDependent,
+		LookupMasterCode:     req.LookupMasterCode,
+		DisplayOrder:         req.DisplayOrder,
+		DisplayGroup:         req.DisplayGroup,
+		CreatedBy:            getUserFromContext(ctx),
 	}
 
 	entity, err := h.createHandler.Handle(ctx, cmd)
@@ -105,7 +111,7 @@ func (h *ParameterHandler) GetParameter(ctx context.Context, req *financev1.GetP
 }
 
 // UpdateParameter updates an existing Parameter.
-func (h *ParameterHandler) UpdateParameter(ctx context.Context, req *financev1.UpdateParameterRequest) (*financev1.UpdateParameterResponse, error) {
+func (h *ParameterHandler) UpdateParameter(ctx context.Context, req *financev1.UpdateParameterRequest) (*financev1.UpdateParameterResponse, error) { //nolint:gocognit,gocyclo // optional-field fan-out mapper
 	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
 		RecordParameterOperation("update", false)
 		return &financev1.UpdateParameterResponse{Base: baseResp}, nil
@@ -144,6 +150,24 @@ func (h *ParameterHandler) UpdateParameter(ctx context.Context, req *financev1.U
 	}
 	if req.IsActive != nil {
 		cmd.IsActive = req.IsActive
+	}
+	if req.OwnerDepartment != nil {
+		cmd.OwnerDepartment = req.OwnerDepartment
+	}
+	if req.IsRequiredForCosting != nil {
+		cmd.IsRequiredForCosting = req.IsRequiredForCosting
+	}
+	if req.IsPeriodDependent != nil {
+		cmd.IsPeriodDependent = req.IsPeriodDependent
+	}
+	if req.LookupMasterCode != nil {
+		cmd.LookupMasterCode = req.LookupMasterCode
+	}
+	if req.DisplayOrder != nil {
+		cmd.DisplayOrder = req.DisplayOrder
+	}
+	if req.DisplayGroup != nil {
+		cmd.DisplayGroup = req.DisplayGroup
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, cmd)
@@ -402,6 +426,9 @@ func stringToProtoDataType(dt string) financev1.DataType {
 	}
 }
 
+// paramCategoryCalculated is the string form of the CALCULATED param category.
+const paramCategoryCalculated = "CALCULATED"
+
 func protoParamCategoryToString(cat financev1.ParamCategory) string {
 	switch cat {
 	case financev1.ParamCategory_PARAM_CATEGORY_INPUT:
@@ -409,7 +436,7 @@ func protoParamCategoryToString(cat financev1.ParamCategory) string {
 	case financev1.ParamCategory_PARAM_CATEGORY_RATE:
 		return "RATE"
 	case financev1.ParamCategory_PARAM_CATEGORY_CALCULATED:
-		return "CALCULATED"
+		return paramCategoryCalculated
 	default:
 		return ""
 	}
@@ -421,7 +448,7 @@ func stringToProtoParamCategory(cat string) financev1.ParamCategory {
 		return financev1.ParamCategory_PARAM_CATEGORY_INPUT
 	case "RATE":
 		return financev1.ParamCategory_PARAM_CATEGORY_RATE
-	case "CALCULATED":
+	case paramCategoryCalculated:
 		return financev1.ParamCategory_PARAM_CATEGORY_CALCULATED
 	default:
 		return financev1.ParamCategory_PARAM_CATEGORY_UNSPECIFIED
@@ -430,15 +457,21 @@ func stringToProtoParamCategory(cat string) financev1.ParamCategory {
 
 func paramEntityToProto(entity *parameter.Parameter) *financev1.Parameter {
 	proto := &financev1.Parameter{
-		ParamId:        entity.ID().String(),
-		ParamCode:      entity.Code().String(),
-		ParamName:      entity.Name(),
-		ParamShortName: entity.ShortName(),
-		DataType:       stringToProtoDataType(entity.DataType().String()),
-		ParamCategory:  stringToProtoParamCategory(entity.ParamCategory().String()),
-		IsActive:       entity.IsActive(),
-		UomCode:        entity.UOMCode(),
-		UomName:        entity.UOMName(),
+		ParamId:              entity.ID().String(),
+		ParamCode:            entity.Code().String(),
+		ParamName:            entity.Name(),
+		ParamShortName:       entity.ShortName(),
+		DataType:             stringToProtoDataType(entity.DataType().String()),
+		ParamCategory:        stringToProtoParamCategory(entity.ParamCategory().String()),
+		IsActive:             entity.IsActive(),
+		UomCode:              entity.UOMCode(),
+		UomName:              entity.UOMName(),
+		OwnerDepartment:      entity.OwnerDepartment(),
+		IsRequiredForCosting: entity.IsRequiredForCosting(),
+		IsPeriodDependent:    entity.IsPeriodDependent(),
+		LookupMasterCode:     entity.LookupMasterCode(),
+		DisplayOrder:         entity.DisplayOrder(),
+		DisplayGroup:         entity.DisplayGroup(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: entity.CreatedAt().Format(time.RFC3339),
 			CreatedBy: entity.CreatedBy(),

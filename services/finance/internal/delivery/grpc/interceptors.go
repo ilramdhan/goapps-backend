@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -83,16 +84,69 @@ func TimeoutInterceptor(timeout time.Duration) grpc.UnaryServerInterceptor {
 	}
 }
 
-// TracingInterceptor adds OpenTelemetry tracing.
-func TracingInterceptor() grpc.UnaryServerInterceptor {
-	tracer := otel.Tracer("finance-service")
+// TraceContextInterceptor extracts the W3C trace context propagated in the
+// incoming gRPC metadata (e.g. by the finance-cost-worker) and injects it into
+// the request context. Placed before TracingInterceptor so the span this server
+// starts becomes a child of the caller's span, producing a single distributed
+// trace across worker -> finance. No-op when the global propagator is the
+// default no-op (tracing disabled) or when no trace headers are present.
+func TraceContextInterceptor() grpc.UnaryServerInterceptor {
+	return func(
+		ctx context.Context,
+		req interface{},
+		_ *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (interface{}, error) {
+		if md, ok := metadata.FromIncomingContext(ctx); ok {
+			ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.TextMapCarrier(metadataCarrier(md)))
+		}
+		return handler(ctx, req)
+	}
+}
 
+// metadataCarrier adapts gRPC metadata.MD to propagation.TextMapCarrier so the
+// W3C TraceContext propagator can read trace headers from incoming metadata.
+type metadataCarrier metadata.MD
+
+// Get returns the first value for key, or "" if absent.
+func (c metadataCarrier) Get(key string) string {
+	vals := metadata.MD(c).Get(key)
+	if len(vals) == 0 {
+		return ""
+	}
+	return vals[0]
+}
+
+// Set overwrites key with value.
+func (c metadataCarrier) Set(key, value string) {
+	metadata.MD(c).Set(key, value)
+}
+
+// Keys returns all metadata keys.
+func (c metadataCarrier) Keys() []string {
+	keys := make([]string, 0, len(c))
+	for k := range c {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// TracingInterceptor adds OpenTelemetry tracing.
+//
+// The tracer is fetched lazily on every request rather than captured at
+// interceptor construction. This keeps the interceptor robust to call
+// ordering: if NewServer runs before tracing.NewProvider sets the global
+// TracerProvider, capturing the tracer up front would freeze a noop and
+// silently drop every span. Looking it up per-request avoids that gotcha.
+func TracingInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
+		tracer := otel.Tracer("finance-service")
+
 		// Extract method name
 		methodParts := strings.Split(info.FullMethod, "/")
 		methodName := info.FullMethod

@@ -4,19 +4,21 @@ package uom
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
 	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
 
 // ListQuery represents the list UOMs query.
 type ListQuery struct {
-	Page      int
-	PageSize  int
-	Search    string
-	Category  *string
-	IsActive  *bool
-	SortBy    string
-	SortOrder string
+	Page       int
+	PageSize   int
+	Search     string
+	CategoryID *string
+	IsActive   *bool
+	SortBy     string
+	SortOrder  string
 }
 
 // ListResult represents the list UOMs result.
@@ -50,12 +52,12 @@ func (h *ListHandler) Handle(ctx context.Context, query ListQuery) (*ListResult,
 	}
 
 	// Category filter
-	if query.Category != nil {
-		cat, err := uom.NewCategory(*query.Category)
-		if err != nil {
-			return nil, err
+	if query.CategoryID != nil && *query.CategoryID != "" {
+		parsed, parseErr := uuid.Parse(*query.CategoryID)
+		if parseErr != nil {
+			return nil, uom.ErrInvalidCategory
 		}
-		filter.Category = &cat
+		filter.CategoryID = &parsed
 	}
 
 	// IsActive filter

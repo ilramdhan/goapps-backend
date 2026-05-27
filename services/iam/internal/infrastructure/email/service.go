@@ -5,12 +5,20 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/config"
+)
+
+// SMTP client timeouts. Kept tight so failures surface fast and never block the request path.
+const (
+	smtpDialTimeout    = 10 * time.Second
+	smtpOverallTimeout = 30 * time.Second
 )
 
 // Service implements the auth.EmailService interface via SMTP.
@@ -31,6 +39,25 @@ func (s *Service) SendOTP(ctx context.Context, email, otp string, expiryMinutes 
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
   <h2 style="color: #333;">Password Reset</h2>
   <p>Your OTP code for password reset is:</p>
+  <div style="background: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+    <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">%s</span>
+  </div>
+  <p>This code expires in <strong>%d minutes</strong>.</p>
+  <p style="color: #666; font-size: 12px;">If you did not request this, please ignore this email.</p>
+</body>
+</html>`, otp, expiryMinutes)
+
+	return s.send(ctx, email, subject, body)
+}
+
+// SendEmailVerification sends an email verification OTP to the user's email.
+func (s *Service) SendEmailVerification(ctx context.Context, email, otp string, expiryMinutes int) error {
+	subject := "GoApps - Email Verification"
+	body := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <h2 style="color: #333;">Verify Your Email</h2>
+  <p>Your email verification code is:</p>
   <div style="background: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
     <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">%s</span>
   </div>
@@ -70,7 +97,7 @@ func (s *Service) send(ctx context.Context, to, subject, htmlBody string) error 
 
 	var msg strings.Builder
 	for k, v := range headers {
-		fmt.Fprintf(&msg, "%s: %s\r\n", k, v)
+		_, _ = fmt.Fprintf(&msg, "%s: %s\r\n", k, v)
 	}
 	msg.WriteString("\r\n")
 	msg.WriteString(htmlBody)
@@ -96,6 +123,10 @@ func (s *Service) send(ctx context.Context, to, subject, htmlBody string) error 
 }
 
 func (s *Service) sendTLS(ctx context.Context, addr string, auth smtp.Auth, to, msg string) error {
+	// Enforce a bounded overall deadline so no SMTP step can hang indefinitely.
+	ctx, cancel := context.WithTimeout(ctx, smtpOverallTimeout)
+	defer cancel()
+
 	tlsConfig := &tls.Config{
 		ServerName: s.cfg.SMTPHost,
 		MinVersion: tls.VersionTLS12,
@@ -104,10 +135,23 @@ func (s *Service) sendTLS(ctx context.Context, addr string, auth smtp.Auth, to, 
 		tlsConfig.InsecureSkipVerify = true //nolint:gosec // Configurable for dev/self-hosted environments.
 	}
 
-	dialer := &tls.Dialer{Config: tlsConfig}
+	dialer := &tls.Dialer{
+		NetDialer: &net.Dialer{Timeout: smtpDialTimeout},
+		Config:    tlsConfig,
+	}
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to connect to SMTP server: %w", err)
+	}
+
+	// After dial, TCP-level deadlines prevent a stalled server from hanging reads/writes.
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := conn.SetDeadline(deadline); err != nil {
+			if closeErr := conn.Close(); closeErr != nil {
+				log.Warn().Err(closeErr).Msg("failed to close SMTP connection after SetDeadline error")
+			}
+			return fmt.Errorf("failed to set SMTP connection deadline: %w", err)
+		}
 	}
 
 	client, err := smtp.NewClient(conn, s.cfg.SMTPHost)

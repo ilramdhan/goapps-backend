@@ -36,7 +36,7 @@ func deletedUser(t *testing.T) *user.User {
 		false, false, 0, nil,
 		false, "",
 		nil, "",
-		nil,
+		nil, nil,
 		shared.AuditInfo{
 			CreatedAt: time.Now().Add(-24 * time.Hour),
 			CreatedBy: "admin",
@@ -55,7 +55,7 @@ func lockedUser(t *testing.T, lockedUntil *time.Time) *user.User {
 		true, true, 5, lockedUntil,
 		false, "",
 		nil, "",
-		nil,
+		nil, nil,
 		shared.AuditInfo{
 			CreatedAt: time.Now().Add(-24 * time.Hour),
 			CreatedBy: "admin",
@@ -213,7 +213,7 @@ func TestUser_CanLogin(t *testing.T) {
 			false, false, 0, nil,
 			false, "",
 			nil, "",
-			nil,
+			nil, nil,
 			shared.AuditInfo{
 				CreatedAt: time.Now(),
 				CreatedBy: "admin",
@@ -549,7 +549,7 @@ func TestReconstructUser(t *testing.T) {
 		true, true, 3, &lockedUntil,
 		true, "TOTP_SECRET_123",
 		&lastLogin, "10.0.0.50",
-		&passwordChanged,
+		&passwordChanged, nil,
 		audit,
 	)
 

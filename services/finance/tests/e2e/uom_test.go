@@ -21,9 +21,11 @@ import (
 // E2ETestSuite is the end-to-end test suite.
 type E2ETestSuite struct {
 	suite.Suite
-	conn   *grpc.ClientConn
-	client financev1.UOMServiceClient
-	ctx    context.Context // authenticated context with JWT
+	conn           *grpc.ClientConn
+	client         financev1.UOMServiceClient
+	categoryClient financev1.UOMCategoryServiceClient
+	ctx            context.Context // authenticated context with JWT
+	testCategoryID string          // cached category ID for tests
 }
 
 func TestE2ESuite(t *testing.T) {
@@ -44,6 +46,7 @@ func (s *E2ETestSuite) SetupSuite() {
 
 	s.conn = conn
 	s.client = financev1.NewUOMServiceClient(conn)
+	s.categoryClient = financev1.NewUOMCategoryServiceClient(conn)
 
 	// Generate test JWT and create authenticated context
 	token := s.generateTestToken()
@@ -134,10 +137,10 @@ func (s *E2ETestSuite) TestCreateUOM_Success() {
 	code := "E2E_" + time.Now().Format("150405")
 
 	resp, err := s.client.CreateUOM(ctx, &financev1.CreateUOMRequest{
-		UomCode:     code,
-		UomName:     "E2E Test Unit",
-		UomCategory: financev1.UOMCategory_UOM_CATEGORY_QUANTITY,
-		Description: "Created by E2E test",
+		UomCode:       code,
+		UomName:       "E2E Test Unit",
+		UomCategoryId: s.getTestCategoryID(),
+		Description:   "Created by E2E test",
 	})
 
 	require.NoError(s.T(), err)
@@ -154,9 +157,9 @@ func (s *E2ETestSuite) TestCreateUOM_ValidationError() {
 	defer cancel()
 
 	resp, err := s.client.CreateUOM(ctx, &financev1.CreateUOMRequest{
-		UomCode:     "invalid_lowercase", // Invalid: lowercase
-		UomName:     "",                  // Invalid: empty
-		UomCategory: financev1.UOMCategory_UOM_CATEGORY_UNSPECIFIED,
+		UomCode:       "invalid_lowercase", // Invalid: lowercase
+		UomName:       "",                  // Invalid: empty
+		UomCategoryId: "",                  // Invalid: empty
 	})
 
 	// Should NOT return error - validation errors in BaseResponse
@@ -196,10 +199,10 @@ func (s *E2ETestSuite) TestCRUDFlow() {
 
 	// 1. Create
 	createResp, err := s.client.CreateUOM(ctx, &financev1.CreateUOMRequest{
-		UomCode:     code,
-		UomName:     "CRUD Test",
-		UomCategory: financev1.UOMCategory_UOM_CATEGORY_WEIGHT,
-		Description: "CRUD flow test",
+		UomCode:       code,
+		UomName:       "CRUD Test",
+		UomCategoryId: s.getTestCategoryID(),
+		Description:   "CRUD flow test",
 	})
 	require.NoError(s.T(), err)
 	require.True(s.T(), createResp.Base.IsSuccess, "Create failed: %s", createResp.Base.Message)
@@ -239,19 +242,20 @@ func (s *E2ETestSuite) TestListWithFilters() {
 	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 	defer cancel()
 
-	// List with category filter
+	// List with category filter (requires a known category ID from seed data)
+	categoryID := s.getTestCategoryID()
 	resp, err := s.client.ListUOMs(ctx, &financev1.ListUOMsRequest{
-		Page:     1,
-		PageSize: 50,
-		Category: financev1.UOMCategory_UOM_CATEGORY_WEIGHT,
+		Page:          1,
+		PageSize:      50,
+		UomCategoryId: categoryID,
 	})
 
 	require.NoError(s.T(), err)
 	assert.True(s.T(), resp.Base.IsSuccess)
 
-	// All returned items should be WEIGHT category
+	// All returned items should have the same category
 	for _, item := range resp.Data {
-		assert.Equal(s.T(), financev1.UOMCategory_UOM_CATEGORY_WEIGHT, item.UomCategory)
+		assert.Equal(s.T(), categoryID, item.UomCategoryId)
 	}
 }
 
@@ -291,6 +295,39 @@ func (s *E2ETestSuite) TestUnauthenticated() {
 	assert.NotNil(s.T(), resp.Base)
 	assert.False(s.T(), resp.Base.IsSuccess)
 	assert.Equal(s.T(), "401", resp.Base.StatusCode)
+}
+
+// getTestCategoryID returns a valid UOM category ID for use in tests.
+// It fetches the first active category from the database via gRPC, or creates one if none exist.
+func (s *E2ETestSuite) getTestCategoryID() string {
+	if s.testCategoryID != "" {
+		return s.testCategoryID
+	}
+
+	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	defer cancel()
+
+	// Try to list existing categories
+	listResp, err := s.categoryClient.ListUOMCategories(ctx, &financev1.ListUOMCategoriesRequest{
+		Page:     1,
+		PageSize: 1,
+	})
+	if err == nil && listResp.Base.IsSuccess && len(listResp.Data) > 0 {
+		s.testCategoryID = listResp.Data[0].UomCategoryId
+		return s.testCategoryID
+	}
+
+	// Create a test category if none exist
+	createResp, err := s.categoryClient.CreateUOMCategory(ctx, &financev1.CreateUOMCategoryRequest{
+		CategoryCode: "E2E_TEST",
+		CategoryName: "E2E Test Category",
+		Description:  "Category for E2E tests",
+	})
+	require.NoError(s.T(), err)
+	require.True(s.T(), createResp.Base.IsSuccess, "Failed to create test category: %s", createResp.Base.Message)
+
+	s.testCategoryID = createResp.Data.UomCategoryId
+	return s.testCategoryID
 }
 
 // Helper function.

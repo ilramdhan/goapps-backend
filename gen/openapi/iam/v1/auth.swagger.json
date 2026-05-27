@@ -277,6 +277,40 @@
         ]
       }
     },
+    "/api/v1/iam/auth/resend-email-verification": {
+      "post": {
+        "summary": "ResendEmailVerification re-sends the verification code. Rate-limited to 1 per minute per user.",
+        "operationId": "AuthService_ResendEmailVerification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResendEmailVerificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ResendEmailVerificationRequest re-sends the verification code.\nRate-limited to 1 per 60 seconds per user.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ResendEmailVerificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
     "/api/v1/iam/auth/reset-password": {
       "post": {
         "summary": "ResetPassword sets a new password using a valid reset token.",
@@ -311,6 +345,40 @@
         ]
       }
     },
+    "/api/v1/iam/auth/send-email-verification": {
+      "post": {
+        "summary": "SendEmailVerification sends a 6-digit verification code to the authenticated user's email.\nGenerates a new token, invalidating any previous unconsumed tokens.",
+        "operationId": "AuthService_SendEmailVerification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendEmailVerificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "SendEmailVerificationRequest is empty (uses JWT context to resolve user + email).",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SendEmailVerificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
     "/api/v1/iam/auth/update-password": {
       "post": {
         "summary": "UpdatePassword changes password for authenticated user.",
@@ -337,6 +405,40 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1UpdatePasswordRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/api/v1/iam/auth/verify-email": {
+      "post": {
+        "summary": "VerifyEmail consumes a verification code and marks the authenticated user's email as verified.",
+        "operationId": "AuthService_VerifyEmail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VerifyEmailResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "VerifyEmailRequest validates the 6-digit verification code.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1VerifyEmailRequest"
             }
           }
         ],
@@ -449,6 +551,18 @@
         "twoFactorEnabled": {
           "type": "boolean",
           "description": "Whether 2FA is enabled."
+        },
+        "emailVerified": {
+          "type": "boolean",
+          "description": "Whether the user has verified their email address (true if email_verified_at IS NOT NULL)."
+        },
+        "sectionId": {
+          "type": "string",
+          "description": "Section UUID assigned to the user via user_detail (empty if not assigned)."
+        },
+        "departmentId": {
+          "type": "string",
+          "description": "Department UUID derived from the user's section (empty if no section assigned)."
         }
       },
       "description": "AuthUser contains basic user info for authentication context."
@@ -597,6 +711,10 @@
         "requires2fa": {
           "type": "boolean",
           "description": "Whether 2FA is required (return true if 2FA enabled but totp_code not provided)."
+        },
+        "requiresEmailVerification": {
+          "type": "boolean",
+          "description": "Whether email verification is required before full access (email_verified_at IS NULL).\nFrontend should redirect to /verify-email and show banner on dashboard."
         }
       },
       "description": "LoginData contains the login result."
@@ -681,6 +799,29 @@
       },
       "description": "RefreshTokenResponse is the response with new tokens."
     },
+    "v1ResendEmailVerificationRequest": {
+      "type": "object",
+      "description": "ResendEmailVerificationRequest re-sends the verification code.\nRate-limited to 1 per 60 seconds per user."
+    },
+    "v1ResendEmailVerificationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message."
+        },
+        "expiresIn": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Code expiry in seconds."
+        }
+      },
+      "description": "ResendEmailVerificationResponse confirms re-send."
+    },
     "v1ResetPasswordRequest": {
       "type": "object",
       "properties": {
@@ -708,6 +849,29 @@
         }
       },
       "description": "ResetPasswordResponse confirms password reset."
+    },
+    "v1SendEmailVerificationRequest": {
+      "type": "object",
+      "description": "SendEmailVerificationRequest is empty (uses JWT context to resolve user + email)."
+    },
+    "v1SendEmailVerificationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message (e.g., \"Verification code sent to j***@example.com\")."
+        },
+        "expiresIn": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Code expiry in seconds (e.g., 900 = 15 minutes)."
+        }
+      },
+      "description": "SendEmailVerificationResponse confirms the verification code was sent."
     },
     "v1TokenPair": {
       "type": "object",
@@ -814,6 +978,26 @@
         }
       },
       "description": "Verify2FAResponse confirms 2FA is enabled."
+    },
+    "v1VerifyEmailRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "6-digit verification code sent to the user's email."
+        }
+      },
+      "description": "VerifyEmailRequest validates the 6-digit verification code."
+    },
+    "v1VerifyEmailResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "VerifyEmailResponse confirms the email is verified."
     },
     "v1VerifyResetOTPRequest": {
       "type": "object",

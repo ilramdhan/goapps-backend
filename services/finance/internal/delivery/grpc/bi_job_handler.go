@@ -38,7 +38,7 @@ func (h *BIJobHandler) ListJobs(ctx context.Context, req *financev1.ListJobsRequ
 	}
 	items := make([]*financev1.BiJob, 0, len(out))
 	for _, j := range out {
-		items = append(items, jobToProto(j))
+		items = append(items, biJobToProto(j))
 	}
 	return &financev1.ListJobsResponse{
 		Base: successResponse("Jobs listed"),
@@ -66,7 +66,7 @@ func (h *BIJobHandler) ListJobLogs(ctx context.Context, req *financev1.ListJobLo
 	return &financev1.ListJobLogsResponse{
 		Base:       successResponse("Job logs listed"),
 		Data:       items,
-		Pagination: paginationResponse(int(req.GetPage()), int(req.GetPageSize()), result.Total),
+		Pagination: biPaginationResponse(int(req.GetPage()), int(req.GetPageSize()), result.Total),
 	}, nil
 }
 

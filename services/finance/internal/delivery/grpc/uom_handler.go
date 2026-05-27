@@ -33,6 +33,7 @@ type UOMHandler struct {
 // NewUOMHandler creates a new UOM gRPC handler.
 func NewUOMHandler(
 	repo uomdomain.Repository,
+	catRepo uomdomain.CategoryRepository,
 	cache *redis.UOMCache,
 ) (*UOMHandler, error) {
 	validationHelper, err := NewValidationHelper()
@@ -47,7 +48,7 @@ func NewUOMHandler(
 		deleteHandler:    uom.NewDeleteHandler(repo),
 		listHandler:      uom.NewListHandler(repo),
 		exportHandler:    uom.NewExportHandler(repo),
-		importHandler:    uom.NewImportHandler(repo),
+		importHandler:    uom.NewImportHandler(repo, catRepo),
 		templateHandler:  uom.NewTemplateHandler(),
 		cache:            cache,
 		validationHelper: validationHelper,
@@ -63,11 +64,11 @@ func (h *UOMHandler) CreateUOM(ctx context.Context, req *financev1.CreateUOMRequ
 	}
 
 	cmd := uom.CreateCommand{
-		UOMCode:     req.UomCode,
-		UOMName:     req.UomName,
-		UOMCategory: protoToCategory(req.UomCategory),
-		Description: req.Description,
-		CreatedBy:   getUserFromContext(ctx),
+		UOMCode:       req.UomCode,
+		UOMName:       req.UomName,
+		UOMCategoryID: req.UomCategoryId,
+		Description:   req.Description,
+		CreatedBy:     getUserFromContext(ctx),
 	}
 
 	entity, err := h.createHandler.Handle(ctx, cmd)
@@ -130,9 +131,8 @@ func (h *UOMHandler) UpdateUOM(ctx context.Context, req *financev1.UpdateUOMRequ
 	if req.UomName != nil && *req.UomName != "" {
 		cmd.UOMName = req.UomName
 	}
-	if req.UomCategory != nil && *req.UomCategory != financev1.UOMCategory_UOM_CATEGORY_UNSPECIFIED {
-		cat := protoToCategory(*req.UomCategory)
-		cmd.UOMCategory = &cat
+	if req.UomCategoryId != nil && *req.UomCategoryId != "" {
+		cmd.UOMCategoryID = req.UomCategoryId
 	}
 	if req.Description != nil {
 		cmd.Description = req.Description
@@ -196,8 +196,6 @@ func (h *UOMHandler) DeleteUOM(ctx context.Context, req *financev1.DeleteUOMRequ
 
 // ListUOMs lists UOMs with search, filter, and pagination.
 func (h *UOMHandler) ListUOMs(ctx context.Context, req *financev1.ListUOMsRequest) (*financev1.ListUOMsResponse, error) {
-	// Note: ListUOMs typically doesn't have strict validation requirements
-
 	page := int(req.Page)
 	if page == 0 {
 		page = 1
@@ -215,9 +213,8 @@ func (h *UOMHandler) ListUOMs(ctx context.Context, req *financev1.ListUOMsReques
 		SortOrder: req.SortOrder,
 	}
 
-	if req.Category != financev1.UOMCategory_UOM_CATEGORY_UNSPECIFIED {
-		cat := protoToCategory(req.Category)
-		query.Category = &cat
+	if req.UomCategoryId != "" {
+		query.CategoryID = &req.UomCategoryId
 	}
 
 	// Handle ActiveFilter enum
@@ -261,9 +258,8 @@ func (h *UOMHandler) ListUOMs(ctx context.Context, req *financev1.ListUOMsReques
 func (h *UOMHandler) ExportUOMs(ctx context.Context, req *financev1.ExportUOMsRequest) (*financev1.ExportUOMsResponse, error) {
 	query := uom.ExportQuery{}
 
-	if req.Category != financev1.UOMCategory_UOM_CATEGORY_UNSPECIFIED {
-		cat := protoToCategory(req.Category)
-		query.Category = &cat
+	if req.UomCategoryId != "" {
+		query.CategoryID = &req.UomCategoryId
 	}
 
 	// Handle ActiveFilter enum
@@ -323,9 +319,9 @@ func (h *UOMHandler) ImportUOMs(ctx context.Context, req *financev1.ImportUOMsRe
 		}
 	}
 
-	errors := make([]*financev1.ImportError, len(result.Errors))
+	importErrors := make([]*financev1.ImportError, len(result.Errors))
 	for i, e := range result.Errors {
-		errors[i] = &financev1.ImportError{
+		importErrors[i] = &financev1.ImportError{
 			RowNumber: e.RowNumber,
 			Field:     e.Field,
 			Message:   e.Message,
@@ -338,7 +334,7 @@ func (h *UOMHandler) ImportUOMs(ctx context.Context, req *financev1.ImportUOMsRe
 		SkippedCount: result.SkippedCount,
 		UpdatedCount: result.UpdatedCount,
 		FailedCount:  result.FailedCount,
-		Errors:       errors,
+		Errors:       importErrors,
 	}, nil
 }
 
@@ -376,7 +372,9 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	switch {
 	case strings.Contains(errMsg, "not found"):
 		return NotFoundResponse(errMsg)
-	case strings.Contains(errMsg, "already exists"):
+	case strings.Contains(errMsg, "already exists"),
+		strings.Contains(errMsg, "cannot be deleted"),
+		strings.Contains(errMsg, "already assigned"):
 		return ConflictResponse(errMsg)
 	case strings.Contains(errMsg, "invalid"):
 		return ErrorResponse("400", errMsg)
@@ -385,44 +383,16 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	}
 }
 
-func protoToCategory(cat financev1.UOMCategory) string {
-	switch cat {
-	case financev1.UOMCategory_UOM_CATEGORY_WEIGHT:
-		return "WEIGHT"
-	case financev1.UOMCategory_UOM_CATEGORY_LENGTH:
-		return "LENGTH"
-	case financev1.UOMCategory_UOM_CATEGORY_VOLUME:
-		return "VOLUME"
-	case financev1.UOMCategory_UOM_CATEGORY_QUANTITY:
-		return "QUANTITY"
-	default:
-		return ""
-	}
-}
-
-func categoryToProto(cat string) financev1.UOMCategory {
-	switch cat {
-	case "WEIGHT":
-		return financev1.UOMCategory_UOM_CATEGORY_WEIGHT
-	case "LENGTH":
-		return financev1.UOMCategory_UOM_CATEGORY_LENGTH
-	case "VOLUME":
-		return financev1.UOMCategory_UOM_CATEGORY_VOLUME
-	case "QUANTITY":
-		return financev1.UOMCategory_UOM_CATEGORY_QUANTITY
-	default:
-		return financev1.UOMCategory_UOM_CATEGORY_UNSPECIFIED
-	}
-}
-
 func entityToProto(entity *uomdomain.UOM) *financev1.UOM {
 	proto := &financev1.UOM{
-		UomId:       entity.ID().String(),
-		UomCode:     entity.Code().String(),
-		UomName:     entity.Name(),
-		UomCategory: categoryToProto(entity.Category().String()),
-		Description: entity.Description(),
-		IsActive:    entity.IsActive(),
+		UomId:           entity.ID().String(),
+		UomCode:         entity.Code().String(),
+		UomName:         entity.Name(),
+		UomCategoryId:   entity.CategoryID().String(),
+		UomCategoryCode: entity.CategoryInfo().Code(),
+		UomCategoryName: entity.CategoryInfo().Name(),
+		Description:     entity.Description(),
+		IsActive:        entity.IsActive(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: entity.CreatedAt().Format(time.RFC3339),
 			CreatedBy: entity.CreatedBy(),
@@ -440,8 +410,16 @@ func entityToProto(entity *uomdomain.UOM) *financev1.UOM {
 }
 
 func getUserFromContext(ctx context.Context) string {
+	// Prefer human-readable username from JWT claims (set by AuthInterceptor).
+	if username, ok := ctx.Value(AuthUsernameKey).(string); ok && username != "" {
+		return username
+	}
+	if userID, ok := ctx.Value(AuthUserIDKey).(string); ok && userID != "" {
+		return userID
+	}
+	// Legacy key retained in case any manual population still uses it.
 	if userID, ok := ctx.Value(UserIDKey).(string); ok && userID != "" {
 		return userID
 	}
-	return "system" // Default for now, will be from JWT in IAM service
+	return "system"
 }

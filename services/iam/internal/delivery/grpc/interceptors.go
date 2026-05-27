@@ -84,15 +84,21 @@ func TimeoutInterceptor(timeout time.Duration) grpc.UnaryServerInterceptor {
 }
 
 // TracingInterceptor adds OpenTelemetry tracing.
+//
+// The tracer is fetched lazily on every request rather than captured at
+// interceptor construction. This makes the interceptor robust to call ordering
+// — if the global TracerProvider is set AFTER NewServer (e.g. when tracing
+// init is wired later in main), the closure would otherwise capture a noop
+// tracer permanently and silently drop all spans.
 func TracingInterceptor() grpc.UnaryServerInterceptor {
-	tracer := otel.Tracer("iam-service")
-
 	return func(
 		ctx context.Context,
 		req interface{},
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
+		tracer := otel.Tracer("iam-service")
+
 		// Extract method name
 		methodParts := strings.Split(info.FullMethod, "/")
 		methodName := info.FullMethod

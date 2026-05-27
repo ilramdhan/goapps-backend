@@ -38,6 +38,15 @@ type Service interface {
 
 	// Disable2FA disables 2FA for a user.
 	Disable2FA(ctx context.Context, userID uuid.UUID, password, totpCode string) error
+
+	// SendEmailVerification sends a verification code to the authenticated user's email.
+	SendEmailVerification(ctx context.Context, userID uuid.UUID) (*EmailVerificationResult, error)
+
+	// VerifyEmail consumes a verification code and marks the user's email as verified.
+	VerifyEmail(ctx context.Context, userID uuid.UUID, code string) error
+
+	// ResendEmailVerification re-sends the verification code (rate-limited).
+	ResendEmailVerification(ctx context.Context, userID uuid.UUID) (*EmailVerificationResult, error)
 }
 
 // LoginInput contains the login request parameters.
@@ -52,10 +61,11 @@ type LoginInput struct {
 
 // LoginResult contains the login response data.
 type LoginResult struct {
-	AccessToken  string
-	RefreshToken string
-	ExpiresIn    int64
-	User         *UserInfo
+	AccessToken               string
+	RefreshToken              string
+	ExpiresIn                 int64
+	User                      *UserInfo
+	RequiresEmailVerification bool
 }
 
 // UserInfo contains basic user info for authentication context.
@@ -65,8 +75,15 @@ type UserInfo struct {
 	Email            string
 	FullName         string
 	TwoFactorEnabled bool
+	EmailVerified    bool
 	Roles            []string
 	Permissions      []string
+}
+
+// EmailVerificationResult contains the result of sending a verification email.
+type EmailVerificationResult struct {
+	Message   string
+	ExpiresIn int
 }
 
 // RefreshResult contains the token refresh response data.

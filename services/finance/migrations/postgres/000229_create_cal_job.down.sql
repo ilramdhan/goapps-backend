@@ -1,0 +1,3 @@
+DROP FUNCTION IF EXISTS generate_cal_job_code(TIMESTAMPTZ);
+DROP TABLE IF EXISTS cal_job_code_counter;
+DROP TABLE IF EXISTS cal_job CASCADE;

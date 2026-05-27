@@ -20,7 +20,16 @@ type CreateCommand struct {
 	DefaultValue   string
 	MinValue       string
 	MaxValue       string
-	CreatedBy      string
+
+	// Phase B costing metadata.
+	OwnerDepartment      string
+	IsRequiredForCosting bool
+	IsPeriodDependent    bool
+	LookupMasterCode     string
+	DisplayOrder         int32
+	DisplayGroup         string
+
+	CreatedBy string
 }
 
 // CreateHandler handles the CreateParameter command.
@@ -83,10 +92,19 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*paramet
 	}
 
 	// 5. Create domain entity
+	costing := parameter.CostingMetadata{
+		OwnerDepartment:      cmd.OwnerDepartment,
+		IsRequiredForCosting: cmd.IsRequiredForCosting,
+		IsPeriodDependent:    cmd.IsPeriodDependent,
+		LookupMasterCode:     cmd.LookupMasterCode,
+		DisplayOrder:         cmd.DisplayOrder,
+		DisplayGroup:         cmd.DisplayGroup,
+	}
 	entity, err := parameter.NewParameter(
 		code, cmd.ParamName, cmd.ParamShortName,
 		dataType, paramCategory, uomID,
 		defaultValue, minValue, maxValue,
+		costing,
 		cmd.CreatedBy,
 	)
 	if err != nil {

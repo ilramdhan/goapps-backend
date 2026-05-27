@@ -238,7 +238,7 @@ func TestGetHandler_Handle(t *testing.T) {
 		code, _ := parameter.NewCode("SPEED")
 		dt, _ := parameter.NewDataType("NUMBER")
 		cat, _ := parameter.NewParamCategory("INPUT")
-		expected, _ := parameter.NewParameter(code, "Speed", "Spd", dt, cat, nil, nil, nil, nil, "admin")
+		expected, _ := parameter.NewParameter(code, "Speed", "Spd", dt, cat, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
 
@@ -344,12 +344,12 @@ func TestListHandler_Handle(t *testing.T) {
 		code1, _ := parameter.NewCode("SPEED")
 		dt1, _ := parameter.NewDataType("NUMBER")
 		cat1, _ := parameter.NewParamCategory("INPUT")
-		p1, _ := parameter.NewParameter(code1, "Speed", "Spd", dt1, cat1, nil, nil, nil, nil, "admin")
+		p1, _ := parameter.NewParameter(code1, "Speed", "Spd", dt1, cat1, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 		code2, _ := parameter.NewCode("DENIER")
 		dt2, _ := parameter.NewDataType("NUMBER")
 		cat2, _ := parameter.NewParamCategory("INPUT")
-		p2, _ := parameter.NewParameter(code2, "Denier", "Den", dt2, cat2, nil, nil, nil, nil, "admin")
+		p2, _ := parameter.NewParameter(code2, "Denier", "Den", dt2, cat2, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("parameter.ListFilter")).Return(
 			[]*parameter.Parameter{p1, p2},
@@ -433,7 +433,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 		code, _ := parameter.NewCode("SPEED")
 		dt, _ := parameter.NewDataType("NUMBER")
 		cat, _ := parameter.NewParamCategory("INPUT")
-		existing, _ := parameter.NewParameter(code, "Speed", "Spd", dt, cat, nil, nil, nil, nil, "admin")
+		existing, _ := parameter.NewParameter(code, "Speed", "Spd", dt, cat, nil, nil, nil, nil, parameter.CostingMetadata{}, "admin")
 
 		mockRepo.On("GetByID", ctx, id).Return(existing, nil)
 		mockRepo.On("Update", ctx, mock.AnythingOfType("*parameter.Parameter")).Return(nil)

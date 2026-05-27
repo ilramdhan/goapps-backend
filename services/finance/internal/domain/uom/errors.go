@@ -23,8 +23,8 @@ var (
 	// ErrCodeTooLong is returned when the UOM code exceeds max length.
 	ErrCodeTooLong = errors.New("uom code must be at most 20 characters")
 
-	// ErrInvalidCategory is returned when the UOM category is invalid.
-	ErrInvalidCategory = errors.New("invalid uom category: must be WEIGHT, LENGTH, VOLUME, or QUANTITY")
+	// ErrInvalidCategory is returned when the UOM category ID is invalid.
+	ErrInvalidCategory = errors.New("invalid uom category: category ID is required")
 
 	// ErrEmptyName is returned when the UOM name is empty.
 	ErrEmptyName = errors.New("uom name cannot be empty")

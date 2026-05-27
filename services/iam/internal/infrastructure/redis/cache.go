@@ -130,9 +130,11 @@ func NewOTPCache(client *Client, ttl time.Duration) *OTPCache {
 }
 
 const (
-	otpPrefix          = "iam:otp:"
-	resetTokenPrefix   = "iam:reset:"
-	loginAttemptPrefix = "iam:login_attempt:"
+	otpPrefix             = "iam:otp:"
+	resetTokenPrefix      = "iam:reset:"
+	loginAttemptPrefix    = "iam:login_attempt:"
+	emailVerifyPrefix     = "iam:email_verify:"
+	emailVerifyCoolPrefix = "iam:email_verify_cooldown:"
 )
 
 // StoreOTP stores an OTP code for a user.
@@ -233,6 +235,53 @@ func (c *OTPCache) Delete2FASetup(ctx context.Context, userID uuid.UUID) error {
 	pipe.Del(ctx, twoFACodesPrefix+userID.String())
 	_, err := pipe.Exec(ctx)
 	return err
+}
+
+// StoreEmailVerificationOTP stores a 6-digit email verification code for a user.
+func (c *OTPCache) StoreEmailVerificationOTP(ctx context.Context, userID uuid.UUID, code string, ttl time.Duration) error {
+	key := emailVerifyPrefix + userID.String()
+	return c.client.Set(ctx, key, code, ttl).Err()
+}
+
+// VerifyEmailOTP verifies and deletes an email verification code.
+func (c *OTPCache) VerifyEmailOTP(ctx context.Context, userID uuid.UUID, code string) (bool, error) {
+	key := emailVerifyPrefix + userID.String()
+	stored, err := c.client.Get(ctx, key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if stored != code {
+		return false, nil
+	}
+
+	// Delete after successful verification.
+	if delErr := c.client.Del(ctx, key).Err(); delErr != nil {
+		return true, fmt.Errorf("verified but failed to delete key: %w", delErr)
+	}
+	return true, nil
+}
+
+// SetEmailVerifyCooldown sets a 60-second cooldown to prevent resend spam.
+func (c *OTPCache) SetEmailVerifyCooldown(ctx context.Context, userID uuid.UUID) error {
+	key := emailVerifyCoolPrefix + userID.String()
+	return c.client.Set(ctx, key, "1", 60*time.Second).Err()
+}
+
+// IsEmailVerifyCooldown checks if the user is still in the resend cooldown period.
+func (c *OTPCache) IsEmailVerifyCooldown(ctx context.Context, userID uuid.UUID) (bool, error) {
+	key := emailVerifyCoolPrefix + userID.String()
+	_, err := c.client.Get(ctx, key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // RateLimitCache provides rate limiting functionality.

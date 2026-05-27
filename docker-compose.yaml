@@ -90,6 +90,29 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
     networks:
       - goapps
+  # RabbitMQ - Message Queue for async job processing
+  # Management UI: http://localhost:15672 (guest/guest)
+  # AMQP: localhost:5672
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: goapps-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - goapps
+
   # Shared MinIO - S3-compatible Object Storage
   # API: localhost:9000 | Console: http://localhost:9001
   # All services share one bucket (goapps-staging), scoped by STORAGE_BASE_PATH:
@@ -123,7 +146,7 @@ services:
       minio:
         condition: service_healthy
     entrypoint: >
-      /bin/sh -c " mc alias set local http://minio:9000 minioadmin minioadmin; mc mb --ignore-existing local/goapps-staging; mc anonymous set download local/goapps-staging; echo 'Bucket goapps-staging created with public read policy'; "
+      /bin/sh -c " mc alias set local http://minio:9000 minioadmin minioadmin; mc mb --ignore-existing local/goapps-staging; mc anonymous set download local/goapps-staging; mc ilm rule add --expire-days 30 --prefix 'exports/' local/goapps-staging 2>/dev/null || mc ilm rule edit --id 'expire-exports-30d' --expire-days 30 --prefix 'exports/' local/goapps-staging 2>/dev/null || true; echo 'Bucket goapps-staging ready with 30-day lifecycle on exports/'; "
     networks:
       - goapps
 
@@ -131,6 +154,7 @@ volumes:
   iam_postgres_data:
   finance_postgres_data:
   redis_data:
+  rabbitmq_data:
   minio_data:
 
 

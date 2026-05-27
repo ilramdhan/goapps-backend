@@ -24,67 +24,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// UOMCategory represents the category of a unit of measure.
-type UOMCategory int32
-
-const (
-	// Default unspecified value - used as "no filter" in list/export requests.
-	UOMCategory_UOM_CATEGORY_UNSPECIFIED UOMCategory = 0
-	// Weight-based units (e.g., KG, GR, TON).
-	UOMCategory_UOM_CATEGORY_WEIGHT UOMCategory = 1
-	// Length-based units (e.g., MTR, CM, YARD).
-	UOMCategory_UOM_CATEGORY_LENGTH UOMCategory = 2
-	// Volume-based units (e.g., LTR, ML).
-	UOMCategory_UOM_CATEGORY_VOLUME UOMCategory = 3
-	// Quantity-based units (e.g., PCS, BOX, SET).
-	UOMCategory_UOM_CATEGORY_QUANTITY UOMCategory = 4
-)
-
-// Enum value maps for UOMCategory.
-var (
-	UOMCategory_name = map[int32]string{
-		0: "UOM_CATEGORY_UNSPECIFIED",
-		1: "UOM_CATEGORY_WEIGHT",
-		2: "UOM_CATEGORY_LENGTH",
-		3: "UOM_CATEGORY_VOLUME",
-		4: "UOM_CATEGORY_QUANTITY",
-	}
-	UOMCategory_value = map[string]int32{
-		"UOM_CATEGORY_UNSPECIFIED": 0,
-		"UOM_CATEGORY_WEIGHT":      1,
-		"UOM_CATEGORY_LENGTH":      2,
-		"UOM_CATEGORY_VOLUME":      3,
-		"UOM_CATEGORY_QUANTITY":    4,
-	}
-)
-
-func (x UOMCategory) Enum() *UOMCategory {
-	p := new(UOMCategory)
-	*p = x
-	return p
-}
-
-func (x UOMCategory) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (UOMCategory) Descriptor() protoreflect.EnumDescriptor {
-	return file_finance_v1_uom_proto_enumTypes[0].Descriptor()
-}
-
-func (UOMCategory) Type() protoreflect.EnumType {
-	return &file_finance_v1_uom_proto_enumTypes[0]
-}
-
-func (x UOMCategory) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use UOMCategory.Descriptor instead.
-func (UOMCategory) EnumDescriptor() ([]byte, []int) {
-	return file_finance_v1_uom_proto_rawDescGZIP(), []int{0}
-}
-
 // ActiveFilter represents filter options for is_active field.
 type ActiveFilter int32
 
@@ -122,11 +61,11 @@ func (x ActiveFilter) String() string {
 }
 
 func (ActiveFilter) Descriptor() protoreflect.EnumDescriptor {
-	return file_finance_v1_uom_proto_enumTypes[1].Descriptor()
+	return file_finance_v1_uom_proto_enumTypes[0].Descriptor()
 }
 
 func (ActiveFilter) Type() protoreflect.EnumType {
-	return &file_finance_v1_uom_proto_enumTypes[1]
+	return &file_finance_v1_uom_proto_enumTypes[0]
 }
 
 func (x ActiveFilter) Number() protoreflect.EnumNumber {
@@ -135,7 +74,7 @@ func (x ActiveFilter) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ActiveFilter.Descriptor instead.
 func (ActiveFilter) EnumDescriptor() ([]byte, []int) {
-	return file_finance_v1_uom_proto_rawDescGZIP(), []int{1}
+	return file_finance_v1_uom_proto_rawDescGZIP(), []int{0}
 }
 
 // UOM represents a Unit of Measure entity.
@@ -147,16 +86,20 @@ type UOM struct {
 	UomCode string `protobuf:"bytes,2,opt,name=uom_code,json=uomCode,proto3" json:"uom_code,omitempty"`
 	// Display name (e.g., "Kilogram", "Meter", "Pieces").
 	UomName string `protobuf:"bytes,3,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty"`
-	// Category of the UOM.
-	UomCategory UOMCategory `protobuf:"varint,4,opt,name=uom_category,json=uomCategory,proto3,enum=finance.v1.UOMCategory" json:"uom_category,omitempty"`
 	// Optional description.
 	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	// Whether the UOM is active.
 	IsActive bool `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	// Audit information.
-	Audit         *v1.AuditInfo `protobuf:"bytes,7,opt,name=audit,proto3" json:"audit,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Audit *v1.AuditInfo `protobuf:"bytes,7,opt,name=audit,proto3" json:"audit,omitempty"`
+	// Category ID (FK to mst_uom_category).
+	UomCategoryId string `protobuf:"bytes,8,opt,name=uom_category_id,json=uomCategoryId,proto3" json:"uom_category_id,omitempty"`
+	// Category code (denormalized for display, e.g., "WEIGHT").
+	UomCategoryCode string `protobuf:"bytes,9,opt,name=uom_category_code,json=uomCategoryCode,proto3" json:"uom_category_code,omitempty"`
+	// Category name (denormalized for display, e.g., "Weight").
+	UomCategoryName string `protobuf:"bytes,10,opt,name=uom_category_name,json=uomCategoryName,proto3" json:"uom_category_name,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UOM) Reset() {
@@ -210,13 +153,6 @@ func (x *UOM) GetUomName() string {
 	return ""
 }
 
-func (x *UOM) GetUomCategory() UOMCategory {
-	if x != nil {
-		return x.UomCategory
-	}
-	return UOMCategory_UOM_CATEGORY_UNSPECIFIED
-}
-
 func (x *UOM) GetDescription() string {
 	if x != nil {
 		return x.Description
@@ -238,6 +174,27 @@ func (x *UOM) GetAudit() *v1.AuditInfo {
 	return nil
 }
 
+func (x *UOM) GetUomCategoryId() string {
+	if x != nil {
+		return x.UomCategoryId
+	}
+	return ""
+}
+
+func (x *UOM) GetUomCategoryCode() string {
+	if x != nil {
+		return x.UomCategoryCode
+	}
+	return ""
+}
+
+func (x *UOM) GetUomCategoryName() string {
+	if x != nil {
+		return x.UomCategoryName
+	}
+	return ""
+}
+
 // CreateUOMRequest is the request for creating a new UOM.
 type CreateUOMRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -246,10 +203,10 @@ type CreateUOMRequest struct {
 	UomCode string `protobuf:"bytes,1,opt,name=uom_code,json=uomCode,proto3" json:"uom_code,omitempty"`
 	// Display name (1-100 chars).
 	UomName string `protobuf:"bytes,2,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty"`
-	// Category (required, cannot be UNSPECIFIED).
-	UomCategory UOMCategory `protobuf:"varint,3,opt,name=uom_category,json=uomCategory,proto3,enum=finance.v1.UOMCategory" json:"uom_category,omitempty"`
 	// Optional description (max 500 chars).
-	Description   string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// Category ID (UUID, required - FK to mst_uom_category).
+	UomCategoryId string `protobuf:"bytes,5,opt,name=uom_category_id,json=uomCategoryId,proto3" json:"uom_category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -298,16 +255,16 @@ func (x *CreateUOMRequest) GetUomName() string {
 	return ""
 }
 
-func (x *CreateUOMRequest) GetUomCategory() UOMCategory {
-	if x != nil {
-		return x.UomCategory
-	}
-	return UOMCategory_UOM_CATEGORY_UNSPECIFIED
-}
-
 func (x *CreateUOMRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateUOMRequest) GetUomCategoryId() string {
+	if x != nil {
+		return x.UomCategoryId
 	}
 	return ""
 }
@@ -477,13 +434,12 @@ type UpdateUOMRequest struct {
 	// New display name (optional, 1-100 chars if provided).
 	// Empty string means no change.
 	UomName *string `protobuf:"bytes,2,opt,name=uom_name,json=uomName,proto3,oneof" json:"uom_name,omitempty"`
-	// New category (optional, cannot be UNSPECIFIED if provided).
-	// Use has_uom_category to check if this field is set.
-	UomCategory *UOMCategory `protobuf:"varint,3,opt,name=uom_category,json=uomCategory,proto3,enum=finance.v1.UOMCategory,oneof" json:"uom_category,omitempty"`
 	// New description (optional, max 500 chars).
 	Description *string `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	// New active status (optional).
-	IsActive      *bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	IsActive *bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// New category ID (optional, UUID format).
+	UomCategoryId *string `protobuf:"bytes,6,opt,name=uom_category_id,json=uomCategoryId,proto3,oneof" json:"uom_category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -532,13 +488,6 @@ func (x *UpdateUOMRequest) GetUomName() string {
 	return ""
 }
 
-func (x *UpdateUOMRequest) GetUomCategory() UOMCategory {
-	if x != nil && x.UomCategory != nil {
-		return *x.UomCategory
-	}
-	return UOMCategory_UOM_CATEGORY_UNSPECIFIED
-}
-
 func (x *UpdateUOMRequest) GetDescription() string {
 	if x != nil && x.Description != nil {
 		return *x.Description
@@ -551,6 +500,13 @@ func (x *UpdateUOMRequest) GetIsActive() bool {
 		return *x.IsActive
 	}
 	return false
+}
+
+func (x *UpdateUOMRequest) GetUomCategoryId() string {
+	if x != nil && x.UomCategoryId != nil {
+		return *x.UomCategoryId
+	}
+	return ""
 }
 
 // UpdateUOMResponse is the response for updating a UOM.
@@ -709,17 +665,16 @@ type ListUOMsRequest struct {
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Search query (searches in code, name, description).
 	Search string `protobuf:"bytes,3,opt,name=search,proto3" json:"search,omitempty"`
-	// Filter by category.
-	// UOM_CATEGORY_UNSPECIFIED (0) means "show all categories" (no filter).
-	Category UOMCategory `protobuf:"varint,4,opt,name=category,proto3,enum=finance.v1.UOMCategory" json:"category,omitempty"`
 	// Filter by active status.
 	// ACTIVE_FILTER_UNSPECIFIED (0) = show all, ACTIVE_FILTER_ACTIVE (1) = only active,
 	// ACTIVE_FILTER_INACTIVE (2) = only inactive.
 	ActiveFilter ActiveFilter `protobuf:"varint,5,opt,name=active_filter,json=activeFilter,proto3,enum=finance.v1.ActiveFilter" json:"active_filter,omitempty"`
-	// Sort field: "code", "name", "created_at" (default: "code").
+	// Sort field: "code", "name", "category", "created_at" (default: "code").
 	SortBy string `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
 	// Sort order: "asc", "desc" (default: "asc").
-	SortOrder     string `protobuf:"bytes,7,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	SortOrder string `protobuf:"bytes,7,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	// Filter by category ID (empty = no filter).
+	UomCategoryId string `protobuf:"bytes,8,opt,name=uom_category_id,json=uomCategoryId,proto3" json:"uom_category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -775,13 +730,6 @@ func (x *ListUOMsRequest) GetSearch() string {
 	return ""
 }
 
-func (x *ListUOMsRequest) GetCategory() UOMCategory {
-	if x != nil {
-		return x.Category
-	}
-	return UOMCategory_UOM_CATEGORY_UNSPECIFIED
-}
-
 func (x *ListUOMsRequest) GetActiveFilter() ActiveFilter {
 	if x != nil {
 		return x.ActiveFilter
@@ -799,6 +747,13 @@ func (x *ListUOMsRequest) GetSortBy() string {
 func (x *ListUOMsRequest) GetSortOrder() string {
 	if x != nil {
 		return x.SortOrder
+	}
+	return ""
+}
+
+func (x *ListUOMsRequest) GetUomCategoryId() string {
+	if x != nil {
+		return x.UomCategoryId
 	}
 	return ""
 }
@@ -870,13 +825,12 @@ func (x *ListUOMsResponse) GetPagination() *v1.PaginationResponse {
 // ExportUOMsRequest is the request for exporting UOMs to Excel.
 type ExportUOMsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Filter by category.
-	// UOM_CATEGORY_UNSPECIFIED (0) means "export all categories".
-	Category UOMCategory `protobuf:"varint,1,opt,name=category,proto3,enum=finance.v1.UOMCategory" json:"category,omitempty"`
 	// Filter by active status.
 	// ACTIVE_FILTER_UNSPECIFIED (0) = export all, ACTIVE_FILTER_ACTIVE (1) = only active,
 	// ACTIVE_FILTER_INACTIVE (2) = only inactive.
-	ActiveFilter  ActiveFilter `protobuf:"varint,2,opt,name=active_filter,json=activeFilter,proto3,enum=finance.v1.ActiveFilter" json:"active_filter,omitempty"`
+	ActiveFilter ActiveFilter `protobuf:"varint,2,opt,name=active_filter,json=activeFilter,proto3,enum=finance.v1.ActiveFilter" json:"active_filter,omitempty"`
+	// Filter by category ID (empty = export all categories).
+	UomCategoryId string `protobuf:"bytes,3,opt,name=uom_category_id,json=uomCategoryId,proto3" json:"uom_category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -911,18 +865,18 @@ func (*ExportUOMsRequest) Descriptor() ([]byte, []int) {
 	return file_finance_v1_uom_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *ExportUOMsRequest) GetCategory() UOMCategory {
-	if x != nil {
-		return x.Category
-	}
-	return UOMCategory_UOM_CATEGORY_UNSPECIFIED
-}
-
 func (x *ExportUOMsRequest) GetActiveFilter() ActiveFilter {
 	if x != nil {
 		return x.ActiveFilter
 	}
 	return ActiveFilter_ACTIVE_FILTER_UNSPECIFIED
+}
+
+func (x *ExportUOMsRequest) GetUomCategoryId() string {
+	if x != nil {
+		return x.UomCategoryId
+	}
+	return ""
 }
 
 // ExportUOMsResponse is the response containing the Excel file.
@@ -1315,20 +1269,23 @@ var File_finance_v1_uom_proto protoreflect.FileDescriptor
 const file_finance_v1_uom_proto_rawDesc = "" +
 	"\n" +
 	"\x14finance/v1/uom.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xf9\x01\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xd1\x02\n" +
 	"\x03UOM\x12\x15\n" +
 	"\x06uom_id\x18\x01 \x01(\tR\x05uomId\x12\x19\n" +
 	"\buom_code\x18\x02 \x01(\tR\auomCode\x12\x19\n" +
-	"\buom_name\x18\x03 \x01(\tR\auomName\x12:\n" +
-	"\fuom_category\x18\x04 \x01(\x0e2\x17.finance.v1.UOMCategoryR\vuomCategory\x12 \n" +
+	"\buom_name\x18\x03 \x01(\tR\auomName\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1b\n" +
 	"\tis_active\x18\x06 \x01(\bR\bisActive\x12*\n" +
-	"\x05audit\x18\a \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xe3\x01\n" +
+	"\x05audit\x18\a \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12&\n" +
+	"\x0fuom_category_id\x18\b \x01(\tR\ruomCategoryId\x12*\n" +
+	"\x11uom_category_code\x18\t \x01(\tR\x0fuomCategoryCode\x12*\n" +
+	"\x11uom_category_name\x18\n" +
+	" \x01(\tR\x0fuomCategoryNameJ\x04\b\x04\x10\x05R\fuom_category\"\xe3\x01\n" +
 	"\x10CreateUOMRequest\x127\n" +
 	"\buom_code\x18\x01 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18\x142\x11^[A-Z][A-Z0-9_]*$R\auomCode\x12$\n" +
-	"\buom_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\auomName\x12D\n" +
-	"\fuom_category\x18\x03 \x01(\x0e2\x17.finance.v1.UOMCategoryB\b\xbaH\x05\x82\x01\x02 \x00R\vuomCategory\x12*\n" +
-	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\vdescription\"e\n" +
+	"\buom_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\auomName\x12*\n" +
+	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\vdescription\x120\n" +
+	"\x0fuom_category_id\x18\x05 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\ruomCategoryIdJ\x04\b\x03\x10\x04R\fuom_category\"e\n" +
 	"\x11CreateUOMResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12#\n" +
 	"\x04data\x18\x02 \x01(\v2\x0f.finance.v1.UOMR\x04data\"0\n" +
@@ -1336,44 +1293,44 @@ const file_finance_v1_uom_proto_rawDesc = "" +
 	"\x06uom_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05uomId\"b\n" +
 	"\x0eGetUOMResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12#\n" +
-	"\x04data\x18\x02 \x01(\v2\x0f.finance.v1.UOMR\x04data\"\xb6\x02\n" +
+	"\x04data\x18\x02 \x01(\v2\x0f.finance.v1.UOMR\x04data\"\xaf\x02\n" +
 	"\x10UpdateUOMRequest\x12\x1f\n" +
 	"\x06uom_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05uomId\x12'\n" +
-	"\buom_name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dH\x00R\auomName\x88\x01\x01\x12I\n" +
-	"\fuom_category\x18\x03 \x01(\x0e2\x17.finance.v1.UOMCategoryB\b\xbaH\x05\x82\x01\x02 \x00H\x01R\vuomCategory\x88\x01\x01\x12/\n" +
-	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03H\x02R\vdescription\x88\x01\x01\x12 \n" +
-	"\tis_active\x18\x05 \x01(\bH\x03R\bisActive\x88\x01\x01B\v\n" +
-	"\t_uom_nameB\x0f\n" +
-	"\r_uom_categoryB\x0e\n" +
+	"\buom_name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dH\x00R\auomName\x88\x01\x01\x12/\n" +
+	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03H\x01R\vdescription\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\x05 \x01(\bH\x02R\bisActive\x88\x01\x01\x12+\n" +
+	"\x0fuom_category_id\x18\x06 \x01(\tH\x03R\ruomCategoryId\x88\x01\x01B\v\n" +
+	"\t_uom_nameB\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
-	"_is_active\"e\n" +
+	"_is_activeB\x12\n" +
+	"\x10_uom_category_idJ\x04\b\x03\x10\x04R\fuom_category\"e\n" +
 	"\x11UpdateUOMResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12#\n" +
 	"\x04data\x18\x02 \x01(\v2\x0f.finance.v1.UOMR\x04data\"3\n" +
 	"\x10DeleteUOMRequest\x12\x1f\n" +
 	"\x06uom_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05uomId\"@\n" +
 	"\x11DeleteUOMResponse\x12+\n" +
-	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xd8\x02\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xe5\x02\n" +
 	"\x0fListUOMsRequest\x12\x1b\n" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\x12\x1f\n" +
-	"\x06search\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06search\x123\n" +
-	"\bcategory\x18\x04 \x01(\x0e2\x17.finance.v1.UOMCategoryR\bcategory\x12=\n" +
-	"\ractive_filter\x18\x05 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\x128\n" +
-	"\asort_by\x18\x06 \x01(\tB\x1f\xbaH\x1cr\x1aR\x00R\x04codeR\x04nameR\n" +
+	"\x06search\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06search\x12=\n" +
+	"\ractive_filter\x18\x05 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\x12B\n" +
+	"\asort_by\x18\x06 \x01(\tB)\xbaH&r$R\x00R\x04codeR\x04nameR\bcategoryR\n" +
 	"created_atR\x06sortBy\x121\n" +
 	"\n" +
-	"sort_order\x18\a \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\"\xa3\x01\n" +
+	"sort_order\x18\a \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\x12&\n" +
+	"\x0fuom_category_id\x18\b \x01(\tR\ruomCategoryIdJ\x04\b\x04\x10\x05R\bcategory\"\xa3\x01\n" +
 	"\x10ListUOMsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12#\n" +
 	"\x04data\x18\x02 \x03(\v2\x0f.finance.v1.UOMR\x04data\x12=\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\x87\x01\n" +
-	"\x11ExportUOMsRequest\x123\n" +
-	"\bcategory\x18\x01 \x01(\x0e2\x17.finance.v1.UOMCategoryR\bcategory\x12=\n" +
-	"\ractive_filter\x18\x02 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\"\x81\x01\n" +
+	"pagination\"\x8a\x01\n" +
+	"\x11ExportUOMsRequest\x12=\n" +
+	"\ractive_filter\x18\x02 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\x12&\n" +
+	"\x0fuom_category_id\x18\x03 \x01(\tR\ruomCategoryIdJ\x04\b\x01\x10\x02R\bcategory\"\x81\x01\n" +
 	"\x12ExportUOMsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
@@ -1398,13 +1355,7 @@ const file_finance_v1_uom_proto_rawDesc = "" +
 	"\x18DownloadTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName*\x91\x01\n" +
-	"\vUOMCategory\x12\x1c\n" +
-	"\x18UOM_CATEGORY_UNSPECIFIED\x10\x00\x12\x17\n" +
-	"\x13UOM_CATEGORY_WEIGHT\x10\x01\x12\x17\n" +
-	"\x13UOM_CATEGORY_LENGTH\x10\x02\x12\x17\n" +
-	"\x13UOM_CATEGORY_VOLUME\x10\x03\x12\x19\n" +
-	"\x15UOM_CATEGORY_QUANTITY\x10\x04*c\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName*c\n" +
 	"\fActiveFilter\x12\x1d\n" +
 	"\x19ACTIVE_FILTER_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14ACTIVE_FILTER_ACTIVE\x10\x01\x12\x1a\n" +
@@ -1437,77 +1388,71 @@ func file_finance_v1_uom_proto_rawDescGZIP() []byte {
 	return file_finance_v1_uom_proto_rawDescData
 }
 
-var file_finance_v1_uom_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_finance_v1_uom_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_finance_v1_uom_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_finance_v1_uom_proto_goTypes = []any{
-	(UOMCategory)(0),                 // 0: finance.v1.UOMCategory
-	(ActiveFilter)(0),                // 1: finance.v1.ActiveFilter
-	(*UOM)(nil),                      // 2: finance.v1.UOM
-	(*CreateUOMRequest)(nil),         // 3: finance.v1.CreateUOMRequest
-	(*CreateUOMResponse)(nil),        // 4: finance.v1.CreateUOMResponse
-	(*GetUOMRequest)(nil),            // 5: finance.v1.GetUOMRequest
-	(*GetUOMResponse)(nil),           // 6: finance.v1.GetUOMResponse
-	(*UpdateUOMRequest)(nil),         // 7: finance.v1.UpdateUOMRequest
-	(*UpdateUOMResponse)(nil),        // 8: finance.v1.UpdateUOMResponse
-	(*DeleteUOMRequest)(nil),         // 9: finance.v1.DeleteUOMRequest
-	(*DeleteUOMResponse)(nil),        // 10: finance.v1.DeleteUOMResponse
-	(*ListUOMsRequest)(nil),          // 11: finance.v1.ListUOMsRequest
-	(*ListUOMsResponse)(nil),         // 12: finance.v1.ListUOMsResponse
-	(*ExportUOMsRequest)(nil),        // 13: finance.v1.ExportUOMsRequest
-	(*ExportUOMsResponse)(nil),       // 14: finance.v1.ExportUOMsResponse
-	(*ImportUOMsRequest)(nil),        // 15: finance.v1.ImportUOMsRequest
-	(*ImportUOMsResponse)(nil),       // 16: finance.v1.ImportUOMsResponse
-	(*ImportError)(nil),              // 17: finance.v1.ImportError
-	(*DownloadTemplateRequest)(nil),  // 18: finance.v1.DownloadTemplateRequest
-	(*DownloadTemplateResponse)(nil), // 19: finance.v1.DownloadTemplateResponse
-	(*v1.AuditInfo)(nil),             // 20: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),          // 21: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),    // 22: common.v1.PaginationResponse
+	(ActiveFilter)(0),                // 0: finance.v1.ActiveFilter
+	(*UOM)(nil),                      // 1: finance.v1.UOM
+	(*CreateUOMRequest)(nil),         // 2: finance.v1.CreateUOMRequest
+	(*CreateUOMResponse)(nil),        // 3: finance.v1.CreateUOMResponse
+	(*GetUOMRequest)(nil),            // 4: finance.v1.GetUOMRequest
+	(*GetUOMResponse)(nil),           // 5: finance.v1.GetUOMResponse
+	(*UpdateUOMRequest)(nil),         // 6: finance.v1.UpdateUOMRequest
+	(*UpdateUOMResponse)(nil),        // 7: finance.v1.UpdateUOMResponse
+	(*DeleteUOMRequest)(nil),         // 8: finance.v1.DeleteUOMRequest
+	(*DeleteUOMResponse)(nil),        // 9: finance.v1.DeleteUOMResponse
+	(*ListUOMsRequest)(nil),          // 10: finance.v1.ListUOMsRequest
+	(*ListUOMsResponse)(nil),         // 11: finance.v1.ListUOMsResponse
+	(*ExportUOMsRequest)(nil),        // 12: finance.v1.ExportUOMsRequest
+	(*ExportUOMsResponse)(nil),       // 13: finance.v1.ExportUOMsResponse
+	(*ImportUOMsRequest)(nil),        // 14: finance.v1.ImportUOMsRequest
+	(*ImportUOMsResponse)(nil),       // 15: finance.v1.ImportUOMsResponse
+	(*ImportError)(nil),              // 16: finance.v1.ImportError
+	(*DownloadTemplateRequest)(nil),  // 17: finance.v1.DownloadTemplateRequest
+	(*DownloadTemplateResponse)(nil), // 18: finance.v1.DownloadTemplateResponse
+	(*v1.AuditInfo)(nil),             // 19: common.v1.AuditInfo
+	(*v1.BaseResponse)(nil),          // 20: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),    // 21: common.v1.PaginationResponse
 }
 var file_finance_v1_uom_proto_depIdxs = []int32{
-	0,  // 0: finance.v1.UOM.uom_category:type_name -> finance.v1.UOMCategory
-	20, // 1: finance.v1.UOM.audit:type_name -> common.v1.AuditInfo
-	0,  // 2: finance.v1.CreateUOMRequest.uom_category:type_name -> finance.v1.UOMCategory
-	21, // 3: finance.v1.CreateUOMResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 4: finance.v1.CreateUOMResponse.data:type_name -> finance.v1.UOM
-	21, // 5: finance.v1.GetUOMResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 6: finance.v1.GetUOMResponse.data:type_name -> finance.v1.UOM
-	0,  // 7: finance.v1.UpdateUOMRequest.uom_category:type_name -> finance.v1.UOMCategory
-	21, // 8: finance.v1.UpdateUOMResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 9: finance.v1.UpdateUOMResponse.data:type_name -> finance.v1.UOM
-	21, // 10: finance.v1.DeleteUOMResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 11: finance.v1.ListUOMsRequest.category:type_name -> finance.v1.UOMCategory
-	1,  // 12: finance.v1.ListUOMsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	21, // 13: finance.v1.ListUOMsResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 14: finance.v1.ListUOMsResponse.data:type_name -> finance.v1.UOM
-	22, // 15: finance.v1.ListUOMsResponse.pagination:type_name -> common.v1.PaginationResponse
-	0,  // 16: finance.v1.ExportUOMsRequest.category:type_name -> finance.v1.UOMCategory
-	1,  // 17: finance.v1.ExportUOMsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	21, // 18: finance.v1.ExportUOMsResponse.base:type_name -> common.v1.BaseResponse
-	21, // 19: finance.v1.ImportUOMsResponse.base:type_name -> common.v1.BaseResponse
-	17, // 20: finance.v1.ImportUOMsResponse.errors:type_name -> finance.v1.ImportError
-	21, // 21: finance.v1.DownloadTemplateResponse.base:type_name -> common.v1.BaseResponse
-	3,  // 22: finance.v1.UOMService.CreateUOM:input_type -> finance.v1.CreateUOMRequest
-	5,  // 23: finance.v1.UOMService.GetUOM:input_type -> finance.v1.GetUOMRequest
-	7,  // 24: finance.v1.UOMService.UpdateUOM:input_type -> finance.v1.UpdateUOMRequest
-	9,  // 25: finance.v1.UOMService.DeleteUOM:input_type -> finance.v1.DeleteUOMRequest
-	11, // 26: finance.v1.UOMService.ListUOMs:input_type -> finance.v1.ListUOMsRequest
-	13, // 27: finance.v1.UOMService.ExportUOMs:input_type -> finance.v1.ExportUOMsRequest
-	15, // 28: finance.v1.UOMService.ImportUOMs:input_type -> finance.v1.ImportUOMsRequest
-	18, // 29: finance.v1.UOMService.DownloadTemplate:input_type -> finance.v1.DownloadTemplateRequest
-	4,  // 30: finance.v1.UOMService.CreateUOM:output_type -> finance.v1.CreateUOMResponse
-	6,  // 31: finance.v1.UOMService.GetUOM:output_type -> finance.v1.GetUOMResponse
-	8,  // 32: finance.v1.UOMService.UpdateUOM:output_type -> finance.v1.UpdateUOMResponse
-	10, // 33: finance.v1.UOMService.DeleteUOM:output_type -> finance.v1.DeleteUOMResponse
-	12, // 34: finance.v1.UOMService.ListUOMs:output_type -> finance.v1.ListUOMsResponse
-	14, // 35: finance.v1.UOMService.ExportUOMs:output_type -> finance.v1.ExportUOMsResponse
-	16, // 36: finance.v1.UOMService.ImportUOMs:output_type -> finance.v1.ImportUOMsResponse
-	19, // 37: finance.v1.UOMService.DownloadTemplate:output_type -> finance.v1.DownloadTemplateResponse
-	30, // [30:38] is the sub-list for method output_type
-	22, // [22:30] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	19, // 0: finance.v1.UOM.audit:type_name -> common.v1.AuditInfo
+	20, // 1: finance.v1.CreateUOMResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 2: finance.v1.CreateUOMResponse.data:type_name -> finance.v1.UOM
+	20, // 3: finance.v1.GetUOMResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 4: finance.v1.GetUOMResponse.data:type_name -> finance.v1.UOM
+	20, // 5: finance.v1.UpdateUOMResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 6: finance.v1.UpdateUOMResponse.data:type_name -> finance.v1.UOM
+	20, // 7: finance.v1.DeleteUOMResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 8: finance.v1.ListUOMsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	20, // 9: finance.v1.ListUOMsResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 10: finance.v1.ListUOMsResponse.data:type_name -> finance.v1.UOM
+	21, // 11: finance.v1.ListUOMsResponse.pagination:type_name -> common.v1.PaginationResponse
+	0,  // 12: finance.v1.ExportUOMsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	20, // 13: finance.v1.ExportUOMsResponse.base:type_name -> common.v1.BaseResponse
+	20, // 14: finance.v1.ImportUOMsResponse.base:type_name -> common.v1.BaseResponse
+	16, // 15: finance.v1.ImportUOMsResponse.errors:type_name -> finance.v1.ImportError
+	20, // 16: finance.v1.DownloadTemplateResponse.base:type_name -> common.v1.BaseResponse
+	2,  // 17: finance.v1.UOMService.CreateUOM:input_type -> finance.v1.CreateUOMRequest
+	4,  // 18: finance.v1.UOMService.GetUOM:input_type -> finance.v1.GetUOMRequest
+	6,  // 19: finance.v1.UOMService.UpdateUOM:input_type -> finance.v1.UpdateUOMRequest
+	8,  // 20: finance.v1.UOMService.DeleteUOM:input_type -> finance.v1.DeleteUOMRequest
+	10, // 21: finance.v1.UOMService.ListUOMs:input_type -> finance.v1.ListUOMsRequest
+	12, // 22: finance.v1.UOMService.ExportUOMs:input_type -> finance.v1.ExportUOMsRequest
+	14, // 23: finance.v1.UOMService.ImportUOMs:input_type -> finance.v1.ImportUOMsRequest
+	17, // 24: finance.v1.UOMService.DownloadTemplate:input_type -> finance.v1.DownloadTemplateRequest
+	3,  // 25: finance.v1.UOMService.CreateUOM:output_type -> finance.v1.CreateUOMResponse
+	5,  // 26: finance.v1.UOMService.GetUOM:output_type -> finance.v1.GetUOMResponse
+	7,  // 27: finance.v1.UOMService.UpdateUOM:output_type -> finance.v1.UpdateUOMResponse
+	9,  // 28: finance.v1.UOMService.DeleteUOM:output_type -> finance.v1.DeleteUOMResponse
+	11, // 29: finance.v1.UOMService.ListUOMs:output_type -> finance.v1.ListUOMsResponse
+	13, // 30: finance.v1.UOMService.ExportUOMs:output_type -> finance.v1.ExportUOMsResponse
+	15, // 31: finance.v1.UOMService.ImportUOMs:output_type -> finance.v1.ImportUOMsResponse
+	18, // 32: finance.v1.UOMService.DownloadTemplate:output_type -> finance.v1.DownloadTemplateResponse
+	25, // [25:33] is the sub-list for method output_type
+	17, // [17:25] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_uom_proto_init() }
@@ -1521,7 +1466,7 @@ func file_finance_v1_uom_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_uom_proto_rawDesc), len(file_finance_v1_uom_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      1,
 			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,

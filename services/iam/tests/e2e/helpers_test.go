@@ -5,10 +5,11 @@ import (
 	"os"
 	"testing"
 
-	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+
+	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 )
 
 func skipIfNoE2E(t *testing.T) {

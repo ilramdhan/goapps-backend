@@ -19,12 +19,13 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
 
-// UOMRepositorySuite is the test suite for UOM repository
+// UOMRepositorySuite is the test suite for UOM repository.
 type UOMRepositorySuite struct {
 	suite.Suite
-	db   *postgres.DB
-	repo uom.Repository
-	ctx  context.Context
+	db         *postgres.DB
+	repo       uom.Repository
+	ctx        context.Context
+	categoryID uuid.UUID // Pre-seeded test category ID
 }
 
 func TestUOMRepositorySuite(t *testing.T) {
@@ -61,8 +62,9 @@ func (s *UOMRepositorySuite) SetupSuite() {
 	s.db = &postgres.DB{DB: db}
 	s.repo = postgres.NewUOMRepository(s.db)
 
-	// Setup test schema
+	// Setup test schema and seed category
 	s.setupSchema()
+	s.categoryID = s.seedTestCategory()
 }
 
 func (s *UOMRepositorySuite) TearDownSuite() {
@@ -73,16 +75,15 @@ func (s *UOMRepositorySuite) TearDownSuite() {
 
 func (s *UOMRepositorySuite) SetupTest() {
 	// Clean up before each test
-	_, _ = s.db.ExecContext(s.ctx, "DELETE FROM uoms WHERE uom_code LIKE 'TEST%'")
+	_, _ = s.db.ExecContext(s.ctx, "DELETE FROM mst_uom WHERE uom_code LIKE 'TEST%'")
 }
 
 func (s *UOMRepositorySuite) setupSchema() {
 	schema := `
-	CREATE TABLE IF NOT EXISTS uoms (
-		id UUID PRIMARY KEY,
-		uom_code VARCHAR(20) NOT NULL UNIQUE,
-		uom_name VARCHAR(100) NOT NULL,
-		uom_category VARCHAR(20) NOT NULL,
+	CREATE TABLE IF NOT EXISTS mst_uom_category (
+		uom_category_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		category_code VARCHAR(50) NOT NULL UNIQUE,
+		category_name VARCHAR(100) NOT NULL,
 		description TEXT,
 		is_active BOOLEAN DEFAULT true,
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -92,18 +93,48 @@ func (s *UOMRepositorySuite) setupSchema() {
 		deleted_at TIMESTAMP WITH TIME ZONE,
 		deleted_by VARCHAR(100)
 	);
-	CREATE INDEX IF NOT EXISTS idx_uoms_code ON uoms(uom_code);
-	CREATE INDEX IF NOT EXISTS idx_uoms_category ON uoms(uom_category);
-	CREATE INDEX IF NOT EXISTS idx_uoms_active ON uoms(is_active) WHERE deleted_at IS NULL;
+	CREATE TABLE IF NOT EXISTS mst_uom (
+		uom_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		uom_code VARCHAR(20) NOT NULL UNIQUE,
+		uom_name VARCHAR(100) NOT NULL,
+		uom_category_id UUID NOT NULL REFERENCES mst_uom_category(uom_category_id),
+		description TEXT,
+		is_active BOOLEAN DEFAULT true,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		created_by VARCHAR(100) NOT NULL,
+		updated_at TIMESTAMP WITH TIME ZONE,
+		updated_by VARCHAR(100),
+		deleted_at TIMESTAMP WITH TIME ZONE,
+		deleted_by VARCHAR(100)
+	);
+	CREATE INDEX IF NOT EXISTS idx_mst_uom_code ON mst_uom(uom_code);
+	CREATE INDEX IF NOT EXISTS idx_mst_uom_category_id ON mst_uom(uom_category_id);
+	CREATE INDEX IF NOT EXISTS idx_mst_uom_active ON mst_uom(is_active) WHERE deleted_at IS NULL;
 	`
 	_, err := s.db.ExecContext(s.ctx, schema)
 	require.NoError(s.T(), err)
 }
 
+func (s *UOMRepositorySuite) seedTestCategory() uuid.UUID {
+	id := uuid.New()
+	_, err := s.db.ExecContext(s.ctx, `
+		INSERT INTO mst_uom_category (uom_category_id, category_code, category_name, created_by)
+		VALUES ($1, 'TEST_WEIGHT', 'Test Weight', 'test')
+		ON CONFLICT (category_code) DO UPDATE SET category_code = EXCLUDED.category_code
+		RETURNING uom_category_id
+	`, id)
+	if err != nil {
+		// If conflict, fetch existing
+		_ = s.db.QueryRowContext(s.ctx,
+			"SELECT uom_category_id FROM mst_uom_category WHERE category_code = 'TEST_WEIGHT'",
+		).Scan(&id)
+	}
+	return id
+}
+
 func (s *UOMRepositorySuite) TestCreate() {
 	code, _ := uom.NewCode("TEST_KG")
-	category, _ := uom.NewCategory("WEIGHT")
-	entity, _ := uom.NewUOM(code, "Test Kilogram", category, "Test description", "test_user")
+	entity, _ := uom.NewUOM(code, "Test Kilogram", s.categoryID, "Test description", "test_user")
 
 	err := s.repo.Create(s.ctx, entity)
 	assert.NoError(s.T(), err)
@@ -117,10 +148,9 @@ func (s *UOMRepositorySuite) TestCreate() {
 
 func (s *UOMRepositorySuite) TestCreate_DuplicateCode() {
 	code, _ := uom.NewCode("TEST_DUP")
-	category, _ := uom.NewCategory("WEIGHT")
 
-	entity1, _ := uom.NewUOM(code, "First", category, "", "test")
-	entity2, _ := uom.NewUOM(code, "Second", category, "", "test")
+	entity1, _ := uom.NewUOM(code, "First", s.categoryID, "", "test")
+	entity2, _ := uom.NewUOM(code, "Second", s.categoryID, "", "test")
 
 	err := s.repo.Create(s.ctx, entity1)
 	assert.NoError(s.T(), err)
@@ -138,14 +168,12 @@ func (s *UOMRepositorySuite) TestGetByID_NotFound() {
 func (s *UOMRepositorySuite) TestUpdate() {
 	// Create first
 	code, _ := uom.NewCode("TEST_UPD")
-	category, _ := uom.NewCategory("WEIGHT")
-	entity, _ := uom.NewUOM(code, "Original", category, "Old desc", "creator")
+	entity, _ := uom.NewUOM(code, "Original", s.categoryID, "Old desc", "creator")
 	_ = s.repo.Create(s.ctx, entity)
 
 	// Update
 	newName := "Updated Name"
-	newCat, _ := uom.NewCategory("LENGTH")
-	_ = entity.Update(&newName, &newCat, nil, nil, "updater")
+	_ = entity.Update(&newName, nil, nil, nil, "updater")
 
 	err := s.repo.Update(s.ctx, entity)
 	assert.NoError(s.T(), err)
@@ -153,13 +181,11 @@ func (s *UOMRepositorySuite) TestUpdate() {
 	// Verify
 	result, _ := s.repo.GetByID(s.ctx, entity.ID())
 	assert.Equal(s.T(), "Updated Name", result.Name())
-	assert.Equal(s.T(), "LENGTH", result.Category().String())
 }
 
 func (s *UOMRepositorySuite) TestSoftDelete() {
 	code, _ := uom.NewCode("TEST_DEL")
-	category, _ := uom.NewCategory("WEIGHT")
-	entity, _ := uom.NewUOM(code, "To Delete", category, "", "creator")
+	entity, _ := uom.NewUOM(code, "To Delete", s.categoryID, "", "creator")
 	_ = s.repo.Create(s.ctx, entity)
 
 	err := s.repo.SoftDelete(s.ctx, entity.ID(), "deleter")
@@ -175,8 +201,7 @@ func (s *UOMRepositorySuite) TestList() {
 	// Create test data
 	for i := 1; i <= 5; i++ {
 		code, _ := uom.NewCode(fmt.Sprintf("TEST_LIST%d", i))
-		category, _ := uom.NewCategory("WEIGHT")
-		entity, _ := uom.NewUOM(code, fmt.Sprintf("List Item %d", i), category, "", "tester")
+		entity, _ := uom.NewUOM(code, fmt.Sprintf("List Item %d", i), s.categoryID, "", "tester")
 		_ = s.repo.Create(s.ctx, entity)
 	}
 
@@ -195,8 +220,7 @@ func (s *UOMRepositorySuite) TestList() {
 
 func (s *UOMRepositorySuite) TestExistsByCode() {
 	code, _ := uom.NewCode("TEST_EXISTS")
-	category, _ := uom.NewCategory("VOLUME")
-	entity, _ := uom.NewUOM(code, "Exists Test", category, "", "tester")
+	entity, _ := uom.NewUOM(code, "Exists Test", s.categoryID, "", "tester")
 	_ = s.repo.Create(s.ctx, entity)
 
 	exists, err := s.repo.ExistsByCode(s.ctx, code)

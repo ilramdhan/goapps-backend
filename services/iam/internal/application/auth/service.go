@@ -32,6 +32,8 @@ type EmailService interface {
 	SendOTP(ctx context.Context, email, otp string, expiryMinutes int) error
 	// Send2FANotification sends a notification about 2FA status change.
 	Send2FANotification(ctx context.Context, email, action string) error
+	// SendEmailVerification sends an email verification OTP to the user's email.
+	SendEmailVerification(ctx context.Context, email, otp string, expiryMinutes int) error
 }
 
 // Service implements domainAuth.Service interface.
@@ -94,7 +96,9 @@ func (s *Service) Login(ctx context.Context, input domainAuth.LoginInput) (*doma
 		return nil, err
 	}
 
-	tokenPair, err := s.jwtService.GenerateTokenPair(u.ID(), u.Username(), u.Email(), roleNames, permNames, nil)
+	// Only embed roles in JWT (not permissions) to keep token size small.
+	// Permissions are returned in the response body and loaded via /me endpoint.
+	tokenPair, err := s.jwtService.GenerateTokenPair(u.ID(), u.Username(), u.Email(), roleNames, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tokens: %w", err)
 	}
@@ -122,9 +126,11 @@ func (s *Service) Login(ctx context.Context, input domainAuth.LoginInput) (*doma
 			Email:            u.Email(),
 			FullName:         fullName,
 			TwoFactorEnabled: u.TwoFactorEnabled(),
+			EmailVerified:    u.IsEmailVerified(),
 			Roles:            roleNames,
 			Permissions:      permNames,
 		},
+		RequiresEmailVerification: !u.IsEmailVerified(),
 	}, nil
 }
 
@@ -290,12 +296,13 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domai
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	roleNames, permNames, err := s.getUserRolePermNames(ctx, u.ID())
+	roleNames, _, err := s.getUserRolePermNames(ctx, u.ID())
 	if err != nil {
 		log.Warn().Err(err).Str("userID", u.ID().String()).Msg("failed to get user role/permission names during token refresh")
 	}
 
-	tokenPair, err := s.jwtService.GenerateTokenPair(u.ID(), u.Username(), u.Email(), roleNames, permNames, nil)
+	// Only embed roles in JWT (not permissions) to keep token size small.
+	tokenPair, err := s.jwtService.GenerateTokenPair(u.ID(), u.Username(), u.Email(), roleNames, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate tokens: %w", err)
 	}
@@ -348,11 +355,16 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) (expiresIn i
 
 	u, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		// Return success even if user not found (prevent email enumeration)
+		// Return success even if user not found (prevent email enumeration).
 		if errors.Is(err, shared.ErrNotFound) {
 			return int(s.securityCfg.OTPExpiry.Seconds()), nil
 		}
 		return 0, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Reject if email not verified (prevent reset on unverified accounts).
+	if !u.IsEmailVerified() {
+		return 0, shared.ErrEmailNotVerified
 	}
 
 	// Generate OTP
@@ -598,6 +610,132 @@ func (s *Service) Disable2FA(ctx context.Context, userID uuid.UUID, pwd, verific
 	s.logAudit(ctx, u.ID(), "DISABLE_2FA", "Two-factor authentication disabled", "", "")
 
 	return nil
+}
+
+// =============================================================================
+// Email Verification
+// =============================================================================
+
+const emailVerifyExpiry = 15 * time.Minute
+
+// SendEmailVerification sends a verification code to the authenticated user's email.
+func (s *Service) SendEmailVerification(ctx context.Context, userID uuid.UUID) (*domainAuth.EmailVerificationResult, error) {
+	if s.otpCache == nil {
+		return nil, errors.New("email verification service unavailable")
+	}
+
+	u, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if u.IsEmailVerified() {
+		return nil, shared.ErrEmailAlreadyVerified
+	}
+
+	return s.sendVerificationCode(ctx, u)
+}
+
+// VerifyEmail consumes a verification code and marks the user's email as verified.
+func (s *Service) VerifyEmail(ctx context.Context, userID uuid.UUID, code string) error {
+	if s.otpCache == nil {
+		return errors.New("email verification service unavailable")
+	}
+
+	u, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if u.IsEmailVerified() {
+		return shared.ErrEmailAlreadyVerified
+	}
+
+	valid, verifyErr := s.otpCache.VerifyEmailOTP(ctx, userID, code)
+	if verifyErr != nil || !valid {
+		return shared.ErrInvalidVerifyCode
+	}
+
+	u.VerifyEmail()
+	if err := s.userRepo.Update(ctx, u); err != nil {
+		return fmt.Errorf("failed to update user email verification: %w", err)
+	}
+
+	s.logAudit(ctx, userID, "EMAIL_VERIFIED", "User verified email address", "", "")
+	return nil
+}
+
+// ResendEmailVerification re-sends the verification code (rate-limited to 1/min).
+func (s *Service) ResendEmailVerification(ctx context.Context, userID uuid.UUID) (*domainAuth.EmailVerificationResult, error) {
+	if s.otpCache == nil {
+		return nil, errors.New("email verification service unavailable")
+	}
+
+	// Check cooldown.
+	onCooldown, err := s.otpCache.IsEmailVerifyCooldown(ctx, userID)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to check email verify cooldown")
+	}
+	if onCooldown {
+		return nil, shared.ErrVerificationCooldown
+	}
+
+	u, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if u.IsEmailVerified() {
+		return nil, shared.ErrEmailAlreadyVerified
+	}
+
+	return s.sendVerificationCode(ctx, u)
+}
+
+// sendVerificationCode generates, stores, and sends a 6-digit verification code.
+func (s *Service) sendVerificationCode(ctx context.Context, u *user.User) (*domainAuth.EmailVerificationResult, error) {
+	code := generateOTP(6)
+	if err := s.otpCache.StoreEmailVerificationOTP(ctx, u.ID(), code, emailVerifyExpiry); err != nil {
+		return nil, fmt.Errorf("failed to store verification code: %w", err)
+	}
+
+	// Set cooldown to prevent resend spam.
+	if err := s.otpCache.SetEmailVerifyCooldown(ctx, u.ID()); err != nil {
+		log.Warn().Err(err).Msg("failed to set email verify cooldown")
+	}
+
+	// Mask email for display (e.g., "j***@example.com").
+	maskedEmail := maskEmail(u.Email())
+
+	if s.emailService != nil {
+		expiryMin := int(emailVerifyExpiry.Minutes())
+		if err := s.emailService.SendEmailVerification(ctx, u.Email(), code, expiryMin); err != nil {
+			log.Warn().Err(err).Str("email", u.Email()).Msg("failed to send verification email")
+			// Don't fail — code is stored, user can retry.
+		}
+	} else {
+		log.Warn().Str("code", code).Str("email", u.Email()).Msg("Email service not configured, verification code logged for development")
+	}
+
+	s.logAudit(ctx, u.ID(), "EMAIL_VERIFICATION_SENT", "Email verification code sent", "", "")
+
+	return &domainAuth.EmailVerificationResult{
+		Message:   fmt.Sprintf("Verification code sent to %s", maskedEmail),
+		ExpiresIn: int(emailVerifyExpiry.Seconds()),
+	}, nil
+}
+
+// maskEmail masks an email address for display (e.g., "john@example.com" → "j***@example.com").
+func maskEmail(email string) string {
+	parts := strings.SplitN(email, "@", 2)
+	if len(parts) != 2 {
+		return email
+	}
+	local := parts[0]
+	if len(local) <= 1 {
+		return local + "***@" + parts[1]
+	}
+	return string(local[0]) + "***@" + parts[1]
 }
 
 // Helper functions

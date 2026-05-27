@@ -10,6 +10,18 @@ BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 DOCKER_REGISTRY ?= ghcr.io/ilramdhan
 DOCKER_IMAGE := $(DOCKER_REGISTRY)/$(SERVICE_NAME)
 
+# Auto-load .env for local development. Gitignored — copy from .env.example.
+# Variables defined here are exported to every recipe so viper picks them up.
+# Looks for .env first, then .env.local for local-only overrides.
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+ifneq (,$(wildcard .env.local))
+    include .env.local
+    export
+endif
+
 help:
 	@echo "IAM Service Makefile"
 	@echo ""

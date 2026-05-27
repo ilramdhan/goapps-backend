@@ -36,7 +36,7 @@ INSERT INTO bi_dashboard_group (
     created_at, created_by
 ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`
 	_, err := r.db.ExecContext(ctx, q,
-		g.ID(), g.Code(), g.Name(), nullableString(g.Description()), nullableString(g.Icon()),
+		g.ID(), g.Code(), g.Name(), biNullableString(g.Description()), biNullableString(g.Icon()),
 		g.DisplayOrder(), g.IsActive(),
 		g.CreatedAt(), nullableUUID(g.CreatedBy()),
 	)
@@ -99,7 +99,7 @@ UPDATE bi_dashboard_group SET
     updated_at = $7, updated_by = $8
 WHERE group_id = $1`
 	res, err := r.db.ExecContext(ctx, q,
-		g.ID(), g.Name(), nullableString(g.Description()), nullableString(g.Icon()),
+		g.ID(), g.Name(), biNullableString(g.Description()), biNullableString(g.Icon()),
 		g.DisplayOrder(), g.IsActive(),
 		g.UpdatedAt(), nullableUUID(g.UpdatedBy()),
 	)

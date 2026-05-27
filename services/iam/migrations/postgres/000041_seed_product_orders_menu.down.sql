@@ -1,0 +1,1 @@
+DELETE FROM mst_menu WHERE menu_code = 'FINANCE_PRODUCT_ORDERS';

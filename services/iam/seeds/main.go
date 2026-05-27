@@ -533,8 +533,8 @@ func seedAdminUser(ctx context.Context, tx *sql.Tx, creds adminCredentials) (uui
 		// Admin doesn't exist — insert
 		existingID = uuid.New()
 		_, err = tx.ExecContext(ctx, `
-			INSERT INTO mst_user (user_id, username, email, password_hash, is_active, created_by)
-			VALUES ($1, $2, $3, $4, true, $5)`,
+			INSERT INTO mst_user (user_id, username, email, password_hash, is_active, email_verified_at, created_by)
+			VALUES ($1, $2, $3, $4, true, NOW(), $5)`,
 			existingID, creds.Username, creds.Email, passwordHash, systemUser,
 		)
 		if err != nil {

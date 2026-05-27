@@ -167,9 +167,12 @@ type LoginData struct {
 	// Authenticated user info.
 	User *AuthUser `protobuf:"bytes,5,opt,name=user,proto3" json:"user,omitempty"`
 	// Whether 2FA is required (return true if 2FA enabled but totp_code not provided).
-	Requires_2Fa  bool `protobuf:"varint,6,opt,name=requires_2fa,json=requires2fa,proto3" json:"requires_2fa,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Requires_2Fa bool `protobuf:"varint,6,opt,name=requires_2fa,json=requires2fa,proto3" json:"requires_2fa,omitempty"`
+	// Whether email verification is required before full access (email_verified_at IS NULL).
+	// Frontend should redirect to /verify-email and show banner on dashboard.
+	RequiresEmailVerification bool `protobuf:"varint,7,opt,name=requires_email_verification,json=requiresEmailVerification,proto3" json:"requires_email_verification,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *LoginData) Reset() {
@@ -244,6 +247,13 @@ func (x *LoginData) GetRequires_2Fa() bool {
 	return false
 }
 
+func (x *LoginData) GetRequiresEmailVerification() bool {
+	if x != nil {
+		return x.RequiresEmailVerification
+	}
+	return false
+}
+
 // AuthUser contains basic user info for authentication context.
 type AuthUser struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -263,8 +273,14 @@ type AuthUser struct {
 	Permissions []string `protobuf:"bytes,7,rep,name=permissions,proto3" json:"permissions,omitempty"`
 	// Whether 2FA is enabled.
 	TwoFactorEnabled bool `protobuf:"varint,8,opt,name=two_factor_enabled,json=twoFactorEnabled,proto3" json:"two_factor_enabled,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Whether the user has verified their email address (true if email_verified_at IS NOT NULL).
+	EmailVerified bool `protobuf:"varint,9,opt,name=email_verified,json=emailVerified,proto3" json:"email_verified,omitempty"`
+	// Section UUID assigned to the user via user_detail (empty if not assigned).
+	SectionId string `protobuf:"bytes,10,opt,name=section_id,json=sectionId,proto3" json:"section_id,omitempty"`
+	// Department UUID derived from the user's section (empty if no section assigned).
+	DepartmentId  string `protobuf:"bytes,11,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AuthUser) Reset() {
@@ -351,6 +367,27 @@ func (x *AuthUser) GetTwoFactorEnabled() bool {
 		return x.TwoFactorEnabled
 	}
 	return false
+}
+
+func (x *AuthUser) GetEmailVerified() bool {
+	if x != nil {
+		return x.EmailVerified
+	}
+	return false
+}
+
+func (x *AuthUser) GetSectionId() string {
+	if x != nil {
+		return x.SectionId
+	}
+	return ""
+}
+
+func (x *AuthUser) GetDepartmentId() string {
+	if x != nil {
+		return x.DepartmentId
+	}
+	return ""
 }
 
 // LogoutRequest is the request for logout.
@@ -1509,6 +1546,301 @@ func (x *GetCurrentUserResponse) GetData() *AuthUser {
 	return nil
 }
 
+// SendEmailVerificationRequest is empty (uses JWT context to resolve user + email).
+type SendEmailVerificationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendEmailVerificationRequest) Reset() {
+	*x = SendEmailVerificationRequest{}
+	mi := &file_iam_v1_auth_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendEmailVerificationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendEmailVerificationRequest) ProtoMessage() {}
+
+func (x *SendEmailVerificationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_auth_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendEmailVerificationRequest.ProtoReflect.Descriptor instead.
+func (*SendEmailVerificationRequest) Descriptor() ([]byte, []int) {
+	return file_iam_v1_auth_proto_rawDescGZIP(), []int{26}
+}
+
+// SendEmailVerificationResponse confirms the verification code was sent.
+type SendEmailVerificationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Human-readable message (e.g., "Verification code sent to j***@example.com").
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	// Code expiry in seconds (e.g., 900 = 15 minutes).
+	ExpiresIn     int32 `protobuf:"varint,3,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendEmailVerificationResponse) Reset() {
+	*x = SendEmailVerificationResponse{}
+	mi := &file_iam_v1_auth_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendEmailVerificationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendEmailVerificationResponse) ProtoMessage() {}
+
+func (x *SendEmailVerificationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_auth_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendEmailVerificationResponse.ProtoReflect.Descriptor instead.
+func (*SendEmailVerificationResponse) Descriptor() ([]byte, []int) {
+	return file_iam_v1_auth_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *SendEmailVerificationResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *SendEmailVerificationResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *SendEmailVerificationResponse) GetExpiresIn() int32 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
+// VerifyEmailRequest validates the 6-digit verification code.
+type VerifyEmailRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 6-digit verification code sent to the user's email.
+	Code          string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyEmailRequest) Reset() {
+	*x = VerifyEmailRequest{}
+	mi := &file_iam_v1_auth_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyEmailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyEmailRequest) ProtoMessage() {}
+
+func (x *VerifyEmailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_auth_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyEmailRequest.ProtoReflect.Descriptor instead.
+func (*VerifyEmailRequest) Descriptor() ([]byte, []int) {
+	return file_iam_v1_auth_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *VerifyEmailRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+// VerifyEmailResponse confirms the email is verified.
+type VerifyEmailResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base          *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyEmailResponse) Reset() {
+	*x = VerifyEmailResponse{}
+	mi := &file_iam_v1_auth_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyEmailResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyEmailResponse) ProtoMessage() {}
+
+func (x *VerifyEmailResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_auth_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyEmailResponse.ProtoReflect.Descriptor instead.
+func (*VerifyEmailResponse) Descriptor() ([]byte, []int) {
+	return file_iam_v1_auth_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *VerifyEmailResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+// ResendEmailVerificationRequest re-sends the verification code.
+// Rate-limited to 1 per 60 seconds per user.
+type ResendEmailVerificationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResendEmailVerificationRequest) Reset() {
+	*x = ResendEmailVerificationRequest{}
+	mi := &file_iam_v1_auth_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResendEmailVerificationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResendEmailVerificationRequest) ProtoMessage() {}
+
+func (x *ResendEmailVerificationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_auth_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResendEmailVerificationRequest.ProtoReflect.Descriptor instead.
+func (*ResendEmailVerificationRequest) Descriptor() ([]byte, []int) {
+	return file_iam_v1_auth_proto_rawDescGZIP(), []int{30}
+}
+
+// ResendEmailVerificationResponse confirms re-send.
+type ResendEmailVerificationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Human-readable message.
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	// Code expiry in seconds.
+	ExpiresIn     int32 `protobuf:"varint,3,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResendEmailVerificationResponse) Reset() {
+	*x = ResendEmailVerificationResponse{}
+	mi := &file_iam_v1_auth_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResendEmailVerificationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResendEmailVerificationResponse) ProtoMessage() {}
+
+func (x *ResendEmailVerificationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_auth_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResendEmailVerificationResponse.ProtoReflect.Descriptor instead.
+func (*ResendEmailVerificationResponse) Descriptor() ([]byte, []int) {
+	return file_iam_v1_auth_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ResendEmailVerificationResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ResendEmailVerificationResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ResendEmailVerificationResponse) GetExpiresIn() int32 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
 var File_iam_v1_auth_proto protoreflect.FileDescriptor
 
 const file_iam_v1_auth_proto_rawDesc = "" +
@@ -1523,7 +1855,7 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"deviceInfo\"c\n" +
 	"\rLoginResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12%\n" +
-	"\x04data\x18\x02 \x01(\v2\x11.iam.v1.LoginDataR\x04data\"\xda\x01\n" +
+	"\x04data\x18\x02 \x01(\v2\x11.iam.v1.LoginDataR\x04data\"\x9a\x02\n" +
 	"\tLoginData\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
@@ -1532,7 +1864,8 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"token_type\x18\x04 \x01(\tR\ttokenType\x12$\n" +
 	"\x04user\x18\x05 \x01(\v2\x10.iam.v1.AuthUserR\x04user\x12!\n" +
-	"\frequires_2fa\x18\x06 \x01(\bR\vrequires2fa\"\x88\x02\n" +
+	"\frequires_2fa\x18\x06 \x01(\bR\vrequires2fa\x12>\n" +
+	"\x1brequires_email_verification\x18\a \x01(\bR\x19requiresEmailVerification\"\xf3\x02\n" +
 	"\bAuthUser\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -1541,7 +1874,12 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"\x13profile_picture_url\x18\x05 \x01(\tR\x11profilePictureUrl\x12\x14\n" +
 	"\x05roles\x18\x06 \x03(\tR\x05roles\x12 \n" +
 	"\vpermissions\x18\a \x03(\tR\vpermissions\x12,\n" +
-	"\x12two_factor_enabled\x18\b \x01(\bR\x10twoFactorEnabled\"K\n" +
+	"\x12two_factor_enabled\x18\b \x01(\bR\x10twoFactorEnabled\x12%\n" +
+	"\x0eemail_verified\x18\t \x01(\bR\remailVerified\x12\x1d\n" +
+	"\n" +
+	"section_id\x18\n" +
+	" \x01(\tR\tsectionId\x12#\n" +
+	"\rdepartment_id\x18\v \x01(\tR\fdepartmentId\"K\n" +
 	"\rLogoutRequest\x12(\n" +
 	"\rrefresh_token\x18\x01 \x01(\tH\x00R\frefreshToken\x88\x01\x01B\x10\n" +
 	"\x0e_refresh_token\"=\n" +
@@ -1610,7 +1948,24 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"\x15GetCurrentUserRequest\"k\n" +
 	"\x16GetCurrentUserResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12$\n" +
-	"\x04data\x18\x02 \x01(\v2\x10.iam.v1.AuthUserR\x04data2\xd2\t\n" +
+	"\x04data\x18\x02 \x01(\v2\x10.iam.v1.AuthUserR\x04data\"\x1e\n" +
+	"\x1cSendEmailVerificationRequest\"\x85\x01\n" +
+	"\x1dSendEmailVerificationResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x03 \x01(\x05R\texpiresIn\">\n" +
+	"\x12VerifyEmailRequest\x12(\n" +
+	"\x04code\x18\x01 \x01(\tB\x14\xbaH\x11r\x0f2\n" +
+	"^[0-9]{6}$\x98\x01\x06R\x04code\"B\n" +
+	"\x13VerifyEmailResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\" \n" +
+	"\x1eResendEmailVerificationRequest\"\x87\x01\n" +
+	"\x1fResendEmailVerificationResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x03 \x01(\x05R\texpiresIn2\x84\r\n" +
 	"\vAuthService\x12W\n" +
 	"\x05Login\x12\x14.iam.v1.LoginRequest\x1a\x15.iam.v1.LoginResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/iam/auth/login\x12[\n" +
 	"\x06Logout\x12\x15.iam.v1.LogoutRequest\x1a\x16.iam.v1.LogoutResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/iam/auth/logout\x12n\n" +
@@ -1623,7 +1978,10 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"\tVerify2FA\x12\x18.iam.v1.Verify2FARequest\x1a\x19.iam.v1.Verify2FAResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/iam/auth/2fa/verify\x12l\n" +
 	"\n" +
 	"Disable2FA\x12\x19.iam.v1.Disable2FARequest\x1a\x1a.iam.v1.Disable2FAResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/iam/auth/2fa/disable\x12l\n" +
-	"\x0eGetCurrentUser\x12\x1d.iam.v1.GetCurrentUserRequest\x1a\x1e.iam.v1.GetCurrentUserResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/v1/iam/auth/meB\x87\x01\n" +
+	"\x0eGetCurrentUser\x12\x1d.iam.v1.GetCurrentUserRequest\x1a\x1e.iam.v1.GetCurrentUserResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/v1/iam/auth/me\x12\x99\x01\n" +
+	"\x15SendEmailVerification\x12$.iam.v1.SendEmailVerificationRequest\x1a%.iam.v1.SendEmailVerificationResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/iam/auth/send-email-verification\x12p\n" +
+	"\vVerifyEmail\x12\x1a.iam.v1.VerifyEmailRequest\x1a\x1b.iam.v1.VerifyEmailResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/iam/auth/verify-email\x12\xa1\x01\n" +
+	"\x17ResendEmailVerification\x12&.iam.v1.ResendEmailVerificationRequest\x1a'.iam.v1.ResendEmailVerificationResponse\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/api/v1/iam/auth/resend-email-verificationB\x87\x01\n" +
 	"\n" +
 	"com.iam.v1B\tAuthProtoP\x01Z5github.com/mutugading/goapps-backend/gen/iam/v1;iamv1\xa2\x02\x03IXX\xaa\x02\x06Iam.V1\xca\x02\x06Iam\\V1\xe2\x02\x12Iam\\V1\\GPBMetadata\xea\x02\aIam::V1b\x06proto3"
 
@@ -1639,80 +1997,95 @@ func file_iam_v1_auth_proto_rawDescGZIP() []byte {
 	return file_iam_v1_auth_proto_rawDescData
 }
 
-var file_iam_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_iam_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_iam_v1_auth_proto_goTypes = []any{
-	(*LoginRequest)(nil),           // 0: iam.v1.LoginRequest
-	(*LoginResponse)(nil),          // 1: iam.v1.LoginResponse
-	(*LoginData)(nil),              // 2: iam.v1.LoginData
-	(*AuthUser)(nil),               // 3: iam.v1.AuthUser
-	(*LogoutRequest)(nil),          // 4: iam.v1.LogoutRequest
-	(*LogoutResponse)(nil),         // 5: iam.v1.LogoutResponse
-	(*RefreshTokenRequest)(nil),    // 6: iam.v1.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),   // 7: iam.v1.RefreshTokenResponse
-	(*TokenPair)(nil),              // 8: iam.v1.TokenPair
-	(*ForgotPasswordRequest)(nil),  // 9: iam.v1.ForgotPasswordRequest
-	(*ForgotPasswordResponse)(nil), // 10: iam.v1.ForgotPasswordResponse
-	(*VerifyResetOTPRequest)(nil),  // 11: iam.v1.VerifyResetOTPRequest
-	(*VerifyResetOTPResponse)(nil), // 12: iam.v1.VerifyResetOTPResponse
-	(*ResetPasswordRequest)(nil),   // 13: iam.v1.ResetPasswordRequest
-	(*ResetPasswordResponse)(nil),  // 14: iam.v1.ResetPasswordResponse
-	(*UpdatePasswordRequest)(nil),  // 15: iam.v1.UpdatePasswordRequest
-	(*UpdatePasswordResponse)(nil), // 16: iam.v1.UpdatePasswordResponse
-	(*Enable2FARequest)(nil),       // 17: iam.v1.Enable2FARequest
-	(*Enable2FAResponse)(nil),      // 18: iam.v1.Enable2FAResponse
-	(*TwoFactorSetup)(nil),         // 19: iam.v1.TwoFactorSetup
-	(*Verify2FARequest)(nil),       // 20: iam.v1.Verify2FARequest
-	(*Verify2FAResponse)(nil),      // 21: iam.v1.Verify2FAResponse
-	(*Disable2FARequest)(nil),      // 22: iam.v1.Disable2FARequest
-	(*Disable2FAResponse)(nil),     // 23: iam.v1.Disable2FAResponse
-	(*GetCurrentUserRequest)(nil),  // 24: iam.v1.GetCurrentUserRequest
-	(*GetCurrentUserResponse)(nil), // 25: iam.v1.GetCurrentUserResponse
-	(*v1.BaseResponse)(nil),        // 26: common.v1.BaseResponse
+	(*LoginRequest)(nil),                    // 0: iam.v1.LoginRequest
+	(*LoginResponse)(nil),                   // 1: iam.v1.LoginResponse
+	(*LoginData)(nil),                       // 2: iam.v1.LoginData
+	(*AuthUser)(nil),                        // 3: iam.v1.AuthUser
+	(*LogoutRequest)(nil),                   // 4: iam.v1.LogoutRequest
+	(*LogoutResponse)(nil),                  // 5: iam.v1.LogoutResponse
+	(*RefreshTokenRequest)(nil),             // 6: iam.v1.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),            // 7: iam.v1.RefreshTokenResponse
+	(*TokenPair)(nil),                       // 8: iam.v1.TokenPair
+	(*ForgotPasswordRequest)(nil),           // 9: iam.v1.ForgotPasswordRequest
+	(*ForgotPasswordResponse)(nil),          // 10: iam.v1.ForgotPasswordResponse
+	(*VerifyResetOTPRequest)(nil),           // 11: iam.v1.VerifyResetOTPRequest
+	(*VerifyResetOTPResponse)(nil),          // 12: iam.v1.VerifyResetOTPResponse
+	(*ResetPasswordRequest)(nil),            // 13: iam.v1.ResetPasswordRequest
+	(*ResetPasswordResponse)(nil),           // 14: iam.v1.ResetPasswordResponse
+	(*UpdatePasswordRequest)(nil),           // 15: iam.v1.UpdatePasswordRequest
+	(*UpdatePasswordResponse)(nil),          // 16: iam.v1.UpdatePasswordResponse
+	(*Enable2FARequest)(nil),                // 17: iam.v1.Enable2FARequest
+	(*Enable2FAResponse)(nil),               // 18: iam.v1.Enable2FAResponse
+	(*TwoFactorSetup)(nil),                  // 19: iam.v1.TwoFactorSetup
+	(*Verify2FARequest)(nil),                // 20: iam.v1.Verify2FARequest
+	(*Verify2FAResponse)(nil),               // 21: iam.v1.Verify2FAResponse
+	(*Disable2FARequest)(nil),               // 22: iam.v1.Disable2FARequest
+	(*Disable2FAResponse)(nil),              // 23: iam.v1.Disable2FAResponse
+	(*GetCurrentUserRequest)(nil),           // 24: iam.v1.GetCurrentUserRequest
+	(*GetCurrentUserResponse)(nil),          // 25: iam.v1.GetCurrentUserResponse
+	(*SendEmailVerificationRequest)(nil),    // 26: iam.v1.SendEmailVerificationRequest
+	(*SendEmailVerificationResponse)(nil),   // 27: iam.v1.SendEmailVerificationResponse
+	(*VerifyEmailRequest)(nil),              // 28: iam.v1.VerifyEmailRequest
+	(*VerifyEmailResponse)(nil),             // 29: iam.v1.VerifyEmailResponse
+	(*ResendEmailVerificationRequest)(nil),  // 30: iam.v1.ResendEmailVerificationRequest
+	(*ResendEmailVerificationResponse)(nil), // 31: iam.v1.ResendEmailVerificationResponse
+	(*v1.BaseResponse)(nil),                 // 32: common.v1.BaseResponse
 }
 var file_iam_v1_auth_proto_depIdxs = []int32{
-	26, // 0: iam.v1.LoginResponse.base:type_name -> common.v1.BaseResponse
+	32, // 0: iam.v1.LoginResponse.base:type_name -> common.v1.BaseResponse
 	2,  // 1: iam.v1.LoginResponse.data:type_name -> iam.v1.LoginData
 	3,  // 2: iam.v1.LoginData.user:type_name -> iam.v1.AuthUser
-	26, // 3: iam.v1.LogoutResponse.base:type_name -> common.v1.BaseResponse
-	26, // 4: iam.v1.RefreshTokenResponse.base:type_name -> common.v1.BaseResponse
+	32, // 3: iam.v1.LogoutResponse.base:type_name -> common.v1.BaseResponse
+	32, // 4: iam.v1.RefreshTokenResponse.base:type_name -> common.v1.BaseResponse
 	8,  // 5: iam.v1.RefreshTokenResponse.data:type_name -> iam.v1.TokenPair
-	26, // 6: iam.v1.ForgotPasswordResponse.base:type_name -> common.v1.BaseResponse
-	26, // 7: iam.v1.VerifyResetOTPResponse.base:type_name -> common.v1.BaseResponse
-	26, // 8: iam.v1.ResetPasswordResponse.base:type_name -> common.v1.BaseResponse
-	26, // 9: iam.v1.UpdatePasswordResponse.base:type_name -> common.v1.BaseResponse
-	26, // 10: iam.v1.Enable2FAResponse.base:type_name -> common.v1.BaseResponse
+	32, // 6: iam.v1.ForgotPasswordResponse.base:type_name -> common.v1.BaseResponse
+	32, // 7: iam.v1.VerifyResetOTPResponse.base:type_name -> common.v1.BaseResponse
+	32, // 8: iam.v1.ResetPasswordResponse.base:type_name -> common.v1.BaseResponse
+	32, // 9: iam.v1.UpdatePasswordResponse.base:type_name -> common.v1.BaseResponse
+	32, // 10: iam.v1.Enable2FAResponse.base:type_name -> common.v1.BaseResponse
 	19, // 11: iam.v1.Enable2FAResponse.data:type_name -> iam.v1.TwoFactorSetup
-	26, // 12: iam.v1.Verify2FAResponse.base:type_name -> common.v1.BaseResponse
-	26, // 13: iam.v1.Disable2FAResponse.base:type_name -> common.v1.BaseResponse
-	26, // 14: iam.v1.GetCurrentUserResponse.base:type_name -> common.v1.BaseResponse
+	32, // 12: iam.v1.Verify2FAResponse.base:type_name -> common.v1.BaseResponse
+	32, // 13: iam.v1.Disable2FAResponse.base:type_name -> common.v1.BaseResponse
+	32, // 14: iam.v1.GetCurrentUserResponse.base:type_name -> common.v1.BaseResponse
 	3,  // 15: iam.v1.GetCurrentUserResponse.data:type_name -> iam.v1.AuthUser
-	0,  // 16: iam.v1.AuthService.Login:input_type -> iam.v1.LoginRequest
-	4,  // 17: iam.v1.AuthService.Logout:input_type -> iam.v1.LogoutRequest
-	6,  // 18: iam.v1.AuthService.RefreshToken:input_type -> iam.v1.RefreshTokenRequest
-	9,  // 19: iam.v1.AuthService.ForgotPassword:input_type -> iam.v1.ForgotPasswordRequest
-	11, // 20: iam.v1.AuthService.VerifyResetOTP:input_type -> iam.v1.VerifyResetOTPRequest
-	13, // 21: iam.v1.AuthService.ResetPassword:input_type -> iam.v1.ResetPasswordRequest
-	15, // 22: iam.v1.AuthService.UpdatePassword:input_type -> iam.v1.UpdatePasswordRequest
-	17, // 23: iam.v1.AuthService.Enable2FA:input_type -> iam.v1.Enable2FARequest
-	20, // 24: iam.v1.AuthService.Verify2FA:input_type -> iam.v1.Verify2FARequest
-	22, // 25: iam.v1.AuthService.Disable2FA:input_type -> iam.v1.Disable2FARequest
-	24, // 26: iam.v1.AuthService.GetCurrentUser:input_type -> iam.v1.GetCurrentUserRequest
-	1,  // 27: iam.v1.AuthService.Login:output_type -> iam.v1.LoginResponse
-	5,  // 28: iam.v1.AuthService.Logout:output_type -> iam.v1.LogoutResponse
-	7,  // 29: iam.v1.AuthService.RefreshToken:output_type -> iam.v1.RefreshTokenResponse
-	10, // 30: iam.v1.AuthService.ForgotPassword:output_type -> iam.v1.ForgotPasswordResponse
-	12, // 31: iam.v1.AuthService.VerifyResetOTP:output_type -> iam.v1.VerifyResetOTPResponse
-	14, // 32: iam.v1.AuthService.ResetPassword:output_type -> iam.v1.ResetPasswordResponse
-	16, // 33: iam.v1.AuthService.UpdatePassword:output_type -> iam.v1.UpdatePasswordResponse
-	18, // 34: iam.v1.AuthService.Enable2FA:output_type -> iam.v1.Enable2FAResponse
-	21, // 35: iam.v1.AuthService.Verify2FA:output_type -> iam.v1.Verify2FAResponse
-	23, // 36: iam.v1.AuthService.Disable2FA:output_type -> iam.v1.Disable2FAResponse
-	25, // 37: iam.v1.AuthService.GetCurrentUser:output_type -> iam.v1.GetCurrentUserResponse
-	27, // [27:38] is the sub-list for method output_type
-	16, // [16:27] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	32, // 16: iam.v1.SendEmailVerificationResponse.base:type_name -> common.v1.BaseResponse
+	32, // 17: iam.v1.VerifyEmailResponse.base:type_name -> common.v1.BaseResponse
+	32, // 18: iam.v1.ResendEmailVerificationResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 19: iam.v1.AuthService.Login:input_type -> iam.v1.LoginRequest
+	4,  // 20: iam.v1.AuthService.Logout:input_type -> iam.v1.LogoutRequest
+	6,  // 21: iam.v1.AuthService.RefreshToken:input_type -> iam.v1.RefreshTokenRequest
+	9,  // 22: iam.v1.AuthService.ForgotPassword:input_type -> iam.v1.ForgotPasswordRequest
+	11, // 23: iam.v1.AuthService.VerifyResetOTP:input_type -> iam.v1.VerifyResetOTPRequest
+	13, // 24: iam.v1.AuthService.ResetPassword:input_type -> iam.v1.ResetPasswordRequest
+	15, // 25: iam.v1.AuthService.UpdatePassword:input_type -> iam.v1.UpdatePasswordRequest
+	17, // 26: iam.v1.AuthService.Enable2FA:input_type -> iam.v1.Enable2FARequest
+	20, // 27: iam.v1.AuthService.Verify2FA:input_type -> iam.v1.Verify2FARequest
+	22, // 28: iam.v1.AuthService.Disable2FA:input_type -> iam.v1.Disable2FARequest
+	24, // 29: iam.v1.AuthService.GetCurrentUser:input_type -> iam.v1.GetCurrentUserRequest
+	26, // 30: iam.v1.AuthService.SendEmailVerification:input_type -> iam.v1.SendEmailVerificationRequest
+	28, // 31: iam.v1.AuthService.VerifyEmail:input_type -> iam.v1.VerifyEmailRequest
+	30, // 32: iam.v1.AuthService.ResendEmailVerification:input_type -> iam.v1.ResendEmailVerificationRequest
+	1,  // 33: iam.v1.AuthService.Login:output_type -> iam.v1.LoginResponse
+	5,  // 34: iam.v1.AuthService.Logout:output_type -> iam.v1.LogoutResponse
+	7,  // 35: iam.v1.AuthService.RefreshToken:output_type -> iam.v1.RefreshTokenResponse
+	10, // 36: iam.v1.AuthService.ForgotPassword:output_type -> iam.v1.ForgotPasswordResponse
+	12, // 37: iam.v1.AuthService.VerifyResetOTP:output_type -> iam.v1.VerifyResetOTPResponse
+	14, // 38: iam.v1.AuthService.ResetPassword:output_type -> iam.v1.ResetPasswordResponse
+	16, // 39: iam.v1.AuthService.UpdatePassword:output_type -> iam.v1.UpdatePasswordResponse
+	18, // 40: iam.v1.AuthService.Enable2FA:output_type -> iam.v1.Enable2FAResponse
+	21, // 41: iam.v1.AuthService.Verify2FA:output_type -> iam.v1.Verify2FAResponse
+	23, // 42: iam.v1.AuthService.Disable2FA:output_type -> iam.v1.Disable2FAResponse
+	25, // 43: iam.v1.AuthService.GetCurrentUser:output_type -> iam.v1.GetCurrentUserResponse
+	27, // 44: iam.v1.AuthService.SendEmailVerification:output_type -> iam.v1.SendEmailVerificationResponse
+	29, // 45: iam.v1.AuthService.VerifyEmail:output_type -> iam.v1.VerifyEmailResponse
+	31, // 46: iam.v1.AuthService.ResendEmailVerification:output_type -> iam.v1.ResendEmailVerificationResponse
+	33, // [33:47] is the sub-list for method output_type
+	19, // [19:33] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_iam_v1_auth_proto_init() }
@@ -1727,7 +2100,7 @@ func file_iam_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_iam_v1_auth_proto_rawDesc), len(file_iam_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

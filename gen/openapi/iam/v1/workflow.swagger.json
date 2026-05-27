@@ -1,0 +1,1010 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "iam/v1/workflow.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "WorkflowTemplateService"
+    },
+    {
+      "name": "WorkflowInstanceService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/iam/workflow-instances": {
+      "get": {
+        "operationId": "WorkflowInstanceService_ListWorkflowInstances",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWorkflowInstancesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entityKind",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "entityId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "WorkflowInstanceService"
+        ]
+      },
+      "post": {
+        "summary": "StartWorkflowInstance snapshots the active template and creates an instance\nwith its first step pre-assigned.",
+        "operationId": "WorkflowInstanceService_StartWorkflowInstance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartWorkflowInstanceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1StartWorkflowInstanceRequest"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowInstanceService"
+        ]
+      }
+    },
+    "/api/v1/iam/workflow-instances/{instanceId}": {
+      "get": {
+        "operationId": "WorkflowInstanceService_GetWorkflowInstance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetWorkflowInstanceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowInstanceService"
+        ]
+      }
+    },
+    "/api/v1/iam/workflow-instances/{instanceId}/advance": {
+      "post": {
+        "summary": "Advance approves the current step. If it was the last step, status becomes LOCKED.",
+        "operationId": "WorkflowInstanceService_AdvanceWorkflowInstance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AdvanceWorkflowInstanceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowInstanceServiceAdvanceWorkflowInstanceBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowInstanceService"
+        ]
+      }
+    },
+    "/api/v1/iam/workflow-instances/{instanceId}/reject": {
+      "post": {
+        "summary": "Reject sets status REJECTED with the supplied comment.",
+        "operationId": "WorkflowInstanceService_RejectWorkflowInstance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RejectWorkflowInstanceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowInstanceServiceRejectWorkflowInstanceBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowInstanceService"
+        ]
+      }
+    },
+    "/api/v1/iam/workflow-templates": {
+      "get": {
+        "operationId": "WorkflowTemplateService_ListWorkflowTemplates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWorkflowTemplatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "description": "Filter by kind (PRODUCT_COSTING|PARAM_FILL). Empty = all.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "\"all\" | \"active\" | \"inactive\". Empty = all.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowTemplateService"
+        ]
+      },
+      "post": {
+        "operationId": "WorkflowTemplateService_CreateWorkflowTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateWorkflowTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateWorkflowTemplateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowTemplateService"
+        ]
+      }
+    },
+    "/api/v1/iam/workflow-templates/{templateId}": {
+      "get": {
+        "operationId": "WorkflowTemplateService_GetWorkflowTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetWorkflowTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowTemplateService"
+        ]
+      },
+      "delete": {
+        "operationId": "WorkflowTemplateService_DeleteWorkflowTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteWorkflowTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowTemplateService"
+        ]
+      },
+      "put": {
+        "summary": "Update creates a new version row; the prior version remains in history.",
+        "operationId": "WorkflowTemplateService_UpdateWorkflowTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateWorkflowTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowTemplateServiceUpdateWorkflowTemplateBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowTemplateService"
+        ]
+      }
+    },
+    "/api/v1/iam/workflow-templates/{templateId}/activate": {
+      "post": {
+        "summary": "Activate marks this version active and deactivates all other versions of the same kind.",
+        "operationId": "WorkflowTemplateService_ActivateWorkflowTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ActivateWorkflowTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowTemplateServiceActivateWorkflowTemplateBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowTemplateService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "WorkflowInstanceServiceAdvanceWorkflowInstanceBody": {
+      "type": "object",
+      "properties": {
+        "comment": {
+          "type": "string"
+        }
+      }
+    },
+    "WorkflowInstanceServiceRejectWorkflowInstanceBody": {
+      "type": "object",
+      "properties": {
+        "comment": {
+          "type": "string"
+        }
+      }
+    },
+    "WorkflowTemplateServiceActivateWorkflowTemplateBody": {
+      "type": "object"
+    },
+    "WorkflowTemplateServiceUpdateWorkflowTemplateBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowTemplateStepInput"
+          }
+        }
+      },
+      "description": "Update creates a new version of the template (immutable history). The current\nactive version is left untouched on disk; activate the new version via Activate.",
+      "title": "=============================================================================\nMESSAGES — Update\n============================================================================="
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActivateWorkflowTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkflowTemplate"
+        }
+      }
+    },
+    "v1AdvanceWorkflowInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkflowInstance"
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateWorkflowTemplateRequest": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowTemplateStepInput"
+          }
+        }
+      }
+    },
+    "v1CreateWorkflowTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkflowTemplate"
+        }
+      }
+    },
+    "v1DeleteWorkflowTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1GetWorkflowInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkflowInstance"
+        }
+      }
+    },
+    "v1GetWorkflowTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkflowTemplate"
+        }
+      }
+    },
+    "v1ListWorkflowInstancesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowInstance"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListWorkflowTemplatesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowTemplate"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1PaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Page number (1-indexed)."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        }
+      },
+      "description": "PaginationRequest contains pagination parameters for list requests."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1RejectWorkflowInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkflowInstance"
+        }
+      }
+    },
+    "v1StartWorkflowInstanceRequest": {
+      "type": "object",
+      "properties": {
+        "templateId": {
+          "type": "string",
+          "description": "Template id to instantiate. Must be active."
+        },
+        "entityKind": {
+          "type": "string"
+        },
+        "entityId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1StartWorkflowInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkflowInstance"
+        }
+      }
+    },
+    "v1UpdateWorkflowTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkflowTemplate"
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    },
+    "v1WorkflowInstance": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "templateId": {
+          "type": "string"
+        },
+        "templateVersion": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "kind": {
+          "type": "string",
+          "title": "PRODUCT_COSTING | PARAM_FILL"
+        },
+        "entityKind": {
+          "type": "string",
+          "title": "PRD_REQUEST | CST_PRODUCT | PARAM_FILL"
+        },
+        "entityId": {
+          "type": "string"
+        },
+        "currentStepNo": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "string",
+          "title": "IN_PROGRESS | APPROVED | REJECTED | LOCKED | UNLOCKED"
+        },
+        "startedBy": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "completedAt": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowInstanceStep"
+          }
+        }
+      },
+      "description": "WorkflowInstance is a live execution of a workflow template against an entity."
+    },
+    "v1WorkflowInstanceStep": {
+      "type": "object",
+      "properties": {
+        "instanceStepId": {
+          "type": "string"
+        },
+        "instanceId": {
+          "type": "string"
+        },
+        "stepNo": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stepName": {
+          "type": "string"
+        },
+        "approverResolutionType": {
+          "type": "string"
+        },
+        "approverResolutionValue": {
+          "type": "string"
+        },
+        "slaHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "assignedAt": {
+          "type": "string"
+        },
+        "actorUserId": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string",
+          "title": "\"\" | APPROVED | REJECTED | REASSIGNED | SKIPPED"
+        },
+        "decidedAt": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "stuckSince": {
+          "type": "string"
+        }
+      },
+      "description": "WorkflowInstanceStep is one snapshot row inside a running instance."
+    },
+    "v1WorkflowTemplate": {
+      "type": "object",
+      "properties": {
+        "templateId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowTemplateStep"
+          }
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      },
+      "description": "WorkflowTemplate is a versioned configuration of approval steps.\nkind discriminates use cases (PRODUCT_COSTING, PARAM_FILL)."
+    },
+    "v1WorkflowTemplateStep": {
+      "type": "object",
+      "properties": {
+        "templateStepId": {
+          "type": "string"
+        },
+        "templateId": {
+          "type": "string"
+        },
+        "stepNo": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stepName": {
+          "type": "string"
+        },
+        "approverResolutionType": {
+          "type": "string",
+          "title": "ROLE | USER | DEPT"
+        },
+        "approverResolutionValue": {
+          "type": "string"
+        },
+        "slaHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "allowReject": {
+          "type": "boolean"
+        },
+        "allowReassign": {
+          "type": "boolean"
+        },
+        "requirePasswordOnUnlock": {
+          "type": "boolean"
+        },
+        "rejectToStepNo": {
+          "type": "integer",
+          "format": "int32",
+          "title": "0 = restart, N-1 = back one"
+        }
+      },
+      "description": "WorkflowTemplateStep is one ordered step inside a template."
+    },
+    "v1WorkflowTemplateStepInput": {
+      "type": "object",
+      "properties": {
+        "stepNo": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stepName": {
+          "type": "string"
+        },
+        "approverResolutionType": {
+          "type": "string"
+        },
+        "approverResolutionValue": {
+          "type": "string"
+        },
+        "slaHours": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "allowReject": {
+          "type": "boolean"
+        },
+        "allowReassign": {
+          "type": "boolean"
+        },
+        "requirePasswordOnUnlock": {
+          "type": "boolean"
+        },
+        "rejectToStepNo": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    }
+  }
+}

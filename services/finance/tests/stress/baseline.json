@@ -1,0 +1,13 @@
+{
+  "s1_single_cold":       { "p50_chunk_ms": 150, "p95_chunk_ms": 800,  "total_ms": 5000 },
+  "s2_single_hot":        { "p50_chunk_ms": 50,  "p95_chunk_ms": 200,  "total_ms": 500 },
+  "s3_filtered_500":      { "p50_chunk_ms": 200, "p95_chunk_ms": 1500, "total_ms": 60000 },
+  "s4_full_12k":          { "p50_chunk_ms": 250, "p95_chunk_ms": 2500, "total_ms": 300000 },
+  "s5_concurrent_2":      { "p50_chunk_ms": 300, "p95_chunk_ms": 3000, "total_ms": 600000 },
+  "s6_failure_isolation": { "p50_chunk_ms": 260, "p95_chunk_ms": 2600, "total_ms": 310000 },
+  "s7_recompute_storm":   { "p50_chunk_ms": 240, "p95_chunk_ms": 2400, "total_ms": 290000 },
+  "s8_mid_batch_cancel":  { "p50_chunk_ms": 250, "p95_chunk_ms": 2500, "total_ms": 35000 },
+  "s9_worker_scale_up":   { "p50_chunk_ms": 250, "p95_chunk_ms": 2500, "total_ms": 300000 },
+
+  "real_full_run":        { "p50_chunk_ms": 250, "p95_chunk_ms": 1200, "total_ms": 95000 }
+}

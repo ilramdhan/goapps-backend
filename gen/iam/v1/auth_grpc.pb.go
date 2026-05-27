@@ -19,17 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_Login_FullMethodName          = "/iam.v1.AuthService/Login"
-	AuthService_Logout_FullMethodName         = "/iam.v1.AuthService/Logout"
-	AuthService_RefreshToken_FullMethodName   = "/iam.v1.AuthService/RefreshToken"
-	AuthService_ForgotPassword_FullMethodName = "/iam.v1.AuthService/ForgotPassword"
-	AuthService_VerifyResetOTP_FullMethodName = "/iam.v1.AuthService/VerifyResetOTP"
-	AuthService_ResetPassword_FullMethodName  = "/iam.v1.AuthService/ResetPassword"
-	AuthService_UpdatePassword_FullMethodName = "/iam.v1.AuthService/UpdatePassword"
-	AuthService_Enable2FA_FullMethodName      = "/iam.v1.AuthService/Enable2FA"
-	AuthService_Verify2FA_FullMethodName      = "/iam.v1.AuthService/Verify2FA"
-	AuthService_Disable2FA_FullMethodName     = "/iam.v1.AuthService/Disable2FA"
-	AuthService_GetCurrentUser_FullMethodName = "/iam.v1.AuthService/GetCurrentUser"
+	AuthService_Login_FullMethodName                   = "/iam.v1.AuthService/Login"
+	AuthService_Logout_FullMethodName                  = "/iam.v1.AuthService/Logout"
+	AuthService_RefreshToken_FullMethodName            = "/iam.v1.AuthService/RefreshToken"
+	AuthService_ForgotPassword_FullMethodName          = "/iam.v1.AuthService/ForgotPassword"
+	AuthService_VerifyResetOTP_FullMethodName          = "/iam.v1.AuthService/VerifyResetOTP"
+	AuthService_ResetPassword_FullMethodName           = "/iam.v1.AuthService/ResetPassword"
+	AuthService_UpdatePassword_FullMethodName          = "/iam.v1.AuthService/UpdatePassword"
+	AuthService_Enable2FA_FullMethodName               = "/iam.v1.AuthService/Enable2FA"
+	AuthService_Verify2FA_FullMethodName               = "/iam.v1.AuthService/Verify2FA"
+	AuthService_Disable2FA_FullMethodName              = "/iam.v1.AuthService/Disable2FA"
+	AuthService_GetCurrentUser_FullMethodName          = "/iam.v1.AuthService/GetCurrentUser"
+	AuthService_SendEmailVerification_FullMethodName   = "/iam.v1.AuthService/SendEmailVerification"
+	AuthService_VerifyEmail_FullMethodName             = "/iam.v1.AuthService/VerifyEmail"
+	AuthService_ResendEmailVerification_FullMethodName = "/iam.v1.AuthService/ResendEmailVerification"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -63,6 +66,13 @@ type AuthServiceClient interface {
 	Disable2FA(ctx context.Context, in *Disable2FARequest, opts ...grpc.CallOption) (*Disable2FAResponse, error)
 	// GetCurrentUser returns the authenticated user's info.
 	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*GetCurrentUserResponse, error)
+	// SendEmailVerification sends a 6-digit verification code to the authenticated user's email.
+	// Generates a new token, invalidating any previous unconsumed tokens.
+	SendEmailVerification(ctx context.Context, in *SendEmailVerificationRequest, opts ...grpc.CallOption) (*SendEmailVerificationResponse, error)
+	// VerifyEmail consumes a verification code and marks the authenticated user's email as verified.
+	VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error)
+	// ResendEmailVerification re-sends the verification code. Rate-limited to 1 per minute per user.
+	ResendEmailVerification(ctx context.Context, in *ResendEmailVerificationRequest, opts ...grpc.CallOption) (*ResendEmailVerificationResponse, error)
 }
 
 type authServiceClient struct {
@@ -183,6 +193,36 @@ func (c *authServiceClient) GetCurrentUser(ctx context.Context, in *GetCurrentUs
 	return out, nil
 }
 
+func (c *authServiceClient) SendEmailVerification(ctx context.Context, in *SendEmailVerificationRequest, opts ...grpc.CallOption) (*SendEmailVerificationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendEmailVerificationResponse)
+	err := c.cc.Invoke(ctx, AuthService_SendEmailVerification_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyEmailResponse)
+	err := c.cc.Invoke(ctx, AuthService_VerifyEmail_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ResendEmailVerification(ctx context.Context, in *ResendEmailVerificationRequest, opts ...grpc.CallOption) (*ResendEmailVerificationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResendEmailVerificationResponse)
+	err := c.cc.Invoke(ctx, AuthService_ResendEmailVerification_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -214,6 +254,13 @@ type AuthServiceServer interface {
 	Disable2FA(context.Context, *Disable2FARequest) (*Disable2FAResponse, error)
 	// GetCurrentUser returns the authenticated user's info.
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*GetCurrentUserResponse, error)
+	// SendEmailVerification sends a 6-digit verification code to the authenticated user's email.
+	// Generates a new token, invalidating any previous unconsumed tokens.
+	SendEmailVerification(context.Context, *SendEmailVerificationRequest) (*SendEmailVerificationResponse, error)
+	// VerifyEmail consumes a verification code and marks the authenticated user's email as verified.
+	VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error)
+	// ResendEmailVerification re-sends the verification code. Rate-limited to 1 per minute per user.
+	ResendEmailVerification(context.Context, *ResendEmailVerificationRequest) (*ResendEmailVerificationResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -256,6 +303,15 @@ func (UnimplementedAuthServiceServer) Disable2FA(context.Context, *Disable2FAReq
 }
 func (UnimplementedAuthServiceServer) GetCurrentUser(context.Context, *GetCurrentUserRequest) (*GetCurrentUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCurrentUser not implemented")
+}
+func (UnimplementedAuthServiceServer) SendEmailVerification(context.Context, *SendEmailVerificationRequest) (*SendEmailVerificationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendEmailVerification not implemented")
+}
+func (UnimplementedAuthServiceServer) VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyEmail not implemented")
+}
+func (UnimplementedAuthServiceServer) ResendEmailVerification(context.Context, *ResendEmailVerificationRequest) (*ResendEmailVerificationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResendEmailVerification not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -476,6 +532,60 @@ func _AuthService_GetCurrentUser_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_SendEmailVerification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendEmailVerificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SendEmailVerification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_SendEmailVerification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SendEmailVerification(ctx, req.(*SendEmailVerificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_VerifyEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).VerifyEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_VerifyEmail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).VerifyEmail(ctx, req.(*VerifyEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ResendEmailVerification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResendEmailVerificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ResendEmailVerification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ResendEmailVerification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ResendEmailVerification(ctx, req.(*ResendEmailVerificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -526,6 +636,18 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCurrentUser",
 			Handler:    _AuthService_GetCurrentUser_Handler,
+		},
+		{
+			MethodName: "SendEmailVerification",
+			Handler:    _AuthService_SendEmailVerification_Handler,
+		},
+		{
+			MethodName: "VerifyEmail",
+			Handler:    _AuthService_VerifyEmail_Handler,
+		},
+		{
+			MethodName: "ResendEmailVerification",
+			Handler:    _AuthService_ResendEmailVerification_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

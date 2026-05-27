@@ -1,0 +1,42 @@
+app:
+  name: finance-cost-orchestrator
+  version: 0.1.0
+  env: development
+
+server:
+  metrics_port: 8092
+  health_port: 8082
+
+database:
+  host: localhost
+  port: 5434
+  user: finance
+  password: finance123
+  name: finance_db
+  ssl_mode: disable
+  max_open_conns: 8
+  max_idle_conns: 3
+  conn_max_lifetime: 30m
+  conn_max_idle_time: 10m
+
+rabbitmq:
+  url: amqp://guest:guest@localhost:5672/
+  prefetch_count: 1
+  reconnect_delay: 5s
+
+orchestrator:
+  chunk_size: 50
+  max_chunk_size: 100
+  cron_schedule: "0 0 2 5 * *"  # second minute hour day month dow — tanggal 5 @ 02:00
+  cron_timezone: "Asia/Jakarta"
+
+tracing:
+  enabled: false
+  service_name: finance-cost-orchestrator
+  endpoint: localhost:4317
+  insecure: true
+
+logger:
+  level: info
+  format: json
+  pretty_json: false

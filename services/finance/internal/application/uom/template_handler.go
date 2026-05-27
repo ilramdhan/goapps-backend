@@ -83,7 +83,7 @@ func (h *TemplateHandler) Handle() (result *TemplateResult, err error) {
 	}
 
 	// Set headers
-	headers := []string{"Code", "Name", "Category", "Description"}
+	headers := []string{"Code", "Name", "Category Code", "Description"}
 	for col, header := range headers {
 		cell, err := excelize.CoordinatesToCellName(col+1, 1)
 		if err != nil {
@@ -141,7 +141,7 @@ func (h *TemplateHandler) Handle() (result *TemplateResult, err error) {
 		notesWriter.setCellValue("A1", "Import Instructions")
 		notesWriter.setCellValue("A3", "1. Code: Unique, uppercase letters/numbers/underscores (e.g., KG, MTR_SQ)")
 		notesWriter.setCellValue("A4", "2. Name: Display name (required)")
-		notesWriter.setCellValue("A5", "3. Category: Must be one of: WEIGHT, LENGTH, VOLUME, QUANTITY")
+		notesWriter.setCellValue("A5", "3. Category Code: Must match an existing UOM Category code (e.g., WEIGHT, LENGTH)")
 		notesWriter.setCellValue("A6", "4. Description: Optional description")
 		notesWriter.setCellValue("A8", "Notes:")
 		notesWriter.setCellValue("A9", "- Delete sample data rows before importing")

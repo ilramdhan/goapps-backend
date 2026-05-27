@@ -11,6 +11,9 @@ RUN apk add --no-cache git ca-certificates tzdata
 # Copy gen module first (needed for replace directive)
 COPY gen/ ./gen/
 
+# Copy shared module (needed for replace directive: services/shared => ../shared)
+COPY services/shared/ ./services/shared/
+
 # Copy IAM service
 COPY services/iam/ ./services/iam/
 

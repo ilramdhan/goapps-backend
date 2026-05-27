@@ -46,4 +46,16 @@ var (
 
 	// ErrUOMNotFound is returned when a referenced UOM code does not exist.
 	ErrUOMNotFound = errors.New("referenced UOM not found")
+
+	// ErrOwnerDepartmentTooLong is returned when owner_department exceeds 30 chars.
+	ErrOwnerDepartmentTooLong = errors.New("owner_department must be at most 30 characters")
+
+	// ErrLookupMasterCodeTooLong is returned when lookup_master_code exceeds 30 chars.
+	ErrLookupMasterCodeTooLong = errors.New("lookup_master_code must be at most 30 characters")
+
+	// ErrDisplayGroupTooLong is returned when display_group exceeds 50 chars.
+	ErrDisplayGroupTooLong = errors.New("display_group must be at most 50 characters")
+
+	// ErrInvalidDisplayOrder is returned when display_order is negative.
+	ErrInvalidDisplayOrder = errors.New("display_order must be non-negative")
 )

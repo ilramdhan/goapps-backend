@@ -11,12 +11,12 @@ import (
 
 // UpdateCommand represents the update UOM command.
 type UpdateCommand struct {
-	UOMID       string
-	UOMName     *string
-	UOMCategory *string
-	Description *string
-	IsActive    *bool
-	UpdatedBy   string
+	UOMID         string
+	UOMName       *string
+	UOMCategoryID *string
+	Description   *string
+	IsActive      *bool
+	UpdatedBy     string
 }
 
 // UpdateHandler handles the UpdateUOM command.
@@ -43,18 +43,18 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*uom.UOM
 		return nil, err
 	}
 
-	// 3. Prepare category if provided
-	var category *uom.Category
-	if cmd.UOMCategory != nil {
-		cat, err := uom.NewCategory(*cmd.UOMCategory)
-		if err != nil {
-			return nil, err
+	// 3. Prepare category ID if provided
+	var categoryID *uuid.UUID
+	if cmd.UOMCategoryID != nil {
+		parsed, parseErr := uuid.Parse(*cmd.UOMCategoryID)
+		if parseErr != nil {
+			return nil, uom.ErrInvalidCategory
 		}
-		category = &cat
+		categoryID = &parsed
 	}
 
 	// 4. Update domain entity
-	if err := entity.Update(cmd.UOMName, category, cmd.Description, cmd.IsActive, cmd.UpdatedBy); err != nil {
+	if err := entity.Update(cmd.UOMName, categoryID, cmd.Description, cmd.IsActive, cmd.UpdatedBy); err != nil {
 		return nil, err
 	}
 

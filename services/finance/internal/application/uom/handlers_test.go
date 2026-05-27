@@ -14,7 +14,7 @@ import (
 	uomdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
 )
 
-// MockRepository is a mock implementation of uom.Repository
+// MockRepository is a mock implementation of uom.Repository.
 type MockRepository struct {
 	mock.Mock
 }
@@ -71,17 +71,19 @@ func (m *MockRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, er
 }
 
 func TestCreateHandler_Handle(t *testing.T) {
+	categoryID := uuid.New()
+
 	t.Run("success - creates new UOM", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		handler := uom.NewCreateHandler(mockRepo)
 		ctx := context.Background()
 
 		cmd := uom.CreateCommand{
-			UOMCode:     "KG",
-			UOMName:     "Kilogram",
-			UOMCategory: "WEIGHT",
-			Description: "Weight in kilograms",
-			CreatedBy:   "admin",
+			UOMCode:       "KG",
+			UOMName:       "Kilogram",
+			UOMCategoryID: categoryID.String(),
+			Description:   "Weight in kilograms",
+			CreatedBy:     "admin",
 		}
 
 		// Setup expectations
@@ -105,10 +107,10 @@ func TestCreateHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		cmd := uom.CreateCommand{
-			UOMCode:     "KG",
-			UOMName:     "Kilogram",
-			UOMCategory: "WEIGHT",
-			CreatedBy:   "admin",
+			UOMCode:       "KG",
+			UOMName:       "Kilogram",
+			UOMCategoryID: categoryID.String(),
+			CreatedBy:     "admin",
 		}
 
 		mockRepo.On("ExistsByCode", ctx, mock.AnythingOfType("uom.Code")).Return(true, nil)
@@ -126,16 +128,35 @@ func TestCreateHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		cmd := uom.CreateCommand{
-			UOMCode:     "invalid",
-			UOMName:     "Test",
-			UOMCategory: "WEIGHT",
-			CreatedBy:   "admin",
+			UOMCode:       "invalid",
+			UOMName:       "Test",
+			UOMCategoryID: categoryID.String(),
+			CreatedBy:     "admin",
 		}
 
 		result, err := handler.Handle(ctx, cmd)
 
 		assert.Nil(t, result)
 		assert.Error(t, err)
+	})
+
+	t.Run("error - invalid category ID", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		handler := uom.NewCreateHandler(mockRepo)
+		ctx := context.Background()
+
+		cmd := uom.CreateCommand{
+			UOMCode:       "KG",
+			UOMName:       "Kilogram",
+			UOMCategoryID: "not-a-uuid",
+			CreatedBy:     "admin",
+		}
+
+		result, err := handler.Handle(ctx, cmd)
+
+		assert.Nil(t, result)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, uomdomain.ErrInvalidCategory)
 	})
 }
 
@@ -147,8 +168,8 @@ func TestGetHandler_Handle(t *testing.T) {
 
 		id := uuid.New()
 		code, _ := uomdomain.NewCode("KG")
-		category, _ := uomdomain.NewCategory("WEIGHT")
-		expected, _ := uomdomain.NewUOM(code, "Kilogram", category, "Weight", "admin")
+		categoryID := uuid.New()
+		expected, _ := uomdomain.NewUOM(code, "Kilogram", categoryID, "Weight", "admin")
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
 
@@ -232,12 +253,10 @@ func TestListHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		code1, _ := uomdomain.NewCode("KG")
-		cat1, _ := uomdomain.NewCategory("WEIGHT")
-		uom1, _ := uomdomain.NewUOM(code1, "Kilogram", cat1, "", "admin")
+		uom1, _ := uomdomain.NewUOM(code1, "Kilogram", uuid.New(), "", "admin")
 
 		code2, _ := uomdomain.NewCode("LTR")
-		cat2, _ := uomdomain.NewCategory("VOLUME")
-		uom2, _ := uomdomain.NewUOM(code2, "Liter", cat2, "", "admin")
+		uom2, _ := uomdomain.NewUOM(code2, "Liter", uuid.New(), "", "admin")
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("uom.ListFilter")).Return(
 			[]*uomdomain.UOM{uom1, uom2},

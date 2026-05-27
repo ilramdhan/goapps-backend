@@ -93,9 +93,10 @@ jobs:
 
       - name: Install golang-migrate
         run: |
-          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
-          sudo mv migrate /usr/local/bin/migrate
-          migrate --version
+          # Install via `go install` (more reliable than the GitHub release
+          # tarball, which has hit transient redirect failures from CI runners).
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+          migrate -version
 
       - name: Run database migrations
         working-directory: ${{ env.WORKING_DIR }}
@@ -223,14 +224,28 @@ jobs:
       - name: Start infrastructure with Docker Compose
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          docker compose -f deployments/docker-compose.yaml up -d postgres redis
-          echo "Waiting for PostgreSQL to be healthy..."
-          sleep 10
+          docker compose -f deployments/docker-compose.yaml up -d --wait postgres redis || true
+          echo "Verifying PostgreSQL is reachable on host port 5434..."
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5434 -U finance > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "PostgreSQL failed to become ready — dumping container logs:"
+              docker compose -f deployments/docker-compose.yaml logs postgres
+              exit 1
+            fi
+            echo "Attempt $i/30 — waiting 2s..."
+            sleep 2
+          done
 
       - name: Install golang-migrate
         run: |
-          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
-          sudo mv migrate /usr/local/bin/migrate
+          # Install via `go install` (more reliable than the GitHub release
+          # tarball, which has hit transient redirect failures from CI runners).
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+          migrate -version
 
       - name: Run database migrations
         working-directory: ${{ env.WORKING_DIR }}

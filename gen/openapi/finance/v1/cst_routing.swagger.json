@@ -1,0 +1,436 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cst_routing.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CstRoutingService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/products/{productId}/routing": {
+      "get": {
+        "summary": "GetCstRouting loads the routing head + all seqs + all rms for the product.",
+        "operationId": "CstRoutingService_GetCstRouting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCstRoutingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CstRoutingService"
+        ]
+      },
+      "put": {
+        "summary": "SaveCstRouting replaces the entire routing tree for the product in a single\ntransaction (idempotent — safe to retry the same payload).",
+        "operationId": "CstRoutingService_SaveCstRouting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SaveCstRoutingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CstRoutingServiceSaveCstRoutingBody"
+            }
+          }
+        ],
+        "tags": [
+          "CstRoutingService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CstRoutingServiceSaveCstRoutingBody": {
+      "type": "object",
+      "properties": {
+        "routingStatus": {
+          "type": "string"
+        },
+        "seqs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SaveSeqInput"
+          },
+          "description": "Full set of seqs that should exist after the save. Server deletes any\npre-existing seqs and rms for this product's routing and re-inserts these."
+        },
+        "rms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SaveRmInput"
+          },
+          "description": "Full set of rms. parent_seq_client_id MUST match a seq above."
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CstRouteHead": {
+      "type": "object",
+      "properties": {
+        "routeHeadId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "routingStatus": {
+          "type": "string",
+          "title": "DRAFT | COMPLETE | LOCKED"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      },
+      "description": "CstRouteHead is the routing root for a CST_PRODUCT (one active per product)."
+    },
+    "v1CstRouteRm": {
+      "type": "object",
+      "properties": {
+        "routeRmId": {
+          "type": "string"
+        },
+        "routeSeqId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "rmProductId": {
+          "type": "string"
+        },
+        "rmCode": {
+          "type": "string"
+        },
+        "rmType": {
+          "type": "string",
+          "title": "PRODUCT | ITEM | GROUP"
+        },
+        "routeRmName": {
+          "type": "string"
+        },
+        "routeRmItemCode": {
+          "type": "string"
+        },
+        "routeRmShadeCode": {
+          "type": "string"
+        },
+        "routeRmShadeName": {
+          "type": "string"
+        },
+        "routeRmRatio": {
+          "type": "string",
+          "title": "decimal as string (avoid float precision loss in JSON)"
+        },
+        "uomId": {
+          "type": "string"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      },
+      "description": "CstRouteRm is a raw-material consumption line under a route seq.\nrm_type=ITEM|GROUP references cst_rm_cost; rm_type=PRODUCT references another\nCST_PRODUCT (an intermediate routed elsewhere)."
+    },
+    "v1CstRouteSeq": {
+      "type": "object",
+      "properties": {
+        "routeSeqId": {
+          "type": "string"
+        },
+        "routeHeadId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Optional: when this seq represents another CST_PRODUCT (intermediate), this\npoints to it. Empty for non-product seqs."
+        },
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "routeSeq": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "routeName": {
+          "type": "string"
+        },
+        "routeItemCode": {
+          "type": "string"
+        },
+        "routeShadeCode": {
+          "type": "string"
+        },
+        "routeShadeName": {
+          "type": "string"
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo"
+        }
+      },
+      "description": "CstRouteSeq is one node inside the routing tree. route_level=1 is the finished\ngood; deeper levels are intermediate steps or raw material categories."
+    },
+    "v1GetCstRoutingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "head": {
+          "$ref": "#/definitions/v1CstRouteHead",
+          "description": "head may be null when the product has no routing yet — base.is_success is\nstill true in that case."
+        },
+        "seqs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CstRouteSeq"
+          }
+        },
+        "rms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CstRouteRm"
+          }
+        }
+      }
+    },
+    "v1SaveCstRoutingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "head": {
+          "$ref": "#/definitions/v1CstRouteHead"
+        },
+        "seqs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CstRouteSeq"
+          }
+        },
+        "rms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CstRouteRm"
+          }
+        }
+      }
+    },
+    "v1SaveRmInput": {
+      "type": "object",
+      "properties": {
+        "parentSeqClientId": {
+          "type": "string"
+        },
+        "rmProductId": {
+          "type": "string",
+          "title": "optional UUID for rm_type=PRODUCT"
+        },
+        "rmCode": {
+          "type": "string"
+        },
+        "rmType": {
+          "type": "string"
+        },
+        "routeRmName": {
+          "type": "string"
+        },
+        "routeRmItemCode": {
+          "type": "string"
+        },
+        "routeRmShadeCode": {
+          "type": "string"
+        },
+        "routeRmShadeName": {
+          "type": "string"
+        },
+        "routeRmRatio": {
+          "type": "string",
+          "description": "Decimal as string to preserve precision over JSON."
+        },
+        "uomId": {
+          "type": "string",
+          "title": "optional UUID"
+        }
+      },
+      "description": "SaveRmInput is one raw-material line. parent_seq_client_id MUST match an\ninput seq's seq_client_id in the same call."
+    },
+    "v1SaveSeqInput": {
+      "type": "object",
+      "properties": {
+        "seqClientId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string",
+          "title": "optional UUID; empty when not an intermediate product"
+        },
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "routeSeq": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "routeName": {
+          "type": "string"
+        },
+        "routeItemCode": {
+          "type": "string"
+        },
+        "routeShadeCode": {
+          "type": "string"
+        },
+        "routeShadeName": {
+          "type": "string"
+        }
+      },
+      "description": "SaveSeqInput is the input shape for one routing seq. seq_client_id is a\ncaller-generated stable ID (any string) used to link child rms to their\nparent seq inside the same Save call. The server allocates real UUIDs and\ndoes not echo seq_client_id back."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

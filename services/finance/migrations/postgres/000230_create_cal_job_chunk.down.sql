@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS cal_job_chunk CASCADE;

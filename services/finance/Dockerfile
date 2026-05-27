@@ -11,6 +11,11 @@ RUN apk add --no-cache git ca-certificates tzdata
 # Copy gen module first (needed for replace directive)
 COPY gen/ ./gen/
 
+# Copy shared module (preemptive — future replace directive: services/shared => ../shared).
+# Adding now keeps the Dockerfile consistent with IAM and avoids CI breakage when
+# Finance starts importing from services/shared.
+COPY services/shared/ ./services/shared/
+
 # Copy finance service
 COPY services/finance/ ./services/finance/
 
@@ -28,6 +33,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME}" \
     -o /bin/finance-service \
     ./cmd/server/main.go
+
+# Build worker binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME}" \
+    -o /bin/finance-worker \
+    ./cmd/worker/main.go
 
 # Build seeder binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
@@ -53,6 +64,7 @@ RUN addgroup -g 1000 appgroup && \
 
 # Copy binaries from builder
 COPY --from=builder /bin/finance-service /app/finance-service
+COPY --from=builder /bin/finance-worker /app/finance-worker
 COPY --from=builder /bin/finance-seed /app/finance-seed
 COPY --from=builder /bin/migrate /app/migrate
 

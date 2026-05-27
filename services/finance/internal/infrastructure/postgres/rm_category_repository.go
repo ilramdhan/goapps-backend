@@ -84,6 +84,8 @@ func (r *RMCategoryRepository) GetByCode(ctx context.Context, code rmcategory.Co
 }
 
 // List retrieves RMCategories with filtering, searching, and pagination.
+//
+//nolint:dupl // Mirrors UOMCategoryRepository.List — different table/types prevent shared code.
 func (r *RMCategoryRepository) List(ctx context.Context, filter rmcategory.ListFilter) ([]*rmcategory.RMCategory, int64, error) {
 	filter.Validate()
 
@@ -119,9 +121,9 @@ func (r *RMCategoryRepository) List(ctx context.Context, filter rmcategory.ListF
 
 	// Build order clause with sort column mapping
 	sortColumnMap := map[string]string{
-		"code":       "category_code",
-		"name":       "category_name",
-		"created_at": "created_at",
+		"code":           "category_code",
+		"name":           "category_name",
+		sortKeyCreatedAt: sortKeyCreatedAt,
 	}
 	orderColumn := "category_code"
 	if mapped, ok := sortColumnMap[filter.SortBy]; ok {

@@ -1,0 +1,547 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_request_comment.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostRequestCommentService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/cost-product-requests/{requestId}/comments": {
+      "get": {
+        "operationId": "CostRequestCommentService_ListCostRequestComments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCostRequestCommentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "includeHidden",
+            "description": "When true, include CRC_is_hidden = true (admin view). Default false.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "CostRequestCommentService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-request-comments": {
+      "post": {
+        "operationId": "CostRequestCommentService_CreateCostRequestComment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostRequestCommentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostRequestCommentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostRequestCommentService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-request-comments/{commentId}": {
+      "delete": {
+        "operationId": "CostRequestCommentService_DeleteCostRequestComment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteCostRequestCommentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostRequestCommentService"
+        ]
+      },
+      "put": {
+        "operationId": "CostRequestCommentService_UpdateCostRequestComment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCostRequestCommentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostRequestCommentServiceUpdateCostRequestCommentBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostRequestCommentService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-request-comments/{commentId}/edit-history": {
+      "get": {
+        "operationId": "CostRequestCommentService_ListCostCommentEditHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCostCommentEditHistoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostRequestCommentService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-request-comments/{commentId}/hide": {
+      "post": {
+        "operationId": "CostRequestCommentService_HideCostRequestComment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HideCostRequestCommentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostRequestCommentServiceHideCostRequestCommentBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostRequestCommentService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-request-comments/{commentId}/unhide": {
+      "post": {
+        "operationId": "CostRequestCommentService_UnhideCostRequestComment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnhideCostRequestCommentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostRequestCommentServiceUnhideCostRequestCommentBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostRequestCommentService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CostRequestCommentServiceHideCostRequestCommentBody": {
+      "type": "object",
+      "properties": {
+        "hiddenReason": {
+          "type": "string"
+        }
+      }
+    },
+    "CostRequestCommentServiceUnhideCostRequestCommentBody": {
+      "type": "object"
+    },
+    "CostRequestCommentServiceUpdateCostRequestCommentBody": {
+      "type": "object",
+      "properties": {
+        "bodyRichtext": {
+          "type": "string"
+        },
+        "bodyPlaintext": {
+          "type": "string"
+        },
+        "mentionedUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CostCommentEditHistory": {
+      "type": "object",
+      "properties": {
+        "editId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "commentId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "bodyRichtext": {
+          "type": "string"
+        },
+        "bodyPlaintext": {
+          "type": "string"
+        },
+        "editedBy": {
+          "type": "string"
+        },
+        "editedAt": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CostRequestComment": {
+      "type": "object",
+      "properties": {
+        "commentId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "requestId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "parentCommentId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "authorUserId": {
+          "type": "string"
+        },
+        "bodyRichtext": {
+          "type": "string",
+          "description": "JSON serialized Tiptap/Lexical document."
+        },
+        "bodyPlaintext": {
+          "type": "string"
+        },
+        "isEdited": {
+          "type": "boolean"
+        },
+        "isHidden": {
+          "type": "boolean"
+        },
+        "hiddenReason": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "mentionedUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mentioned user_ids extracted from body_plaintext on create/update."
+        }
+      }
+    },
+    "v1CreateCostRequestCommentRequest": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "parentCommentId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "bodyRichtext": {
+          "type": "string"
+        },
+        "bodyPlaintext": {
+          "type": "string"
+        },
+        "mentionedUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional @mentions extracted client-side; backend re-extracts to be safe."
+        }
+      }
+    },
+    "v1CreateCostRequestCommentResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostRequestComment"
+        }
+      }
+    },
+    "v1DeleteCostRequestCommentResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1HideCostRequestCommentResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostRequestComment"
+        }
+      }
+    },
+    "v1ListCostCommentEditHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostCommentEditHistory"
+          }
+        }
+      }
+    },
+    "v1ListCostRequestCommentsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostRequestComment"
+          }
+        }
+      }
+    },
+    "v1UnhideCostRequestCommentResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostRequestComment"
+        }
+      }
+    },
+    "v1UpdateCostRequestCommentResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostRequestComment"
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

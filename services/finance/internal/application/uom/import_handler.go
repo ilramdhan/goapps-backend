@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
 
@@ -41,12 +42,13 @@ type ImportError struct {
 
 // ImportHandler handles the ImportUOMs command.
 type ImportHandler struct {
-	repo uom.Repository
+	repo    uom.Repository
+	catRepo uom.CategoryRepository
 }
 
 // NewImportHandler creates a new ImportHandler.
-func NewImportHandler(repo uom.Repository) *ImportHandler {
-	return &ImportHandler{repo: repo}
+func NewImportHandler(repo uom.Repository, catRepo uom.CategoryRepository) *ImportHandler {
+	return &ImportHandler{repo: repo, catRepo: catRepo}
 }
 
 // Handle executes the import UOMs command.
@@ -111,19 +113,19 @@ func (h *ImportHandler) parseExcelFile(content []byte, fileName string) ([][]str
 
 // rowData holds parsed row values.
 type rowData struct {
-	code        string
-	name        string
-	category    string
-	description string
+	code         string
+	name         string
+	categoryCode string
+	description  string
 }
 
 // parseRow extracts cell values from a row.
 func parseRow(row []string) rowData {
 	return rowData{
-		code:        getCell(row, 0),
-		name:        getCell(row, 1),
-		category:    getCell(row, 2),
-		description: getCell(row, 3),
+		code:         getCell(row, 0),
+		name:         getCell(row, 1),
+		categoryCode: getCell(row, 2),
+		description:  getCell(row, 3),
 	}
 }
 
@@ -132,7 +134,7 @@ func (h *ImportHandler) processRow(ctx context.Context, row []string, rowNum int
 	data := parseRow(row)
 
 	// Validate fields
-	code, category, err := h.validateRowData(data, rowNum, result)
+	code, categoryID, err := h.validateRowData(ctx, data, rowNum, result)
 	if err != nil {
 		return // Error already recorded in result
 	}
@@ -150,16 +152,16 @@ func (h *ImportHandler) processRow(ctx context.Context, row []string, rowNum int
 	}
 
 	if exists {
-		h.handleDuplicate(ctx, code, data, rowNum, cmd, result)
+		h.handleDuplicate(ctx, code, data, categoryID, rowNum, cmd, result)
 		return
 	}
 
 	// Create new UOM
-	h.createUOM(ctx, code, category, data, rowNum, cmd.CreatedBy, result)
+	h.createUOM(ctx, code, categoryID, data, rowNum, cmd.CreatedBy, result)
 }
 
 // validateRowData validates the row data and returns domain objects.
-func (h *ImportHandler) validateRowData(data rowData, rowNum int32, result *ImportResult) (uom.Code, uom.Category, error) {
+func (h *ImportHandler) validateRowData(ctx context.Context, data rowData, rowNum int32, result *ImportResult) (uom.Code, uuid.UUID, error) {
 	// Validate code
 	code, err := uom.NewCode(data.code)
 	if err != nil {
@@ -169,19 +171,29 @@ func (h *ImportHandler) validateRowData(data rowData, rowNum int32, result *Impo
 			Field:     "uom_code",
 			Message:   err.Error(),
 		})
-		return uom.Code{}, "", err
+		return uom.Code{}, uuid.Nil, err
 	}
 
-	// Validate category
-	category, err := uom.NewCategory(data.category)
+	// Resolve category code to ID
+	if data.categoryCode == "" {
+		result.FailedCount++
+		result.Errors = append(result.Errors, ImportError{
+			RowNumber: rowNum,
+			Field:     "uom_category",
+			Message:   "category code cannot be empty",
+		})
+		return uom.Code{}, uuid.Nil, fmt.Errorf("category code cannot be empty")
+	}
+
+	categoryID, err := h.catRepo.GetCategoryIDByCode(ctx, strings.ToUpper(data.categoryCode))
 	if err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{
 			RowNumber: rowNum,
 			Field:     "uom_category",
-			Message:   err.Error(),
+			Message:   fmt.Sprintf("invalid category code %q: %v", data.categoryCode, err),
 		})
-		return uom.Code{}, "", err
+		return uom.Code{}, uuid.Nil, err
 	}
 
 	// Validate name
@@ -192,19 +204,19 @@ func (h *ImportHandler) validateRowData(data rowData, rowNum int32, result *Impo
 			Field:     "uom_name",
 			Message:   "name cannot be empty",
 		})
-		return uom.Code{}, "", fmt.Errorf("name cannot be empty")
+		return uom.Code{}, uuid.Nil, fmt.Errorf("name cannot be empty")
 	}
 
-	return code, category, nil
+	return code, categoryID, nil
 }
 
 // handleDuplicate handles a duplicate code based on the specified action.
-func (h *ImportHandler) handleDuplicate(ctx context.Context, code uom.Code, data rowData, rowNum int32, cmd ImportCommand, result *ImportResult) {
+func (h *ImportHandler) handleDuplicate(ctx context.Context, code uom.Code, data rowData, categoryID uuid.UUID, rowNum int32, cmd ImportCommand, result *ImportResult) {
 	switch cmd.DuplicateAction {
 	case "skip":
 		result.SkippedCount++
 	case "update":
-		h.updateExisting(ctx, code, data, rowNum, cmd.CreatedBy, result)
+		h.updateExisting(ctx, code, data, categoryID, rowNum, cmd.CreatedBy, result)
 	case "error":
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{
@@ -219,7 +231,7 @@ func (h *ImportHandler) handleDuplicate(ctx context.Context, code uom.Code, data
 }
 
 // updateExisting updates an existing UOM.
-func (h *ImportHandler) updateExisting(ctx context.Context, code uom.Code, data rowData, rowNum int32, updatedBy string, result *ImportResult) {
+func (h *ImportHandler) updateExisting(ctx context.Context, code uom.Code, data rowData, categoryID uuid.UUID, rowNum int32, updatedBy string, result *ImportResult) {
 	existing, err := h.repo.GetByCode(ctx, code)
 	if err != nil {
 		result.FailedCount++
@@ -231,18 +243,7 @@ func (h *ImportHandler) updateExisting(ctx context.Context, code uom.Code, data 
 		return
 	}
 
-	category, err := uom.NewCategory(data.category)
-	if err != nil {
-		result.FailedCount++
-		result.Errors = append(result.Errors, ImportError{
-			RowNumber: rowNum,
-			Field:     "uom_category",
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	if err := existing.Update(&data.name, &category, &data.description, nil, updatedBy); err != nil {
+	if err := existing.Update(&data.name, &categoryID, &data.description, nil, updatedBy); err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{
 			RowNumber: rowNum,
@@ -266,8 +267,8 @@ func (h *ImportHandler) updateExisting(ctx context.Context, code uom.Code, data 
 }
 
 // createUOM creates a new UOM.
-func (h *ImportHandler) createUOM(ctx context.Context, code uom.Code, category uom.Category, data rowData, rowNum int32, createdBy string, result *ImportResult) {
-	entity, err := uom.NewUOM(code, data.name, category, data.description, createdBy)
+func (h *ImportHandler) createUOM(ctx context.Context, code uom.Code, categoryID uuid.UUID, data rowData, rowNum int32, createdBy string, result *ImportResult) {
+	entity, err := uom.NewUOM(code, data.name, categoryID, data.description, createdBy)
 	if err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{

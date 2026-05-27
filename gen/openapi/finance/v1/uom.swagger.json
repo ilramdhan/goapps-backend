@@ -59,21 +59,6 @@
             "type": "string"
           },
           {
-            "name": "category",
-            "description": "Filter by category.\nUOM_CATEGORY_UNSPECIFIED (0) means \"show all categories\" (no filter).\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "UOM_CATEGORY_UNSPECIFIED",
-              "UOM_CATEGORY_WEIGHT",
-              "UOM_CATEGORY_LENGTH",
-              "UOM_CATEGORY_VOLUME",
-              "UOM_CATEGORY_QUANTITY"
-            ],
-            "default": "UOM_CATEGORY_UNSPECIFIED"
-          },
-          {
             "name": "activeFilter",
             "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = show all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
             "in": "query",
@@ -88,7 +73,7 @@
           },
           {
             "name": "sortBy",
-            "description": "Sort field: \"code\", \"name\", \"created_at\" (default: \"code\").",
+            "description": "Sort field: \"code\", \"name\", \"category\", \"created_at\" (default: \"code\").",
             "in": "query",
             "required": false,
             "type": "string"
@@ -96,6 +81,13 @@
           {
             "name": "sortOrder",
             "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "uomCategoryId",
+            "description": "Filter by category ID (empty = no filter).",
             "in": "query",
             "required": false,
             "type": "string"
@@ -158,21 +150,6 @@
         },
         "parameters": [
           {
-            "name": "category",
-            "description": "Filter by category.\nUOM_CATEGORY_UNSPECIFIED (0) means \"export all categories\".\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET).",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "UOM_CATEGORY_UNSPECIFIED",
-              "UOM_CATEGORY_WEIGHT",
-              "UOM_CATEGORY_LENGTH",
-              "UOM_CATEGORY_VOLUME",
-              "UOM_CATEGORY_QUANTITY"
-            ],
-            "default": "UOM_CATEGORY_UNSPECIFIED"
-          },
-          {
             "name": "activeFilter",
             "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = export all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
             "in": "query",
@@ -184,6 +161,13 @@
               "ACTIVE_FILTER_INACTIVE"
             ],
             "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "uomCategoryId",
+            "description": "Filter by category ID (empty = export all categories).",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -357,10 +341,6 @@
           "type": "string",
           "description": "New display name (optional, 1-100 chars if provided).\nEmpty string means no change."
         },
-        "uomCategory": {
-          "$ref": "#/definitions/v1UOMCategory",
-          "description": "New category (optional, cannot be UNSPECIFIED if provided).\nUse has_uom_category to check if this field is set."
-        },
         "description": {
           "type": "string",
           "description": "New description (optional, max 500 chars)."
@@ -368,6 +348,10 @@
         "isActive": {
           "type": "boolean",
           "description": "New active status (optional)."
+        },
+        "uomCategoryId": {
+          "type": "string",
+          "description": "New category ID (optional, UUID format)."
         }
       },
       "description": "UpdateUOMRequest is the request for updating a UOM.\nNote: uom_code is immutable and cannot be changed after creation."
@@ -469,13 +453,13 @@
           "type": "string",
           "description": "Display name (1-100 chars)."
         },
-        "uomCategory": {
-          "$ref": "#/definitions/v1UOMCategory",
-          "description": "Category (required, cannot be UNSPECIFIED)."
-        },
         "description": {
           "type": "string",
           "description": "Optional description (max 500 chars)."
+        },
+        "uomCategoryId": {
+          "type": "string",
+          "description": "Category ID (UUID, required - FK to mst_uom_category)."
         }
       },
       "description": "CreateUOMRequest is the request for creating a new UOM."
@@ -695,10 +679,6 @@
           "type": "string",
           "description": "Display name (e.g., \"Kilogram\", \"Meter\", \"Pieces\")."
         },
-        "uomCategory": {
-          "$ref": "#/definitions/v1UOMCategory",
-          "description": "Category of the UOM."
-        },
         "description": {
           "type": "string",
           "description": "Optional description."
@@ -710,21 +690,21 @@
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit information."
+        },
+        "uomCategoryId": {
+          "type": "string",
+          "description": "Category ID (FK to mst_uom_category)."
+        },
+        "uomCategoryCode": {
+          "type": "string",
+          "description": "Category code (denormalized for display, e.g., \"WEIGHT\")."
+        },
+        "uomCategoryName": {
+          "type": "string",
+          "description": "Category name (denormalized for display, e.g., \"Weight\")."
         }
       },
       "description": "UOM represents a Unit of Measure entity."
-    },
-    "v1UOMCategory": {
-      "type": "string",
-      "enum": [
-        "UOM_CATEGORY_UNSPECIFIED",
-        "UOM_CATEGORY_WEIGHT",
-        "UOM_CATEGORY_LENGTH",
-        "UOM_CATEGORY_VOLUME",
-        "UOM_CATEGORY_QUANTITY"
-      ],
-      "default": "UOM_CATEGORY_UNSPECIFIED",
-      "description": "UOMCategory represents the category of a unit of measure.\n\n - UOM_CATEGORY_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - UOM_CATEGORY_WEIGHT: Weight-based units (e.g., KG, GR, TON).\n - UOM_CATEGORY_LENGTH: Length-based units (e.g., MTR, CM, YARD).\n - UOM_CATEGORY_VOLUME: Volume-based units (e.g., LTR, ML).\n - UOM_CATEGORY_QUANTITY: Quantity-based units (e.g., PCS, BOX, SET)."
     },
     "v1UpdateUOMResponse": {
       "type": "object",

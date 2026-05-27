@@ -15,10 +15,10 @@ import (
 )
 
 type uomSeed struct {
-	code        string
-	name        string
-	category    string
-	description string
+	code         string
+	name         string
+	categoryCode string
+	description  string
 }
 
 type rmCategorySeed struct {
@@ -107,7 +107,16 @@ func main() {
 		return
 	}
 
-	// Seed UOMs
+	// Seed UOMs (uses uom_category_id FK via lookup on mst_uom_category)
+	seedUOMs(ctx, db)
+
+	// Seed RM Categories
+	seedRMCategories(ctx, db)
+}
+
+func seedUOMs(ctx context.Context, db *sql.DB) {
+	log.Info().Msg("Seeding UOMs")
+
 	inserted := 0
 	skipped := 0
 
@@ -129,11 +138,23 @@ func main() {
 			continue
 		}
 
-		// Insert
+		// Lookup category ID from mst_uom_category
+		var categoryID string
+		err = db.QueryRowContext(ctx,
+			"SELECT uom_category_id FROM mst_uom_category WHERE category_code = $1 AND deleted_at IS NULL",
+			seed.categoryCode,
+		).Scan(&categoryID)
+		if err != nil {
+			log.Error().Err(err).Str("code", seed.code).Str("category", seed.categoryCode).
+				Msg("Failed to find UOM category - run migration 000007 first")
+			continue
+		}
+
+		// Insert with uom_category_id FK
 		_, err = db.ExecContext(ctx,
-			`INSERT INTO mst_uom (uom_code, uom_name, uom_category, description, is_active, created_by)
+			`INSERT INTO mst_uom (uom_code, uom_name, uom_category_id, description, is_active, created_by)
 			 VALUES ($1, $2, $3, $4, true, 'seeder')`,
-			seed.code, seed.name, seed.category, seed.description,
+			seed.code, seed.name, categoryID, seed.description,
 		)
 		if err != nil {
 			log.Error().Err(err).Str("code", seed.code).Msg("Failed to insert UOM")
@@ -148,9 +169,6 @@ func main() {
 	fmt.Printf("   Inserted: %d\n", inserted)
 	fmt.Printf("   Skipped:  %d\n", skipped)
 	fmt.Printf("   Total:    %d\n", len(uomSeeds))
-
-	// Seed RM Categories
-	seedRMCategories(ctx, db)
 }
 
 func seedRMCategories(ctx context.Context, db *sql.DB) {

@@ -25,6 +25,9 @@ database:
 jwt:
   access_token_secret: "dev-access-secret-change-in-production"
   issuer: "goapps-iam"
+  # Shared secret for service-to-service auth (finance-cost-worker → ProcessChunkInternal).
+  # Override via FINANCE_JWT_SERVICE_SECRET env in prod; must match worker's finance.service_secret.
+  service_secret: "dev-service-secret-change-in-production"
 
 cors:
   allowed_origins:
@@ -43,6 +46,20 @@ auth_redis:
   password: ""
   db: 1  # Same Redis DB as IAM for shared token blacklist
 
+oracle:
+  host: localhost
+  port: 1521
+  service: ORCLPDB1
+  user: ""        # Override via ORACLE_USER env var
+  password: ""    # Override via ORACLE_PASSWORD env var
+  max_open_conns: 5
+  conn_max_lifetime: 10m
+
+rabbitmq:
+  url: "amqp://guest:guest@localhost:5672/"  # Override via RABBITMQ_URL env var
+  prefetch_count: 1
+  reconnect_delay: 5s
+
 tracing:
   enabled: true
   endpoint: localhost:4317
@@ -55,3 +72,18 @@ rate_limit:
 logging:
   level: debug  # debug, info, warn, error
   format: console  # console, json
+
+iam_client:
+  host: localhost
+  port: 50052          # Override via IAM_GRPC_HOST / IAM_GRPC_PORT env
+  internal_service_token: ""  # Override via INTERNAL_SERVICE_TOKEN — must match IAM's security.internal_service_token
+
+storage:
+  endpoint: localhost:9000
+  access_key: minioadmin       # Override via MINIO_ACCESS_KEY env
+  secret_key: minioadmin       # Override via MINIO_SECRET_KEY env
+  bucket: goapps-staging
+  use_ssl: false
+  insecure_skip_verify: false
+  region: us-east-1
+  public_url: ""               # Set when internal endpoint differs from browser-reachable URL

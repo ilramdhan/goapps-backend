@@ -35,6 +35,9 @@ const (
 	UserService_RemoveUserPermissions_FullMethodName      = "/iam.v1.UserService/RemoveUserPermissions"
 	UserService_GetUserRolesAndPermissions_FullMethodName = "/iam.v1.UserService/GetUserRolesAndPermissions"
 	UserService_UploadProfilePicture_FullMethodName       = "/iam.v1.UserService/UploadProfilePicture"
+	UserService_AssignUserCompanyMapping_FullMethodName   = "/iam.v1.UserService/AssignUserCompanyMapping"
+	UserService_RemoveUserCompanyMapping_FullMethodName   = "/iam.v1.UserService/RemoveUserCompanyMapping"
+	UserService_GetUserCompanyMappings_FullMethodName     = "/iam.v1.UserService/GetUserCompanyMappings"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -76,6 +79,12 @@ type UserServiceClient interface {
 	// UploadProfilePicture uploads or replaces a user's profile picture.
 	// Old picture is automatically deleted when a new one is uploaded.
 	UploadProfilePicture(ctx context.Context, in *UploadProfilePictureRequest, opts ...grpc.CallOption) (*UploadProfilePictureResponse, error)
+	// AssignUserCompanyMapping assigns a company mapping to a user.
+	AssignUserCompanyMapping(ctx context.Context, in *AssignUserCompanyMappingRequest, opts ...grpc.CallOption) (*AssignUserCompanyMappingResponse, error)
+	// RemoveUserCompanyMapping removes a company mapping from a user.
+	RemoveUserCompanyMapping(ctx context.Context, in *RemoveUserCompanyMappingRequest, opts ...grpc.CallOption) (*RemoveUserCompanyMappingResponse, error)
+	// GetUserCompanyMappings lists all company mappings assigned to a user.
+	GetUserCompanyMappings(ctx context.Context, in *GetUserCompanyMappingsRequest, opts ...grpc.CallOption) (*GetUserCompanyMappingsResponse, error)
 }
 
 type userServiceClient struct {
@@ -246,6 +255,36 @@ func (c *userServiceClient) UploadProfilePicture(ctx context.Context, in *Upload
 	return out, nil
 }
 
+func (c *userServiceClient) AssignUserCompanyMapping(ctx context.Context, in *AssignUserCompanyMappingRequest, opts ...grpc.CallOption) (*AssignUserCompanyMappingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssignUserCompanyMappingResponse)
+	err := c.cc.Invoke(ctx, UserService_AssignUserCompanyMapping_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) RemoveUserCompanyMapping(ctx context.Context, in *RemoveUserCompanyMappingRequest, opts ...grpc.CallOption) (*RemoveUserCompanyMappingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveUserCompanyMappingResponse)
+	err := c.cc.Invoke(ctx, UserService_RemoveUserCompanyMapping_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetUserCompanyMappings(ctx context.Context, in *GetUserCompanyMappingsRequest, opts ...grpc.CallOption) (*GetUserCompanyMappingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserCompanyMappingsResponse)
+	err := c.cc.Invoke(ctx, UserService_GetUserCompanyMappings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -285,6 +324,12 @@ type UserServiceServer interface {
 	// UploadProfilePicture uploads or replaces a user's profile picture.
 	// Old picture is automatically deleted when a new one is uploaded.
 	UploadProfilePicture(context.Context, *UploadProfilePictureRequest) (*UploadProfilePictureResponse, error)
+	// AssignUserCompanyMapping assigns a company mapping to a user.
+	AssignUserCompanyMapping(context.Context, *AssignUserCompanyMappingRequest) (*AssignUserCompanyMappingResponse, error)
+	// RemoveUserCompanyMapping removes a company mapping from a user.
+	RemoveUserCompanyMapping(context.Context, *RemoveUserCompanyMappingRequest) (*RemoveUserCompanyMappingResponse, error)
+	// GetUserCompanyMappings lists all company mappings assigned to a user.
+	GetUserCompanyMappings(context.Context, *GetUserCompanyMappingsRequest) (*GetUserCompanyMappingsResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -342,6 +387,15 @@ func (UnimplementedUserServiceServer) GetUserRolesAndPermissions(context.Context
 }
 func (UnimplementedUserServiceServer) UploadProfilePicture(context.Context, *UploadProfilePictureRequest) (*UploadProfilePictureResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UploadProfilePicture not implemented")
+}
+func (UnimplementedUserServiceServer) AssignUserCompanyMapping(context.Context, *AssignUserCompanyMappingRequest) (*AssignUserCompanyMappingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AssignUserCompanyMapping not implemented")
+}
+func (UnimplementedUserServiceServer) RemoveUserCompanyMapping(context.Context, *RemoveUserCompanyMappingRequest) (*RemoveUserCompanyMappingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveUserCompanyMapping not implemented")
+}
+func (UnimplementedUserServiceServer) GetUserCompanyMappings(context.Context, *GetUserCompanyMappingsRequest) (*GetUserCompanyMappingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserCompanyMappings not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -652,6 +706,60 @@ func _UserService_UploadProfilePicture_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_AssignUserCompanyMapping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssignUserCompanyMappingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).AssignUserCompanyMapping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_AssignUserCompanyMapping_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).AssignUserCompanyMapping(ctx, req.(*AssignUserCompanyMappingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_RemoveUserCompanyMapping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveUserCompanyMappingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).RemoveUserCompanyMapping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_RemoveUserCompanyMapping_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).RemoveUserCompanyMapping(ctx, req.(*RemoveUserCompanyMappingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetUserCompanyMappings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserCompanyMappingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetUserCompanyMappings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetUserCompanyMappings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetUserCompanyMappings(ctx, req.(*GetUserCompanyMappingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -722,6 +830,18 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UploadProfilePicture",
 			Handler:    _UserService_UploadProfilePicture_Handler,
+		},
+		{
+			MethodName: "AssignUserCompanyMapping",
+			Handler:    _UserService_AssignUserCompanyMapping_Handler,
+		},
+		{
+			MethodName: "RemoveUserCompanyMapping",
+			Handler:    _UserService_RemoveUserCompanyMapping_Handler,
+		},
+		{
+			MethodName: "GetUserCompanyMappings",
+			Handler:    _UserService_GetUserCompanyMappings_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

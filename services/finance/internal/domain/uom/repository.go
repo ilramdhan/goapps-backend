@@ -7,6 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
+// CategoryRepository defines read-only access to UOM Category data.
+// Used by UOM handlers that need to resolve category codes to IDs.
+type CategoryRepository interface {
+	// GetCategoryIDByCode resolves a category code to its UUID.
+	GetCategoryIDByCode(ctx context.Context, code string) (uuid.UUID, error)
+}
+
 // Repository defines the interface for UOM persistence.
 // This interface is defined in domain layer, implemented in infrastructure layer.
 type Repository interface {
@@ -43,8 +50,8 @@ type ListFilter struct {
 	// Search query (searches in code, name, description).
 	Search string
 
-	// Category filter.
-	Category *Category
+	// CategoryID filter (FK to mst_uom_category).
+	CategoryID *uuid.UUID
 
 	// IsActive filter.
 	IsActive *bool
@@ -54,14 +61,14 @@ type ListFilter struct {
 	PageSize int
 
 	// Sorting.
-	SortBy    string // "code", "name", "created_at"
+	SortBy    string // "code", "name", "category", "created_at"
 	SortOrder string // "asc", "desc"
 }
 
 // ExportFilter contains filtering options for exporting UOMs.
 type ExportFilter struct {
-	// Category filter.
-	Category *Category
+	// CategoryID filter (FK to mst_uom_category).
+	CategoryID *uuid.UUID
 
 	// IsActive filter.
 	IsActive *bool

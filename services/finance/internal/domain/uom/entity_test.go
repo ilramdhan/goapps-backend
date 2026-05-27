@@ -2,7 +2,6 @@
 package uom_test
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -83,47 +82,37 @@ func TestNewCode(t *testing.T) {
 	}
 }
 
-func TestNewCategory(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   string
-		wantErr bool
-	}{
-		{name: "valid - WEIGHT", input: "WEIGHT", wantErr: false},
-		{name: "valid - LENGTH", input: "LENGTH", wantErr: false},
-		{name: "valid - VOLUME", input: "VOLUME", wantErr: false},
-		{name: "valid - QUANTITY", input: "QUANTITY", wantErr: false},
-		{name: "valid - lowercase (auto uppercase)", input: "weight", wantErr: false},
-		{name: "invalid - empty", input: "", wantErr: true},
-		{name: "invalid - unknown", input: "UNKNOWN", wantErr: true},
-	}
+func TestCategoryInfo(t *testing.T) {
+	t.Run("create category info", func(t *testing.T) {
+		id := uuid.New()
+		info := uom.NewCategoryInfo(id, "WEIGHT", "Weight")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cat, err := uom.NewCategory(tt.input)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				// All valid categories should be uppercase
-				assert.Equal(t, strings.ToUpper(tt.input), cat.String())
-			}
-		})
-	}
+		assert.Equal(t, id, info.ID())
+		assert.Equal(t, "WEIGHT", info.Code())
+		assert.Equal(t, "Weight", info.Name())
+	})
+
+	t.Run("zero value category info", func(t *testing.T) {
+		info := uom.CategoryInfo{}
+		assert.Equal(t, uuid.Nil, info.ID())
+		assert.Equal(t, "", info.Code())
+		assert.Equal(t, "", info.Name())
+	})
 }
 
 func TestNewUOM(t *testing.T) {
+	categoryID := uuid.New()
+
 	t.Run("valid UOM creation", func(t *testing.T) {
 		code, _ := uom.NewCode("KG")
-		category, _ := uom.NewCategory("WEIGHT")
 
-		entity, err := uom.NewUOM(code, "Kilogram", category, "Unit of weight", "admin")
+		entity, err := uom.NewUOM(code, "Kilogram", categoryID, "Unit of weight", "admin")
 
 		require.NoError(t, err)
 		assert.NotEqual(t, uuid.Nil, entity.ID())
 		assert.Equal(t, "KG", entity.Code().String())
 		assert.Equal(t, "Kilogram", entity.Name())
-		assert.Equal(t, "WEIGHT", entity.Category().String())
+		assert.Equal(t, categoryID, entity.CategoryID())
 		assert.Equal(t, "Unit of weight", entity.Description())
 		assert.True(t, entity.IsActive())
 		assert.Equal(t, "admin", entity.CreatedBy())
@@ -134,9 +123,8 @@ func TestNewUOM(t *testing.T) {
 
 	t.Run("invalid - empty name", func(t *testing.T) {
 		code, _ := uom.NewCode("KG")
-		category, _ := uom.NewCategory("WEIGHT")
 
-		_, err := uom.NewUOM(code, "", category, "Description", "admin")
+		_, err := uom.NewUOM(code, "", categoryID, "Description", "admin")
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, uom.ErrEmptyName)
@@ -144,10 +132,9 @@ func TestNewUOM(t *testing.T) {
 
 	t.Run("invalid - name too long", func(t *testing.T) {
 		code, _ := uom.NewCode("KG")
-		category, _ := uom.NewCategory("WEIGHT")
 		longName := string(make([]byte, 101)) // 101 characters
 
-		_, err := uom.NewUOM(code, longName, category, "Description", "admin")
+		_, err := uom.NewUOM(code, longName, categoryID, "Description", "admin")
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, uom.ErrNameTooLong)
@@ -155,20 +142,28 @@ func TestNewUOM(t *testing.T) {
 
 	t.Run("invalid - empty created by", func(t *testing.T) {
 		code, _ := uom.NewCode("KG")
-		category, _ := uom.NewCategory("WEIGHT")
 
-		_, err := uom.NewUOM(code, "Kilogram", category, "Description", "")
+		_, err := uom.NewUOM(code, "Kilogram", categoryID, "Description", "")
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, uom.ErrEmptyCreatedBy)
+	})
+
+	t.Run("invalid - nil category ID", func(t *testing.T) {
+		code, _ := uom.NewCode("KG")
+
+		_, err := uom.NewUOM(code, "Kilogram", uuid.Nil, "Description", "admin")
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, uom.ErrInvalidCategory)
 	})
 }
 
 func TestUOM_Update(t *testing.T) {
 	// Create a valid entity first
 	code, _ := uom.NewCode("KG")
-	category, _ := uom.NewCategory("WEIGHT")
-	entity, _ := uom.NewUOM(code, "Kilogram", category, "Old description", "admin")
+	categoryID := uuid.New()
+	entity, _ := uom.NewUOM(code, "Kilogram", categoryID, "Old description", "admin")
 
 	t.Run("update name", func(t *testing.T) {
 		newName := "Kilogram Updated"
@@ -182,12 +177,20 @@ func TestUOM_Update(t *testing.T) {
 	})
 
 	t.Run("update category", func(t *testing.T) {
-		newCat, _ := uom.NewCategory("LENGTH")
-		err := entity.Update(nil, &newCat, nil, nil, "editor2")
+		newCatID := uuid.New()
+		err := entity.Update(nil, &newCatID, nil, nil, "editor2")
 
 		require.NoError(t, err)
-		assert.Equal(t, "LENGTH", entity.Category().String())
+		assert.Equal(t, newCatID, entity.CategoryID())
 		assert.Equal(t, "editor2", *entity.UpdatedBy())
+	})
+
+	t.Run("update category with nil UUID", func(t *testing.T) {
+		nilID := uuid.Nil
+		err := entity.Update(nil, &nilID, nil, nil, "editor")
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, uom.ErrInvalidCategory)
 	})
 
 	t.Run("update description", func(t *testing.T) {
@@ -210,7 +213,7 @@ func TestUOM_Update(t *testing.T) {
 func TestReconstructUOM(t *testing.T) {
 	id := uuid.New()
 	code, _ := uom.NewCode("LTR")
-	category, _ := uom.NewCategory("VOLUME")
+	categoryInfo := uom.NewCategoryInfo(uuid.New(), "VOLUME", "Volume")
 	createdAt := time.Now().Add(-24 * time.Hour)
 	updatedAt := time.Now()
 	updatedBy := "updater"
@@ -219,7 +222,7 @@ func TestReconstructUOM(t *testing.T) {
 		id,
 		code,
 		"Liter",
-		category,
+		categoryInfo,
 		"Volume unit",
 		true,
 		createdAt,
@@ -233,7 +236,9 @@ func TestReconstructUOM(t *testing.T) {
 	assert.Equal(t, id, entity.ID())
 	assert.Equal(t, "LTR", entity.Code().String())
 	assert.Equal(t, "Liter", entity.Name())
-	assert.Equal(t, "VOLUME", entity.Category().String())
+	assert.Equal(t, categoryInfo.ID(), entity.CategoryID())
+	assert.Equal(t, "VOLUME", entity.CategoryInfo().Code())
+	assert.Equal(t, "Volume", entity.CategoryInfo().Name())
 	assert.Equal(t, "Volume unit", entity.Description())
 	assert.True(t, entity.IsActive())
 	assert.Equal(t, createdAt, entity.CreatedAt())
@@ -242,14 +247,4 @@ func TestReconstructUOM(t *testing.T) {
 	assert.Equal(t, updatedAt, *entity.UpdatedAt())
 	assert.NotNil(t, entity.UpdatedBy())
 	assert.Equal(t, "updater", *entity.UpdatedBy())
-}
-
-func TestCategory_IsValid(t *testing.T) {
-	validCategories := []string{"WEIGHT", "LENGTH", "VOLUME", "QUANTITY"}
-
-	for _, catStr := range validCategories {
-		cat, err := uom.NewCategory(catStr)
-		assert.NoError(t, err)
-		assert.True(t, cat.IsValid())
-	}
 }

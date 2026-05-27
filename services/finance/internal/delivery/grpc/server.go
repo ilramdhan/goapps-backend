@@ -37,6 +37,7 @@ func NewServer(cfg *config.ServerConfig, db *postgres.DB, jwtCfg *config.JWTConf
 		StructuredErrorInterceptor(),       // 0. Wrap gRPC errors into BaseResponse
 		RecoveryInterceptor(),              // 1. Recover from panics first
 		RequestIDInterceptor(),             // 2. Add request ID
+		TraceContextInterceptor(),          // 2b. Continue caller's distributed trace
 		TracingInterceptor(),               // 3. Add tracing span
 		MetricsInterceptor(),               // 4. Record metrics
 		RateLimitInterceptor(rateLimiter),  // 5. Rate limiting
@@ -73,6 +74,8 @@ func NewServer(cfg *config.ServerConfig, db *postgres.DB, jwtCfg *config.JWTConf
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("finance.v1.UOMService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("finance.v1.RMCategoryService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("finance.v1.ProductService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("finance.v1.ProductRequestService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	// Enable reflection for development
 	reflection.Register(grpcServer)

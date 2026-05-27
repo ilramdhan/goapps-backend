@@ -1,0 +1,2 @@
+DELETE FROM cost_rm_type
+WHERE crmt_type_code IN ('STORE_RATE', 'CAPTIVE_COST', 'MULTI_YARN', 'UNEVEN_PACK');

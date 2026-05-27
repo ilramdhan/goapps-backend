@@ -36,16 +36,18 @@ func NewUOMCache(client *Client) *UOMCache {
 
 // uomCacheData is the cached representation of UOM.
 type uomCacheData struct {
-	ID          string  `json:"id"`
-	Code        string  `json:"code"`
-	Name        string  `json:"name"`
-	Category    string  `json:"category"`
-	Description string  `json:"description"`
-	IsActive    bool    `json:"is_active"`
-	CreatedAt   string  `json:"created_at"`
-	CreatedBy   string  `json:"created_by"`
-	UpdatedAt   *string `json:"updated_at,omitempty"`
-	UpdatedBy   *string `json:"updated_by,omitempty"`
+	ID           string  `json:"id"`
+	Code         string  `json:"code"`
+	Name         string  `json:"name"`
+	CategoryID   string  `json:"category_id"`
+	CategoryCode string  `json:"category_code"`
+	CategoryName string  `json:"category_name"`
+	Description  string  `json:"description"`
+	IsActive     bool    `json:"is_active"`
+	CreatedAt    string  `json:"created_at"`
+	CreatedBy    string  `json:"created_by"`
+	UpdatedAt    *string `json:"updated_at,omitempty"`
+	UpdatedBy    *string `json:"updated_by,omitempty"`
 }
 
 // GetByID retrieves a UOM by ID from cache.
@@ -134,14 +136,16 @@ func (c *UOMCache) InvalidateList(ctx context.Context) error {
 // fromEntity converts domain entity to cache data.
 func (c *UOMCache) fromEntity(entity *uom.UOM) *uomCacheData {
 	data := &uomCacheData{
-		ID:          entity.ID().String(),
-		Code:        entity.Code().String(),
-		Name:        entity.Name(),
-		Category:    entity.Category().String(),
-		Description: entity.Description(),
-		IsActive:    entity.IsActive(),
-		CreatedAt:   entity.CreatedAt().Format(time.RFC3339),
-		CreatedBy:   entity.CreatedBy(),
+		ID:           entity.ID().String(),
+		Code:         entity.Code().String(),
+		Name:         entity.Name(),
+		CategoryID:   entity.CategoryID().String(),
+		CategoryCode: entity.CategoryInfo().Code(),
+		CategoryName: entity.CategoryInfo().Name(),
+		Description:  entity.Description(),
+		IsActive:     entity.IsActive(),
+		CreatedAt:    entity.CreatedAt().Format(time.RFC3339),
+		CreatedBy:    entity.CreatedBy(),
 	}
 
 	if entity.UpdatedAt() != nil {
@@ -167,10 +171,11 @@ func (c *UOMCache) toEntity(data *uomCacheData) (*uom.UOM, error) {
 		return nil, err
 	}
 
-	category, err := uom.NewCategory(data.Category)
+	categoryID, err := uuid.Parse(data.CategoryID)
 	if err != nil {
 		return nil, err
 	}
+	categoryInfo := uom.NewCategoryInfo(categoryID, data.CategoryCode, data.CategoryName)
 
 	createdAt, err := time.Parse(time.RFC3339, data.CreatedAt)
 	if err != nil {
@@ -189,7 +194,7 @@ func (c *UOMCache) toEntity(data *uomCacheData) (*uom.UOM, error) {
 		id,
 		code,
 		data.Name,
-		category,
+		categoryInfo,
 		data.Description,
 		data.IsActive,
 		createdAt,

@@ -168,7 +168,19 @@ type Parameter struct {
 	// Resolved UOM code (read-only, populated from mst_uom join).
 	UomCode string `protobuf:"bytes,22,opt,name=uom_code,json=uomCode,proto3" json:"uom_code,omitempty"`
 	// Resolved UOM name (read-only, populated from mst_uom join).
-	UomName       string `protobuf:"bytes,23,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty"`
+	UomName string `protobuf:"bytes,23,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty"`
+	// Responsible department (Engineering, Production, Finance, RND). Optional.
+	OwnerDepartment string `protobuf:"bytes,24,opt,name=owner_department,json=ownerDepartment,proto3" json:"owner_department,omitempty"`
+	// Whether this parameter must be filled per product before the request can leave PARAMETER_PENDING.
+	IsRequiredForCosting bool `protobuf:"varint,25,opt,name=is_required_for_costing,json=isRequiredForCosting,proto3" json:"is_required_for_costing,omitempty"`
+	// FALSE = stored in cost_product_parameter (Phase B static). TRUE = stored per period in Phase C (deferred).
+	IsPeriodDependent bool `protobuf:"varint,26,opt,name=is_period_dependent,json=isPeriodDependent,proto3" json:"is_period_dependent,omitempty"`
+	// When NOT empty the UI renders a combobox sourced from the named master (e.g. YARN_TYPE). Free-text fallback while master is not yet built.
+	LookupMasterCode string `protobuf:"bytes,27,opt,name=lookup_master_code,json=lookupMasterCode,proto3" json:"lookup_master_code,omitempty"`
+	// Render order within display_group.
+	DisplayOrder int32 `protobuf:"varint,28,opt,name=display_order,json=displayOrder,proto3" json:"display_order,omitempty"`
+	// Form section: Spec / Machine / Grade / Packing / Cost / etc.
+	DisplayGroup  string `protobuf:"bytes,29,opt,name=display_group,json=displayGroup,proto3" json:"display_group,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -301,6 +313,48 @@ func (x *Parameter) GetUomName() string {
 	return ""
 }
 
+func (x *Parameter) GetOwnerDepartment() string {
+	if x != nil {
+		return x.OwnerDepartment
+	}
+	return ""
+}
+
+func (x *Parameter) GetIsRequiredForCosting() bool {
+	if x != nil {
+		return x.IsRequiredForCosting
+	}
+	return false
+}
+
+func (x *Parameter) GetIsPeriodDependent() bool {
+	if x != nil {
+		return x.IsPeriodDependent
+	}
+	return false
+}
+
+func (x *Parameter) GetLookupMasterCode() string {
+	if x != nil {
+		return x.LookupMasterCode
+	}
+	return ""
+}
+
+func (x *Parameter) GetDisplayOrder() int32 {
+	if x != nil {
+		return x.DisplayOrder
+	}
+	return 0
+}
+
+func (x *Parameter) GetDisplayGroup() string {
+	if x != nil {
+		return x.DisplayGroup
+	}
+	return ""
+}
+
 // CreateParameterRequest is the request for creating a new parameter.
 type CreateParameterRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -322,7 +376,19 @@ type CreateParameterRequest struct {
 	// Minimum value (optional, decimal as string).
 	MinValue string `protobuf:"bytes,8,opt,name=min_value,json=minValue,proto3" json:"min_value,omitempty"`
 	// Maximum value (optional, decimal as string).
-	MaxValue      string `protobuf:"bytes,9,opt,name=max_value,json=maxValue,proto3" json:"max_value,omitempty"`
+	MaxValue string `protobuf:"bytes,9,opt,name=max_value,json=maxValue,proto3" json:"max_value,omitempty"`
+	// Owner department (optional, max 30 chars).
+	OwnerDepartment string `protobuf:"bytes,10,opt,name=owner_department,json=ownerDepartment,proto3" json:"owner_department,omitempty"`
+	// Whether required for costing (default false).
+	IsRequiredForCosting bool `protobuf:"varint,11,opt,name=is_required_for_costing,json=isRequiredForCosting,proto3" json:"is_required_for_costing,omitempty"`
+	// Period-dependent flag (default false). TRUE = Phase C period-storage (deferred).
+	IsPeriodDependent bool `protobuf:"varint,12,opt,name=is_period_dependent,json=isPeriodDependent,proto3" json:"is_period_dependent,omitempty"`
+	// Lookup master code (optional, max 30 chars). E.g. 'YARN_TYPE'.
+	LookupMasterCode string `protobuf:"bytes,13,opt,name=lookup_master_code,json=lookupMasterCode,proto3" json:"lookup_master_code,omitempty"`
+	// Display order within display group (default 0).
+	DisplayOrder int32 `protobuf:"varint,14,opt,name=display_order,json=displayOrder,proto3" json:"display_order,omitempty"`
+	// Display group (optional, max 50 chars). E.g. 'Spec', 'Machine'.
+	DisplayGroup  string `protobuf:"bytes,15,opt,name=display_group,json=displayGroup,proto3" json:"display_group,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -416,6 +482,48 @@ func (x *CreateParameterRequest) GetMinValue() string {
 func (x *CreateParameterRequest) GetMaxValue() string {
 	if x != nil {
 		return x.MaxValue
+	}
+	return ""
+}
+
+func (x *CreateParameterRequest) GetOwnerDepartment() string {
+	if x != nil {
+		return x.OwnerDepartment
+	}
+	return ""
+}
+
+func (x *CreateParameterRequest) GetIsRequiredForCosting() bool {
+	if x != nil {
+		return x.IsRequiredForCosting
+	}
+	return false
+}
+
+func (x *CreateParameterRequest) GetIsPeriodDependent() bool {
+	if x != nil {
+		return x.IsPeriodDependent
+	}
+	return false
+}
+
+func (x *CreateParameterRequest) GetLookupMasterCode() string {
+	if x != nil {
+		return x.LookupMasterCode
+	}
+	return ""
+}
+
+func (x *CreateParameterRequest) GetDisplayOrder() int32 {
+	if x != nil {
+		return x.DisplayOrder
+	}
+	return 0
+}
+
+func (x *CreateParameterRequest) GetDisplayGroup() string {
+	if x != nil {
+		return x.DisplayGroup
 	}
 	return ""
 }
@@ -599,7 +707,19 @@ type UpdateParameterRequest struct {
 	// New maximum value (optional).
 	MaxValue *string `protobuf:"bytes,9,opt,name=max_value,json=maxValue,proto3,oneof" json:"max_value,omitempty"`
 	// New active status (optional).
-	IsActive      *bool `protobuf:"varint,10,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	IsActive *bool `protobuf:"varint,10,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// New owner department (optional).
+	OwnerDepartment *string `protobuf:"bytes,11,opt,name=owner_department,json=ownerDepartment,proto3,oneof" json:"owner_department,omitempty"`
+	// New is_required_for_costing flag (optional).
+	IsRequiredForCosting *bool `protobuf:"varint,12,opt,name=is_required_for_costing,json=isRequiredForCosting,proto3,oneof" json:"is_required_for_costing,omitempty"`
+	// New is_period_dependent flag (optional).
+	IsPeriodDependent *bool `protobuf:"varint,13,opt,name=is_period_dependent,json=isPeriodDependent,proto3,oneof" json:"is_period_dependent,omitempty"`
+	// New lookup master code (optional). Set to empty string to clear.
+	LookupMasterCode *string `protobuf:"bytes,14,opt,name=lookup_master_code,json=lookupMasterCode,proto3,oneof" json:"lookup_master_code,omitempty"`
+	// New display order (optional).
+	DisplayOrder *int32 `protobuf:"varint,15,opt,name=display_order,json=displayOrder,proto3,oneof" json:"display_order,omitempty"`
+	// New display group (optional). Set to empty string to clear.
+	DisplayGroup  *string `protobuf:"bytes,16,opt,name=display_group,json=displayGroup,proto3,oneof" json:"display_group,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -702,6 +822,48 @@ func (x *UpdateParameterRequest) GetIsActive() bool {
 		return *x.IsActive
 	}
 	return false
+}
+
+func (x *UpdateParameterRequest) GetOwnerDepartment() string {
+	if x != nil && x.OwnerDepartment != nil {
+		return *x.OwnerDepartment
+	}
+	return ""
+}
+
+func (x *UpdateParameterRequest) GetIsRequiredForCosting() bool {
+	if x != nil && x.IsRequiredForCosting != nil {
+		return *x.IsRequiredForCosting
+	}
+	return false
+}
+
+func (x *UpdateParameterRequest) GetIsPeriodDependent() bool {
+	if x != nil && x.IsPeriodDependent != nil {
+		return *x.IsPeriodDependent
+	}
+	return false
+}
+
+func (x *UpdateParameterRequest) GetLookupMasterCode() string {
+	if x != nil && x.LookupMasterCode != nil {
+		return *x.LookupMasterCode
+	}
+	return ""
+}
+
+func (x *UpdateParameterRequest) GetDisplayOrder() int32 {
+	if x != nil && x.DisplayOrder != nil {
+		return *x.DisplayOrder
+	}
+	return 0
+}
+
+func (x *UpdateParameterRequest) GetDisplayGroup() string {
+	if x != nil && x.DisplayGroup != nil {
+		return *x.DisplayGroup
+	}
+	return ""
 }
 
 // UpdateParameterResponse is the response for updating a parameter.
@@ -1417,7 +1579,7 @@ var File_finance_v1_parameter_proto protoreflect.FileDescriptor
 const file_finance_v1_parameter_proto_rawDesc = "" +
 	"\n" +
 	"\x1afinance/v1/parameter.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xf8\x03\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\x82\x06\n" +
 	"\tParameter\x12\x19\n" +
 	"\bparam_id\x18\x01 \x01(\tR\aparamId\x12\x1d\n" +
 	"\n" +
@@ -1435,7 +1597,13 @@ const file_finance_v1_parameter_proto_rawDesc = "" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12\x15\n" +
 	"\x06uom_id\x18\x15 \x01(\tR\x05uomId\x12\x19\n" +
 	"\buom_code\x18\x16 \x01(\tR\auomCode\x12\x19\n" +
-	"\buom_name\x18\x17 \x01(\tR\auomName\"\xda\x03\n" +
+	"\buom_name\x18\x17 \x01(\tR\auomName\x12)\n" +
+	"\x10owner_department\x18\x18 \x01(\tR\x0fownerDepartment\x125\n" +
+	"\x17is_required_for_costing\x18\x19 \x01(\bR\x14isRequiredForCosting\x12.\n" +
+	"\x13is_period_dependent\x18\x1a \x01(\bR\x11isPeriodDependent\x12,\n" +
+	"\x12lookup_master_code\x18\x1b \x01(\tR\x10lookupMasterCode\x12#\n" +
+	"\rdisplay_order\x18\x1c \x01(\x05R\fdisplayOrder\x12#\n" +
+	"\rdisplay_group\x18\x1d \x01(\tR\fdisplayGroup\"\x88\x06\n" +
 	"\x16CreateParameterRequest\x12;\n" +
 	"\n" +
 	"param_code\x18\x01 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18\x142\x11^[A-Z][A-Z0-9_]*$R\tparamCode\x12)\n" +
@@ -1448,7 +1616,14 @@ const file_finance_v1_parameter_proto_rawDesc = "" +
 	"\x06uom_id\x18\x06 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\x05uomId\x12,\n" +
 	"\rdefault_value\x18\a \x01(\tB\a\xbaH\x04r\x02\x182R\fdefaultValue\x12$\n" +
 	"\tmin_value\x18\b \x01(\tB\a\xbaH\x04r\x02\x182R\bminValue\x12$\n" +
-	"\tmax_value\x18\t \x01(\tB\a\xbaH\x04r\x02\x182R\bmaxValue\"q\n" +
+	"\tmax_value\x18\t \x01(\tB\a\xbaH\x04r\x02\x182R\bmaxValue\x122\n" +
+	"\x10owner_department\x18\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x18\x1eR\x0fownerDepartment\x125\n" +
+	"\x17is_required_for_costing\x18\v \x01(\bR\x14isRequiredForCosting\x12.\n" +
+	"\x13is_period_dependent\x18\f \x01(\bR\x11isPeriodDependent\x125\n" +
+	"\x12lookup_master_code\x18\r \x01(\tB\a\xbaH\x04r\x02\x18\x1eR\x10lookupMasterCode\x12,\n" +
+	"\rdisplay_order\x18\x0e \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fdisplayOrder\x12,\n" +
+	"\rdisplay_group\x18\x0f \x01(\tB\a\xbaH\x04r\x02\x182R\fdisplayGroup\"q\n" +
 	"\x17CreateParameterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12)\n" +
 	"\x04data\x18\x02 \x01(\v2\x15.finance.v1.ParameterR\x04data\":\n" +
@@ -1456,7 +1631,7 @@ const file_finance_v1_parameter_proto_rawDesc = "" +
 	"\bparam_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aparamId\"n\n" +
 	"\x14GetParameterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12)\n" +
-	"\x04data\x18\x02 \x01(\v2\x15.finance.v1.ParameterR\x04data\"\xee\x04\n" +
+	"\x04data\x18\x02 \x01(\v2\x15.finance.v1.ParameterR\x04data\"\xbe\b\n" +
 	"\x16UpdateParameterRequest\x12#\n" +
 	"\bparam_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aparamId\x12,\n" +
 	"\n" +
@@ -1469,7 +1644,14 @@ const file_finance_v1_parameter_proto_rawDesc = "" +
 	"\tmin_value\x18\b \x01(\tH\x06R\bminValue\x88\x01\x01\x12 \n" +
 	"\tmax_value\x18\t \x01(\tH\aR\bmaxValue\x88\x01\x01\x12 \n" +
 	"\tis_active\x18\n" +
-	" \x01(\bH\bR\bisActive\x88\x01\x01B\r\n" +
+	" \x01(\bH\bR\bisActive\x88\x01\x01\x127\n" +
+	"\x10owner_department\x18\v \x01(\tB\a\xbaH\x04r\x02\x18\x1eH\tR\x0fownerDepartment\x88\x01\x01\x12:\n" +
+	"\x17is_required_for_costing\x18\f \x01(\bH\n" +
+	"R\x14isRequiredForCosting\x88\x01\x01\x123\n" +
+	"\x13is_period_dependent\x18\r \x01(\bH\vR\x11isPeriodDependent\x88\x01\x01\x12:\n" +
+	"\x12lookup_master_code\x18\x0e \x01(\tB\a\xbaH\x04r\x02\x18\x1eH\fR\x10lookupMasterCode\x88\x01\x01\x121\n" +
+	"\rdisplay_order\x18\x0f \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\rR\fdisplayOrder\x88\x01\x01\x121\n" +
+	"\rdisplay_group\x18\x10 \x01(\tB\a\xbaH\x04r\x02\x182H\x0eR\fdisplayGroup\x88\x01\x01B\r\n" +
 	"\v_param_nameB\x13\n" +
 	"\x11_param_short_nameB\f\n" +
 	"\n" +
@@ -1482,7 +1664,13 @@ const file_finance_v1_parameter_proto_rawDesc = "" +
 	"\n" +
 	"_max_valueB\f\n" +
 	"\n" +
-	"_is_active\"q\n" +
+	"_is_activeB\x13\n" +
+	"\x11_owner_departmentB\x1a\n" +
+	"\x18_is_required_for_costingB\x16\n" +
+	"\x14_is_period_dependentB\x15\n" +
+	"\x13_lookup_master_codeB\x10\n" +
+	"\x0e_display_orderB\x10\n" +
+	"\x0e_display_group\"q\n" +
 	"\x17UpdateParameterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12)\n" +
 	"\x04data\x18\x02 \x01(\v2\x15.finance.v1.ParameterR\x04data\"=\n" +

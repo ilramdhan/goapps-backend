@@ -177,10 +177,10 @@ DO UPDATE SET
 	}()
 	for _, row := range rowsIn {
 		if _, err := stmt.ExecContext(ctx,
-			row.Type, row.Group1, nullableString(row.Group2), nullableString(row.Group3),
+			row.Type, row.Group1, biNullableString(row.Group2), biNullableString(row.Group3),
 			nullableInt(row.Group1Order), nullableInt(row.Group2Order), nullableInt(row.Group3Order),
 			row.PeriodGrain, row.PeriodDate, row.PeriodLabel,
-			row.Value, row.DisplayValue, nullableString(row.UOM), row.Scenario, row.SourceID, row.DimensionKey,
+			row.Value, row.DisplayValue, biNullableString(row.UOM), row.Scenario, row.SourceID, row.DimensionKey,
 			nullableUUID(row.UploadedBy), row.IsActive,
 		); err != nil {
 			return fmt.Errorf("upsert row: %w", err)

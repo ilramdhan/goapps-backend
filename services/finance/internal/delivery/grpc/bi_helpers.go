@@ -26,8 +26,8 @@ func iso8601(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
-// paginationResponse builds a PaginationResponse from page/pageSize/total.
-func paginationResponse(page, pageSize int, total int64) *commonv1.PaginationResponse {
+// biPaginationResponse builds a PaginationResponse from page/pageSize/total.
+func biPaginationResponse(page, pageSize int, total int64) *commonv1.PaginationResponse {
 	if page < 1 {
 		page = 1
 	}
@@ -444,8 +444,8 @@ func dataSourceToProto(ds *dsdomain.DataSource) *financev1.DataSource {
 	}
 }
 
-// jobToProto converts a domain Job to its proto representation.
-func jobToProto(j *jobdomain.Job) *financev1.BiJob {
+// biJobToProto converts a domain Job to its proto representation.
+func biJobToProto(j *jobdomain.Job) *financev1.BiJob {
 	if j == nil {
 		return nil
 	}

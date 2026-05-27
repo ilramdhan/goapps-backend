@@ -64,6 +64,13 @@ linters:
         - G104
     misspell:
       locale: US
+      ignore-rules:
+        - colourant
+        - colour
+        # "cancelled" is the deliberate British-spelled persisted value used by
+        # the cost job status (CANCELLED) and closed_substatus ('cancelled') —
+        # baked into DB CHECK constraints + proto enums, not a typo to fix.
+        - cancelled
     nestif:
       min-complexity: 4
     exhaustive:

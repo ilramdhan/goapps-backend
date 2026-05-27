@@ -170,7 +170,7 @@ func (h *BIDashboardHandler) ListDashboards(ctx context.Context, req *financev1.
 	return &financev1.ListDashboardsResponse{
 		Base:       successResponse("Dashboards listed"),
 		Data:       items,
-		Pagination: paginationResponse(q.Page, q.PageSize, result.Total),
+		Pagination: biPaginationResponse(q.Page, q.PageSize, result.Total),
 	}, nil
 }
 

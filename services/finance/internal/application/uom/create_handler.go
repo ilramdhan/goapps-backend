@@ -4,16 +4,18 @@ package uom
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/uom"
 )
 
 // CreateCommand represents the create UOM command.
 type CreateCommand struct {
-	UOMCode     string
-	UOMName     string
-	UOMCategory string
-	Description string
-	CreatedBy   string
+	UOMCode       string
+	UOMName       string
+	UOMCategoryID string
+	Description   string
+	CreatedBy     string
 }
 
 // CreateHandler handles the CreateUOM command.
@@ -34,9 +36,9 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*uom.UOM
 		return nil, err
 	}
 
-	category, err := uom.NewCategory(cmd.UOMCategory)
+	categoryID, err := uuid.Parse(cmd.UOMCategoryID)
 	if err != nil {
-		return nil, err
+		return nil, uom.ErrInvalidCategory
 	}
 
 	// 2. Check for duplicates
@@ -49,7 +51,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*uom.UOM
 	}
 
 	// 3. Create domain entity
-	entity, err := uom.NewUOM(code, cmd.UOMName, category, cmd.Description, cmd.CreatedBy)
+	entity, err := uom.NewUOM(code, cmd.UOMName, categoryID, cmd.Description, cmd.CreatedBy)
 	if err != nil {
 		return nil, err
 	}

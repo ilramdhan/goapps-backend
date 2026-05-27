@@ -87,7 +87,10 @@ func updateSessionActivity(repo session.Repository, userIDStr string) {
 // AuthInterceptor creates a unary interceptor that validates JWT tokens
 // and populates the context with user information.
 // sessionRepo is optional — when provided, it updates last_activity_at on each request.
-func AuthInterceptor(jwtService *jwt.Service, sessionCache *redis.SessionCache, sessionRepo session.Repository) grpc.UnaryServerInterceptor {
+// internalToken is an optional shared secret accepted in the `x-internal-token`
+// metadata header in lieu of a bearer token; intended for trusted backend
+// service-to-service calls (e.g. finance-worker → IAM CreateNotification).
+func AuthInterceptor(jwtService *jwt.Service, sessionCache *redis.SessionCache, sessionRepo session.Repository, internalToken string) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,
@@ -96,6 +99,16 @@ func AuthInterceptor(jwtService *jwt.Service, sessionCache *redis.SessionCache, 
 	) (any, error) {
 		// Skip auth for public endpoints
 		if isPublicMethod(info.FullMethod) {
+			return handler(ctx, req)
+		}
+
+		// Internal service-to-service bypass — accepts a shared secret in
+		// `x-internal-token` metadata. Injects a synthetic "system" user.
+		if internalToken != "" && hasInternalToken(ctx, internalToken) {
+			ctx = context.WithValue(ctx, UserIDKey, "system")
+			ctx = context.WithValue(ctx, UsernameKey, "system")
+			ctx = context.WithValue(ctx, RolesKey, []string{"system"})
+			ctx = context.WithValue(ctx, PermissionsKey, []string{})
 			return handler(ctx, req)
 		}
 
@@ -136,6 +149,22 @@ func AuthInterceptor(jwtService *jwt.Service, sessionCache *redis.SessionCache, 
 
 		return handler(ctx, req)
 	}
+}
+
+// hasInternalToken returns true when the gRPC metadata contains a
+// `x-internal-token` header equal to the configured internal token.
+func hasInternalToken(ctx context.Context, expected string) bool {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return false
+	}
+	values := md.Get("x-internal-token")
+	for _, v := range values {
+		if v == expected {
+			return true
+		}
+	}
+	return false
 }
 
 // extractBearerToken extracts the Bearer token from gRPC metadata.

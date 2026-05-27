@@ -1,0 +1,671 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "iam/v1/notification.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "NotificationService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/iam/notifications": {
+      "get": {
+        "summary": "ListNotifications lists notifications for the authenticated user.",
+        "operationId": "NotificationService_ListNotifications",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListNotificationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "status",
+            "description": "Filter by status (UNSPECIFIED = all).\n\n - NOTIFICATION_STATUS_UNREAD: Recipient has not read yet.\n - NOTIFICATION_STATUS_READ: Recipient has marked read.\n - NOTIFICATION_STATUS_ARCHIVED: Recipient archived (kept until expires_at).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "NOTIFICATION_STATUS_UNSPECIFIED",
+              "NOTIFICATION_STATUS_UNREAD",
+              "NOTIFICATION_STATUS_READ",
+              "NOTIFICATION_STATUS_ARCHIVED"
+            ],
+            "default": "NOTIFICATION_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "type",
+            "description": "Filter by type (UNSPECIFIED = all).\n\n - NOTIFICATION_TYPE_UNSPECIFIED: Default — used as \"no filter\" in list.\n - NOTIFICATION_TYPE_EXPORT_READY: A generated file is ready for download.\n - NOTIFICATION_TYPE_ALERT: System alert (warning/error).\n - NOTIFICATION_TYPE_APPROVAL: Approval request awaiting recipient action.\n - NOTIFICATION_TYPE_CHAT: Direct chat or comment from another user.\n - NOTIFICATION_TYPE_REMINDER: Time-based reminder.\n - NOTIFICATION_TYPE_SYSTEM: Generic system notification.\n - NOTIFICATION_TYPE_MENTION: The user was mentioned (@username) somewhere.\n - NOTIFICATION_TYPE_ASSIGNMENT: A task/resource was assigned to the user.\n - NOTIFICATION_TYPE_ANNOUNCEMENT: Broadcast announcement to many users.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "NOTIFICATION_TYPE_UNSPECIFIED",
+              "NOTIFICATION_TYPE_EXPORT_READY",
+              "NOTIFICATION_TYPE_ALERT",
+              "NOTIFICATION_TYPE_APPROVAL",
+              "NOTIFICATION_TYPE_CHAT",
+              "NOTIFICATION_TYPE_REMINDER",
+              "NOTIFICATION_TYPE_SYSTEM",
+              "NOTIFICATION_TYPE_MENTION",
+              "NOTIFICATION_TYPE_ASSIGNMENT",
+              "NOTIFICATION_TYPE_ANNOUNCEMENT"
+            ],
+            "default": "NOTIFICATION_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      },
+      "post": {
+        "summary": "CreateNotification creates a new notification for a user. Used by other\nservices (e.g. finance worker emitting EXPORT_READY).",
+        "operationId": "NotificationService_CreateNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateNotificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateNotificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      }
+    },
+    "/api/v1/iam/notifications/read-all": {
+      "post": {
+        "summary": "MarkAllAsRead marks all unread notifications as read.",
+        "operationId": "NotificationService_MarkAllAsRead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MarkAllAsReadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1MarkAllAsReadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      }
+    },
+    "/api/v1/iam/notifications/unread-count": {
+      "get": {
+        "summary": "GetUnreadCount returns the count of unread notifications for the caller.",
+        "operationId": "NotificationService_GetUnreadCount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetUnreadCountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "NotificationService"
+        ]
+      }
+    },
+    "/api/v1/iam/notifications/{notificationId}": {
+      "get": {
+        "summary": "GetNotification returns a single notification owned by the caller.",
+        "operationId": "NotificationService_GetNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetNotificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteNotification hard-deletes a notification owned by the caller.",
+        "operationId": "NotificationService_DeleteNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteNotificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      }
+    },
+    "/api/v1/iam/notifications/{notificationId}/archive": {
+      "post": {
+        "summary": "ArchiveNotification archives a notification (kept until expires_at).",
+        "operationId": "NotificationService_ArchiveNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ArchiveNotificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NotificationServiceArchiveNotificationBody"
+            }
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      }
+    },
+    "/api/v1/iam/notifications/{notificationId}/read": {
+      "post": {
+        "summary": "MarkAsRead marks a single notification as read.",
+        "operationId": "NotificationService_MarkAsRead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MarkAsReadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NotificationServiceMarkAsReadBody"
+            }
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "NotificationServiceArchiveNotificationBody": {
+      "type": "object"
+    },
+    "NotificationServiceMarkAsReadBody": {
+      "type": "object"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ArchiveNotificationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateNotificationRequest": {
+      "type": "object",
+      "properties": {
+        "recipientUserId": {
+          "type": "string",
+          "description": "Target recipient."
+        },
+        "type": {
+          "$ref": "#/definitions/v1NotificationType"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1NotificationSeverity"
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "actionType": {
+          "$ref": "#/definitions/v1NotificationActionType"
+        },
+        "actionPayload": {
+          "type": "string",
+          "description": "JSON-encoded string. May be empty for action_type=NONE. Max 8KB."
+        },
+        "expiresAt": {
+          "type": "string",
+          "description": "Optional ISO8601 expiry; missing/empty means no auto-cleanup."
+        },
+        "sourceType": {
+          "type": "string",
+          "description": "Source correlation (free-form; recommended pattern: \"{service}.{feature}\")."
+        },
+        "sourceId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateNotificationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Notification"
+        }
+      }
+    },
+    "v1DeleteNotificationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1GetNotificationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Notification"
+        }
+      }
+    },
+    "v1GetUnreadCountResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "unreadCount": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ListNotificationsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Notification"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1MarkAllAsReadRequest": {
+      "type": "object"
+    },
+    "v1MarkAllAsReadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "affectedCount": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1MarkAsReadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
+    },
+    "v1Notification": {
+      "type": "object",
+      "properties": {
+        "notificationId": {
+          "type": "string"
+        },
+        "recipientUserId": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1NotificationType"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1NotificationSeverity"
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "actionType": {
+          "$ref": "#/definitions/v1NotificationActionType"
+        },
+        "actionPayload": {
+          "type": "string",
+          "description": "action_payload is a JSON-encoded string whose shape depends on\naction_type — see enum comments. Empty string when action_type=NONE."
+        },
+        "status": {
+          "$ref": "#/definitions/v1NotificationStatus"
+        },
+        "readAt": {
+          "type": "string",
+          "description": "ISO8601 timestamp, empty when not applicable."
+        },
+        "archivedAt": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string",
+          "description": "source_type and source_id help correlate the notification with the\nemitting feature (e.g. source_type=\"finance.rm_cost_export\", source_id=job_id)."
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        }
+      },
+      "description": "Notification represents a single notification record."
+    },
+    "v1NotificationActionType": {
+      "type": "string",
+      "enum": [
+        "NOTIFICATION_ACTION_TYPE_UNSPECIFIED",
+        "NOTIFICATION_ACTION_TYPE_NONE",
+        "NOTIFICATION_ACTION_TYPE_NAVIGATE",
+        "NOTIFICATION_ACTION_TYPE_DOWNLOAD",
+        "NOTIFICATION_ACTION_TYPE_EXTERNAL_LINK",
+        "NOTIFICATION_ACTION_TYPE_APPROVE_REJECT",
+        "NOTIFICATION_ACTION_TYPE_ACKNOWLEDGE",
+        "NOTIFICATION_ACTION_TYPE_MULTI_ACTION",
+        "NOTIFICATION_ACTION_TYPE_REPLY",
+        "NOTIFICATION_ACTION_TYPE_SNOOZE",
+        "NOTIFICATION_ACTION_TYPE_CUSTOM"
+      ],
+      "default": "NOTIFICATION_ACTION_TYPE_UNSPECIFIED",
+      "description": "NotificationActionType controls how the frontend renders the click-action.\nThe shape of action_payload is determined by this value (see proto comments\nfor each variant). Frontend MUST handle CUSTOM as info-only fallback.\n\n - NOTIFICATION_ACTION_TYPE_NONE: No interactive action.\n - NOTIFICATION_ACTION_TYPE_NAVIGATE: payload: {\"path\": \"/foo/bar\"}.\n - NOTIFICATION_ACTION_TYPE_DOWNLOAD: payload: {\"file_path\", \"file_name\", \"size_bytes\", \"expires_at\"}.\n - NOTIFICATION_ACTION_TYPE_EXTERNAL_LINK: payload: {\"url\", \"label\"}.\n - NOTIFICATION_ACTION_TYPE_APPROVE_REJECT: payload: {\"resource_type\",\"resource_id\",\"approve_endpoint\",\"reject_endpoint\"}.\n - NOTIFICATION_ACTION_TYPE_ACKNOWLEDGE: payload: {\"ack_endpoint\"}.\n - NOTIFICATION_ACTION_TYPE_MULTI_ACTION: payload: {\"actions\":[{\"key\",\"label\",\"style\",\"endpoint\"}, ...]}.\n - NOTIFICATION_ACTION_TYPE_REPLY: payload: {\"thread_id\",\"preview\",\"open_path\"}.\n - NOTIFICATION_ACTION_TYPE_SNOOZE: payload: {\"options_minutes\":[15,60,...], \"original_due_at\"}.\n - NOTIFICATION_ACTION_TYPE_CUSTOM: payload: arbitrary; frontend renders info-only."
+    },
+    "v1NotificationSeverity": {
+      "type": "string",
+      "enum": [
+        "NOTIFICATION_SEVERITY_UNSPECIFIED",
+        "NOTIFICATION_SEVERITY_INFO",
+        "NOTIFICATION_SEVERITY_SUCCESS",
+        "NOTIFICATION_SEVERITY_WARNING",
+        "NOTIFICATION_SEVERITY_ERROR"
+      ],
+      "default": "NOTIFICATION_SEVERITY_UNSPECIFIED",
+      "description": "NotificationSeverity drives the visual styling on the frontend.\n\n - NOTIFICATION_SEVERITY_INFO: Neutral information.\n - NOTIFICATION_SEVERITY_SUCCESS: Positive outcome.\n - NOTIFICATION_SEVERITY_WARNING: Caution/attention required.\n - NOTIFICATION_SEVERITY_ERROR: Failure/error condition."
+    },
+    "v1NotificationStatus": {
+      "type": "string",
+      "enum": [
+        "NOTIFICATION_STATUS_UNSPECIFIED",
+        "NOTIFICATION_STATUS_UNREAD",
+        "NOTIFICATION_STATUS_READ",
+        "NOTIFICATION_STATUS_ARCHIVED"
+      ],
+      "default": "NOTIFICATION_STATUS_UNSPECIFIED",
+      "description": "NotificationStatus is the lifecycle state of a notification.\n\n - NOTIFICATION_STATUS_UNREAD: Recipient has not read yet.\n - NOTIFICATION_STATUS_READ: Recipient has marked read.\n - NOTIFICATION_STATUS_ARCHIVED: Recipient archived (kept until expires_at)."
+    },
+    "v1NotificationType": {
+      "type": "string",
+      "enum": [
+        "NOTIFICATION_TYPE_UNSPECIFIED",
+        "NOTIFICATION_TYPE_EXPORT_READY",
+        "NOTIFICATION_TYPE_ALERT",
+        "NOTIFICATION_TYPE_APPROVAL",
+        "NOTIFICATION_TYPE_CHAT",
+        "NOTIFICATION_TYPE_REMINDER",
+        "NOTIFICATION_TYPE_SYSTEM",
+        "NOTIFICATION_TYPE_MENTION",
+        "NOTIFICATION_TYPE_ASSIGNMENT",
+        "NOTIFICATION_TYPE_ANNOUNCEMENT"
+      ],
+      "default": "NOTIFICATION_TYPE_UNSPECIFIED",
+      "description": "NotificationType categorizes notifications. Add new values via migration\nonly — backend constraints reference these names.\n\n - NOTIFICATION_TYPE_UNSPECIFIED: Default — used as \"no filter\" in list.\n - NOTIFICATION_TYPE_EXPORT_READY: A generated file is ready for download.\n - NOTIFICATION_TYPE_ALERT: System alert (warning/error).\n - NOTIFICATION_TYPE_APPROVAL: Approval request awaiting recipient action.\n - NOTIFICATION_TYPE_CHAT: Direct chat or comment from another user.\n - NOTIFICATION_TYPE_REMINDER: Time-based reminder.\n - NOTIFICATION_TYPE_SYSTEM: Generic system notification.\n - NOTIFICATION_TYPE_MENTION: The user was mentioned (@username) somewhere.\n - NOTIFICATION_TYPE_ASSIGNMENT: A task/resource was assigned to the user.\n - NOTIFICATION_TYPE_ANNOUNCEMENT: Broadcast announcement to many users."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

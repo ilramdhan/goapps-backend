@@ -42,16 +42,58 @@ type TokenBlacklistChecker interface {
 	IsBlacklisted(ctx context.Context, tokenID string) (bool, error)
 }
 
+// serviceSecretValid reports whether the internal x-service-secret header
+// matches the configured secret. An empty configured secret skips the check
+// (trusts cluster network isolation).
+func serviceSecretValid(ctx context.Context, svcSecret string) bool {
+	if svcSecret == "" {
+		return true
+	}
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return false
+	}
+	vals := md.Get("x-service-secret")
+	return len(vals) == 1 && vals[0] == svcSecret
+}
+
+// withServiceIdentity injects a synthetic SUPER_ADMIN identity for trusted
+// service-to-service calls so the permission interceptor's bypass applies.
+func withServiceIdentity(ctx context.Context) context.Context {
+	ctx = context.WithValue(ctx, AuthUserIDKey, "service:finance-cost-worker")
+	ctx = context.WithValue(ctx, AuthUsernameKey, "finance-cost-worker")
+	ctx = context.WithValue(ctx, AuthRolesKey, []string{"SUPER_ADMIN"})
+	ctx = context.WithValue(ctx, AuthPermissionsKey, []string{})
+	return ctx
+}
+
 // AuthInterceptor validates JWT tokens issued by IAM service.
 // blacklist is optional — if nil, blacklist checking is skipped (graceful degradation).
-func AuthInterceptor(cfg *config.JWTConfig, blacklist TokenBlacklistChecker) grpc.UnaryServerInterceptor {
+func AuthInterceptor(cfg *config.JWTConfig, blacklist TokenBlacklistChecker) grpc.UnaryServerInterceptor { //nolint:gocognit,gocyclo // sequential auth gates, cohesive
 	secret := []byte(cfg.AccessTokenSecret)
+	svcSecret := cfg.ServiceSecret
 
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		// Health checks are always public.
 		if strings.HasPrefix(info.FullMethod, "/grpc.health.v1.") ||
 			strings.HasPrefix(info.FullMethod, "/grpc.reflection.") {
 			return handler(ctx, req)
+		}
+
+		// ProcessChunkInternal is invoked by finance-cost-worker via the cluster's
+		// internal network. The RPC has NO HTTP gateway path (proto file omits
+		// google.api.http annotation by design), so it's not reachable from the
+		// public internet. We trust network isolation for service-to-service
+		// auth + inject synthetic SUPER_ADMIN identity so the permission
+		// interceptor's SUPER_ADMIN bypass takes effect.
+		//
+		// When cfg.ServiceSecret is set, also require x-service-secret header
+		// match for defense-in-depth.
+		if info.FullMethod == "/finance.v1.CostCalcService/ProcessChunkInternal" {
+			if !serviceSecretValid(ctx, svcSecret) {
+				return nil, status.Error(codes.Unauthenticated, "ProcessChunkInternal: missing or invalid x-service-secret")
+			}
+			return handler(withServiceIdentity(ctx), req)
 		}
 
 		// All finance endpoints require authentication.
@@ -229,6 +271,21 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.RMCategoryService/ImportRMCategories":         "finance.master.rmcategory.import",
 		"/finance.v1.RMCategoryService/ExportRMCategories":         "finance.master.rmcategory.export",
 		"/finance.v1.RMCategoryService/DownloadRMCategoryTemplate": "finance.master.rmcategory.view",
+
+		// CostCalc Service (S8a foundation; stubs return Unimplemented).
+		"/finance.v1.CostCalcService/TriggerCalcJob":      "finance.cost.caljob.trigger",
+		"/finance.v1.CostCalcService/GetCalcJob":          "finance.cost.caljob.view",
+		"/finance.v1.CostCalcService/ListCalcJobs":        "finance.cost.caljob.view",
+		"/finance.v1.CostCalcService/ListCalcJobChunks":   "finance.cost.caljob.view",
+		"/finance.v1.CostCalcService/ListCalcJobProducts": "finance.cost.caljob.view",
+		"/finance.v1.CostCalcService/CancelCalcJob":       "finance.cost.caljob.cancel",
+		"/finance.v1.CostCalcService/GetCostResult":       "finance.cost.result.view",
+		"/finance.v1.CostCalcService/GetCostBreakdown":    "finance.cost.result.view",
+		"/finance.v1.CostCalcService/ListCostHistory":     "finance.cost.history.view",
+		"/finance.v1.CostCalcService/VerifyCostResult":    "finance.cost.result.verify",
+		"/finance.v1.CostCalcService/ApproveCostResult":   "finance.cost.result.approve",
+		// Service-to-service: invoked by finance-cost-worker. Same scope as triggering a job.
+		"/finance.v1.CostCalcService/ProcessChunkInternal": "finance.cost.caljob.trigger",
 	}
 
 	return permissions[fullMethod]

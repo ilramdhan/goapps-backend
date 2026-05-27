@@ -12,12 +12,16 @@ import (
 	"github.com/mutugading/goapps-backend/services/iam/pkg/safeconv"
 )
 
+// systemUser is the audit identity used when no end-user is in scope
+// (e.g. service-to-service notification creation).
+const systemUser = "system"
+
 // getUserFromCtx extracts the user ID from context, falling back to "system".
 func getUserFromCtx(ctx context.Context) string {
 	if id, err := getUserIDFromContext(ctx); err == nil {
 		return id.String()
 	}
-	return "system"
+	return systemUser
 }
 
 // CompanyHandler handles company-related gRPC requests.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
 
@@ -14,8 +15,8 @@ import (
 
 // ExportQuery represents the export UOMs query.
 type ExportQuery struct {
-	Category *string
-	IsActive *bool
+	CategoryID *string
+	IsActive   *bool
 }
 
 // ExportResult represents the export UOMs result.
@@ -72,12 +73,12 @@ func (ew *excelWriter) error() error {
 func buildExportFilter(query ExportQuery) (uom.ExportFilter, error) {
 	filter := uom.ExportFilter{}
 
-	if query.Category != nil {
-		cat, err := uom.NewCategory(*query.Category)
+	if query.CategoryID != nil && *query.CategoryID != "" {
+		parsed, err := uuid.Parse(*query.CategoryID)
 		if err != nil {
-			return filter, err
+			return filter, uom.ErrInvalidCategory
 		}
-		filter.Category = &cat
+		filter.CategoryID = &parsed
 	}
 	filter.IsActive = query.IsActive
 
@@ -164,7 +165,7 @@ func (h *ExportHandler) Handle(ctx context.Context, query ExportQuery) (result *
 		writer.setCellValue(fmt.Sprintf("A%d", row), i+1)
 		writer.setCellValue(fmt.Sprintf("B%d", row), u.Code().String())
 		writer.setCellValue(fmt.Sprintf("C%d", row), u.Name())
-		writer.setCellValue(fmt.Sprintf("D%d", row), u.Category().String())
+		writer.setCellValue(fmt.Sprintf("D%d", row), u.CategoryInfo().Code())
 		writer.setCellValue(fmt.Sprintf("E%d", row), u.Description())
 		writer.setCellValue(fmt.Sprintf("F%d", row), u.IsActive())
 		writer.setCellValue(fmt.Sprintf("G%d", row), u.CreatedAt().Format("2006-01-02 15:04:05"))

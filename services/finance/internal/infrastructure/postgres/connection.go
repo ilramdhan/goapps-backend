@@ -20,6 +20,13 @@ const (
 	sortDESC = "DESC"
 )
 
+// Shared filter / sort-key string constants used across repositories.
+const (
+	filterActive     = "active"
+	filterInactive   = "inactive"
+	sortKeyCreatedAt = "created_at"
+)
+
 // DB wraps the SQL database connection.
 type DB struct {
 	*sql.DB
@@ -54,6 +61,11 @@ func NewConnection(cfg *config.DatabaseConfig) (*DB, error) {
 		Msg("Database connection established")
 
 	return &DB{db}, nil
+}
+
+// NewDBFromSQL wraps an existing *sql.DB. Used by integration tests.
+func NewDBFromSQL(db *sql.DB) *DB {
+	return &DB{db}
 }
 
 // Close closes the database connection.

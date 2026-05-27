@@ -19,8 +19,57 @@ type Config struct {
 	AuthRedis AuthRedisConfig `mapstructure:"auth_redis"`
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	CORS      CORSConfig      `mapstructure:"cors"`
+	Oracle    OracleConfig    `mapstructure:"oracle"`
+	RabbitMQ  RabbitMQConfig  `mapstructure:"rabbitmq"`
 	Tracing   TracingConfig   `mapstructure:"tracing"`
 	Logger    LoggerConfig    `mapstructure:"logger"`
+	Storage   StorageConfig   `mapstructure:"storage"`
+	IAMClient IAMClientConfig `mapstructure:"iam_client"`
+}
+
+// IAMClientConfig configures the gRPC client used by the worker to call IAM
+// (notably NotificationService.CreateNotification when emitting export-ready
+// notifications). Empty/zero values disable the client and the worker logs a
+// warning instead of emitting notifications.
+//
+// InternalServiceToken is the shared secret sent in the `x-internal-token`
+// metadata header so IAM accepts the call without a JWT. Must match
+// SecurityConfig.InternalServiceToken on the IAM side.
+type IAMClientConfig struct {
+	Host                 string `mapstructure:"host"`
+	Port                 int    `mapstructure:"port"`
+	InternalServiceToken string `mapstructure:"internal_service_token"`
+}
+
+// StorageConfig holds MinIO/S3 connection details for the finance worker
+// and gRPC handlers that need to issue presigned URLs.
+type StorageConfig struct {
+	Endpoint           string `mapstructure:"endpoint"`
+	AccessKey          string `mapstructure:"access_key"`
+	SecretKey          string `mapstructure:"secret_key"`
+	Bucket             string `mapstructure:"bucket"`
+	UseSSL             bool   `mapstructure:"use_ssl"`
+	InsecureSkipVerify bool   `mapstructure:"insecure_skip_verify"`
+	Region             string `mapstructure:"region"`
+	PublicURL          string `mapstructure:"public_url"`
+}
+
+// OracleConfig holds Oracle database connection configuration.
+type OracleConfig struct {
+	Host            string        `mapstructure:"host"`
+	Port            int           `mapstructure:"port"`
+	Service         string        `mapstructure:"service"`
+	User            string        `mapstructure:"user"`
+	Password        string        `mapstructure:"password"`
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+}
+
+// RabbitMQConfig holds RabbitMQ connection configuration.
+type RabbitMQConfig struct {
+	URL            string        `mapstructure:"url"`
+	PrefetchCount  int           `mapstructure:"prefetch_count"`
+	ReconnectDelay time.Duration `mapstructure:"reconnect_delay"`
 }
 
 // CORSConfig holds CORS configuration for SSO multi-app support.
@@ -33,6 +82,12 @@ type CORSConfig struct {
 type JWTConfig struct {
 	AccessTokenSecret string `mapstructure:"access_token_secret"`
 	Issuer            string `mapstructure:"issuer"`
+	// ServiceSecret is a shared secret for service-to-service auth (e.g. the
+	// cost calc worker calling ProcessChunkInternal). When a request carries
+	// the matching value in the x-service-secret metadata header, the auth
+	// interceptor injects a synthetic SUPER_ADMIN identity bypassing JWT.
+	// Empty string disables the bypass.
+	ServiceSecret string `mapstructure:"service_secret"`
 }
 
 // AppConfig holds application-level configuration.
@@ -197,6 +252,20 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("cors.allowed_origins", []string{"http://localhost:3000"})
 	v.SetDefault("cors.max_age", 300)
 
+	// Oracle defaults (credentials must come from env vars — never hardcode)
+	v.SetDefault("oracle.host", "localhost")
+	v.SetDefault("oracle.port", 1521)
+	v.SetDefault("oracle.service", "ORCLPDB1")
+	v.SetDefault("oracle.user", "")
+	v.SetDefault("oracle.password", "")
+	v.SetDefault("oracle.max_open_conns", 5)
+	v.SetDefault("oracle.conn_max_lifetime", 10*time.Minute)
+
+	// RabbitMQ defaults (URL must come from env var — never hardcode credentials)
+	v.SetDefault("rabbitmq.url", "")
+	v.SetDefault("rabbitmq.prefetch_count", 1)
+	v.SetDefault("rabbitmq.reconnect_delay", 5*time.Second)
+
 	// Tracing defaults
 	v.SetDefault("tracing.enabled", true)
 	v.SetDefault("tracing.service_name", "finance-service")
@@ -207,6 +276,24 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("logger.level", "info")
 	v.SetDefault("logger.format", "json")
 	v.SetDefault("logger.pretty_json", false)
+
+	// IAM gRPC client (worker → IAM for emit-on-complete notifications).
+	v.SetDefault("iam_client.host", "localhost")
+	v.SetDefault("iam_client.port", 50052)
+	// internal_service_token MUST come from environment (.env.local for dev,
+	// Kubernetes Secret for staging/production). Must match the value on the
+	// IAM side.
+	v.SetDefault("iam_client.internal_service_token", "")
+
+	// Storage / MinIO defaults — credentials must come from env vars.
+	v.SetDefault("storage.endpoint", "localhost:9000")
+	v.SetDefault("storage.access_key", "minioadmin")
+	v.SetDefault("storage.secret_key", "minioadmin")
+	v.SetDefault("storage.bucket", "goapps-staging")
+	v.SetDefault("storage.use_ssl", false)
+	v.SetDefault("storage.insecure_skip_verify", false)
+	v.SetDefault("storage.region", "us-east-1")
+	v.SetDefault("storage.public_url", "")
 }
 
 func bindEnvVars(v *viper.Viper) {
@@ -234,6 +321,14 @@ func bindEnvVars(v *viper.Viper) {
 		{"auth_redis.port", "AUTH_REDIS_PORT"},
 		{"auth_redis.password", "AUTH_REDIS_PASSWORD"},
 		{"auth_redis.db", "AUTH_REDIS_DB"},
+		// Oracle
+		{"oracle.host", "ORACLE_HOST"},
+		{"oracle.port", "ORACLE_PORT"},
+		{"oracle.service", "ORACLE_SERVICE"},
+		{"oracle.user", "ORACLE_USER"},
+		{"oracle.password", "ORACLE_PASSWORD"},
+		// RabbitMQ
+		{"rabbitmq.url", "RABBITMQ_URL"},
 		// CORS
 		{"cors.allowed_origins", "CORS_ALLOWED_ORIGINS"},
 		// Tracing
@@ -242,6 +337,19 @@ func bindEnvVars(v *viper.Viper) {
 		// App
 		{"app.environment", "APP_ENV"},
 		{"logger.level", "LOG_LEVEL"},
+		// IAM gRPC client (worker → IAM for notifications)
+		{"iam_client.host", "IAM_GRPC_HOST"},
+		{"iam_client.port", "IAM_GRPC_PORT"},
+		{"iam_client.internal_service_token", "INTERNAL_SERVICE_TOKEN"},
+		// Storage (MinIO)
+		{"storage.endpoint", "MINIO_ENDPOINT"},
+		{"storage.access_key", "MINIO_ACCESS_KEY"},
+		{"storage.secret_key", "MINIO_SECRET_KEY"},
+		{"storage.bucket", "MINIO_BUCKET"},
+		{"storage.use_ssl", "MINIO_USE_SSL"},
+		{"storage.insecure_skip_verify", "MINIO_INSECURE_SKIP_VERIFY"},
+		{"storage.region", "MINIO_REGION"},
+		{"storage.public_url", "MINIO_PUBLIC_URL"},
 	}
 
 	for _, binding := range envBindings {

@@ -4,6 +4,8 @@ package uom
 import (
 	"regexp"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // =============================================================================
@@ -50,48 +52,26 @@ func (c Code) Equals(other Code) bool {
 }
 
 // =============================================================================
-// Category Value Object
+// CategoryInfo holds denormalized category data from the FK relationship.
 // =============================================================================
 
-// Category represents a validated UOM category value object.
-type Category string
-
-// Category constants.
-const (
-	CategoryWeight   Category = "WEIGHT"
-	CategoryLength   Category = "LENGTH"
-	CategoryVolume   Category = "VOLUME"
-	CategoryQuantity Category = "QUANTITY"
-)
-
-// validCategories is a set of valid category values.
-var validCategories = map[Category]bool{
-	CategoryWeight:   true,
-	CategoryLength:   true,
-	CategoryVolume:   true,
-	CategoryQuantity: true,
+// CategoryInfo holds the UOM category reference data.
+type CategoryInfo struct {
+	id   uuid.UUID
+	code string
+	name string
 }
 
-// NewCategory creates a new validated Category value object.
-func NewCategory(category string) (Category, error) {
-	cat := Category(strings.ToUpper(strings.TrimSpace(category)))
-	if !validCategories[cat] {
-		return "", ErrInvalidCategory
-	}
-	return cat, nil
+// NewCategoryInfo creates a new CategoryInfo.
+func NewCategoryInfo(id uuid.UUID, code, name string) CategoryInfo {
+	return CategoryInfo{id: id, code: code, name: name}
 }
 
-// String returns the string representation of the category.
-func (c Category) String() string {
-	return string(c)
-}
+// ID returns the category UUID.
+func (c CategoryInfo) ID() uuid.UUID { return c.id }
 
-// IsValid returns true if the category is valid.
-func (c Category) IsValid() bool {
-	return validCategories[c]
-}
+// Code returns the category code.
+func (c CategoryInfo) Code() string { return c.code }
 
-// AllCategories returns a slice of all valid categories.
-func AllCategories() []Category {
-	return []Category{CategoryWeight, CategoryLength, CategoryVolume, CategoryQuantity}
-}
+// Name returns the category name.
+func (c CategoryInfo) Name() string { return c.name }

@@ -32,7 +32,7 @@ var _ uom.Repository = (*UOMRepository)(nil)
 func (r *UOMRepository) Create(ctx context.Context, entity *uom.UOM) error {
 	query := `
 		INSERT INTO mst_uom (
-			uom_id, uom_code, uom_name, uom_category, description,
+			uom_id, uom_code, uom_name, uom_category_id, description,
 			is_active, created_at, created_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
@@ -41,7 +41,7 @@ func (r *UOMRepository) Create(ctx context.Context, entity *uom.UOM) error {
 		entity.ID(),
 		entity.Code().String(),
 		entity.Name(),
-		entity.Category().String(),
+		entity.CategoryID(),
 		entity.Description(),
 		entity.IsActive(),
 		entity.CreatedAt(),
@@ -61,11 +61,13 @@ func (r *UOMRepository) Create(ctx context.Context, entity *uom.UOM) error {
 // GetByID retrieves a UOM by its ID.
 func (r *UOMRepository) GetByID(ctx context.Context, id uuid.UUID) (*uom.UOM, error) {
 	query := `
-		SELECT uom_id, uom_code, uom_name, uom_category, description,
-			   is_active, created_at, created_by, updated_at, updated_by,
-			   deleted_at, deleted_by
-		FROM mst_uom
-		WHERE uom_id = $1 AND deleted_at IS NULL
+		SELECT u.uom_id, u.uom_code, u.uom_name, u.uom_category_id,
+			   c.category_code, c.category_name,
+			   u.description, u.is_active, u.created_at, u.created_by,
+			   u.updated_at, u.updated_by, u.deleted_at, u.deleted_by
+		FROM mst_uom u
+		JOIN mst_uom_category c ON u.uom_category_id = c.uom_category_id
+		WHERE u.uom_id = $1 AND u.deleted_at IS NULL
 	`
 
 	return r.scanUOM(r.db.QueryRowContext(ctx, query, id))
@@ -74,11 +76,13 @@ func (r *UOMRepository) GetByID(ctx context.Context, id uuid.UUID) (*uom.UOM, er
 // GetByCode retrieves a UOM by its code.
 func (r *UOMRepository) GetByCode(ctx context.Context, code uom.Code) (*uom.UOM, error) {
 	query := `
-		SELECT uom_id, uom_code, uom_name, uom_category, description,
-			   is_active, created_at, created_by, updated_at, updated_by,
-			   deleted_at, deleted_by
-		FROM mst_uom
-		WHERE uom_code = $1 AND deleted_at IS NULL
+		SELECT u.uom_id, u.uom_code, u.uom_name, u.uom_category_id,
+			   c.category_code, c.category_name,
+			   u.description, u.is_active, u.created_at, u.created_by,
+			   u.updated_at, u.updated_by, u.deleted_at, u.deleted_by
+		FROM mst_uom u
+		JOIN mst_uom_category c ON u.uom_category_id = c.uom_category_id
+		WHERE u.uom_code = $1 AND u.deleted_at IS NULL
 	`
 
 	return r.scanUOM(r.db.QueryRowContext(ctx, query, code.String()))
@@ -88,32 +92,32 @@ func (r *UOMRepository) GetByCode(ctx context.Context, code uom.Code) (*uom.UOM,
 func (r *UOMRepository) List(ctx context.Context, filter uom.ListFilter) ([]*uom.UOM, int64, error) {
 	filter.Validate()
 
-	// Build dynamic query
-	baseQuery := `FROM mst_uom WHERE deleted_at IS NULL`
+	// Build dynamic query with JOIN
+	baseQuery := `FROM mst_uom u JOIN mst_uom_category c ON u.uom_category_id = c.uom_category_id WHERE u.deleted_at IS NULL`
 	args := []interface{}{}
 	argIndex := 1
 
 	// Search filter
 	if filter.Search != "" {
 		baseQuery += fmt.Sprintf(` AND (
-			uom_code ILIKE $%d OR 
-			uom_name ILIKE $%d OR 
-			description ILIKE $%d
+			u.uom_code ILIKE $%d OR
+			u.uom_name ILIKE $%d OR
+			u.description ILIKE $%d
 		)`, argIndex, argIndex, argIndex)
 		args = append(args, "%"+filter.Search+"%")
 		argIndex++
 	}
 
 	// Category filter
-	if filter.Category != nil {
-		baseQuery += fmt.Sprintf(` AND uom_category = $%d`, argIndex)
-		args = append(args, filter.Category.String())
+	if filter.CategoryID != nil {
+		baseQuery += fmt.Sprintf(` AND u.uom_category_id = $%d`, argIndex)
+		args = append(args, *filter.CategoryID)
 		argIndex++
 	}
 
 	// IsActive filter
 	if filter.IsActive != nil {
-		baseQuery += fmt.Sprintf(` AND is_active = $%d`, argIndex)
+		baseQuery += fmt.Sprintf(` AND u.is_active = $%d`, argIndex)
 		args = append(args, *filter.IsActive)
 		argIndex++
 	}
@@ -125,13 +129,16 @@ func (r *UOMRepository) List(ctx context.Context, filter uom.ListFilter) ([]*uom
 		return nil, 0, fmt.Errorf("failed to count uoms: %w", err)
 	}
 
-	// Build order clause
-	orderColumn := "uom_code"
-	switch filter.SortBy {
-	case "name":
-		orderColumn = "uom_name"
-	case "created_at":
-		orderColumn = "created_at"
+	// Build order clause with sort column mapping
+	sortColumnMap := map[string]string{
+		"code":           "u.uom_code",
+		"name":           "u.uom_name",
+		"category":       "c.category_code",
+		sortKeyCreatedAt: "u.created_at",
+	}
+	orderColumn := "u.uom_code"
+	if mapped, ok := sortColumnMap[filter.SortBy]; ok {
+		orderColumn = mapped
 	}
 	orderDir := sortASC
 	if strings.ToUpper(filter.SortOrder) == sortDESC {
@@ -140,9 +147,10 @@ func (r *UOMRepository) List(ctx context.Context, filter uom.ListFilter) ([]*uom
 
 	// Data query with pagination
 	selectQuery := `
-		SELECT uom_id, uom_code, uom_name, uom_category, description,
-			   is_active, created_at, created_by, updated_at, updated_by,
-			   deleted_at, deleted_by
+		SELECT u.uom_id, u.uom_code, u.uom_name, u.uom_category_id,
+			   c.category_code, c.category_name,
+			   u.description, u.is_active, u.created_at, u.created_by,
+			   u.updated_at, u.updated_by, u.deleted_at, u.deleted_by
 	` + baseQuery + fmt.Sprintf(
 		` ORDER BY %s %s LIMIT $%d OFFSET $%d`,
 		orderColumn, orderDir, argIndex, argIndex+1,
@@ -155,9 +163,8 @@ func (r *UOMRepository) List(ctx context.Context, filter uom.ListFilter) ([]*uom
 		return nil, 0, fmt.Errorf("failed to list uoms: %w", err)
 	}
 	defer func() {
-		if err := rows.Close(); err != nil {
-			// Log silently as this is cleanup
-			_ = err
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
 		}
 	}()
 
@@ -182,7 +189,7 @@ func (r *UOMRepository) Update(ctx context.Context, entity *uom.UOM) error {
 	query := `
 		UPDATE mst_uom SET
 			uom_name = $2,
-			uom_category = $3,
+			uom_category_id = $3,
 			description = $4,
 			is_active = $5,
 			updated_at = $6,
@@ -193,7 +200,7 @@ func (r *UOMRepository) Update(ctx context.Context, entity *uom.UOM) error {
 	result, err := r.db.ExecContext(ctx, query,
 		entity.ID(),
 		entity.Name(),
-		entity.Category().String(),
+		entity.CategoryID(),
 		entity.Description(),
 		entity.IsActive(),
 		entity.UpdatedAt(),
@@ -267,38 +274,39 @@ func (r *UOMRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, err
 // ListAll retrieves all non-deleted UOMs (for export).
 func (r *UOMRepository) ListAll(ctx context.Context, filter uom.ExportFilter) ([]*uom.UOM, error) {
 	query := `
-		SELECT uom_id, uom_code, uom_name, uom_category, description,
-			   is_active, created_at, created_by, updated_at, updated_by,
-			   deleted_at, deleted_by
-		FROM mst_uom
-		WHERE deleted_at IS NULL
+		SELECT u.uom_id, u.uom_code, u.uom_name, u.uom_category_id,
+			   c.category_code, c.category_name,
+			   u.description, u.is_active, u.created_at, u.created_by,
+			   u.updated_at, u.updated_by, u.deleted_at, u.deleted_by
+		FROM mst_uom u
+		JOIN mst_uom_category c ON u.uom_category_id = c.uom_category_id
+		WHERE u.deleted_at IS NULL
 	`
 	args := []interface{}{}
 	argIndex := 1
 
 	// Category filter
-	if filter.Category != nil {
-		query += fmt.Sprintf(` AND uom_category = $%d`, argIndex)
-		args = append(args, filter.Category.String())
+	if filter.CategoryID != nil {
+		query += fmt.Sprintf(` AND u.uom_category_id = $%d`, argIndex)
+		args = append(args, *filter.CategoryID)
 		argIndex++
 	}
 
 	// IsActive filter
 	if filter.IsActive != nil {
-		query += fmt.Sprintf(` AND is_active = $%d`, argIndex)
+		query += fmt.Sprintf(` AND u.is_active = $%d`, argIndex)
 		args = append(args, *filter.IsActive)
 	}
 
-	query += ` ORDER BY uom_code ASC`
+	query += ` ORDER BY u.uom_code ASC`
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all uoms: %w", err)
 	}
 	defer func() {
-		if err := rows.Close(); err != nil {
-			// Log silently as this is cleanup
-			_ = err
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
 		}
 	}()
 
@@ -328,7 +336,9 @@ func (r *UOMRepository) scanUOM(row *sql.Row) (*uom.UOM, error) {
 		&dto.ID,
 		&dto.Code,
 		&dto.Name,
-		&dto.Category,
+		&dto.CategoryID,
+		&dto.CategoryCode,
+		&dto.CategoryName,
 		&dto.Description,
 		&dto.IsActive,
 		&dto.CreatedAt,
@@ -355,7 +365,9 @@ func (r *UOMRepository) scanUOMFromRows(rows *sql.Rows) (*uom.UOM, error) {
 		&dto.ID,
 		&dto.Code,
 		&dto.Name,
-		&dto.Category,
+		&dto.CategoryID,
+		&dto.CategoryCode,
+		&dto.CategoryName,
 		&dto.Description,
 		&dto.IsActive,
 		&dto.CreatedAt,
@@ -374,18 +386,20 @@ func (r *UOMRepository) scanUOMFromRows(rows *sql.Rows) (*uom.UOM, error) {
 
 // uomDTO is a data transfer object for database operations.
 type uomDTO struct {
-	ID          uuid.UUID
-	Code        string
-	Name        string
-	Category    string
-	Description sql.NullString
-	IsActive    bool
-	CreatedAt   time.Time
-	CreatedBy   string
-	UpdatedAt   sql.NullTime
-	UpdatedBy   sql.NullString
-	DeletedAt   sql.NullTime
-	DeletedBy   sql.NullString
+	ID           uuid.UUID
+	Code         string
+	Name         string
+	CategoryID   uuid.UUID
+	CategoryCode string
+	CategoryName string
+	Description  sql.NullString
+	IsActive     bool
+	CreatedAt    time.Time
+	CreatedBy    string
+	UpdatedAt    sql.NullTime
+	UpdatedBy    sql.NullString
+	DeletedAt    sql.NullTime
+	DeletedBy    sql.NullString
 }
 
 // ToEntity converts DTO to domain entity.
@@ -395,10 +409,7 @@ func (d *uomDTO) ToEntity() (*uom.UOM, error) {
 		return nil, fmt.Errorf("invalid code from db: %w", err)
 	}
 
-	category, err := uom.NewCategory(d.Category)
-	if err != nil {
-		return nil, fmt.Errorf("invalid category from db: %w", err)
-	}
+	categoryInfo := uom.NewCategoryInfo(d.CategoryID, d.CategoryCode, d.CategoryName)
 
 	var description string
 	if d.Description.Valid {
@@ -429,7 +440,7 @@ func (d *uomDTO) ToEntity() (*uom.UOM, error) {
 		d.ID,
 		code,
 		d.Name,
-		category,
+		categoryInfo,
 		description,
 		d.IsActive,
 		d.CreatedAt,
@@ -441,11 +452,22 @@ func (d *uomDTO) ToEntity() (*uom.UOM, error) {
 	), nil
 }
 
-// isUniqueViolation checks if the error is a PostgreSQL unique violation.
+// isUniqueViolation checks if the error is a PostgreSQL unique violation (code 23505).
+// Handles both lib/pq and pgx/v5/stdlib error types.
 func isUniqueViolation(err error) bool {
+	// lib/pq driver error type.
 	var pqErr *pq.Error
 	if errors.As(err, &pqErr) {
 		return pqErr.Code == "23505" // unique_violation
+	}
+	// pgx/v5/stdlib driver error type (pgconn.PgError).
+	// Use interface matching to avoid importing pgconn directly.
+	type pgError interface {
+		SQLState() string
+	}
+	var pgErr pgError
+	if errors.As(err, &pgErr) {
+		return pgErr.SQLState() == "23505"
 	}
 	return false
 }

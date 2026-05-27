@@ -206,6 +206,7 @@ func newDummyUser(id uuid.UUID) *user.User {
 		nil,   // lastLoginAt
 		"",    // lastLoginIP
 		nil,   // passwordChangedAt
+		nil,   // emailVerifiedAt
 		shared.NewAuditInfo("admin"),
 	)
 }

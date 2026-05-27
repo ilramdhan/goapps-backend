@@ -88,7 +88,7 @@ INSERT INTO bi_dashboard (
 ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`
 	_, err = tx.ExecContext(ctx, q,
 		d.ID(), d.Code().String(), d.Title(), d.Description(),
-		d.FilterType(), nullableString(d.FilterGroup1()), d.PeriodGrain().String(), d.DefaultPeriod().String(),
+		d.FilterType(), biNullableString(d.FilterGroup1()), d.PeriodGrain().String(), d.DefaultPeriod().String(),
 		d.ChartType().String(), chartConfig, nullableBytes(layoutConfig), compareModes, kpiConfig,
 		d.DrillEnabled(), d.MaxDrillLevel().Int(), d.CacheTTL().Seconds(), d.RefreshInterval().Seconds(),
 		d.DisplayOrder(), d.GroupID(), d.IsActive(),
@@ -303,7 +303,7 @@ UPDATE bi_dashboard SET
 WHERE dashboard_id = $1 AND deleted_at IS NULL`
 	res, err := tx.ExecContext(ctx, q,
 		d.ID(), d.Title(), d.Description(),
-		d.FilterType(), nullableString(d.FilterGroup1()), d.PeriodGrain().String(), d.DefaultPeriod().String(),
+		d.FilterType(), biNullableString(d.FilterGroup1()), d.PeriodGrain().String(), d.DefaultPeriod().String(),
 		d.ChartType().String(), chartConfig, nullableBytes(layoutConfig), compareModes, kpiConfig,
 		d.DrillEnabled(), d.MaxDrillLevel().Int(), d.CacheTTL().Seconds(), d.RefreshInterval().Seconds(),
 		d.DisplayOrder(), d.GroupID(), d.IsActive(),
@@ -646,7 +646,7 @@ func mapDashboardSortField(field string) string {
 
 // ---- shared utility helpers (used by other bi_* repos as well) ----
 
-func nullableString(s string) any {
+func biNullableString(s string) any {
 	if s == "" {
 		return nil
 	}

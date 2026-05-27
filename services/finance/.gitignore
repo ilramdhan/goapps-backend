@@ -98,3 +98,6 @@ htmlcov/
 *.crt
 *.cer
 !*example*
+
+# Stress test reports (timestamped JSON output)
+tests/stress/reports/

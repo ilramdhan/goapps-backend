@@ -125,6 +125,12 @@ type SecurityConfig struct {
 	ResetTokenExpiry         time.Duration `mapstructure:"reset_token_expiry"`
 	SingleDeviceLogin        bool          `mapstructure:"single_device_login"`
 	SessionIdleTimeout       time.Duration `mapstructure:"session_idle_timeout"`
+	// InternalServiceToken is a shared secret accepted in the
+	// `x-internal-token` gRPC metadata header in lieu of a JWT bearer token.
+	// Used by trusted backend services (e.g. finance-worker) to call IAM gRPC
+	// methods like NotificationService.CreateNotification when there is no
+	// end-user JWT in scope. Empty disables the bypass.
+	InternalServiceToken string `mapstructure:"internal_service_token"`
 }
 
 // RateLimitConfig holds rate limiting configuration.
@@ -263,6 +269,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("security.reset_token_expiry", 10*time.Minute)
 	v.SetDefault("security.single_device_login", true)
 	v.SetDefault("security.session_idle_timeout", 2*time.Hour)
+	// internal_service_token MUST come from environment (.env.local for dev,
+	// Kubernetes Secret for staging/production). Empty disables the bypass.
+	v.SetDefault("security.internal_service_token", "")
 
 	// CORS defaults (comma-separated origins for SSO multi-app)
 	v.SetDefault("cors.allowed_origins", []string{"http://localhost:3000"})
@@ -341,6 +350,8 @@ func bindEnvVars(v *viper.Viper) {
 		{"storage.insecure_skip_verify", "STORAGE_INSECURE_SKIP_VERIFY"},
 		{"storage.region", "STORAGE_REGION"},
 		{"storage.public_url", "STORAGE_PUBLIC_URL"},
+		// Internal service-to-service token (shared with trusted backends).
+		{"security.internal_service_token", "INTERNAL_SERVICE_TOKEN"},
 	}
 
 	for _, binding := range envBindings {

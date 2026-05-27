@@ -21,16 +21,22 @@ type PermissionRequirement struct {
 // Methods not listed here and not in publicMethods will be denied by default.
 var methodPermissions = map[string]PermissionRequirement{
 	// Auth Service — authenticated only (no specific permission)
-	"/iam.v1.AuthService/GetCurrentUser": {Permission: ""},
-	"/iam.v1.AuthService/UpdatePassword": {Permission: ""},
-	"/iam.v1.AuthService/Enable2FA":      {Permission: ""},
-	"/iam.v1.AuthService/Verify2FA":      {Permission: ""},
-	"/iam.v1.AuthService/Disable2FA":     {Permission: ""},
+	"/iam.v1.AuthService/GetCurrentUser":          {Permission: ""},
+	"/iam.v1.AuthService/UpdatePassword":          {Permission: ""},
+	"/iam.v1.AuthService/Enable2FA":               {Permission: ""},
+	"/iam.v1.AuthService/Verify2FA":               {Permission: ""},
+	"/iam.v1.AuthService/Disable2FA":              {Permission: ""},
+	"/iam.v1.AuthService/SendEmailVerification":   {Permission: ""},
+	"/iam.v1.AuthService/VerifyEmail":             {Permission: ""},
+	"/iam.v1.AuthService/ResendEmailVerification": {Permission: ""},
 
 	// User Service
-	"/iam.v1.UserService/CreateUser":                 {Permission: "iam.user.account.create"},
-	"/iam.v1.UserService/GetUser":                    {Permission: "iam.user.account.view"},
-	"/iam.v1.UserService/GetUserDetail":              {Permission: "iam.user.account.view"},
+	"/iam.v1.UserService/CreateUser": {Permission: "iam.user.account.create"},
+	// GetUser is open to any authenticated user — needed by UserName resolver
+	// across the app to display real names instead of raw UUIDs (audit log,
+	// comments, feasibility, etc.). It only returns identity (no secrets).
+	"/iam.v1.UserService/GetUser":                    {Permission: ""},
+	"/iam.v1.UserService/GetUserDetail":              {Permission: ""},
 	"/iam.v1.UserService/UpdateUser":                 {Permission: "iam.user.account.update"},
 	"/iam.v1.UserService/UpdateUserDetail":           {Permission: "iam.user.account.update"},
 	"/iam.v1.UserService/DeleteUser":                 {Permission: "iam.user.account.delete"},
@@ -158,6 +164,56 @@ var methodPermissions = map[string]PermissionRequirement{
 	"/iam.v1.CMSSettingService/UpdateCMSSetting":      {Permission: "iam.cms.setting.update"},
 	"/iam.v1.CMSSettingService/ListCMSSettings":       {Permission: "iam.cms.setting.view"},
 	"/iam.v1.CMSSettingService/BulkUpdateCMSSettings": {Permission: "iam.cms.setting.update"},
+
+	// Employee Level Service
+	"/iam.v1.EmployeeLevelService/CreateEmployeeLevel":           {Permission: "iam.master.employeelevel.create"},
+	"/iam.v1.EmployeeLevelService/GetEmployeeLevel":              {Permission: "iam.master.employeelevel.view"},
+	"/iam.v1.EmployeeLevelService/UpdateEmployeeLevel":           {Permission: "iam.master.employeelevel.update"},
+	"/iam.v1.EmployeeLevelService/DeleteEmployeeLevel":           {Permission: "iam.master.employeelevel.delete"},
+	"/iam.v1.EmployeeLevelService/ListEmployeeLevels":            {Permission: "iam.master.employeelevel.view"},
+	"/iam.v1.EmployeeLevelService/ExportEmployeeLevels":          {Permission: "iam.master.employeelevel.export"},
+	"/iam.v1.EmployeeLevelService/ImportEmployeeLevels":          {Permission: "iam.master.employeelevel.import"},
+	"/iam.v1.EmployeeLevelService/DownloadEmployeeLevelTemplate": {Permission: "iam.master.employeelevel.view"},
+	"/iam.v1.EmployeeLevelService/SubmitEmployeeLevel":           {Permission: "iam.master.employeelevel.submit"},
+	"/iam.v1.EmployeeLevelService/ApproveEmployeeLevel":          {Permission: "iam.master.employeelevel.approve"},
+	"/iam.v1.EmployeeLevelService/ReleaseEmployeeLevel":          {Permission: "iam.master.employeelevel.release"},
+	"/iam.v1.EmployeeLevelService/BypassReleaseEmployeeLevel":    {Permission: "iam.master.employeelevel.bypass"},
+
+	// Employee Group
+	"/iam.v1.EmployeeGroupService/CreateEmployeeGroup":           {Permission: "iam.master.employeegroup.create"},
+	"/iam.v1.EmployeeGroupService/GetEmployeeGroup":              {Permission: "iam.master.employeegroup.view"},
+	"/iam.v1.EmployeeGroupService/UpdateEmployeeGroup":           {Permission: "iam.master.employeegroup.update"},
+	"/iam.v1.EmployeeGroupService/DeleteEmployeeGroup":           {Permission: "iam.master.employeegroup.delete"},
+	"/iam.v1.EmployeeGroupService/ListEmployeeGroups":            {Permission: "iam.master.employeegroup.view"},
+	"/iam.v1.EmployeeGroupService/ExportEmployeeGroups":          {Permission: "iam.master.employeegroup.export"},
+	"/iam.v1.EmployeeGroupService/ImportEmployeeGroups":          {Permission: "iam.master.employeegroup.import"},
+	"/iam.v1.EmployeeGroupService/DownloadEmployeeGroupTemplate": {Permission: "iam.master.employeegroup.view"},
+
+	// Company Mapping Service
+	"/iam.v1.CompanyMappingService/CreateCompanyMapping": {Permission: "iam.master.companymapping.create"},
+	"/iam.v1.CompanyMappingService/GetCompanyMapping":    {Permission: "iam.master.companymapping.view"},
+	"/iam.v1.CompanyMappingService/UpdateCompanyMapping": {Permission: "iam.master.companymapping.update"},
+	"/iam.v1.CompanyMappingService/DeleteCompanyMapping": {Permission: "iam.master.companymapping.delete"},
+	"/iam.v1.CompanyMappingService/ListCompanyMappings":  {Permission: "iam.master.companymapping.view"},
+
+	// User ↔ Company Mapping (under UserService)
+	"/iam.v1.UserService/AssignUserCompanyMapping": {Permission: "iam.user.companymapping.assign"},
+	"/iam.v1.UserService/RemoveUserCompanyMapping": {Permission: "iam.user.companymapping.remove"},
+	"/iam.v1.UserService/GetUserCompanyMappings":   {Permission: "iam.user.companymapping.view"},
+
+	// Notification Service — own-data only; authenticated is sufficient.
+	// CreateNotification stays authenticated-only because the service is meant to be
+	// called by other backend services via service-to-service gRPC; for end-users the
+	// recipient_user_id is their own (enforced at handler level).
+	"/iam.v1.NotificationService/CreateNotification":  {Permission: ""},
+	"/iam.v1.NotificationService/GetNotification":     {Permission: ""},
+	"/iam.v1.NotificationService/ListNotifications":   {Permission: ""},
+	"/iam.v1.NotificationService/GetUnreadCount":      {Permission: ""},
+	"/iam.v1.NotificationService/MarkAsRead":          {Permission: ""},
+	"/iam.v1.NotificationService/MarkAllAsRead":       {Permission: ""},
+	"/iam.v1.NotificationService/ArchiveNotification": {Permission: ""},
+	"/iam.v1.NotificationService/DeleteNotification":  {Permission: ""},
+	"/iam.v1.NotificationService/StreamNotifications": {Permission: ""},
 }
 
 // PermissionInterceptor creates a unary interceptor that checks if the

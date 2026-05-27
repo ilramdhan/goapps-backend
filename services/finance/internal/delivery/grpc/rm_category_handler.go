@@ -1,4 +1,4 @@
-// Package grpc provides gRPC server implementation for finance service.
+//nolint:dupl // RMCategoryHandler mirrors UOMCategoryHandler by design — different proto types prevent shared code.
 package grpc
 
 import (

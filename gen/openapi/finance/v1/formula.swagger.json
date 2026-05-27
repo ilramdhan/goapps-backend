@@ -1,0 +1,841 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/formula.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "FormulaService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/formulas": {
+      "get": {
+        "summary": "ListFormulas lists formulas with search, filter, and pagination.",
+        "operationId": "FormulaService_ListFormulas",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListFormulasResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, default 1, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100, default 10).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in code, name, expression).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "formulaType",
+            "description": "Filter by formula type.\nFORMULA_TYPE_UNSPECIFIED (0) means \"show all types\" (no filter).\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "FORMULA_TYPE_UNSPECIFIED",
+              "FORMULA_TYPE_CALCULATION",
+              "FORMULA_TYPE_SQL_QUERY",
+              "FORMULA_TYPE_CONSTANT"
+            ],
+            "default": "FORMULA_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"code\", \"name\", \"type\", \"version\", \"created_at\" (default: \"code\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FormulaService"
+        ]
+      },
+      "post": {
+        "summary": "CreateFormula creates a new formula.",
+        "operationId": "FormulaService_CreateFormula",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateFormulaResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateFormulaRequest is the request for creating a new formula.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateFormulaRequest"
+            }
+          }
+        ],
+        "tags": [
+          "FormulaService"
+        ]
+      }
+    },
+    "/api/v1/finance/formulas/export": {
+      "get": {
+        "summary": "ExportFormulas exports formulas to Excel file.",
+        "operationId": "FormulaService_ExportFormulas",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportFormulasResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "formulaType",
+            "description": "Filter by formula type.\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "FORMULA_TYPE_UNSPECIFIED",
+              "FORMULA_TYPE_CALCULATION",
+              "FORMULA_TYPE_SQL_QUERY",
+              "FORMULA_TYPE_CONSTANT"
+            ],
+            "default": "FORMULA_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "FormulaService"
+        ]
+      }
+    },
+    "/api/v1/finance/formulas/import": {
+      "post": {
+        "summary": "ImportFormulas imports formulas from Excel file.",
+        "operationId": "FormulaService_ImportFormulas",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportFormulasResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportFormulasRequest is the request for importing formulas from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportFormulasRequest"
+            }
+          }
+        ],
+        "tags": [
+          "FormulaService"
+        ]
+      }
+    },
+    "/api/v1/finance/formulas/template": {
+      "get": {
+        "summary": "DownloadFormulaTemplate downloads the Excel import template.",
+        "operationId": "FormulaService_DownloadFormulaTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadFormulaTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "FormulaService"
+        ]
+      }
+    },
+    "/api/v1/finance/formulas/{formulaId}": {
+      "get": {
+        "summary": "GetFormula retrieves a formula by ID.",
+        "operationId": "FormulaService_GetFormula",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetFormulaResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "formulaId",
+            "description": "Formula ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FormulaService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteFormula soft deletes a formula.",
+        "operationId": "FormulaService_DeleteFormula",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteFormulaResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "formulaId",
+            "description": "Formula ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "FormulaService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateFormula updates an existing formula.\nNote: formula_code is immutable and cannot be changed.",
+        "operationId": "FormulaService_UpdateFormula",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateFormulaResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "formulaId",
+            "description": "Formula ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FormulaServiceUpdateFormulaBody"
+            }
+          }
+        ],
+        "tags": [
+          "FormulaService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "FormulaServiceUpdateFormulaBody": {
+      "type": "object",
+      "properties": {
+        "formulaName": {
+          "type": "string",
+          "description": "New display name (optional, 1-200 chars if provided)."
+        },
+        "formulaType": {
+          "$ref": "#/definitions/v1FormulaType",
+          "description": "New formula type (optional)."
+        },
+        "expression": {
+          "type": "string",
+          "description": "New expression (optional, 1-5000 chars if provided)."
+        },
+        "resultParamId": {
+          "type": "string",
+          "description": "New result parameter ID (optional, UUID)."
+        },
+        "inputParamIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "New input parameter IDs (optional, replaces all existing)."
+        },
+        "description": {
+          "type": "string",
+          "description": "New description (optional, max 1000 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "New active status (optional)."
+        }
+      },
+      "description": "UpdateFormulaRequest is the request for updating a formula.\nNote: formula_code is immutable and cannot be changed after creation."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateFormulaRequest": {
+      "type": "object",
+      "properties": {
+        "formulaCode": {
+          "type": "string",
+          "description": "Unique code (uppercase, alphanumeric with underscore, 1-50 chars)."
+        },
+        "formulaName": {
+          "type": "string",
+          "description": "Display name (1-200 chars)."
+        },
+        "formulaType": {
+          "$ref": "#/definitions/v1FormulaType",
+          "description": "Formula type (required, cannot be UNSPECIFIED)."
+        },
+        "expression": {
+          "type": "string",
+          "description": "Expression (required, 1-5000 chars)."
+        },
+        "resultParamId": {
+          "type": "string",
+          "description": "Result parameter ID (UUID, required)."
+        },
+        "inputParamIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Input parameter IDs (at least 1 for CALCULATION type)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 1000 chars)."
+        }
+      },
+      "description": "CreateFormulaRequest is the request for creating a new formula."
+    },
+    "v1CreateFormulaResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Formula",
+          "description": "Created formula data."
+        }
+      },
+      "description": "CreateFormulaResponse is the response for creating a formula."
+    },
+    "v1DeleteFormulaResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteFormulaResponse is the response for deleting a formula."
+    },
+    "v1DownloadFormulaTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "DownloadFormulaTemplateResponse is the response containing the template file."
+    },
+    "v1ExportFormulasResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Suggested filename."
+        }
+      },
+      "description": "ExportFormulasResponse is the response containing the Excel file."
+    },
+    "v1Formula": {
+      "type": "object",
+      "properties": {
+        "formulaId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "formulaCode": {
+          "type": "string",
+          "description": "Unique code (e.g., \"COST_ELEC_STD\"). Immutable after creation."
+        },
+        "formulaName": {
+          "type": "string",
+          "description": "Display name (e.g., \"Electricity Cost Standard\")."
+        },
+        "formulaType": {
+          "$ref": "#/definitions/v1FormulaType",
+          "description": "Type of formula expression."
+        },
+        "expression": {
+          "type": "string",
+          "description": "Expression text (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\" or SQL query)."
+        },
+        "resultParamId": {
+          "type": "string",
+          "description": "Result/output parameter ID (UUID FK to mst_parameter)."
+        },
+        "resultParamCode": {
+          "type": "string",
+          "description": "Resolved result parameter code (read-only, from join)."
+        },
+        "resultParamName": {
+          "type": "string",
+          "description": "Resolved result parameter name (read-only, from join)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Formula version number."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the formula is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        },
+        "inputParams": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FormulaParam"
+          },
+          "description": "Input parameters (from junction table)."
+        }
+      },
+      "description": "Formula represents a master formula entity for costing calculations."
+    },
+    "v1FormulaParam": {
+      "type": "object",
+      "properties": {
+        "formulaParamId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "paramId": {
+          "type": "string",
+          "description": "Parameter ID reference (UUID)."
+        },
+        "paramCode": {
+          "type": "string",
+          "description": "Resolved parameter code (read-only, from join)."
+        },
+        "paramName": {
+          "type": "string",
+          "description": "Resolved parameter name (read-only, from join)."
+        },
+        "sortOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display order of the parameter in the formula."
+        }
+      },
+      "description": "FormulaParam represents an input parameter reference within a formula."
+    },
+    "v1FormulaType": {
+      "type": "string",
+      "enum": [
+        "FORMULA_TYPE_UNSPECIFIED",
+        "FORMULA_TYPE_CALCULATION",
+        "FORMULA_TYPE_SQL_QUERY",
+        "FORMULA_TYPE_CONSTANT"
+      ],
+      "default": "FORMULA_TYPE_UNSPECIFIED",
+      "description": "FormulaType represents the type of a formula expression.\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation)."
+    },
+    "v1GetFormulaResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Formula",
+          "description": "Formula data."
+        }
+      },
+      "description": "GetFormulaResponse is the response for getting a formula."
+    },
+    "v1ImportError": {
+      "type": "object",
+      "properties": {
+        "rowNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Row number in the Excel file."
+        },
+        "field": {
+          "type": "string",
+          "description": "Field that caused the error."
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message."
+        }
+      },
+      "description": "ImportError represents a single import error."
+    },
+    "v1ImportFormulasRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content as bytes (.xlsx or .xls format)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Original filename (for format detection)."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "Required. How to handle duplicates: \"skip\", \"update\", \"error\"."
+        }
+      },
+      "description": "ImportFormulasRequest is the request for importing formulas from Excel."
+    },
+    "v1ImportFormulasResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully imported records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records (duplicates with skip action)."
+        },
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of updated records (duplicates with update action)."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Details of failed records."
+        }
+      },
+      "description": "ImportFormulasResponse is the response for importing formulas."
+    },
+    "v1ListFormulasResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Formula"
+          },
+          "description": "List of formulas."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListFormulasResponse is the response for listing formulas."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1UpdateFormulaResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Formula",
+          "description": "Updated formula data."
+        }
+      },
+      "description": "UpdateFormulaResponse is the response for updating a formula."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

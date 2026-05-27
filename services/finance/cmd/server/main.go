@@ -17,11 +17,21 @@ import (
 	datasourceapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/datasource"
 	groupapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/group"
 	jobapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/job"
+	"github.com/mutugading/goapps-backend/pkg/costcalc/metrics"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/auditadapter"
+	auditapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costauditlog"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc/evaluator"
+	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
+	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
 	redisinfra "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/redis"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/storage"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/tracing"
 )
 
@@ -32,7 +42,7 @@ func main() {
 }
 
 // run contains the main application logic, separated for cleaner error handling.
-func run() error {
+func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	setupLogger()
 
 	// Load configuration
@@ -61,6 +71,20 @@ func run() error {
 	}
 	defer closeDatabase(db)
 
+	// Background DB-pool gauge scraper for cost-calc observability.
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				metrics.DBPoolInUse.WithLabelValues("finance").Set(float64(db.Stats().InUse))
+			}
+		}
+	}()
+
 	// Setup Redis (optional - graceful degradation)
 	redisClient, uomCache := setupRedis(cfg)
 	if redisClient != nil {
@@ -73,10 +97,47 @@ func run() error {
 		defer closeAuthRedis(tokenBlacklist)
 	}
 
+	// Setup RabbitMQ (optional - graceful degradation for publisher)
+	rmqAdapter, costJobPub, closeRabbitMQ := setupRabbitMQ(cfg)
+	defer closeRabbitMQ()
+
+	// Wrap into explicit interface values so that when RabbitMQ is unavailable
+	// the handlers receive a true nil interface (not a typed-nil pointer).
+	var oracleSyncPublisher oraclesync.JobPublisher
+	var rmCostPublisher apprmcost.JobPublisher
+	var rmCostExportPublisher apprmcost.ExportJobPublisher
+	var costCalcJobTriggerPub costcalc.JobTriggerPublisher
+	if rmqAdapter != nil {
+		oracleSyncPublisher = rmqAdapter
+		rmCostPublisher = rmqAdapter
+		rmCostExportPublisher = rmqAdapter
+	}
+	if costJobPub != nil {
+		costCalcJobTriggerPub = costJobPub
+	}
+
 	// Setup repositories
 	uomRepo := postgres.NewUOMRepository(db)
 	rmCategoryRepo := postgres.NewRMCategoryRepository(db)
 	parameterRepo := postgres.NewParameterRepository(db)
+	formulaRepo := postgres.NewFormulaRepository(db)
+	uomCategoryRepo := postgres.NewUOMCategoryRepository(db)
+	jobRepo := postgres.NewJobRepository(db)
+	syncDataRepo := postgres.NewSyncDataRepository(db)
+	rmGroupRepo := postgres.NewRMGroupRepository(db)
+	rmCostRepo := postgres.NewRMCostRepository(db)
+	rmCostDetailRepo := postgres.NewRMCostDetailRepository(db)
+	rmCostInputsRepo := postgres.NewRMCostInputsRepository(db)
+	// NOTE: legacy productRepo / prdRequestRepo wired to dropped tables — removed.
+	// Canonical Phase B (cost_product_master, cost_product_order) wiring added in S2.8-S2.10.
+
+	// Setup oracle sync handlers
+	triggerHandler := oraclesync.NewTriggerHandler(jobRepo, oracleSyncPublisher)
+	getJobHandler := oraclesync.NewGetJobHandler(jobRepo)
+	listJobsHandler := oraclesync.NewListJobsHandler(jobRepo)
+	cancelJobHandler := oraclesync.NewCancelJobHandler(jobRepo)
+	listDataHandler := oraclesync.NewListDataHandler(syncDataRepo)
+	listPeriodsHandler := oraclesync.NewListPeriodsHandler(syncDataRepo)
 
 	// BI repositories + cache
 	biDashboardRepo := postgres.NewBiDashboardRepository(db)
@@ -87,7 +148,7 @@ func run() error {
 	biChartCache := redisinfra.NewChartCache(redisClient)
 
 	// Setup gRPC handlers
-	uomHandler, err := grpcdelivery.NewUOMHandler(uomRepo, uomCache)
+	uomHandler, err := grpcdelivery.NewUOMHandler(uomRepo, uomCategoryRepo, uomCache)
 	if err != nil {
 		return err
 	}
@@ -102,7 +163,179 @@ func run() error {
 		return err
 	}
 
-	// BI gRPC handlers
+	formulaHandler, err := grpcdelivery.NewFormulaHandler(formulaRepo)
+	if err != nil {
+		return err
+	}
+
+	uomCategoryHandler, err := grpcdelivery.NewUOMCategoryHandler(uomCategoryRepo)
+	if err != nil {
+		return err
+	}
+
+	oracleSyncHandler, err := grpcdelivery.NewOracleSyncHandler(
+		triggerHandler, getJobHandler, listJobsHandler,
+		cancelJobHandler, listDataHandler, listPeriodsHandler,
+	)
+	if err != nil {
+		return err
+	}
+
+	recalcChain := grpcdelivery.NewRecalcChain(
+		jobRepo,
+		rmCostPublisher,
+		rmCostRepo.ListDistinctPeriods,
+		syncDataRepo.GetDistinctPeriods,
+	)
+	rmGroupHandler, err := grpcdelivery.NewRMGroupHandler(rmGroupRepo, syncDataRepo, syncDataRepo, syncDataRepo, rmCostRepo, syncDataRepo, recalcChain)
+	if err != nil {
+		return err
+	}
+
+	rmCostTrigger := apprmcost.NewTriggerHandler(jobRepo, rmCostPublisher)
+	rmCostCalculate := apprmcost.NewCalculateHandler(rmGroupRepo, rmCostRepo, syncDataRepo)
+	rmCostGet := apprmcost.NewGetHandler(rmCostRepo)
+	rmCostList := apprmcost.NewListHandler(rmCostRepo)
+	rmCostHistory := apprmcost.NewHistoryHandler(rmCostRepo)
+	rmCostPeriods := apprmcost.NewPeriodsHandler(rmCostRepo)
+	rmCostExport := apprmcost.NewExportHandler(rmCostRepo)
+	rmCostRequestExport := apprmcost.NewRequestExportHandler(jobRepo, rmCostExportPublisher)
+
+	// MinIO storage — shared between RM Cost export downloads and Phase A attachments.
+	var rmCostExportURL *apprmcost.GetExportURLHandler
+	var storageSvc storage.Service
+	if client, sErr := storage.NewMinIOClient(storage.Config{
+		Endpoint:           cfg.Storage.Endpoint,
+		AccessKey:          cfg.Storage.AccessKey,
+		SecretKey:          cfg.Storage.SecretKey,
+		Bucket:             cfg.Storage.Bucket,
+		UseSSL:             cfg.Storage.UseSSL,
+		InsecureSkipVerify: cfg.Storage.InsecureSkipVerify,
+		Region:             cfg.Storage.Region,
+		PublicURL:          cfg.Storage.PublicURL,
+	}); sErr != nil {
+		log.Warn().Err(sErr).Msg("MinIO unavailable; export download URLs + attachments will return 503")
+	} else {
+		storageSvc = client
+		rmCostExportURL = apprmcost.NewGetExportURLHandler(jobRepo, client, 5*time.Minute)
+	}
+
+	editInputsHandler := apprmcost.NewEditInputsHandler(rmCostRepo, rmCostInputsRepo)
+	editFixRateHandler := apprmcost.NewEditFixRateHandler(rmCostRepo, rmCostDetailRepo, rmCostInputsRepo)
+
+	rmCostHandler, err := grpcdelivery.NewRMCostHandler(
+		rmCostTrigger, rmCostCalculate, rmCostGet, rmCostList, rmCostHistory, rmCostPeriods, rmCostExport, rmCostRequestExport, rmCostExportURL,
+		rmCostDetailRepo, editInputsHandler, editFixRateHandler,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Canonical Phase B (cost_*) repositories + handlers.
+	costProductTypeRepo := postgres.NewCostProductTypeRepository(db)
+	costRmTypeRepo := postgres.NewCostRmTypeRepository(db)
+	costErpRepo := postgres.NewCostErpRepository(db)
+	costProductMasterRepo := postgres.NewCostProductMasterRepository(db)
+	costRouteRepo := postgres.NewCostRouteRepository(db)
+	// Canonical Phase A (PRD §7.1) repositories.
+	costRequestTypeRepo := postgres.NewCostRequestTypeRepository(db)
+	costPaperTubeTypeRepo := postgres.NewCostPaperTubeTypeRepository(db)
+	costProductRequestRepo := postgres.NewCostProductRequestRepository(db)
+	costRequestCommentRepo := postgres.NewCostRequestCommentRepository(db)
+	costAttachmentRepo := postgres.NewCostAttachmentRepository(db)
+	costRoutingRuleRepo := postgres.NewCostRoutingRuleRepository(db)
+	costAuditLogRepo := postgres.NewCostAuditLogRepository(db)
+	costNotificationRepo := postgres.NewCostNotificationRepository(db)
+	costProductParameterRepo := postgres.NewCostProductParameterRepository(db)
+
+	costProductTypeHandler, err := grpcdelivery.NewCostProductTypeHandler(costProductTypeRepo)
+	if err != nil {
+		return err
+	}
+	costRmTypeHandler, err := grpcdelivery.NewCostRmTypeHandler(costRmTypeRepo)
+	if err != nil {
+		return err
+	}
+	costErpHandler, err := grpcdelivery.NewCostErpHandler(costErpRepo)
+	if err != nil {
+		return err
+	}
+	costProductMasterHandler, err := grpcdelivery.NewCostProductMasterHandler(costProductMasterRepo)
+	if err != nil {
+		return err
+	}
+	costRouteHandler, err := grpcdelivery.NewCostRouteHandler(costRouteRepo, costProductRequestRepo)
+	if err != nil {
+		return err
+	}
+	costRequestTypeHandler, err := grpcdelivery.NewCostRequestTypeHandler(costRequestTypeRepo)
+	if err != nil {
+		return err
+	}
+	costPaperTubeTypeHandler, err := grpcdelivery.NewCostPaperTubeTypeHandler(costPaperTubeTypeRepo)
+	if err != nil {
+		return err
+	}
+	// Audit emitter — appends CAL_ rows from request state transitions (S7.5).
+	auditEmitter := auditadapter.NewCprEmitter(auditapp.NewEmitter(costAuditLogRepo))
+	costProductRequestHandler, err := grpcdelivery.NewCostProductRequestHandler(costProductRequestRepo, costRouteRepo, auditEmitter)
+	if err != nil {
+		return err
+	}
+	costRequestCommentHandler, err := grpcdelivery.NewCostRequestCommentHandler(costRequestCommentRepo)
+	if err != nil {
+		return err
+	}
+	costAttachmentHandler, err := grpcdelivery.NewCostAttachmentHandler(costAttachmentRepo, storageSvc)
+	if err != nil {
+		return err
+	}
+	costRoutingRuleHandler, err := grpcdelivery.NewCostRoutingRuleHandler(costRoutingRuleRepo)
+	if err != nil {
+		return err
+	}
+	costAuditLogHandler, err := grpcdelivery.NewCostAuditLogHandler(costAuditLogRepo)
+	if err != nil {
+		return err
+	}
+	costNotificationHandler, err := grpcdelivery.NewCostNotificationHandler(costNotificationRepo)
+	if err != nil {
+		return err
+	}
+	costProductParameterApp := cppapp.New(costProductParameterRepo)
+	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp)
+
+	// S8b: real CostCalcService wiring. Service holds 5 repos + loader + evaluator
+	// cache; 11 application handlers wrap individual use cases. Audit emitter is
+	// nil for now (cost_audit_log integration lands in S8c orchestrator).
+	calcJobRepo := postgres.NewCostCalcJobRepository(db)
+	calcChunkRepo := postgres.NewCostCalcChunkRepository(db)
+	calcJobProductRepo := postgres.NewCostCalcJobProductRepository(db)
+	costResultRepo := postgres.NewCostResultRepository(db)
+	costAuditHistoryRepo := postgres.NewCostAuditHistoryRepository(db)
+	calcEvalCache := evaluator.NewCache()
+	calcLoader := costcalc.NewProductLoader(db.DB)
+	calcSvc := costcalc.NewService(
+		calcJobRepo, calcChunkRepo, calcJobProductRepo, costResultRepo, costAuditHistoryRepo,
+		calcLoader, calcEvalCache, nil, costCalcJobTriggerPub,
+	)
+	costCalcHandler := grpcdelivery.NewCostCalcHandler(
+		calcSvc,
+		costcalc.NewTriggerJobHandler(calcSvc),
+		costcalc.NewGetJobHandler(calcSvc),
+		costcalc.NewListJobsHandler(calcSvc),
+		costcalc.NewListChunksHandler(calcSvc),
+		costcalc.NewListJobProductsHandler(calcSvc),
+		costcalc.NewCancelJobHandler(calcSvc),
+		costcalc.NewGetCostResultHandler(calcSvc),
+		costcalc.NewGetCostBreakdownHandler(calcSvc),
+		costcalc.NewListCostHistoryHandler(calcSvc),
+		costcalc.NewListCostResultsHandler(calcSvc),
+		costcalc.NewVerifyCostHandler(calcSvc),
+		costcalc.NewApproveCostHandler(calcSvc),
+	)
+
+	// BI (Executive Dashboard) gRPC handlers.
 	biDashboardHandler, err := grpcdelivery.NewBIDashboardHandler(
 		dashboardapp.NewCreateHandler(biDashboardRepo),
 		dashboardapp.NewGetHandler(biDashboardRepo),
@@ -147,7 +380,15 @@ func run() error {
 	}
 
 	// Setup and start servers
-	return startServers(ctx, cfg, uomHandler, rmCategoryHandler, parameterHandler,
+	return startServers(ctx, cfg,
+		uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler,
+		oracleSyncHandler, rmGroupHandler, rmCostHandler,
+		costProductTypeHandler, costRmTypeHandler, costErpHandler, costProductMasterHandler, costRouteHandler,
+		costRequestTypeHandler, costPaperTubeTypeHandler, costProductRequestHandler,
+		costRequestCommentHandler, costAttachmentHandler,
+		costRoutingRuleHandler, costAuditLogHandler, costNotificationHandler,
+		costProductParameterHandler,
+		costCalcHandler,
 		biDashboardHandler, biChartDataHandler, biDataSourceHandler, biJobHandler,
 		tokenBlacklist)
 }
@@ -246,12 +487,30 @@ func closeAuthRedis(bl *redisinfra.TokenBlacklist) {
 }
 
 // startServers starts the gRPC and HTTP servers and handles graceful shutdown.
-func startServers(
-	ctx context.Context,
-	cfg *config.Config,
+func startServers(ctx context.Context, cfg *config.Config,
 	uomHandler *grpcdelivery.UOMHandler,
 	rmCategoryHandler *grpcdelivery.RMCategoryHandler,
 	parameterHandler *grpcdelivery.ParameterHandler,
+	formulaHandler *grpcdelivery.FormulaHandler,
+	uomCategoryHandler *grpcdelivery.UOMCategoryHandler,
+	oracleSyncHandler *grpcdelivery.OracleSyncHandler,
+	rmGroupHandler *grpcdelivery.RMGroupHandler,
+	rmCostHandler *grpcdelivery.RMCostHandler,
+	costProductTypeHandler *grpcdelivery.CostProductTypeHandler,
+	costRmTypeHandler *grpcdelivery.CostRmTypeHandler,
+	costErpHandler *grpcdelivery.CostErpHandler,
+	costProductMasterHandler *grpcdelivery.CostProductMasterHandler,
+	costRouteHandler *grpcdelivery.CostRouteHandler,
+	costRequestTypeHandler *grpcdelivery.CostRequestTypeHandler,
+	costPaperTubeTypeHandler *grpcdelivery.CostPaperTubeTypeHandler,
+	costProductRequestHandler *grpcdelivery.CostProductRequestHandler,
+	costRequestCommentHandler *grpcdelivery.CostRequestCommentHandler,
+	costAttachmentHandler *grpcdelivery.CostAttachmentHandler,
+	costRoutingRuleHandler *grpcdelivery.CostRoutingRuleHandler,
+	costAuditLogHandler *grpcdelivery.CostAuditLogHandler,
+	costNotificationHandler *grpcdelivery.CostNotificationHandler,
+	costProductParameterHandler *grpcdelivery.CostProductParameterHandler,
+	costCalcHandler *grpcdelivery.CostCalcHandler,
 	biDashboardHandler *grpcdelivery.BIDashboardHandler,
 	biChartDataHandler *grpcdelivery.BIChartDataHandler,
 	biDataSourceHandler *grpcdelivery.BIDataSourceHandler,
@@ -268,6 +527,29 @@ func startServers(
 	financev1.RegisterUOMServiceServer(grpcServer.GRPCServer(), uomHandler)
 	financev1.RegisterRMCategoryServiceServer(grpcServer.GRPCServer(), rmCategoryHandler)
 	financev1.RegisterParameterServiceServer(grpcServer.GRPCServer(), parameterHandler)
+	financev1.RegisterFormulaServiceServer(grpcServer.GRPCServer(), formulaHandler)
+	financev1.RegisterUOMCategoryServiceServer(grpcServer.GRPCServer(), uomCategoryHandler)
+	financev1.RegisterOracleSyncServiceServer(grpcServer.GRPCServer(), oracleSyncHandler)
+	financev1.RegisterRMGroupServiceServer(grpcServer.GRPCServer(), rmGroupHandler)
+	financev1.RegisterRMCostServiceServer(grpcServer.GRPCServer(), rmCostHandler)
+	// Canonical Phase B services (PRD §7.2-§7.3).
+	financev1.RegisterCostProductTypeServiceServer(grpcServer.GRPCServer(), costProductTypeHandler)
+	financev1.RegisterCostRmTypeServiceServer(grpcServer.GRPCServer(), costRmTypeHandler)
+	financev1.RegisterCostErpLookupServiceServer(grpcServer.GRPCServer(), costErpHandler)
+	financev1.RegisterCostProductMasterServiceServer(grpcServer.GRPCServer(), costProductMasterHandler)
+	financev1.RegisterCostRouteServiceServer(grpcServer.GRPCServer(), costRouteHandler)
+	// Canonical Phase A services (PRD §7.1).
+	financev1.RegisterCostRequestTypeServiceServer(grpcServer.GRPCServer(), costRequestTypeHandler)
+	financev1.RegisterCostPaperTubeTypeServiceServer(grpcServer.GRPCServer(), costPaperTubeTypeHandler)
+	financev1.RegisterCostProductRequestServiceServer(grpcServer.GRPCServer(), costProductRequestHandler)
+	financev1.RegisterCostRequestCommentServiceServer(grpcServer.GRPCServer(), costRequestCommentHandler)
+	financev1.RegisterCostAttachmentServiceServer(grpcServer.GRPCServer(), costAttachmentHandler)
+	financev1.RegisterCostRoutingRuleServiceServer(grpcServer.GRPCServer(), costRoutingRuleHandler)
+	financev1.RegisterCostAuditLogServiceServer(grpcServer.GRPCServer(), costAuditLogHandler)
+	financev1.RegisterCostNotificationServiceServer(grpcServer.GRPCServer(), costNotificationHandler)
+	financev1.RegisterCostProductParameterServiceServer(grpcServer.GRPCServer(), costProductParameterHandler)
+	// S8a foundation: CostCalcService stub.
+	financev1.RegisterCostCalcServiceServer(grpcServer.GRPCServer(), costCalcHandler)
 
 	// BI services
 	financev1.RegisterDashboardServiceServer(grpcServer.GRPCServer(), biDashboardHandler)
@@ -313,4 +595,32 @@ func startServers(
 
 	log.Info().Msg("Server shutdown complete")
 	return nil
+}
+
+// setupRabbitMQ creates a RabbitMQ connection and publishers (optional -
+// graceful degradation). Returns the job-publisher adapter (oracle sync / RM
+// cost), the cost-calc job-trigger publisher (orchestrator hand-off), and a
+// close function for graceful shutdown.
+func setupRabbitMQ(cfg *config.Config) (*rabbitmq.JobPublisherAdapter, *rabbitmq.CostJobPublisher, func()) {
+	rmqConn, err := rabbitmq.NewConnection(cfg.RabbitMQ, log.Logger)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to connect to RabbitMQ, sync trigger will fail")
+		return nil, nil, func() {}
+	}
+
+	publisher := rabbitmq.NewPublisher(rmqConn, log.Logger)
+	adapter := rabbitmq.NewJobPublisherAdapter(publisher, log.Logger)
+
+	costPub, costErr := rabbitmq.NewCostJobPublisher(rmqConn, log.Logger)
+	if costErr != nil {
+		log.Warn().Err(costErr).Msg("Failed to init cost job publisher; multi-product calc scopes will fail")
+		costPub = nil
+	}
+
+	closeFunc := func() {
+		if closeErr := rmqConn.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("Failed to close RabbitMQ connection")
+		}
+	}
+	return adapter, costPub, closeFunc
 }

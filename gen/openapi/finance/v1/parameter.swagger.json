@@ -414,6 +414,31 @@
         "isActive": {
           "type": "boolean",
           "description": "New active status (optional)."
+        },
+        "ownerDepartment": {
+          "type": "string",
+          "description": "New owner department (optional)."
+        },
+        "isRequiredForCosting": {
+          "type": "boolean",
+          "description": "New is_required_for_costing flag (optional)."
+        },
+        "isPeriodDependent": {
+          "type": "boolean",
+          "description": "New is_period_dependent flag (optional)."
+        },
+        "lookupMasterCode": {
+          "type": "string",
+          "description": "New lookup master code (optional). Set to empty string to clear."
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "New display order (optional)."
+        },
+        "displayGroup": {
+          "type": "string",
+          "description": "New display group (optional). Set to empty string to clear."
         }
       },
       "description": "UpdateParameterRequest is the request for updating a parameter.\nNote: param_code is immutable and cannot be changed after creation."
@@ -542,6 +567,31 @@
         "maxValue": {
           "type": "string",
           "description": "Maximum value (optional, decimal as string)."
+        },
+        "ownerDepartment": {
+          "type": "string",
+          "description": "Owner department (optional, max 30 chars)."
+        },
+        "isRequiredForCosting": {
+          "type": "boolean",
+          "description": "Whether required for costing (default false)."
+        },
+        "isPeriodDependent": {
+          "type": "boolean",
+          "description": "Period-dependent flag (default false). TRUE = Phase C period-storage (deferred)."
+        },
+        "lookupMasterCode": {
+          "type": "string",
+          "description": "Lookup master code (optional, max 30 chars). E.g. 'YARN_TYPE'."
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display order within display group (default 0)."
+        },
+        "displayGroup": {
+          "type": "string",
+          "description": "Display group (optional, max 50 chars). E.g. 'Spec', 'Machine'."
         }
       },
       "description": "CreateParameterRequest is the request for creating a new parameter."
@@ -826,6 +876,31 @@
         "uomName": {
           "type": "string",
           "description": "Resolved UOM name (read-only, populated from mst_uom join)."
+        },
+        "ownerDepartment": {
+          "type": "string",
+          "description": "Responsible department (Engineering, Production, Finance, RND). Optional."
+        },
+        "isRequiredForCosting": {
+          "type": "boolean",
+          "description": "Whether this parameter must be filled per product before the request can leave PARAMETER_PENDING."
+        },
+        "isPeriodDependent": {
+          "type": "boolean",
+          "description": "FALSE = stored in cost_product_parameter (Phase B static). TRUE = stored per period in Phase C (deferred)."
+        },
+        "lookupMasterCode": {
+          "type": "string",
+          "description": "When NOT empty the UI renders a combobox sourced from the named master (e.g. YARN_TYPE). Free-text fallback while master is not yet built."
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Render order within display_group."
+        },
+        "displayGroup": {
+          "type": "string",
+          "description": "Form section: Spec / Machine / Grade / Packing / Cost / etc."
         }
       },
       "description": "Parameter represents a master parameter entity for costing calculations."

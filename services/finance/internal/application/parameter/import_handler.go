@@ -268,7 +268,7 @@ func (h *ImportHandler) updateExisting(ctx context.Context, code parameter.Code,
 		uomIDPtr = &resolvedID
 	}
 
-	if err := existing.Update(&data.name, &data.shortName, &dataType, &paramCategory, uomIDPtr, defaultValue, minValue, maxValue, nil, updatedBy); err != nil {
+	if err := existing.Update(&data.name, &data.shortName, &dataType, &paramCategory, uomIDPtr, defaultValue, minValue, maxValue, nil, parameter.CostingUpdate{}, updatedBy); err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "update", Message: err.Error()})
 		return
@@ -326,6 +326,7 @@ func (h *ImportHandler) createParameter(
 		code, data.name, data.shortName,
 		dataType, paramCategory, uomID,
 		defaultValue, minValue, maxValue,
+		parameter.CostingMetadata{},
 		createdBy,
 	)
 	if err != nil {

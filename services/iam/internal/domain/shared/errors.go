@@ -44,6 +44,12 @@ var (
 	// OTP errors
 	ErrInvalidOTP = errors.New("invalid OTP code")
 
+	// Email verification errors
+	ErrEmailNotVerified     = errors.New("email address has not been verified")
+	ErrEmailAlreadyVerified = errors.New("email address is already verified")
+	ErrVerificationCooldown = errors.New("please wait before requesting a new verification code")
+	ErrInvalidVerifyCode    = errors.New("invalid or expired verification code")
+
 	// Legacy aliases for compatibility
 	ErrTOTPRequired = ErrTwoFARequired
 	ErrTOTPInvalid  = ErrInvalid2FACode

@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS cst_product_cost CASCADE;

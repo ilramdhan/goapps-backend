@@ -12,6 +12,7 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	userapp "github.com/mutugading/goapps-backend/services/iam/internal/application/user"
+	"github.com/mutugading/goapps-backend/services/iam/internal/domain/companymapping"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/user"
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/password"
@@ -33,9 +34,13 @@ type UserHandler struct {
 	assignPermissionsHandler   *userapp.AssignPermissionsHandler
 	removePermissionsHandler   *userapp.RemovePermissionsHandler
 	getRolesPermissionsHandler *userapp.GetRolesPermissionsHandler
+	assignMappingHandler       *userapp.AssignCompanyMappingHandler
+	removeMappingHandler       *userapp.RemoveCompanyMappingHandler
+	getMappingsHandler         *userapp.GetCompanyMappingsHandler
 	validationHelper           *ValidationHelper
 	storageService             storage.Service
 	userRepo                   user.Repository
+	mappingRepo                companymapping.Repository
 }
 
 // NewUserHandler creates a new UserHandler.
@@ -43,14 +48,15 @@ func NewUserHandler(
 	userRepo user.Repository,
 	userRoleRepo role.UserRoleRepository,
 	userPermissionRepo role.UserPermissionRepository,
+	mappingRepo companymapping.Repository,
 	validationHelper *ValidationHelper,
 	storageSvc storage.Service,
 ) *UserHandler {
 	return &UserHandler{
-		createHandler:              userapp.NewCreateHandler(userRepo),
+		createHandler:              userapp.NewCreateHandlerWithMapping(userRepo, mappingRepo),
 		getHandler:                 userapp.NewGetHandler(userRepo),
 		getDetailHandler:           userapp.NewGetDetailHandler(userRepo),
-		updateHandler:              userapp.NewUpdateHandler(userRepo),
+		updateHandler:              userapp.NewUpdateHandlerWithMapping(userRepo, mappingRepo),
 		updateDetailHandler:        userapp.NewUpdateDetailHandler(userRepo),
 		deleteHandler:              userapp.NewDeleteHandler(userRepo),
 		listHandler:                userapp.NewListHandler(userRepo),
@@ -59,9 +65,13 @@ func NewUserHandler(
 		assignPermissionsHandler:   userapp.NewAssignPermissionsHandler(userRepo, userPermissionRepo),
 		removePermissionsHandler:   userapp.NewRemovePermissionsHandler(userRepo, userPermissionRepo),
 		getRolesPermissionsHandler: userapp.NewGetRolesPermissionsHandler(userRepo),
+		assignMappingHandler:       userapp.NewAssignCompanyMappingHandler(mappingRepo),
+		removeMappingHandler:       userapp.NewRemoveCompanyMappingHandler(mappingRepo),
+		getMappingsHandler:         userapp.NewGetCompanyMappingsHandler(mappingRepo),
 		validationHelper:           validationHelper,
 		storageService:             storageSvc,
 		userRepo:                   userRepo,
+		mappingRepo:                mappingRepo,
 	}
 }
 
@@ -99,17 +109,20 @@ func (h *UserHandler) CreateUser(ctx context.Context, req *iamv1.CreateUserReque
 	}
 
 	entity, err := h.createHandler.Handle(ctx, userapp.CreateCommand{
-		Username:     req.GetUsername(),
-		Email:        req.GetEmail(),
-		PasswordHash: hashedPassword,
-		EmployeeCode: req.GetEmployeeCode(),
-		FullName:     req.GetFullName(),
-		FirstName:    req.GetFirstName(),
-		LastName:     req.GetLastName(),
-		Phone:        req.GetPhone(),
-		Position:     req.GetPosition(),
-		Address:      req.GetAddress(),
-		CreatedBy:    h.getActorID(ctx),
+		Username:         req.GetUsername(),
+		Email:            req.GetEmail(),
+		PasswordHash:     hashedPassword,
+		EmployeeCode:     req.GetEmployeeCode(),
+		FullName:         req.GetFullName(),
+		FirstName:        req.GetFirstName(),
+		LastName:         req.GetLastName(),
+		Phone:            req.GetPhone(),
+		Position:         req.GetPosition(),
+		Address:          req.GetAddress(),
+		EmployeeLevelID:  req.EmployeeLevelId,
+		EmployeeGroupID:  req.EmployeeGroupId,
+		CompanyMappingID: req.CompanyMappingId,
+		CreatedBy:        h.getActorID(ctx),
 	})
 	if err != nil {
 		return &iamv1.CreateUserResponse{Base: domainErrorToBaseResponse(err)}, nil
@@ -117,7 +130,7 @@ func (h *UserHandler) CreateUser(ctx context.Context, req *iamv1.CreateUserReque
 
 	return &iamv1.CreateUserResponse{
 		Base: SuccessResponse("User created successfully"),
-		Data: h.toUserWithDetailProto(entity, nil, nil),
+		Data: h.toUserWithDetailProto(ctx, entity, nil, nil),
 	}, nil
 }
 
@@ -136,7 +149,7 @@ func (h *UserHandler) GetUser(ctx context.Context, req *iamv1.GetUserRequest) (*
 
 	return &iamv1.GetUserResponse{
 		Base: SuccessResponse("User retrieved successfully"),
-		Data: h.toUserProto(entity),
+		Data: h.toUserProtoEnriched(ctx, entity),
 	}, nil
 }
 
@@ -155,7 +168,7 @@ func (h *UserHandler) GetUserDetail(ctx context.Context, req *iamv1.GetUserDetai
 
 	return &iamv1.GetUserDetailResponse{
 		Base: SuccessResponse("User detail retrieved successfully"),
-		Data: h.toUserWithDetailProto(result.User, result.Detail, nil),
+		Data: h.toUserWithDetailProto(ctx, result.User, result.Detail, nil),
 	}, nil
 }
 
@@ -166,10 +179,13 @@ func (h *UserHandler) UpdateUser(ctx context.Context, req *iamv1.UpdateUserReque
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, userapp.UpdateCommand{
-		UserID:    req.GetUserId(),
-		Email:     req.Email,
-		IsActive:  req.IsActive,
-		UpdatedBy: h.getActorID(ctx),
+		UserID:           req.GetUserId(),
+		Email:            req.Email,
+		IsActive:         req.IsActive,
+		EmployeeLevelID:  req.EmployeeLevelId,
+		EmployeeGroupID:  req.EmployeeGroupId,
+		CompanyMappingID: req.CompanyMappingId,
+		UpdatedBy:        h.getActorID(ctx),
 	})
 	if err != nil {
 		return &iamv1.UpdateUserResponse{Base: domainErrorToBaseResponse(err)}, nil
@@ -177,7 +193,7 @@ func (h *UserHandler) UpdateUser(ctx context.Context, req *iamv1.UpdateUserReque
 
 	return &iamv1.UpdateUserResponse{
 		Base: SuccessResponse("User updated successfully"),
-		Data: h.toUserProto(entity),
+		Data: h.toUserProtoEnriched(ctx, entity),
 	}, nil
 }
 
@@ -288,7 +304,7 @@ func (h *UserHandler) ListUsers(ctx context.Context, req *iamv1.ListUsersRequest
 		for j, r := range uwd.Roles {
 			roleCodes[j] = r.RoleCode
 		}
-		protoUsers[i] = h.toUserWithDetailProto(uwd.User, uwd.Detail, roleCodes)
+		protoUsers[i] = h.toUserWithDetailProto(ctx, uwd.User, uwd.Detail, roleCodes)
 	}
 
 	return &iamv1.ListUsersResponse{
@@ -443,7 +459,10 @@ func (h *UserHandler) GetUserRolesAndPermissions(ctx context.Context, req *iamv1
 
 // Helper methods
 
-func (h *UserHandler) toUserProto(u *user.User) *iamv1.User {
+// toUserProtoEnriched populates the user proto plus denormalized primary
+// company mapping fields by looking up the user's mappings via mappingRepo.
+// Falls back to the bare proto when mappingRepo is nil or lookup fails.
+func (h *UserHandler) toUserProtoEnriched(ctx context.Context, u *user.User) *iamv1.User {
 	proto := &iamv1.User{
 		UserId:           u.ID().String(),
 		Username:         u.Username(),
@@ -458,13 +477,38 @@ func (h *UserHandler) toUserProto(u *user.User) *iamv1.User {
 		lastLogin := u.LastLoginAt().Format("2006-01-02T15:04:05Z07:00")
 		proto.LastLoginAt = &lastLogin
 	}
+	if id := u.EmployeeLevelID(); id != nil {
+		proto.EmployeeLevelId = id.String()
+	}
+	if id := u.EmployeeGroupID(); id != nil {
+		proto.EmployeeGroupId = id.String()
+	}
 
+	if h.mappingRepo == nil {
+		return proto
+	}
+	assignments, primaryID, lookupErr := h.mappingRepo.ListByUser(ctx, u.ID())
+	if lookupErr != nil || primaryID == nil {
+		return proto
+	}
+	for _, a := range assignments {
+		if a.Mapping == nil || a.Mapping.ID() != *primaryID {
+			continue
+		}
+		hierarchy := a.Mapping.Hierarchy()
+		proto.PrimaryCompanyMappingId = a.Mapping.ID().String()
+		proto.PrimaryCompanyName = hierarchy.CompanyName
+		proto.PrimaryDivisionName = hierarchy.DivisionName
+		proto.PrimaryDepartmentName = hierarchy.DepartmentName
+		proto.PrimarySectionName = hierarchy.SectionName
+		break
+	}
 	return proto
 }
 
-func (h *UserHandler) toUserWithDetailProto(u *user.User, detail *user.Detail, roleCodes []string) *iamv1.UserWithDetail {
+func (h *UserHandler) toUserWithDetailProto(ctx context.Context, u *user.User, detail *user.Detail, roleCodes []string) *iamv1.UserWithDetail {
 	proto := &iamv1.UserWithDetail{
-		User:      h.toUserProto(u),
+		User:      h.toUserProtoEnriched(ctx, u),
 		RoleCodes: roleCodes,
 	}
 
@@ -585,5 +629,80 @@ func (h *UserHandler) UploadProfilePicture(ctx context.Context, req *iamv1.Uploa
 	return &iamv1.UploadProfilePictureResponse{
 		Base:              SuccessResponse("Profile picture uploaded successfully"),
 		ProfilePictureUrl: newURL,
+	}, nil
+}
+
+// =============================================================================
+// User ↔ Company Mapping RPCs
+// =============================================================================
+
+// AssignUserCompanyMapping assigns a company mapping to a user.
+func (h *UserHandler) AssignUserCompanyMapping(ctx context.Context, req *iamv1.AssignUserCompanyMappingRequest) (*iamv1.AssignUserCompanyMappingResponse, error) {
+	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
+		return &iamv1.AssignUserCompanyMappingResponse{Base: baseResp}, nil
+	}
+	if err := h.assignMappingHandler.Handle(ctx, userapp.AssignCompanyMappingCommand{
+		UserID:           req.GetUserId(),
+		CompanyMappingID: req.GetCompanyMappingId(),
+		IsPrimary:        req.GetIsPrimary(),
+		AssignedBy:       h.getActorID(ctx),
+	}); err != nil {
+		return &iamv1.AssignUserCompanyMappingResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	return &iamv1.AssignUserCompanyMappingResponse{
+		Base: SuccessResponse("Company mapping assigned to user successfully"),
+	}, nil
+}
+
+// RemoveUserCompanyMapping removes a company mapping from a user.
+func (h *UserHandler) RemoveUserCompanyMapping(ctx context.Context, req *iamv1.RemoveUserCompanyMappingRequest) (*iamv1.RemoveUserCompanyMappingResponse, error) {
+	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
+		return &iamv1.RemoveUserCompanyMappingResponse{Base: baseResp}, nil
+	}
+	if err := h.removeMappingHandler.Handle(ctx, userapp.RemoveCompanyMappingCommand{
+		UserID:           req.GetUserId(),
+		CompanyMappingID: req.GetCompanyMappingId(),
+	}); err != nil {
+		return &iamv1.RemoveUserCompanyMappingResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	return &iamv1.RemoveUserCompanyMappingResponse{
+		Base: SuccessResponse("Company mapping removed from user successfully"),
+	}, nil
+}
+
+// GetUserCompanyMappings lists company mappings assigned to a user.
+func (h *UserHandler) GetUserCompanyMappings(ctx context.Context, req *iamv1.GetUserCompanyMappingsRequest) (*iamv1.GetUserCompanyMappingsResponse, error) {
+	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
+		return &iamv1.GetUserCompanyMappingsResponse{Base: baseResp}, nil
+	}
+	result, err := h.getMappingsHandler.Handle(ctx, userapp.GetCompanyMappingsQuery{UserID: req.GetUserId()})
+	if err != nil {
+		return &iamv1.GetUserCompanyMappingsResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+
+	refs := make([]*iamv1.UserCompanyMappingRef, len(result.Assignments))
+	for i, a := range result.Assignments {
+		h2 := a.Mapping.Hierarchy()
+		refs[i] = &iamv1.UserCompanyMappingRef{
+			CompanyMappingId: a.Mapping.ID().String(),
+			Code:             a.Mapping.Code().String(),
+			Name:             a.Mapping.Name().String(),
+			CompanyName:      h2.CompanyName,
+			DivisionName:     h2.DivisionName,
+			DepartmentName:   h2.DepartmentName,
+			SectionName:      h2.SectionName,
+			IsPrimary:        a.IsPrimary,
+		}
+	}
+
+	primaryID := ""
+	if result.PrimaryID != nil {
+		primaryID = result.PrimaryID.String()
+	}
+
+	return &iamv1.GetUserCompanyMappingsResponse{
+		Base:                    SuccessResponse("User company mappings retrieved successfully"),
+		Data:                    refs,
+		PrimaryCompanyMappingId: primaryID,
 	}, nil
 }

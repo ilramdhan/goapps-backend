@@ -100,3 +100,13 @@ func InternalErrorResponse(message string) *commonv1.BaseResponse {
 func ConflictResponse(message string) *commonv1.BaseResponse {
 	return ErrorResponse("409", message)
 }
+
+// BadRequestResponse creates a 400 response.
+func BadRequestResponse(message string) *commonv1.BaseResponse {
+	return ErrorResponse("400", message)
+}
+
+// UnauthorizedResponse creates a 401 response.
+func UnauthorizedResponse(message string) *commonv1.BaseResponse {
+	return ErrorResponse("401", message)
+}

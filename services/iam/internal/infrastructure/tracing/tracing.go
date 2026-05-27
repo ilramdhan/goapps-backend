@@ -13,8 +13,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/mutugading/goapps-backend/services/iam/internal/infrastructure/config"
 )
@@ -31,11 +29,14 @@ func NewProvider(ctx context.Context, cfg *config.TracingConfig, serviceName, ve
 		return &Provider{}, nil
 	}
 
-	// Create OTLP exporter
+	// Create OTLP exporter. WithInsecure() is the canonical way to disable TLS
+	// in the OTel SDK — passing insecure credentials via WithDialOption only
+	// adds a dial option ON TOP of the SDK's default TLS credentials, so the
+	// client still tries TLS first and the collector logs "bogus greeting".
 	var opts []otlptracegrpc.Option
 	opts = append(opts, otlptracegrpc.WithEndpoint(cfg.Endpoint))
 	if cfg.Insecure {
-		opts = append(opts, otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+		opts = append(opts, otlptracegrpc.WithInsecure())
 	}
 
 	exporter, err := otlptracegrpc.New(ctx, opts...)
