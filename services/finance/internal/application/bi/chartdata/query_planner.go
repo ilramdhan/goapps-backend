@@ -35,15 +35,29 @@ func Plan(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time) (factmet
 
 	period := ResolvePeriod(f.PeriodPreset, f.PeriodFrom, f.PeriodTo, d.PeriodGrain().String(), now)
 
+	// Trend charts (x_axis_field="period") group by period over time; categorical charts
+	// (waterfall/bar/donut) group by the drill-level group column.
+	isTrend := d.ChartConfig().XAxisField == "period"
+
 	switch drillDepth {
 	case 0:
-		return planLevel1(d, f, period)
+		return planLevel1(d, f, period, isTrend)
 	case 1:
-		return planLevel2(d, f, period)
+		return planLevel2(d, f, period, isTrend)
 	case 2:
-		return planLevel3(d, f, period)
+		return planLevel3(d, f, period, isTrend)
 	}
 	return factmetric.PlannedQuery{}, fmt.Errorf("%w: drill depth %d not supported", factmetric.ErrInvalidPlan, drillDepth)
+}
+
+// applyTrend overrides the category/order columns to group by period when the chart
+// is a trend chart. Group filters (Group1/Group2) remain as WHERE conditions.
+func applyTrend(a buildArgs, isTrend bool) buildArgs {
+	if isTrend {
+		a.CategoryCol = "periode_date"
+		a.OrderCol = ""
+	}
+	return a
 }
 
 // planLevel1 — aggregate at group_1 within (or below) the dashboard's filter_type.
@@ -51,10 +65,10 @@ func Plan(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time) (factmet
 // When filter_group_1 is set, drilling at level 0 means "show group_2 breakdown for that fixed group_1",
 // effectively treating the dashboard as already drilled one level. This matches the EBITDA pattern
 // (filter_type=MIS, filter_group_1=EBITDA → waterfall shows G2 components).
-func planLevel1(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRange) (factmetric.PlannedQuery, error) {
+func planLevel1(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRange, isTrend bool) (factmetric.PlannedQuery, error) {
 	if d.FilterGroup1() != "" {
 		// Dashboard pre-narrows to a specific group_1 → render its group_2 breakdown.
-		return buildPlan(buildArgs{
+		return buildPlan(applyTrend(buildArgs{
 			Source:      "mv_bi_metric_g2",
 			CategoryCol: "group_2",
 			OrderCol:    "group_2_order",
@@ -63,9 +77,9 @@ func planLevel1(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 			Period:      period,
 			Grain:       d.PeriodGrain().String(),
 			Compare:     f.Compare,
-		})
+		}, isTrend))
 	}
-	return buildPlan(buildArgs{
+	return buildPlan(applyTrend(buildArgs{
 		Source:      "mv_bi_metric_g1",
 		CategoryCol: "group_1",
 		OrderCol:    "group_1_order",
@@ -73,14 +87,14 @@ func planLevel1(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 		Period:      period,
 		Grain:       d.PeriodGrain().String(),
 		Compare:     f.Compare,
-	})
+	}, isTrend))
 }
 
-func planLevel2(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRange) (factmetric.PlannedQuery, error) {
+func planLevel2(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRange, isTrend bool) (factmetric.PlannedQuery, error) {
 	// DrillPath[0] picks a group_2 (when dashboard had filter_group_1) or a group_1 (when it didn't).
 	if d.FilterGroup1() != "" {
 		// Level 2 with pre-narrow → into group_3 of (filter_group_1, drill[0]).
-		return buildPlan(buildArgs{
+		return buildPlan(applyTrend(buildArgs{
 			Source:      "bi_fact_metric",
 			CategoryCol: "group_3",
 			OrderCol:    "group_3_order",
@@ -91,9 +105,9 @@ func planLevel2(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 			Grain:       d.PeriodGrain().String(),
 			Compare:     f.Compare,
 			RequireG3:   true,
-		})
+		}, isTrend))
 	}
-	return buildPlan(buildArgs{
+	return buildPlan(applyTrend(buildArgs{
 		Source:      "mv_bi_metric_g2",
 		CategoryCol: "group_2",
 		OrderCol:    "group_2_order",
@@ -102,16 +116,16 @@ func planLevel2(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 		Period:      period,
 		Grain:       d.PeriodGrain().String(),
 		Compare:     f.Compare,
-	})
+	}, isTrend))
 }
 
-func planLevel3(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRange) (factmetric.PlannedQuery, error) {
+func planLevel3(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRange, isTrend bool) (factmetric.PlannedQuery, error) {
 	// Without filter_group_1: drill[0]=group_1, drill[1]=group_2 → render group_3.
 	// With filter_group_1:    drill[0]=group_2, drill[1]=group_3 → already at max depth (level3 isn't drillable).
 	if d.FilterGroup1() != "" {
 		return factmetric.PlannedQuery{}, fmt.Errorf("%w: cannot drill past group_3 when dashboard pre-filters group_1", factmetric.ErrInvalidPlan)
 	}
-	return buildPlan(buildArgs{
+	return buildPlan(applyTrend(buildArgs{
 		Source:      "bi_fact_metric",
 		CategoryCol: "group_3",
 		OrderCol:    "group_3_order",
@@ -122,7 +136,7 @@ func planLevel3(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 		Grain:       d.PeriodGrain().String(),
 		Compare:     f.Compare,
 		RequireG3:   true,
-	})
+	}, isTrend))
 }
 
 // buildArgs are the inputs to buildPlan.
@@ -143,85 +157,131 @@ type buildArgs struct {
 // buildPlan emits the canonical 6-column SELECT used by BiFactMetricRepository.QueryAggregate.
 //
 // Columns (in order): category, period_date, period_label, value, prev_value, order_seq.
-// For non-compare queries, prev_value is 0 (placeholder).
 //
-// For compare modes that overlay a comparison series, a LEFT JOIN to a prev-period CTE
-// adds the prev_value column. The shift amount depends on compare+grain.
+// For categorical charts (waterfall/bar/donut) one row per distinct category is returned
+// with prev_value=0 (compare overlays are not meaningful for those types).
+//
+// For trend charts (CategoryCol="periode_date") with an active compare mode, a self-join
+// to a period-shifted aggregate populates prev_value so the frontend renders a comparison
+// line. The shift is month-based (MoM=1, QoQ=3, YoY/R12=12); YTD/none get no overlay.
 func buildPlan(a buildArgs) (factmetric.PlannedQuery, error) {
 	if a.Scenario == "" {
 		a.Scenario = "ACTUAL"
 	}
+
+	// Core conditions (type/group/grain/scenario) are shared by current + previous
+	// aggregates; date conditions apply only to the current window.
+	coreConds := []string{"type = $1"}
 	args := []any{a.Type}
 	idx := 2
-	var conds []string
-	conds = append(conds, "type = $1")
 	if a.Group1 != "" {
-		conds = append(conds, fmt.Sprintf("group_1 = $%d", idx))
+		coreConds = append(coreConds, fmt.Sprintf("group_1 = $%d", idx))
 		args = append(args, a.Group1)
 		idx++
 	}
 	if a.Group2 != "" {
-		conds = append(conds, fmt.Sprintf("group_2 = $%d", idx))
+		coreConds = append(coreConds, fmt.Sprintf("group_2 = $%d", idx))
 		args = append(args, a.Group2)
 		idx++
 	}
 	if a.RequireG3 {
-		conds = append(conds, "group_3 IS NOT NULL")
+		coreConds = append(coreConds, "group_3 IS NOT NULL")
 	}
-	conds = append(conds, fmt.Sprintf("periode_grain = $%d", idx))
+	coreConds = append(coreConds, fmt.Sprintf("periode_grain = $%d", idx))
 	args = append(args, a.Grain)
 	idx++
-	if !a.Period.From.IsZero() && !a.Period.To.IsZero() {
-		conds = append(conds, fmt.Sprintf("periode_date BETWEEN $%d AND $%d", idx, idx+1))
-		args = append(args, a.Period.From, a.Period.To)
-		idx += 2
-	}
-	conds = append(conds, fmt.Sprintf("scenario = $%d", idx))
+	coreConds = append(coreConds, fmt.Sprintf("scenario = $%d", idx))
 	args = append(args, a.Scenario)
-	// idx++ omitted; final.
+	idx++
 
-	where := strings.Join(conds, " AND ")
+	dateConds := append([]string{}, coreConds...)
+	hasDateWindow := !a.Period.From.IsZero() && !a.Period.To.IsZero()
+	if hasDateWindow {
+		dateConds = append(dateConds, fmt.Sprintf("periode_date BETWEEN $%d AND $%d", idx, idx+1))
+		args = append(args, a.Period.From, a.Period.To)
+	}
 
-	// Group by category (and optionally period) — for trend charts we group by period;
-	// for categorical waterfall/bar/donut, the planner is generally invoked once with
-	// the full period range and the SQL aggregates over time.
-	//
-	// We emit two output shapes interleaved by ORDER BY:
-	//   - If category is a period field, callers pass CategoryCol="periode_date" and we
-	//     return one row per period.
-	//   - Otherwise we sum across the period range, returning one row per distinct category.
 	groupByPeriod := a.CategoryCol == "periode_date"
 
-	var selectExpr, groupBy, orderBy string
+	// Trend chart + real compare mode → emit a self-join for prev_value.
 	if groupByPeriod {
-		selectExpr = "TO_CHAR(periode_date, 'YYYYMMDD')::text AS category, periode_date, periode_label, SUM(value) AS value, 0::numeric AS prev_value, 0::int AS order_seq"
-		groupBy = "periode_date, periode_label"
-		orderBy = "periode_date"
-	} else {
-		categoryExpr := "COALESCE(" + a.CategoryCol + ", '')"
-		var orderExpr string
-		if a.OrderCol != "" {
-			orderExpr = "COALESCE(MAX(" + a.OrderCol + "), 0)"
-		} else {
-			orderExpr = "0"
+		if shift := compareShiftMonths(a.Compare); shift > 0 {
+			return buildTrendComparePlan(a, coreConds, dateConds, args, shift), nil
 		}
-		selectExpr = fmt.Sprintf(
-			"%s AS category, NULL::date AS periode_date, ''::text AS periode_label, SUM(value) AS value, 0::numeric AS prev_value, %s AS order_seq",
-			categoryExpr, orderExpr)
-		groupBy = a.CategoryCol
-		orderBy = "order_seq NULLS LAST, category"
+		sql := fmt.Sprintf(`
+SELECT TO_CHAR(periode_date, 'YYYYMMDD')::text AS category, periode_date, periode_label,
+       SUM(value) AS value, 0::numeric AS prev_value, 0::int AS order_seq
+FROM %s
+WHERE %s
+GROUP BY periode_date, periode_label
+ORDER BY periode_date`, a.Source, strings.Join(dateConds, " AND "))
+		return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: a.Source}, nil
 	}
 
+	// Categorical chart: one row per distinct category, summed over the window.
+	categoryExpr := "COALESCE(" + a.CategoryCol + ", '')"
+	orderExpr := "0"
+	if a.OrderCol != "" {
+		orderExpr = "COALESCE(MAX(" + a.OrderCol + "), 0)"
+	}
 	sql := fmt.Sprintf(`
-SELECT %s
+SELECT %s AS category, NULL::date AS periode_date, ''::text AS periode_label,
+       SUM(value) AS value, 0::numeric AS prev_value, %s AS order_seq
 FROM %s
 WHERE %s
 GROUP BY %s
-ORDER BY %s`, selectExpr, a.Source, where, groupBy, orderBy)
+ORDER BY order_seq NULLS LAST, category`,
+		categoryExpr, orderExpr, a.Source, strings.Join(dateConds, " AND "), a.CategoryCol)
 
-	return factmetric.PlannedQuery{
-		SQL:         sql,
-		Args:        args,
-		TargetTable: a.Source,
-	}, nil
+	return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: a.Source}, nil
+}
+
+// buildTrendComparePlan assembles a CTE query: `cur` aggregates the current window per
+// period; `prev` aggregates the whole series (no date filter) per period; the outer
+// select left-joins prev on (cur.periode_date - <shift> months) to populate prev_value.
+//
+// shiftMonths is a fixed integer derived from the compare mode (not user input), so the
+// INTERVAL literal is safe to inline.
+func buildTrendComparePlan(a buildArgs, coreConds, dateConds []string, args []any, shiftMonths int) factmetric.PlannedQuery {
+	sql := fmt.Sprintf(`
+WITH cur AS (
+    SELECT periode_date, periode_label, SUM(value) AS value
+    FROM %s
+    WHERE %s
+    GROUP BY periode_date, periode_label
+),
+prev AS (
+    SELECT periode_date, SUM(value) AS value
+    FROM %s
+    WHERE %s
+    GROUP BY periode_date
+)
+SELECT TO_CHAR(cur.periode_date, 'YYYYMMDD')::text AS category,
+       cur.periode_date, cur.periode_label,
+       cur.value,
+       COALESCE(prev.value, 0) AS prev_value,
+       0::int AS order_seq
+FROM cur
+LEFT JOIN prev ON prev.periode_date = (cur.periode_date - INTERVAL '%d months')
+ORDER BY cur.periode_date`,
+		a.Source, strings.Join(dateConds, " AND "),
+		a.Source, strings.Join(coreConds, " AND "),
+		shiftMonths)
+
+	return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: a.Source}
+}
+
+// compareShiftMonths maps a compare mode to a month offset for the overlay self-join.
+// Returns 0 when no period-shifted overlay applies (none / YTD / unknown).
+func compareShiftMonths(compare string) int {
+	switch compare {
+	case "MoM":
+		return 1
+	case "QoQ":
+		return 3
+	case "YoY", "R12":
+		return 12
+	default:
+		return 0
+	}
 }
