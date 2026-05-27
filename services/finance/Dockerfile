@@ -11,6 +11,10 @@ RUN apk add --no-cache git ca-certificates tzdata
 # Copy gen module first (needed for replace directive)
 COPY gen/ ./gen/
 
+# Copy pkg module (needed for the pkg/costcalc replace directive in services/finance/go.mod).
+# Without this, `go mod download` fails: open /app/pkg/costcalc/go.mod: no such file or directory.
+COPY pkg/ ./pkg/
+
 # Copy shared module (preemptive — future replace directive: services/shared => ../shared).
 # Adding now keeps the Dockerfile consistent with IAM and avoids CI breakage when
 # Finance starts importing from services/shared.
