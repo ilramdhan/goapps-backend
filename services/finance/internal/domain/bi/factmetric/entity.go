@@ -27,11 +27,15 @@ type FactMetric struct {
 	DisplayValue float64
 	UOM          string
 	Scenario     string
-	SourceID     uuid.UUID
-	DimensionKey string
-	UploadedBy   uuid.UUID
-	LoadedAt     time.Time
-	IsActive     bool
+	// v1.1 multi-metric fields — default 'VALUE'/'VALUE'/'SUM' for backward compat (EBITDA pattern).
+	MetricName     string // UPPERCASE_SNAKE_CASE: 'VALUE', 'GROSS_SALES', 'MARGIN', etc.
+	MetricCategory string // 'VOLUME', 'VALUE', 'AVERAGE', 'RATIO', 'DERIVED'
+	AggMethod      string // 'SUM', 'WEIGHTED_AVG', 'AVG', 'LAST', 'RATIO'
+	SourceID       uuid.UUID
+	DimensionKey   string
+	UploadedBy     uuid.UUID
+	LoadedAt       time.Time
+	IsActive       bool
 }
 
 // AggRow is the output shape of QueryAggregate — one row per category

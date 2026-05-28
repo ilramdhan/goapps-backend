@@ -208,27 +208,32 @@ INSERT INTO bi_fact_metric (
     type, group_1, group_2, group_3,
     group_1_order, group_2_order, group_3_order,
     periode_grain, periode_date, periode_label,
-    value, display_value, uom, scenario, source_id, dimension_key, uploaded_by, is_active
+    value, display_value, uom, scenario,
+    metric_name, metric_category, agg_method,
+    source_id, dimension_key, uploaded_by, is_active
 )
 SELECT s.type, s.group_1, s.group_2, s.group_3,
        s.group_1_order, s.group_2_order, s.group_3_order,
        s.periode_grain, s.periode_date, COALESCE(s.periode_label, ''),
        s.value, COALESCE(s.display_value, s.value), s.uom, COALESCE(s.scenario, 'ACTUAL'),
+       'VALUE', 'VALUE', 'SUM',
        (SELECT source_id FROM bi_data_source WHERE source_code = 'EXCEL_UPLOAD'),
        '', u.uploaded_by, TRUE
 FROM bi_excel_staging s
 JOIN bi_excel_upload u ON u.upload_id = s.upload_id
 WHERE s.upload_id = $1
   AND s.validation_status IN ('VALID','WILL_OVERWRITE')
-ON CONFLICT (type, group_1, group_2, group_3, periode_grain, periode_date, scenario, dimension_key)
+ON CONFLICT (type, group_1, group_2, group_3, periode_grain, periode_date, metric_name, scenario, dimension_key)
 DO UPDATE SET
-    value = EXCLUDED.value,
-    display_value = EXCLUDED.display_value,
-    uom = EXCLUDED.uom,
-    source_id = EXCLUDED.source_id,
-    uploaded_by = EXCLUDED.uploaded_by,
-    loaded_at = NOW(),
-    is_active = TRUE`
+    value          = EXCLUDED.value,
+    display_value  = EXCLUDED.display_value,
+    uom            = EXCLUDED.uom,
+    metric_category = EXCLUDED.metric_category,
+    agg_method     = EXCLUDED.agg_method,
+    source_id      = EXCLUDED.source_id,
+    uploaded_by    = EXCLUDED.uploaded_by,
+    loaded_at      = NOW(),
+    is_active      = TRUE`
 	res, err := r.db.ExecContext(ctx, q, uploadID)
 	if err != nil {
 		return 0, fmt.Errorf("commit staging to fact: %w", err)

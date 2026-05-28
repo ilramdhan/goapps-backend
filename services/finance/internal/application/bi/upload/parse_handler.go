@@ -209,6 +209,10 @@ func buildRawRow(cells []string, colIdx map[string]int) uploaddomain.RawRow {
 		Value:       get(uploadHeaders[9]),
 		UOM:         get(uploadHeaders[10]),
 		Scenario:    get(uploadHeaders[11]),
+		// v1.1 optional multi-metric columns — absent columns produce "" (defaults applied at Upsert).
+		MetricName:     get("METRIC_NAME"),
+		MetricCategory: get("METRIC_CATEGORY"),
+		AggMethod:      get("AGG_METHOD"),
 	}
 }
 

@@ -179,6 +179,9 @@ type StagingRow struct {
 	DisplayValue     float64
 	UOM              string
 	Scenario         string
+	MetricName       string // optional — defaults to 'VALUE' when absent
+	MetricCategory   string // optional — defaults to 'VALUE' when absent
+	AggMethod        string // optional — defaults to 'SUM' when absent
 	ValidationStatus string
 	ValidationMsg    string
 }

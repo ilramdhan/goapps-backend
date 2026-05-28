@@ -44,18 +44,21 @@ const maxGroupLen = 100
 
 // RawRow holds the trimmed string cells of one Excel data row, keyed by column.
 type RawRow struct {
-	Type        string
-	Group1      string
-	Group2      string
-	Group3      string
-	Group1Order string
-	Group2Order string
-	Group3Order string
-	Grain       string
-	Periode     string
-	Value       string
-	UOM         string
-	Scenario    string
+	Type           string
+	Group1         string
+	Group2         string
+	Group3         string
+	Group1Order    string
+	Group2Order    string
+	Group3Order    string
+	Grain          string
+	Periode        string
+	Value          string
+	UOM            string
+	Scenario       string
+	MetricName     string // optional — defaults to 'VALUE' when absent
+	MetricCategory string // optional — defaults to 'VALUE' when absent
+	AggMethod      string // optional — defaults to 'SUM' when absent
 }
 
 // FieldError describes a single per-cell validation failure.
@@ -107,6 +110,10 @@ func ValidateRow(raw RawRow, targetType string, rowNumber int) (StagingRow, []Fi
 	row.Group2Order = parseOrder(raw.Group2Order)
 	row.Group3Order = parseOrder(raw.Group3Order)
 	row.DisplayValue = ComputeDisplayValue(row.Type, row.Group1, row.Group2, row.Value)
+	// v1.1 multi-metric fields — pass through verbatim; defaults applied at Upsert boundary.
+	row.MetricName = raw.MetricName
+	row.MetricCategory = raw.MetricCategory
+	row.AggMethod = raw.AggMethod
 
 	if len(errs) > 0 {
 		row.ValidationStatus = ValidationInvalid
@@ -247,10 +254,15 @@ func parseOrder(s string) int {
 }
 
 // BusinessKey returns the duplicate-detection key for a staging row.
+// Must match the unique constraint on bi_fact_metric (v1.1 adds metric_name).
 func BusinessKey(r StagingRow) string {
+	metricName := r.MetricName
+	if metricName == "" {
+		metricName = "VALUE"
+	}
 	return strings.Join([]string{
 		r.Type, r.Group1, r.Group2, r.Group3,
-		r.PeriodGrain, r.PeriodDate.Format("2006-01-02"), r.Scenario,
+		r.PeriodGrain, r.PeriodDate.Format("2006-01-02"), metricName, r.Scenario,
 	}, "|")
 }
 

@@ -170,17 +170,21 @@ INSERT INTO bi_fact_metric (
     type, group_1, group_2, group_3,
     group_1_order, group_2_order, group_3_order,
     periode_grain, periode_date, periode_label,
-    value, display_value, uom, scenario, source_id, dimension_key, uploaded_by, is_active
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-ON CONFLICT (type, group_1, group_2, group_3, periode_grain, periode_date, scenario, dimension_key)
+    value, display_value, uom, scenario,
+    metric_name, metric_category, agg_method,
+    source_id, dimension_key, uploaded_by, is_active
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+ON CONFLICT (type, group_1, group_2, group_3, periode_grain, periode_date, metric_name, scenario, dimension_key)
 DO UPDATE SET
-    value = EXCLUDED.value,
-    display_value = EXCLUDED.display_value,
-    uom = EXCLUDED.uom,
-    source_id = EXCLUDED.source_id,
-    uploaded_by = EXCLUDED.uploaded_by,
-    loaded_at = NOW(),
-    is_active = TRUE`
+    value          = EXCLUDED.value,
+    display_value  = EXCLUDED.display_value,
+    uom            = EXCLUDED.uom,
+    metric_category = EXCLUDED.metric_category,
+    agg_method     = EXCLUDED.agg_method,
+    source_id      = EXCLUDED.source_id,
+    uploaded_by    = EXCLUDED.uploaded_by,
+    loaded_at      = NOW(),
+    is_active      = TRUE`
 	stmt, err := tx.PrepareContext(ctx, q)
 	if err != nil {
 		return fmt.Errorf("prepare upsert: %w", err)
@@ -195,7 +199,11 @@ DO UPDATE SET
 			row.Type, row.Group1, biNullableString(row.Group2), biNullableString(row.Group3),
 			nullableInt(row.Group1Order), nullableInt(row.Group2Order), nullableInt(row.Group3Order),
 			row.PeriodGrain, row.PeriodDate, row.PeriodLabel,
-			row.Value, row.DisplayValue, biNullableString(row.UOM), row.Scenario, row.SourceID, row.DimensionKey,
+			row.Value, row.DisplayValue, biNullableString(row.UOM), row.Scenario,
+			metricNameOrDefault(row.MetricName),
+			metricCategoryOrDefault(row.MetricCategory),
+			aggMethodOrDefault(row.AggMethod),
+			row.SourceID, row.DimensionKey,
 			nullableUUID(row.UploadedBy), row.IsActive,
 		); err != nil {
 			return fmt.Errorf("upsert row: %w", err)
@@ -210,4 +218,28 @@ func nullableInt(i int) any {
 		return nil
 	}
 	return i
+}
+
+// metricNameOrDefault returns "VALUE" when the metric name is unset (backward-compat EBITDA default).
+func metricNameOrDefault(s string) string {
+	if s == "" {
+		return "VALUE"
+	}
+	return s
+}
+
+// metricCategoryOrDefault returns "VALUE" when the metric category is unset.
+func metricCategoryOrDefault(s string) string {
+	if s == "" {
+		return "VALUE"
+	}
+	return s
+}
+
+// aggMethodOrDefault returns "SUM" when the aggregation method is unset.
+func aggMethodOrDefault(s string) string {
+	if s == "" {
+		return "SUM"
+	}
+	return s
 }
