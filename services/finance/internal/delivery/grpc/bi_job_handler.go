@@ -13,11 +13,21 @@ type BIJobHandler struct {
 	listHandler      *jobapp.ListHandler
 	listLogsHandler  *jobapp.ListLogsHandler
 	triggerHandler   *jobapp.TriggerHandler
+	createHandler    *jobapp.CreateHandler
+	updateHandler    *jobapp.UpdateHandler
+	deleteHandler    *jobapp.DeleteHandler
 	validationHelper *ValidationHelper
 }
 
 // NewBIJobHandler constructs the gRPC handler.
-func NewBIJobHandler(list *jobapp.ListHandler, listLogs *jobapp.ListLogsHandler, trigger *jobapp.TriggerHandler) (*BIJobHandler, error) {
+func NewBIJobHandler(
+	list *jobapp.ListHandler,
+	listLogs *jobapp.ListLogsHandler,
+	trigger *jobapp.TriggerHandler,
+	create *jobapp.CreateHandler,
+	update *jobapp.UpdateHandler,
+	del *jobapp.DeleteHandler,
+) (*BIJobHandler, error) {
 	v, err := NewValidationHelper()
 	if err != nil {
 		return nil, err
@@ -26,6 +36,9 @@ func NewBIJobHandler(list *jobapp.ListHandler, listLogs *jobapp.ListLogsHandler,
 		listHandler:      list,
 		listLogsHandler:  listLogs,
 		triggerHandler:   trigger,
+		createHandler:    create,
+		updateHandler:    update,
+		deleteHandler:    del,
 		validationHelper: v,
 	}, nil
 }
@@ -86,6 +99,88 @@ func (h *BIJobHandler) TriggerJob(ctx context.Context, req *financev1.TriggerJob
 	return &financev1.TriggerJobResponse{
 		Base: successResponse("Job triggered"),
 		Data: jobLogToProto(log),
+	}, nil
+}
+
+// CreateBiJob registers a new ETL job.
+func (h *BIJobHandler) CreateBiJob(ctx context.Context, req *financev1.CreateBiJobRequest) (*financev1.CreateBiJobResponse, error) {
+	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
+		return &financev1.CreateBiJobResponse{Base: baseResp}, nil
+	}
+	userID, _ := GetUserIDFromCtx(ctx)
+	// Resolve source_code → source_id via the data source repository lookup embedded in the
+	// create command; the delivery layer passes source_code and the repo resolves it.
+	// For now the handler passes source_code through; the create_handler stores it as SourceCode,
+	// and the postgres layer uses a sub-select to resolve the FK.
+	out, err := h.createHandler.Handle(ctx, jobapp.CreateCommand{
+		JobName:         req.GetJobName(),
+		SourceCode:      req.GetSourceCode(),
+		TargetType:      req.GetTargetType(),
+		ScheduleCron:    req.GetScheduleCron(),
+		OracleProcedure: req.GetOracleProcedure(),
+		Config:          structToMap(req.GetConfig()),
+		IsActive:        req.GetIsActive(),
+		CreatedBy:       userUUIDFromContext(userID),
+	})
+	if err != nil {
+		return &financev1.CreateBiJobResponse{Base: biDomainErrorToBase(err)}, nil
+	}
+	return &financev1.CreateBiJobResponse{
+		Base: successResponse("Job created"),
+		Data: biJobToProto(out),
+	}, nil
+}
+
+// UpdateBiJob mutates an existing ETL job.
+func (h *BIJobHandler) UpdateBiJob(ctx context.Context, req *financev1.UpdateBiJobRequest) (*financev1.UpdateBiJobResponse, error) {
+	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
+		return &financev1.UpdateBiJobResponse{Base: baseResp}, nil
+	}
+	userID, _ := GetUserIDFromCtx(ctx)
+	cmd := jobapp.UpdateCommand{
+		JobID:     uuidFromString(req.GetJobId()),
+		UpdatedBy: userUUIDFromContext(userID),
+	}
+	if req.ScheduleCron != nil {
+		v := req.GetScheduleCron()
+		cmd.ScheduleCron = &v
+	}
+	if req.OracleProcedure != nil {
+		v := req.GetOracleProcedure()
+		cmd.OracleProcedure = &v
+	}
+	if req.Config != nil {
+		cmd.Config = structToMap(req.GetConfig())
+	}
+	if req.IsActive != nil {
+		v := req.GetIsActive()
+		cmd.IsActive = &v
+	}
+	out, err := h.updateHandler.Handle(ctx, cmd)
+	if err != nil {
+		return &financev1.UpdateBiJobResponse{Base: biDomainErrorToBase(err)}, nil
+	}
+	return &financev1.UpdateBiJobResponse{
+		Base: successResponse("Job updated"),
+		Data: biJobToProto(out),
+	}, nil
+}
+
+// DeleteBiJob soft-disables a job (sets is_active=false, preserves logs).
+func (h *BIJobHandler) DeleteBiJob(ctx context.Context, req *financev1.DeleteBiJobRequest) (*financev1.DeleteBiJobResponse, error) {
+	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
+		return &financev1.DeleteBiJobResponse{Base: baseResp}, nil
+	}
+	userID, _ := GetUserIDFromCtx(ctx)
+	err := h.deleteHandler.Handle(ctx, jobapp.DeleteCommand{
+		JobID:     uuidFromString(req.GetJobId()),
+		DeletedBy: userUUIDFromContext(userID),
+	})
+	if err != nil {
+		return &financev1.DeleteBiJobResponse{Base: biDomainErrorToBase(err)}, nil
+	}
+	return &financev1.DeleteBiJobResponse{
+		Base: successResponse("Job disabled"),
 	}, nil
 }
 

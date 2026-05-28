@@ -164,6 +164,144 @@ WHERE log_id = $1`
 	return nil
 }
 
+// Create inserts a new ETL job row and returns the full persisted Job (with source_code resolved).
+// The source_id FK is resolved from source_code via a sub-select on bi_data_source.
+func (r *BiJobRepository) Create(ctx context.Context, p job.CreateJobParams) (*job.Job, error) {
+	configJSON, err := marshalJobConfig(p.Config)
+	if err != nil {
+		return nil, err
+	}
+	var createdBy any
+	if p.CreatedBy != uuid.Nil {
+		createdBy = p.CreatedBy
+	}
+	const q = `
+INSERT INTO bi_job (job_name, source_id, target_type, schedule_cron, oracle_procedure, config, is_active, created_at, updated_at, created_by, updated_by)
+SELECT $1, ds.source_id, $3, $4, $5, $6, $7, now(), now(), $8, $8
+FROM bi_data_source ds
+WHERE ds.source_code = $2
+RETURNING job_id, created_at, updated_at`
+	var j job.Job
+	j.Name = p.JobName
+	j.SourceCode = p.SourceCode
+	j.TargetType = p.TargetType
+	j.ScheduleCron = p.ScheduleCron
+	j.OracleProcedure = p.OracleProcedure
+	j.Config = p.Config
+	j.IsActive = p.IsActive
+	err = r.db.QueryRowContext(ctx, q,
+		p.JobName, p.SourceCode, p.TargetType,
+		biNullableString(p.ScheduleCron), biNullableString(p.OracleProcedure),
+		configJSON, p.IsActive, createdBy,
+	).Scan(&j.ID, &j.CreatedAt, &j.UpdatedAt)
+	if isUniqueViolation(err) {
+		return nil, job.ErrAlreadyExists
+	}
+	if err != nil {
+		return nil, fmt.Errorf("insert bi job: %w", err)
+	}
+	return &j, nil
+}
+
+// Update applies partial mutations to an existing ETL job.
+func (r *BiJobRepository) Update(ctx context.Context, p job.UpdateJobParams) (*job.Job, error) {
+	// Build SET clause dynamically from provided optional fields.
+	setClauses := []string{"updated_at = now()"}
+	args := []any{}
+	argN := 1
+
+	if p.UpdatedBy != uuid.Nil {
+		setClauses = append(setClauses, fmt.Sprintf("updated_by = $%d", argN))
+		args = append(args, p.UpdatedBy)
+		argN++
+	}
+	if p.ScheduleCron != nil {
+		setClauses = append(setClauses, fmt.Sprintf("schedule_cron = $%d", argN))
+		args = append(args, biNullableString(*p.ScheduleCron))
+		argN++
+	}
+	if p.OracleProcedure != nil {
+		setClauses = append(setClauses, fmt.Sprintf("oracle_procedure = $%d", argN))
+		args = append(args, biNullableString(*p.OracleProcedure))
+		argN++
+	}
+	if p.Config != nil {
+		configJSON, err := marshalJobConfig(p.Config)
+		if err != nil {
+			return nil, err
+		}
+		setClauses = append(setClauses, fmt.Sprintf("config = $%d", argN))
+		args = append(args, configJSON)
+		argN++
+	}
+	if p.IsActive != nil {
+		setClauses = append(setClauses, fmt.Sprintf("is_active = $%d", argN))
+		args = append(args, *p.IsActive)
+		argN++
+	}
+	args = append(args, p.ID)
+	q := fmt.Sprintf(`UPDATE bi_job SET %s WHERE job_id = $%d`,
+		joinComma(setClauses), argN)
+	res, err := r.db.ExecContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("update bi job: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("update bi job rows affected: %w", err)
+	}
+	if affected == 0 {
+		return nil, job.ErrNotFound
+	}
+	return r.GetByID(ctx, p.ID)
+}
+
+// Delete soft-disables a job by setting is_active=false and recording updated_by.
+// The row and its logs are preserved for historical queries.
+func (r *BiJobRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy uuid.UUID) error {
+	var updatedByArg any
+	if deletedBy != uuid.Nil {
+		updatedByArg = deletedBy
+	}
+	const q = `UPDATE bi_job SET is_active = FALSE, updated_at = now(), updated_by = $2 WHERE job_id = $1`
+	res, err := r.db.ExecContext(ctx, q, id, updatedByArg)
+	if err != nil {
+		return fmt.Errorf("delete bi job: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete bi job rows affected: %w", err)
+	}
+	if affected == 0 {
+		return job.ErrNotFound
+	}
+	return nil
+}
+
+// marshalJobConfig converts a map to JSON bytes for storage; nil maps produce nil bytes.
+func marshalJobConfig(m map[string]any) ([]byte, error) {
+	if m == nil {
+		return nil, nil //nolint:nilnil // nil JSON is intentional for empty config
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("marshal job config: %w", err)
+	}
+	return b, nil
+}
+
+// joinComma joins a slice of strings with ", ".
+func joinComma(parts []string) string {
+	result := ""
+	for i, p := range parts {
+		if i > 0 {
+			result += ", "
+		}
+		result += p
+	}
+	return result
+}
+
 // scanJob handles the row produced by List/GetByID (with LATERAL join columns).
 func (r *BiJobRepository) scanJob(scan scanFunc) (*job.Job, error) {
 	var (

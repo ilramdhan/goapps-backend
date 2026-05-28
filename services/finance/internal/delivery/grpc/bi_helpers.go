@@ -58,7 +58,8 @@ func biDomainErrorToBase(err error) *commonv1.BaseResponse {
 		errors.Is(err, jobdomain.ErrNotFound):
 		return NotFoundResponse(err.Error())
 	case errors.Is(err, dashboarddomain.ErrAlreadyExists),
-		errors.Is(err, groupdomain.ErrAlreadyExists):
+		errors.Is(err, groupdomain.ErrAlreadyExists),
+		errors.Is(err, jobdomain.ErrAlreadyExists):
 		return ConflictResponse(err.Error())
 	case errors.Is(err, dashboarddomain.ErrForbidden):
 		return ErrorResponse("403", err.Error())
@@ -78,7 +79,8 @@ func biDomainErrorToBase(err error) *commonv1.BaseResponse {
 		errors.Is(err, groupdomain.ErrInvalidCode),
 		errors.Is(err, groupdomain.ErrInvalidName),
 		errors.Is(err, factmetricdomain.ErrInvalidPlan),
-		errors.Is(err, factmetricdomain.ErrDrillTooDeep):
+		errors.Is(err, factmetricdomain.ErrDrillTooDeep),
+		errors.Is(err, jobdomain.ErrInvalidCron):
 		return ErrorResponse("400", err.Error())
 	}
 	// Fallback to error-message inspection for wrapped errors not directly tagged.

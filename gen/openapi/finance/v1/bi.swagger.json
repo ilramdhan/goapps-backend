@@ -706,6 +706,105 @@
         "tags": [
           "BiJobService"
         ]
+      },
+      "post": {
+        "summary": "CreateBiJob registers a new ETL job in the bi_job registry.",
+        "operationId": "BiJobService_CreateBiJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateBiJobResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateBiJobRequest"
+            }
+          }
+        ],
+        "tags": [
+          "BiJobService"
+        ]
+      }
+    },
+    "/api/v1/finance/bi/jobs/{jobId}": {
+      "delete": {
+        "summary": "DeleteBiJob soft-disables a job (sets is_active=false, preserves logs).",
+        "operationId": "BiJobService_DeleteBiJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteBiJobResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BiJobService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateBiJob mutates schedule_cron, oracle_procedure, config, or is_active.",
+        "operationId": "BiJobService_UpdateBiJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateBiJobResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BiJobServiceUpdateBiJobBody"
+            }
+          }
+        ],
+        "tags": [
+          "BiJobService"
+        ]
       }
     },
     "/api/v1/finance/bi/jobs/{jobId}/logs": {
@@ -1010,6 +1109,23 @@
   "definitions": {
     "BiJobServiceTriggerJobBody": {
       "type": "object"
+    },
+    "BiJobServiceUpdateBiJobBody": {
+      "type": "object",
+      "properties": {
+        "scheduleCron": {
+          "type": "string"
+        },
+        "oracleProcedure": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      }
     },
     "BiUploadServiceCancelUploadBody": {
       "type": "object"
@@ -1469,6 +1585,43 @@
       ],
       "default": "COMPARE_MODE_UNSPECIFIED"
     },
+    "v1CreateBiJobRequest": {
+      "type": "object",
+      "properties": {
+        "jobName": {
+          "type": "string"
+        },
+        "sourceCode": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string"
+        },
+        "scheduleCron": {
+          "type": "string"
+        },
+        "oracleProcedure": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1CreateBiJobResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1BiJob"
+        }
+      }
+    },
     "v1CreateDashboardGroupRequest": {
       "type": "object",
       "properties": {
@@ -1763,6 +1916,14 @@
         "DATA_SOURCE_TYPE_API"
       ],
       "default": "DATA_SOURCE_TYPE_UNSPECIFIED"
+    },
+    "v1DeleteBiJobResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      }
     },
     "v1DeleteDashboardGroupResponse": {
       "type": "object",
@@ -2244,6 +2405,17 @@
         },
         "data": {
           "$ref": "#/definitions/v1BiJobLog"
+        }
+      }
+    },
+    "v1UpdateBiJobResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1BiJob"
         }
       }
     },

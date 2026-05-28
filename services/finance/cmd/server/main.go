@@ -381,6 +381,9 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		jobapp.NewListHandler(biJobRepo),
 		jobapp.NewListLogsHandler(biJobRepo),
 		jobapp.NewTriggerHandler(biJobRepo, biMVRefresher),
+		jobapp.NewCreateHandler(biJobRepo),
+		jobapp.NewUpdateHandler(biJobRepo),
+		jobapp.NewDeleteHandler(biJobRepo),
 	)
 	if err != nil {
 		return err

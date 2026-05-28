@@ -16,6 +16,10 @@ import (
 var (
 	// ErrNotFound is returned when no job matches the lookup.
 	ErrNotFound = errors.New("bi job not found")
+	// ErrAlreadyExists is returned when a job with the same name already exists.
+	ErrAlreadyExists = errors.New("bi job name already exists")
+	// ErrInvalidCron is returned when a cron expression is malformed.
+	ErrInvalidCron = errors.New("invalid cron expression")
 )
 
 // Job is a registered ETL job.
@@ -61,10 +65,36 @@ type Log struct {
 	DurationMs   int
 }
 
-// Repository is the read + trigger contract.
+// CreateJobParams holds the fields required to persist a new Job.
+// SourceCode is resolved to source_id by the repository using a sub-select on bi_data_source.
+type CreateJobParams struct {
+	JobName         string
+	SourceCode      string
+	TargetType      string
+	ScheduleCron    string
+	OracleProcedure string
+	Config          map[string]any
+	IsActive        bool
+	CreatedBy       uuid.UUID
+}
+
+// UpdateJobParams holds the mutable fields for UpdateJob (all optional).
+type UpdateJobParams struct {
+	ID              uuid.UUID
+	ScheduleCron    *string
+	OracleProcedure *string
+	Config          map[string]any
+	IsActive        *bool
+	UpdatedBy       uuid.UUID
+}
+
+// Repository is the read + trigger + CRUD contract.
 type Repository interface {
 	List(ctx context.Context, includeInactive bool) ([]*Job, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Job, error)
+	Create(ctx context.Context, p CreateJobParams) (*Job, error)
+	Update(ctx context.Context, p UpdateJobParams) (*Job, error)
+	Delete(ctx context.Context, id uuid.UUID, deletedBy uuid.UUID) error
 
 	ListLogs(ctx context.Context, jobID uuid.UUID, page, pageSize int) ([]*Log, int64, error)
 	InsertLog(ctx context.Context, log *Log) error
