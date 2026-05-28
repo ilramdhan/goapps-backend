@@ -1,0 +1,3 @@
+BEGIN;
+DROP TABLE IF EXISTS bi_data_source;
+COMMIT;

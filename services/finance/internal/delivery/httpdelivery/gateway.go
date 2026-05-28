@@ -152,6 +152,23 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 		return fmt.Errorf("failed to register CostCalc gateway: %w", err)
 	}
 
+	// BI (Executive Dashboard) gateway routes.
+	if err := financev1.RegisterDashboardServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register BI Dashboard gateway: %w", err)
+	}
+	if err := financev1.RegisterChartDataServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register BI ChartData gateway: %w", err)
+	}
+	if err := financev1.RegisterDataSourceServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register BI DataSource gateway: %w", err)
+	}
+	if err := financev1.RegisterBiJobServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register BI Job gateway: %w", err)
+	}
+	if err := financev1.RegisterBiUploadServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register BI Upload gateway: %w", err)
+	}
+
 	// Create main mux
 	mux := http.NewServeMux()
 

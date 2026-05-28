@@ -17,7 +17,7 @@ import (
 func actorFromCtx(ctx context.Context) string {
 	id, _ := GetUserIDFromCtx(ctx)
 	if id == "" {
-		return "system"
+		return systemActor
 	}
 	return id
 }

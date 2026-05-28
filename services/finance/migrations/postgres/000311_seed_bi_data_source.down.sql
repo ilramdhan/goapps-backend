@@ -1,0 +1,3 @@
+BEGIN;
+DELETE FROM bi_data_source WHERE source_code IN ('ERP_ORACLE', 'LARAVEL_DB', 'EXCEL_UPLOAD');
+COMMIT;

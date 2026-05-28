@@ -1,0 +1,3 @@
+BEGIN;
+DROP TABLE IF EXISTS bi_fact_metric;
+COMMIT;

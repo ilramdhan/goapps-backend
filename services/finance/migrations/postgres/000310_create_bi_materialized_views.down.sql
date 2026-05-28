@@ -1,0 +1,5 @@
+BEGIN;
+DROP FUNCTION IF EXISTS bi_refresh_dashboard_mvs();
+DROP MATERIALIZED VIEW IF EXISTS mv_bi_metric_g2;
+DROP MATERIALIZED VIEW IF EXISTS mv_bi_metric_g1;
+COMMIT;

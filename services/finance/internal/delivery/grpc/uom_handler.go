@@ -421,5 +421,5 @@ func getUserFromContext(ctx context.Context) string {
 	if userID, ok := ctx.Value(UserIDKey).(string); ok && userID != "" {
 		return userID
 	}
-	return "system"
+	return systemActor
 }
