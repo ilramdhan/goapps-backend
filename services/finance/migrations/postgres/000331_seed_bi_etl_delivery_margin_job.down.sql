@@ -1,0 +1,4 @@
+BEGIN;
+DELETE FROM bi_job_log WHERE job_id = (SELECT job_id FROM bi_job WHERE job_name='ETL_DELIVERY_MARGIN');
+DELETE FROM bi_job WHERE job_name = 'ETL_DELIVERY_MARGIN';
+COMMIT;
