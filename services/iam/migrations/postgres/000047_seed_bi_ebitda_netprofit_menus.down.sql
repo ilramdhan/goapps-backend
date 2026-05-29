@@ -1,0 +1,3 @@
+BEGIN;
+DELETE FROM mst_menu WHERE menu_code IN ('BI_EBITDA', 'BI_NET_PROFIT');
+COMMIT;
