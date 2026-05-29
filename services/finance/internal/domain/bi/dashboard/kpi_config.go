@@ -10,6 +10,7 @@ import (
 type KpiEntry struct {
 	Label            string
 	ValueField       string
+	MetricName       string // optional; when set, queries bi_fact_metric directly with metric_name filter (multi-metric SALES dashboards)
 	Agg              string // sum|avg|min|max|last|cross_ratio
 	Compare          string // MoM|QoQ|YoY|YTD_vs_LY|none
 	Period           string // selected|current_month|ytd|l12m — scopes the KPI window independently of the viewer's selected period
@@ -95,6 +96,8 @@ func parseKpiEntry(m map[string]any, idx int) (KpiEntry, error) {
 		return KpiEntry{}, fmt.Errorf("%w: entry %d missing 'value_field'", ErrInvalidKpiConfig, idx)
 	}
 
+	metricName := mapStringVal(m, "metric_name") // optional; when set, KPI queries bi_fact_metric with metric_name filter
+
 	compare, err := parseKpiCompare(m, idx)
 	if err != nil {
 		return KpiEntry{}, err
@@ -135,6 +138,7 @@ func parseKpiEntry(m map[string]any, idx int) (KpiEntry, error) {
 	return KpiEntry{
 		Label:                       label,
 		ValueField:                  valueField,
+		MetricName:                  metricName,
 		Agg:                         agg,
 		Compare:                     compare,
 		Period:                      period,
@@ -218,6 +222,9 @@ func (k KpiConfig) MarshalToList() []map[string]any {
 			"agg":         e.Agg,
 			"compare":     e.Compare,
 			"format":      string(e.Format),
+		}
+		if e.MetricName != "" {
+			m["metric_name"] = e.MetricName
 		}
 		if e.Period != "" && e.Period != kpiPeriodSelected {
 			m["period"] = e.Period

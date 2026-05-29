@@ -166,6 +166,12 @@ func runKPIScalar(
 	scenario string,
 	_ time.Time,
 ) (float64, error) {
+	// When metric_name is specified (multi-metric dashboards like SALES),
+	// query bi_fact_metric directly — MVs don't support per-metric-name aggregation for KPIs.
+	if k.MetricName != "" {
+		return runKPIScalarDirect(ctx, repo, d, k, period, scenario)
+	}
+
 	source, group1Filter := kpiSourceTable(d)
 	args := []any{d.FilterType()}
 	idx := 2
@@ -249,6 +255,54 @@ ORDER BY periode_date`, aggSQL, source, joinAnd(conds))
 		vals = append(vals, r.Value)
 	}
 	return vals, nil
+}
+
+// runKPIScalarDirect queries bi_fact_metric directly with a metric_name filter.
+// Used for multi-metric dashboards (SALES type) where KPIs need per-metric aggregation.
+func runKPIScalarDirect(
+	ctx context.Context,
+	repo factmetric.Repository,
+	d *dashboarddomain.Dashboard,
+	k dashboarddomain.KpiEntry,
+	period PeriodRange,
+	scenario string,
+) (float64, error) {
+	args := []any{d.FilterType(), k.MetricName}
+	idx := 3
+	conds := []string{"type = $1", "metric_name = $2", "is_active = TRUE"}
+
+	if d.FilterGroup1() != "" {
+		conds = append(conds, fmt.Sprintf("group_1 = $%d", idx))
+		args = append(args, d.FilterGroup1())
+		idx++
+	}
+	if g := d.PeriodGrain().String(); g != "" {
+		conds = append(conds, fmt.Sprintf("periode_grain = $%d", idx))
+		args = append(args, g)
+		idx++
+	}
+	if !period.From.IsZero() && !period.To.IsZero() {
+		conds = append(conds, fmt.Sprintf("periode_date BETWEEN $%d AND $%d", idx, idx+1))
+		args = append(args, period.From, period.To)
+		idx += 2
+	}
+	conds = append(conds, fmt.Sprintf("scenario = $%d", idx))
+	args = append(args, scenario)
+
+	aggSQL := mapAgg(k.Agg) + "(display_value)"
+	sql := fmt.Sprintf(`
+SELECT 'kpi'::text AS category, NULL::date AS periode_date, ''::text AS periode_label,
+       COALESCE(%s, 0) AS value, 0::numeric AS prev_value, 0::int AS order_seq
+FROM bi_fact_metric WHERE %s`, aggSQL, joinAnd(conds))
+
+	rows, err := repo.QueryAggregate(ctx, factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: "bi_fact_metric"})
+	if err != nil {
+		return 0, err
+	}
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	return rows[0].Value, nil
 }
 
 // kpiSourceTable picks the right MV given whether the dashboard pre-filters group_1.
