@@ -42,6 +42,10 @@ type Repository interface {
 	// Visibility rule: row has no entries in bi_dashboard_role OR user's role(s) intersect that set,
 	// OR isSuperAdmin is true. Used by viewer sidebar.
 	ListAccessible(ctx context.Context, userRoles []string, isSuperAdmin bool) ([]*Dashboard, error)
+
+	// ListFeatured returns active dashboards pinned to the Executive Dashboard landing page,
+	// ordered by feature_order ASC, dashboard_code ASC.
+	ListFeatured(ctx context.Context) ([]*Dashboard, error)
 }
 
 // ListFilter is the parameter object for Repository.List.

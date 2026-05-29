@@ -35,6 +35,8 @@ type Dashboard struct {
 	displayOrder     int
 	groupID          uuid.UUID
 	isActive         bool
+	isFeatured       bool
+	featureOrder     int
 	allowedRoleCodes []string
 	createdAt        time.Time
 	createdBy        uuid.UUID
@@ -69,6 +71,8 @@ type NewDashboardParams struct {
 	DisplayOrder       int
 	GroupID            uuid.UUID
 	IsActive           bool
+	IsFeatured         bool
+	FeatureOrder       int
 	AllowedRoleCodes   []string
 	CreatedBy          uuid.UUID
 }
@@ -174,6 +178,8 @@ func NewDashboard(p NewDashboardParams) (*Dashboard, error) {
 		displayOrder:     p.DisplayOrder,
 		groupID:          p.GroupID,
 		isActive:         p.IsActive,
+		isFeatured:       p.IsFeatured,
+		featureOrder:     p.FeatureOrder,
 		allowedRoleCodes: roleCodes,
 		createdAt:        time.Now().UTC(),
 		createdBy:        p.CreatedBy,
@@ -203,6 +209,8 @@ type UpdateParams struct {
 	DisplayOrder       *int
 	GroupID            *uuid.UUID
 	IsActive           *bool
+	IsFeatured         *bool
+	FeatureOrder       *int
 	AllowedRoleCodes   []string
 	UpdatedBy          uuid.UUID
 }
@@ -336,6 +344,12 @@ func (d *Dashboard) Update(p UpdateParams) error {
 	if p.IsActive != nil {
 		staged.isActive = *p.IsActive
 	}
+	if p.IsFeatured != nil {
+		staged.isFeatured = *p.IsFeatured
+	}
+	if p.FeatureOrder != nil {
+		staged.featureOrder = *p.FeatureOrder
+	}
 	if p.AllowedRoleCodes != nil {
 		staged.allowedRoleCodes = dedupRoles(p.AllowedRoleCodes)
 	}
@@ -418,6 +432,12 @@ func (d *Dashboard) GroupID() uuid.UUID { return d.groupID }
 
 // IsActive reports whether the dashboard is active.
 func (d *Dashboard) IsActive() bool { return d.isActive }
+
+// IsFeatured reports whether the dashboard is pinned to the Executive Dashboard landing page.
+func (d *Dashboard) IsFeatured() bool { return d.isFeatured }
+
+// FeatureOrder returns the sort position within the featured section (lower = first).
+func (d *Dashboard) FeatureOrder() int { return d.featureOrder }
 
 // AllowedRoleCodes returns a copy of the role-code whitelist.
 func (d *Dashboard) AllowedRoleCodes() []string {

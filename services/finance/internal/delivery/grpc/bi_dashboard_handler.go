@@ -28,6 +28,7 @@ type BIDashboardHandler struct {
 	duplicateHandler      *dashboardapp.DuplicateHandler
 	setRolesHandler       *dashboardapp.SetRolesHandler
 	listAccessibleHandler *dashboardapp.ListAccessibleHandler
+	listFeaturedHandler   *dashboardapp.ListFeaturedHandler
 	groupCreateHandler    *groupapp.CreateHandler
 	groupListHandler      *groupapp.ListHandler
 	groupUpdateHandler    *groupapp.UpdateHandler
@@ -46,6 +47,7 @@ func NewBIDashboardHandler(
 	dup *dashboardapp.DuplicateHandler,
 	setRoles *dashboardapp.SetRolesHandler,
 	listAccessible *dashboardapp.ListAccessibleHandler,
+	listFeatured *dashboardapp.ListFeaturedHandler,
 	groupCreate *groupapp.CreateHandler,
 	groupList *groupapp.ListHandler,
 	groupUpdate *groupapp.UpdateHandler,
@@ -65,6 +67,7 @@ func NewBIDashboardHandler(
 		duplicateHandler:      dup,
 		setRolesHandler:       setRoles,
 		listAccessibleHandler: listAccessible,
+		listFeaturedHandler:   listFeatured,
 		groupCreateHandler:    groupCreate,
 		groupListHandler:      groupList,
 		groupUpdateHandler:    groupUpdate,
@@ -279,6 +282,14 @@ func (h *BIDashboardHandler) UpdateDashboard(ctx context.Context, req *financev1
 		v := req.GetIsActive()
 		cmd.IsActive = &v
 	}
+	if req.IsFeatured != nil {
+		v := req.GetIsFeatured()
+		cmd.IsFeatured = &v
+	}
+	if req.FeatureOrder != nil {
+		v := int(req.GetFeatureOrder())
+		cmd.FeatureOrder = &v
+	}
 	if len(req.GetCompareModes()) > 0 {
 		modes := make([]string, 0, len(req.GetCompareModes()))
 		for _, m := range req.GetCompareModes() {
@@ -381,6 +392,22 @@ func (h *BIDashboardHandler) ListAccessibleDashboards(ctx context.Context, _ *fi
 	}
 	return &financev1.ListAccessibleDashboardsResponse{
 		Base: successResponse("Accessible dashboards listed"),
+		Data: items,
+	}, nil
+}
+
+// ListFeaturedDashboards returns dashboards pinned to the Executive Dashboard landing page.
+func (h *BIDashboardHandler) ListFeaturedDashboards(ctx context.Context, _ *financev1.ListFeaturedDashboardsRequest) (*financev1.ListFeaturedDashboardsResponse, error) {
+	out, err := h.listFeaturedHandler.Handle(ctx)
+	if err != nil {
+		return &financev1.ListFeaturedDashboardsResponse{Base: biDomainErrorToBase(err)}, nil
+	}
+	items := make([]*financev1.Dashboard, 0, len(out))
+	for _, d := range out {
+		items = append(items, dashboardToProto(d))
+	}
+	return &financev1.ListFeaturedDashboardsResponse{
+		Base: successResponse("Featured dashboards listed"),
 		Data: items,
 	}, nil
 }

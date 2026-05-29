@@ -233,6 +233,29 @@
         ]
       }
     },
+    "/api/v1/finance/bi/dashboards/featured": {
+      "get": {
+        "summary": "ListFeaturedDashboards returns dashboards pinned to the Executive Dashboard landing page.",
+        "operationId": "DashboardService_ListFeaturedDashboards",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListFeaturedDashboardsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "DashboardService"
+        ]
+      }
+    },
     "/api/v1/finance/bi/dashboards/{dashboardCode}/data": {
       "get": {
         "summary": "GetDashboardData resolves dashboard config + filters and returns chart-ready data.",
@@ -1218,6 +1241,13 @@
         },
         "isActive": {
           "type": "boolean"
+        },
+        "isFeatured": {
+          "type": "boolean"
+        },
+        "featureOrder": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -1827,6 +1857,13 @@
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo"
+        },
+        "isFeatured": {
+          "type": "boolean"
+        },
+        "featureOrder": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2186,6 +2223,21 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1DataSource"
+          }
+        }
+      }
+    },
+    "v1ListFeaturedDashboardsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Dashboard"
           }
         }
       }

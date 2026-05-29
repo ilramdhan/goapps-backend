@@ -28,6 +28,7 @@ const (
 	DashboardService_DuplicateDashboard_FullMethodName       = "/finance.v1.DashboardService/DuplicateDashboard"
 	DashboardService_SetDashboardRoles_FullMethodName        = "/finance.v1.DashboardService/SetDashboardRoles"
 	DashboardService_ListAccessibleDashboards_FullMethodName = "/finance.v1.DashboardService/ListAccessibleDashboards"
+	DashboardService_ListFeaturedDashboards_FullMethodName   = "/finance.v1.DashboardService/ListFeaturedDashboards"
 	DashboardService_CreateDashboardGroup_FullMethodName     = "/finance.v1.DashboardService/CreateDashboardGroup"
 	DashboardService_ListDashboardGroups_FullMethodName      = "/finance.v1.DashboardService/ListDashboardGroups"
 	DashboardService_UpdateDashboardGroup_FullMethodName     = "/finance.v1.DashboardService/UpdateDashboardGroup"
@@ -59,6 +60,8 @@ type DashboardServiceClient interface {
 	SetDashboardRoles(ctx context.Context, in *SetDashboardRolesRequest, opts ...grpc.CallOption) (*SetDashboardRolesResponse, error)
 	// ListAccessibleDashboards returns dashboards visible to the calling user (for viewer sidebar).
 	ListAccessibleDashboards(ctx context.Context, in *ListAccessibleDashboardsRequest, opts ...grpc.CallOption) (*ListAccessibleDashboardsResponse, error)
+	// ListFeaturedDashboards returns dashboards pinned to the Executive Dashboard landing page.
+	ListFeaturedDashboards(ctx context.Context, in *ListFeaturedDashboardsRequest, opts ...grpc.CallOption) (*ListFeaturedDashboardsResponse, error)
 	// CreateDashboardGroup creates a new dashboard group.
 	CreateDashboardGroup(ctx context.Context, in *CreateDashboardGroupRequest, opts ...grpc.CallOption) (*CreateDashboardGroupResponse, error)
 	// ListDashboardGroups returns dashboard groups.
@@ -169,6 +172,16 @@ func (c *dashboardServiceClient) ListAccessibleDashboards(ctx context.Context, i
 	return out, nil
 }
 
+func (c *dashboardServiceClient) ListFeaturedDashboards(ctx context.Context, in *ListFeaturedDashboardsRequest, opts ...grpc.CallOption) (*ListFeaturedDashboardsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListFeaturedDashboardsResponse)
+	err := c.cc.Invoke(ctx, DashboardService_ListFeaturedDashboards_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dashboardServiceClient) CreateDashboardGroup(ctx context.Context, in *CreateDashboardGroupRequest, opts ...grpc.CallOption) (*CreateDashboardGroupResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateDashboardGroupResponse)
@@ -243,6 +256,8 @@ type DashboardServiceServer interface {
 	SetDashboardRoles(context.Context, *SetDashboardRolesRequest) (*SetDashboardRolesResponse, error)
 	// ListAccessibleDashboards returns dashboards visible to the calling user (for viewer sidebar).
 	ListAccessibleDashboards(context.Context, *ListAccessibleDashboardsRequest) (*ListAccessibleDashboardsResponse, error)
+	// ListFeaturedDashboards returns dashboards pinned to the Executive Dashboard landing page.
+	ListFeaturedDashboards(context.Context, *ListFeaturedDashboardsRequest) (*ListFeaturedDashboardsResponse, error)
 	// CreateDashboardGroup creates a new dashboard group.
 	CreateDashboardGroup(context.Context, *CreateDashboardGroupRequest) (*CreateDashboardGroupResponse, error)
 	// ListDashboardGroups returns dashboard groups.
@@ -289,6 +304,9 @@ func (UnimplementedDashboardServiceServer) SetDashboardRoles(context.Context, *S
 }
 func (UnimplementedDashboardServiceServer) ListAccessibleDashboards(context.Context, *ListAccessibleDashboardsRequest) (*ListAccessibleDashboardsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAccessibleDashboards not implemented")
+}
+func (UnimplementedDashboardServiceServer) ListFeaturedDashboards(context.Context, *ListFeaturedDashboardsRequest) (*ListFeaturedDashboardsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListFeaturedDashboards not implemented")
 }
 func (UnimplementedDashboardServiceServer) CreateDashboardGroup(context.Context, *CreateDashboardGroupRequest) (*CreateDashboardGroupResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateDashboardGroup not implemented")
@@ -488,6 +506,24 @@ func _DashboardService_ListAccessibleDashboards_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DashboardService_ListFeaturedDashboards_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListFeaturedDashboardsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DashboardServiceServer).ListFeaturedDashboards(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DashboardService_ListFeaturedDashboards_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DashboardServiceServer).ListFeaturedDashboards(ctx, req.(*ListFeaturedDashboardsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DashboardService_CreateDashboardGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateDashboardGroupRequest)
 	if err := dec(in); err != nil {
@@ -620,6 +656,10 @@ var DashboardService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAccessibleDashboards",
 			Handler:    _DashboardService_ListAccessibleDashboards_Handler,
+		},
+		{
+			MethodName: "ListFeaturedDashboards",
+			Handler:    _DashboardService_ListFeaturedDashboards_Handler,
 		},
 		{
 			MethodName: "CreateDashboardGroup",

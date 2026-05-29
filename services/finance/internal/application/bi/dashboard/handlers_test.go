@@ -56,6 +56,9 @@ func (r *fakeRepo) GetRoles(context.Context, uuid.UUID) ([]string, error) { retu
 func (r *fakeRepo) ListAccessible(context.Context, []string, bool) ([]*dashboarddomain.Dashboard, error) {
 	return []*dashboarddomain.Dashboard{r.byID}, nil
 }
+func (r *fakeRepo) ListFeatured(context.Context) ([]*dashboarddomain.Dashboard, error) {
+	return []*dashboarddomain.Dashboard{r.byID}, nil
+}
 
 // spyCache records invalidations.
 type spyCache struct{ invalidated []string }

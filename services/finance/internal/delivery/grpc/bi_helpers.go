@@ -391,6 +391,8 @@ func dashboardToProto(d *dashboarddomain.Dashboard) *financev1.Dashboard {
 		DisplayOrder:       int32(d.DisplayOrder()),              //nolint:gosec
 		GroupId:            d.GroupID().String(),
 		IsActive:           d.IsActive(),
+		IsFeatured:         d.IsFeatured(),
+		FeatureOrder:       int32(d.FeatureOrder()), //nolint:gosec // feature_order is bounded by UI (0..999)
 		AllowedRoleCodes:   d.AllowedRoleCodes(),
 		Audit:              audit,
 	}

@@ -182,6 +182,8 @@ type UpdateCommand struct {
 	DisplayOrder       *int
 	GroupID            *uuid.UUID
 	IsActive           *bool
+	IsFeatured         *bool
+	FeatureOrder       *int
 	AllowedRoleCodes   []string
 	UpdatedBy          uuid.UUID
 }
@@ -222,6 +224,8 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*dashboa
 		DisplayOrder:       cmd.DisplayOrder,
 		GroupID:            cmd.GroupID,
 		IsActive:           cmd.IsActive,
+		IsFeatured:         cmd.IsFeatured,
+		FeatureOrder:       cmd.FeatureOrder,
 		AllowedRoleCodes:   cmd.AllowedRoleCodes,
 		UpdatedBy:          cmd.UpdatedBy,
 	}); err != nil {
@@ -369,6 +373,25 @@ func NewListAccessibleHandler(repo dashboarddomain.Repository) *ListAccessibleHa
 // Handle executes the visibility query.
 func (h *ListAccessibleHandler) Handle(ctx context.Context, q ListAccessibleQuery) ([]*dashboarddomain.Dashboard, error) {
 	return h.repo.ListAccessible(ctx, q.UserRoles, q.IsSuperAdmin)
+}
+
+// =========================================================================
+// ListFeaturedHandler — featured dashboards for the Executive Dashboard landing page
+// =========================================================================
+
+// ListFeaturedHandler returns dashboards pinned to the Executive Dashboard landing page.
+type ListFeaturedHandler struct {
+	repo dashboarddomain.Repository
+}
+
+// NewListFeaturedHandler constructs a ListFeaturedHandler.
+func NewListFeaturedHandler(repo dashboarddomain.Repository) *ListFeaturedHandler {
+	return &ListFeaturedHandler{repo: repo}
+}
+
+// Handle executes the featured-dashboard query.
+func (h *ListFeaturedHandler) Handle(ctx context.Context) ([]*dashboarddomain.Dashboard, error) {
+	return h.repo.ListFeatured(ctx)
 }
 
 // Compile-time assertion that the redis cache satisfies the local Cache interface

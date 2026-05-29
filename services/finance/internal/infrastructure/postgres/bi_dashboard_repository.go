@@ -83,15 +83,15 @@ INSERT INTO bi_dashboard (
     filter_type, filter_group_1, periode_grain, default_period,
     chart_type, chart_config, layout_config, compare_modes, kpi_config,
     drill_enabled, max_drill_level, cache_ttl_sec, refresh_interval_sec,
-    display_order, group_id, is_active,
+    display_order, group_id, is_active, is_featured, feature_order,
     created_at, created_by
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`
 	_, err = tx.ExecContext(ctx, q,
 		d.ID(), d.Code().String(), d.Title(), d.Description(),
 		d.FilterType(), biNullableString(d.FilterGroup1()), d.PeriodGrain().String(), d.DefaultPeriod().String(),
 		d.ChartType().String(), chartConfig, nullableBytes(layoutConfig), compareModes, kpiConfig,
 		d.DrillEnabled(), d.MaxDrillLevel().Int(), d.CacheTTL().Seconds(), d.RefreshInterval().Seconds(),
-		d.DisplayOrder(), d.GroupID(), d.IsActive(),
+		d.DisplayOrder(), d.GroupID(), d.IsActive(), d.IsFeatured(), d.FeatureOrder(),
 		d.CreatedAt(), nullableUUID(d.CreatedBy()),
 	)
 	if err != nil {
@@ -298,15 +298,17 @@ UPDATE bi_dashboard SET
     display_order = $17,
     group_id = $18,
     is_active = $19,
-    updated_at = $20,
-    updated_by = $21
+    is_featured = $20,
+    feature_order = $21,
+    updated_at = $22,
+    updated_by = $23
 WHERE dashboard_id = $1 AND deleted_at IS NULL`
 	res, err := tx.ExecContext(ctx, q,
 		d.ID(), d.Title(), d.Description(),
 		d.FilterType(), biNullableString(d.FilterGroup1()), d.PeriodGrain().String(), d.DefaultPeriod().String(),
 		d.ChartType().String(), chartConfig, nullableBytes(layoutConfig), compareModes, kpiConfig,
 		d.DrillEnabled(), d.MaxDrillLevel().Int(), d.CacheTTL().Seconds(), d.RefreshInterval().Seconds(),
-		d.DisplayOrder(), d.GroupID(), d.IsActive(),
+		d.DisplayOrder(), d.GroupID(), d.IsActive(), d.IsFeatured(), d.FeatureOrder(),
 		d.UpdatedAt(), nullableUUID(d.UpdatedBy()),
 	)
 	if err != nil {
@@ -471,6 +473,37 @@ func (r *BiDashboardRepository) ListAccessible(ctx context.Context, userRoles []
 	return out, nil
 }
 
+// ListFeatured returns active dashboards pinned to the Executive Dashboard landing page.
+func (r *BiDashboardRepository) ListFeatured(ctx context.Context) ([]*dashboard.Dashboard, error) {
+	const q = selectDashboardBase + ` WHERE deleted_at IS NULL AND is_active = TRUE AND is_featured = TRUE
+ORDER BY feature_order ASC, dashboard_code ASC`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("query featured: %w", err)
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
+
+	var out []*dashboard.Dashboard
+	for rows.Next() {
+		d, err := r.scanDashboard(ctx, rows.Scan)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows err: %w", err)
+	}
+	if err := r.hydrateRolesBatch(ctx, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ---- helpers ----
 
 const selectDashboardBase = `
@@ -478,7 +511,7 @@ SELECT dashboard_id, dashboard_code, dashboard_title, description,
        filter_type, filter_group_1, periode_grain, default_period,
        chart_type, chart_config, layout_config, compare_modes, kpi_config,
        drill_enabled, max_drill_level, cache_ttl_sec, refresh_interval_sec,
-       display_order, group_id, is_active,
+       display_order, group_id, is_active, is_featured, feature_order,
        created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
 FROM bi_dashboard`
 
@@ -509,6 +542,8 @@ type dashboardRow struct {
 	DisplayOrder       int
 	GroupID            uuid.UUID
 	IsActive           bool
+	IsFeatured         bool
+	FeatureOrder       int
 	CreatedAt          time.Time
 	CreatedBy          uuid.NullUUID
 	UpdatedAt          sql.NullTime
@@ -525,7 +560,7 @@ func (r *BiDashboardRepository) scanDashboard(_ context.Context, scan scanFunc) 
 		&row.FilterType, &row.FilterGroup1, &row.PeriodGrain, &row.DefaultPeriod,
 		&row.ChartType, &row.ChartConfig, &row.LayoutConfig, &row.CompareModes, &row.KpiConfig,
 		&row.DrillEnabled, &row.MaxDrillLevel, &row.CacheTTLSec, &row.RefreshIntervalSec,
-		&row.DisplayOrder, &row.GroupID, &row.IsActive,
+		&row.DisplayOrder, &row.GroupID, &row.IsActive, &row.IsFeatured, &row.FeatureOrder,
 		&row.CreatedAt, &row.CreatedBy, &row.UpdatedAt, &row.UpdatedBy, &row.DeletedAt, &row.DeletedBy,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -573,6 +608,8 @@ func (r *BiDashboardRepository) scanDashboard(_ context.Context, scan scanFunc) 
 		DisplayOrder:       row.DisplayOrder,
 		GroupID:            row.GroupID,
 		IsActive:           row.IsActive,
+		IsFeatured:         row.IsFeatured,
+		FeatureOrder:       row.FeatureOrder,
 		CreatedBy:          uuidOrNil(row.CreatedBy),
 	})
 	if err != nil {

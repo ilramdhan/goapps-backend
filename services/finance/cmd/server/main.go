@@ -350,6 +350,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		dashboardapp.NewDuplicateHandler(biDashboardRepo),
 		dashboardapp.NewSetRolesHandler(biDashboardRepo, biChartCache),
 		dashboardapp.NewListAccessibleHandler(biDashboardRepo),
+		dashboardapp.NewListFeaturedHandler(biDashboardRepo),
 		groupapp.NewCreateHandler(biGroupRepo),
 		groupapp.NewListHandler(biGroupRepo),
 		groupapp.NewUpdateHandler(biGroupRepo),

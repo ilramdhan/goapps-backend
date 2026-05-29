@@ -39,6 +39,9 @@ func (m *mockDashboardRepo) GetRoles(context.Context, uuid.UUID) ([]string, erro
 func (m *mockDashboardRepo) ListAccessible(context.Context, []string, bool) ([]*dashboarddomain.Dashboard, error) {
 	return nil, nil
 }
+func (m *mockDashboardRepo) ListFeatured(context.Context) ([]*dashboarddomain.Dashboard, error) {
+	return nil, nil
+}
 
 // ---- mock fact repository ----
 
