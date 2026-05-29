@@ -50,6 +50,10 @@ type ChartConfig struct {
 	SizeField     string
 	LabelPosition string
 
+	// AvailableChartTypes lists additional chart types the viewer may switch to.
+	// Stored in chart_config.available_chart_types JSONB. Managed by the admin wizard.
+	AvailableChartTypes []string
+
 	// ViewConfigs holds per-view-type display settings keyed by chart type string.
 	// Stored in chart_config.view_configs JSONB. Falls back to sensible defaults via Dashboard.ViewConfigFor.
 	ViewConfigs map[string]ViewModeConfig
@@ -190,6 +194,9 @@ func ParseChartConfig(t ChartType, raw map[string]any) (ChartConfig, error) {
 	// computed_ratio — optional; drives planComputedRatio for secondary computed charts.
 	cfg.ComputedRatio = parseComputedRatio(merged)
 
+	// available_chart_types — optional; list of chart type strings the viewer may switch to.
+	cfg.AvailableChartTypes = parseStringSlice(merged, "available_chart_types")
+
 	// view_configs — optional; per-view-type display overrides keyed by chart type string.
 	cfg.ViewConfigs = parseViewConfigs(merged)
 
@@ -246,6 +253,8 @@ func parseComputedRatio(merged map[string]any) *ComputedRatioConfig {
 
 // MarshalToMap converts a ChartConfig back to a map for JSONB storage. Empty/default
 // values are omitted so the persisted JSON stays compact.
+//
+//nolint:gocyclo // one branch per optional field; splitting by field group would obscure the schema
 func (c ChartConfig) MarshalToMap() map[string]any {
 	out := map[string]any{}
 	putString(out, "x_axis_field", c.XAxisField)
@@ -312,6 +321,13 @@ func (c ChartConfig) MarshalToMap() map[string]any {
 			"scale":       c.ComputedRatio.Scale,
 			"group_by":    c.ComputedRatio.GroupBy,
 		}
+	}
+	if len(c.AvailableChartTypes) > 0 {
+		raw := make([]any, len(c.AvailableChartTypes))
+		for i, t := range c.AvailableChartTypes {
+			raw[i] = t
+		}
+		out["available_chart_types"] = raw
 	}
 	if len(c.ViewConfigs) > 0 {
 		vcMap := make(map[string]any, len(c.ViewConfigs))
@@ -397,6 +413,28 @@ func mapStringVal(m map[string]any, key string) string {
 		return ""
 	}
 	return v
+}
+
+// parseStringSlice extracts a []string from a map[string]any under the given key.
+// Accepts both []any (JSON-decoded) and []string. Returns nil when absent or malformed.
+func parseStringSlice(m map[string]any, key string) []string {
+	v, ok := m[key]
+	if !ok {
+		return nil
+	}
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s, ok2 := item.(string); ok2 && s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
 }
 
 // validateRequiredField checks that a required key exists in merged and has a valid value.
