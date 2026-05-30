@@ -472,12 +472,22 @@ func planComputedRatio( //nolint:unparam
 	if d.FilterGroup1() != "" {
 		conds = append(conds, fmt.Sprintf("group_1 = $%d", idx))
 		args = append(args, d.FilterGroup1())
-		idx++ //nolint:ineffassign,wastedassign
+		idx++
 	} else if len(f.DrillPath) > 0 {
 		conds = append(conds, fmt.Sprintf("group_1 = $%d", idx))
 		args = append(args, f.DrillPath[0])
-		idx++ //nolint:ineffassign,wastedassign
+		idx++
+	} else if len(f.Group1Filter) > 0 {
+		// Filter-chip group_1 selections (e.g. ["Export", "Local"]) narrow the ratio
+		// to only those delivery types, mirroring appendGroupConds behaviour.
+		conds, args, idx = appendINClause(conds, args, idx, "group_1", f.Group1Filter)
 	}
+	// Filter-chip group_2 selections narrow the computed groupBy dimension when
+	// groupBy=="group_2" (e.g. show margin % only for selected product categories).
+	if len(f.Group2Filter) > 0 && groupBy == "group_2" {
+		conds, args, idx = appendINClause(conds, args, idx, "group_2", f.Group2Filter)
+	}
+	_ = idx // consumed by appendINClause above; satisfy linter
 
 	where := strings.Join(conds, " AND ")
 	// scale is a config constant (not user input), safe to inline.
