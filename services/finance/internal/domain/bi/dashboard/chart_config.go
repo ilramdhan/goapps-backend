@@ -58,6 +58,14 @@ type ChartConfig struct {
 	// Stored in chart_config.view_configs JSONB. Falls back to sensible defaults via Dashboard.ViewConfigFor.
 	ViewConfigs map[string]ViewModeConfig
 
+	// FilterChipsGroup1 lists the static group_1 values shown as filter chips in the viewer
+	// (e.g. ["Export","Local"] for DELIVERY_MARGIN). Stored as filter_chips_group1 in JSONB.
+	FilterChipsGroup1 []string
+
+	// FilterChipsGroup2 lists the static group_2 values shown as filter chips in the viewer
+	// (e.g. ["ACY","FG"] for DELIVERY_MARGIN). Stored as filter_chips_group2 in JSONB.
+	FilterChipsGroup2 []string
+
 	// MetricFilter holds the optional list of metric_names for multi-series dashboards
 	// (e.g. SALES dashboards with GROSS_SALES / NETT_SALES / MARGIN on the same chart).
 	// When non-empty the query planner bypasses MVs and queries bi_fact_metric directly.
@@ -188,6 +196,10 @@ func ParseChartConfig(t ChartType, raw map[string]any) (ChartConfig, error) {
 		cfg.SeriesDefs = defs
 	}
 
+	// filter_chips_group1/2 — optional; static chip values for viewer filter chips.
+	cfg.FilterChipsGroup1 = parseStringSlice(merged, "filter_chips_group1")
+	cfg.FilterChipsGroup2 = parseStringSlice(merged, "filter_chips_group2")
+
 	// metric_filter.include_metrics — optional; drives the multi-metric query planner path.
 	cfg.MetricFilter = parseMetricFilter(merged)
 
@@ -308,6 +320,20 @@ func (c ChartConfig) MarshalToMap() map[string]any {
 			defs[i] = map[string]any{"name": sd.Name, "type": sd.Type, "field": sd.Field}
 		}
 		out["series_defs"] = defs
+	}
+	if len(c.FilterChipsGroup1) > 0 {
+		raw := make([]any, len(c.FilterChipsGroup1))
+		for i, v := range c.FilterChipsGroup1 {
+			raw[i] = v
+		}
+		out["filter_chips_group1"] = raw
+	}
+	if len(c.FilterChipsGroup2) > 0 {
+		raw := make([]any, len(c.FilterChipsGroup2))
+		for i, v := range c.FilterChipsGroup2 {
+			raw[i] = v
+		}
+		out["filter_chips_group2"] = raw
 	}
 	if len(c.MetricFilter.IncludeMetrics) > 0 {
 		raw := make([]any, len(c.MetricFilter.IncludeMetrics))
