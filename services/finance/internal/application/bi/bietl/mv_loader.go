@@ -66,10 +66,7 @@ func (l *MVLoader) LoadSales(ctx context.Context) (int, error) {
 func (l *MVLoader) upsertBatched(ctx context.Context, rows []oracleinfra.BIMVRow) (int, error) {
 	total := 0
 	for i := 0; i < len(rows); i += l.batchSize {
-		end := i + l.batchSize
-		if end > len(rows) {
-			end = len(rows)
-		}
+		end := min(i+l.batchSize, len(rows))
 		batch := make([]factmetric.FactMetric, 0, end-i)
 		for _, r := range rows[i:end] {
 			batch = append(batch, r.ToFactMetric())
