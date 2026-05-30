@@ -70,7 +70,7 @@ func TestComputeKPIs_NoCompare(t *testing.T) {
 	now := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
 	period := chartdata.ResolvePeriod("L12M", time.Time{}, time.Time{}, "MONTHLY", now)
 
-	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now)
+	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestComputeKPIs_MoM_DeltaComputed(t *testing.T) {
 	now := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
 	period := chartdata.ResolvePeriod("THIS_MONTH", time.Time{}, time.Time{}, "MONTHLY", now)
 
-	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now)
+	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestComputeKPIs_Sparkline(t *testing.T) {
 	now := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
 	period := chartdata.ResolvePeriod("L12M", time.Time{}, time.Time{}, "MONTHLY", now)
 
-	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now)
+	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +161,7 @@ func TestComputeKPIs_PerKPIPeriodScoping(t *testing.T) {
 	now := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
 	period := chartdata.ResolvePeriod("L12M", time.Time{}, time.Time{}, "MONTHLY", now)
 
-	if _, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now); err != nil {
+	if _, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if len(repo.queries) != 3 {
@@ -203,7 +203,7 @@ func TestComputeKPIs_CrossRatio_ComputesRatio(t *testing.T) {
 	now := time.Date(2026, 5, 29, 0, 0, 0, 0, time.UTC)
 	period := chartdata.ResolvePeriod("L12M", time.Time{}, time.Time{}, "MONTHLY", now)
 
-	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now)
+	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, period, now, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +232,7 @@ func TestComputeKPIs_CrossRatio_ZeroDenominator_ReturnsZero(t *testing.T) {
 		},
 	})
 	repo := &scriptedFactRepo{values: []float64{500, 0}} // denominator is 0
-	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, chartdata.PeriodRange{}, time.Now())
+	rows, err := chartdata.ComputeKPIs(context.Background(), repo, d, chartdata.PeriodRange{}, time.Now(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestComputeKPIs_CrossRatio_ZeroDenominator_ReturnsZero(t *testing.T) {
 
 func TestComputeKPIs_Empty(t *testing.T) {
 	d := dashboardWithKPIs(t, nil)
-	rows, err := chartdata.ComputeKPIs(context.Background(), &scriptedFactRepo{}, d, chartdata.PeriodRange{}, time.Now())
+	rows, err := chartdata.ComputeKPIs(context.Background(), &scriptedFactRepo{}, d, chartdata.PeriodRange{}, time.Now(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

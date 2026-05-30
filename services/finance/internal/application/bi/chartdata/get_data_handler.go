@@ -122,7 +122,7 @@ func (h *GetDataHandler) Handle(ctx context.Context, q GetDataQuery) (*Result, e
 	// 6. Compute KPIs
 	period := ResolvePeriod(q.Filters.PeriodPreset, q.Filters.PeriodFrom, q.Filters.PeriodTo,
 		d.PeriodGrain().String(), asOf)
-	kpis, err := ComputeKPIs(ctx, h.fact, d, period, asOf)
+	kpis, err := ComputeKPIs(ctx, h.fact, d, period, asOf, q.Filters.Group1Filter, q.Filters.Group2Filter)
 	if err != nil {
 		return nil, fmt.Errorf("compute kpis: %w", err)
 	}

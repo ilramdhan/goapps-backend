@@ -27,6 +27,7 @@ func ComputeKPIs(
 	d *dashboarddomain.Dashboard,
 	periodRange PeriodRange,
 	now time.Time,
+	group1Filters, group2Filters []string,
 ) ([]factmetric.KpiRow, error) {
 	kpis := d.KpiConfig()
 	if len(kpis) == 0 {
@@ -34,7 +35,7 @@ func ComputeKPIs(
 	}
 	out := make([]factmetric.KpiRow, 0, len(kpis))
 	for _, k := range kpis {
-		row, err := computeOneKPI(ctx, repo, d, k, periodRange, now)
+		row, err := computeOneKPI(ctx, repo, d, k, periodRange, now, group1Filters, group2Filters)
 		if err != nil {
 			return nil, fmt.Errorf("kpi %q: %w", k.Label, err)
 		}
@@ -53,15 +54,16 @@ func computeOneKPI(
 	k dashboarddomain.KpiEntry,
 	period PeriodRange,
 	now time.Time,
+	group1Filters, group2Filters []string,
 ) (factmetric.KpiRow, error) {
 	if k.Agg == "cross_ratio" {
-		return computeCrossRatioKPI(ctx, repo, d, k, now)
+		return computeCrossRatioKPI(ctx, repo, d, k, now, group1Filters, group2Filters)
 	}
 
 	// Each KPI may scope its own window (e.g. "Current Month" vs "YTD") independently
 	// of the period the viewer selected for the main chart; "selected" inherits it.
 	effPeriod := resolveKPIPeriod(k.Period, period, now)
-	currentVal, err := runKPIScalar(ctx, repo, d, k, effPeriod, "ACTUAL", now)
+	currentVal, err := runKPIScalar(ctx, repo, d, k, effPeriod, "ACTUAL", now, group1Filters, group2Filters)
 	if err != nil {
 		return factmetric.KpiRow{}, err
 	}
@@ -72,7 +74,7 @@ func computeOneKPI(
 	if k.Compare != "none" && k.Compare != "" {
 		comparePeriod, compareLabel := compareRange(effPeriod, k.Compare, d.PeriodGrain().String(), now)
 		if !comparePeriod.From.IsZero() {
-			compareVal, err := runKPIScalar(ctx, repo, d, k, comparePeriod, "ACTUAL", now)
+			compareVal, err := runKPIScalar(ctx, repo, d, k, comparePeriod, "ACTUAL", now, group1Filters, group2Filters)
 			if err != nil {
 				return factmetric.KpiRow{}, err
 			}
@@ -89,7 +91,7 @@ func computeOneKPI(
 		if periods <= 0 {
 			periods = 12
 		}
-		spark, err := runSparkline(ctx, repo, d, k, periods, now)
+		spark, err := runSparkline(ctx, repo, d, k, periods, now, group1Filters, group2Filters)
 		if err != nil {
 			return factmetric.KpiRow{}, err
 		}
@@ -107,6 +109,7 @@ func computeCrossRatioKPI(
 	d *dashboarddomain.Dashboard,
 	k dashboarddomain.KpiEntry,
 	now time.Time,
+	_, _ []string, // group1Filters, group2Filters — not applicable for cross_ratio KPIs (fixed group_1 semantics)
 ) (factmetric.KpiRow, error) {
 	effPeriod := resolveKPIPeriod(k.Period, PeriodRange{
 		From: shiftByMonths(now, -12),
@@ -165,11 +168,12 @@ func runKPIScalar(
 	period PeriodRange,
 	scenario string,
 	_ time.Time,
+	group1Filters, group2Filters []string,
 ) (float64, error) {
 	// When metric_name is specified (multi-metric dashboards like SALES),
 	// query bi_fact_metric directly — MVs don't support per-metric-name aggregation for KPIs.
 	if k.MetricName != "" {
-		return runKPIScalarDirect(ctx, repo, d, k, period, scenario)
+		return runKPIScalarDirect(ctx, repo, d, k, period, scenario, group1Filters, group2Filters)
 	}
 
 	source, group1Filter := kpiSourceTable(d)
@@ -181,6 +185,14 @@ func runKPIScalar(
 		args = append(args, group1Filter)
 		idx++
 	}
+	// Apply viewer filter-chip selections (group_1 / group_2) when no dashboard-level pre-filter is set.
+	if group1Filter == "" && len(group1Filters) > 0 {
+		conds, args, idx = appendINClause(conds, args, idx, "group_1", group1Filters)
+	}
+	if len(group2Filters) > 0 {
+		conds, args, idx = appendINClause(conds, args, idx, "group_2", group2Filters)
+	}
+	_ = idx
 	conds = append(conds, fmt.Sprintf("periode_grain = $%d", idx))
 	args = append(args, d.PeriodGrain().String())
 	idx++
@@ -216,6 +228,7 @@ func runSparkline(
 	k dashboarddomain.KpiEntry,
 	periods int,
 	now time.Time,
+	group1Filters, group2Filters []string,
 ) ([]float64, error) {
 	source, group1Filter := kpiSourceTable(d)
 	args := []any{d.FilterType()}
@@ -225,6 +238,12 @@ func runSparkline(
 		conds = append(conds, fmt.Sprintf("group_1 = $%d", idx))
 		args = append(args, group1Filter)
 		idx++
+	}
+	if group1Filter == "" && len(group1Filters) > 0 {
+		conds, args, idx = appendINClause(conds, args, idx, "group_1", group1Filters)
+	}
+	if len(group2Filters) > 0 {
+		conds, args, idx = appendINClause(conds, args, idx, "group_2", group2Filters)
 	}
 	conds = append(conds, fmt.Sprintf("periode_grain = $%d", idx))
 	args = append(args, d.PeriodGrain().String())
@@ -266,6 +285,7 @@ func runKPIScalarDirect(
 	k dashboarddomain.KpiEntry,
 	period PeriodRange,
 	scenario string,
+	group1Filters, group2Filters []string,
 ) (float64, error) {
 	args := []any{d.FilterType(), k.MetricName}
 	idx := 3
@@ -275,6 +295,11 @@ func runKPIScalarDirect(
 		conds = append(conds, fmt.Sprintf("group_1 = $%d", idx))
 		args = append(args, d.FilterGroup1())
 		idx++
+	} else if len(group1Filters) > 0 {
+		conds, args, idx = appendINClause(conds, args, idx, "group_1", group1Filters)
+	}
+	if len(group2Filters) > 0 {
+		conds, args, idx = appendINClause(conds, args, idx, "group_2", group2Filters)
 	}
 	if g := d.PeriodGrain().String(); g != "" {
 		conds = append(conds, fmt.Sprintf("periode_grain = $%d", idx))
