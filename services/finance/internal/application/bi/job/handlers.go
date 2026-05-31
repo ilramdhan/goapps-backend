@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,12 +63,15 @@ type MVRefresher interface {
 	RefreshMVs(ctx context.Context) error
 }
 
-// BIETLRunner executes a BI ETL job (Oracle MV → bi_fact_metric).
-// Injected into TriggerHandler; set to nil when Oracle is not configured.
+// BIETLRunner executes a BI ETL job that loads an Oracle MV into bi_fact_metric.
+// A single generic method keeps the interface extensible — adding a new target type
+// requires only a new case inside the concrete implementation (MVLoader), not a new
+// interface method and not a new switch arm in TriggerHandler.
+//
+// targetType  — bi_fact_metric.type value (e.g. "MIS", "DELIVERY MARGIN", "SALES").
+// sourceView  — fully-qualified Oracle view/MV name (e.g. "MGTDAT.MV_DASH_MIS_MGT").
 type BIETLRunner interface {
-	LoadMIS(ctx context.Context) (int, error)
-	LoadDeliveryMargin(ctx context.Context) (int, error)
-	LoadSales(ctx context.Context) (int, error)
+	Load(ctx context.Context, targetType, sourceView string) (int, error)
 }
 
 // TriggerCommand is the payload for TriggerHandler.
@@ -79,11 +83,12 @@ type TriggerCommand struct {
 // TriggerHandler records a manual job trigger.
 //
 // Dispatches by config["kind"]:
-//   - "mv_refresh"          — refreshes Postgres materialized views, marks SUCCESS.
-//   - "etl_mis"             — loads MGTDAT.MV_DASH_MIS_MGT → bi_fact_metric.
-//   - "etl_delivery_margin" — loads MGTDAT.MV_DASH_DELMAR_MGT → bi_fact_metric.
-//   - "etl_sales"           — loads MGTDAT.MV_DASH_SALES_MGT → bi_fact_metric.
-//   - (other)               — MVP placeholder: immediately marks SUCCESS, rows_affected=0.
+//   - "mv_refresh"  — refreshes Postgres materialized views, marks SUCCESS.
+//   - "etl_*"       — any kind prefixed "etl_" is dispatched to BIETLRunner.Load
+//     using config["target_type"] and config["source_view"].
+//     Adding a new ETL type requires only a new case in MVLoader.Load,
+//     no changes to TriggerHandler or the admin form.
+//   - (other)       — MVP placeholder: immediately marks SUCCESS, rows_affected=0.
 type TriggerHandler struct {
 	repo        jobdomain.Repository
 	mvRefresher MVRefresher // optional — nil when not needed
@@ -114,21 +119,22 @@ func (h *TriggerHandler) Handle(ctx context.Context, cmd TriggerCommand) (*jobdo
 		return nil, fmt.Errorf("insert running log: %w", err)
 	}
 
+	kind := ""
+	if v, ok := theJob.Config["kind"].(string); ok {
+		kind = v
+	}
+
 	// Dispatch by job kind.
-	switch theJob.Config["kind"] {
-	case "mv_refresh":
+	switch {
+	case kind == "mv_refresh":
 		return h.handleMVRefresh(ctx, entry, now)
-	case "etl_mis":
+	case strings.HasPrefix(kind, "etl_"):
+		// Generic ETL dispatch: works for any target_type without code changes.
+		// target_type and source_view come from the job's config (auto-set on create).
+		targetType := configString(theJob.Config, "target_type")
+		sourceView := configString(theJob.Config, "source_view")
 		return h.handleETL(ctx, entry, now, func(c context.Context) (int, error) {
-			return h.etlRunner.LoadMIS(c)
-		})
-	case "etl_delivery_margin":
-		return h.handleETL(ctx, entry, now, func(c context.Context) (int, error) {
-			return h.etlRunner.LoadDeliveryMargin(c)
-		})
-	case "etl_sales":
-		return h.handleETL(ctx, entry, now, func(c context.Context) (int, error) {
-			return h.etlRunner.LoadSales(c)
+			return h.etlRunner.Load(c, targetType, sourceView)
 		})
 	default:
 		// MVP placeholder: resolve immediately to SUCCESS without real work.
@@ -192,4 +198,16 @@ func (h *TriggerHandler) handleMVRefresh(ctx context.Context, entry *jobdomain.L
 		return nil, fmt.Errorf("update mv_refresh completion log: %w", err)
 	}
 	return entry, nil
+}
+
+// configString extracts a string value from a job config map.
+// Returns "" when the key is absent or the value is not a string.
+// Avoids blank-identifier type assertions that errcheck flags.
+func configString(config map[string]any, key string) string {
+	if v, ok := config[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }

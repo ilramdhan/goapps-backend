@@ -13,6 +13,9 @@ import (
 	oracleinfra "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/oracle"
 )
 
+// Ensure MVLoader satisfies the job.BIETLRunner interface at compile time.
+// (job package imports bietl, so we cannot import job here — the check lives in main.go.)
+
 const defaultBatchSize = 500
 
 // MVLoader fetches rows from Oracle BI MVs and upserts them into bi_fact_metric.
@@ -31,9 +34,31 @@ func NewMVLoader(oracleRepo *oracleinfra.BIMVRepository, factRepo factmetric.Rep
 	}
 }
 
-// LoadMIS fetches MGTDAT.MV_DASH_MIS_MGT (EBITDA) and upserts into bi_fact_metric.
-// Returns the number of rows upserted.
-func (l *MVLoader) LoadMIS(ctx context.Context) (int, error) {
+// Load implements job.BIETLRunner.
+//
+// Dispatches by targetType — the value stored in bi_fact_metric.type.
+// sourceView is the fully-qualified Oracle MV name (e.g. "MGTDAT.MV_DASH_MIS_MGT").
+//
+// Adding a new ETL type:
+//  1. Add FetchXxx() to BIMVRepository (oracle package).
+//  2. Add a case here.
+//  3. Create a bi_job via the admin form with the matching Target Type.
+//
+// No changes to handlers.go or the frontend form are needed.
+func (l *MVLoader) Load(ctx context.Context, targetType, sourceView string) (int, error) {
+	switch targetType {
+	case "MIS":
+		return l.loadMIS(ctx, sourceView)
+	case "DELIVERY MARGIN":
+		return l.loadDeliveryMargin(ctx, sourceView)
+	case "SALES":
+		return l.loadSales(ctx, sourceView)
+	default:
+		return 0, fmt.Errorf("unsupported target_type %q: add a new FetchXxx method to BIMVRepository and a case here", targetType)
+	}
+}
+
+func (l *MVLoader) loadMIS(ctx context.Context, _ string) (int, error) {
 	rows, err := l.oracleRepo.FetchMIS(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("fetch MIS MV: %w", err)
@@ -41,9 +66,7 @@ func (l *MVLoader) LoadMIS(ctx context.Context) (int, error) {
 	return l.upsertBatched(ctx, rows)
 }
 
-// LoadDeliveryMargin fetches MGTDAT.MV_DASH_DELMAR_MGT and upserts into bi_fact_metric.
-// Returns the number of rows upserted.
-func (l *MVLoader) LoadDeliveryMargin(ctx context.Context) (int, error) {
+func (l *MVLoader) loadDeliveryMargin(ctx context.Context, _ string) (int, error) {
 	rows, err := l.oracleRepo.FetchDeliveryMargin(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("fetch DELMAR MV: %w", err)
@@ -51,9 +74,7 @@ func (l *MVLoader) LoadDeliveryMargin(ctx context.Context) (int, error) {
 	return l.upsertBatched(ctx, rows)
 }
 
-// LoadSales fetches MGTDAT.MV_DASH_SALES_MGT and upserts into bi_fact_metric.
-// Returns the number of rows upserted.
-func (l *MVLoader) LoadSales(ctx context.Context) (int, error) {
+func (l *MVLoader) loadSales(ctx context.Context, _ string) (int, error) {
 	rows, err := l.oracleRepo.FetchSales(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("fetch SALES MV: %w", err)
