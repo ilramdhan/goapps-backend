@@ -115,7 +115,7 @@ func (s *BIRepositorySuite) setupSchema() {
 			scenario VARCHAR(20) NOT NULL DEFAULT 'ACTUAL', source_id UUID NOT NULL REFERENCES bi_data_source(source_id), metric_name VARCHAR(50) NOT NULL DEFAULT 'VALUE', metric_category VARCHAR(20) NOT NULL DEFAULT 'VALUE', agg_method VARCHAR(20) NOT NULL DEFAULT 'SUM',
 			dimension_key VARCHAR(200) NOT NULL DEFAULT '', uploaded_by UUID, loaded_at TIMESTAMP NOT NULL DEFAULT NOW(),
 			is_active BOOLEAN NOT NULL DEFAULT TRUE,
-			CONSTRAINT uq_bi_fm_bk_itest UNIQUE NULLS NOT DISTINCT (type, group_1, group_2, group_3, periode_grain, periode_date, scenario, dimension_key))`,
+			CONSTRAINT uq_bi_fm_bk_itest UNIQUE NULLS NOT DISTINCT (type, group_1, group_2, group_3, periode_grain, periode_date, metric_name, scenario, dimension_key))`,
 		`CREATE MATERIALIZED VIEW IF NOT EXISTS mv_bi_metric_g1 AS
 			SELECT type, group_1, periode_grain, periode_date, scenario, SUM(display_value) AS value,
 			       MAX(group_1_order) AS group_1_order
