@@ -71,7 +71,10 @@ type MVRefresher interface {
 // targetType  — bi_fact_metric.type value (e.g. "MIS", "DELIVERY MARGIN", "SALES").
 // sourceView  — fully-qualified Oracle view/MV name (e.g. "MGTDAT.MV_DASH_MIS_MGT").
 type BIETLRunner interface {
-	Load(ctx context.Context, targetType, sourceView string) (int, error)
+	// Load fetches an Oracle MV and upserts rows into bi_fact_metric.
+	// sourceID must be the bi_data_source.source_id FK value — use theJob.SourceID
+	// so the UUID matches what is already registered in bi_data_source (env-specific).
+	Load(ctx context.Context, targetType, sourceView string, sourceID uuid.UUID) (int, error)
 }
 
 // TriggerCommand is the payload for TriggerHandler.
@@ -134,7 +137,7 @@ func (h *TriggerHandler) Handle(ctx context.Context, cmd TriggerCommand) (*jobdo
 		targetType := configString(theJob.Config, "target_type")
 		sourceView := configString(theJob.Config, "source_view")
 		return h.handleETL(ctx, entry, now, func(c context.Context) (int, error) {
-			return h.etlRunner.Load(c, targetType, sourceView)
+			return h.etlRunner.Load(c, targetType, sourceView, theJob.SourceID)
 		})
 	default:
 		// MVP placeholder: resolve immediately to SUCCESS without real work.

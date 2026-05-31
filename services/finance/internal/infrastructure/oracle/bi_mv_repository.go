@@ -60,7 +60,7 @@ type BIMVRow struct {
 
 // ToFactMetric converts a BIMVRow to a factmetric.FactMetric domain value.
 // MIS rows get default metric_name/category/agg_method='VALUE'/'VALUE'/'SUM'.
-func (r BIMVRow) ToFactMetric() factmetric.FactMetric {
+func (r BIMVRow) ToFactMetric(sourceID uuid.UUID) factmetric.FactMetric {
 	mn := r.MetricName
 	if mn == "" {
 		mn = misDefaultMetricName
@@ -90,7 +90,7 @@ func (r BIMVRow) ToFactMetric() factmetric.FactMetric {
 		DisplayValue:   r.DisplayValue,
 		UOM:            r.UOM,
 		Scenario:       r.Scenario,
-		SourceID:       sourceCodeUUID(r.SourceCode),
+		SourceID:       sourceID, // use the job's registered source_id (env-specific UUID from bi_data_source)
 		MetricName:     mn,
 		MetricCategory: mc,
 		AggMethod:      am,
