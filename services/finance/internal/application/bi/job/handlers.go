@@ -85,9 +85,9 @@ type TriggerCommand struct {
 // Dispatches by config["kind"]:
 //   - "mv_refresh"  — refreshes Postgres materialized views, marks SUCCESS.
 //   - "etl_*"       — any kind prefixed "etl_" is dispatched to BIETLRunner.Load
-//                     using config["target_type"] and config["source_view"].
-//                     Adding a new ETL type requires only a new case in MVLoader.Load,
-//                     no changes to TriggerHandler or the admin form.
+//     using config["target_type"] and config["source_view"].
+//     Adding a new ETL type requires only a new case in MVLoader.Load,
+//     no changes to TriggerHandler or the admin form.
 //   - (other)       — MVP placeholder: immediately marks SUCCESS, rows_affected=0.
 type TriggerHandler struct {
 	repo        jobdomain.Repository
@@ -131,8 +131,8 @@ func (h *TriggerHandler) Handle(ctx context.Context, cmd TriggerCommand) (*jobdo
 	case strings.HasPrefix(kind, "etl_"):
 		// Generic ETL dispatch: works for any target_type without code changes.
 		// target_type and source_view come from the job's config (auto-set on create).
-		targetType, _ := theJob.Config["target_type"].(string)
-		sourceView, _ := theJob.Config["source_view"].(string)
+		targetType := configString(theJob.Config, "target_type")
+		sourceView := configString(theJob.Config, "source_view")
 		return h.handleETL(ctx, entry, now, func(c context.Context) (int, error) {
 			return h.etlRunner.Load(c, targetType, sourceView)
 		})
@@ -198,4 +198,16 @@ func (h *TriggerHandler) handleMVRefresh(ctx context.Context, entry *jobdomain.L
 		return nil, fmt.Errorf("update mv_refresh completion log: %w", err)
 	}
 	return entry, nil
+}
+
+// configString extracts a string value from a job config map.
+// Returns "" when the key is absent or the value is not a string.
+// Avoids blank-identifier type assertions that errcheck flags.
+func configString(config map[string]any, key string) string {
+	if v, ok := config[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
