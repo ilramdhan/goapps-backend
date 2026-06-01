@@ -18,12 +18,6 @@ const (
 	misDefaultAggMethod      = "SUM"
 )
 
-// sourceCodeUUID derives a deterministic UUID v5 from a source code string.
-// Same source code always maps to the same UUID so ETL re-runs are idempotent.
-func sourceCodeUUID(sourceCode string) uuid.UUID {
-	return uuid.NewSHA1(uuid.NameSpaceDNS, []byte(strings.TrimSpace(sourceCode)))
-}
-
 // dimensionKey builds the deduplication key used in bi_fact_metric upsert.
 // Format: type|group_1|group_2|group_3|grain|YYYYMMDD|metric_name|scenario.
 func dimensionKey(fmType, g1, g2, g3, grain string, periodDate time.Time, metricName, scenario string) string {
@@ -60,7 +54,7 @@ type BIMVRow struct {
 
 // ToFactMetric converts a BIMVRow to a factmetric.FactMetric domain value.
 // MIS rows get default metric_name/category/agg_method='VALUE'/'VALUE'/'SUM'.
-func (r BIMVRow) ToFactMetric() factmetric.FactMetric {
+func (r BIMVRow) ToFactMetric(sourceID uuid.UUID) factmetric.FactMetric {
 	mn := r.MetricName
 	if mn == "" {
 		mn = misDefaultMetricName
@@ -90,7 +84,7 @@ func (r BIMVRow) ToFactMetric() factmetric.FactMetric {
 		DisplayValue:   r.DisplayValue,
 		UOM:            r.UOM,
 		Scenario:       r.Scenario,
-		SourceID:       sourceCodeUUID(r.SourceCode),
+		SourceID:       sourceID, // use the job's registered source_id (env-specific UUID from bi_data_source)
 		MetricName:     mn,
 		MetricCategory: mc,
 		AggMethod:      am,
