@@ -8,14 +8,15 @@
 --   • UNION ALL joined by periode_date → two time-series lines
 --   • Shape() produces 2 Series (Net Sales, Margin) with correct individual values
 --
--- Also switch chart_type to LINE (4) so the frontend renders the two series as
+-- Also switch chart_type to 'line' so the frontend renders the two series as
 -- two separate lines rather than a stacked-bar, which is not meaningful for
--- multi-metric data.
+-- multi-metric data. The bi_dashboard.chart_type column stores lowercase string
+-- names ('line', 'waterfall', 'bar', etc.) NOT the proto enum integer values.
 BEGIN;
 
 UPDATE bi_dashboard
 SET
-  chart_type  = 4,   -- CHART_TYPE_LINE
+  chart_type  = 'line',
   chart_config = chart_config
     || '{"metric_filter": {"include_metrics": ["NETT_SALES", "MARGIN"]}, "available_chart_types": ["line", "bar", "data_table"]}'::jsonb
 WHERE dashboard_code = 'DELIVERY_MARGIN';
