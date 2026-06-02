@@ -185,11 +185,14 @@ func runKPIScalar(
 		args = append(args, group1Filter)
 		idx++
 	}
-	// Apply viewer filter-chip selections (group_1 / group_2) when no dashboard-level pre-filter is set.
+	// Apply viewer filter-chip group_1 selections when no dashboard-level pre-filter is set.
 	if group1Filter == "" && len(group1Filters) > 0 {
 		conds, args, idx = appendINClause(conds, args, idx, "group_1", group1Filters)
 	}
-	if len(group2Filters) > 0 {
+	// group_2 filter is only applicable when the source has a group_2 column.
+	// mv_bi_metric_g1 aggregates across all group_2 values and does not expose the column —
+	// adding a group_2 condition against it would fail with "column group_2 does not exist".
+	if len(group2Filters) > 0 && source != "mv_bi_metric_g1" {
 		conds, args, idx = appendINClause(conds, args, idx, "group_2", group2Filters)
 	}
 	_ = idx
@@ -242,7 +245,8 @@ func runSparkline(
 	if group1Filter == "" && len(group1Filters) > 0 {
 		conds, args, idx = appendINClause(conds, args, idx, "group_1", group1Filters)
 	}
-	if len(group2Filters) > 0 {
+	// mv_bi_metric_g1 does not have a group_2 column — skip the filter to avoid SQL error.
+	if len(group2Filters) > 0 && source != "mv_bi_metric_g1" {
 		conds, args, idx = appendINClause(conds, args, idx, "group_2", group2Filters)
 	}
 	conds = append(conds, fmt.Sprintf("periode_grain = $%d", idx))
