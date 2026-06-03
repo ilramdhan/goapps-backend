@@ -354,12 +354,33 @@ func kpiSourceTable(d *dashboarddomain.Dashboard) (source, group1Filter string) 
 // resolveKPIPeriod maps a per-KPI period scope to a concrete date window. "selected" (and any
 // unrecognized value) inherits the viewer's selected period; the fixed scopes are relative to now
 // so the KPI's label stays accurate regardless of what the viewer picked.
+//
+// "selected_ytd" is a dynamic scope: it computes Jan 1 of the selected period's year to
+// selected.To. This lets KPIs like "YTD EBITDA" follow the month picker — when the user
+// selects May 2026, the KPI shows Jan–May 2026 (not Jan–today as "ytd" would).
+// When no month is selected (selected inherits the full preset range, e.g. L12M = Jun 2025–Jun 2026),
+// selected_ytd anchors on selected.To (Jun 2026) → Jan 2026–Jun 2026, which is still the
+// current YTD. Combined with compare="YTD_vs_LY" this gives:
+//   May 2026 → value=Jan–May 2026, compare=Jan–May 2025
+//   May 2025 → value=Jan–May 2025, compare=Jan–May 2024
+//   Jan 2026 → value=Jan 2026,     compare=Jan 2025 (delta = actual YoY for January)
 func resolveKPIPeriod(scope string, selected PeriodRange, now time.Time) PeriodRange {
 	switch scope {
 	case "current_month":
 		return PeriodRange{From: firstOfMonth(now), To: now}
 	case "ytd":
 		return PeriodRange{From: time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location()), To: now}
+	case "selected_ytd":
+		// YTD anchored to the selected period's end date: Jan 1 of that year → selected.To.
+		// Falls back to current YTD when the selected period is zero.
+		anchor := selected.To
+		if anchor.IsZero() {
+			anchor = now
+		}
+		return PeriodRange{
+			From: time.Date(anchor.Year(), 1, 1, 0, 0, 0, 0, anchor.Location()),
+			To:   anchor,
+		}
 	case "l12m":
 		return PeriodRange{From: shiftByMonths(now, -12), To: now}
 	default:
