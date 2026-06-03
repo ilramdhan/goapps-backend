@@ -2,7 +2,7 @@
 BEGIN;
 
 UPDATE bi_dashboard
-SET kpi_config = (
+SET kpi_config = jsonb_build_object('items', (
     SELECT jsonb_agg(
         CASE
             WHEN (kpi->>'label') = 'YTD EBITDA'
@@ -11,7 +11,7 @@ SET kpi_config = (
         END
     )
     FROM jsonb_array_elements(kpi_config->'items') AS kpi
-)
+))
 WHERE dashboard_code = 'EBITDA'
   AND kpi_config->'items' IS NOT NULL;
 

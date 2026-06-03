@@ -10,8 +10,10 @@
 
 BEGIN;
 
+-- kpi_config is stored as {"items": [...]} — must preserve the "items" wrapper.
+-- jsonb_agg returns a plain array; wrap it back with jsonb_build_object.
 UPDATE bi_dashboard
-SET kpi_config = (
+SET kpi_config = jsonb_build_object('items', (
     SELECT jsonb_agg(
         CASE
             WHEN (kpi->>'label') = 'YTD EBITDA'
@@ -20,7 +22,7 @@ SET kpi_config = (
         END
     )
     FROM jsonb_array_elements(kpi_config->'items') AS kpi
-)
+))
 WHERE dashboard_code = 'EBITDA'
   AND kpi_config->'items' IS NOT NULL;
 
