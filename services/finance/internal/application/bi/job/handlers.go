@@ -161,6 +161,53 @@ func (h *TriggerHandler) Handle(ctx context.Context, cmd TriggerCommand) (*jobdo
 	}
 }
 
+// CronTrigger executes a scheduled job trigger on behalf of the system cron.
+// It behaves identically to Handle but marks the log entry as "CRON:SYSTEM"
+// instead of "MANUAL:<userUUID>" so operators can distinguish automatic runs.
+func (h *TriggerHandler) CronTrigger(ctx context.Context, jobID uuid.UUID) (*jobdomain.Log, error) {
+	theJob, err := h.repo.GetByID(ctx, jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	entry := &jobdomain.Log{
+		JobID:       jobID,
+		StartedAt:   now,
+		Status:      jobdomain.StatusRunning,
+		TriggeredBy: "CRON:SYSTEM",
+	}
+	if err = h.repo.InsertLog(ctx, entry); err != nil {
+		return nil, fmt.Errorf("cron insert running log: %w", err)
+	}
+
+	kind := ""
+	if v, ok := theJob.Config["kind"].(string); ok {
+		kind = v
+	}
+
+	switch {
+	case kind == "mv_refresh":
+		return h.handleMVRefresh(ctx, entry, now)
+	case strings.HasPrefix(kind, "etl_"):
+		targetType := configString(theJob.Config, "target_type")
+		sourceView := configString(theJob.Config, "source_view")
+		return h.handleETL(ctx, entry, now, func(c context.Context) (int, error) {
+			return h.etlRunner.Load(c, targetType, sourceView, theJob.SourceID)
+		})
+	default:
+		// Unknown kind — mark success immediately (no-op placeholder).
+		ended := time.Now().UTC()
+		entry.EndedAt = ended
+		entry.Status = jobdomain.StatusSuccess
+		entry.DurationMs = int(ended.Sub(now).Milliseconds()) //nolint:gosec // duration fits int
+		if err = h.repo.UpdateLog(ctx, entry); err != nil {
+			return nil, fmt.Errorf("cron update completion log: %w", err)
+		}
+		return entry, nil
+	}
+}
+
 // handleETL runs an ETL load function and writes the outcome to the log.
 func (h *TriggerHandler) handleETL(
 	ctx context.Context,
