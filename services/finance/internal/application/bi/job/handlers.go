@@ -63,6 +63,13 @@ type MVRefresher interface {
 	RefreshMVs(ctx context.Context) error
 }
 
+// ChartCacheInvalidator clears cached chart data payloads from Redis.
+// Called after MV_REFRESH and ETL so users immediately see fresh data without
+// waiting for the cache TTL to expire or restarting the service.
+type ChartCacheInvalidator interface {
+	InvalidateAll(ctx context.Context) error
+}
+
 // BIETLRunner executes a BI ETL job that loads an Oracle MV into bi_fact_metric.
 // A single generic method keeps the interface extensible — adding a new target type
 // requires only a new case inside the concrete implementation (MVLoader), not a new
@@ -94,14 +101,16 @@ type TriggerCommand struct {
 //   - (other)       — MVP placeholder: immediately marks SUCCESS, rows_affected=0.
 type TriggerHandler struct {
 	repo        jobdomain.Repository
-	mvRefresher MVRefresher // optional — nil when not needed
-	etlRunner   BIETLRunner // optional — nil when Oracle not configured
+	mvRefresher MVRefresher        // optional — nil when not needed
+	etlRunner   BIETLRunner        // optional — nil when Oracle not configured
+	chartCache  ChartCacheInvalidator // optional — nil when cache not configured
 }
 
 // NewTriggerHandler constructs a TriggerHandler.
 // etlRunner may be nil (Oracle unavailable); those job kinds will fail gracefully.
-func NewTriggerHandler(r jobdomain.Repository, mv MVRefresher, etl BIETLRunner) *TriggerHandler {
-	return &TriggerHandler{repo: r, mvRefresher: mv, etlRunner: etl}
+// chartCache may be nil (no-op); when set, cache is invalidated after MV_REFRESH and ETL.
+func NewTriggerHandler(r jobdomain.Repository, mv MVRefresher, etl BIETLRunner, cache ChartCacheInvalidator) *TriggerHandler {
+	return &TriggerHandler{repo: r, mvRefresher: mv, etlRunner: etl, chartCache: cache}
 }
 
 // Handle executes the manual trigger.
@@ -175,6 +184,13 @@ func (h *TriggerHandler) handleETL(
 		entry.ErrorMessage = runErr.Error()
 	} else {
 		entry.Status = jobdomain.StatusSuccess
+		// Invalidate chart cache after a successful ETL load so any subsequent
+		// MV_REFRESH also serves fresh data; avoids stale cache after ETL + MV_REFRESH.
+		if h.chartCache != nil {
+			if cErr := h.chartCache.InvalidateAll(ctx); cErr != nil {
+				_ = cErr // best-effort
+			}
+		}
 	}
 	if err := h.repo.UpdateLog(ctx, entry); err != nil {
 		return nil, fmt.Errorf("update ETL completion log: %w", err)
@@ -196,6 +212,13 @@ func (h *TriggerHandler) handleMVRefresh(ctx context.Context, entry *jobdomain.L
 		entry.ErrorMessage = refreshErr.Error()
 	} else {
 		entry.Status = jobdomain.StatusSuccess
+		// Invalidate Redis chart cache so users immediately see the refreshed MV data
+		// without waiting for TTL expiry or restarting the service.
+		if h.chartCache != nil {
+			if cErr := h.chartCache.InvalidateAll(ctx); cErr != nil {
+				_ = cErr // best-effort; stale cache is acceptable, log omitted to avoid noise
+			}
+		}
 	}
 	if err := h.repo.UpdateLog(ctx, entry); err != nil {
 		return nil, fmt.Errorf("update mv_refresh completion log: %w", err)
