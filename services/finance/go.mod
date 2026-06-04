@@ -41,6 +41,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.39.0
 )
 
+require github.com/robfig/cron/v3 v3.0.1 // indirect
+
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20251209175733-2a1774d88802.1 // indirect
 	cel.dev/expr v0.24.0 // indirect

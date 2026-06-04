@@ -63,6 +63,13 @@ type MVRefresher interface {
 	RefreshMVs(ctx context.Context) error
 }
 
+// ChartCacheInvalidator clears cached chart data payloads from Redis.
+// Called after MV_REFRESH and ETL so users immediately see fresh data without
+// waiting for the cache TTL to expire or restarting the service.
+type ChartCacheInvalidator interface {
+	InvalidateAll(ctx context.Context) error
+}
+
 // BIETLRunner executes a BI ETL job that loads an Oracle MV into bi_fact_metric.
 // A single generic method keeps the interface extensible — adding a new target type
 // requires only a new case inside the concrete implementation (MVLoader), not a new
@@ -94,14 +101,16 @@ type TriggerCommand struct {
 //   - (other)       — MVP placeholder: immediately marks SUCCESS, rows_affected=0.
 type TriggerHandler struct {
 	repo        jobdomain.Repository
-	mvRefresher MVRefresher // optional — nil when not needed
-	etlRunner   BIETLRunner // optional — nil when Oracle not configured
+	mvRefresher MVRefresher           // optional — nil when not needed
+	etlRunner   BIETLRunner           // optional — nil when Oracle not configured
+	chartCache  ChartCacheInvalidator // optional — nil when cache not configured
 }
 
 // NewTriggerHandler constructs a TriggerHandler.
 // etlRunner may be nil (Oracle unavailable); those job kinds will fail gracefully.
-func NewTriggerHandler(r jobdomain.Repository, mv MVRefresher, etl BIETLRunner) *TriggerHandler {
-	return &TriggerHandler{repo: r, mvRefresher: mv, etlRunner: etl}
+// chartCache may be nil (no-op); when set, cache is invalidated after MV_REFRESH and ETL.
+func NewTriggerHandler(r jobdomain.Repository, mv MVRefresher, etl BIETLRunner, cache ChartCacheInvalidator) *TriggerHandler {
+	return &TriggerHandler{repo: r, mvRefresher: mv, etlRunner: etl, chartCache: cache}
 }
 
 // Handle executes the manual trigger.
@@ -152,6 +161,53 @@ func (h *TriggerHandler) Handle(ctx context.Context, cmd TriggerCommand) (*jobdo
 	}
 }
 
+// CronTrigger executes a scheduled job trigger on behalf of the system cron.
+// It behaves identically to Handle but marks the log entry as "CRON:SYSTEM"
+// instead of "MANUAL:<userUUID>" so operators can distinguish automatic runs.
+func (h *TriggerHandler) CronTrigger(ctx context.Context, jobID uuid.UUID) (*jobdomain.Log, error) {
+	theJob, err := h.repo.GetByID(ctx, jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	entry := &jobdomain.Log{
+		JobID:       jobID,
+		StartedAt:   now,
+		Status:      jobdomain.StatusRunning,
+		TriggeredBy: "CRON:SYSTEM",
+	}
+	if err = h.repo.InsertLog(ctx, entry); err != nil {
+		return nil, fmt.Errorf("cron insert running log: %w", err)
+	}
+
+	kind := ""
+	if v, ok := theJob.Config["kind"].(string); ok {
+		kind = v
+	}
+
+	switch {
+	case kind == "mv_refresh":
+		return h.handleMVRefresh(ctx, entry, now)
+	case strings.HasPrefix(kind, "etl_"):
+		targetType := configString(theJob.Config, "target_type")
+		sourceView := configString(theJob.Config, "source_view")
+		return h.handleETL(ctx, entry, now, func(c context.Context) (int, error) {
+			return h.etlRunner.Load(c, targetType, sourceView, theJob.SourceID)
+		})
+	default:
+		// Unknown kind — mark success immediately (no-op placeholder).
+		ended := time.Now().UTC()
+		entry.EndedAt = ended
+		entry.Status = jobdomain.StatusSuccess
+		entry.DurationMs = int(ended.Sub(now).Milliseconds()) //nolint:gosec // duration fits int
+		if err = h.repo.UpdateLog(ctx, entry); err != nil {
+			return nil, fmt.Errorf("cron update completion log: %w", err)
+		}
+		return entry, nil
+	}
+}
+
 // handleETL runs an ETL load function and writes the outcome to the log.
 func (h *TriggerHandler) handleETL(
 	ctx context.Context,
@@ -170,16 +226,34 @@ func (h *TriggerHandler) handleETL(
 	entry.EndedAt = ended
 	entry.DurationMs = int(ended.Sub(started).Milliseconds()) //nolint:gosec // duration in ms always fits int
 	entry.RowsAffected = rowsAffected
-	if runErr != nil {
-		entry.Status = jobdomain.StatusFailed
-		entry.ErrorMessage = runErr.Error()
-	} else {
-		entry.Status = jobdomain.StatusSuccess
+	applyETLOutcome(entry, runErr)
+	if runErr == nil {
+		h.invalidateCache(ctx)
 	}
 	if err := h.repo.UpdateLog(ctx, entry); err != nil {
 		return nil, fmt.Errorf("update ETL completion log: %w", err)
 	}
 	return entry, nil
+}
+
+// applyETLOutcome sets the log entry status and error message based on the ETL run result.
+func applyETLOutcome(entry *jobdomain.Log, runErr error) {
+	if runErr != nil {
+		entry.Status = jobdomain.StatusFailed
+		entry.ErrorMessage = runErr.Error()
+		return
+	}
+	entry.Status = jobdomain.StatusSuccess
+}
+
+// invalidateCache clears the Redis chart cache. Best-effort: failure is ignored.
+func (h *TriggerHandler) invalidateCache(ctx context.Context) {
+	if h.chartCache == nil {
+		return
+	}
+	if cErr := h.chartCache.InvalidateAll(ctx); cErr != nil {
+		_ = cErr // best-effort; stale cache is acceptable
+	}
 }
 
 // handleMVRefresh calls RefreshMVs and writes the result back to the log.
@@ -191,11 +265,9 @@ func (h *TriggerHandler) handleMVRefresh(ctx context.Context, entry *jobdomain.L
 	ended := time.Now().UTC()
 	entry.EndedAt = ended
 	entry.DurationMs = int(ended.Sub(started).Milliseconds()) //nolint:gosec // duration in ms always fits int
-	if refreshErr != nil {
-		entry.Status = jobdomain.StatusFailed
-		entry.ErrorMessage = refreshErr.Error()
-	} else {
-		entry.Status = jobdomain.StatusSuccess
+	applyETLOutcome(entry, refreshErr)
+	if refreshErr == nil {
+		h.invalidateCache(ctx)
 	}
 	if err := h.repo.UpdateLog(ctx, entry); err != nil {
 		return nil, fmt.Errorf("update mv_refresh completion log: %w", err)

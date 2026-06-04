@@ -395,17 +395,22 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	biMVRefresher := &biMVRefresherAdapter{db: db}
+	biJobTriggerHandler := jobapp.NewTriggerHandler(biJobRepo, biMVRefresher, biETLRunner, biChartCache)
 	biJobHandler, err := grpcdelivery.NewBIJobHandler(
 		jobapp.NewListHandler(biJobRepo),
 		jobapp.NewListLogsHandler(biJobRepo),
-		jobapp.NewTriggerHandler(biJobRepo, biMVRefresher, biETLRunner),
+		biJobTriggerHandler,
 		jobapp.NewCreateHandler(biJobRepo),
 		jobapp.NewUpdateHandler(biJobRepo),
 		jobapp.NewDeleteHandler(biJobRepo),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("create BI job handler: %w", err)
 	}
+	// BI job scheduler — fires ETL/MV_REFRESH jobs automatically on their cron schedule.
+	// Syncs active jobs from DB every 5 minutes to pick up admin changes without restart.
+	biJobScheduler := jobapp.NewBiJobScheduler(biJobRepo, biJobTriggerHandler, log.Logger, 5*time.Minute)
+	go biJobScheduler.Start(ctx)
 
 	excelUploadSourceLookup := func(ctx context.Context) (uuid.UUID, error) {
 		ds, err := biDataSourceRepo.GetByCode(ctx, "EXCEL_UPLOAD")
