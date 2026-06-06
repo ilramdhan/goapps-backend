@@ -3,8 +3,12 @@ package costproductrequest
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	fillDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costfillassignment"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
+	routeDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 )
 
 // CreateCommand is the create-time input.
@@ -177,12 +181,21 @@ type AuditEntry struct {
 	UserID     string
 }
 
+// FillTaskCreator creates fill tasks for all route levels of a request before
+// the ROUTING_DEFINED → PARAMETER_PENDING transition is committed.
+// Implemented by costfillassignment.CreateAllTasksHandler.
+type FillTaskCreator interface {
+	CreateForRequest(ctx context.Context, requestID, productSysID, routeHeadID int64, routeLevels []int32, totalParams int32) error
+}
+
 // TransitionHandler wraps a single state transition: load → mutate → save.
 // Optionally emits a CAL_ audit row after a successful save. Audit failures are
 // LOGGED (caller decides) but never block the business operation.
 type TransitionHandler struct {
-	repo    domain.Repository
-	emitter AuditEmitter
+	repo        domain.Repository
+	emitter     AuditEmitter
+	routeRepo   routeDomain.Repository // optional; used by MarkParameterPending
+	fillCreator FillTaskCreator        // optional; if nil, fill task creation is skipped
 }
 
 // NewTransitionHandler constructs a TransitionHandler. Pass emitter=nil to skip auditing.
@@ -193,6 +206,20 @@ func NewTransitionHandler(r domain.Repository) *TransitionHandler {
 // WithAudit attaches an audit emitter. Returns the receiver for chaining.
 func (h *TransitionHandler) WithAudit(emitter AuditEmitter) *TransitionHandler {
 	h.emitter = emitter
+	return h
+}
+
+// WithRouteRepo attaches the route repository used by MarkParameterPending to
+// resolve route levels for fill-task creation. Returns the receiver for chaining.
+func (h *TransitionHandler) WithRouteRepo(rr routeDomain.Repository) *TransitionHandler {
+	h.routeRepo = rr
+	return h
+}
+
+// WithFillCreator attaches the fill-task creator called before the state
+// transition in MarkParameterPending. Returns the receiver for chaining.
+func (h *TransitionHandler) WithFillCreator(c FillTaskCreator) *TransitionHandler {
+	h.fillCreator = c
 	return h
 }
 
@@ -276,10 +303,85 @@ func (h *TransitionHandler) DecideFeasibility(ctx context.Context, requestID int
 // MarkParameterPending advances ROUTING_DEFINED → PARAMETER_PENDING.
 // Invoked automatically by the PromoteHandler after the first routing draft
 // successfully promotes — see costroutingdraft/handlers.go PromoteHandler.
+//
+// When a FillTaskCreator is configured via WithFillCreator, fill tasks are created
+// for every route level BEFORE the state transition is committed. If config is
+// missing for any level, the method returns an error and the transition is aborted.
 func (h *TransitionHandler) MarkParameterPending(ctx context.Context, requestID int64, actor string) (*domain.Request, error) {
+	if h.fillCreator != nil {
+		if err := h.createFillTasksForRequest(ctx, requestID); err != nil {
+			return nil, fmt.Errorf("create fill tasks: %w", err)
+		}
+	}
 	return h.apply(ctx, requestID, func(r *domain.Request) error {
 		return r.MarkParameterPending()
 	}, applyOpts{operation: auditOpStatusChange, actorID: actor})
+}
+
+// createFillTasksForRequest loads the request + linked route graph, extracts the
+// distinct route levels, and calls fillCreator.CreateForRequest.
+func (h *TransitionHandler) createFillTasksForRequest(ctx context.Context, requestID int64) error {
+	req, err := h.repo.GetByID(ctx, requestID)
+	if err != nil {
+		return fmt.Errorf("load request %d: %w", requestID, err)
+	}
+	routeHeadID := req.LinkedRouteHeadID()
+	if routeHeadID == 0 {
+		return fmt.Errorf("request %d has no linked route head", requestID)
+	}
+	if h.routeRepo == nil {
+		return fmt.Errorf("route repository not configured on TransitionHandler")
+	}
+	graph, err := h.routeRepo.GetGraph(ctx, routeHeadID)
+	if err != nil {
+		return fmt.Errorf("load route graph %d: %w", routeHeadID, err)
+	}
+	levels := uniqueRouteLevels(graph)
+	if len(levels) == 0 {
+		return fmt.Errorf("route head %d has no sequences", routeHeadID)
+	}
+	productSysID := graph.Head.ProductSysID
+	if err := h.fillCreator.CreateForRequest(ctx, requestID, productSysID, routeHeadID, levels, 0); err != nil {
+		if errors.Is(err, fillDomain.ErrConfigNotFound) {
+			return fmt.Errorf("assignment config missing for one or more levels: %w", err)
+		}
+		return err
+	}
+	return nil
+}
+
+// uniqueRouteLevels extracts the distinct route level integers from a graph,
+// deduplicated and in ascending order.
+func uniqueRouteLevels(g *routeDomain.Graph) []int32 {
+	if g == nil {
+		return nil
+	}
+	seen := make(map[int32]struct{}, len(g.Seqs))
+	for _, s := range g.Seqs {
+		if s != nil {
+			seen[s.RouteLevel] = struct{}{}
+		}
+	}
+	levels := make([]int32, 0, len(seen))
+	for lvl := range seen {
+		levels = append(levels, lvl)
+	}
+	// Sort ascending so tasks are inserted in a consistent order.
+	sortInt32Slice(levels)
+	return levels
+}
+
+// sortInt32Slice sorts a []int32 in ascending order (insertion sort — short slices typical).
+func sortInt32Slice(s []int32) {
+	for i := 1; i < len(s); i++ {
+		key := s[i]
+		j := i - 1
+		for j >= 0 && s[j] > key {
+			s[j+1] = s[j]
+			j--
+		}
+		s[j+1] = key
+	}
 }
 
 // MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE. The
