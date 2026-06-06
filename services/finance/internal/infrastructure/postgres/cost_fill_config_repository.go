@@ -88,7 +88,11 @@ func (r *CostFillConfigRepository) ListGlobal(ctx context.Context) ([]*domain.Co
 	if err != nil {
 		return nil, fmt.Errorf("list global configs: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
 	var out []*domain.Config
 	for rows.Next() {
 		c, scanErr := scanGlobalConfig(rows)

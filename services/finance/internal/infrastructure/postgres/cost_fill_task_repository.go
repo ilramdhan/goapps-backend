@@ -103,7 +103,11 @@ func (r *CostFillTaskRepository) ListByRequest(ctx context.Context, requestID in
 	if err != nil {
 		return nil, fmt.Errorf("list tasks by request: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
 	return scanTaskRows(rows)
 }
 
@@ -124,7 +128,11 @@ func (r *CostFillTaskRepository) ListForUser(ctx context.Context, userID string,
 	if err != nil {
 		return nil, fmt.Errorf("list tasks for user: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
 	return scanTaskRows(rows)
 }
 
@@ -214,7 +222,11 @@ func (r *CostFillTaskRepository) ListOverdue(ctx context.Context, reminderGapHou
 	if err != nil {
 		return nil, fmt.Errorf("list overdue tasks: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
 	return scanTaskRows(rows)
 }
 
@@ -244,7 +256,11 @@ func (r *CostFillTaskRepository) ListApprovals(ctx context.Context, taskID int64
 	if err != nil {
 		return nil, fmt.Errorf("list approvals: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
 	var out []*domain.Approval
 	for rows.Next() {
 		a := &domain.Approval{}

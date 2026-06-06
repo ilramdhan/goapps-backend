@@ -1,3 +1,4 @@
+// Package costfillassignment provides application-layer handlers for the fill-assignment feature.
 package costfillassignment
 
 import (
