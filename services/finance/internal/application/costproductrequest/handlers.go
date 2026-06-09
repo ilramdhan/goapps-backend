@@ -31,10 +31,19 @@ type CreateCommand struct {
 }
 
 // CreateHandler creates a draft request.
-type CreateHandler struct{ repo domain.Repository }
+type CreateHandler struct {
+	repo        domain.Repository
+	cprNotifier CPRNotifier // optional; if nil, CPR notification emission is skipped
+}
 
 // NewCreateHandler constructs a CreateHandler.
 func NewCreateHandler(r domain.Repository) *CreateHandler { return &CreateHandler{repo: r} }
+
+// WithCPRNotifier attaches a CPRNotifier to CreateHandler. Returns receiver for chaining.
+func (h *CreateHandler) WithCPRNotifier(n CPRNotifier) *CreateHandler {
+	h.cprNotifier = n
+	return h
+}
 
 // Handle executes the create.
 func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*domain.Request, error) {
@@ -58,6 +67,15 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*domain.
 	if err := h.repo.Create(ctx, req); err != nil {
 		return nil, err
 	}
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_DRAFT_CREATED",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
+		},
+	})
 	return req, nil
 }
 
@@ -172,6 +190,51 @@ type AuditEmitter interface {
 	Emit(ctx context.Context, in AuditEntry) error
 }
 
+// NotificationEmitter is the minimal interface TransitionHandler needs to fire
+// in-app notifications. Matches the Emit signature of costnotification.Emitter
+// so the wiring in main.go is a direct assignment with no adapter.
+type NotificationEmitter interface {
+	Emit(ctx context.Context, in NotificationInput) error
+}
+
+// NotificationInput is a decoupled mirror of costnotification.NewInput.
+// The costnotification package is not imported here to preserve Clean Architecture
+// layering (application/costproductrequest must not import application/costnotification).
+type NotificationInput struct {
+	RecipientUserID string
+	TriggerType     string
+	RequestID       int64
+	Payload         string
+}
+
+// CPRNotifier dispatches rule-based, multi-recipient notifications for CPR
+// lifecycle events. Implemented by iamnotifier.CPRNotifier in infrastructure.
+// Replaces NotificationEmitter for new code; NotificationEmitter is kept for
+// backward compatibility during migration.
+type CPRNotifier interface {
+	NotifyEvent(ctx context.Context, event CPREvent) error
+}
+
+// CPREvent describes a CPR lifecycle notification to be dispatched.
+type CPREvent struct {
+	// EventType identifies the event, e.g. "CPR_DRAFT_CREATED", "CPR_SUBMITTED_REVIEWER".
+	EventType string
+	RequestID int64
+	RequestNo string
+	// RequesterUserID is the user who created the request, used for BY_USER_ID rules.
+	RequesterUserID string
+	// Rules defines who receives the notification. When empty the default rule
+	// for the event type is applied by the implementation.
+	Rules []CPRNotifRule
+}
+
+// CPRNotifRule is a single recipient resolution rule embedded in a CPREvent.
+type CPRNotifRule struct {
+	// RuleType is one of "BY_PERMISSION", "BY_USER_ID", "BY_DEPT", "BY_ROLE".
+	RuleType string
+	Value    string
+}
+
 // AuditEntry is the shape the transition handler hands off to the emitter.
 // Mirrors costauditlog.NewInput field-for-field so the wiring in main.go is a
 // pure adapter (no domain leakage into this package).
@@ -192,11 +255,13 @@ type FillTaskCreator interface {
 }
 
 // TransitionHandler wraps a single state transition: load → mutate → save.
-// Optionally emits a CAL_ audit row after a successful save. Audit failures are
-// LOGGED (caller decides) but never block the business operation.
+// Optionally emits a CAL_ audit row and/or in-app notifications after a
+// successful save. Failures of both are best-effort (logged, never blocking).
 type TransitionHandler struct {
 	repo        domain.Repository
 	emitter     AuditEmitter
+	notifier    NotificationEmitter      // optional; if nil, notification emission is skipped
+	cprNotifier CPRNotifier              // optional; if nil, CPR notification emission is skipped
 	routeRepo   routeDomain.Repository   // optional; used by MarkParameterPending
 	fillCreator FillTaskCreator          // optional; if nil, fill task creation is skipped
 	wflClient   iamclient.WorkflowClient // optional; if nil, IAM workflow wiring is skipped
@@ -210,6 +275,19 @@ func NewTransitionHandler(r domain.Repository) *TransitionHandler {
 // WithAudit attaches an audit emitter. Returns the receiver for chaining.
 func (h *TransitionHandler) WithAudit(emitter AuditEmitter) *TransitionHandler {
 	h.emitter = emitter
+	return h
+}
+
+// WithNotifier attaches a notification emitter. Returns the receiver for chaining.
+// Pass nil (or omit) to disable in-app notification emission.
+func (h *TransitionHandler) WithNotifier(n NotificationEmitter) *TransitionHandler {
+	h.notifier = n
+	return h
+}
+
+// WithCPRNotifier attaches a CPRNotifier to TransitionHandler. Returns receiver for chaining.
+func (h *TransitionHandler) WithCPRNotifier(n CPRNotifier) *TransitionHandler {
+	h.cprNotifier = n
 	return h
 }
 
@@ -293,16 +371,90 @@ const (
 	auditOpAssign                 = "ASSIGN"
 )
 
+// Notification trigger type constants — mirror costnotification domain constants
+// without importing that package (layering constraint).
+const (
+	notifTriggerStatusChange    = "STATUS_CHANGE"
+	notifTriggerAssigned        = "ASSIGNED"
+	notifTriggerFeasibility     = "FEASIBILITY"
+	notifTriggerRequestRejected = "REQUEST_REJECTED"
+)
+
+// emitNotification fires a best-effort in-app notification.
+// Failures are logged as warnings and never propagate to the caller.
+func (h *TransitionHandler) emitNotification(ctx context.Context, in NotificationInput) {
+	if h.notifier == nil || in.RecipientUserID == "" {
+		return
+	}
+	if e := h.notifier.Emit(ctx, in); e != nil {
+		log.Warn().
+			Err(e).
+			Str("recipient", in.RecipientUserID).
+			Str("trigger", in.TriggerType).
+			Int64("request_id", in.RequestID).
+			Msg("notification emit failed (non-fatal)")
+	}
+}
+
+// emitCPREvent fires a CPR notification best-effort (logs on failure, never returns error).
+func (h *TransitionHandler) emitCPREvent(ctx context.Context, event CPREvent) {
+	if h.cprNotifier == nil {
+		return
+	}
+	if err := h.cprNotifier.NotifyEvent(ctx, event); err != nil {
+		log.Warn().Err(err).Str("event_type", event.EventType).
+			Int64("request_id", event.RequestID).
+			Msg("TransitionHandler: CPR notification failed (non-fatal)")
+	}
+}
+
+// emitCPREvent fires a CPR notification best-effort (logs on failure, never returns error).
+func (h *CreateHandler) emitCPREvent(ctx context.Context, event CPREvent) {
+	if h.cprNotifier == nil {
+		return
+	}
+	if err := h.cprNotifier.NotifyEvent(ctx, event); err != nil {
+		log.Warn().Err(err).Str("event_type", event.EventType).
+			Int64("request_id", event.RequestID).
+			Msg("CreateHandler: CPR notification failed (non-fatal)")
+	}
+}
+
 // Submit transitions DRAFT → SUBMITTED.
 // After a successful transition, if a WorkflowClient is configured, it
 // attempts to start an IAM approval instance. This is best-effort: a failure
 // to reach IAM is logged as a warning but does not roll back the transition.
+// If a NotificationEmitter is configured, a STATUS_CHANGE notification is sent
+// to the assigned reviewer (if any); falls back to the requester if unassigned.
 func (h *TransitionHandler) Submit(ctx context.Context, requestID int64, actor string) (*domain.Request, error) {
 	req, err := h.apply(ctx, requestID, func(r *domain.Request) error { return r.Submit() }, applyOpts{operation: auditOpStatusChange, actorID: actor})
 	if err != nil {
 		return nil, err
 	}
 	h.startWorkflowInstance(ctx, req, actor)
+	// Notify reviewer (assigned user) that a new request is awaiting review.
+	// Falls back to the requester themselves if no assignee is set yet.
+	recipient := req.AssignedToUserID()
+	if recipient == "" {
+		recipient = req.RequesterUserID()
+	}
+	h.emitNotification(ctx, NotificationInput{
+		RecipientUserID: recipient,
+		TriggerType:     notifTriggerStatusChange,
+		RequestID:       req.RequestID(),
+		Payload:         `{"status":"SUBMITTED","request_no":"` + req.RequestNo() + `"}`,
+	})
+	// Rule-based notification: notify users with submit permission that a
+	// request is awaiting their review.
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_SUBMITTED_REVIEWER",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_PERMISSION", Value: "finance.product.request.review"},
+		},
+	})
 	return req, nil
 }
 
@@ -339,8 +491,28 @@ func (h *TransitionHandler) startWorkflowInstance(ctx context.Context, req *doma
 }
 
 // StartReview transitions SUBMITTED → UNDER_REVIEW.
+// Emits an ASSIGNED notification to the reviewer (actor) and a STATUS_CHANGE
+// notification to the requester informing them the review has started.
 func (h *TransitionHandler) StartReview(ctx context.Context, requestID int64, actor string) (*domain.Request, error) {
-	return h.apply(ctx, requestID, func(r *domain.Request) error { return r.StartReview() }, applyOpts{operation: auditOpStatusChange, actorID: actor})
+	req, err := h.apply(ctx, requestID, func(r *domain.Request) error { return r.StartReview() }, applyOpts{operation: auditOpStatusChange, actorID: actor})
+	if err != nil {
+		return nil, err
+	}
+	// Notify the reviewer (actor) that they own this review.
+	h.emitNotification(ctx, NotificationInput{
+		RecipientUserID: actor,
+		TriggerType:     notifTriggerAssigned,
+		RequestID:       req.RequestID(),
+		Payload:         `{"status":"UNDER_REVIEW","request_no":"` + req.RequestNo() + `"}`,
+	})
+	// Notify the requester that their submission is now under review.
+	h.emitNotification(ctx, NotificationInput{
+		RecipientUserID: req.RequesterUserID(),
+		TriggerType:     notifTriggerStatusChange,
+		RequestID:       req.RequestID(),
+		Payload:         `{"status":"UNDER_REVIEW","request_no":"` + req.RequestNo() + `"}`,
+	})
+	return req, nil
 }
 
 // VerifyClassification sets verified_classification + (required) override_reason.
@@ -349,8 +521,30 @@ func (h *TransitionHandler) VerifyClassification(ctx context.Context, requestID 
 }
 
 // DecideFeasibility advances UNDER_REVIEW → ROUTING_DEFINED or REJECTED.
+// Emits a FEASIBILITY notification to the requester with the decision outcome,
+// and a STATUS_CHANGE notification to the assigned engineer (if any) on FEASIBLE.
 func (h *TransitionHandler) DecideFeasibility(ctx context.Context, requestID int64, decision, note, actor string) (*domain.Request, error) {
-	return h.apply(ctx, requestID, func(r *domain.Request) error { return r.DecideFeasibility(decision, note, actor) }, applyOpts{operation: auditOpFeasibility, actorID: actor})
+	req, err := h.apply(ctx, requestID, func(r *domain.Request) error { return r.DecideFeasibility(decision, note, actor) }, applyOpts{operation: auditOpFeasibility, actorID: actor})
+	if err != nil {
+		return nil, err
+	}
+	// Notify the requester of the feasibility outcome.
+	h.emitNotification(ctx, NotificationInput{
+		RecipientUserID: req.RequesterUserID(),
+		TriggerType:     notifTriggerFeasibility,
+		RequestID:       req.RequestID(),
+		Payload:         `{"decision":"` + decision + `","status":"` + req.Status() + `","request_no":"` + req.RequestNo() + `"}`,
+	})
+	// On FEASIBLE, also notify the assigned engineer that routing can begin.
+	if decision == domain.FeasibilityFeasible && req.AssignedToUserID() != "" {
+		h.emitNotification(ctx, NotificationInput{
+			RecipientUserID: req.AssignedToUserID(),
+			TriggerType:     notifTriggerStatusChange,
+			RequestID:       req.RequestID(),
+			Payload:         `{"status":"ROUTING_DEFINED","request_no":"` + req.RequestNo() + `"}`,
+		})
+	}
+	return req, nil
 }
 
 // MarkParameterPending advances ROUTING_DEFINED → PARAMETER_PENDING.
@@ -455,8 +649,19 @@ func (h *TransitionHandler) UseExistingCosting(ctx context.Context, requestID in
 }
 
 // Reject sends to REJECTED with a reason.
+// Emits a REQUEST_REJECTED notification to the requester.
 func (h *TransitionHandler) Reject(ctx context.Context, requestID int64, reason, actor string) (*domain.Request, error) {
-	return h.apply(ctx, requestID, func(r *domain.Request) error { return r.Reject(reason) }, applyOpts{operation: auditOpStatusChange, actorID: actor})
+	req, err := h.apply(ctx, requestID, func(r *domain.Request) error { return r.Reject(reason) }, applyOpts{operation: auditOpStatusChange, actorID: actor})
+	if err != nil {
+		return nil, err
+	}
+	h.emitNotification(ctx, NotificationInput{
+		RecipientUserID: req.RequesterUserID(),
+		TriggerType:     notifTriggerRequestRejected,
+		RequestID:       req.RequestID(),
+		Payload:         `{"status":"REJECTED","request_no":"` + req.RequestNo() + `"}`,
+	})
+	return req, nil
 }
 
 // Revise re-submits a REJECTED request.
