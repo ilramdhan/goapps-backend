@@ -79,7 +79,7 @@ func (r *DBUserResolver) GetByUserID(ctx context.Context, userID uuid.UUID) ([]u
 	return r.scan(ctx, q, userID)
 }
 
-func (r *DBUserResolver) scan(ctx context.Context, q string, arg interface{}) ([]uuid.UUID, error) {
+func (r *DBUserResolver) scan(ctx context.Context, q string, arg any) ([]uuid.UUID, error) {
 	rows, err := r.db.Query(ctx, q, arg)
 	if err != nil {
 		return nil, fmt.Errorf("user resolver query: %w", err)
