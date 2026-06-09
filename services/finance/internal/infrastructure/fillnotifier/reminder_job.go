@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	appfill "github.com/mutugading/goapps-backend/services/finance/internal/application/costfillassignment"
 	costnotif "github.com/mutugading/goapps-backend/services/finance/internal/application/costnotification"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costfillassignment"
 	notifDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costnotification"
@@ -21,6 +22,7 @@ import (
 type ReminderJob struct {
 	taskRepo         domain.TaskRepository
 	emitter          *costnotif.Emitter
+	fillNotifier     appfill.FillEventNotifier // preferred; supports USER + DEPT
 	reminderGapHours int
 }
 
@@ -31,6 +33,12 @@ func NewReminderJob(taskRepo domain.TaskRepository, emitter *costnotif.Emitter, 
 		reminderGapHours = 4
 	}
 	return &ReminderJob{taskRepo: taskRepo, emitter: emitter, reminderGapHours: reminderGapHours}
+}
+
+// WithFillNotifier attaches a FillEventNotifier. Returns receiver for chaining.
+func (j *ReminderJob) WithFillNotifier(fn appfill.FillEventNotifier) *ReminderJob {
+	j.fillNotifier = fn
+	return j
 }
 
 // Run is the cron entry point. It scans all pending-fill and pending-approval tasks
@@ -84,8 +92,11 @@ func (j *ReminderJob) runPendingApproval(ctx context.Context) {
 }
 
 func (j *ReminderJob) notifyPendingFill(ctx context.Context, t *domain.Task) error {
-	if t.FillerType != "USER" {
-		// Department-assigned: no single user to notify.
+	if j.fillNotifier != nil {
+		return j.fillNotifier.NotifyReminderFill(ctx, t)
+	}
+	if t.FillerType != domain.ActorUser {
+		// Department-assigned: no single user to notify (legacy path only).
 		return nil
 	}
 	payload := fmt.Sprintf(
@@ -102,8 +113,11 @@ func (j *ReminderJob) notifyPendingFill(ctx context.Context, t *domain.Task) err
 }
 
 func (j *ReminderJob) notifyPendingApproval(ctx context.Context, t *domain.Task) error {
-	if t.ApproverType != "USER" {
-		// Department approver: no single user to notify.
+	if j.fillNotifier != nil {
+		return j.fillNotifier.NotifyReminderApproval(ctx, t)
+	}
+	if t.ApproverType != domain.ActorUser {
+		// Department approver: no single user to notify (legacy path only).
 		return nil
 	}
 	payload := fmt.Sprintf(

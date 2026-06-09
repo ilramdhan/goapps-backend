@@ -13,7 +13,8 @@ import (
 // SLANotifierJob checks for overdue fill tasks and triggers notifications.
 type SLANotifierJob struct {
 	repo             domain.TaskRepository
-	notifier         Notifier
+	notifier         Notifier          // legacy; used when fillNotifier is nil
+	fillNotifier     FillEventNotifier // preferred; supports USER and DEPT assignees
 	reminderGapHours int
 }
 
@@ -28,6 +29,12 @@ func NewSLANotifierJob(repo domain.TaskRepository, notifier Notifier, reminderGa
 		notifier:         notifier,
 		reminderGapHours: reminderGapHours,
 	}
+}
+
+// WithFillNotifier attaches a FillEventNotifier. Returns receiver for chaining.
+func (j *SLANotifierJob) WithFillNotifier(fn FillEventNotifier) *SLANotifierJob {
+	j.fillNotifier = fn
+	return j
 }
 
 // Run finds all overdue tasks and sends notifications. Safe to call from a cron scheduler.
@@ -46,7 +53,7 @@ func (j *SLANotifierJob) Run() {
 	log.Info().Int("count", len(tasks)).Msg("sla_notifier: processing overdue tasks")
 
 	for _, t := range tasks {
-		if notifyErr := j.notifier.NotifyOverdue(ctx, t.TaskID); notifyErr != nil {
+		if notifyErr := j.notifyOverdue(ctx, t); notifyErr != nil {
 			log.Warn().Err(notifyErr).Int64("task_id", t.TaskID).Msg("sla_notifier: notify failed")
 			continue
 		}
@@ -64,7 +71,7 @@ func (j *SLANotifierJob) RunWithError(ctx context.Context) error {
 		return fmt.Errorf("list overdue: %w", err)
 	}
 	for _, t := range tasks {
-		if notifyErr := j.notifier.NotifyOverdue(ctx, t.TaskID); notifyErr != nil {
+		if notifyErr := j.notifyOverdue(ctx, t); notifyErr != nil {
 			return fmt.Errorf("notify task %d: %w", t.TaskID, notifyErr)
 		}
 		if markErr := j.repo.MarkNotified(ctx, t.TaskID); markErr != nil {
@@ -72,4 +79,13 @@ func (j *SLANotifierJob) RunWithError(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// notifyOverdue dispatches an overdue notification for t using fillNotifier when
+// available (supports USER + DEPT), falling back to the legacy notifier otherwise.
+func (j *SLANotifierJob) notifyOverdue(ctx context.Context, t *domain.Task) error {
+	if j.fillNotifier != nil {
+		return j.fillNotifier.NotifyOverdue(ctx, t)
+	}
+	return j.notifier.NotifyOverdue(ctx, t.TaskID)
 }
