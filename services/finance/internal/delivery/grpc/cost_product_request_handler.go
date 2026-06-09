@@ -33,7 +33,7 @@ func NewCostProductRequestHandler(repo domain.Repository, routeRepo routeDomain.
 	if err != nil {
 		return nil, err
 	}
-	transition := app.NewTransitionHandler(repo)
+	transition := app.NewTransitionHandler(repo).WithRouteRepo(routeRepo)
 	if auditEmitter != nil {
 		transition = transition.WithAudit(auditEmitter)
 	}
@@ -54,6 +54,32 @@ func NewCostProductRequestHandler(repo domain.Repository, routeRepo routeDomain.
 func (h *CostProductRequestHandler) WithFillCreator(c app.FillTaskCreator) *CostProductRequestHandler {
 	h.transitionHandler = h.transitionHandler.WithFillCreator(c)
 	return h
+}
+
+// WithNotifier attaches an in-app notification emitter to the transition handler.
+func (h *CostProductRequestHandler) WithNotifier(n app.NotificationEmitter) *CostProductRequestHandler {
+	h.transitionHandler = h.transitionHandler.WithNotifier(n)
+	return h
+}
+
+// WithCPRNotifier attaches an IAM-backed CPRNotifier to both the create and
+// transition handlers for rule-based multi-recipient fan-out notifications.
+func (h *CostProductRequestHandler) WithCPRNotifier(n app.CPRNotifier) *CostProductRequestHandler {
+	h.createHandler = h.createHandler.WithCPRNotifier(n)
+	h.transitionHandler = h.transitionHandler.WithCPRNotifier(n)
+	return h
+}
+
+// MarkParameterCompleteForGate advances the CPR aggregate to PARAMETER_COMPLETE and
+// returns the requester user ID and request number needed for downstream notifications.
+// It is called by the completion gate after L102 is approved — the caller ("system")
+// is recorded as the actor since the transition is automated.
+func (h *CostProductRequestHandler) MarkParameterCompleteForGate(ctx context.Context, requestID int64, actor string) (requesterUserID, requestNo string, err error) {
+	req, tErr := h.transitionHandler.MarkParameterComplete(ctx, requestID, actor)
+	if tErr != nil {
+		return "", "", tErr
+	}
+	return req.RequesterUserID(), req.RequestNo(), nil
 }
 
 // =============================================================================
@@ -257,6 +283,23 @@ func (h *CostProductRequestHandler) RejectCostProductRequest(ctx context.Context
 		return &financev1.RejectCostProductRequestResponse{Base: requestErrToBase(err)}, nil
 	}
 	return &financev1.RejectCostProductRequestResponse{Base: successResponse("Rejected"), Data: requestToProto(r)}, nil
+}
+
+// MarkParameterPending advances ROUTING_DEFINED → PARAMETER_PENDING.
+// Creates fill tasks for every route level linked to this request.
+func (h *CostProductRequestHandler) MarkParameterPending(ctx context.Context, req *financev1.MarkParameterPendingRequest) (*financev1.MarkParameterPendingResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.MarkParameterPendingResponse{Base: baseResp}, nil
+	}
+	actor, _ := GetUserIDFromCtx(ctx)
+	r, err := h.transitionHandler.MarkParameterPending(ctx, req.GetRequestId(), actor)
+	if err != nil {
+		return &financev1.MarkParameterPendingResponse{Base: requestErrToBase(err)}, nil
+	}
+	return &financev1.MarkParameterPendingResponse{
+		Base: successResponse("Route promoted — fill tasks created"),
+		Data: requestToProto(r),
+	}, nil
 }
 
 // MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE.
