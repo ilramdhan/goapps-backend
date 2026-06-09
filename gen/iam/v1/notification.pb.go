@@ -281,6 +281,62 @@ func (NotificationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_iam_v1_notification_proto_rawDescGZIP(), []int{3}
 }
 
+// RecipientRuleType determines how recipients are resolved for a notification.
+type RecipientRuleType int32
+
+const (
+	RecipientRuleType_RECIPIENT_RULE_TYPE_UNSPECIFIED   RecipientRuleType = 0
+	RecipientRuleType_RECIPIENT_RULE_TYPE_BY_USER_ID    RecipientRuleType = 1 // Resolve by explicit user UUID.
+	RecipientRuleType_RECIPIENT_RULE_TYPE_BY_PERMISSION RecipientRuleType = 2 // All users holding the given permission code.
+	RecipientRuleType_RECIPIENT_RULE_TYPE_BY_DEPT       RecipientRuleType = 3 // All users in the given department UUID.
+	RecipientRuleType_RECIPIENT_RULE_TYPE_BY_ROLE       RecipientRuleType = 4 // All users assigned the given role UUID.
+)
+
+// Enum value maps for RecipientRuleType.
+var (
+	RecipientRuleType_name = map[int32]string{
+		0: "RECIPIENT_RULE_TYPE_UNSPECIFIED",
+		1: "RECIPIENT_RULE_TYPE_BY_USER_ID",
+		2: "RECIPIENT_RULE_TYPE_BY_PERMISSION",
+		3: "RECIPIENT_RULE_TYPE_BY_DEPT",
+		4: "RECIPIENT_RULE_TYPE_BY_ROLE",
+	}
+	RecipientRuleType_value = map[string]int32{
+		"RECIPIENT_RULE_TYPE_UNSPECIFIED":   0,
+		"RECIPIENT_RULE_TYPE_BY_USER_ID":    1,
+		"RECIPIENT_RULE_TYPE_BY_PERMISSION": 2,
+		"RECIPIENT_RULE_TYPE_BY_DEPT":       3,
+		"RECIPIENT_RULE_TYPE_BY_ROLE":       4,
+	}
+)
+
+func (x RecipientRuleType) Enum() *RecipientRuleType {
+	p := new(RecipientRuleType)
+	*p = x
+	return p
+}
+
+func (x RecipientRuleType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RecipientRuleType) Descriptor() protoreflect.EnumDescriptor {
+	return file_iam_v1_notification_proto_enumTypes[4].Descriptor()
+}
+
+func (RecipientRuleType) Type() protoreflect.EnumType {
+	return &file_iam_v1_notification_proto_enumTypes[4]
+}
+
+func (x RecipientRuleType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RecipientRuleType.Descriptor instead.
+func (RecipientRuleType) EnumDescriptor() ([]byte, []int) {
+	return file_iam_v1_notification_proto_rawDescGZIP(), []int{4}
+}
+
 // Notification represents a single notification record.
 type Notification struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -1409,6 +1465,269 @@ func (x *StreamNotificationsRequest) GetSince() string {
 	return ""
 }
 
+// RecipientRule is a single rule for resolving notification recipients.
+type RecipientRule struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	RuleType RecipientRuleType      `protobuf:"varint,1,opt,name=rule_type,json=ruleType,proto3,enum=iam.v1.RecipientRuleType" json:"rule_type,omitempty"`
+	// value interpretation depends on rule_type:
+	//
+	//	BY_USER_ID → user UUID
+	//	BY_PERMISSION → permission code (e.g. "finance.master.uom.view")
+	//	BY_DEPT → department UUID
+	//	BY_ROLE → role UUID
+	Value         string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecipientRule) Reset() {
+	*x = RecipientRule{}
+	mi := &file_iam_v1_notification_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecipientRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecipientRule) ProtoMessage() {}
+
+func (x *RecipientRule) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_notification_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecipientRule.ProtoReflect.Descriptor instead.
+func (*RecipientRule) Descriptor() ([]byte, []int) {
+	return file_iam_v1_notification_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *RecipientRule) GetRuleType() RecipientRuleType {
+	if x != nil {
+		return x.RuleType
+	}
+	return RecipientRuleType_RECIPIENT_RULE_TYPE_UNSPECIFIED
+}
+
+func (x *RecipientRule) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+// RequestNotificationRequest is used by external services (e.g. Finance) to
+// dispatch a notification to one or more recipients resolved by rules.
+type RequestNotificationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// event_type identifies the notification event for deduplication and display.
+	EventType string `protobuf:"bytes,1,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	// source_service is the originating service name (e.g. "finance").
+	SourceService string `protobuf:"bytes,2,opt,name=source_service,json=sourceService,proto3" json:"source_service,omitempty"`
+	// source_type correlates the notification to a feature (e.g. "finance.rm_cost_export").
+	SourceType string `protobuf:"bytes,3,opt,name=source_type,json=sourceType,proto3" json:"source_type,omitempty"`
+	// source_id is the identifier of the source entity (e.g. job UUID).
+	SourceId string `protobuf:"bytes,4,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	// recipient_rules must contain at least one rule.
+	RecipientRules []*RecipientRule       `protobuf:"bytes,5,rep,name=recipient_rules,json=recipientRules,proto3" json:"recipient_rules,omitempty"`
+	Type           NotificationType       `protobuf:"varint,6,opt,name=type,proto3,enum=iam.v1.NotificationType" json:"type,omitempty"`
+	Severity       NotificationSeverity   `protobuf:"varint,7,opt,name=severity,proto3,enum=iam.v1.NotificationSeverity" json:"severity,omitempty"`
+	Title          string                 `protobuf:"bytes,8,opt,name=title,proto3" json:"title,omitempty"`
+	Body           string                 `protobuf:"bytes,9,opt,name=body,proto3" json:"body,omitempty"`
+	ActionType     NotificationActionType `protobuf:"varint,10,opt,name=action_type,json=actionType,proto3,enum=iam.v1.NotificationActionType" json:"action_type,omitempty"`
+	// action_payload is a JSON-encoded string whose shape depends on action_type.
+	ActionPayload string `protobuf:"bytes,11,opt,name=action_payload,json=actionPayload,proto3" json:"action_payload,omitempty"`
+	// idempotency_key prevents duplicate dispatch on retry; optional.
+	IdempotencyKey string `protobuf:"bytes,12,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RequestNotificationRequest) Reset() {
+	*x = RequestNotificationRequest{}
+	mi := &file_iam_v1_notification_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestNotificationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestNotificationRequest) ProtoMessage() {}
+
+func (x *RequestNotificationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_notification_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestNotificationRequest.ProtoReflect.Descriptor instead.
+func (*RequestNotificationRequest) Descriptor() ([]byte, []int) {
+	return file_iam_v1_notification_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *RequestNotificationRequest) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *RequestNotificationRequest) GetSourceService() string {
+	if x != nil {
+		return x.SourceService
+	}
+	return ""
+}
+
+func (x *RequestNotificationRequest) GetSourceType() string {
+	if x != nil {
+		return x.SourceType
+	}
+	return ""
+}
+
+func (x *RequestNotificationRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *RequestNotificationRequest) GetRecipientRules() []*RecipientRule {
+	if x != nil {
+		return x.RecipientRules
+	}
+	return nil
+}
+
+func (x *RequestNotificationRequest) GetType() NotificationType {
+	if x != nil {
+		return x.Type
+	}
+	return NotificationType_NOTIFICATION_TYPE_UNSPECIFIED
+}
+
+func (x *RequestNotificationRequest) GetSeverity() NotificationSeverity {
+	if x != nil {
+		return x.Severity
+	}
+	return NotificationSeverity_NOTIFICATION_SEVERITY_UNSPECIFIED
+}
+
+func (x *RequestNotificationRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *RequestNotificationRequest) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+func (x *RequestNotificationRequest) GetActionType() NotificationActionType {
+	if x != nil {
+		return x.ActionType
+	}
+	return NotificationActionType_NOTIFICATION_ACTION_TYPE_UNSPECIFIED
+}
+
+func (x *RequestNotificationRequest) GetActionPayload() string {
+	if x != nil {
+		return x.ActionPayload
+	}
+	return ""
+}
+
+func (x *RequestNotificationRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+// RequestNotificationResponse returns the dispatch result.
+type RequestNotificationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Base  *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// event_id is a server-generated identifier for this dispatch event.
+	EventId string `protobuf:"bytes,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	// recipient_count is the number of users notified.
+	RecipientCount int32 `protobuf:"varint,3,opt,name=recipient_count,json=recipientCount,proto3" json:"recipient_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RequestNotificationResponse) Reset() {
+	*x = RequestNotificationResponse{}
+	mi := &file_iam_v1_notification_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestNotificationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestNotificationResponse) ProtoMessage() {}
+
+func (x *RequestNotificationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_iam_v1_notification_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestNotificationResponse.ProtoReflect.Descriptor instead.
+func (*RequestNotificationResponse) Descriptor() ([]byte, []int) {
+	return file_iam_v1_notification_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *RequestNotificationResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *RequestNotificationResponse) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *RequestNotificationResponse) GetRecipientCount() int32 {
+	if x != nil {
+		return x.RecipientCount
+	}
+	return 0
+}
+
 var File_iam_v1_notification_proto protoreflect.FileDescriptor
 
 const file_iam_v1_notification_proto_rawDesc = "" +
@@ -1500,7 +1819,33 @@ const file_iam_v1_notification_proto_rawDesc = "" +
 	"\x1aDeleteNotificationResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\";\n" +
 	"\x1aStreamNotificationsRequest\x12\x1d\n" +
-	"\x05since\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18dR\x05since*\xd5\x02\n" +
+	"\x05since\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18dR\x05since\"s\n" +
+	"\rRecipientRule\x12@\n" +
+	"\trule_type\x18\x01 \x01(\x0e2\x19.iam.v1.RecipientRuleTypeB\b\xbaH\x05\x82\x01\x02 \x00R\bruleType\x12 \n" +
+	"\x05value\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05value\"\xfd\x04\n" +
+	"\x1aRequestNotificationRequest\x12(\n" +
+	"\n" +
+	"event_type\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\teventType\x120\n" +
+	"\x0esource_service\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\rsourceService\x12(\n" +
+	"\vsource_type\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x182R\n" +
+	"sourceType\x12$\n" +
+	"\tsource_id\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\bsourceId\x12H\n" +
+	"\x0frecipient_rules\x18\x05 \x03(\v2\x15.iam.v1.RecipientRuleB\b\xbaH\x05\x92\x01\x02\b\x01R\x0erecipientRules\x126\n" +
+	"\x04type\x18\x06 \x01(\x0e2\x18.iam.v1.NotificationTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x04type\x12B\n" +
+	"\bseverity\x18\a \x01(\x0e2\x1c.iam.v1.NotificationSeverityB\b\xbaH\x05\x82\x01\x02 \x00R\bseverity\x12 \n" +
+	"\x05title\x18\b \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05title\x12\x1c\n" +
+	"\x04body\x18\t \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\x04body\x12I\n" +
+	"\vaction_type\x18\n" +
+	" \x01(\x0e2\x1e.iam.v1.NotificationActionTypeB\b\xbaH\x05\x82\x01\x02 \x00R\n" +
+	"actionType\x12/\n" +
+	"\x0eaction_payload\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\x80@R\ractionPayload\x121\n" +
+	"\x0fidempotency_key\x18\f \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x0eidempotencyKey\"\x8e\x01\n" +
+	"\x1bRequestNotificationResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\tR\aeventId\x12'\n" +
+	"\x0frecipient_count\x18\x03 \x01(\x05R\x0erecipientCount*\xd5\x02\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eNOTIFICATION_TYPE_EXPORT_READY\x10\x01\x12\x1b\n" +
@@ -1535,8 +1880,16 @@ const file_iam_v1_notification_proto_rawDesc = "" +
 	"\x1fNOTIFICATION_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aNOTIFICATION_STATUS_UNREAD\x10\x01\x12\x1c\n" +
 	"\x18NOTIFICATION_STATUS_READ\x10\x02\x12 \n" +
-	"\x1cNOTIFICATION_STATUS_ARCHIVED\x10\x032\xb7\t\n" +
-	"\x13NotificationService\x12\x81\x01\n" +
+	"\x1cNOTIFICATION_STATUS_ARCHIVED\x10\x03*\xc5\x01\n" +
+	"\x11RecipientRuleType\x12#\n" +
+	"\x1fRECIPIENT_RULE_TYPE_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eRECIPIENT_RULE_TYPE_BY_USER_ID\x10\x01\x12%\n" +
+	"!RECIPIENT_RULE_TYPE_BY_PERMISSION\x10\x02\x12\x1f\n" +
+	"\x1bRECIPIENT_RULE_TYPE_BY_DEPT\x10\x03\x12\x1f\n" +
+	"\x1bRECIPIENT_RULE_TYPE_BY_ROLE\x10\x042\xc6\n" +
+	"\n" +
+	"\x13NotificationService\x12\x8c\x01\n" +
+	"\x13RequestNotification\x12\".iam.v1.RequestNotificationRequest\x1a#.iam.v1.RequestNotificationResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/iam/notifications/request\x12\x81\x01\n" +
 	"\x12CreateNotification\x12!.iam.v1.CreateNotificationRequest\x1a\".iam.v1.CreateNotificationResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/iam/notifications\x12\x87\x01\n" +
 	"\x0fGetNotification\x12\x1e.iam.v1.GetNotificationRequest\x1a\x1f.iam.v1.GetNotificationResponse\"3\x82\xd3\xe4\x93\x02-\x12+/api/v1/iam/notifications/{notification_id}\x12{\n" +
 	"\x11ListNotifications\x12 .iam.v1.ListNotificationsRequest\x1a!.iam.v1.ListNotificationsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/api/v1/iam/notifications\x12\x7f\n" +
@@ -1562,81 +1915,93 @@ func file_iam_v1_notification_proto_rawDescGZIP() []byte {
 	return file_iam_v1_notification_proto_rawDescData
 }
 
-var file_iam_v1_notification_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_iam_v1_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_iam_v1_notification_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_iam_v1_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_iam_v1_notification_proto_goTypes = []any{
 	(NotificationType)(0),               // 0: iam.v1.NotificationType
 	(NotificationSeverity)(0),           // 1: iam.v1.NotificationSeverity
 	(NotificationActionType)(0),         // 2: iam.v1.NotificationActionType
 	(NotificationStatus)(0),             // 3: iam.v1.NotificationStatus
-	(*Notification)(nil),                // 4: iam.v1.Notification
-	(*StreamNotificationsResponse)(nil), // 5: iam.v1.StreamNotificationsResponse
-	(*CreateNotificationRequest)(nil),   // 6: iam.v1.CreateNotificationRequest
-	(*CreateNotificationResponse)(nil),  // 7: iam.v1.CreateNotificationResponse
-	(*GetNotificationRequest)(nil),      // 8: iam.v1.GetNotificationRequest
-	(*GetNotificationResponse)(nil),     // 9: iam.v1.GetNotificationResponse
-	(*ListNotificationsRequest)(nil),    // 10: iam.v1.ListNotificationsRequest
-	(*ListNotificationsResponse)(nil),   // 11: iam.v1.ListNotificationsResponse
-	(*GetUnreadCountRequest)(nil),       // 12: iam.v1.GetUnreadCountRequest
-	(*GetUnreadCountResponse)(nil),      // 13: iam.v1.GetUnreadCountResponse
-	(*MarkAsReadRequest)(nil),           // 14: iam.v1.MarkAsReadRequest
-	(*MarkAsReadResponse)(nil),          // 15: iam.v1.MarkAsReadResponse
-	(*MarkAllAsReadRequest)(nil),        // 16: iam.v1.MarkAllAsReadRequest
-	(*MarkAllAsReadResponse)(nil),       // 17: iam.v1.MarkAllAsReadResponse
-	(*ArchiveNotificationRequest)(nil),  // 18: iam.v1.ArchiveNotificationRequest
-	(*ArchiveNotificationResponse)(nil), // 19: iam.v1.ArchiveNotificationResponse
-	(*DeleteNotificationRequest)(nil),   // 20: iam.v1.DeleteNotificationRequest
-	(*DeleteNotificationResponse)(nil),  // 21: iam.v1.DeleteNotificationResponse
-	(*StreamNotificationsRequest)(nil),  // 22: iam.v1.StreamNotificationsRequest
-	(*v1.BaseResponse)(nil),             // 23: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),       // 24: common.v1.PaginationResponse
+	(RecipientRuleType)(0),              // 4: iam.v1.RecipientRuleType
+	(*Notification)(nil),                // 5: iam.v1.Notification
+	(*StreamNotificationsResponse)(nil), // 6: iam.v1.StreamNotificationsResponse
+	(*CreateNotificationRequest)(nil),   // 7: iam.v1.CreateNotificationRequest
+	(*CreateNotificationResponse)(nil),  // 8: iam.v1.CreateNotificationResponse
+	(*GetNotificationRequest)(nil),      // 9: iam.v1.GetNotificationRequest
+	(*GetNotificationResponse)(nil),     // 10: iam.v1.GetNotificationResponse
+	(*ListNotificationsRequest)(nil),    // 11: iam.v1.ListNotificationsRequest
+	(*ListNotificationsResponse)(nil),   // 12: iam.v1.ListNotificationsResponse
+	(*GetUnreadCountRequest)(nil),       // 13: iam.v1.GetUnreadCountRequest
+	(*GetUnreadCountResponse)(nil),      // 14: iam.v1.GetUnreadCountResponse
+	(*MarkAsReadRequest)(nil),           // 15: iam.v1.MarkAsReadRequest
+	(*MarkAsReadResponse)(nil),          // 16: iam.v1.MarkAsReadResponse
+	(*MarkAllAsReadRequest)(nil),        // 17: iam.v1.MarkAllAsReadRequest
+	(*MarkAllAsReadResponse)(nil),       // 18: iam.v1.MarkAllAsReadResponse
+	(*ArchiveNotificationRequest)(nil),  // 19: iam.v1.ArchiveNotificationRequest
+	(*ArchiveNotificationResponse)(nil), // 20: iam.v1.ArchiveNotificationResponse
+	(*DeleteNotificationRequest)(nil),   // 21: iam.v1.DeleteNotificationRequest
+	(*DeleteNotificationResponse)(nil),  // 22: iam.v1.DeleteNotificationResponse
+	(*StreamNotificationsRequest)(nil),  // 23: iam.v1.StreamNotificationsRequest
+	(*RecipientRule)(nil),               // 24: iam.v1.RecipientRule
+	(*RequestNotificationRequest)(nil),  // 25: iam.v1.RequestNotificationRequest
+	(*RequestNotificationResponse)(nil), // 26: iam.v1.RequestNotificationResponse
+	(*v1.BaseResponse)(nil),             // 27: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),       // 28: common.v1.PaginationResponse
 }
 var file_iam_v1_notification_proto_depIdxs = []int32{
 	0,  // 0: iam.v1.Notification.type:type_name -> iam.v1.NotificationType
 	1,  // 1: iam.v1.Notification.severity:type_name -> iam.v1.NotificationSeverity
 	2,  // 2: iam.v1.Notification.action_type:type_name -> iam.v1.NotificationActionType
 	3,  // 3: iam.v1.Notification.status:type_name -> iam.v1.NotificationStatus
-	4,  // 4: iam.v1.StreamNotificationsResponse.notification:type_name -> iam.v1.Notification
+	5,  // 4: iam.v1.StreamNotificationsResponse.notification:type_name -> iam.v1.Notification
 	0,  // 5: iam.v1.CreateNotificationRequest.type:type_name -> iam.v1.NotificationType
 	1,  // 6: iam.v1.CreateNotificationRequest.severity:type_name -> iam.v1.NotificationSeverity
 	2,  // 7: iam.v1.CreateNotificationRequest.action_type:type_name -> iam.v1.NotificationActionType
-	23, // 8: iam.v1.CreateNotificationResponse.base:type_name -> common.v1.BaseResponse
-	4,  // 9: iam.v1.CreateNotificationResponse.data:type_name -> iam.v1.Notification
-	23, // 10: iam.v1.GetNotificationResponse.base:type_name -> common.v1.BaseResponse
-	4,  // 11: iam.v1.GetNotificationResponse.data:type_name -> iam.v1.Notification
+	27, // 8: iam.v1.CreateNotificationResponse.base:type_name -> common.v1.BaseResponse
+	5,  // 9: iam.v1.CreateNotificationResponse.data:type_name -> iam.v1.Notification
+	27, // 10: iam.v1.GetNotificationResponse.base:type_name -> common.v1.BaseResponse
+	5,  // 11: iam.v1.GetNotificationResponse.data:type_name -> iam.v1.Notification
 	3,  // 12: iam.v1.ListNotificationsRequest.status:type_name -> iam.v1.NotificationStatus
 	0,  // 13: iam.v1.ListNotificationsRequest.type:type_name -> iam.v1.NotificationType
-	23, // 14: iam.v1.ListNotificationsResponse.base:type_name -> common.v1.BaseResponse
-	4,  // 15: iam.v1.ListNotificationsResponse.data:type_name -> iam.v1.Notification
-	24, // 16: iam.v1.ListNotificationsResponse.pagination:type_name -> common.v1.PaginationResponse
-	23, // 17: iam.v1.GetUnreadCountResponse.base:type_name -> common.v1.BaseResponse
-	23, // 18: iam.v1.MarkAsReadResponse.base:type_name -> common.v1.BaseResponse
-	23, // 19: iam.v1.MarkAllAsReadResponse.base:type_name -> common.v1.BaseResponse
-	23, // 20: iam.v1.ArchiveNotificationResponse.base:type_name -> common.v1.BaseResponse
-	23, // 21: iam.v1.DeleteNotificationResponse.base:type_name -> common.v1.BaseResponse
-	6,  // 22: iam.v1.NotificationService.CreateNotification:input_type -> iam.v1.CreateNotificationRequest
-	8,  // 23: iam.v1.NotificationService.GetNotification:input_type -> iam.v1.GetNotificationRequest
-	10, // 24: iam.v1.NotificationService.ListNotifications:input_type -> iam.v1.ListNotificationsRequest
-	12, // 25: iam.v1.NotificationService.GetUnreadCount:input_type -> iam.v1.GetUnreadCountRequest
-	14, // 26: iam.v1.NotificationService.MarkAsRead:input_type -> iam.v1.MarkAsReadRequest
-	16, // 27: iam.v1.NotificationService.MarkAllAsRead:input_type -> iam.v1.MarkAllAsReadRequest
-	18, // 28: iam.v1.NotificationService.ArchiveNotification:input_type -> iam.v1.ArchiveNotificationRequest
-	20, // 29: iam.v1.NotificationService.DeleteNotification:input_type -> iam.v1.DeleteNotificationRequest
-	22, // 30: iam.v1.NotificationService.StreamNotifications:input_type -> iam.v1.StreamNotificationsRequest
-	7,  // 31: iam.v1.NotificationService.CreateNotification:output_type -> iam.v1.CreateNotificationResponse
-	9,  // 32: iam.v1.NotificationService.GetNotification:output_type -> iam.v1.GetNotificationResponse
-	11, // 33: iam.v1.NotificationService.ListNotifications:output_type -> iam.v1.ListNotificationsResponse
-	13, // 34: iam.v1.NotificationService.GetUnreadCount:output_type -> iam.v1.GetUnreadCountResponse
-	15, // 35: iam.v1.NotificationService.MarkAsRead:output_type -> iam.v1.MarkAsReadResponse
-	17, // 36: iam.v1.NotificationService.MarkAllAsRead:output_type -> iam.v1.MarkAllAsReadResponse
-	19, // 37: iam.v1.NotificationService.ArchiveNotification:output_type -> iam.v1.ArchiveNotificationResponse
-	21, // 38: iam.v1.NotificationService.DeleteNotification:output_type -> iam.v1.DeleteNotificationResponse
-	5,  // 39: iam.v1.NotificationService.StreamNotifications:output_type -> iam.v1.StreamNotificationsResponse
-	31, // [31:40] is the sub-list for method output_type
-	22, // [22:31] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	27, // 14: iam.v1.ListNotificationsResponse.base:type_name -> common.v1.BaseResponse
+	5,  // 15: iam.v1.ListNotificationsResponse.data:type_name -> iam.v1.Notification
+	28, // 16: iam.v1.ListNotificationsResponse.pagination:type_name -> common.v1.PaginationResponse
+	27, // 17: iam.v1.GetUnreadCountResponse.base:type_name -> common.v1.BaseResponse
+	27, // 18: iam.v1.MarkAsReadResponse.base:type_name -> common.v1.BaseResponse
+	27, // 19: iam.v1.MarkAllAsReadResponse.base:type_name -> common.v1.BaseResponse
+	27, // 20: iam.v1.ArchiveNotificationResponse.base:type_name -> common.v1.BaseResponse
+	27, // 21: iam.v1.DeleteNotificationResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 22: iam.v1.RecipientRule.rule_type:type_name -> iam.v1.RecipientRuleType
+	24, // 23: iam.v1.RequestNotificationRequest.recipient_rules:type_name -> iam.v1.RecipientRule
+	0,  // 24: iam.v1.RequestNotificationRequest.type:type_name -> iam.v1.NotificationType
+	1,  // 25: iam.v1.RequestNotificationRequest.severity:type_name -> iam.v1.NotificationSeverity
+	2,  // 26: iam.v1.RequestNotificationRequest.action_type:type_name -> iam.v1.NotificationActionType
+	27, // 27: iam.v1.RequestNotificationResponse.base:type_name -> common.v1.BaseResponse
+	25, // 28: iam.v1.NotificationService.RequestNotification:input_type -> iam.v1.RequestNotificationRequest
+	7,  // 29: iam.v1.NotificationService.CreateNotification:input_type -> iam.v1.CreateNotificationRequest
+	9,  // 30: iam.v1.NotificationService.GetNotification:input_type -> iam.v1.GetNotificationRequest
+	11, // 31: iam.v1.NotificationService.ListNotifications:input_type -> iam.v1.ListNotificationsRequest
+	13, // 32: iam.v1.NotificationService.GetUnreadCount:input_type -> iam.v1.GetUnreadCountRequest
+	15, // 33: iam.v1.NotificationService.MarkAsRead:input_type -> iam.v1.MarkAsReadRequest
+	17, // 34: iam.v1.NotificationService.MarkAllAsRead:input_type -> iam.v1.MarkAllAsReadRequest
+	19, // 35: iam.v1.NotificationService.ArchiveNotification:input_type -> iam.v1.ArchiveNotificationRequest
+	21, // 36: iam.v1.NotificationService.DeleteNotification:input_type -> iam.v1.DeleteNotificationRequest
+	23, // 37: iam.v1.NotificationService.StreamNotifications:input_type -> iam.v1.StreamNotificationsRequest
+	26, // 38: iam.v1.NotificationService.RequestNotification:output_type -> iam.v1.RequestNotificationResponse
+	8,  // 39: iam.v1.NotificationService.CreateNotification:output_type -> iam.v1.CreateNotificationResponse
+	10, // 40: iam.v1.NotificationService.GetNotification:output_type -> iam.v1.GetNotificationResponse
+	12, // 41: iam.v1.NotificationService.ListNotifications:output_type -> iam.v1.ListNotificationsResponse
+	14, // 42: iam.v1.NotificationService.GetUnreadCount:output_type -> iam.v1.GetUnreadCountResponse
+	16, // 43: iam.v1.NotificationService.MarkAsRead:output_type -> iam.v1.MarkAsReadResponse
+	18, // 44: iam.v1.NotificationService.MarkAllAsRead:output_type -> iam.v1.MarkAllAsReadResponse
+	20, // 45: iam.v1.NotificationService.ArchiveNotification:output_type -> iam.v1.ArchiveNotificationResponse
+	22, // 46: iam.v1.NotificationService.DeleteNotification:output_type -> iam.v1.DeleteNotificationResponse
+	6,  // 47: iam.v1.NotificationService.StreamNotifications:output_type -> iam.v1.StreamNotificationsResponse
+	38, // [38:48] is the sub-list for method output_type
+	28, // [28:38] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_iam_v1_notification_proto_init() }
@@ -1649,8 +2014,8 @@ func file_iam_v1_notification_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_iam_v1_notification_proto_rawDesc), len(file_iam_v1_notification_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   19,
+			NumEnums:      5,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
