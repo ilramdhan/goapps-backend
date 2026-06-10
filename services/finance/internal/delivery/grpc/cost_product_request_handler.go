@@ -11,6 +11,7 @@ import (
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/requesthistory"
 	routeDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
+	"github.com/rs/zerolog/log"
 )
 
 // CostProductRequestHandler implements financev1.CostProductRequestServiceServer.
@@ -599,8 +600,9 @@ func (h *CostProductRequestHandler) GetCostProductRequestHistory(
 	}
 	entries, err := h.historyRepo.ListByRequestID(ctx, req.GetRequestId())
 	if err != nil {
+		log.Error().Err(err).Int64("request_id", req.GetRequestId()).Msg("GetCostProductRequestHistory: list failed")
 		return &financev1.GetCostProductRequestHistoryResponse{
-			Base: InternalErrorResponse(err.Error()),
+			Base: InternalErrorResponse("internal server error"),
 		}, nil //nolint:nilerr // BaseResponse pattern
 	}
 	result := make([]*financev1.StatusHistoryEntry, 0, len(entries))
