@@ -26,6 +26,7 @@ type AuthHandler struct {
 	sessionRepo      session.Repository
 	auditRepo        audit.Repository
 	sectionRepo      organization.SectionRepository
+	departmentRepo   organization.DepartmentRepository
 	mappingRepo      companymapping.Repository
 	validationHelper *ValidationHelper
 }
@@ -37,6 +38,7 @@ func NewAuthHandler(
 	sessionRepo session.Repository,
 	auditRepo audit.Repository,
 	sectionRepo organization.SectionRepository,
+	departmentRepo organization.DepartmentRepository,
 	mappingRepo companymapping.Repository,
 	validationHelper *ValidationHelper,
 ) *AuthHandler {
@@ -46,18 +48,19 @@ func NewAuthHandler(
 		sessionRepo:      sessionRepo,
 		auditRepo:        auditRepo,
 		sectionRepo:      sectionRepo,
+		departmentRepo:   departmentRepo,
 		mappingRepo:      mappingRepo,
 		validationHelper: validationHelper,
 	}
 }
 
-// resolveOrgIDs returns the user's section_id and department_id as strings,
-// derived from (in order of preference):
+// resolveOrgInfo returns the user's section_id, department_id, section_code, and
+// department_code, derived from (in order of preference):
 //  1. Primary company mapping (mst_company_mapping via user_company_mappings).
 //  2. user_detail.section_id (legacy fallback) → section.department_id.
 //
-// Both fields can be empty when unresolved; this is a display-only helper.
-func (h *AuthHandler) resolveOrgIDs(ctx context.Context, userID uuid.UUID) (sectionID, departmentID string) { //nolint:gocognit // cohesive function; complexity inherent
+// All fields can be empty when unresolved; this is a display-only helper.
+func (h *AuthHandler) resolveOrgInfo(ctx context.Context, userID uuid.UUID) (sectionID, departmentID, sectionCode, departmentCode string) { //nolint:gocognit // cohesive function; complexity inherent
 	if h.mappingRepo != nil { //nolint:nestif // cohesive branch, extraction would scatter tightly-coupled logic
 		assignments, primaryID, err := h.mappingRepo.ListByUser(ctx, userID)
 		if err == nil && primaryID != nil {
@@ -67,27 +70,38 @@ func (h *AuthHandler) resolveOrgIDs(ctx context.Context, userID uuid.UUID) (sect
 				}
 				hierarchy := a.Mapping.Hierarchy()
 				departmentID = hierarchy.DepartmentID.String()
+				departmentCode = hierarchy.DepartmentCode
 				if hierarchy.SectionID != nil {
 					sectionID = hierarchy.SectionID.String()
+					sectionCode = hierarchy.SectionCode
 				}
-				return sectionID, departmentID
+				return sectionID, departmentID, sectionCode, departmentCode
 			}
 		}
 	}
 
 	if h.sectionRepo == nil {
-		return "", ""
+		return "", "", "", ""
 	}
 	detail, detailErr := h.userRepo.GetDetailByUserID(ctx, userID)
 	if detailErr != nil || detail == nil || detail.SectionID() == nil {
-		return "", ""
+		return "", "", "", ""
 	}
 	sectionID = detail.SectionID().String()
 	section, secErr := h.sectionRepo.GetByID(ctx, *detail.SectionID())
 	if secErr != nil || section == nil {
-		return sectionID, ""
+		return sectionID, "", "", ""
 	}
-	return sectionID, section.DepartmentID().String()
+	sectionCode = section.Code()
+	deptID := section.DepartmentID()
+	departmentID = deptID.String()
+	if h.departmentRepo != nil {
+		dept, deptErr := h.departmentRepo.GetByID(ctx, deptID)
+		if deptErr == nil && dept != nil {
+			departmentCode = dept.Code()
+		}
+	}
+	return sectionID, departmentID, sectionCode, departmentCode
 }
 
 // Login authenticates a user and returns tokens.
@@ -126,7 +140,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *iamv1.LoginRequest) (*iamv
 			ExpiresIn:    result.ExpiresIn,
 			TokenType:    "Bearer",
 			User: func() *iamv1.AuthUser {
-				sectionID, departmentID := h.resolveOrgIDs(ctx, result.User.ID)
+				sectionID, departmentID, sectionCode, departmentCode := h.resolveOrgInfo(ctx, result.User.ID)
 				return &iamv1.AuthUser{
 					UserId:           result.User.ID.String(),
 					Username:         result.User.Username,
@@ -138,6 +152,8 @@ func (h *AuthHandler) Login(ctx context.Context, req *iamv1.LoginRequest) (*iamv
 					Permissions:      result.User.Permissions,
 					SectionId:        sectionID,
 					DepartmentId:     departmentID,
+					SectionCode:      sectionCode,
+					DepartmentCode:   departmentCode,
 				}
 			}(),
 			RequiresEmailVerification: result.RequiresEmailVerification,
@@ -354,7 +370,7 @@ func (h *AuthHandler) GetCurrentUser(ctx context.Context, _ *iamv1.GetCurrentUse
 		fullName = detail.FullName()
 	}
 
-	sectionID, departmentID := h.resolveOrgIDs(ctx, userID)
+	sectionID, departmentID, sectionCode, departmentCode := h.resolveOrgInfo(ctx, userID)
 	return &iamv1.GetCurrentUserResponse{
 		Base: SuccessResponse("User retrieved successfully"),
 		Data: &iamv1.AuthUser{
@@ -368,6 +384,8 @@ func (h *AuthHandler) GetCurrentUser(ctx context.Context, _ *iamv1.GetCurrentUse
 			Permissions:      permissionNames,
 			SectionId:        sectionID,
 			DepartmentId:     departmentID,
+			SectionCode:      sectionCode,
+			DepartmentCode:   departmentCode,
 		},
 	}, nil
 }

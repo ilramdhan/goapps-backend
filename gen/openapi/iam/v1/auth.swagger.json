@@ -597,6 +597,14 @@
         "departmentId": {
           "type": "string",
           "description": "Department UUID derived from the user's section (empty if no section assigned)."
+        },
+        "sectionCode": {
+          "type": "string",
+          "description": "Section code (human-readable, for DEPT filler eligibility checks)."
+        },
+        "departmentCode": {
+          "type": "string",
+          "description": "Department code (human-readable, for DEPT filler eligibility checks)."
         }
       },
       "description": "AuthUser contains basic user info for authentication context."

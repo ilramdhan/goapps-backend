@@ -139,7 +139,7 @@ func run() error {
 	}
 
 	// Setup gRPC handlers
-	authHandler := grpcdelivery.NewAuthHandler(authService, userRepo, sessionRepo, auditRepo, sectionRepo, companyMappingRepo, validationHelper)
+	authHandler := grpcdelivery.NewAuthHandler(authService, userRepo, sessionRepo, auditRepo, sectionRepo, departmentRepo, companyMappingRepo, validationHelper)
 	userHandler := grpcdelivery.NewUserHandler(userRepo, userRoleRepo, userPermissionRepo, companyMappingRepo, validationHelper, storageSvc)
 	companyMappingHandler := grpcdelivery.NewCompanyMappingHandler(companyMappingRepo, validationHelper)
 	roleHandler := grpcdelivery.NewRoleHandler(roleRepo, validationHelper)

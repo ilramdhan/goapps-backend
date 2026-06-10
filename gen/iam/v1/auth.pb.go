@@ -278,9 +278,13 @@ type AuthUser struct {
 	// Section UUID assigned to the user via user_detail (empty if not assigned).
 	SectionId string `protobuf:"bytes,10,opt,name=section_id,json=sectionId,proto3" json:"section_id,omitempty"`
 	// Department UUID derived from the user's section (empty if no section assigned).
-	DepartmentId  string `protobuf:"bytes,11,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	DepartmentId string `protobuf:"bytes,11,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
+	// Section code (human-readable, for DEPT filler eligibility checks).
+	SectionCode string `protobuf:"bytes,12,opt,name=section_code,json=sectionCode,proto3" json:"section_code,omitempty"`
+	// Department code (human-readable, for DEPT filler eligibility checks).
+	DepartmentCode string `protobuf:"bytes,13,opt,name=department_code,json=departmentCode,proto3" json:"department_code,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AuthUser) Reset() {
@@ -386,6 +390,20 @@ func (x *AuthUser) GetSectionId() string {
 func (x *AuthUser) GetDepartmentId() string {
 	if x != nil {
 		return x.DepartmentId
+	}
+	return ""
+}
+
+func (x *AuthUser) GetSectionCode() string {
+	if x != nil {
+		return x.SectionCode
+	}
+	return ""
+}
+
+func (x *AuthUser) GetDepartmentCode() string {
+	if x != nil {
+		return x.DepartmentCode
 	}
 	return ""
 }
@@ -1958,7 +1976,7 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"token_type\x18\x04 \x01(\tR\ttokenType\x12$\n" +
 	"\x04user\x18\x05 \x01(\v2\x10.iam.v1.AuthUserR\x04user\x12!\n" +
 	"\frequires_2fa\x18\x06 \x01(\bR\vrequires2fa\x12>\n" +
-	"\x1brequires_email_verification\x18\a \x01(\bR\x19requiresEmailVerification\"\xf3\x02\n" +
+	"\x1brequires_email_verification\x18\a \x01(\bR\x19requiresEmailVerification\"\xbf\x03\n" +
 	"\bAuthUser\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -1972,7 +1990,9 @@ const file_iam_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"section_id\x18\n" +
 	" \x01(\tR\tsectionId\x12#\n" +
-	"\rdepartment_id\x18\v \x01(\tR\fdepartmentId\"K\n" +
+	"\rdepartment_id\x18\v \x01(\tR\fdepartmentId\x12!\n" +
+	"\fsection_code\x18\f \x01(\tR\vsectionCode\x12'\n" +
+	"\x0fdepartment_code\x18\r \x01(\tR\x0edepartmentCode\"K\n" +
 	"\rLogoutRequest\x12(\n" +
 	"\rrefresh_token\x18\x01 \x01(\tH\x00R\frefreshToken\x88\x01\x01B\x10\n" +
 	"\x0e_refresh_token\"=\n" +
