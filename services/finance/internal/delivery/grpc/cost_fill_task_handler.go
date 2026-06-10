@@ -3,32 +3,12 @@ package grpc
 import (
 	"context"
 	"errors"
-	"fmt"
-
-	"github.com/rs/zerolog/log"
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costfillassignment"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costfillassignment"
 )
-
-// fillCompletionGate is a minimal completion gate that checks whether all fill tasks
-// for a request are approved. State-machine integration is deferred.
-type fillCompletionGate struct {
-	taskRepo domain.TaskRepository
-}
-
-func (g *fillCompletionGate) CheckAndAdvance(ctx context.Context, requestID int64) error {
-	n, err := g.taskRepo.CountNonApproved(ctx, requestID)
-	if err != nil {
-		return fmt.Errorf("count non-approved: %w", err)
-	}
-	if n == 0 {
-		log.Info().Int64("request_id", requestID).Msg("all fill tasks approved")
-	}
-	return nil
-}
 
 // CostFillTaskHandler implements financev1.CostFillTaskServiceServer.
 type CostFillTaskHandler struct {
@@ -41,8 +21,9 @@ type CostFillTaskHandler struct {
 }
 
 // NewCostFillTaskHandler constructs the handler.
-func NewCostFillTaskHandler(taskRepo domain.TaskRepository) *CostFillTaskHandler {
-	gate := &fillCompletionGate{taskRepo: taskRepo}
+// gate is the CompletionGate implementation — use app.NewCompletionGateHandler for
+// the full chain (L100-102 creation + CPR state machine), or a no-op stub for tests.
+func NewCostFillTaskHandler(taskRepo domain.TaskRepository, gate app.CompletionGate) *CostFillTaskHandler {
 	return &CostFillTaskHandler{
 		listTasks:   app.NewListTasksHandler(taskRepo),
 		claimTask:   app.NewClaimTaskHandler(taskRepo),
@@ -50,6 +31,14 @@ func NewCostFillTaskHandler(taskRepo domain.TaskRepository) *CostFillTaskHandler
 		approveTask: app.NewApproveTaskHandler(taskRepo, gate),
 		rejectTask:  app.NewRejectTaskHandler(taskRepo),
 	}
+}
+
+// WithSubmitFillNotifier wires the FillEventNotifier and RequestNoProvider into the
+// SubmitFillHandler so approvers are notified when a fill task reaches APPROVAL_PENDING.
+// Returns receiver for chaining.
+func (h *CostFillTaskHandler) WithSubmitFillNotifier(fn app.FillEventNotifier, p app.RequestNoProvider) *CostFillTaskHandler {
+	h.submitFill.WithFillNotifier(fn).WithRequestNoProvider(p)
+	return h
 }
 
 // ListFillTasks returns all fill tasks for a cost product request.

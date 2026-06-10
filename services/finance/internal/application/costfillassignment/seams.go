@@ -41,8 +41,9 @@ type CompletionGate interface {
 // FillTaskCreator creates fill tasks for all route levels of a request.
 // It is called by MarkParameterPending BEFORE the state transition.
 // Returns ErrConfigNotFound (wrapped) if a level has no global config.
+// perLevelTotals maps route level → total applicable params for that level's products.
 type FillTaskCreator interface {
-	CreateForRequest(ctx context.Context, requestID, productSysID, routeHeadID int64, routeLevels []int32, totalParams int32) error
+	CreateForRequest(ctx context.Context, requestID, productSysID, routeHeadID int64, routeLevels []int32, perLevelTotals map[int32]int32, requestNo string) error
 }
 
 // CPRCompleter triggers the PARAMETER_COMPLETE state transition on the CPR aggregate.
@@ -57,4 +58,10 @@ type CPRCompleter interface {
 type CompletionNotifier interface {
 	NotifyFiller(ctx context.Context, taskID int64, recipientUserID, requestNo string) error
 	NotifyComplete(ctx context.Context, requestID int64, requesterUserID, requestNo string) error
+}
+
+// RequestNoProvider resolves a CPR request number from its numeric ID.
+// Used by SubmitFillHandler to fetch requestNo for the approval-pending notification.
+type RequestNoProvider interface {
+	GetRequestNo(ctx context.Context, requestID int64) (string, error)
 }

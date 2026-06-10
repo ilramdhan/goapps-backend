@@ -388,6 +388,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		upsertGlobalHandler, upsertOverrideHandler, deleteGlobalHandler, listGlobalHandler,
 	)
 	costFillTaskHandler := grpcdelivery.NewCostFillTaskHandler(fillTaskRepo, completionGate)
+	costFillTaskHandler.WithSubmitFillNotifier(fillIAMNotifier, &cprRequestNoAdapter{repo: costProductRequestRepo})
 
 	// SLA + reminder cron jobs for fill-assignment notifications.
 	// reminderGapHours=4: at most one reminder per task per 4 hours.
@@ -850,4 +851,19 @@ func (a *cprNotifEmitterAdapter) Emit(ctx context.Context, in cprapp.Notificatio
 		Payload:         in.Payload,
 	})
 	return err
+}
+
+// cprRequestNoAdapter implements fillapp.RequestNoProvider by delegating to the
+// CostProductRequestRepository. Used by SubmitFillHandler to resolve request_no
+// for the NotifyApprovalPending notification.
+type cprRequestNoAdapter struct {
+	repo *postgres.CostProductRequestRepository
+}
+
+func (a *cprRequestNoAdapter) GetRequestNo(ctx context.Context, requestID int64) (string, error) {
+	req, err := a.repo.GetByID(ctx, requestID)
+	if err != nil {
+		return "", fmt.Errorf("cprRequestNoAdapter.GetRequestNo: %w", err)
+	}
+	return req.RequestNo(), nil
 }
