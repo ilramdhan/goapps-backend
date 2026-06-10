@@ -9,6 +9,7 @@ import (
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/requesthistory"
 	routeDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 )
 
@@ -23,6 +24,7 @@ type CostProductRequestHandler struct {
 	linkRouteHandler   *app.LinkRouteHandler
 	unlinkRouteHandler *app.UnlinkRouteHandler
 	validation         *ValidationHelper
+	historyRepo        requesthistory.Repository // optional; nil disables GetCostProductRequestHistory
 }
 
 // NewCostProductRequestHandler constructs the handler. Pass auditEmitter=nil to
@@ -56,6 +58,20 @@ func (h *CostProductRequestHandler) WithFillCreator(c app.FillTaskCreator) *Cost
 	return h
 }
 
+// WithFillChecker attaches a fill-completion checker so that MarkParameterComplete
+// is blocked until all regular fill levels are approved.
+func (h *CostProductRequestHandler) WithFillChecker(c app.FillCompletionChecker) *CostProductRequestHandler {
+	h.transitionHandler = h.transitionHandler.WithFillChecker(c)
+	return h
+}
+
+// WithParamCounter attaches an applicable-param counter so that cft_total_params is
+// populated correctly when fill tasks are created during MarkParameterPending.
+func (h *CostProductRequestHandler) WithParamCounter(c app.ApplicableParamCounter) *CostProductRequestHandler {
+	h.transitionHandler = h.transitionHandler.WithParamCounter(c)
+	return h
+}
+
 // WithNotifier attaches an in-app notification emitter to the transition handler.
 func (h *CostProductRequestHandler) WithNotifier(n app.NotificationEmitter) *CostProductRequestHandler {
 	h.transitionHandler = h.transitionHandler.WithNotifier(n)
@@ -67,6 +83,15 @@ func (h *CostProductRequestHandler) WithNotifier(n app.NotificationEmitter) *Cos
 func (h *CostProductRequestHandler) WithCPRNotifier(n app.CPRNotifier) *CostProductRequestHandler {
 	h.createHandler = h.createHandler.WithCPRNotifier(n)
 	h.transitionHandler = h.transitionHandler.WithCPRNotifier(n)
+	return h
+}
+
+// WithHistoryRepo attaches the approval trace repository and wires it into the
+// transition handler so every state change is recorded, and enables the
+// GetCostProductRequestHistory RPC.
+func (h *CostProductRequestHandler) WithHistoryRepo(r requesthistory.Repository) *CostProductRequestHandler {
+	h.historyRepo = r
+	h.transitionHandler = h.transitionHandler.WithHistoryRepo(r)
 	return h
 }
 
@@ -389,6 +414,45 @@ func (h *CostProductRequestHandler) AssignCostProductRequest(ctx context.Context
 	return &financev1.AssignCostProductRequestResponse{Base: successResponse("Assigned"), Data: requestToProto(r)}, nil
 }
 
+// ConfirmCostProductRequest advances PARAMETER_COMPLETE → CONFIRMED.
+func (h *CostProductRequestHandler) ConfirmCostProductRequest(ctx context.Context, req *financev1.ConfirmCostProductRequestRequest) (*financev1.ConfirmCostProductRequestResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.ConfirmCostProductRequestResponse{Base: baseResp}, nil
+	}
+	actor, _ := GetUserIDFromCtx(ctx)
+	r, err := h.transitionHandler.Confirm(ctx, req.GetRequestId(), actor)
+	if err != nil {
+		return &financev1.ConfirmCostProductRequestResponse{Base: requestErrToBase(err)}, nil
+	}
+	return &financev1.ConfirmCostProductRequestResponse{Base: successResponse("Confirmed"), Data: requestToProto(r)}, nil
+}
+
+// ApproveCostProductRequest advances CONFIRMED → APPROVED.
+func (h *CostProductRequestHandler) ApproveCostProductRequest(ctx context.Context, req *financev1.ApproveCostProductRequestRequest) (*financev1.ApproveCostProductRequestResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.ApproveCostProductRequestResponse{Base: baseResp}, nil
+	}
+	actor, _ := GetUserIDFromCtx(ctx)
+	r, err := h.transitionHandler.Approve(ctx, req.GetRequestId(), actor)
+	if err != nil {
+		return &financev1.ApproveCostProductRequestResponse{Base: requestErrToBase(err)}, nil
+	}
+	return &financev1.ApproveCostProductRequestResponse{Base: successResponse("Approved"), Data: requestToProto(r)}, nil
+}
+
+// ReleaseCostProductRequest advances APPROVED → RELEASED.
+func (h *CostProductRequestHandler) ReleaseCostProductRequest(ctx context.Context, req *financev1.ReleaseCostProductRequestRequest) (*financev1.ReleaseCostProductRequestResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.ReleaseCostProductRequestResponse{Base: baseResp}, nil
+	}
+	actor, _ := GetUserIDFromCtx(ctx)
+	r, err := h.transitionHandler.Release(ctx, req.GetRequestId(), actor)
+	if err != nil {
+		return &financev1.ReleaseCostProductRequestResponse{Base: requestErrToBase(err)}, nil
+	}
+	return &financev1.ReleaseCostProductRequestResponse{Base: successResponse("Released"), Data: requestToProto(r)}, nil
+}
+
 // =============================================================================
 // mappers
 // =============================================================================
@@ -500,6 +564,45 @@ func (h *CostProductRequestHandler) UnlinkRoute(ctx context.Context, req *financ
 	return &financev1.UnlinkRouteResponse{
 		Base: successResponse("Route unlinked"),
 		Data: requestToProto(res),
+	}, nil
+}
+
+// GetCostProductRequestHistory returns the full status-transition timeline for a CPR.
+func (h *CostProductRequestHandler) GetCostProductRequestHistory(
+	ctx context.Context,
+	req *financev1.GetCostProductRequestHistoryRequest,
+) (*financev1.GetCostProductRequestHistoryResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.GetCostProductRequestHistoryResponse{Base: baseResp}, nil
+	}
+	if h.historyRepo == nil {
+		return &financev1.GetCostProductRequestHistoryResponse{
+			Base:    successResponse("OK"),
+			Entries: nil,
+		}, nil
+	}
+	entries, err := h.historyRepo.ListByRequestID(ctx, req.GetRequestId())
+	if err != nil {
+		return &financev1.GetCostProductRequestHistoryResponse{
+			Base: InternalErrorResponse(err.Error()),
+		}, nil //nolint:nilerr // BaseResponse pattern
+	}
+	result := make([]*financev1.StatusHistoryEntry, 0, len(entries))
+	for _, e := range entries {
+		result = append(result, &financev1.StatusHistoryEntry{
+			Id:          e.ID,
+			RequestId:   e.RequestID,
+			FromStatus:  e.FromStatus,
+			ToStatus:    e.ToStatus,
+			ActorUserId: e.ActorUserID,
+			ActorName:   e.ActorName,
+			Note:        e.Note,
+			CreatedAt:   e.CreatedAt.Format(time.RFC3339),
+		})
+	}
+	return &financev1.GetCostProductRequestHistoryResponse{
+		Base:    successResponse("OK"),
+		Entries: result,
 	}, nil
 }
 

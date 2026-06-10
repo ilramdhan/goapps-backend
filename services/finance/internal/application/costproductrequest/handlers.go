@@ -11,6 +11,7 @@ import (
 	fillDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costfillassignment"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
 	routeDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/requesthistory"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamclient"
 )
 
@@ -262,20 +263,37 @@ type AuditEntry struct {
 // the ROUTING_DEFINED → PARAMETER_PENDING transition is committed.
 // Implemented by costfillassignment.CreateAllTasksHandler.
 type FillTaskCreator interface {
-	CreateForRequest(ctx context.Context, requestID, productSysID, routeHeadID int64, routeLevels []int32, totalParams int32) error
+	CreateForRequest(ctx context.Context, requestID, productSysID, routeHeadID int64, routeLevels []int32, perLevelTotals map[int32]int32, requestNo string) error
+}
+
+// FillCompletionChecker checks whether all regular fill levels (below the
+// completion chain at L100+) are approved for a given request.
+// Implemented by costfillassignment.TaskRepository.
+type FillCompletionChecker interface {
+	CountNonApprovedBelow(ctx context.Context, requestID int64, maxLevel int32) (int, error)
+}
+
+// ApplicableParamCounter counts applicable params for a set of product sys IDs.
+// Used when creating fill tasks to populate cft_total_params per route level.
+// Implemented by the costproductparameter.Repository postgres adapter.
+type ApplicableParamCounter interface {
+	CountApplicableForProducts(ctx context.Context, productSysIDs []int64) (int32, error)
 }
 
 // TransitionHandler wraps a single state transition: load → mutate → save.
 // Optionally emits a CAL_ audit row and/or in-app notifications after a
 // successful save. Failures of both are best-effort (logged, never blocking).
 type TransitionHandler struct {
-	repo        domain.Repository
-	emitter     AuditEmitter
-	notifier    NotificationEmitter      // optional; if nil, notification emission is skipped
-	cprNotifier CPRNotifier              // optional; if nil, CPR notification emission is skipped
-	routeRepo   routeDomain.Repository   // optional; used by MarkParameterPending
-	fillCreator FillTaskCreator          // optional; if nil, fill task creation is skipped
-	wflClient   iamclient.WorkflowClient // optional; if nil, IAM workflow wiring is skipped
+	repo         domain.Repository
+	emitter      AuditEmitter
+	notifier     NotificationEmitter      // optional; if nil, notification emission is skipped
+	cprNotifier  CPRNotifier              // optional; if nil, CPR notification emission is skipped
+	routeRepo    routeDomain.Repository   // optional; used by MarkParameterPending
+	fillCreator  FillTaskCreator          // optional; if nil, fill task creation is skipped
+	fillChecker  FillCompletionChecker    // optional; if nil, fill guard is skipped
+	paramCounter ApplicableParamCounter   // optional; used to set cft_total_params on task creation
+	wflClient    iamclient.WorkflowClient // optional; if nil, IAM workflow wiring is skipped
+	historyRepo  requesthistory.Repository // optional; if nil, approval trace recording is skipped
 }
 
 // NewTransitionHandler constructs a TransitionHandler. Pass emitter=nil to skip auditing.
@@ -316,12 +334,33 @@ func (h *TransitionHandler) WithFillCreator(c FillTaskCreator) *TransitionHandle
 	return h
 }
 
+// WithFillChecker attaches a fill-completion checker used by MarkParameterComplete
+// to guard against premature completion when regular fill levels are not yet approved.
+func (h *TransitionHandler) WithFillChecker(c FillCompletionChecker) *TransitionHandler {
+	h.fillChecker = c
+	return h
+}
+
+// WithParamCounter attaches an applicable-param counter used by createFillTasksForRequest
+// to populate cft_total_params per route level on fill task creation.
+func (h *TransitionHandler) WithParamCounter(c ApplicableParamCounter) *TransitionHandler {
+	h.paramCounter = c
+	return h
+}
+
 // WithWorkflowClient attaches an IAM workflow client used by Submit to start an
 // approval instance after a successful DRAFT → SUBMITTED transition. This is
 // best-effort: if the client returns an error the submit still succeeds.
 // Pass nil (or omit) to disable IAM workflow wiring.
 func (h *TransitionHandler) WithWorkflowClient(c iamclient.WorkflowClient) *TransitionHandler {
 	h.wflClient = c
+	return h
+}
+
+// WithHistoryRepo attaches an approval trace repository so that every successful
+// state transition is recorded as a history entry. Pass nil (or omit) to disable.
+func (h *TransitionHandler) WithHistoryRepo(r requesthistory.Repository) *TransitionHandler {
+	h.historyRepo = r
 	return h
 }
 
@@ -344,7 +383,26 @@ func (h *TransitionHandler) apply(ctx context.Context, requestID int64, mutate f
 		return nil, err
 	}
 	h.emitAudit(ctx, req, beforeStatus, opts)
+	h.insertHistory(ctx, req, beforeStatus)
 	return req, nil
+}
+
+// insertHistory records a status transition in the approval trace (best-effort).
+func (h *TransitionHandler) insertHistory(ctx context.Context, req *domain.Request, beforeStatus string) {
+	if h.historyRepo == nil {
+		return
+	}
+	entry := &requesthistory.Entry{
+		RequestID:   req.RequestID(),
+		FromStatus:  beforeStatus,
+		ToStatus:    req.Status(),
+		ActorUserID: actorIDFromCtx(ctx),
+		ActorName:   actorNameFromCtx(ctx),
+	}
+	if insertErr := h.historyRepo.Insert(ctx, entry); insertErr != nil {
+		log.Warn().Err(insertErr).Int64("request_id", req.RequestID()).
+			Msg("TransitionHandler: history insert failed")
+	}
 }
 
 func (h *TransitionHandler) emitAudit(ctx context.Context, req *domain.Request, beforeStatus string, opts applyOpts) {
@@ -455,8 +513,8 @@ func (h *TransitionHandler) Submit(ctx context.Context, requestID int64, actor s
 		RequestID:       req.RequestID(),
 		Payload:         `{"status":"SUBMITTED","request_no":"` + req.RequestNo() + `"}`,
 	})
-	// Rule-based notification: notify users with submit permission that a
-	// request is awaiting their review.
+	// Rule-based notification: notify users with review permission that a
+	// submitted request awaits their review.
 	h.emitCPREvent(ctx, CPREvent{
 		EventType:       "CPR_SUBMITTED_REVIEWER",
 		RequestID:       req.RequestID(),
@@ -464,6 +522,16 @@ func (h *TransitionHandler) Submit(ctx context.Context, requestID int64, actor s
 		RequesterUserID: req.RequesterUserID(),
 		Rules: []CPRNotifRule{
 			{RuleType: "BY_PERMISSION", Value: "finance.product.request.review"},
+		},
+	})
+	// Acknowledge to the creator that their request was submitted.
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_SUBMITTED_ACK",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
 		},
 	})
 	return req, nil
@@ -579,6 +647,18 @@ func (h *TransitionHandler) DecideFeasibility(ctx context.Context, requestID int
 			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
 		},
 	})
+	// On FEASIBLE, notify routing engineers that they can now define routing.
+	if decision == domain.FeasibilityFeasible {
+		h.emitCPREvent(ctx, CPREvent{
+			EventType:       "CPR_ROUTING_NEEDED",
+			RequestID:       req.RequestID(),
+			RequestNo:       req.RequestNo(),
+			RequesterUserID: req.RequesterUserID(),
+			Rules: []CPRNotifRule{
+				{RuleType: "BY_PERMISSION", Value: "finance.product.route.create"},
+			},
+		})
+	}
 	return req, nil
 }
 
@@ -601,7 +681,7 @@ func (h *TransitionHandler) MarkParameterPending(ctx context.Context, requestID 
 }
 
 // createFillTasksForRequest loads the request + linked route graph, extracts the
-// distinct route levels, and calls fillCreator.CreateForRequest.
+// distinct route levels, counts applicable params per level, and calls fillCreator.CreateForRequest.
 func (h *TransitionHandler) createFillTasksForRequest(ctx context.Context, requestID int64) error {
 	req, err := h.repo.GetByID(ctx, requestID)
 	if err != nil {
@@ -622,14 +702,38 @@ func (h *TransitionHandler) createFillTasksForRequest(ctx context.Context, reque
 	if len(levels) == 0 {
 		return fmt.Errorf("route head %d has no sequences", routeHeadID)
 	}
+	perLevelTotals := h.countParamsPerLevel(ctx, graph)
 	productSysID := graph.Head.ProductSysID
-	if err := h.fillCreator.CreateForRequest(ctx, requestID, productSysID, routeHeadID, levels, 0); err != nil {
+	if err := h.fillCreator.CreateForRequest(ctx, requestID, productSysID, routeHeadID, levels, perLevelTotals, req.RequestNo()); err != nil {
 		if errors.Is(err, fillDomain.ErrConfigNotFound) {
 			return fmt.Errorf("assignment config missing for one or more levels: %w", err)
 		}
 		return err
 	}
 	return nil
+}
+
+// countParamsPerLevel sums applicable params for every product in each route level.
+// Returns an empty map (safe to use) when paramCounter is nil or counting fails.
+func (h *TransitionHandler) countParamsPerLevel(ctx context.Context, graph *routeDomain.Graph) map[int32]int32 {
+	result := make(map[int32]int32, 8) //nolint:gomnd // pre-size for typical route depth
+	if h.paramCounter == nil || graph == nil {
+		return result
+	}
+	levelProducts := make(map[int32][]int64, 8) //nolint:gomnd
+	for _, seq := range graph.Seqs {
+		levelProducts[seq.RouteLevel] = append(levelProducts[seq.RouteLevel], seq.ProductSysID)
+	}
+	for level, ids := range levelProducts {
+		n, countErr := h.paramCounter.CountApplicableForProducts(ctx, ids)
+		if countErr != nil {
+			log.Warn().Err(countErr).Int32("level", level).
+				Msg("countParamsPerLevel: failed to count applicable params (defaulting to 0)")
+			continue
+		}
+		result[level] = n
+	}
+	return result
 }
 
 // uniqueRouteLevels extracts the distinct route level integers from a graph,
@@ -666,10 +770,23 @@ func sortInt32Slice(s []int32) {
 	}
 }
 
-// MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE. The
-// gRPC layer is responsible for asserting no required params are missing via
-// cost_product_parameter.CheckMissingRequiredParams before calling this.
+// completionLevelMin is the lowest route level reserved for the automated
+// completion chain (L100, L101, L102). Regular fill levels are below this.
+const completionLevelMin = int32(100)
+
+// MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE.
+// When a FillCompletionChecker is attached via WithFillChecker, all regular
+// fill levels (below L100) must be APPROVED before the transition is allowed.
 func (h *TransitionHandler) MarkParameterComplete(ctx context.Context, requestID int64, actor string) (*domain.Request, error) {
+	if h.fillChecker != nil {
+		pending, checkErr := h.fillChecker.CountNonApprovedBelow(ctx, requestID, completionLevelMin)
+		if checkErr != nil {
+			return nil, fmt.Errorf("checking fill completion: %w", checkErr)
+		}
+		if pending > 0 {
+			return nil, fmt.Errorf("%w: %d fill level(s) not yet approved", domain.ErrInvalidTransition, pending)
+		}
+	}
 	req, err := h.apply(ctx, requestID, func(r *domain.Request) error {
 		return r.MarkParameterComplete()
 	}, applyOpts{operation: auditOpStatusChange, actorID: actor})
@@ -686,9 +803,97 @@ func (h *TransitionHandler) MarkParameterComplete(ctx context.Context, requestID
 			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
 		},
 	})
-	// Notify costing team that the request is ready for calculation.
+	// Notify users with confirm permission that the request awaits confirmation.
 	h.emitCPREvent(ctx, CPREvent{
-		EventType:       "CPR_PARAM_COMPLETE_COSTING",
+		EventType:       "CPR_PARAM_COMPLETE_CONFIRM",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_PERMISSION", Value: "finance.product.request.confirm"},
+		},
+	})
+	return req, nil
+}
+
+// Confirm advances PARAMETER_COMPLETE → CONFIRMED.
+func (h *TransitionHandler) Confirm(ctx context.Context, requestID int64, actor string) (*domain.Request, error) {
+	req, err := h.apply(ctx, requestID, func(r *domain.Request) error { return r.Confirm() }, applyOpts{operation: auditOpStatusChange, actorID: actor})
+	if err != nil {
+		return nil, err
+	}
+	// Notify requester that the request has been confirmed.
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_CONFIRMED_REQUESTER",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
+		},
+	})
+	// Notify users with approve permission that approval is required.
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_CONFIRMED_APPROVE",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_PERMISSION", Value: "finance.product.request.approve"},
+		},
+	})
+	return req, nil
+}
+
+// Approve advances CONFIRMED → APPROVED.
+func (h *TransitionHandler) Approve(ctx context.Context, requestID int64, actor string) (*domain.Request, error) {
+	req, err := h.apply(ctx, requestID, func(r *domain.Request) error { return r.Approve() }, applyOpts{operation: auditOpStatusChange, actorID: actor})
+	if err != nil {
+		return nil, err
+	}
+	// Notify requester that the request has been approved.
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_APPROVED_REQUESTER",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
+		},
+	})
+	// Notify users with release permission that release is required.
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_APPROVED_RELEASE",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_PERMISSION", Value: "finance.product.request.release"},
+		},
+	})
+	return req, nil
+}
+
+// Release advances APPROVED → RELEASED. After release the request is locked
+// and the cost calculation engine can proceed.
+func (h *TransitionHandler) Release(ctx context.Context, requestID int64, actor string) (*domain.Request, error) {
+	req, err := h.apply(ctx, requestID, func(r *domain.Request) error { return r.Release() }, applyOpts{operation: auditOpStatusChange, actorID: actor})
+	if err != nil {
+		return nil, err
+	}
+	// Notify requester that the request has been released.
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_RELEASED_REQUESTER",
+		RequestID:       req.RequestID(),
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		Rules: []CPRNotifRule{
+			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
+		},
+	})
+	// Notify costing team that the request is released and ready for calculation.
+	h.emitCPREvent(ctx, CPREvent{
+		EventType:       "CPR_RELEASED_CALC",
 		RequestID:       req.RequestID(),
 		RequestNo:       req.RequestNo(),
 		RequesterUserID: req.RequesterUserID(),

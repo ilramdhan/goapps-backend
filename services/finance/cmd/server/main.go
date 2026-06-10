@@ -263,6 +263,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costAuditLogRepo := postgres.NewCostAuditLogRepository(db)
 	costNotificationRepo := postgres.NewCostNotificationRepository(db)
 	costProductParameterRepo := postgres.NewCostProductParameterRepository(db)
+	requestHistoryRepo := postgres.NewRequestHistoryRepository(db)
 
 	costProductTypeHandler, err := grpcdelivery.NewCostProductTypeHandler(costProductTypeRepo)
 	if err != nil {
@@ -356,7 +357,10 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	listGlobalHandler := fillapp.NewListGlobalConfigHandler(fillConfigRepo)
 
 	createAllTasksHandler := fillapp.NewCreateAllTasksHandler(fillConfigRepo, fillTaskRepo)
+	createAllTasksHandler.WithNotifier(fillIAMNotifier)
 	costProductRequestHandler.WithFillCreator(createAllTasksHandler)
+	costProductRequestHandler.WithFillChecker(fillTaskRepo)
+	costProductRequestHandler.WithParamCounter(costProductParameterRepo)
 
 	// Wire in-app notification emitter to the CPR TransitionHandler so that
 	// status-change events (Submit, StartReview, Reject, etc.) produce persisted
@@ -365,6 +369,10 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 
 	// Wire IAM-backed CPR notifier for rule-based multi-recipient fan-out.
 	costProductRequestHandler.WithCPRNotifier(cprIAMNotifier)
+
+	// Wire approval trace repository so every state transition is recorded and
+	// the GetCostProductRequestHistory RPC is enabled.
+	costProductRequestHandler.WithHistoryRepo(requestHistoryRepo)
 
 	// Build the completion gate: L100-L102 chain creation + CPR state machine trigger.
 	cprCompleter := &cprCompleterAdapter{handler: costProductRequestHandler}
