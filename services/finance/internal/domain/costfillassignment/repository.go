@@ -42,6 +42,13 @@ type TaskRepository interface {
 	IncrementFilled(ctx context.Context, requestID int64, routeLevel int32, delta int32) (*Task, error)
 	// CountNonApproved returns how many tasks for a request are not APPROVED.
 	CountNonApproved(ctx context.Context, requestID int64) (int, error)
+	// CountNonApprovedBelow returns how many tasks for a request with route level
+	// strictly less than maxLevel are not APPROVED. Used by CompletionGate to
+	// decide when all "regular" levels are done before creating the L100-102 chain.
+	CountNonApprovedBelow(ctx context.Context, requestID int64, maxLevel int32) (int, error)
+	// ActivateTask sets a task's status to ACTIVE and stamps activated_at to now.
+	// Used by CompletionGate to activate L101 after L100 approves, etc.
+	ActivateTask(ctx context.Context, taskID int64) error
 	// MarkNotified stamps cft_last_notified_at = now for a task.
 	MarkNotified(ctx context.Context, taskID int64) error
 	// ListOverdue returns unfinished tasks past SLA whose last notify is stale.

@@ -55,7 +55,7 @@ func (h *ApproveTaskHandler) Handle(ctx context.Context, cmd ApproveTaskCommand)
 	if err = h.repo.AddApproval(ctx, approval); err != nil {
 		return fmt.Errorf("record approval for task %d: %w", cmd.TaskID, err)
 	}
-	if gateErr := h.gate.CheckAndAdvance(ctx, cmd.RequestID); gateErr != nil {
+	if gateErr := h.gate.CheckAndAdvance(ctx, cmd.RequestID, task.RouteLevel); gateErr != nil {
 		return fmt.Errorf("completion gate after approve: %w", gateErr)
 	}
 	return nil

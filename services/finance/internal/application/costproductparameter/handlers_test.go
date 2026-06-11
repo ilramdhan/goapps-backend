@@ -88,6 +88,10 @@ func (f *fakeRepo) ListAvailableParams(_ context.Context, _ int64) ([]cpp.ParamM
 	return nil, nil
 }
 
+func (f *fakeRepo) CountApplicableForProducts(_ context.Context, _ []int64) (int32, error) {
+	return 0, nil
+}
+
 // =============================================================================
 // Upsert
 // =============================================================================
