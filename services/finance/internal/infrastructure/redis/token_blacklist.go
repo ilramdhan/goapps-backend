@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -13,7 +14,10 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 )
 
-const blacklistPrefix = "iam:blacklist:"
+const (
+	blacklistPrefix   = "iam:blacklist:"
+	permissionsPrefix = "iam:user_perms:"
+)
 
 // TokenBlacklist checks the shared IAM token blacklist in Redis.
 // This enables cross-service logout enforcement.
@@ -60,6 +64,23 @@ func (tb *TokenBlacklist) IsBlacklisted(ctx context.Context, tokenID string) (bo
 		return false, fmt.Errorf("blacklist check failed: %w", err)
 	}
 	return exists > 0, nil
+}
+
+// GetUserPermissions retrieves cached permissions for a user from the IAM Redis.
+// Returns nil, nil on cache miss (fail-open).
+func (tb *TokenBlacklist) GetUserPermissions(ctx context.Context, userID string) ([]string, error) {
+	key := permissionsPrefix + userID
+	val, err := tb.client.Get(ctx, key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get user permissions: %w", err)
+	}
+	if val == "" {
+		return nil, nil
+	}
+	return strings.Split(val, "|"), nil
 }
 
 // Close closes the auth Redis connection.

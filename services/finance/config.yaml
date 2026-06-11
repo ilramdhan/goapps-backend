@@ -76,7 +76,7 @@ logging:
 iam_client:
   host: localhost
   port: 50052          # Override via IAM_GRPC_HOST / IAM_GRPC_PORT env
-  internal_service_token: ""  # Override via INTERNAL_SERVICE_TOKEN — must match IAM's security.internal_service_token
+  internal_service_token: "dev-internal-token-2026"  # Override via INTERNAL_SERVICE_TOKEN — must match IAM's security.internal_service_token
 
 storage:
   endpoint: localhost:9000
