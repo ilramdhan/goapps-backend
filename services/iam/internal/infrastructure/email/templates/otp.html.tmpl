@@ -1,19 +1,18 @@
 {{define "content"}}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-  <!-- Heading -->
+  <!-- Description -->
   <tr>
     <td align="center" style="padding-bottom:24px;">
-      <div style="display:inline-block; width:48px; height:48px; border-radius:50%; background-color:#f0f3ff; text-align:center; line-height:48px; font-size:22px; margin-bottom:14px;">&#128274;</div>
-      <h1 style="margin:10px 0 8px 0; font-size:22px; font-weight:700; color:#111c2d; font-family:Arial,Helvetica,sans-serif; letter-spacing:-0.3px;">Verify your identity</h1>
-      <p style="margin:0; font-size:14px; color:#5c5f61; font-family:Arial,Helvetica,sans-serif; line-height:1.5;">
-        We received a request for {{.Purpose}}.<br>Enter the code below to continue.
+      <p style="margin:0; font-size:14px; color:#5c5f61; font-family:Arial,Helvetica,sans-serif; line-height:1.6;">
+        We received a request for <strong style="color:#111c2d;">{{.Purpose}}</strong> on <strong style="color:#111c2d;">{{.RecipientEmail}}</strong>.<br>
+        Enter the code below to continue.
       </p>
     </td>
   </tr>
   <!-- OTP code box -->
   <tr>
     <td align="center" style="padding-bottom:24px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0f3ff" style="border:1px solid #dee8ff; border-radius:10px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="#eff6ff" style="border:1px solid #dbeafe; border-radius:10px;">
         <tr>
           <td style="padding:24px 32px;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
@@ -31,7 +30,7 @@
                       {{if eq . "-"}}
                       <td style="font-size:22px; color:#777587; font-family:Arial,Helvetica,sans-serif; vertical-align:middle; padding:0 4px;">&ndash;</td>
                       {{else}}
-                      <td width="44" height="60" align="center" valign="middle" bgcolor="#ffffff" style="border:2px solid #3525cd; border-radius:6px; font-size:26px; font-weight:700; color:#3525cd; font-family:Arial,Helvetica,sans-serif;">{{.}}</td>
+                      <td width="44" height="60" align="center" valign="middle" bgcolor="#ffffff" style="border:2px solid #3b82f6; border-radius:6px; font-size:26px; font-weight:700; color:#3b82f6; font-family:Arial,Helvetica,sans-serif;">{{.}}</td>
                       {{end}}
                       {{end}}
                     </tr>
@@ -52,12 +51,12 @@
   <!-- Security notice -->
   <tr>
     <td>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0f3ff" style="border:1px solid #dee8ff; border-radius:8px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eff6ff" style="border:1px solid #dbeafe; border-radius:8px;">
         <tr>
           <td style="padding:14px 16px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td width="24" valign="top" style="padding-right:8px; font-size:16px; color:#3525cd; line-height:20px; font-family:Arial,Helvetica,sans-serif;">&#9432;</td>
+                <td width="24" valign="top" style="padding-right:8px; font-size:16px; color:#3b82f6; line-height:20px; font-family:Arial,Helvetica,sans-serif;">&#9432;</td>
                 <td>
                   <p style="margin:0 0 3px 0; font-size:13px; font-weight:700; color:#111c2d; font-family:Arial,Helvetica,sans-serif;">Do not share this code</p>
                   <p style="margin:0; font-size:13px; color:#5c5f61; font-family:Arial,Helvetica,sans-serif; line-height:1.5;">{{.AppName}} will never ask you for this code. If you did not request this, you can safely ignore this email.</p>

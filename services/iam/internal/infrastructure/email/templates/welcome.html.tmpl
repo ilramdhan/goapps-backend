@@ -1,19 +1,18 @@
 {{define "content"}}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-  <!-- Heading -->
+  <!-- Description -->
   <tr>
     <td style="padding-bottom:24px;">
-      <div style="display:inline-block; width:44px; height:44px; border-radius:50%; background-color:#f0f3ff; text-align:center; line-height:44px; font-size:20px; margin-bottom:12px;">&#127881;</div>
-      <h1 style="margin:8px 0 8px 0; font-size:22px; font-weight:700; color:#111c2d; font-family:Arial,Helvetica,sans-serif; letter-spacing:-0.3px;">Welcome{{if .RecipientName}}, {{.RecipientName}}{{end}}!</h1>
-      <p style="margin:0; font-size:14px; color:#5c5f61; font-family:Arial,Helvetica,sans-serif; line-height:1.5;">
-        Your {{.AppName}} account has been created. You can now sign in and get started.
+      <p style="margin:0; font-size:14px; color:#5c5f61; font-family:Arial,Helvetica,sans-serif; line-height:1.6;">
+        Hi{{if .RecipientName}} <strong style="color:#111c2d;">{{.RecipientName}}</strong>{{end}},<br>
+        Your <strong style="color:#111c2d;">{{.AppName}}</strong> account has been created. You can now sign in and start working.
       </p>
     </td>
   </tr>
   <!-- Account info -->
   <tr>
     <td style="padding-bottom:24px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0f3ff" style="border:1px solid #dee8ff; border-radius:8px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eff6ff" style="border:1px solid #dbeafe; border-radius:8px;">
         <tr>
           <td style="padding:16px 20px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -30,7 +29,7 @@
   <!-- CTA -->
   <tr>
     <td align="center" style="padding-bottom:8px;">
-      <a href="{{.LoginURL}}" style="display:inline-block; padding:12px 32px; background-color:#3525cd; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; border-radius:6px; font-family:Arial,Helvetica,sans-serif; letter-spacing:0.02em;">Sign In to {{.AppName}}</a>
+      <a href="{{.LoginURL}}" style="display:inline-block; padding:12px 32px; background-color:#3b82f6; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; border-radius:6px; font-family:Arial,Helvetica,sans-serif; letter-spacing:0.02em;">Sign In to {{.AppName}}</a>
     </td>
   </tr>
 </table>

@@ -12,22 +12,40 @@
         <tr><td style="padding:12px 16px; font-size:13px; color:#7a4f00; font-family:Arial,Helvetica,sans-serif;">&#9888;&nbsp; <strong>Attention needed</strong></td></tr>
       </table>
       {{else}}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0f3ff" style="border:1px solid #dee8ff; border-radius:8px;">
-        <tr><td style="padding:12px 16px; font-size:13px; color:#3525cd; font-family:Arial,Helvetica,sans-serif;">&#9432;&nbsp; <strong>Information</strong></td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eff6ff" style="border:1px solid #dbeafe; border-radius:8px;">
+        <tr><td style="padding:12px 16px; font-size:13px; color:#3b82f6; font-family:Arial,Helvetica,sans-serif;">&#9432;&nbsp; <strong>Information</strong></td></tr>
       </table>
       {{end}}
     </td>
   </tr>
   {{end}}
+  {{if and .Title (eq .HeaderTitle "")}}
+  <!-- Fallback title in content when HeaderTitle was not set (e.g. direct NotificationData use) -->
   <tr>
     <td style="padding-bottom:12px;">
-      <h1 style="margin:0; font-size:20px; font-weight:700; color:#111c2d; font-family:Arial,Helvetica,sans-serif; letter-spacing:-0.3px;">{{.Title}}</h1>
+      <h2 style="margin:0; font-size:20px; font-weight:700; color:#111c2d; font-family:Arial,Helvetica,sans-serif; letter-spacing:-0.3px;">{{.Title}}</h2>
     </td>
   </tr>
+  {{end}}
   {{if .RecipientName}}
   <tr>
-    <td style="padding-bottom:12px;">
-      <p style="margin:0; font-size:14px; color:#5c5f61; font-family:Arial,Helvetica,sans-serif;">Hi {{.RecipientName}},</p>
+    <td style="padding-bottom:16px;">
+      <p style="margin:0; font-size:14px; color:#5c5f61; font-family:Arial,Helvetica,sans-serif;">Hi <strong style="color:#111c2d;">{{.RecipientName}}</strong>,</p>
+    </td>
+  </tr>
+  {{end}}
+  {{if .MetaItems}}
+  <!-- Transaction / event metadata card -->
+  <tr>
+    <td style="padding-bottom:20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #dbeafe; border-radius:10px; overflow:hidden;">
+        {{range .MetaItems}}
+        <tr>
+          <td style="padding:9px 14px; font-size:11px; font-weight:700; color:#5c5f61; text-transform:uppercase; letter-spacing:0.07em; font-family:Arial,Helvetica,sans-serif; background-color:#eff6ff; width:36%; vertical-align:top; border-top:1px solid #dbeafe; white-space:nowrap;">{{.Label}}</td>
+          <td style="padding:9px 14px; font-size:13px; color:#111c2d; font-family:Arial,Helvetica,sans-serif; vertical-align:top; border-top:1px solid #dbeafe; border-left:1px solid #dbeafe;">{{.Value}}</td>
+        </tr>
+        {{end}}
+      </table>
     </td>
   </tr>
   {{end}}
@@ -44,8 +62,8 @@
       {{if .Table.Caption}}
       <p style="margin:0 0 8px 0; font-size:11px; font-weight:700; color:#5c5f61; text-transform:uppercase; letter-spacing:0.08em; font-family:Arial,Helvetica,sans-serif;">{{.Table.Caption}}</p>
       {{end}}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #dee8ff; border-radius:8px; overflow:hidden;">
-        <tr bgcolor="#3525cd">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #dbeafe; border-radius:8px; overflow:hidden;">
+        <tr bgcolor="#3b82f6">
           {{range .Table.Headers}}
           <td style="padding:10px 14px; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.08em; font-family:Arial,Helvetica,sans-serif;">{{.}}</td>
           {{end}}
@@ -53,7 +71,7 @@
         {{range .Table.Rows}}
         <tr bgcolor="#ffffff">
           {{range .}}
-          <td style="padding:10px 14px; font-size:13px; color:#111c2d; font-family:Arial,Helvetica,sans-serif; border-top:1px solid #dee8ff;">{{.}}</td>
+          <td style="padding:10px 14px; font-size:13px; color:#111c2d; font-family:Arial,Helvetica,sans-serif; border-top:1px solid #dbeafe;">{{.}}</td>
           {{end}}
         </tr>
         {{end}}
@@ -64,7 +82,7 @@
   {{if .CTA.Label}}
   <tr>
     <td align="left" style="padding-top:8px; padding-bottom:8px;">
-      <a href="{{.CTA.URL}}" style="display:inline-block; padding:12px 28px; background-color:#3525cd; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; border-radius:6px; font-family:Arial,Helvetica,sans-serif; letter-spacing:0.02em;">{{.CTA.Label}}</a>
+      <a href="{{.CTA.URL}}" style="display:inline-block; padding:12px 28px; background-color:#3b82f6; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; border-radius:6px; font-family:Arial,Helvetica,sans-serif; letter-spacing:0.02em;">{{.CTA.Label}}</a>
     </td>
   </tr>
   {{end}}
