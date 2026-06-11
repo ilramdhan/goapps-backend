@@ -108,8 +108,13 @@ func run() error {
 		&cfg.Security,
 	)
 
-	// Setup email service
-	emailService := emailinfra.NewService(&cfg.Email)
+	// Setup email service with template renderer.
+	emailRenderer := emailinfra.NewRenderer(emailinfra.BaseData{
+		AppName:    cfg.Email.AppName,
+		AppURL:     cfg.Email.AppURL,
+		SupportURL: cfg.Email.SupportURL,
+	})
+	emailService := emailinfra.NewService(&cfg.Email, emailRenderer)
 	authService.SetEmailService(emailService)
 
 	// Setup validation helper
