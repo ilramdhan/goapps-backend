@@ -1,0 +1,72 @@
+{{define "content"}}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  {{if .AlertLevel}}
+  <tr>
+    <td style="padding-bottom:16px;">
+      {{if eq .AlertLevel "error"}}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffdad6" style="border:1px solid #f5c6c1; border-radius:8px;">
+        <tr><td style="padding:12px 16px; font-size:13px; color:#93000a; font-family:Arial,Helvetica,sans-serif;">&#9888;&nbsp; <strong>Action Required</strong></td></tr>
+      </table>
+      {{else if eq .AlertLevel "warning"}}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#fff8e1" style="border:1px solid #ffe082; border-radius:8px;">
+        <tr><td style="padding:12px 16px; font-size:13px; color:#7a4f00; font-family:Arial,Helvetica,sans-serif;">&#9888;&nbsp; <strong>Attention needed</strong></td></tr>
+      </table>
+      {{else}}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0f3ff" style="border:1px solid #dee8ff; border-radius:8px;">
+        <tr><td style="padding:12px 16px; font-size:13px; color:#3525cd; font-family:Arial,Helvetica,sans-serif;">&#9432;&nbsp; <strong>Information</strong></td></tr>
+      </table>
+      {{end}}
+    </td>
+  </tr>
+  {{end}}
+  <tr>
+    <td style="padding-bottom:12px;">
+      <h1 style="margin:0; font-size:20px; font-weight:700; color:#111c2d; font-family:Arial,Helvetica,sans-serif; letter-spacing:-0.3px;">{{.Title}}</h1>
+    </td>
+  </tr>
+  {{if .RecipientName}}
+  <tr>
+    <td style="padding-bottom:12px;">
+      <p style="margin:0; font-size:14px; color:#5c5f61; font-family:Arial,Helvetica,sans-serif;">Hi {{.RecipientName}},</p>
+    </td>
+  </tr>
+  {{end}}
+  {{range .Paragraphs}}
+  <tr>
+    <td style="padding-bottom:12px;">
+      <p style="margin:0; font-size:14px; color:#111c2d; font-family:Arial,Helvetica,sans-serif; line-height:1.6;">{{.}}</p>
+    </td>
+  </tr>
+  {{end}}
+  {{if .Table}}
+  <tr>
+    <td style="padding-top:4px; padding-bottom:20px;">
+      {{if .Table.Caption}}
+      <p style="margin:0 0 8px 0; font-size:11px; font-weight:700; color:#5c5f61; text-transform:uppercase; letter-spacing:0.08em; font-family:Arial,Helvetica,sans-serif;">{{.Table.Caption}}</p>
+      {{end}}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #dee8ff; border-radius:8px; overflow:hidden;">
+        <tr bgcolor="#3525cd">
+          {{range .Table.Headers}}
+          <td style="padding:10px 14px; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.08em; font-family:Arial,Helvetica,sans-serif;">{{.}}</td>
+          {{end}}
+        </tr>
+        {{range .Table.Rows}}
+        <tr bgcolor="#ffffff">
+          {{range .}}
+          <td style="padding:10px 14px; font-size:13px; color:#111c2d; font-family:Arial,Helvetica,sans-serif; border-top:1px solid #dee8ff;">{{.}}</td>
+          {{end}}
+        </tr>
+        {{end}}
+      </table>
+    </td>
+  </tr>
+  {{end}}
+  {{if .CTA.Label}}
+  <tr>
+    <td align="left" style="padding-top:8px; padding-bottom:8px;">
+      <a href="{{.CTA.URL}}" style="display:inline-block; padding:12px 28px; background-color:#3525cd; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; border-radius:6px; font-family:Arial,Helvetica,sans-serif; letter-spacing:0.02em;">{{.CTA.Label}}</a>
+    </td>
+  </tr>
+  {{end}}
+</table>
+{{end}}

@@ -120,3 +120,71 @@ func TestRenderer_RenderWelcome(t *testing.T) {
 	assert.Contains(t, html, "ilham@mutugading.com")
 	assert.Contains(t, html, "http://localhost:3000/login")
 }
+
+func TestRenderer_RenderNotification_Basic(t *testing.T) {
+	r := NewRenderer(BaseData{AppName: "GoApps", AppURL: "http://localhost:3000"})
+	data := NotificationData{
+		BaseData:      r.BaseData(),
+		RecipientName: "Ilham",
+		Title:         "Your export is ready",
+		Paragraphs:    SplitParagraphs("Your RM Cost export has been generated.\n\nClick the button below to download it."),
+		CTA:           CTAData{Label: "Download Report", URL: "http://localhost:3000/exports/123"},
+	}
+	html, err := r.Render("notification", data)
+	require.NoError(t, err)
+	assert.Contains(t, html, "Your export is ready")
+	assert.Contains(t, html, "Your RM Cost export has been generated.")
+	assert.Contains(t, html, "Download Report")
+	assert.Contains(t, html, "http://localhost:3000/exports/123")
+}
+
+func TestRenderer_RenderNotification_WithTable(t *testing.T) {
+	r := NewRenderer(BaseData{AppName: "GoApps", AppURL: "http://localhost:3000"})
+	data := NotificationData{
+		BaseData:   r.BaseData(),
+		Title:      "Approval Summary",
+		Paragraphs: []string{"The following items require your approval."},
+		Table: &TableData{
+			Caption: "Pending Approvals",
+			Headers: []string{"Request No", "Product", "Status"},
+			Rows: [][]string{
+				{"PRD-2026-001", "Polymer A", "Pending"},
+				{"PRD-2026-002", "Pigment B", "Pending"},
+			},
+		},
+	}
+	html, err := r.Render("notification", data)
+	require.NoError(t, err)
+	assert.Contains(t, html, "Pending Approvals")
+	assert.Contains(t, html, "Request No")
+	assert.Contains(t, html, "PRD-2026-001")
+	assert.Contains(t, html, "Polymer A")
+}
+
+func TestRenderer_RenderNotification_AlertBannerError(t *testing.T) {
+	r := NewRenderer(BaseData{AppName: "GoApps", AppURL: "http://localhost:3000"})
+	data := NotificationData{
+		BaseData:   r.BaseData(),
+		Title:      "Action Required",
+		Paragraphs: []string{"Critical issue detected."},
+		AlertLevel: "error",
+	}
+	html, err := r.Render("notification", data)
+	require.NoError(t, err)
+	// Error banner uses red background color
+	assert.Contains(t, html, "#ffdad6")
+	assert.Contains(t, html, "Action Required")
+}
+
+func TestRenderer_RenderNotification_NoCTA(t *testing.T) {
+	r := NewRenderer(BaseData{AppName: "GoApps", AppURL: "http://localhost:3000"})
+	data := NotificationData{
+		BaseData:   r.BaseData(),
+		Title:      "Heads up",
+		Paragraphs: []string{"This is an informational notice."},
+	}
+	html, err := r.Render("notification", data)
+	require.NoError(t, err)
+	// No CTA button rendered — no display:inline-block button style
+	assert.NotContains(t, html, "display:inline-block; padding:12px")
+}
