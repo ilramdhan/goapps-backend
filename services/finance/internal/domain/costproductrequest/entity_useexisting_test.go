@@ -78,12 +78,16 @@ func TestUseExistingCosting_BlockedFromWrongState(t *testing.T) {
 	}
 }
 
-func TestUseExistingCosting_BlockedWhenVerifiedIsNew(t *testing.T) {
+// TestUseExistingCosting_AutoSetsVerifiedClassification verifies that
+// UseExistingCosting auto-sets verifiedClassification to "existing" regardless
+// of any prior VerifyClassification call, so callers do not need a separate
+// VerifyClassification step before invoking this transition.
+func TestUseExistingCosting_AutoSetsVerifiedClassification(t *testing.T) {
 	t.Parallel()
 
 	r, err := cpr.New(cpr.NewInput{
 		RequestTypeID:         1,
-		Title:                 "verified new",
+		Title:                 "auto-set verified",
 		CustomerName:          "Acme",
 		ProductClassification: cpr.ClassNew,
 		UrgencyLevel:          cpr.UrgencyMedium,
@@ -106,10 +110,17 @@ func TestUseExistingCosting_BlockedWhenVerifiedIsNew(t *testing.T) {
 	if err := r.StartReview(); err != nil {
 		t.Fatalf("StartReview: %v", err)
 	}
+	// Prior VerifyClassification("new") should NOT block UseExistingCosting.
 	if err := r.VerifyClassification(cpr.ClassNew, ""); err != nil {
 		t.Fatalf("VerifyClassification: %v", err)
 	}
-	if err := r.UseExistingCosting(99); !errors.Is(err, cpr.ErrInvalidTransition) {
-		t.Fatalf("want ErrInvalidTransition when verified=new, got %v", err)
+	if err := r.UseExistingCosting(99); err != nil {
+		t.Fatalf("want success, got %v", err)
+	}
+	if r.Status() != cpr.StatusQuoteReady {
+		t.Fatalf("want QUOTE_READY, got %s", r.Status())
+	}
+	if r.VerifiedClassification() != cpr.ClassExisting {
+		t.Fatalf("want verifiedClassification=%s, got %s", cpr.ClassExisting, r.VerifiedClassification())
 	}
 }

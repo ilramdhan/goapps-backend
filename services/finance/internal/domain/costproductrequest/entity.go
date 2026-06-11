@@ -335,6 +335,10 @@ func (r *Request) DecideFeasibility(decision, note, actor string) error {
 		r.feasibilityBy = actor
 		now := time.Now().UTC()
 		r.feasibilityAt = &now
+		// Preserve original classification; only override when explicitly verified.
+		if r.verifiedClassification == "" {
+			r.verifiedClassification = r.productClassification
+		}
 		r.status = StatusRoutingDefined
 	case FeasibilityNotFeasible:
 		if strings.TrimSpace(note) == "" {
@@ -348,6 +352,9 @@ func (r *Request) DecideFeasibility(decision, note, actor string) error {
 		r.feasibilityBy = actor
 		now := time.Now().UTC()
 		r.feasibilityAt = &now
+		if r.verifiedClassification == "" {
+			r.verifiedClassification = r.productClassification
+		}
 		r.status = StatusRejected
 		r.rejectReason = strings.TrimSpace(note)
 	default:
@@ -357,14 +364,13 @@ func (r *Request) DecideFeasibility(decision, note, actor string) error {
 	return nil
 }
 
-// UseExistingCosting transitions UNDER_REVIEW → QUOTE_READY (verified must be existing).
+// UseExistingCosting transitions UNDER_REVIEW → QUOTE_READY.
+// Automatically sets verifiedClassification to "existing" so the caller does
+// not need to invoke VerifyClassification separately before this transition.
 // existingProductSysID is recorded so the QUOTE_READY state traces back to a
 // concrete cost_product_master.
 func (r *Request) UseExistingCosting(existingProductSysID int64) error {
 	if r.status != StatusUnderReview {
-		return ErrInvalidTransition
-	}
-	if r.verifiedClassification != ClassExisting {
 		return ErrInvalidTransition
 	}
 	if existingProductSysID <= 0 {
@@ -373,6 +379,7 @@ func (r *Request) UseExistingCosting(existingProductSysID int64) error {
 	if !canTransition(r.status, StatusQuoteReady) {
 		return ErrInvalidTransition
 	}
+	r.verifiedClassification = ClassExisting
 	r.existingProductSysID = existingProductSysID
 	r.status = StatusQuoteReady
 	r.touch()
@@ -393,7 +400,8 @@ func (r *Request) LinkRoute(headID int64) error {
 	}
 	switch r.status {
 	case StatusDraft, StatusSubmitted, StatusUnderReview,
-		StatusRoutingDefined, StatusParameterPending, StatusParameterComplete:
+		StatusRoutingDefined, StatusParameterPending, StatusParameterComplete,
+		StatusConfirmed, StatusApproved:
 		r.linkedRouteHeadID = headID
 		r.touch()
 		return nil
@@ -438,6 +446,46 @@ func (r *Request) MarkParameterComplete() error {
 		return ErrInvalidTransition
 	}
 	r.status = StatusParameterComplete
+	r.touch()
+	return nil
+}
+
+// Confirm advances PARAMETER_COMPLETE → CONFIRMED.
+func (r *Request) Confirm() error {
+	if r.status != StatusParameterComplete {
+		return ErrInvalidTransition
+	}
+	if !canTransition(r.status, StatusConfirmed) {
+		return ErrInvalidTransition
+	}
+	r.status = StatusConfirmed
+	r.touch()
+	return nil
+}
+
+// Approve advances CONFIRMED → APPROVED.
+func (r *Request) Approve() error {
+	if r.status != StatusConfirmed {
+		return ErrInvalidTransition
+	}
+	if !canTransition(r.status, StatusApproved) {
+		return ErrInvalidTransition
+	}
+	r.status = StatusApproved
+	r.touch()
+	return nil
+}
+
+// Release advances APPROVED → RELEASED. After release the request is locked
+// and the cost calculation engine can proceed.
+func (r *Request) Release() error {
+	if r.status != StatusApproved {
+		return ErrInvalidTransition
+	}
+	if !canTransition(r.status, StatusReleased) {
+		return ErrInvalidTransition
+	}
+	r.status = StatusReleased
 	r.touch()
 	return nil
 }

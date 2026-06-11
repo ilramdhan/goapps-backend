@@ -8,6 +8,9 @@ const (
 	StatusRoutingDefined    = "ROUTING_DEFINED"
 	StatusParameterPending  = "PARAMETER_PENDING"
 	StatusParameterComplete = "PARAMETER_COMPLETE"
+	StatusConfirmed         = "CONFIRMED"
+	StatusApproved          = "APPROVED"
+	StatusReleased          = "RELEASED"
 	StatusCostingDone       = "COSTING_DONE"
 	StatusQuoted            = "QUOTED"
 	StatusQuoteReady        = "QUOTE_READY"
@@ -64,6 +67,18 @@ var allowedTransitions = map[string]map[string]struct{}{
 		StatusClosed:            {},
 	},
 	StatusParameterComplete: {
+		StatusConfirmed: {},
+		StatusClosed:    {},
+	},
+	StatusConfirmed: {
+		StatusApproved: {},
+		StatusClosed:   {},
+	},
+	StatusApproved: {
+		StatusReleased: {},
+		StatusClosed:   {},
+	},
+	StatusReleased: {
 		StatusCostingDone: {},
 		StatusClosed:      {},
 	},
