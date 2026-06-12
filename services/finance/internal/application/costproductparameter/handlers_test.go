@@ -92,6 +92,26 @@ func (f *fakeRepo) CountApplicableForProducts(_ context.Context, _ []int64) (int
 	return 0, nil
 }
 
+func (f *fakeRepo) GetParamIDByCode(_ context.Context, _ string) (uuid.UUID, error) {
+	return uuid.Nil, nil
+}
+
+func (f *fakeRepo) GetProductSysIDByCode(_ context.Context, _ string) (int64, error) {
+	return 0, nil
+}
+
+func (f *fakeRepo) ListApplicable(_ context.Context, _ int64) ([]cpp.CAPPRow, error) {
+	return nil, nil
+}
+
+func (f *fakeRepo) ListAllApplicable(_ context.Context) ([]cpp.CAPPRow, error) {
+	return nil, nil
+}
+
+func (f *fakeRepo) ListAllValues(_ context.Context) ([]cpp.CPPRow, error) {
+	return nil, nil
+}
+
 // =============================================================================
 // Upsert
 // =============================================================================

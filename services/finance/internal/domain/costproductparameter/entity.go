@@ -82,6 +82,24 @@ type RequiredEntry struct {
 	Value *Value // nil = not yet filled
 }
 
+// CAPPRow is a flat representation of a cost_product_applicable_param row used
+// for export and reporting.
+type CAPPRow struct {
+	ProductCode  string
+	ParamCode    string
+	IsRequired   bool
+	DisplayOrder *int32
+}
+
+// CPPRow is a flat representation of a cost_product_parameter row used for export.
+type CPPRow struct {
+	ProductCode  string
+	ParamCode    string
+	ValueNumeric *string
+	ValueText    *string
+	ValueFlag    *bool
+}
+
 // EnsureValueShape verifies that the (numeric|text|flag) triple has exactly
 // one populated field and that it matches the declared data_type.
 func EnsureValueShape(dataType string, valueNumeric, valueText *string, valueFlag *bool) error {

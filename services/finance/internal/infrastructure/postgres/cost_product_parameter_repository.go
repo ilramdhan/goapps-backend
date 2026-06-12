@@ -507,3 +507,148 @@ func boolPtrOrNil(p *bool) interface{} {
 	}
 	return *p
 }
+
+// GetParamIDByCode resolves mst_parameter.param_code → UUID.
+func (r *CostProductParameterRepository) GetParamIDByCode(ctx context.Context, paramCode string) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := r.db.QueryRowContext(ctx,
+		`SELECT id FROM mst_parameter WHERE param_code = $1 AND deleted_at IS NULL AND is_active = TRUE LIMIT 1`,
+		paramCode,
+	).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return uuid.Nil, cpp.ErrParamNotFound
+	}
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("get param id by code: %w", err)
+	}
+	return id, nil
+}
+
+// GetProductSysIDByCode resolves cost_product_master.cpm_product_code → sys_id.
+func (r *CostProductParameterRepository) GetProductSysIDByCode(ctx context.Context, productCode string) (int64, error) {
+	var sysID int64
+	err := r.db.QueryRowContext(ctx,
+		`SELECT cpm_product_sys_id FROM cost_product_master WHERE cpm_product_code = $1 LIMIT 1`,
+		productCode,
+	).Scan(&sysID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, cpp.ErrProductNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("get product sys id by code: %w", err)
+	}
+	return sysID, nil
+}
+
+// ListApplicable returns all CAPP rows for a product joined with product code and param code.
+func (r *CostProductParameterRepository) ListApplicable(ctx context.Context, productSysID int64) ([]cpp.CAPPRow, error) {
+	const q = `
+SELECT m.cpm_product_code, p.param_code, a.capp_is_required, a.capp_display_order
+FROM cost_product_applicable_param a
+JOIN mst_parameter p ON p.id = a.capp_param_id AND p.deleted_at IS NULL
+JOIN cost_product_master m ON m.cpm_product_sys_id = a.capp_product_sys_id
+WHERE a.capp_product_sys_id = $1
+ORDER BY a.capp_display_order, p.param_code
+`
+	rows, err := r.db.QueryContext(ctx, q, productSysID)
+	if err != nil {
+		return nil, fmt.Errorf("list applicable: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+
+	var out []cpp.CAPPRow
+	for rows.Next() {
+		var row cpp.CAPPRow
+		var dispOrder sql.NullInt32
+		if err := rows.Scan(&row.ProductCode, &row.ParamCode, &row.IsRequired, &dispOrder); err != nil {
+			return nil, fmt.Errorf("scan capp row: %w", err)
+		}
+		if dispOrder.Valid {
+			v := dispOrder.Int32
+			row.DisplayOrder = &v
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+// ListAllApplicable returns all CAPP rows across all products.
+func (r *CostProductParameterRepository) ListAllApplicable(ctx context.Context) ([]cpp.CAPPRow, error) {
+	const q = `
+SELECT m.cpm_product_code, p.param_code, a.capp_is_required, a.capp_display_order
+FROM cost_product_applicable_param a
+JOIN mst_parameter p ON p.id = a.capp_param_id AND p.deleted_at IS NULL
+JOIN cost_product_master m ON m.cpm_product_sys_id = a.capp_product_sys_id
+ORDER BY m.cpm_product_code, a.capp_display_order, p.param_code
+`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list all applicable: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+
+	var out []cpp.CAPPRow
+	for rows.Next() {
+		var row cpp.CAPPRow
+		var dispOrder sql.NullInt32
+		if err := rows.Scan(&row.ProductCode, &row.ParamCode, &row.IsRequired, &dispOrder); err != nil {
+			return nil, fmt.Errorf("scan capp row: %w", err)
+		}
+		if dispOrder.Valid {
+			v := dispOrder.Int32
+			row.DisplayOrder = &v
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+// ListAllValues returns all CPP rows across all products.
+func (r *CostProductParameterRepository) ListAllValues(ctx context.Context) ([]cpp.CPPRow, error) {
+	const q = `
+SELECT m.cpm_product_code, p.param_code,
+       c.cpp_value_numeric::text, c.cpp_value_text, c.cpp_value_flag
+FROM cost_product_parameter c
+JOIN mst_parameter p ON p.id = c.cpp_param_id AND p.deleted_at IS NULL
+JOIN cost_product_master m ON m.cpm_product_sys_id = c.cpp_product_sys_id
+ORDER BY m.cpm_product_code, p.param_code
+`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list all cpp values: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+
+	var out []cpp.CPPRow
+	for rows.Next() {
+		var row cpp.CPPRow
+		var vn, vt sql.NullString
+		var vf sql.NullBool
+		if err := rows.Scan(&row.ProductCode, &row.ParamCode, &vn, &vt, &vf); err != nil {
+			return nil, fmt.Errorf("scan cpp row: %w", err)
+		}
+		if vn.Valid {
+			row.ValueNumeric = &vn.String
+		}
+		if vt.Valid {
+			row.ValueText = &vt.String
+		}
+		if vf.Valid {
+			row.ValueFlag = &vf.Bool
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
