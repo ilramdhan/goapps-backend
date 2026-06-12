@@ -17,6 +17,8 @@ import (
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/pkg/costcalc/metrics"
+	cappapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductapplicableparam"
+	cpmapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/auditadapter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/bi/bietl"
 	chartdataapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/chartdata"
@@ -264,6 +266,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costAuditLogRepo := postgres.NewCostAuditLogRepository(db)
 	costNotificationRepo := postgres.NewCostNotificationRepository(db)
 	costProductParameterRepo := postgres.NewCostProductParameterRepository(db)
+	costImportJobRepo := postgres.NewCostImportJobRepository(db)
 	requestHistoryRepo := postgres.NewRequestHistoryRepository(db)
 
 	costProductTypeHandler, err := grpcdelivery.NewCostProductTypeHandler(costProductTypeRepo)
@@ -282,6 +285,25 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return err
 	}
+
+	// Wire async import support (storage + job repo + publisher) into CPM handler.
+	costProductMasterHandler.WithImportSupport(costImportJobRepo, storageSvc, rmqAdapter)
+
+	// Build CostDataImportHandler (CAPP/CPP async import + export/template for CAPP/CPP/CPM).
+	cappExportH := cappapp.NewExportHandler(costProductParameterRepo)
+	cappTemplateH := cappapp.NewTemplateHandler()
+	cppExportH := cppapp.NewExportHandler(costProductParameterRepo)
+	cppTemplateH := cppapp.NewTemplateHandler()
+	cpmExportH := cpmapp.NewExportHandler(costProductMasterRepo)
+	cpmTemplateH := cpmapp.NewTemplateHandler()
+	costDataImportHandler := grpcdelivery.NewCostDataImportHandler(
+		costImportJobRepo, storageSvc,
+		cappExportH, cappTemplateH,
+		cppExportH, cppTemplateH,
+		cpmExportH, cpmTemplateH,
+		rmqAdapter,
+	)
+
 	costRouteHandler, err := grpcdelivery.NewCostRouteHandler(costRouteRepo, costProductRequestRepo)
 	if err != nil {
 		return err
@@ -536,6 +558,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costRequestCommentHandler, costAttachmentHandler,
 		costRoutingRuleHandler, costAuditLogHandler, costNotificationHandler,
 		costProductParameterHandler,
+		costDataImportHandler,
 		costCalcHandler,
 		costFillConfigHandler, costFillTaskHandler,
 		biDashboardHandler, biChartDataHandler, biDataSourceHandler, biJobHandler, biUploadHandler,
@@ -659,6 +682,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	costAuditLogHandler *grpcdelivery.CostAuditLogHandler,
 	costNotificationHandler *grpcdelivery.CostNotificationHandler,
 	costProductParameterHandler *grpcdelivery.CostProductParameterHandler,
+	costDataImportHandler *grpcdelivery.CostDataImportHandler,
 	costCalcHandler *grpcdelivery.CostCalcHandler,
 	costFillConfigHandler *grpcdelivery.CostFillConfigHandler,
 	costFillTaskHandler *grpcdelivery.CostFillTaskHandler,
@@ -700,6 +724,8 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterCostAuditLogServiceServer(grpcServer.GRPCServer(), costAuditLogHandler)
 	financev1.RegisterCostNotificationServiceServer(grpcServer.GRPCServer(), costNotificationHandler)
 	financev1.RegisterCostProductParameterServiceServer(grpcServer.GRPCServer(), costProductParameterHandler)
+	// Costing data import/export service.
+	financev1.RegisterCostDataImportServiceServer(grpcServer.GRPCServer(), costDataImportHandler)
 	// S8a foundation: CostCalcService stub.
 	financev1.RegisterCostCalcServiceServer(grpcServer.GRPCServer(), costCalcHandler)
 

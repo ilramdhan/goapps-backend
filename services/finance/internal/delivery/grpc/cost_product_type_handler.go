@@ -14,11 +14,14 @@ import (
 // CostProductTypeHandler implements financev1.CostProductTypeServiceServer.
 type CostProductTypeHandler struct {
 	financev1.UnimplementedCostProductTypeServiceServer
-	createHandler *app.CreateHandler
-	getHandler    *app.GetHandler
-	updateHandler *app.UpdateHandler
-	listHandler   *app.ListHandler
-	validation    *ValidationHelper
+	createHandler  *app.CreateHandler
+	getHandler     *app.GetHandler
+	updateHandler  *app.UpdateHandler
+	listHandler    *app.ListHandler
+	exportHandler  *app.ExportHandler
+	importHandler  *app.ImportHandler
+	templateHandler *app.TemplateHandler
+	validation     *ValidationHelper
 }
 
 // NewCostProductTypeHandler constructs the handler.
@@ -28,11 +31,14 @@ func NewCostProductTypeHandler(repo domain.Repository) (*CostProductTypeHandler,
 		return nil, err
 	}
 	return &CostProductTypeHandler{
-		createHandler: app.NewCreateHandler(repo),
-		getHandler:    app.NewGetHandler(repo),
-		updateHandler: app.NewUpdateHandler(repo),
-		listHandler:   app.NewListHandler(repo),
-		validation:    v,
+		createHandler:   app.NewCreateHandler(repo),
+		getHandler:      app.NewGetHandler(repo),
+		updateHandler:   app.NewUpdateHandler(repo),
+		listHandler:     app.NewListHandler(repo),
+		exportHandler:   app.NewExportHandler(repo),
+		importHandler:   app.NewImportHandler(repo),
+		templateHandler: app.NewTemplateHandler(),
+		validation:      v,
 	}, nil
 }
 
@@ -159,4 +165,60 @@ func productTypeErrToBase(err error) *commonv1.BaseResponse {
 	default:
 		return InternalErrorResponse(err.Error())
 	}
+}
+
+// ExportCostProductTypes exports CostProductTypes to Excel.
+func (h *CostProductTypeHandler) ExportCostProductTypes(ctx context.Context, req *financev1.ExportCostProductTypesRequest) (*financev1.ExportCostProductTypesResponse, error) {
+	result, err := h.exportHandler.Handle(ctx, app.ExportQuery{ActiveFilter: req.GetActiveFilter()})
+	if err != nil {
+		return &financev1.ExportCostProductTypesResponse{Base: productTypeErrToBase(err)}, nil
+	}
+	return &financev1.ExportCostProductTypesResponse{
+		Base:        successResponse("Cost product types exported successfully"),
+		FileContent: result.FileContent,
+		FileName:    result.FileName,
+	}, nil
+}
+
+// ImportCostProductTypes imports CostProductTypes from Excel.
+func (h *CostProductTypeHandler) ImportCostProductTypes(ctx context.Context, req *financev1.ImportCostProductTypesRequest) (*financev1.ImportCostProductTypesResponse, error) {
+	result, err := h.importHandler.Handle(ctx, app.ImportCommand{
+		FileContent:     req.GetFileContent(),
+		FileName:        req.GetFileName(),
+		DuplicateAction: req.GetDuplicateAction(),
+	})
+	if err != nil {
+		return &financev1.ImportCostProductTypesResponse{Base: productTypeErrToBase(err)}, nil
+	}
+
+	importErrors := make([]*financev1.ImportError, len(result.Errors))
+	for i, e := range result.Errors {
+		importErrors[i] = &financev1.ImportError{
+			RowNumber: e.RowNumber,
+			Field:     e.Field,
+			Message:   e.Message,
+		}
+	}
+
+	return &financev1.ImportCostProductTypesResponse{
+		Base:         successResponse("Import completed"),
+		SuccessCount: result.SuccessCount,
+		SkippedCount: result.SkippedCount,
+		UpdatedCount: result.UpdatedCount,
+		FailedCount:  result.FailedCount,
+		Errors:       importErrors,
+	}, nil
+}
+
+// DownloadCostProductTypeTemplate downloads the Excel import template.
+func (h *CostProductTypeHandler) DownloadCostProductTypeTemplate(_ context.Context, _ *financev1.DownloadCostProductTypeTemplateRequest) (*financev1.DownloadCostProductTypeTemplateResponse, error) {
+	result, err := h.templateHandler.Handle()
+	if err != nil {
+		return &financev1.DownloadCostProductTypeTemplateResponse{Base: InternalErrorResponse(err.Error())}, nil
+	}
+	return &financev1.DownloadCostProductTypeTemplateResponse{
+		Base:        successResponse("Template generated successfully"),
+		FileContent: result.FileContent,
+		FileName:    result.FileName,
+	}, nil
 }

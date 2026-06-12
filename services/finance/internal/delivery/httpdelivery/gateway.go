@@ -160,6 +160,11 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 		return fmt.Errorf("failed to register CostFillTask gateway: %w", err)
 	}
 
+	// Costing data import/export gateway routes.
+	if err := financev1.RegisterCostDataImportServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("register CostDataImportService gateway: %w", err)
+	}
+
 	// BI (Executive Dashboard) gateway routes.
 	if err := financev1.RegisterDashboardServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register BI Dashboard gateway: %w", err)

@@ -1,14 +1,19 @@
 package grpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costimportjob"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/storage"
 )
 
 // CostProductMasterHandler implements financev1.CostProductMasterServiceServer.
@@ -20,6 +25,11 @@ type CostProductMasterHandler struct {
 	linkErpHandler    *app.LinkErpHandler
 	deactivateHandler *app.DeactivateHandler
 	listHandler       *app.ListHandler
+	exportHandler     *app.ExportHandler
+	templateHandler   *app.TemplateHandler
+	jobRepo           costimportjob.Repository
+	storageSvc        storage.Service
+	importPublisher   *rabbitmq.JobPublisherAdapter
 	validation        *ValidationHelper
 }
 
@@ -36,8 +46,21 @@ func NewCostProductMasterHandler(repo domain.Repository) (*CostProductMasterHand
 		linkErpHandler:    app.NewLinkErpHandler(repo),
 		deactivateHandler: app.NewDeactivateHandler(repo),
 		listHandler:       app.NewListHandler(repo),
+		exportHandler:     app.NewExportHandler(repo),
+		templateHandler:   app.NewTemplateHandler(),
 		validation:        v,
 	}, nil
+}
+
+// WithImportSupport wires the job repo, storage, and publisher needed for async CPM imports.
+func (h *CostProductMasterHandler) WithImportSupport(
+	jobRepo costimportjob.Repository,
+	storageSvc storage.Service,
+	importPublisher *rabbitmq.JobPublisherAdapter,
+) {
+	h.jobRepo = jobRepo
+	h.storageSvc = storageSvc
+	h.importPublisher = importPublisher
 }
 
 // CreateCostProductMaster creates a new product master with auto-generated code.
@@ -184,6 +207,69 @@ func (h *CostProductMasterHandler) ListCostProductMasters(ctx context.Context, r
 		Base:       successResponse("OK"),
 		Data:       items,
 		Pagination: paginationResponse(page, pageSize, res.Total),
+	}, nil
+}
+
+// ExportCostProductMasters exports product masters to Excel.
+func (h *CostProductMasterHandler) ExportCostProductMasters(ctx context.Context, req *financev1.ExportCostProductMastersRequest) (*financev1.ExportCostProductMastersResponse, error) {
+	result, err := h.exportHandler.Handle(ctx, app.ExportQuery{
+		Search:       req.GetSearch(),
+		ActiveFilter: req.GetActiveFilter(),
+	})
+	if err != nil {
+		return &financev1.ExportCostProductMastersResponse{Base: productMasterErrToBase(err)}, nil
+	}
+	return &financev1.ExportCostProductMastersResponse{
+		Base:        successResponse("Cost product masters exported successfully"),
+		FileContent: result.FileContent,
+		FileName:    result.FileName,
+	}, nil
+}
+
+// ImportCostProductMasters uploads file to MinIO, creates a PENDING job, and publishes to RabbitMQ.
+func (h *CostProductMasterHandler) ImportCostProductMasters(ctx context.Context, req *financev1.ImportCostProductMastersRequest) (*financev1.ImportCostProductMastersResponse, error) {
+	if h.jobRepo == nil {
+		return &financev1.ImportCostProductMastersResponse{Base: InternalErrorResponse("import not configured")}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+
+	actor := getUserFromContext(ctx)
+	fileContent := req.GetFileContent()
+	fileKey := fmt.Sprintf("imports/%s/%s_%d.xlsx", costimportjob.EntityProductMaster, actor, time.Now().UnixNano())
+
+	if h.storageSvc != nil {
+		if err := h.storageSvc.PutObject(ctx, fileKey, bytes.NewReader(fileContent), int64(len(fileContent)),
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); err != nil {
+			return &financev1.ImportCostProductMastersResponse{Base: InternalErrorResponse(fmt.Sprintf("upload file: %s", err.Error()))}, nil //nolint:nilerr // intentional BaseResponse pattern
+		}
+	}
+
+	job := costimportjob.NewJob(costimportjob.EntityProductMaster, fileKey, actor)
+	if err := h.jobRepo.Create(ctx, job); err != nil {
+		return &financev1.ImportCostProductMastersResponse{Base: InternalErrorResponse(fmt.Sprintf("create import job: %s", err.Error()))}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+
+	if h.importPublisher != nil {
+		if err := h.importPublisher.PublishImportJob(ctx, job.JobID(), costimportjob.EntityProductMaster); err != nil {
+			return &financev1.ImportCostProductMastersResponse{Base: InternalErrorResponse(fmt.Sprintf("publish import job: %s", err.Error()))}, nil //nolint:nilerr // intentional BaseResponse pattern
+		}
+	}
+
+	return &financev1.ImportCostProductMastersResponse{
+		Base:  successResponse("Product master import queued"),
+		JobId: job.JobID(),
+	}, nil
+}
+
+// DownloadCostProductMasterTemplate downloads the Excel import template.
+func (h *CostProductMasterHandler) DownloadCostProductMasterTemplate(_ context.Context, _ *financev1.DownloadCostProductMasterTemplateRequest) (*financev1.DownloadCostProductMasterTemplateResponse, error) {
+	result, err := h.templateHandler.Handle()
+	if err != nil {
+		return &financev1.DownloadCostProductMasterTemplateResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+	return &financev1.DownloadCostProductMasterTemplateResponse{
+		Base:        successResponse("Template generated successfully"),
+		FileContent: result.FileContent,
+		FileName:    result.FileName,
 	}, nil
 }
 
