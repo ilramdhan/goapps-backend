@@ -97,8 +97,15 @@ func run() error {
 	notificationRepo := postgres.NewNotificationRepository(db)
 	companyMappingRepo := postgres.NewCompanyMappingRepository(db)
 
-	// Notification broadcaster (in-memory pub/sub for SSE realtime delivery).
-	notifBroadcaster := notifinfra.NewBroadcaster()
+	// Notification broadcaster: Redis-backed when Redis is available so that
+	// events published on one pod reach SSE subscribers on all other pods.
+	// Falls back to in-memory-only when Redis is unavailable (single-pod staging).
+	var notifBroadcaster *notifinfra.Broadcaster
+	if redisClient != nil {
+		notifBroadcaster = notifinfra.NewRedisBroadcaster(redisClient.Client)
+	} else {
+		notifBroadcaster = notifinfra.NewBroadcaster()
+	}
 
 	// Setup auth service
 	authService := authapp.NewService(

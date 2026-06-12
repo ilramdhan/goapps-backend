@@ -4,6 +4,7 @@ package costrequestcomment
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
@@ -71,16 +72,19 @@ func (h *CreateHandler) emitCommentAdded(ctx context.Context, requestID int64, a
 			Msg("CreateCommentHandler: fetch CPR for notification failed (non-fatal)")
 		return
 	}
+	rules := []cprapp.CPRNotifRule{
+		{RuleType: "BY_PERMISSION", Value: "finance.product.request.review"},
+	}
+	if _, err := uuid.Parse(req.RequesterUserID()); err == nil {
+		rules = append([]cprapp.CPRNotifRule{{RuleType: "BY_USER_ID", Value: req.RequesterUserID()}}, rules...)
+	}
 	event := cprapp.CPREvent{
 		EventType:       "CPR_COMMENT_ADDED",
 		RequestID:       requestID,
 		RequestNo:       req.RequestNo(),
 		RequesterUserID: req.RequesterUserID(),
 		ActorName:       authorName,
-		Rules: []cprapp.CPRNotifRule{
-			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
-			{RuleType: "BY_PERMISSION", Value: "finance.product.request.review"},
-		},
+		Rules:           rules,
 	}
 	if notifyErr := h.cprNotifier.NotifyEvent(ctx, event); notifyErr != nil {
 		log.Warn().Err(notifyErr).Int64("request_id", requestID).
