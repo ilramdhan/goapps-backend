@@ -212,7 +212,7 @@ func (s *BIRepositorySuite) TestDashboardCRUDRoundtrip() {
 		Code: "ITEST_DASH", Title: "ITest", FilterType: "MIS", FilterGroup1: "EBITDA",
 		PeriodGrain: "MONTHLY", DefaultPeriod: "L12M", ChartType: "waterfall",
 		ChartConfigRaw: map[string]any{"x_axis_field": "group_2", "y_axis_field": "display_value"},
-		CompareModes: []string{"YoY"}, MaxDrillLevel: 3, CacheTTLSec: 1800,
+		CompareModes:   []string{"YoY"}, MaxDrillLevel: 3, CacheTTLSec: 1800,
 		GroupID: s.groupID, IsActive: true, AllowedRoleCodes: []string{"CFO"}, CreatedBy: uuid.New(),
 	})
 	require.NoError(s.T(), err)
@@ -255,7 +255,7 @@ func (s *BIRepositorySuite) TestDuplicateCode_Conflict() {
 			Code: "ITEST_DUP", Title: "Dup", FilterType: "MIS", PeriodGrain: "MONTHLY",
 			DefaultPeriod: "L12M", ChartType: "bar",
 			ChartConfigRaw: map[string]any{"x_axis_field": "group_1", "y_axis_field": "value"},
-			MaxDrillLevel: 1, CacheTTLSec: 60, GroupID: s.groupID, IsActive: true, CreatedBy: uuid.New(),
+			MaxDrillLevel:  1, CacheTTLSec: 60, GroupID: s.groupID, IsActive: true, CreatedBy: uuid.New(),
 		})
 		require.NoError(s.T(), err)
 		return d

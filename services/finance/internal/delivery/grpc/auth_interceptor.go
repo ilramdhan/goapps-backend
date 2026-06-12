@@ -42,6 +42,11 @@ type TokenBlacklistChecker interface {
 	IsBlacklisted(ctx context.Context, tokenID string) (bool, error)
 }
 
+// PermissionsReader fetches a user's permissions from the IAM Redis cache.
+type PermissionsReader interface {
+	GetUserPermissions(ctx context.Context, userID string) ([]string, error)
+}
+
 // serviceSecretValid reports whether the internal x-service-secret header
 // matches the configured secret. An empty configured secret skips the check
 // (trusts cluster network isolation).
@@ -69,7 +74,8 @@ func withServiceIdentity(ctx context.Context) context.Context {
 
 // AuthInterceptor validates JWT tokens issued by IAM service.
 // blacklist is optional — if nil, blacklist checking is skipped (graceful degradation).
-func AuthInterceptor(cfg *config.JWTConfig, blacklist TokenBlacklistChecker) grpc.UnaryServerInterceptor { //nolint:gocognit,gocyclo // sequential auth gates, cohesive
+// permsReader is optional — if nil, permissions fall back to JWT claims (empty after cookie-size fix).
+func AuthInterceptor(cfg *config.JWTConfig, blacklist TokenBlacklistChecker, permsReader PermissionsReader) grpc.UnaryServerInterceptor { //nolint:gocognit,gocyclo // sequential auth gates, cohesive
 	secret := []byte(cfg.AccessTokenSecret)
 	svcSecret := cfg.ServiceSecret
 
@@ -120,12 +126,23 @@ func AuthInterceptor(cfg *config.JWTConfig, blacklist TokenBlacklistChecker) grp
 			}
 		}
 
+		// Resolve permissions from IAM Redis cache (JWT no longer embeds them).
+		// Fall back to claims.Permissions on cache miss so old tokens still work.
+		perms := claims.Permissions
+		if permsReader != nil {
+			if cached, err := permsReader.GetUserPermissions(ctx, claims.UserID); err != nil {
+				log.Warn().Err(err).Str("userID", claims.UserID).Msg("failed to fetch permissions from Redis, using JWT fallback")
+			} else if cached != nil {
+				perms = cached
+			}
+		}
+
 		// Populate context with user info from claims.
 		ctx = context.WithValue(ctx, AuthUserIDKey, claims.UserID)
 		ctx = context.WithValue(ctx, AuthUsernameKey, claims.Username)
 		ctx = context.WithValue(ctx, AuthEmailKey, claims.Email)
 		ctx = context.WithValue(ctx, AuthRolesKey, claims.Roles)
-		ctx = context.WithValue(ctx, AuthPermissionsKey, claims.Permissions)
+		ctx = context.WithValue(ctx, AuthPermissionsKey, perms)
 
 		return handler(ctx, req)
 	}
@@ -180,6 +197,12 @@ func validateAccessToken(tokenString string, secret []byte) (*JWTClaims, error) 
 // GetUserIDFromCtx retrieves the user ID from context.
 func GetUserIDFromCtx(ctx context.Context) (string, bool) {
 	val, ok := ctx.Value(AuthUserIDKey).(string)
+	return val, ok
+}
+
+// GetUsernameFromCtx retrieves the username from context.
+func GetUsernameFromCtx(ctx context.Context) (string, bool) {
+	val, ok := ctx.Value(AuthUsernameKey).(string)
 	return val, ok
 }
 
@@ -286,6 +309,65 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostCalcService/ApproveCostResult":   "finance.cost.result.approve",
 		// Service-to-service: invoked by finance-cost-worker. Same scope as triggering a job.
 		"/finance.v1.CostCalcService/ProcessChunkInternal": "finance.cost.caljob.trigger",
+
+		// CostProductRequestService
+		"/finance.v1.CostProductRequestService/CreateCostProductRequest":                "finance.product.request.create",
+		"/finance.v1.CostProductRequestService/UpdateCostProductRequest":                "finance.product.request.create",
+		"/finance.v1.CostProductRequestService/GetCostProductRequest":                   "finance.product.request.view",
+		"/finance.v1.CostProductRequestService/GetCostProductRequestByNo":               "finance.product.request.view",
+		"/finance.v1.CostProductRequestService/ListCostProductRequests":                 "finance.product.request.view",
+		"/finance.v1.CostProductRequestService/SubmitCostProductRequest":                "finance.product.request.submit",
+		"/finance.v1.CostProductRequestService/CancelCostProductRequest":                "",
+		"/finance.v1.CostProductRequestService/CloseCostProductRequest":                 "",
+		"/finance.v1.CostProductRequestService/ReviseCostProductRequest":                "finance.product.request.create",
+		"/finance.v1.CostProductRequestService/StartCostProductRequestReview":           "finance.product.request.review",
+		"/finance.v1.CostProductRequestService/VerifyCostProductRequestClassification":  "finance.product.request.review",
+		"/finance.v1.CostProductRequestService/DecideCostProductRequestFeasibility":     "finance.product.request.resolve",
+		"/finance.v1.CostProductRequestService/UseExistingCostingForCostProductRequest": "finance.product.request.resolve",
+		"/finance.v1.CostProductRequestService/RejectCostProductRequest":                "finance.product.request.reject",
+		"/finance.v1.CostProductRequestService/AssignCostProductRequest":                "finance.product.request.assign",
+		"/finance.v1.CostProductRequestService/MarkParameterComplete":                   "finance.product.request.resolve",
+		"/finance.v1.CostProductRequestService/ConfirmCostProductRequest":               "finance.product.request.confirm",
+		"/finance.v1.CostProductRequestService/ApproveCostProductRequest":               "finance.product.request.approve",
+		"/finance.v1.CostProductRequestService/ReleaseCostProductRequest":               "finance.product.request.release",
+		"/finance.v1.CostProductRequestService/ReopenCostProductRequest":                "finance.product.request.reopen",
+		"/finance.v1.CostProductRequestService/GetCostProductRequestHistory":            "finance.product.request.view",
+		"/finance.v1.CostProductRequestService/LinkExistingRoute":                       "finance.product.route.update",
+		"/finance.v1.CostProductRequestService/UnlinkRoute":                             "finance.product.route.update",
+
+		// CostRouteService
+		"/finance.v1.CostRouteService/CreateRouteFromProduct": "finance.product.route.create",
+		"/finance.v1.CostRouteService/GetRouteByProduct":      "finance.product.route.view",
+		"/finance.v1.CostRouteService/GetRouteGraph":          "finance.product.route.view",
+		"/finance.v1.CostRouteService/SaveRouteGraph":         "finance.product.route.create",
+		"/finance.v1.CostRouteService/CompleteRoute":          "finance.product.route.create",
+		"/finance.v1.CostRouteService/LockRoute":              "finance.product.route.update",
+		"/finance.v1.CostRouteService/UnlockRoute":            "finance.product.route.update",
+		"/finance.v1.CostRouteService/DeleteRoute":            "finance.product.route.create",
+		"/finance.v1.CostRouteService/ListRoutes":             "finance.product.route.view",
+		"/finance.v1.CostRouteService/DuplicateRoute":         "finance.product.route.create",
+		"/finance.v1.CostRouteService/ListLinkedRequests":     "finance.product.route.view",
+
+		// CostProductMasterService
+		"/finance.v1.CostProductMasterService/CreateCostProductMaster":           "finance.product.route.create",
+		"/finance.v1.CostProductMasterService/UpdateCostProductMaster":           "finance.product.route.create",
+		"/finance.v1.CostProductMasterService/GetCostProductMaster":              "finance.product.route.view",
+		"/finance.v1.CostProductMasterService/GetCostProductMasterByCode":        "finance.product.route.view",
+		"/finance.v1.CostProductMasterService/ListCostProductMasters":            "finance.product.route.view",
+		"/finance.v1.CostProductMasterService/UpdateCostProductMasterErpLinkage": "finance.product.route.create",
+		"/finance.v1.CostProductMasterService/DeactivateCostProductMaster":       "finance.product.route.update",
+
+		// CostFillTaskService — authenticated-only (access controlled by fill config domain)
+		"/finance.v1.CostFillTaskService/ListFillTasks":   "",
+		"/finance.v1.CostFillTaskService/ClaimFillTask":   "",
+		"/finance.v1.CostFillTaskService/SubmitFillTask":  "",
+		"/finance.v1.CostFillTaskService/ApproveFillTask": "",
+		"/finance.v1.CostFillTaskService/RejectFillTask":  "",
+
+		// CostLevelAssignmentConfigService
+		"/finance.v1.CostLevelAssignmentConfigService/UpsertLevelConfig":  "finance.product.request.resolve",
+		"/finance.v1.CostLevelAssignmentConfigService/DeleteGlobalConfig": "finance.product.request.resolve",
+		"/finance.v1.CostLevelAssignmentConfigService/ListGlobalConfigs":  "finance.product.request.view",
 	}
 
 	return permissions[fullMethod]

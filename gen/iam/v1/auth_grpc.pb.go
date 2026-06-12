@@ -33,6 +33,7 @@ const (
 	AuthService_SendEmailVerification_FullMethodName   = "/iam.v1.AuthService/SendEmailVerification"
 	AuthService_VerifyEmail_FullMethodName             = "/iam.v1.AuthService/VerifyEmail"
 	AuthService_ResendEmailVerification_FullMethodName = "/iam.v1.AuthService/ResendEmailVerification"
+	AuthService_ValidateUnlockPassword_FullMethodName  = "/iam.v1.AuthService/ValidateUnlockPassword"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -73,6 +74,10 @@ type AuthServiceClient interface {
 	VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error)
 	// ResendEmailVerification re-sends the verification code. Rate-limited to 1 per minute per user.
 	ResendEmailVerification(ctx context.Context, in *ResendEmailVerificationRequest, opts ...grpc.CallOption) (*ResendEmailVerificationResponse, error)
+	// ValidateUnlockPassword verifies the authenticated user's password without changing it.
+	// Used by sensitive UIs (e.g., fill-task unlock dialogs) to re-confirm identity.
+	// The user identity is resolved from the JWT token; no user_id in the request.
+	ValidateUnlockPassword(ctx context.Context, in *ValidateUnlockPasswordRequest, opts ...grpc.CallOption) (*ValidateUnlockPasswordResponse, error)
 }
 
 type authServiceClient struct {
@@ -223,6 +228,16 @@ func (c *authServiceClient) ResendEmailVerification(ctx context.Context, in *Res
 	return out, nil
 }
 
+func (c *authServiceClient) ValidateUnlockPassword(ctx context.Context, in *ValidateUnlockPasswordRequest, opts ...grpc.CallOption) (*ValidateUnlockPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateUnlockPasswordResponse)
+	err := c.cc.Invoke(ctx, AuthService_ValidateUnlockPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -261,6 +276,10 @@ type AuthServiceServer interface {
 	VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error)
 	// ResendEmailVerification re-sends the verification code. Rate-limited to 1 per minute per user.
 	ResendEmailVerification(context.Context, *ResendEmailVerificationRequest) (*ResendEmailVerificationResponse, error)
+	// ValidateUnlockPassword verifies the authenticated user's password without changing it.
+	// Used by sensitive UIs (e.g., fill-task unlock dialogs) to re-confirm identity.
+	// The user identity is resolved from the JWT token; no user_id in the request.
+	ValidateUnlockPassword(context.Context, *ValidateUnlockPasswordRequest) (*ValidateUnlockPasswordResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -312,6 +331,9 @@ func (UnimplementedAuthServiceServer) VerifyEmail(context.Context, *VerifyEmailR
 }
 func (UnimplementedAuthServiceServer) ResendEmailVerification(context.Context, *ResendEmailVerificationRequest) (*ResendEmailVerificationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResendEmailVerification not implemented")
+}
+func (UnimplementedAuthServiceServer) ValidateUnlockPassword(context.Context, *ValidateUnlockPasswordRequest) (*ValidateUnlockPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidateUnlockPassword not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -586,6 +608,24 @@ func _AuthService_ResendEmailVerification_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_ValidateUnlockPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateUnlockPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ValidateUnlockPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ValidateUnlockPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ValidateUnlockPassword(ctx, req.(*ValidateUnlockPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -648,6 +688,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResendEmailVerification",
 			Handler:    _AuthService_ResendEmailVerification_Handler,
+		},
+		{
+			MethodName: "ValidateUnlockPassword",
+			Handler:    _AuthService_ValidateUnlockPassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

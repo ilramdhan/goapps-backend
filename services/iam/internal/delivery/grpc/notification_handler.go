@@ -30,6 +30,7 @@ type NotificationHandler struct {
 	archive       *appnotif.ArchiveHandler
 	deleteHandler *appnotif.DeleteHandler
 	stream        *appnotif.StreamHandler
+	request       *appnotif.RequestHandler
 	validation    *ValidationHelper
 }
 
@@ -293,6 +294,62 @@ func (h *NotificationHandler) DeleteNotification(ctx context.Context, req *iamv1
 		return &iamv1.DeleteNotificationResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // error in body
 	}
 	return &iamv1.DeleteNotificationResponse{Base: SuccessResponse("notification deleted")}, nil
+}
+
+// WithRequestHandler attaches the fan-out request handler to the notification handler.
+func (h *NotificationHandler) WithRequestHandler(r *appnotif.RequestHandler) *NotificationHandler {
+	h.request = r
+	return h
+}
+
+// RequestNotification fans out a notification to all users matched by the given
+// recipient rules. It is intended for service-to-service use and requires the
+// internal system token.
+func (h *NotificationHandler) RequestNotification(
+	ctx context.Context,
+	req *iamv1.RequestNotificationRequest,
+) (*iamv1.RequestNotificationResponse, error) {
+	if h.request == nil {
+		return &iamv1.RequestNotificationResponse{
+			Base: ErrorResponse("503", "request notification not configured"),
+		}, nil //nolint:nilerr // error in body
+	}
+
+	rules := make([]appnotif.RecipientRuleCmd, 0, len(req.GetRecipientRules()))
+	for _, r := range req.GetRecipientRules() {
+		rules = append(rules, appnotif.RecipientRuleCmd{
+			RuleType: r.GetRuleType(),
+			Value:    r.GetValue(),
+		})
+	}
+
+	notifType := protoToType(req.GetType())
+	notifSeverity := protoToSeverity(req.GetSeverity())
+	notifActionType := protoToActionType(req.GetActionType())
+
+	result, err := h.request.Handle(ctx, appnotif.RequestCommand{
+		Rules:         rules,
+		Type:          notifType,
+		Severity:      notifSeverity,
+		Title:         req.GetTitle(),
+		Body:          req.GetBody(),
+		ActionType:    notifActionType,
+		ActionPayload: req.GetActionPayload(),
+		SourceType:    req.GetSourceType(),
+		SourceID:      req.GetSourceId(),
+		CreatedBy:     systemUser,
+	})
+	if err != nil {
+		return &iamv1.RequestNotificationResponse{
+			Base: ErrorResponse("500", err.Error()),
+		}, nil //nolint:nilerr // error in body
+	}
+
+	return &iamv1.RequestNotificationResponse{
+		Base:           SuccessResponse("notifications dispatched"),
+		EventId:        result.EventID.String(),
+		RecipientCount: int32(result.RecipientCount), //nolint:gosec // bounded by DB query result count
+	}, nil
 }
 
 // StreamNotifications opens a server-streaming subscription for the caller.

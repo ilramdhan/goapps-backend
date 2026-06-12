@@ -227,6 +227,46 @@
         ]
       }
     },
+    "/api/v1/finance/cost-product-requests/{requestId}/approve": {
+      "post": {
+        "summary": "ApproveCostProductRequest advances CONFIRMED → APPROVED.",
+        "operationId": "CostProductRequestService_ApproveCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApproveCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceApproveCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
     "/api/v1/finance/cost-product-requests/{requestId}/assign": {
       "post": {
         "operationId": "CostProductRequestService_AssignCostProductRequest",
@@ -344,6 +384,46 @@
         ]
       }
     },
+    "/api/v1/finance/cost-product-requests/{requestId}/confirm": {
+      "post": {
+        "summary": "ConfirmCostProductRequest advances PARAMETER_COMPLETE → CONFIRMED.",
+        "operationId": "CostProductRequestService_ConfirmCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConfirmCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceConfirmCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
     "/api/v1/finance/cost-product-requests/{requestId}/decide-feasibility": {
       "post": {
         "operationId": "CostProductRequestService_DecideCostProductRequestFeasibility",
@@ -376,6 +456,38 @@
             "schema": {
               "$ref": "#/definitions/CostProductRequestServiceDecideCostProductRequestFeasibilityBody"
             }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/history": {
+      "get": {
+        "summary": "GetCostProductRequestHistory returns the full status-transition timeline for a request.",
+        "operationId": "CostProductRequestService_GetCostProductRequestHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCostProductRequestHistoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -463,6 +575,46 @@
         ]
       }
     },
+    "/api/v1/finance/cost-product-requests/{requestId}/mark-parameter-pending": {
+      "post": {
+        "summary": "MarkParameterPending advances ROUTING_DEFINED → PARAMETER_PENDING and\ncreates fill tasks for every route level before committing the transition.",
+        "operationId": "CostProductRequestService_MarkParameterPending",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MarkParameterPendingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceMarkParameterPendingBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
     "/api/v1/finance/cost-product-requests/{requestId}/reject": {
       "post": {
         "operationId": "CostProductRequestService_RejectCostProductRequest",
@@ -494,6 +646,46 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/CostProductRequestServiceRejectCostProductRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/release": {
+      "post": {
+        "summary": "ReleaseCostProductRequest advances APPROVED → RELEASED.\nAfter release the request is locked and the cost calculation engine can proceed.",
+        "operationId": "CostProductRequestService_ReleaseCostProductRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReleaseCostProductRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductRequestServiceReleaseCostProductRequestBody"
             }
           }
         ],
@@ -779,6 +971,15 @@
     }
   },
   "definitions": {
+    "CostProductRequestServiceApproveCostProductRequestBody": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string"
+        }
+      },
+      "description": "ApproveCostProductRequest advances CONFIRMED → APPROVED.\nRequires finance.product.request.approve permission."
+    },
     "CostProductRequestServiceAssignCostProductRequestBody": {
       "type": "object",
       "properties": {
@@ -802,6 +1003,10 @@
           "type": "string"
         }
       }
+    },
+    "CostProductRequestServiceConfirmCostProductRequestBody": {
+      "type": "object",
+      "description": "ConfirmCostProductRequest advances PARAMETER_COMPLETE → CONFIRMED.\nRequires finance.product.request.confirm permission."
     },
     "CostProductRequestServiceDecideCostProductRequestFeasibilityBody": {
       "type": "object",
@@ -827,6 +1032,10 @@
       "type": "object",
       "description": "MarkParameterComplete moves PARAMETER_PENDING → PARAMETER_COMPLETE.\nThe handler verifies all promoted products have their required CAPP params\nfilled before allowing the transition."
     },
+    "CostProductRequestServiceMarkParameterPendingBody": {
+      "type": "object",
+      "description": "MarkParameterPending moves ROUTING_DEFINED → PARAMETER_PENDING.\nCreates fill tasks for every route level attached to this request."
+    },
     "CostProductRequestServiceRejectCostProductRequestBody": {
       "type": "object",
       "properties": {
@@ -834,6 +1043,10 @@
           "type": "string"
         }
       }
+    },
+    "CostProductRequestServiceReleaseCostProductRequestBody": {
+      "type": "object",
+      "description": "ReleaseCostProductRequest advances APPROVED → RELEASED.\nRequires finance.product.request.release permission.\nAfter release the request is locked and ready for the cost calculation engine."
     },
     "CostProductRequestServiceReopenCostProductRequestBody": {
       "type": "object",
@@ -935,6 +1148,17 @@
         }
       }
     },
+    "v1ApproveCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
     "v1AssignCostProductRequestResponse": {
       "type": "object",
       "properties": {
@@ -1006,6 +1230,17 @@
       }
     },
     "v1CloseCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1ConfirmCostProductRequestResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -1118,6 +1353,10 @@
           "type": "string",
           "format": "int64",
           "description": "Active route head linked to this request (many requests → one route head when spec matches)."
+        },
+        "wflInstanceId": {
+          "type": "string",
+          "description": "IAM workflow instance ID linked to this request (empty if no workflow attached)."
         }
       }
     },
@@ -1242,6 +1481,22 @@
         }
       }
     },
+    "v1GetCostProductRequestHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StatusHistoryEntry"
+          }
+        }
+      },
+      "description": "GetCostProductRequestHistoryResponse returns the full status-transition timeline."
+    },
     "v1GetCostProductRequestResponse": {
       "type": "object",
       "properties": {
@@ -1298,6 +1553,17 @@
             "$ref": "#/definitions/v1MissingProductParams"
           },
           "description": "missing_products lists product_sys_ids that still have required params unfilled\nwhen the transition is blocked. Empty when the response is_success = true."
+        }
+      }
+    },
+    "v1MarkParameterPendingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
         }
       }
     },
@@ -1375,6 +1641,17 @@
         }
       }
     },
+    "v1ReleaseCostProductRequestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
     "v1ReopenCostProductRequestResponse": {
       "type": "object",
       "properties": {
@@ -1435,6 +1712,38 @@
           "$ref": "#/definitions/v1CostProductRequest"
         }
       }
+    },
+    "v1StatusHistoryEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "requestId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fromStatus": {
+          "type": "string"
+        },
+        "toStatus": {
+          "type": "string"
+        },
+        "actorUserId": {
+          "type": "string"
+        },
+        "actorName": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "description": "StatusHistoryEntry records a single CPR status transition."
     },
     "v1SubmitCostProductRequestResponse": {
       "type": "object",

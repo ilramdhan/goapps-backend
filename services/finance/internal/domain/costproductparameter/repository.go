@@ -34,4 +34,9 @@ type Repository interface {
 	RemoveApplicable(ctx context.Context, productSysID int64, paramID uuid.UUID) error
 	UpdateApplicable(ctx context.Context, productSysID int64, paramID uuid.UUID, isRequired *bool, displayOrder *int32, updatedBy string) error
 	ListAvailableParams(ctx context.Context, productSysID int64) ([]ParamMeta, error)
+
+	// CountApplicableForProducts returns the total number of applicable-param entries
+	// for all products in the given slice. Used to pre-populate cft_total_params when
+	// creating fill tasks so the fill-progress percentage is computed correctly.
+	CountApplicableForProducts(ctx context.Context, productSysIDs []int64) (int32, error)
 }

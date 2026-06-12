@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/smtp"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -23,97 +22,194 @@ const (
 
 // Service implements the auth.EmailService interface via SMTP.
 type Service struct {
-	cfg *config.EmailConfig
+	cfg      *config.EmailConfig
+	renderer *Renderer
 }
 
-// NewService creates a new email service.
-func NewService(cfg *config.EmailConfig) *Service {
-	return &Service{cfg: cfg}
+// NewService creates a new email service with the given config and renderer.
+func NewService(cfg *config.EmailConfig, renderer *Renderer) *Service {
+	return &Service{cfg: cfg, renderer: renderer}
 }
 
 // SendOTP sends a password reset OTP to the user's email.
 func (s *Service) SendOTP(ctx context.Context, email, otp string, expiryMinutes int) error {
-	subject := "GoApps - Password Reset OTP"
-	body := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2 style="color: #333;">Password Reset</h2>
-  <p>Your OTP code for password reset is:</p>
-  <div style="background: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-    <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">%s</span>
-  </div>
-  <p>This code expires in <strong>%d minutes</strong>.</p>
-  <p style="color: #666; font-size: 12px;">If you did not request this, please ignore this email.</p>
-</body>
-</html>`, otp, expiryMinutes)
-
-	return s.send(ctx, email, subject, body)
+	base := s.renderer.BaseData()
+	base.HeaderTitle = "Password Reset"
+	base.HeaderSubtitle = "One-time verification code"
+	data := OTPData{
+		BaseData:       base,
+		RecipientEmail: email,
+		OTPDigits:      SplitOTP(otp),
+		ExpiryMinutes:  expiryMinutes,
+		Purpose:        "password reset",
+	}
+	body, err := s.renderer.Render("otp", data)
+	if err != nil {
+		return fmt.Errorf("render OTP email: %w", err)
+	}
+	return s.send(ctx, email, "Your password reset code", body)
 }
 
 // SendEmailVerification sends an email verification OTP to the user's email.
 func (s *Service) SendEmailVerification(ctx context.Context, email, otp string, expiryMinutes int) error {
-	subject := "GoApps - Email Verification"
-	body := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2 style="color: #333;">Verify Your Email</h2>
-  <p>Your email verification code is:</p>
-  <div style="background: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-    <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">%s</span>
-  </div>
-  <p>This code expires in <strong>%d minutes</strong>.</p>
-  <p style="color: #666; font-size: 12px;">If you did not request this, please ignore this email.</p>
-</body>
-</html>`, otp, expiryMinutes)
-
-	return s.send(ctx, email, subject, body)
+	base := s.renderer.BaseData()
+	base.HeaderTitle = "Verify Your Email"
+	base.HeaderSubtitle = "One-time verification code"
+	data := OTPData{
+		BaseData:       base,
+		RecipientEmail: email,
+		OTPDigits:      SplitOTP(otp),
+		ExpiryMinutes:  expiryMinutes,
+		Purpose:        "email verification",
+	}
+	body, err := s.renderer.Render("otp", data)
+	if err != nil {
+		return fmt.Errorf("render email verification email: %w", err)
+	}
+	return s.send(ctx, email, "Verify your email address", body)
 }
 
-// Send2FANotification sends a notification about 2FA status change.
+// Send2FANotification sends a notification about a 2FA status change.
 func (s *Service) Send2FANotification(ctx context.Context, email, action string) error {
-	subject := "GoApps - Two-Factor Authentication Update"
-	body := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2 style="color: #333;">Two-Factor Authentication</h2>
-  <p>Two-factor authentication has been <strong>%s</strong> on your account.</p>
-  <p style="color: #666; font-size: 12px;">If you did not make this change, please contact support immediately.</p>
-</body>
-</html>`, action)
-
+	base := s.renderer.BaseData()
+	base.HeaderTitle = "Security Update"
+	base.HeaderSubtitle = "Account security notification"
+	data := SecurityData{
+		BaseData:  base,
+		Feature:   "Two-Factor Authentication",
+		Action:    action,
+		SecureURL: s.cfg.AppURL + "/settings/security",
+	}
+	body, err := s.renderer.Render("security", data)
+	if err != nil {
+		return fmt.Errorf("render 2FA notification email: %w", err)
+	}
+	subject := fmt.Sprintf("Two-factor authentication %s", action)
 	return s.send(ctx, email, subject, body)
 }
 
-func (s *Service) send(ctx context.Context, to, subject, htmlBody string) error {
+// SendWelcomeUser sends a welcome email to a newly created user.
+func (s *Service) SendWelcomeUser(ctx context.Context, toEmail, toName string) error {
+	base := s.renderer.BaseData()
+	base.HeaderTitle = "Welcome to " + s.cfg.AppName
+	base.HeaderSubtitle = "Your account is ready"
+	data := WelcomeData{
+		BaseData:       base,
+		RecipientName:  toName,
+		RecipientEmail: toEmail,
+		LoginURL:       s.cfg.AppURL,
+	}
+	body, err := s.renderer.Render("welcome", data)
+	if err != nil {
+		return fmt.Errorf("render welcome email: %w", err)
+	}
+	return s.send(ctx, toEmail, "Welcome to "+s.cfg.AppName, body)
+}
+
+// AppURL returns the configured application base URL used for constructing CTA links.
+func (s *Service) AppURL() string {
+	return s.cfg.AppURL
+}
+
+// SendNotification sends a general platform notification email.
+// ctaURL is optional; when non-empty a "View Details" button is shown in the email.
+// When SMTP host is unconfigured, this is a no-op.
+func (s *Service) SendNotification(ctx context.Context, toEmail, toName, title, body, ctaURL string) error {
+	if s.cfg.SMTPHost == "" {
+		return nil
+	}
+	base := s.renderer.BaseData()
+	base.HeaderTitle = title
+	data := NotificationData{
+		BaseData:      base,
+		RecipientName: toName,
+		Title:         title,
+		Paragraphs:    SplitParagraphs(body),
+	}
+	if ctaURL != "" {
+		data.CTA = CTAData{Label: "View Details", URL: ctaURL}
+	}
+	htmlBody, err := s.renderer.Render("notification", data)
+	if err != nil {
+		return fmt.Errorf("render notification email: %w", err)
+	}
+	return s.send(ctx, toEmail, title, htmlBody)
+}
+
+// SendNotificationWithAttachments sends a notification email with file attachments.
+// Used for export-ready notifications (RM Cost export, bulk exports, etc.).
+func (s *Service) SendNotificationWithAttachments(
+	ctx context.Context,
+	toEmail, toName, title, body string,
+	attachments ...Attachment,
+) error {
+	if s.cfg.SMTPHost == "" {
+		return nil
+	}
+	base := s.renderer.BaseData()
+	base.HeaderTitle = title
+	data := NotificationData{
+		BaseData:      base,
+		RecipientName: toName,
+		Title:         title,
+		Paragraphs:    SplitParagraphs(body),
+	}
+	htmlBody, err := s.renderer.Render("notification", data)
+	if err != nil {
+		return fmt.Errorf("render notification-with-attachments email: %w", err)
+	}
+	return s.send(ctx, toEmail, title, htmlBody, attachments...)
+}
+
+// SendNotificationWithTable sends a notification email with an inline data table.
+// Used for approval summaries, status digests, and workflow notifications.
+func (s *Service) SendNotificationWithTable(
+	ctx context.Context,
+	toEmail, toName, title, body string,
+	table TableData,
+	cta CTAData,
+) error {
+	if s.cfg.SMTPHost == "" {
+		return nil
+	}
+	base := s.renderer.BaseData()
+	base.HeaderTitle = title
+	data := NotificationData{
+		BaseData:      base,
+		RecipientName: toName,
+		Title:         title,
+		Paragraphs:    SplitParagraphs(body),
+		Table:         &table,
+		CTA:           cta,
+	}
+	htmlBody, err := s.renderer.Render("notification", data)
+	if err != nil {
+		return fmt.Errorf("render notification-with-table email: %w", err)
+	}
+	return s.send(ctx, toEmail, title, htmlBody)
+}
+
+func (s *Service) send(ctx context.Context, to, subject, htmlBody string, attachments ...Attachment) error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
 
 	headers := map[string]string{
-		"From":         fmt.Sprintf("%s <%s>", s.cfg.FromName, s.cfg.FromAddress),
-		"To":           to,
-		"Subject":      subject,
-		"MIME-Version": "1.0",
-		"Content-Type": "text/html; charset=UTF-8",
+		"From":    fmt.Sprintf("%s <%s>", s.cfg.FromName, s.cfg.FromAddress),
+		"To":      to,
+		"Subject": subject,
 	}
 
-	var msg strings.Builder
-	for k, v := range headers {
-		_, _ = fmt.Fprintf(&msg, "%s: %s\r\n", k, v)
-	}
-	msg.WriteString("\r\n")
-	msg.WriteString(htmlBody)
+	msg := buildMessage(headers, htmlBody, attachments)
 
-	// Determine auth (nil if no user/password — works for Mailpit)
 	var auth smtp.Auth
 	if s.cfg.SMTPUser != "" && s.cfg.SMTPPassword != "" {
 		auth = smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
 	}
 
 	if s.cfg.UseTLS {
-		return s.sendTLS(ctx, addr, auth, to, msg.String())
+		return s.sendTLS(ctx, addr, auth, to, msg)
 	}
 
-	err := smtp.SendMail(addr, auth, s.cfg.FromAddress, []string{to}, []byte(msg.String()))
-	if err != nil {
+	if err := smtp.SendMail(addr, auth, s.cfg.FromAddress, []string{to}, []byte(msg)); err != nil {
 		log.Error().Err(err).Str("to", to).Str("subject", subject).Msg("Failed to send email")
 		return fmt.Errorf("failed to send email: %w", err)
 	}
@@ -123,7 +219,6 @@ func (s *Service) send(ctx context.Context, to, subject, htmlBody string) error 
 }
 
 func (s *Service) sendTLS(ctx context.Context, addr string, auth smtp.Auth, to, msg string) error {
-	// Enforce a bounded overall deadline so no SMTP step can hang indefinitely.
 	ctx, cancel := context.WithTimeout(ctx, smtpOverallTimeout)
 	defer cancel()
 
@@ -144,7 +239,6 @@ func (s *Service) sendTLS(ctx context.Context, addr string, auth smtp.Auth, to, 
 		return fmt.Errorf("failed to connect to SMTP server: %w", err)
 	}
 
-	// After dial, TCP-level deadlines prevent a stalled server from hanging reads/writes.
 	if deadline, ok := ctx.Deadline(); ok {
 		if err := conn.SetDeadline(deadline); err != nil {
 			if closeErr := conn.Close(); closeErr != nil {

@@ -13,6 +13,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/robfig/cron/v3"
+
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/pkg/costcalc/metrics"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/auditadapter"
@@ -26,12 +28,20 @@ import (
 	auditapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costauditlog"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc/evaluator"
+	fillapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costfillassignment"
+	costnotifapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costnotification"
 	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
+	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
+	notifDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costnotification"
+
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
+	fillnotifierinfra "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/fillnotifier"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamclient"
+	iamnotifier "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamnotifier"
 	oracleinfra "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/oracle"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
@@ -254,6 +264,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costAuditLogRepo := postgres.NewCostAuditLogRepository(db)
 	costNotificationRepo := postgres.NewCostNotificationRepository(db)
 	costProductParameterRepo := postgres.NewCostProductParameterRepository(db)
+	requestHistoryRepo := postgres.NewRequestHistoryRepository(db)
 
 	costProductTypeHandler, err := grpcdelivery.NewCostProductTypeHandler(costProductTypeRepo)
 	if err != nil {
@@ -309,8 +320,94 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return err
 	}
+	// Shared notification emitter used by both gRPC handlers and cron jobs.
+	costNotifEmitter := costnotifapp.NewEmitter(costNotificationRepo)
+
+	// IAM notification client — used by CPRNotifier and FillNotifier for rule-based
+	// fan-out to multiple recipients. Falls back to nop client on dial failure so
+	// the server still starts (notifications are best-effort).
+	iamNotifClient, iamNotifErr := iamclient.NewClient(
+		cfg.IAMClient.Host,
+		cfg.IAMClient.Port,
+		cfg.IAMClient.InternalServiceToken,
+	)
+	if iamNotifErr != nil {
+		log.Warn().Err(iamNotifErr).Msg("IAM notification client dial failed; using nop (notifications disabled)")
+		iamNotifClient = iamclient.NewNopClient()
+	} else {
+		defer func() {
+			if closeErr := iamNotifClient.Close(); closeErr != nil {
+				log.Warn().Err(closeErr).Msg("IAM notification client close error")
+			}
+		}()
+	}
+
+	cprIAMNotifier := iamnotifier.NewCPRNotifier(iamNotifClient)
+	fillIAMNotifier := iamnotifier.NewFillNotifier(iamNotifClient)
+
 	costProductParameterApp := cppapp.New(costProductParameterRepo)
 	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp)
+
+	// Fill-assignment repositories + handlers.
+	fillConfigRepo := postgres.NewCostFillConfigRepository(db)
+	fillTaskRepo := postgres.NewCostFillTaskRepository(db)
+
+	upsertGlobalHandler := fillapp.NewUpsertGlobalConfigHandler(fillConfigRepo)
+	upsertOverrideHandler := fillapp.NewUpsertOverrideHandler(fillConfigRepo)
+	deleteGlobalHandler := fillapp.NewDeleteGlobalConfigHandler(fillConfigRepo)
+	listGlobalHandler := fillapp.NewListGlobalConfigHandler(fillConfigRepo)
+
+	createAllTasksHandler := fillapp.NewCreateAllTasksHandler(fillConfigRepo, fillTaskRepo)
+	createAllTasksHandler.WithNotifier(fillIAMNotifier)
+	costProductRequestHandler.WithFillCreator(createAllTasksHandler)
+	costProductRequestHandler.WithFillChecker(fillTaskRepo)
+	costProductRequestHandler.WithParamCounter(costProductParameterRepo)
+
+	// Wire in-app notification emitter to the CPR TransitionHandler so that
+	// status-change events (Submit, StartReview, Reject, etc.) produce persisted
+	// notifications visible in the frontend bell icon.
+	costProductRequestHandler.WithNotifier(&cprNotifEmitterAdapter{emitter: costNotifEmitter})
+
+	// Wire IAM-backed CPR notifier for rule-based multi-recipient fan-out.
+	costProductRequestHandler.WithCPRNotifier(cprIAMNotifier)
+
+	// Wire CPR notifier into the comment handler so that CPR_COMMENT_ADDED
+	// notifications are emitted whenever a new comment is posted.
+	costRequestCommentHandler.WithCPRNotifier(costProductRequestRepo, cprIAMNotifier)
+
+	// Wire approval trace repository so every state transition is recorded and
+	// the GetCostProductRequestHistory RPC is enabled.
+	costProductRequestHandler.WithHistoryRepo(requestHistoryRepo)
+
+	// Build the completion gate: L100-L102 chain creation + CPR state machine trigger.
+	cprCompleter := &cprCompleterAdapter{handler: costProductRequestHandler}
+	completionNotifier := &completionNotifierAdapter{emitter: costNotifEmitter}
+	completionGate := fillapp.NewCompletionGateHandler(fillTaskRepo, fillConfigRepo, cprCompleter, completionNotifier)
+	completionGate.WithFillNotifier(fillIAMNotifier)
+
+	costFillConfigHandler := grpcdelivery.NewCostFillConfigHandler(
+		upsertGlobalHandler, upsertOverrideHandler, deleteGlobalHandler, listGlobalHandler,
+	)
+	costFillTaskHandler := grpcdelivery.NewCostFillTaskHandler(fillTaskRepo, completionGate)
+	costFillTaskHandler.WithSubmitFillNotifier(fillIAMNotifier, &cprRequestNoAdapter{repo: costProductRequestRepo})
+
+	// SLA + reminder cron jobs for fill-assignment notifications.
+	// reminderGapHours=4: at most one reminder per task per 4 hours.
+	const reminderGapHours = 4
+	fillSLANotifier := fillnotifierinfra.New(fillTaskRepo, costNotifEmitter)
+	slaJob := fillapp.NewSLANotifierJob(fillTaskRepo, fillSLANotifier, reminderGapHours)
+	slaJob.WithFillNotifier(fillIAMNotifier)
+	reminderJob := fillnotifierinfra.NewReminderJob(fillTaskRepo, costNotifEmitter, reminderGapHours)
+	reminderJob.WithFillNotifier(fillIAMNotifier)
+	fillCron := cron.New()
+	if _, addErr := fillCron.AddFunc("0 * * * *", slaJob.Run); addErr != nil {
+		return fmt.Errorf("register sla notifier cron: %w", addErr)
+	}
+	if _, addErr := fillCron.AddFunc("30 * * * *", reminderJob.Run); addErr != nil {
+		return fmt.Errorf("register reminder cron: %w", addErr)
+	}
+	fillCron.Start()
+	defer fillCron.Stop()
 
 	// S8b: real CostCalcService wiring. Service holds 5 repos + loader + evaluator
 	// cache; 11 application handlers wrap individual use cases. Audit emitter is
@@ -440,6 +537,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costRoutingRuleHandler, costAuditLogHandler, costNotificationHandler,
 		costProductParameterHandler,
 		costCalcHandler,
+		costFillConfigHandler, costFillTaskHandler,
 		biDashboardHandler, biChartDataHandler, biDataSourceHandler, biJobHandler, biUploadHandler,
 		tokenBlacklist)
 }
@@ -562,6 +660,8 @@ func startServers(ctx context.Context, cfg *config.Config,
 	costNotificationHandler *grpcdelivery.CostNotificationHandler,
 	costProductParameterHandler *grpcdelivery.CostProductParameterHandler,
 	costCalcHandler *grpcdelivery.CostCalcHandler,
+	costFillConfigHandler *grpcdelivery.CostFillConfigHandler,
+	costFillTaskHandler *grpcdelivery.CostFillTaskHandler,
 	biDashboardHandler *grpcdelivery.BIDashboardHandler,
 	biChartDataHandler *grpcdelivery.BIChartDataHandler,
 	biDataSourceHandler *grpcdelivery.BIDataSourceHandler,
@@ -570,7 +670,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	tokenBlacklist *redisinfra.TokenBlacklist,
 ) error {
 	// Setup gRPC server with JWT auth and token blacklist
-	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, nil, &cfg.JWT, tokenBlacklist)
+	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, nil, &cfg.JWT, tokenBlacklist, tokenBlacklist)
 	if err != nil {
 		return err
 	}
@@ -602,6 +702,10 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterCostProductParameterServiceServer(grpcServer.GRPCServer(), costProductParameterHandler)
 	// S8a foundation: CostCalcService stub.
 	financev1.RegisterCostCalcServiceServer(grpcServer.GRPCServer(), costCalcHandler)
+
+	// Fill-assignment services.
+	financev1.RegisterCostLevelAssignmentConfigServiceServer(grpcServer.GRPCServer(), costFillConfigHandler)
+	financev1.RegisterCostFillTaskServiceServer(grpcServer.GRPCServer(), costFillTaskHandler)
 
 	// BI services
 	financev1.RegisterDashboardServiceServer(grpcServer.GRPCServer(), biDashboardHandler)
@@ -688,4 +792,79 @@ func (a *biMVRefresherAdapter) RefreshMVs(ctx context.Context) error {
 		return fmt.Errorf("bi_refresh_dashboard_mvs: %w", err)
 	}
 	return nil
+}
+
+// =============================================================================
+// Fill-assignment completion adapters
+// =============================================================================
+
+// cprCompleterAdapter wraps CostProductRequestHandler to implement
+// fillapp.CPRCompleter, allowing the CompletionGateHandler (application layer)
+// to trigger the PARAMETER_COMPLETE state transition without importing the
+// delivery package (the adapter lives in main.go, which bridges both).
+type cprCompleterAdapter struct {
+	handler *grpcdelivery.CostProductRequestHandler
+}
+
+func (a *cprCompleterAdapter) MarkParameterComplete(ctx context.Context, requestID int64, actor string) (string, string, error) {
+	return a.handler.MarkParameterCompleteForGate(ctx, requestID, actor)
+}
+
+// completionNotifierAdapter wraps costnotifapp.Emitter to implement
+// fillapp.CompletionNotifier for the L100-102 completion chain notifications.
+type completionNotifierAdapter struct {
+	emitter *costnotifapp.Emitter
+}
+
+func (a *completionNotifierAdapter) NotifyFiller(ctx context.Context, taskID int64, recipientUserID, requestNo string) error {
+	payload := fmt.Sprintf(`{"taskId":%d,"requestNo":%q}`, taskID, requestNo)
+	_, err := a.emitter.Emit(ctx, notifDomain.NewInput{
+		RecipientUserID: recipientUserID,
+		TriggerType:     notifDomain.TriggerPendingFill,
+		Payload:         payload,
+	})
+	return err
+}
+
+func (a *completionNotifierAdapter) NotifyComplete(ctx context.Context, requestID int64, requesterUserID, requestNo string) error {
+	payload := fmt.Sprintf(`{"status":"PARAMETER_COMPLETE","requestNo":%q}`, requestNo)
+	_, err := a.emitter.Emit(ctx, notifDomain.NewInput{
+		RecipientUserID: requesterUserID,
+		TriggerType:     notifDomain.TriggerStatusChange,
+		RequestID:       requestID,
+		Payload:         payload,
+	})
+	return err
+}
+
+// cprNotifEmitterAdapter wraps costnotifapp.Emitter to implement
+// costproductrequest.NotificationEmitter, enabling the TransitionHandler to
+// send in-app notifications without importing the costnotification package.
+type cprNotifEmitterAdapter struct {
+	emitter *costnotifapp.Emitter
+}
+
+func (a *cprNotifEmitterAdapter) Emit(ctx context.Context, in cprapp.NotificationInput) error {
+	_, err := a.emitter.Emit(ctx, notifDomain.NewInput{
+		RecipientUserID: in.RecipientUserID,
+		TriggerType:     in.TriggerType,
+		RequestID:       in.RequestID,
+		Payload:         in.Payload,
+	})
+	return err
+}
+
+// cprRequestNoAdapter implements fillapp.RequestNoProvider by delegating to the
+// CostProductRequestRepository. Used by SubmitFillHandler to resolve request_no
+// for the NotifyApprovalPending notification.
+type cprRequestNoAdapter struct {
+	repo *postgres.CostProductRequestRepository
+}
+
+func (a *cprRequestNoAdapter) GetRequestNo(ctx context.Context, requestID int64) (string, error) {
+	req, err := a.repo.GetByID(ctx, requestID)
+	if err != nil {
+		return "", fmt.Errorf("cprRequestNoAdapter.GetRequestNo: %w", err)
+	}
+	return req.RequestNo(), nil
 }

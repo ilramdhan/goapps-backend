@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
+	"github.com/mutugading/goapps-backend/services/iam/internal/domain/companymapping"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 )
 
@@ -172,6 +173,9 @@ func domainErrorToBaseResponse(err error) *commonv1.BaseResponse {
 		errors.Is(err, shared.ErrTwoFAAlreadyEnabled),
 		errors.Is(err, shared.ErrInvalidOTP):
 		return ErrorResponse("422", err.Error())
+	case errors.Is(err, companymapping.ErrAssignedToUser),
+		errors.Is(err, companymapping.ErrComboTaken):
+		return ConflictResponse(err.Error())
 	default:
 		return mapUnknownError(err)
 	}

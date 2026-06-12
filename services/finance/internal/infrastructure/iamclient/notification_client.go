@@ -29,10 +29,38 @@ type CreateNotificationParams struct {
 	ExpiresAt       string // RFC3339 (empty = no expiry)
 }
 
+// RecipientRule mirrors iamv1.RecipientRule for Finance callers.
+// Finance application code uses this type so it stays decoupled from the
+// generated proto package.
+type RecipientRule struct {
+	RuleType iamv1.RecipientRuleType
+	Value    string
+}
+
+// RequestNotificationParams is the input for rule-based multi-recipient
+// notification dispatch via the IAM service.
+type RequestNotificationParams struct {
+	EventType      string
+	SourceService  string
+	SourceType     string
+	SourceID       string
+	Rules          []RecipientRule
+	Type           iamv1.NotificationType
+	Severity       iamv1.NotificationSeverity
+	Title          string
+	Body           string
+	ActionType     iamv1.NotificationActionType
+	ActionPayload  string
+	IdempotencyKey string
+}
+
 // NotificationClient is the public interface used by callers. Implementations
 // fall back to a no-op when the underlying gRPC connection is unavailable.
 type NotificationClient interface {
 	Create(ctx context.Context, p CreateNotificationParams) error
+	// RequestNotification dispatches a rule-based notification to multiple
+	// recipients via IAM's fan-out mechanism.
+	RequestNotification(ctx context.Context, p RequestNotificationParams) error
 	Close() error
 }
 
@@ -92,6 +120,46 @@ func (g *grpcClient) Create(ctx context.Context, p CreateNotificationParams) err
 	return nil
 }
 
+// RequestNotification calls IAM NotificationService.RequestNotification.
+func (g *grpcClient) RequestNotification(ctx context.Context, p RequestNotificationParams) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.internalToken != "" {
+		ctx = metadata.AppendToOutgoingContext(ctx, "x-internal-token", g.internalToken)
+	}
+
+	rules := make([]*iamv1.RecipientRule, 0, len(p.Rules))
+	for _, r := range p.Rules {
+		rules = append(rules, &iamv1.RecipientRule{
+			RuleType: r.RuleType,
+			Value:    r.Value,
+		})
+	}
+
+	resp, err := g.client.RequestNotification(ctx, &iamv1.RequestNotificationRequest{
+		EventType:      p.EventType,
+		SourceService:  p.SourceService,
+		SourceType:     p.SourceType,
+		SourceId:       p.SourceID,
+		RecipientRules: rules,
+		Type:           p.Type,
+		Severity:       p.Severity,
+		Title:          p.Title,
+		Body:           p.Body,
+		ActionType:     p.ActionType,
+		ActionPayload:  p.ActionPayload,
+		IdempotencyKey: p.IdempotencyKey,
+	})
+	if err != nil {
+		return fmt.Errorf("request notification rpc: %w", err)
+	}
+	if resp.GetBase() != nil && !resp.GetBase().GetIsSuccess() {
+		return fmt.Errorf("request notification: %s", resp.GetBase().GetMessage())
+	}
+	return nil
+}
+
 // Close releases the underlying gRPC connection.
 func (g *grpcClient) Close() error {
 	if g.conn == nil {
@@ -109,6 +177,11 @@ func NewNopClient() NotificationClient { return &nopClient{} }
 
 // Create returns nil unconditionally.
 func (n *nopClient) Create(_ context.Context, _ CreateNotificationParams) error { return nil }
+
+// RequestNotification returns nil unconditionally.
+func (n *nopClient) RequestNotification(_ context.Context, _ RequestNotificationParams) error {
+	return nil
+}
 
 // Close returns nil unconditionally.
 func (n *nopClient) Close() error { return nil }

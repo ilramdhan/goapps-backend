@@ -108,8 +108,21 @@ func run() error {
 		&cfg.Security,
 	)
 
-	// Setup email service
-	emailService := emailinfra.NewService(&cfg.Email)
+	// Setup email service with template renderer.
+	emailRenderer := emailinfra.NewRenderer(emailinfra.BaseData{
+		AppName:        cfg.Email.AppName,
+		AppURL:         cfg.Email.AppURL,
+		SupportURL:     cfg.Email.SupportURL,
+		HeaderTagline:  cfg.Email.HeaderTagline,
+		CompanyName:    cfg.Email.CompanyName,
+		CompanyAddress: cfg.Email.CompanyAddress,
+		PrivacyURL:     cfg.Email.PrivacyURL,
+		TermsURL:       cfg.Email.TermsURL,
+		LogoURL:        cfg.Email.LogoURL,
+		HeaderBgURL:    cfg.Email.HeaderBgURL,
+		SocialLinks:    buildSocialLinks(cfg.Email),
+	})
+	emailService := emailinfra.NewService(&cfg.Email, emailRenderer)
 	authService.SetEmailService(emailService)
 
 	// Setup validation helper
@@ -139,7 +152,7 @@ func run() error {
 	}
 
 	// Setup gRPC handlers
-	authHandler := grpcdelivery.NewAuthHandler(authService, userRepo, sessionRepo, auditRepo, sectionRepo, companyMappingRepo, validationHelper)
+	authHandler := grpcdelivery.NewAuthHandler(authService, userRepo, sessionRepo, auditRepo, sectionRepo, departmentRepo, companyMappingRepo, validationHelper)
 	userHandler := grpcdelivery.NewUserHandler(userRepo, userRoleRepo, userPermissionRepo, companyMappingRepo, validationHelper, storageSvc)
 	companyMappingHandler := grpcdelivery.NewCompanyMappingHandler(companyMappingRepo, validationHelper)
 	roleHandler := grpcdelivery.NewRoleHandler(roleRepo, validationHelper)
@@ -175,11 +188,14 @@ func run() error {
 	notifArchive := appnotif.NewArchiveHandler(notificationRepo)
 	notifDelete := appnotif.NewDeleteHandler(notificationRepo)
 	notifStream := appnotif.NewStreamHandler(notificationRepo, notifBroadcaster, 30*time.Second)
+	notifUserResolver := notifinfra.NewDBUserResolver(db.DB)
+	notifEmailDispatcher := emailinfra.NewNotificationDispatcher(emailService, notifUserResolver)
+	notifRequestHandler := appnotif.NewRequestHandler(notifCreate, notifUserResolver, notifEmailDispatcher)
 	notificationHandler := grpcdelivery.NewNotificationHandler(
 		notifCreate, notifGet, notifList, notifUnread,
 		notifMarkRead, notifMarkAllRead, notifArchive, notifDelete,
 		notifStream, validationHelper,
-	)
+	).WithRequestHandler(notifRequestHandler)
 
 	// Setup gRPC server with interceptor chain (pass JWT + session cache + session repo for auth & activity tracking)
 	grpcServer, err := grpcdelivery.NewServer(&cfg.Server, db, jwtService, sessionCache, sessionRepo, cfg.Security.InternalServiceToken)
@@ -327,4 +343,20 @@ func closeRedis(client *redisinfra.Client) {
 	if err := client.Close(); err != nil {
 		log.Warn().Err(err).Msg("Failed to close Redis connection")
 	}
+}
+
+// buildSocialLinks converts individual social URL config fields into a slice
+// of SocialLink values for the email renderer.
+func buildSocialLinks(cfg config.EmailConfig) []emailinfra.SocialLink {
+	var links []emailinfra.SocialLink
+	if cfg.SocialLinkedIn != "" {
+		links = append(links, emailinfra.SocialLink{Name: "LinkedIn", URL: cfg.SocialLinkedIn})
+	}
+	if cfg.SocialInstagram != "" {
+		links = append(links, emailinfra.SocialLink{Name: "Instagram", URL: cfg.SocialInstagram})
+	}
+	if cfg.SocialCompanyProfile != "" {
+		links = append(links, emailinfra.SocialLink{Name: "Company Profile", URL: cfg.SocialCompanyProfile})
+	}
+	return links
 }

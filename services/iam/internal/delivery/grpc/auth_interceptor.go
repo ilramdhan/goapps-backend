@@ -137,12 +137,23 @@ func AuthInterceptor(jwtService *jwt.Service, sessionCache *redis.SessionCache, 
 			return nil, status.Error(codes.Unauthenticated, "token has been revoked")
 		}
 
+		// Resolve permissions from Redis (JWT no longer embeds them — too large for browser cookie).
+		// Fall back to claims.Permissions on cache miss so old tokens still work during rollout.
+		perms := claims.Permissions
+		if sessionCache != nil {
+			if cached, err := sessionCache.GetUserPermissions(ctx, claims.UserID); err != nil {
+				log.Warn().Err(err).Str("userID", claims.UserID).Msg("failed to fetch permissions from Redis, using JWT fallback")
+			} else if cached != nil {
+				perms = cached
+			}
+		}
+
 		// Populate context with user information from JWT claims
 		ctx = context.WithValue(ctx, UserIDKey, claims.UserID)
 		ctx = context.WithValue(ctx, UsernameKey, claims.Username)
 		ctx = context.WithValue(ctx, EmailKey, claims.Email)
 		ctx = context.WithValue(ctx, RolesKey, claims.Roles)
-		ctx = context.WithValue(ctx, PermissionsKey, claims.Permissions)
+		ctx = context.WithValue(ctx, PermissionsKey, perms)
 
 		// Update session last_activity_at (fire-and-forget, non-blocking)
 		updateSessionActivity(sessionRepo, claims.UserID)

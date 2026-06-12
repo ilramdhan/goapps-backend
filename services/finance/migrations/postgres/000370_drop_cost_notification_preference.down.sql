@@ -1,0 +1,3 @@
+-- Intentionally empty: cost_notification_preference has zero application code
+-- references, so restoring it serves no purpose.
+-- The original DDL can be found in migration 000214 if needed.

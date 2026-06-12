@@ -219,8 +219,9 @@ func TestAuthInterceptor_ValidToken(t *testing.T) {
 		roles := GetRolesFromCtx(ctx)
 		assert.Contains(t, roles, "ADMIN")
 
-		perms := GetPermissionsFromCtx(ctx)
-		assert.Contains(t, perms, "iam.user.account.view")
+		// Permissions are now fetched from Redis (not JWT). With nil sessionCache
+		// in this unit test, the slice is empty — permissions flow is tested in e2e.
+		_ = GetPermissionsFromCtx(ctx)
 
 		return "ok", nil
 	}

@@ -350,6 +350,11 @@ func run() error {
 			return fmt.Errorf("failed to seed CMS content: %w", err)
 		}
 
+		// 8. Seed test users (filler + approver) with org structure for local testing.
+		if err := seedTestUsers(ctx, tx, roleIDs); err != nil {
+			return fmt.Errorf("failed to seed test users: %w", err)
+		}
+
 		return nil
 	})
 }
@@ -912,5 +917,188 @@ func seedMenuPermissions(ctx context.Context, tx *sql.Tx, permIDs map[string]uui
 	}
 
 	log.Info().Int("total_links", totalLinked).Msg("Menu-permission linkage seeded")
+	return nil
+}
+
+// seedTestUsers creates a minimal org structure (company → division → department → company_mapping)
+// plus two test employee accounts for local fill-assignment testing:
+//
+//   - filler1 / filler123  — assigned the USER role; represents the parameter filler.
+//   - approver1 / approver123 — assigned the USER role; represents the fill-task approver.
+//
+// All data is idempotent (ON CONFLICT DO NOTHING) so re-running the seeder is safe.
+func seedTestUsers(ctx context.Context, tx *sql.Tx, roleIDs map[string]uuid.UUID) error { //nolint:gocognit,gocyclo // seed function with inherent setup complexity
+	log.Info().Msg("Seeding test users for fill-assignment...")
+
+	// --- Employee level (STAFF) ---
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO mst_employee_level
+		  (code, name, grade, type, sequence, workflow, is_active, created_by)
+		VALUES ('STAFF', 'Staff', 1, 0, 1, 0, true, $1)
+		ON CONFLICT (code) WHERE deleted_at IS NULL DO NOTHING`,
+		systemUser,
+	); err != nil {
+		return fmt.Errorf("seed employee level: %w", err)
+	}
+
+	// --- Employee group (GENERAL) ---
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO mst_employee_group
+		  (code, name, is_active, created_by)
+		VALUES ('GENERAL', 'General', true, $1)
+		ON CONFLICT (code) WHERE deleted_at IS NULL DO NOTHING`,
+		systemUser,
+	); err != nil {
+		return fmt.Errorf("seed employee group: %w", err)
+	}
+
+	// --- Company (TEST) ---
+	var companyID uuid.UUID
+	if err := tx.QueryRowContext(ctx, `
+		SELECT company_id FROM mst_company WHERE company_code = 'TEST' AND deleted_at IS NULL`,
+	).Scan(&companyID); errors.Is(err, sql.ErrNoRows) {
+		companyID = uuid.New()
+		if _, insErr := tx.ExecContext(ctx, `
+			INSERT INTO mst_company (company_id, company_code, company_name, is_active, created_by)
+			VALUES ($1, 'TEST', 'Test Company', true, $2)`,
+			companyID, systemUser,
+		); insErr != nil {
+			return fmt.Errorf("seed company: %w", insErr)
+		}
+	} else if err != nil {
+		return fmt.Errorf("lookup company: %w", err)
+	}
+
+	// --- Division (TEST-DIV) ---
+	var divisionID uuid.UUID
+	if err := tx.QueryRowContext(ctx, `
+		SELECT division_id FROM mst_division WHERE division_code = 'TESTDIV' AND deleted_at IS NULL`,
+	).Scan(&divisionID); errors.Is(err, sql.ErrNoRows) {
+		divisionID = uuid.New()
+		if _, insErr := tx.ExecContext(ctx, `
+			INSERT INTO mst_division (division_id, company_id, division_code, division_name, is_active, created_by)
+			VALUES ($1, $2, 'TESTDIV', 'Test Division', true, $3)`,
+			divisionID, companyID, systemUser,
+		); insErr != nil {
+			return fmt.Errorf("seed division: %w", insErr)
+		}
+	} else if err != nil {
+		return fmt.Errorf("lookup division: %w", err)
+	}
+
+	// --- Department (TEST-DEPT) ---
+	var departmentID uuid.UUID
+	if err := tx.QueryRowContext(ctx, `
+		SELECT department_id FROM mst_department WHERE department_code = 'TESTDEPT' AND deleted_at IS NULL`,
+	).Scan(&departmentID); errors.Is(err, sql.ErrNoRows) {
+		departmentID = uuid.New()
+		if _, insErr := tx.ExecContext(ctx, `
+			INSERT INTO mst_department (department_id, division_id, department_code, department_name, is_active, created_by)
+			VALUES ($1, $2, 'TESTDEPT', 'Test Department', true, $3)`,
+			departmentID, divisionID, systemUser,
+		); insErr != nil {
+			return fmt.Errorf("seed department: %w", insErr)
+		}
+	} else if err != nil {
+		return fmt.Errorf("lookup department: %w", err)
+	}
+
+	// --- Company mapping (TEST-MAP) ---
+	var mappingID uuid.UUID
+	if err := tx.QueryRowContext(ctx, `
+		SELECT company_mapping_id FROM mst_company_mapping WHERE code = 'TESTMAP' AND deleted_at IS NULL`,
+	).Scan(&mappingID); errors.Is(err, sql.ErrNoRows) {
+		mappingID = uuid.New()
+		if _, insErr := tx.ExecContext(ctx, `
+			INSERT INTO mst_company_mapping
+			  (company_mapping_id, code, name, company_id, division_id, department_id, is_active, created_by)
+			VALUES ($1, 'TESTMAP', 'Test Mapping', $2, $3, $4, true, $5)`,
+			mappingID, companyID, divisionID, departmentID, systemUser,
+		); insErr != nil {
+			return fmt.Errorf("seed company mapping: %w", insErr)
+		}
+	} else if err != nil {
+		return fmt.Errorf("lookup company mapping: %w", err)
+	}
+
+	// Resolve USER role.
+	userRoleID, ok := roleIDs["USER"]
+	if !ok {
+		return fmt.Errorf("USER role not found in seeded roles")
+	}
+
+	// --- Test users ---
+	type testUser struct {
+		username string
+		email    string
+		empCode  string
+		fullName string
+		first    string
+		last     string
+	}
+	users := []testUser{
+		{"filler1", "filler1@goapps.local", "EMP-F01", "Fill User One", "Fill", "One"},
+		{"approver1", "approver1@goapps.local", "EMP-A01", "Approver User One", "Approver", "One"},
+	}
+	// All test users share the same password for local convenience.
+	// Change via SEED_TEST_PASSWORD env var if needed.
+	testPwd := envOrDefault("SEED_TEST_PASSWORD", "user123") //nolint:gosec // local dev default
+	pwdHash, err := password.Hash(testPwd)
+	if err != nil {
+		return fmt.Errorf("hash test user password: %w", err)
+	}
+
+	for _, u := range users {
+		var userID uuid.UUID
+		lookupErr := tx.QueryRowContext(ctx,
+			`SELECT user_id FROM mst_user WHERE username = $1 AND deleted_at IS NULL`, u.username,
+		).Scan(&userID)
+		if errors.Is(lookupErr, sql.ErrNoRows) {
+			userID = uuid.New()
+			if _, insErr := tx.ExecContext(ctx, `
+				INSERT INTO mst_user (user_id, username, email, password_hash, is_active, email_verified_at, created_by)
+				VALUES ($1, $2, $3, $4, true, NOW(), $5)`,
+				userID, u.username, u.email, pwdHash, systemUser,
+			); insErr != nil {
+				return fmt.Errorf("insert test user %s: %w", u.username, insErr)
+			}
+		} else if lookupErr != nil {
+			return fmt.Errorf("lookup test user %s: %w", u.username, lookupErr)
+		}
+
+		// User detail.
+		if _, insErr := tx.ExecContext(ctx, `
+			INSERT INTO mst_user_detail (detail_id, user_id, employee_code, full_name, first_name, last_name, created_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			ON CONFLICT (user_id) DO NOTHING`,
+			uuid.New(), userID, u.empCode, u.fullName, u.first, u.last, systemUser,
+		); insErr != nil {
+			return fmt.Errorf("insert detail for test user %s: %w", u.username, insErr)
+		}
+
+		// Assign USER role.
+		if _, insErr := tx.ExecContext(ctx, `
+			INSERT INTO user_roles (id, user_id, role_id, assigned_by)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (user_id, role_id) DO NOTHING`,
+			uuid.New(), userID, userRoleID, systemUser,
+		); insErr != nil {
+			return fmt.Errorf("assign role for test user %s: %w", u.username, insErr)
+		}
+
+		// Assign company mapping.
+		if _, insErr := tx.ExecContext(ctx, `
+			INSERT INTO user_company_mappings (user_id, company_mapping_id, is_primary, assigned_by)
+			VALUES ($1, $2, true, $3)
+			ON CONFLICT (user_id, company_mapping_id) DO NOTHING`,
+			userID, mappingID, systemUser,
+		); insErr != nil {
+			return fmt.Errorf("assign company mapping for test user %s: %w", u.username, insErr)
+		}
+
+		log.Info().Str("username", u.username).Str("user_id", userID.String()).Msg("Test user seeded")
+	}
+
+	log.Info().Msg("Test users seeding complete")
 	return nil
 }

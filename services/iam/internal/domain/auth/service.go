@@ -47,6 +47,10 @@ type Service interface {
 
 	// ResendEmailVerification re-sends the verification code (rate-limited).
 	ResendEmailVerification(ctx context.Context, userID uuid.UUID) (*EmailVerificationResult, error)
+
+	// ValidateUnlockPassword verifies the user's current password for cell-unlock authorization.
+	// Returns nil if the password matches, or ErrInvalidCredentials if it does not.
+	ValidateUnlockPassword(ctx context.Context, userID uuid.UUID, password string) error
 }
 
 // LoginInput contains the login request parameters.

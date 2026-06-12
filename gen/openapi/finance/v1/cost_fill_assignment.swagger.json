@@ -1,0 +1,753 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_fill_assignment.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostLevelAssignmentConfigService"
+    },
+    {
+      "name": "CostFillTaskService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/fill-configs": {
+      "put": {
+        "summary": "UpsertLevelConfig creates or replaces the filler/approver config for a level+tier.",
+        "operationId": "CostLevelAssignmentConfigService_UpsertLevelConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertLevelConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "UpsertLevelConfigRequest creates or replaces the assignment config for a level+tier.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertLevelConfigRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostLevelAssignmentConfigService"
+        ]
+      }
+    },
+    "/api/v1/finance/fill-configs/global": {
+      "get": {
+        "summary": "ListGlobalConfigs returns all global-tier assignment configs.",
+        "operationId": "CostLevelAssignmentConfigService_ListGlobalConfigs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListGlobalConfigsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CostLevelAssignmentConfigService"
+        ]
+      }
+    },
+    "/api/v1/finance/fill-configs/global/{routeLevel}": {
+      "delete": {
+        "summary": "DeleteGlobalConfig removes the global-tier config for a route level.",
+        "operationId": "CostLevelAssignmentConfigService_DeleteGlobalConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteGlobalConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "routeLevel",
+            "description": "Route level whose global config should be deleted.",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "CostLevelAssignmentConfigService"
+        ]
+      }
+    },
+    "/api/v1/finance/fill-tasks": {
+      "get": {
+        "summary": "ListFillTasks returns all fill tasks for a cost product request.",
+        "operationId": "CostFillTaskService_ListFillTasks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListFillTasksResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "description": "Parent cost product request ID.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostFillTaskService"
+        ]
+      }
+    },
+    "/api/v1/finance/fill-tasks/{taskId}/approve": {
+      "post": {
+        "summary": "ApproveFillTask approves a submitted fill task.",
+        "operationId": "CostFillTaskService_ApproveFillTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApproveFillTaskResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "description": "Task to approve.",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostFillTaskServiceApproveFillTaskBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostFillTaskService"
+        ]
+      }
+    },
+    "/api/v1/finance/fill-tasks/{taskId}/claim": {
+      "post": {
+        "summary": "ClaimFillTask assigns the authenticated user as the active filler.",
+        "operationId": "CostFillTaskService_ClaimFillTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ClaimFillTaskResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "description": "Task to claim.",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostFillTaskServiceClaimFillTaskBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostFillTaskService"
+        ]
+      }
+    },
+    "/api/v1/finance/fill-tasks/{taskId}/reject": {
+      "post": {
+        "summary": "RejectFillTask rejects a submitted fill task and returns it to the filler.",
+        "operationId": "CostFillTaskService_RejectFillTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RejectFillTaskResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "description": "Task to reject.",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostFillTaskServiceRejectFillTaskBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostFillTaskService"
+        ]
+      }
+    },
+    "/api/v1/finance/fill-tasks/{taskId}/submit": {
+      "post": {
+        "summary": "SubmitFillTask marks all parameters as filled and requests approver review.",
+        "operationId": "CostFillTaskService_SubmitFillTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitFillTaskResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "taskId",
+            "description": "Task to submit.",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostFillTaskServiceSubmitFillTaskBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostFillTaskService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CostFillTaskServiceApproveFillTaskBody": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Parent request ID for validation."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional note from the approver."
+        }
+      },
+      "description": "ApproveFillTaskRequest approves a pending fill task."
+    },
+    "CostFillTaskServiceClaimFillTaskBody": {
+      "type": "object",
+      "description": "ClaimFillTaskRequest marks the authenticated user as the active filler."
+    },
+    "CostFillTaskServiceRejectFillTaskBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for rejection (shown to the filler)."
+        }
+      },
+      "description": "RejectFillTaskRequest rejects a pending fill task and sends it back to the filler."
+    },
+    "CostFillTaskServiceSubmitFillTaskBody": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Parent request ID for validation."
+        }
+      },
+      "description": "SubmitFillTaskRequest moves a filled task into APPROVAL_PENDING."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ApproveFillTaskResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "ApproveFillTaskResponse confirms approval."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1ClaimFillTaskResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "ClaimFillTaskResponse confirms the claim."
+    },
+    "v1DeleteGlobalConfigResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteGlobalConfigResponse confirms the deletion."
+    },
+    "v1FillApproval": {
+      "type": "object",
+      "properties": {
+        "approvalId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Unique approval record ID."
+        },
+        "taskId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Parent task ID."
+        },
+        "decision": {
+          "type": "string",
+          "description": "Decision: APPROVED | REJECTED."
+        },
+        "decidedBy": {
+          "type": "string",
+          "description": "User who made the decision."
+        },
+        "decidedAt": {
+          "type": "string",
+          "description": "Timestamp of the decision (ISO 8601)."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional note from the approver."
+        },
+        "trigger": {
+          "type": "string",
+          "description": "Trigger context (MANUAL | AUTO)."
+        }
+      },
+      "description": "FillApproval records one approver decision on a fill task."
+    },
+    "v1FillTask": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Unique task ID."
+        },
+        "requestId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Parent cost product request ID."
+        },
+        "routeHeadId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Route head the task is associated with."
+        },
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Route level (1 = FG, 2..N = upstream)."
+        },
+        "fillerType": {
+          "type": "string",
+          "description": "Filler actor type (USER | DEPT)."
+        },
+        "fillerValue": {
+          "type": "string",
+          "description": "Filler actor value (user_id or dept_id)."
+        },
+        "approverType": {
+          "type": "string",
+          "description": "Approver actor type (USER | DEPT)."
+        },
+        "approverValue": {
+          "type": "string",
+          "description": "Approver actor value (user_id or dept_id)."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current task status."
+        },
+        "claimedBy": {
+          "type": "string",
+          "description": "User who claimed the task (empty if unclaimed)."
+        },
+        "reapproveOnChange": {
+          "type": "boolean",
+          "description": "Whether approval must be re-triggered on parameter changes."
+        },
+        "slaFillHours": {
+          "type": "integer",
+          "format": "int32",
+          "description": "SLA hours for fill phase."
+        },
+        "slaApproveHours": {
+          "type": "integer",
+          "format": "int32",
+          "description": "SLA hours for approval phase."
+        },
+        "totalParams": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of parameters to fill."
+        },
+        "filledParams": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of parameters already filled."
+        },
+        "activatedAt": {
+          "type": "string",
+          "description": "Timestamp when the task was activated (ISO 8601)."
+        },
+        "approvals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FillApproval"
+          },
+          "description": "Approval history for this task."
+        }
+      },
+      "description": "FillTask represents one cost-fill assignment for a specific route level on a request."
+    },
+    "v1LevelAssignmentConfig": {
+      "type": "object",
+      "properties": {
+        "configId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Unique config record ID."
+        },
+        "tier": {
+          "type": "string",
+          "description": "Tier scope: GLOBAL | PRODUCT | REQUEST."
+        },
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Route level this config applies to (1 = FG, 2..N = upstream)."
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Set for PRODUCT tier: the product sys ID this config is scoped to."
+        },
+        "requestId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Set for REQUEST tier: the request ID this config is scoped to."
+        },
+        "fillerType": {
+          "type": "string",
+          "description": "Filler actor type (USER | DEPT)."
+        },
+        "fillerValue": {
+          "type": "string",
+          "description": "Filler actor value (user_id or dept_id)."
+        },
+        "approverType": {
+          "type": "string",
+          "description": "Approver actor type (USER | DEPT)."
+        },
+        "approverValue": {
+          "type": "string",
+          "description": "Approver actor value (user_id or dept_id)."
+        },
+        "reapproveOnChange": {
+          "type": "boolean",
+          "description": "Whether the task must be re-approved when any parameter value changes."
+        },
+        "slaFillHours": {
+          "type": "integer",
+          "format": "int32",
+          "description": "SLA hours allowed for the fill phase before escalation."
+        },
+        "slaApproveHours": {
+          "type": "integer",
+          "format": "int32",
+          "description": "SLA hours allowed for the approval phase before escalation."
+        }
+      },
+      "description": "LevelAssignmentConfig holds the filler/approver assignment for one route level."
+    },
+    "v1ListFillTasksResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FillTask"
+          },
+          "description": "Fill tasks ordered by route level."
+        }
+      },
+      "description": "ListFillTasksResponse returns all fill tasks for the request."
+    },
+    "v1ListGlobalConfigsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LevelAssignmentConfig"
+          },
+          "description": "List of global-tier assignment configs."
+        }
+      },
+      "description": "ListGlobalConfigsResponse returns all global-tier level configs."
+    },
+    "v1RejectFillTaskResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "RejectFillTaskResponse confirms rejection."
+    },
+    "v1SubmitFillTaskResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "SubmitFillTaskResponse confirms submission."
+    },
+    "v1UpsertLevelConfigRequest": {
+      "type": "object",
+      "properties": {
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Route level to configure (must be \u003e= 1)."
+        },
+        "tier": {
+          "type": "string",
+          "description": "Tier scope: GLOBAL, PRODUCT, or REQUEST."
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Required for PRODUCT tier: the target product sys ID."
+        },
+        "requestId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Required for REQUEST tier: the target request ID."
+        },
+        "fillerType": {
+          "type": "string",
+          "description": "Filler actor type identifier."
+        },
+        "fillerValue": {
+          "type": "string",
+          "description": "Filler actor value (user_id or dept_id)."
+        },
+        "approverType": {
+          "type": "string",
+          "description": "Approver actor type identifier (optional)."
+        },
+        "approverValue": {
+          "type": "string",
+          "description": "Approver actor value (optional)."
+        },
+        "reapproveOnChange": {
+          "type": "boolean",
+          "description": "Whether re-approval is triggered on parameter change."
+        },
+        "slaFillHours": {
+          "type": "integer",
+          "format": "int32",
+          "description": "SLA hours for fill phase (0 = no SLA)."
+        },
+        "slaApproveHours": {
+          "type": "integer",
+          "format": "int32",
+          "description": "SLA hours for approval phase (0 = no SLA)."
+        }
+      },
+      "description": "UpsertLevelConfigRequest creates or replaces the assignment config for a level+tier."
+    },
+    "v1UpsertLevelConfigResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "UpsertLevelConfigResponse confirms the upsert."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

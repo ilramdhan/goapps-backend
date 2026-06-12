@@ -95,14 +95,27 @@ type JWTConfig struct {
 
 // EmailConfig holds email/SMTP configuration.
 type EmailConfig struct {
-	SMTPHost     string `mapstructure:"smtp_host"`
-	SMTPPort     int    `mapstructure:"smtp_port"`
-	SMTPUser     string `mapstructure:"smtp_user"`
-	SMTPPassword string `mapstructure:"smtp_password"`
-	FromAddress  string `mapstructure:"from_address"`
-	FromName     string `mapstructure:"from_name"`
-	UseTLS       bool   `mapstructure:"use_tls"`
-	SkipVerify   bool   `mapstructure:"skip_verify"`
+	SMTPHost             string `mapstructure:"smtp_host"`
+	SMTPPort             int    `mapstructure:"smtp_port"`
+	SMTPUser             string `mapstructure:"smtp_user"`
+	SMTPPassword         string `mapstructure:"smtp_password"`
+	FromAddress          string `mapstructure:"from_address"`
+	FromName             string `mapstructure:"from_name"`
+	UseTLS               bool   `mapstructure:"use_tls"`
+	SkipVerify           bool   `mapstructure:"skip_verify"`
+	AppName              string `mapstructure:"app_name"`               // brand name used in templates.
+	AppURL               string `mapstructure:"app_url"`                // base URL for CTA links.
+	SupportURL           string `mapstructure:"support_url"`            // optional support link in footer.
+	HeaderTagline        string `mapstructure:"header_tagline"`         // optional tagline next to logo in header.
+	CompanyName          string `mapstructure:"company_name"`           // full legal entity name for footer copyright.
+	CompanyAddress       string `mapstructure:"company_address"`        // optional physical address in footer.
+	PrivacyURL           string `mapstructure:"privacy_url"`            // privacy policy link; auto-derived from app_url if empty.
+	TermsURL             string `mapstructure:"terms_url"`              // terms of service link; auto-derived from app_url if empty.
+	LogoURL              string `mapstructure:"logo_url"`               // optional logo image URL shown in header.
+	HeaderBgURL          string `mapstructure:"header_bg_url"`          // optional header background image URL.
+	SocialLinkedIn       string `mapstructure:"social_linkedin"`        // optional LinkedIn profile URL.
+	SocialInstagram      string `mapstructure:"social_instagram"`       // optional Instagram profile URL.
+	SocialCompanyProfile string `mapstructure:"social_company_profile"` // optional company website URL.
 }
 
 // TOTPConfig holds TOTP 2FA configuration.
@@ -248,9 +261,12 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("email.smtp_user", "")
 	v.SetDefault("email.smtp_password", "")
 	v.SetDefault("email.from_address", "noreply@goapps.local")
-	v.SetDefault("email.from_name", "GoApps IAM")
+	v.SetDefault("email.from_name", "GoApps")
 	v.SetDefault("email.use_tls", false)
 	v.SetDefault("email.skip_verify", true)
+	v.SetDefault("email.app_name", "GoApps")
+	v.SetDefault("email.app_url", "http://localhost:3000")
+	v.SetDefault("email.support_url", "")
 
 	// TOTP defaults
 	v.SetDefault("totp.issuer", "GoApps")
@@ -332,6 +348,9 @@ func bindEnvVars(v *viper.Viper) {
 		{"email.from_name", "SMTP_FROM_NAME"},
 		{"email.use_tls", "SMTP_USE_TLS"},
 		{"email.skip_verify", "SMTP_SKIP_VERIFY"},
+		{"email.app_name", "EMAIL_APP_NAME"},
+		{"email.app_url", "EMAIL_APP_URL"},
+		{"email.support_url", "EMAIL_SUPPORT_URL"},
 		// CORS
 		{"cors.allowed_origins", "CORS_ALLOWED_ORIGINS"},
 		// Tracing

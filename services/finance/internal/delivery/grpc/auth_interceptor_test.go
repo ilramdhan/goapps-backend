@@ -63,7 +63,7 @@ func financeNoopHandler(_ context.Context, _ any) (any, error) {
 }
 
 func TestFinanceAuthInterceptor_HealthBypass(t *testing.T) {
-	interceptor := AuthInterceptor(testJWTConfig(), nil)
+	interceptor := AuthInterceptor(testJWTConfig(), nil, nil)
 
 	tests := []string{
 		"/grpc.health.v1.Health/Check",
@@ -82,7 +82,7 @@ func TestFinanceAuthInterceptor_HealthBypass(t *testing.T) {
 }
 
 func TestFinanceAuthInterceptor_MissingToken(t *testing.T) {
-	interceptor := AuthInterceptor(testJWTConfig(), nil)
+	interceptor := AuthInterceptor(testJWTConfig(), nil, nil)
 
 	info := &grpc.UnaryServerInfo{FullMethod: "/finance.v1.UOMService/ListUOMs"}
 	_, err := interceptor(context.Background(), nil, info, financeNoopHandler)
@@ -94,7 +94,7 @@ func TestFinanceAuthInterceptor_MissingToken(t *testing.T) {
 }
 
 func TestFinanceAuthInterceptor_InvalidToken(t *testing.T) {
-	interceptor := AuthInterceptor(testJWTConfig(), nil)
+	interceptor := AuthInterceptor(testJWTConfig(), nil, nil)
 
 	ctx := financeCtxWithToken("garbage-token")
 	info := &grpc.UnaryServerInfo{FullMethod: "/finance.v1.UOMService/ListUOMs"}
@@ -112,7 +112,7 @@ func TestFinanceAuthInterceptor_ExpiredToken(t *testing.T) {
 	claims.IssuedAt = jwt.NewNumericDate(time.Now().Add(-2 * time.Hour))
 
 	token := signTestToken(t, claims, testJWTSecret)
-	interceptor := AuthInterceptor(testJWTConfig(), nil)
+	interceptor := AuthInterceptor(testJWTConfig(), nil, nil)
 
 	ctx := financeCtxWithToken(token)
 	info := &grpc.UnaryServerInfo{FullMethod: "/finance.v1.UOMService/ListUOMs"}
@@ -129,7 +129,7 @@ func TestFinanceAuthInterceptor_RefreshTokenRejected(t *testing.T) {
 	claims.TokenType = "refresh" // Should be rejected.
 
 	token := signTestToken(t, claims, testJWTSecret)
-	interceptor := AuthInterceptor(testJWTConfig(), nil)
+	interceptor := AuthInterceptor(testJWTConfig(), nil, nil)
 
 	ctx := financeCtxWithToken(token)
 	info := &grpc.UnaryServerInfo{FullMethod: "/finance.v1.UOMService/ListUOMs"}
@@ -145,7 +145,7 @@ func TestFinanceAuthInterceptor_WrongSecret(t *testing.T) {
 	claims := validAccessClaims()
 	token := signTestToken(t, claims, "wrong-secret")
 
-	interceptor := AuthInterceptor(testJWTConfig(), nil)
+	interceptor := AuthInterceptor(testJWTConfig(), nil, nil)
 
 	ctx := financeCtxWithToken(token)
 	info := &grpc.UnaryServerInfo{FullMethod: "/finance.v1.UOMService/ListUOMs"}
@@ -161,7 +161,7 @@ func TestFinanceAuthInterceptor_ValidToken(t *testing.T) {
 	claims := validAccessClaims()
 	token := signTestToken(t, claims, testJWTSecret)
 
-	interceptor := AuthInterceptor(testJWTConfig(), nil)
+	interceptor := AuthInterceptor(testJWTConfig(), nil, nil)
 
 	ctx := financeCtxWithToken(token)
 	info := &grpc.UnaryServerInfo{FullMethod: "/finance.v1.UOMService/ListUOMs"}
@@ -280,4 +280,62 @@ func TestFinanceContextHelpers(t *testing.T) {
 	assert.True(t, IsSuperAdmin(ctx))
 	assert.True(t, HasPermission(ctx, "finance.master.uom.view"))
 	assert.False(t, HasPermission(ctx, "finance.master.uom.delete"))
+}
+
+func TestFinanceGetRequiredPermission_CPR(t *testing.T) {
+	tests := []struct {
+		method string
+		want   string
+	}{
+		// CPR transitions that require explicit permissions.
+		{"/finance.v1.CostProductRequestService/SubmitCostProductRequest", "finance.product.request.submit"},
+		{"/finance.v1.CostProductRequestService/ReopenCostProductRequest", "finance.product.request.reopen"},
+		{"/finance.v1.CostProductRequestService/StartCostProductRequestReview", "finance.product.request.review"},
+		{"/finance.v1.CostProductRequestService/RejectCostProductRequest", "finance.product.request.reject"},
+		{"/finance.v1.CostProductRequestService/CreateCostProductRequest", "finance.product.request.create"},
+		// CPR transitions open to any authenticated user (empty string).
+		{"/finance.v1.CostProductRequestService/CancelCostProductRequest", ""},
+		{"/finance.v1.CostProductRequestService/CloseCostProductRequest", ""},
+		// Route RPCs.
+		{"/finance.v1.CostRouteService/CreateRouteFromProduct", "finance.product.route.create"},
+		{"/finance.v1.CostRouteService/GetRouteByProduct", "finance.product.route.view"},
+		{"/finance.v1.CostRouteService/LockRoute", "finance.product.route.update"},
+		// Fill-task RPCs open to any authenticated user.
+		{"/finance.v1.CostFillTaskService/ClaimFillTask", ""},
+		{"/finance.v1.CostFillTaskService/SubmitFillTask", ""},
+		{"/finance.v1.CostFillTaskService/ApproveFillTask", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.method, func(t *testing.T) {
+			assert.Equal(t, tt.want, getRequiredPermission(tt.method))
+		})
+	}
+}
+
+func TestFinancePermissionInterceptor_CPRSubmit_Allowed(t *testing.T) {
+	interceptor := PermissionInterceptor()
+
+	ctx := context.WithValue(context.Background(), AuthRolesKey, []string{"CPR_SUBMITTER"})
+	ctx = context.WithValue(ctx, AuthPermissionsKey, []string{"finance.product.request.submit"})
+
+	info := &grpc.UnaryServerInfo{FullMethod: "/finance.v1.CostProductRequestService/SubmitCostProductRequest"}
+	resp, err := interceptor(ctx, nil, info, financeNoopHandler)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", resp)
+}
+
+func TestFinancePermissionInterceptor_CPRSubmit_Denied(t *testing.T) {
+	interceptor := PermissionInterceptor()
+
+	ctx := context.WithValue(context.Background(), AuthRolesKey, []string{"CPR_REQUESTER"})
+	ctx = context.WithValue(ctx, AuthPermissionsKey, []string{"finance.product.request.view"})
+
+	info := &grpc.UnaryServerInfo{FullMethod: "/finance.v1.CostProductRequestService/SubmitCostProductRequest"}
+	_, err := interceptor(ctx, nil, info, financeNoopHandler)
+
+	assert.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.PermissionDenied, st.Code())
 }

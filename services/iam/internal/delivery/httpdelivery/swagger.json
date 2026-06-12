@@ -700,6 +700,40 @@
         ]
       }
     },
+    "/api/v1/iam/auth/validate-unlock": {
+      "post": {
+        "summary": "ValidateUnlockPassword verifies the authenticated user's password without changing it.\nUsed by sensitive UIs (e.g., fill-task unlock dialogs) to re-confirm identity.\nThe user identity is resolved from the JWT token; no user_id in the request.",
+        "operationId": "AuthService_ValidateUnlockPassword",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ValidateUnlockPasswordResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ValidateUnlockPasswordRequest re-confirms the authenticated user's password.\nThe user identity is resolved server-side from the JWT bearer token.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ValidateUnlockPasswordRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
     "/api/v1/iam/auth/verify-email": {
       "post": {
         "summary": "VerifyEmail consumes a verification code and marks the authenticated user's email as verified.",
@@ -7398,6 +7432,26 @@
         }
       },
       "description": "UpdatePasswordResponse confirms password update."
+    },
+    "v1ValidateUnlockPasswordRequest": {
+      "type": "object",
+      "properties": {
+        "password": {
+          "type": "string",
+          "description": "Password to validate (must not be empty)."
+        }
+      },
+      "description": "ValidateUnlockPasswordRequest re-confirms the authenticated user's password.\nThe user identity is resolved server-side from the JWT bearer token."
+    },
+    "v1ValidateUnlockPasswordResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata. is_success=true means the password matched."
+        }
+      },
+      "description": "ValidateUnlockPasswordResponse confirms whether the password is valid."
     },
     "v1Verify2FARequest": {
       "type": "object",

@@ -4,6 +4,10 @@ package costrequestcomment
 import (
 	"context"
 
+	"github.com/rs/zerolog/log"
+
+	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
+	cprdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costrequestcomment"
 )
 
@@ -12,16 +16,29 @@ type CreateCommand struct {
 	RequestID        int64
 	ParentCommentID  int64
 	AuthorUserID     string
+	AuthorName       string // display name for notifications
 	BodyRichtext     string
 	BodyPlaintext    string
 	MentionedUserIDs []string
 }
 
 // CreateHandler creates a comment.
-type CreateHandler struct{ repo domain.Repository }
+type CreateHandler struct {
+	repo        domain.Repository
+	cprRepo     cprdomain.Repository // optional: fetch CPR for notification
+	cprNotifier cprapp.CPRNotifier   // optional: best-effort CPR_COMMENT_ADDED event
+}
 
 // NewCreateHandler constructs a CreateHandler.
 func NewCreateHandler(r domain.Repository) *CreateHandler { return &CreateHandler{repo: r} }
+
+// WithCPRNotifier attaches a notifier so that CPR_COMMENT_ADDED events are emitted
+// after a comment is saved. Both arguments must be non-nil.
+func (h *CreateHandler) WithCPRNotifier(repo cprdomain.Repository, notifier cprapp.CPRNotifier) *CreateHandler {
+	h.cprRepo = repo
+	h.cprNotifier = notifier
+	return h
+}
 
 // Handle executes the create.
 func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*domain.Comment, error) {
@@ -39,7 +56,63 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*domain.
 	if err := h.repo.Create(ctx, c); err != nil {
 		return nil, err
 	}
+	h.emitCommentAdded(ctx, cmd.RequestID, cmd.AuthorName, cmd.MentionedUserIDs)
 	return c, nil
+}
+
+// emitCommentAdded fires CPR_COMMENT_ADDED (and CPR_MENTIONED per mention) best-effort.
+func (h *CreateHandler) emitCommentAdded(ctx context.Context, requestID int64, authorName string, mentionedUserIDs []string) {
+	if h.cprNotifier == nil || h.cprRepo == nil {
+		return
+	}
+	req, err := h.cprRepo.GetByID(ctx, requestID)
+	if err != nil {
+		log.Warn().Err(err).Int64("request_id", requestID).
+			Msg("CreateCommentHandler: fetch CPR for notification failed (non-fatal)")
+		return
+	}
+	event := cprapp.CPREvent{
+		EventType:       "CPR_COMMENT_ADDED",
+		RequestID:       requestID,
+		RequestNo:       req.RequestNo(),
+		RequesterUserID: req.RequesterUserID(),
+		ActorName:       authorName,
+		Rules: []cprapp.CPRNotifRule{
+			{RuleType: "BY_USER_ID", Value: req.RequesterUserID()},
+			{RuleType: "BY_PERMISSION", Value: "finance.product.request.review"},
+		},
+	}
+	if notifyErr := h.cprNotifier.NotifyEvent(ctx, event); notifyErr != nil {
+		log.Warn().Err(notifyErr).Int64("request_id", requestID).
+			Msg("CreateCommentHandler: emit CPR_COMMENT_ADDED failed (non-fatal)")
+	}
+	// Emit a separate CPR_MENTIONED notification per mentioned user.
+	for _, uid := range dedupStrings(mentionedUserIDs) {
+		mentionEvent := cprapp.CPREvent{
+			EventType:       "CPR_MENTIONED",
+			RequestID:       requestID,
+			RequestNo:       req.RequestNo(),
+			RequesterUserID: req.RequesterUserID(),
+			ActorName:       authorName,
+			Rules:           []cprapp.CPRNotifRule{{RuleType: "BY_USER_ID", Value: uid}},
+		}
+		if notifyErr := h.cprNotifier.NotifyEvent(ctx, mentionEvent); notifyErr != nil {
+			log.Warn().Err(notifyErr).Str("user_id", uid).
+				Msg("CreateCommentHandler: emit CPR_MENTIONED failed (non-fatal)")
+		}
+	}
+}
+
+func dedupStrings(ss []string) []string {
+	seen := make(map[string]struct{}, len(ss))
+	out := make([]string, 0, len(ss))
+	for _, s := range ss {
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // UpdateCommand input.

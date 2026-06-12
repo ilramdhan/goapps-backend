@@ -97,10 +97,14 @@ func (r *CompanyMappingRepository) Update(ctx context.Context, m *companymapping
 
 // Delete soft-deletes a company mapping.
 func (r *CompanyMappingRepository) Delete(ctx context.Context, id uuid.UUID, deletedBy string) error {
-	// Reject deletes when any user still references this mapping.
+	// Reject deletes when any active (non-deleted) user still references this mapping.
 	var inUse bool
-	if err := r.db.QueryRowContext(ctx,
-		"SELECT EXISTS(SELECT 1 FROM user_company_mappings WHERE company_mapping_id = $1)", id,
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM user_company_mappings ucm
+			INNER JOIN mst_user u ON u.user_id = ucm.user_id AND u.deleted_at IS NULL
+			WHERE ucm.company_mapping_id = $1
+		)`, id,
 	).Scan(&inUse); err != nil {
 		return fmt.Errorf("failed to check mapping references: %w", err)
 	}

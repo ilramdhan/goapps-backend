@@ -159,6 +159,40 @@
         ]
       }
     },
+    "/api/v1/iam/notifications/request": {
+      "post": {
+        "summary": "RequestNotification creates notifications for one or more recipients\nresolved dynamically from RecipientRules. Used by cross-service\nnotification dispatch (e.g. Finance → IAM).",
+        "operationId": "NotificationService_RequestNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RequestNotificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RequestNotificationRequest is used by external services (e.g. Finance) to\ndispatch a notification to one or more recipients resolved by rules.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RequestNotificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "NotificationService"
+        ]
+      }
+    },
     "/api/v1/iam/notifications/unread-count": {
       "get": {
         "summary": "GetUnreadCount returns the count of unread notifications for the caller.",
@@ -652,6 +686,102 @@
         }
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1RecipientRule": {
+      "type": "object",
+      "properties": {
+        "ruleType": {
+          "$ref": "#/definitions/v1RecipientRuleType"
+        },
+        "value": {
+          "type": "string",
+          "title": "value interpretation depends on rule_type:\n  BY_USER_ID → user UUID\n  BY_PERMISSION → permission code (e.g. \"finance.master.uom.view\")\n  BY_DEPT → department UUID\n  BY_ROLE → role UUID"
+        }
+      },
+      "description": "RecipientRule is a single rule for resolving notification recipients."
+    },
+    "v1RecipientRuleType": {
+      "type": "string",
+      "enum": [
+        "RECIPIENT_RULE_TYPE_UNSPECIFIED",
+        "RECIPIENT_RULE_TYPE_BY_USER_ID",
+        "RECIPIENT_RULE_TYPE_BY_PERMISSION",
+        "RECIPIENT_RULE_TYPE_BY_DEPT",
+        "RECIPIENT_RULE_TYPE_BY_ROLE"
+      ],
+      "default": "RECIPIENT_RULE_TYPE_UNSPECIFIED",
+      "description": "RecipientRuleType determines how recipients are resolved for a notification.\n\n - RECIPIENT_RULE_TYPE_BY_USER_ID: Resolve by explicit user UUID.\n - RECIPIENT_RULE_TYPE_BY_PERMISSION: All users holding the given permission code.\n - RECIPIENT_RULE_TYPE_BY_DEPT: All users in the given department UUID.\n - RECIPIENT_RULE_TYPE_BY_ROLE: All users assigned the given role UUID."
+    },
+    "v1RequestNotificationRequest": {
+      "type": "object",
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "description": "event_type identifies the notification event for deduplication and display."
+        },
+        "sourceService": {
+          "type": "string",
+          "description": "source_service is the originating service name (e.g. \"finance\")."
+        },
+        "sourceType": {
+          "type": "string",
+          "description": "source_type correlates the notification to a feature (e.g. \"finance.rm_cost_export\")."
+        },
+        "sourceId": {
+          "type": "string",
+          "description": "source_id is the identifier of the source entity (e.g. job UUID)."
+        },
+        "recipientRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RecipientRule"
+          },
+          "description": "recipient_rules must contain at least one rule."
+        },
+        "type": {
+          "$ref": "#/definitions/v1NotificationType"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1NotificationSeverity"
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "actionType": {
+          "$ref": "#/definitions/v1NotificationActionType"
+        },
+        "actionPayload": {
+          "type": "string",
+          "description": "action_payload is a JSON-encoded string whose shape depends on action_type."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "idempotency_key prevents duplicate dispatch on retry; optional."
+        }
+      },
+      "description": "RequestNotificationRequest is used by external services (e.g. Finance) to\ndispatch a notification to one or more recipients resolved by rules."
+    },
+    "v1RequestNotificationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "eventId": {
+          "type": "string",
+          "description": "event_id is a server-generated identifier for this dispatch event."
+        },
+        "recipientCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "recipient_count is the number of users notified."
+        }
+      },
+      "description": "RequestNotificationResponse returns the dispatch result."
     },
     "v1ValidationError": {
       "type": "object",

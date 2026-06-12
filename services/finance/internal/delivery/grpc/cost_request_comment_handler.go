@@ -7,7 +7,9 @@ import (
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costrequestcomment"
+	cprdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costrequestcomment"
 )
 
@@ -22,6 +24,13 @@ type CostRequestCommentHandler struct {
 	listByRequestHandler   *app.ListByRequestHandler
 	listEditHistoryHandler *app.ListEditHistoryHandler
 	validation             *ValidationHelper
+}
+
+// WithCPRNotifier wires CPR notification support into the create-comment use case.
+// Both arguments must be non-nil.
+func (h *CostRequestCommentHandler) WithCPRNotifier(repo cprdomain.Repository, notifier cprapp.CPRNotifier) *CostRequestCommentHandler {
+	h.createHandler.WithCPRNotifier(repo, notifier)
+	return h
 }
 
 // NewCostRequestCommentHandler constructs the handler.
@@ -48,10 +57,12 @@ func (h *CostRequestCommentHandler) CreateCostRequestComment(ctx context.Context
 		return &financev1.CreateCostRequestCommentResponse{Base: baseResp}, nil
 	}
 	actor, _ := GetUserIDFromCtx(ctx)
+	authorName, _ := GetUsernameFromCtx(ctx)
 	c, err := h.createHandler.Handle(ctx, app.CreateCommand{
 		RequestID:        req.GetRequestId(),
 		ParentCommentID:  req.GetParentCommentId(),
 		AuthorUserID:     actor,
+		AuthorName:       authorName,
 		BodyRichtext:     req.GetBodyRichtext(),
 		BodyPlaintext:    req.GetBodyPlaintext(),
 		MentionedUserIDs: req.GetMentionedUserIds(),

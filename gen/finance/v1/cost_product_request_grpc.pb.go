@@ -32,12 +32,17 @@ const (
 	CostProductRequestService_RejectCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/RejectCostProductRequest"
 	CostProductRequestService_ReviseCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/ReviseCostProductRequest"
 	CostProductRequestService_ReopenCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/ReopenCostProductRequest"
+	CostProductRequestService_MarkParameterPending_FullMethodName                    = "/finance.v1.CostProductRequestService/MarkParameterPending"
 	CostProductRequestService_MarkParameterComplete_FullMethodName                   = "/finance.v1.CostProductRequestService/MarkParameterComplete"
 	CostProductRequestService_CancelCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/CancelCostProductRequest"
 	CostProductRequestService_CloseCostProductRequest_FullMethodName                 = "/finance.v1.CostProductRequestService/CloseCostProductRequest"
 	CostProductRequestService_AssignCostProductRequest_FullMethodName                = "/finance.v1.CostProductRequestService/AssignCostProductRequest"
 	CostProductRequestService_LinkExistingRoute_FullMethodName                       = "/finance.v1.CostProductRequestService/LinkExistingRoute"
 	CostProductRequestService_UnlinkRoute_FullMethodName                             = "/finance.v1.CostProductRequestService/UnlinkRoute"
+	CostProductRequestService_ConfirmCostProductRequest_FullMethodName               = "/finance.v1.CostProductRequestService/ConfirmCostProductRequest"
+	CostProductRequestService_ApproveCostProductRequest_FullMethodName               = "/finance.v1.CostProductRequestService/ApproveCostProductRequest"
+	CostProductRequestService_ReleaseCostProductRequest_FullMethodName               = "/finance.v1.CostProductRequestService/ReleaseCostProductRequest"
+	CostProductRequestService_GetCostProductRequestHistory_FullMethodName            = "/finance.v1.CostProductRequestService/GetCostProductRequestHistory"
 )
 
 // CostProductRequestServiceClient is the client API for CostProductRequestService service.
@@ -58,6 +63,9 @@ type CostProductRequestServiceClient interface {
 	ReviseCostProductRequest(ctx context.Context, in *ReviseCostProductRequestRequest, opts ...grpc.CallOption) (*ReviseCostProductRequestResponse, error)
 	// ReopenCostProductRequest moves a CLOSED request back to DRAFT.
 	ReopenCostProductRequest(ctx context.Context, in *ReopenCostProductRequestRequest, opts ...grpc.CallOption) (*ReopenCostProductRequestResponse, error)
+	// MarkParameterPending advances ROUTING_DEFINED → PARAMETER_PENDING and
+	// creates fill tasks for every route level before committing the transition.
+	MarkParameterPending(ctx context.Context, in *MarkParameterPendingRequest, opts ...grpc.CallOption) (*MarkParameterPendingResponse, error)
 	// MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE
 	// after verifying all promoted products have required params filled.
 	MarkParameterComplete(ctx context.Context, in *MarkParameterCompleteRequest, opts ...grpc.CallOption) (*MarkParameterCompleteResponse, error)
@@ -68,6 +76,15 @@ type CostProductRequestServiceClient interface {
 	LinkExistingRoute(ctx context.Context, in *LinkExistingRouteRequest, opts ...grpc.CallOption) (*LinkExistingRouteResponse, error)
 	// UnlinkRoute clears both existing-product and linked-route fields.
 	UnlinkRoute(ctx context.Context, in *UnlinkRouteRequest, opts ...grpc.CallOption) (*UnlinkRouteResponse, error)
+	// ConfirmCostProductRequest advances PARAMETER_COMPLETE → CONFIRMED.
+	ConfirmCostProductRequest(ctx context.Context, in *ConfirmCostProductRequestRequest, opts ...grpc.CallOption) (*ConfirmCostProductRequestResponse, error)
+	// ApproveCostProductRequest advances CONFIRMED → APPROVED.
+	ApproveCostProductRequest(ctx context.Context, in *ApproveCostProductRequestRequest, opts ...grpc.CallOption) (*ApproveCostProductRequestResponse, error)
+	// ReleaseCostProductRequest advances APPROVED → RELEASED.
+	// After release the request is locked and the cost calculation engine can proceed.
+	ReleaseCostProductRequest(ctx context.Context, in *ReleaseCostProductRequestRequest, opts ...grpc.CallOption) (*ReleaseCostProductRequestResponse, error)
+	// GetCostProductRequestHistory returns the full status-transition timeline for a request.
+	GetCostProductRequestHistory(ctx context.Context, in *GetCostProductRequestHistoryRequest, opts ...grpc.CallOption) (*GetCostProductRequestHistoryResponse, error)
 }
 
 type costProductRequestServiceClient struct {
@@ -208,6 +225,16 @@ func (c *costProductRequestServiceClient) ReopenCostProductRequest(ctx context.C
 	return out, nil
 }
 
+func (c *costProductRequestServiceClient) MarkParameterPending(ctx context.Context, in *MarkParameterPendingRequest, opts ...grpc.CallOption) (*MarkParameterPendingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MarkParameterPendingResponse)
+	err := c.cc.Invoke(ctx, CostProductRequestService_MarkParameterPending_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *costProductRequestServiceClient) MarkParameterComplete(ctx context.Context, in *MarkParameterCompleteRequest, opts ...grpc.CallOption) (*MarkParameterCompleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MarkParameterCompleteResponse)
@@ -268,6 +295,46 @@ func (c *costProductRequestServiceClient) UnlinkRoute(ctx context.Context, in *U
 	return out, nil
 }
 
+func (c *costProductRequestServiceClient) ConfirmCostProductRequest(ctx context.Context, in *ConfirmCostProductRequestRequest, opts ...grpc.CallOption) (*ConfirmCostProductRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConfirmCostProductRequestResponse)
+	err := c.cc.Invoke(ctx, CostProductRequestService_ConfirmCostProductRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductRequestServiceClient) ApproveCostProductRequest(ctx context.Context, in *ApproveCostProductRequestRequest, opts ...grpc.CallOption) (*ApproveCostProductRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApproveCostProductRequestResponse)
+	err := c.cc.Invoke(ctx, CostProductRequestService_ApproveCostProductRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductRequestServiceClient) ReleaseCostProductRequest(ctx context.Context, in *ReleaseCostProductRequestRequest, opts ...grpc.CallOption) (*ReleaseCostProductRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseCostProductRequestResponse)
+	err := c.cc.Invoke(ctx, CostProductRequestService_ReleaseCostProductRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductRequestServiceClient) GetCostProductRequestHistory(ctx context.Context, in *GetCostProductRequestHistoryRequest, opts ...grpc.CallOption) (*GetCostProductRequestHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCostProductRequestHistoryResponse)
+	err := c.cc.Invoke(ctx, CostProductRequestService_GetCostProductRequestHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostProductRequestServiceServer is the server API for CostProductRequestService service.
 // All implementations must embed UnimplementedCostProductRequestServiceServer
 // for forward compatibility.
@@ -286,6 +353,9 @@ type CostProductRequestServiceServer interface {
 	ReviseCostProductRequest(context.Context, *ReviseCostProductRequestRequest) (*ReviseCostProductRequestResponse, error)
 	// ReopenCostProductRequest moves a CLOSED request back to DRAFT.
 	ReopenCostProductRequest(context.Context, *ReopenCostProductRequestRequest) (*ReopenCostProductRequestResponse, error)
+	// MarkParameterPending advances ROUTING_DEFINED → PARAMETER_PENDING and
+	// creates fill tasks for every route level before committing the transition.
+	MarkParameterPending(context.Context, *MarkParameterPendingRequest) (*MarkParameterPendingResponse, error)
 	// MarkParameterComplete advances PARAMETER_PENDING → PARAMETER_COMPLETE
 	// after verifying all promoted products have required params filled.
 	MarkParameterComplete(context.Context, *MarkParameterCompleteRequest) (*MarkParameterCompleteResponse, error)
@@ -296,6 +366,15 @@ type CostProductRequestServiceServer interface {
 	LinkExistingRoute(context.Context, *LinkExistingRouteRequest) (*LinkExistingRouteResponse, error)
 	// UnlinkRoute clears both existing-product and linked-route fields.
 	UnlinkRoute(context.Context, *UnlinkRouteRequest) (*UnlinkRouteResponse, error)
+	// ConfirmCostProductRequest advances PARAMETER_COMPLETE → CONFIRMED.
+	ConfirmCostProductRequest(context.Context, *ConfirmCostProductRequestRequest) (*ConfirmCostProductRequestResponse, error)
+	// ApproveCostProductRequest advances CONFIRMED → APPROVED.
+	ApproveCostProductRequest(context.Context, *ApproveCostProductRequestRequest) (*ApproveCostProductRequestResponse, error)
+	// ReleaseCostProductRequest advances APPROVED → RELEASED.
+	// After release the request is locked and the cost calculation engine can proceed.
+	ReleaseCostProductRequest(context.Context, *ReleaseCostProductRequestRequest) (*ReleaseCostProductRequestResponse, error)
+	// GetCostProductRequestHistory returns the full status-transition timeline for a request.
+	GetCostProductRequestHistory(context.Context, *GetCostProductRequestHistoryRequest) (*GetCostProductRequestHistoryResponse, error)
 	mustEmbedUnimplementedCostProductRequestServiceServer()
 }
 
@@ -345,6 +424,9 @@ func (UnimplementedCostProductRequestServiceServer) ReviseCostProductRequest(con
 func (UnimplementedCostProductRequestServiceServer) ReopenCostProductRequest(context.Context, *ReopenCostProductRequestRequest) (*ReopenCostProductRequestResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReopenCostProductRequest not implemented")
 }
+func (UnimplementedCostProductRequestServiceServer) MarkParameterPending(context.Context, *MarkParameterPendingRequest) (*MarkParameterPendingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MarkParameterPending not implemented")
+}
 func (UnimplementedCostProductRequestServiceServer) MarkParameterComplete(context.Context, *MarkParameterCompleteRequest) (*MarkParameterCompleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MarkParameterComplete not implemented")
 }
@@ -362,6 +444,18 @@ func (UnimplementedCostProductRequestServiceServer) LinkExistingRoute(context.Co
 }
 func (UnimplementedCostProductRequestServiceServer) UnlinkRoute(context.Context, *UnlinkRouteRequest) (*UnlinkRouteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UnlinkRoute not implemented")
+}
+func (UnimplementedCostProductRequestServiceServer) ConfirmCostProductRequest(context.Context, *ConfirmCostProductRequestRequest) (*ConfirmCostProductRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConfirmCostProductRequest not implemented")
+}
+func (UnimplementedCostProductRequestServiceServer) ApproveCostProductRequest(context.Context, *ApproveCostProductRequestRequest) (*ApproveCostProductRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApproveCostProductRequest not implemented")
+}
+func (UnimplementedCostProductRequestServiceServer) ReleaseCostProductRequest(context.Context, *ReleaseCostProductRequestRequest) (*ReleaseCostProductRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReleaseCostProductRequest not implemented")
+}
+func (UnimplementedCostProductRequestServiceServer) GetCostProductRequestHistory(context.Context, *GetCostProductRequestHistoryRequest) (*GetCostProductRequestHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCostProductRequestHistory not implemented")
 }
 func (UnimplementedCostProductRequestServiceServer) mustEmbedUnimplementedCostProductRequestServiceServer() {
 }
@@ -619,6 +713,24 @@ func _CostProductRequestService_ReopenCostProductRequest_Handler(srv interface{}
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductRequestService_MarkParameterPending_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MarkParameterPendingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductRequestServiceServer).MarkParameterPending(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductRequestService_MarkParameterPending_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductRequestServiceServer).MarkParameterPending(ctx, req.(*MarkParameterPendingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CostProductRequestService_MarkParameterComplete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MarkParameterCompleteRequest)
 	if err := dec(in); err != nil {
@@ -727,6 +839,78 @@ func _CostProductRequestService_UnlinkRoute_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductRequestService_ConfirmCostProductRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmCostProductRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductRequestServiceServer).ConfirmCostProductRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductRequestService_ConfirmCostProductRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductRequestServiceServer).ConfirmCostProductRequest(ctx, req.(*ConfirmCostProductRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductRequestService_ApproveCostProductRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveCostProductRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductRequestServiceServer).ApproveCostProductRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductRequestService_ApproveCostProductRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductRequestServiceServer).ApproveCostProductRequest(ctx, req.(*ApproveCostProductRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductRequestService_ReleaseCostProductRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseCostProductRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductRequestServiceServer).ReleaseCostProductRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductRequestService_ReleaseCostProductRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductRequestServiceServer).ReleaseCostProductRequest(ctx, req.(*ReleaseCostProductRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductRequestService_GetCostProductRequestHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCostProductRequestHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductRequestServiceServer).GetCostProductRequestHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductRequestService_GetCostProductRequestHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductRequestServiceServer).GetCostProductRequestHistory(ctx, req.(*GetCostProductRequestHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostProductRequestService_ServiceDesc is the grpc.ServiceDesc for CostProductRequestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -787,6 +971,10 @@ var CostProductRequestService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CostProductRequestService_ReopenCostProductRequest_Handler,
 		},
 		{
+			MethodName: "MarkParameterPending",
+			Handler:    _CostProductRequestService_MarkParameterPending_Handler,
+		},
+		{
 			MethodName: "MarkParameterComplete",
 			Handler:    _CostProductRequestService_MarkParameterComplete_Handler,
 		},
@@ -809,6 +997,22 @@ var CostProductRequestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnlinkRoute",
 			Handler:    _CostProductRequestService_UnlinkRoute_Handler,
+		},
+		{
+			MethodName: "ConfirmCostProductRequest",
+			Handler:    _CostProductRequestService_ConfirmCostProductRequest_Handler,
+		},
+		{
+			MethodName: "ApproveCostProductRequest",
+			Handler:    _CostProductRequestService_ApproveCostProductRequest_Handler,
+		},
+		{
+			MethodName: "ReleaseCostProductRequest",
+			Handler:    _CostProductRequestService_ReleaseCostProductRequest_Handler,
+		},
+		{
+			MethodName: "GetCostProductRequestHistory",
+			Handler:    _CostProductRequestService_GetCostProductRequestHistory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -31,12 +31,24 @@ const (
 	TriggerRoutingPromoted = "ROUTING_PROMOTED"
 	TriggerRequestRejected = "REQUEST_REJECTED"
 	TriggerRequestClosed   = "REQUEST_CLOSED"
+	// TriggerSLAOverdue fires when a fill task misses its SLA deadline.
+	TriggerSLAOverdue = "SLA_OVERDUE"
+	// TriggerPendingFill reminds the assigned filler that a task is waiting for parameter input.
+	TriggerPendingFill = "PENDING_FILL"
+	// TriggerPendingApproval reminds the approver that a submitted task is awaiting decision.
+	TriggerPendingApproval = "PENDING_APPROVAL"
+	// TriggerMissingParam alerts that required parameter values are still empty for a product.
+	TriggerMissingParam = "MISSING_PARAM"
+	// TriggerNewParam alerts that new required parameters were added to a product after the task was activated.
+	TriggerNewParam = "NEW_PARAM"
 )
 
 var allowedTriggers = map[string]struct{}{
 	TriggerStatusChange: {}, TriggerMention: {}, TriggerAssigned: {},
 	TriggerFeasibility: {}, TriggerCommentAdded: {}, TriggerRoutingPromoted: {},
 	TriggerRequestRejected: {}, TriggerRequestClosed: {},
+	TriggerSLAOverdue: {}, TriggerPendingFill: {}, TriggerPendingApproval: {},
+	TriggerMissingParam: {}, TriggerNewParam: {},
 }
 
 // Notification is an in-app notification row.

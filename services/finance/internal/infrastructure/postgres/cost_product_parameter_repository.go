@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 
 	cpp "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductparameter"
 )
@@ -475,6 +476,29 @@ func stringPtrOrNil(p *string) interface{} {
 		return nil
 	}
 	return *p
+}
+
+// CountApplicableForProducts returns the number of non-CALCULATED applicable params
+// for all products in the slice. Used to set cft_total_params when creating fill tasks.
+// CALCULATED params are excluded because they are computed by the calc engine and
+// must not block fill submission.
+func (r *CostProductParameterRepository) CountApplicableForProducts(ctx context.Context, productSysIDs []int64) (int32, error) {
+	if len(productSysIDs) == 0 {
+		return 0, nil
+	}
+	var n int32
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*)
+		   FROM cost_product_applicable_param ca
+		   JOIN mst_parameter mp ON mp.id = ca.capp_param_id
+		                        AND mp.param_category != 'CALCULATED'
+		  WHERE ca.capp_product_sys_id = ANY($1)`,
+		pq.Array(productSysIDs),
+	).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count applicable params: %w", err)
+	}
+	return n, nil
 }
 
 func boolPtrOrNil(p *bool) interface{} {

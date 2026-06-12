@@ -13,12 +13,12 @@ import (
 
 // fakeRepo records calls and lets tests script returns.
 type fakeRepo struct {
-	created    *dashboarddomain.Dashboard
-	updated    *dashboarddomain.Dashboard
-	deletedID  uuid.UUID
-	setRoles   []string
-	byID       *dashboarddomain.Dashboard
-	createErr  error
+	created   *dashboarddomain.Dashboard
+	updated   *dashboarddomain.Dashboard
+	deletedID uuid.UUID
+	setRoles  []string
+	byID      *dashboarddomain.Dashboard
+	createErr error
 }
 
 func (r *fakeRepo) Create(_ context.Context, d *dashboarddomain.Dashboard) error {

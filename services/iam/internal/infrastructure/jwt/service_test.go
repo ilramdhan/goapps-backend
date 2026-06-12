@@ -69,7 +69,9 @@ func TestGenerateTokenPair_ContainsExpectedClaims(t *testing.T) {
 	assert.Equal(t, "janedoe", accessClaims.Username)
 	assert.Equal(t, "jane@example.com", accessClaims.Email)
 	assert.Equal(t, roles, accessClaims.Roles)
-	assert.Equal(t, permissions, accessClaims.Permissions)
+	// Permissions intentionally omitted from access token to keep it under browser cookie size limit.
+	// They are stored in Redis and fetched by auth interceptors.
+	assert.Nil(t, accessClaims.Permissions)
 	assert.Equal(t, serviceAccess, accessClaims.ServiceAccess)
 	assert.Equal(t, "test-iam", accessClaims.Issuer)
 

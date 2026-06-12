@@ -152,6 +152,14 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 		return fmt.Errorf("failed to register CostCalc gateway: %w", err)
 	}
 
+	// Fill-assignment gateway routes.
+	if err := financev1.RegisterCostLevelAssignmentConfigServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostLevelAssignmentConfig gateway: %w", err)
+	}
+	if err := financev1.RegisterCostFillTaskServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostFillTask gateway: %w", err)
+	}
+
 	// BI (Executive Dashboard) gateway routes.
 	if err := financev1.RegisterDashboardServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register BI Dashboard gateway: %w", err)

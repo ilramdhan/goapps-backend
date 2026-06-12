@@ -70,8 +70,9 @@ func NewSessionCache(client *Client, cfg *config.RedisConfig) *SessionCache {
 }
 
 const (
-	sessionPrefix   = "iam:session:"
-	blacklistPrefix = "iam:blacklist:"
+	sessionPrefix     = "iam:session:"
+	blacklistPrefix   = "iam:blacklist:"
+	permissionsPrefix = "iam:user_perms:"
 )
 
 // StoreSession stores session data in cache for quick validation.
@@ -113,6 +114,30 @@ func (c *SessionCache) IsBlacklisted(ctx context.Context, tokenID string) (bool,
 		return false, err
 	}
 	return exists > 0, nil
+}
+
+// StoreUserPermissions caches a user's permission list by user ID.
+// TTL should match the access token TTL so entries expire with the token.
+func (c *SessionCache) StoreUserPermissions(ctx context.Context, userID string, permissions []string, ttl time.Duration) error {
+	key := permissionsPrefix + userID
+	return c.client.Set(ctx, key, strings.Join(permissions, "|"), ttl).Err()
+}
+
+// GetUserPermissions retrieves cached permissions for a user.
+// Returns nil, nil on cache miss.
+func (c *SessionCache) GetUserPermissions(ctx context.Context, userID string) ([]string, error) {
+	key := permissionsPrefix + userID
+	val, err := c.client.Get(ctx, key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if val == "" {
+		return nil, nil
+	}
+	return strings.Split(val, "|"), nil
 }
 
 // OTPCache provides OTP storage in Redis.
