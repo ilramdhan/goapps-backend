@@ -20,8 +20,8 @@ type SubmitFillCommand struct {
 type SubmitFillHandler struct {
 	repo          domain.TaskRepository
 	gate          CompletionGate
-	fillNotifier  FillEventNotifier  // optional; fires NotifyApprovalPending when task reaches APPROVAL_PENDING
-	reqNoProvider RequestNoProvider  // optional; resolves request_no for the notification
+	fillNotifier  FillEventNotifier // optional; fires NotifyApprovalPending when task reaches APPROVAL_PENDING
+	reqNoProvider RequestNoProvider // optional; resolves request_no for the notification
 }
 
 // NewSubmitFillHandler constructs the handler.

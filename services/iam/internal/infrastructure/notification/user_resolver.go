@@ -103,7 +103,11 @@ func (r *DBUserResolver) scan(ctx context.Context, q string, arg any) ([]uuid.UU
 	if err != nil {
 		return nil, fmt.Errorf("user resolver query: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
 
 	var ids []uuid.UUID
 	for rows.Next() {

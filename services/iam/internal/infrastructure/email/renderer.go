@@ -182,7 +182,7 @@ func (r *Renderer) loadTemplate(name string) (*template.Template, error) {
 	funcs := template.FuncMap{
 		// safeURL marks a string as a trusted URL, bypassing html/template's
 		// sanitization of data: URIs and other non-http schemes.
-		"safeURL": func(s string) template.URL { return template.URL(s) },
+		"safeURL": func(s string) template.URL { return template.URL(s) }, //nolint:gosec // intentional URL type conversion for trusted internal email templates
 	}
 	tmpl, err := template.New("").Funcs(funcs).ParseFS(
 		templateFS,

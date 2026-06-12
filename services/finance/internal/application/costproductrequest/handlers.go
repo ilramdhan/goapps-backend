@@ -293,13 +293,13 @@ type ApplicableParamCounter interface {
 type TransitionHandler struct {
 	repo         domain.Repository
 	emitter      AuditEmitter
-	notifier     NotificationEmitter      // optional; if nil, notification emission is skipped
-	cprNotifier  CPRNotifier              // optional; if nil, CPR notification emission is skipped
-	routeRepo    routeDomain.Repository   // optional; used by MarkParameterPending
-	fillCreator  FillTaskCreator          // optional; if nil, fill task creation is skipped
-	fillChecker  FillCompletionChecker    // optional; if nil, fill guard is skipped
-	paramCounter ApplicableParamCounter   // optional; used to set cft_total_params on task creation
-	wflClient    iamclient.WorkflowClient // optional; if nil, IAM workflow wiring is skipped
+	notifier     NotificationEmitter       // optional; if nil, notification emission is skipped
+	cprNotifier  CPRNotifier               // optional; if nil, CPR notification emission is skipped
+	routeRepo    routeDomain.Repository    // optional; used by MarkParameterPending
+	fillCreator  FillTaskCreator           // optional; if nil, fill task creation is skipped
+	fillChecker  FillCompletionChecker     // optional; if nil, fill guard is skipped
+	paramCounter ApplicableParamCounter    // optional; used to set cft_total_params on task creation
+	wflClient    iamclient.WorkflowClient  // optional; if nil, IAM workflow wiring is skipped
 	historyRepo  requesthistory.Repository // optional; if nil, approval trace recording is skipped
 }
 

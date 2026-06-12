@@ -18,9 +18,9 @@ import (
 type CompletionGateHandler struct {
 	taskRepo     domain.TaskRepository
 	configRepo   domain.ConfigRepository // kept for interface compatibility; not used by gate
-	completer    CPRCompleter             // optional; nil → MarkParameterComplete is a no-op (logged)
-	notifier     CompletionNotifier       // optional; nil → notifications are skipped
-	fillNotifier FillEventNotifier        // optional; nil → falls back to notifier (USER-only)
+	completer    CPRCompleter            // optional; nil → MarkParameterComplete is a no-op (logged)
+	notifier     CompletionNotifier      // optional; nil → notifications are skipped
+	fillNotifier FillEventNotifier       // optional; nil → falls back to notifier (USER-only)
 }
 
 // NewCompletionGateHandler constructs the gate. configRepo is required.

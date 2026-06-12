@@ -62,7 +62,7 @@ func (n *CPRNotifier) buildParams(event cprapp.CPREvent) iamclient.RequestNotifi
 
 // cprEventMeta returns the display text and notification metadata for each
 // CPR event type. actorName is only relevant for comment/mention events.
-func cprEventMeta(eventType, requestNo, actorName string) (title, body string, notifType iamv1.NotificationType, severity iamv1.NotificationSeverity) {
+func cprEventMeta(eventType, requestNo, actorName string) (title, body string, notifType iamv1.NotificationType, severity iamv1.NotificationSeverity) { //nolint:gocyclo // exhaustive event-type switch; splitting would harm readability
 	ref := requestNo
 	if ref == "" {
 		ref = "a product request"

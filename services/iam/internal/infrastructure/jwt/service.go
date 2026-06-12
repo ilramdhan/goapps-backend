@@ -69,7 +69,7 @@ type TokenPair struct {
 }
 
 // GenerateTokenPair generates a new access and refresh token pair.
-func (s *Service) GenerateTokenPair(userID uuid.UUID, username, email string, roles, permissions, serviceAccess []string) (*TokenPair, error) {
+func (s *Service) GenerateTokenPair(userID uuid.UUID, username, email string, roles, _ []string, serviceAccess []string) (*TokenPair, error) {
 	now := time.Now()
 	tokenID := uuid.New().String()
 

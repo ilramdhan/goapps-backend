@@ -60,7 +60,7 @@ func NewAuthHandler(
 //  2. user_detail.section_id (legacy fallback) → section.department_id.
 //
 // All fields can be empty when unresolved; this is a display-only helper.
-func (h *AuthHandler) resolveOrgInfo(ctx context.Context, userID uuid.UUID) (sectionID, departmentID, sectionCode, departmentCode string) { //nolint:gocognit // cohesive function; complexity inherent
+func (h *AuthHandler) resolveOrgInfo(ctx context.Context, userID uuid.UUID) (sectionID, departmentID, sectionCode, departmentCode string) { //nolint:gocognit,gocyclo // cohesive function; complexity inherent
 	if h.mappingRepo != nil { //nolint:nestif // cohesive branch, extraction would scatter tightly-coupled logic
 		assignments, primaryID, err := h.mappingRepo.ListByUser(ctx, userID)
 		if err == nil && primaryID != nil {

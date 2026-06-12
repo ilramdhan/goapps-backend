@@ -428,6 +428,7 @@ func (s *FillAssignmentRepoSuite) TestTask_SaveStatusAndFilledAt() {
 	inserted.ClaimedBy = "filler-save"
 	// Manually advance domain state to FILLING then Submit.
 	require.NoError(s.T(), inserted.Claim("filler-save"))
+	inserted.FilledParams = inserted.TotalParams // simulate all parameters filled
 	require.NoError(s.T(), inserted.Submit())
 	require.Equal(s.T(), domain.StatusApproved, inserted.Status(), "no approver → should go straight to APPROVED")
 
@@ -463,7 +464,8 @@ func (s *FillAssignmentRepoSuite) TestTask_ApprovalCycle() {
 	// Claim and advance domain state.
 	_, _ = s.taskRepo.Claim(s.ctx, inserted.TaskID, "filler-appr")
 	require.NoError(s.T(), inserted.Claim("filler-appr"))
-	require.NoError(s.T(), inserted.Submit()) // → APPROVAL_PENDING (has approver)
+	inserted.FilledParams = inserted.TotalParams // simulate all parameters filled
+	require.NoError(s.T(), inserted.Submit())    // → APPROVAL_PENDING (has approver)
 	require.Equal(s.T(), domain.StatusApprovalPending, inserted.Status())
 	require.NoError(s.T(), s.taskRepo.Save(s.ctx, inserted))
 

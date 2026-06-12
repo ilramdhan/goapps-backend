@@ -95,26 +95,26 @@ type JWTConfig struct {
 
 // EmailConfig holds email/SMTP configuration.
 type EmailConfig struct {
-	SMTPHost       string `mapstructure:"smtp_host"`
-	SMTPPort       int    `mapstructure:"smtp_port"`
-	SMTPUser       string `mapstructure:"smtp_user"`
-	SMTPPassword   string `mapstructure:"smtp_password"`
-	FromAddress    string `mapstructure:"from_address"`
-	FromName       string `mapstructure:"from_name"`
-	UseTLS         bool   `mapstructure:"use_tls"`
-	SkipVerify     bool   `mapstructure:"skip_verify"`
-	AppName        string `mapstructure:"app_name"`        // brand name used in templates.
-	AppURL         string `mapstructure:"app_url"`         // base URL for CTA links.
-	SupportURL     string `mapstructure:"support_url"`     // optional support link in footer.
-	HeaderTagline  string `mapstructure:"header_tagline"`  // optional tagline next to logo in header.
-	CompanyName    string `mapstructure:"company_name"`    // full legal entity name for footer copyright.
-	CompanyAddress       string `mapstructure:"company_address"`       // optional physical address in footer.
-	PrivacyURL           string `mapstructure:"privacy_url"`           // privacy policy link; auto-derived from app_url if empty.
-	TermsURL             string `mapstructure:"terms_url"`             // terms of service link; auto-derived from app_url if empty.
-	LogoURL              string `mapstructure:"logo_url"`              // optional logo image URL shown in header.
-	HeaderBgURL          string `mapstructure:"header_bg_url"`         // optional header background image URL.
-	SocialLinkedIn       string `mapstructure:"social_linkedin"`       // optional LinkedIn profile URL.
-	SocialInstagram      string `mapstructure:"social_instagram"`      // optional Instagram profile URL.
+	SMTPHost             string `mapstructure:"smtp_host"`
+	SMTPPort             int    `mapstructure:"smtp_port"`
+	SMTPUser             string `mapstructure:"smtp_user"`
+	SMTPPassword         string `mapstructure:"smtp_password"`
+	FromAddress          string `mapstructure:"from_address"`
+	FromName             string `mapstructure:"from_name"`
+	UseTLS               bool   `mapstructure:"use_tls"`
+	SkipVerify           bool   `mapstructure:"skip_verify"`
+	AppName              string `mapstructure:"app_name"`               // brand name used in templates.
+	AppURL               string `mapstructure:"app_url"`                // base URL for CTA links.
+	SupportURL           string `mapstructure:"support_url"`            // optional support link in footer.
+	HeaderTagline        string `mapstructure:"header_tagline"`         // optional tagline next to logo in header.
+	CompanyName          string `mapstructure:"company_name"`           // full legal entity name for footer copyright.
+	CompanyAddress       string `mapstructure:"company_address"`        // optional physical address in footer.
+	PrivacyURL           string `mapstructure:"privacy_url"`            // privacy policy link; auto-derived from app_url if empty.
+	TermsURL             string `mapstructure:"terms_url"`              // terms of service link; auto-derived from app_url if empty.
+	LogoURL              string `mapstructure:"logo_url"`               // optional logo image URL shown in header.
+	HeaderBgURL          string `mapstructure:"header_bg_url"`          // optional header background image URL.
+	SocialLinkedIn       string `mapstructure:"social_linkedin"`        // optional LinkedIn profile URL.
+	SocialInstagram      string `mapstructure:"social_instagram"`       // optional Instagram profile URL.
 	SocialCompanyProfile string `mapstructure:"social_company_profile"` // optional company website URL.
 }
 
