@@ -79,7 +79,7 @@ func TestShape_SingleMetric_Unchanged(t *testing.T) {
 		Code: "EBITDA", Title: "EBITDA", FilterType: "MIS", FilterGroup1: "EBITDA",
 		PeriodGrain: "MONTHLY", DefaultPeriod: "L12M", ChartType: "waterfall",
 		ChartConfigRaw: map[string]any{"x_axis_field": "group_2", "y_axis_field": "display_value"},
-		MaxDrillLevel: 3, CacheTTLSec: 60,
+		MaxDrillLevel:  3, CacheTTLSec: 60,
 		GroupID: uuid.New(), IsActive: true, DrillEnabled: true, CreatedBy: uuid.New(),
 	})
 	if err != nil {

@@ -29,13 +29,15 @@ func (m *mockDashboardRepo) GetByCode(ctx context.Context, code string) (*dashbo
 func (m *mockDashboardRepo) List(context.Context, dashboarddomain.ListFilter) ([]*dashboarddomain.Dashboard, int64, error) {
 	return nil, 0, nil
 }
-func (m *mockDashboardRepo) Update(context.Context, *dashboarddomain.Dashboard) error    { return nil }
-func (m *mockDashboardRepo) SoftDelete(context.Context, uuid.UUID, uuid.UUID) error       { return nil }
+func (m *mockDashboardRepo) Update(context.Context, *dashboarddomain.Dashboard) error { return nil }
+func (m *mockDashboardRepo) SoftDelete(context.Context, uuid.UUID, uuid.UUID) error   { return nil }
 func (m *mockDashboardRepo) Duplicate(context.Context, uuid.UUID, string, string, uuid.UUID) (*dashboarddomain.Dashboard, error) {
 	return nil, nil
 }
-func (m *mockDashboardRepo) SetRoles(context.Context, uuid.UUID, []string, uuid.UUID) error { return nil }
-func (m *mockDashboardRepo) GetRoles(context.Context, uuid.UUID) ([]string, error)          { return nil, nil }
+func (m *mockDashboardRepo) SetRoles(context.Context, uuid.UUID, []string, uuid.UUID) error {
+	return nil
+}
+func (m *mockDashboardRepo) GetRoles(context.Context, uuid.UUID) ([]string, error) { return nil, nil }
 func (m *mockDashboardRepo) ListAccessible(context.Context, []string, bool) ([]*dashboarddomain.Dashboard, error) {
 	return nil, nil
 }
@@ -50,7 +52,7 @@ type mockFactRepo struct {
 	aggErr   error
 	queries  int
 	latest   time.Time // returned by LatestPeriod; zero means "no data"
-	lastArgs []any      // args of the most recent QueryAggregate call
+	lastArgs []any     // args of the most recent QueryAggregate call
 }
 
 func (m *mockFactRepo) GetDistincts(context.Context, factmetric.DistinctScope) (factmetric.DistinctValues, error) {
@@ -87,21 +89,21 @@ func (c *mockCache) Set(_ context.Context, code, hash string, _ any, _ time.Dura
 func buildViewerDashboard(t *testing.T, roles []string) *dashboarddomain.Dashboard {
 	t.Helper()
 	d, err := dashboarddomain.NewDashboard(dashboarddomain.NewDashboardParams{
-		Code:           "EBITDA",
-		Title:          "EBITDA",
-		FilterType:     "MIS",
-		FilterGroup1:   "EBITDA",
-		PeriodGrain:    "MONTHLY",
-		DefaultPeriod:  "L12M",
-		ChartType:      "waterfall",
-		ChartConfigRaw: map[string]any{"x_axis_field": "group_2", "y_axis_field": "display_value"},
-		CompareModes:   []string{"YoY"},
-		MaxDrillLevel:  3,
-		CacheTTLSec:    1800,
-		GroupID:        uuid.New(),
-		IsActive:       true,
+		Code:             "EBITDA",
+		Title:            "EBITDA",
+		FilterType:       "MIS",
+		FilterGroup1:     "EBITDA",
+		PeriodGrain:      "MONTHLY",
+		DefaultPeriod:    "L12M",
+		ChartType:        "waterfall",
+		ChartConfigRaw:   map[string]any{"x_axis_field": "group_2", "y_axis_field": "display_value"},
+		CompareModes:     []string{"YoY"},
+		MaxDrillLevel:    3,
+		CacheTTLSec:      1800,
+		GroupID:          uuid.New(),
+		IsActive:         true,
 		AllowedRoleCodes: roles,
-		CreatedBy:      uuid.New(),
+		CreatedBy:        uuid.New(),
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -155,7 +155,7 @@ func newFillingTask() *domain.Task {
 	}
 	t := domain.NewTask(1, 10, rc, 5)
 	t.FilledParams = t.TotalParams // all params filled — ready to submit
-	_ = t.Claim("u-filler")       // ACTIVE → FILLING
+	_ = t.Claim("u-filler")        // ACTIVE → FILLING
 	return t
 }
 
@@ -167,7 +167,7 @@ func newFillingTaskWithApprover() *domain.Task {
 	}
 	t := domain.NewTask(1, 10, rc, 5)
 	t.FilledParams = t.TotalParams // all params filled — ready to submit
-	_ = t.Claim("u-filler")       // ACTIVE → FILLING
+	_ = t.Claim("u-filler")        // ACTIVE → FILLING
 	return t
 }
 

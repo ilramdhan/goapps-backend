@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -36,9 +36,9 @@ func TestDBUserResolver_GetByUserID(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name        string
-		userID      uuid.UUID
-		wantEmpty   bool
+		name      string
+		userID    uuid.UUID
+		wantEmpty bool
 	}{
 		{
 			name:      "unknown UUID returns empty",
@@ -70,9 +70,9 @@ func TestDBUserResolver_GetByPermission(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name          string
+		name           string
 		permissionCode string
-		wantEmpty     bool
+		wantEmpty      bool
 	}{
 		{
 			name:           "unknown permission code returns empty",

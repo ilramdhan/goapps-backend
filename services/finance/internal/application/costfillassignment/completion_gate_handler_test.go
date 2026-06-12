@@ -43,7 +43,7 @@ func (r *gateTaskRepo) ListForUser(_ context.Context, _ string, _ []string) ([]*
 	return nil, nil
 }
 func (r *gateTaskRepo) Claim(_ context.Context, _ int64, _ string) (bool, error) { return true, nil }
-func (r *gateTaskRepo) Save(_ context.Context, _ *domain.Task) error              { return nil }
+func (r *gateTaskRepo) Save(_ context.Context, _ *domain.Task) error             { return nil }
 func (r *gateTaskRepo) IncrementFilled(_ context.Context, _ int64, _ int32, _ int32) (*domain.Task, error) {
 	return nil, nil
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/bi/dashboard"
 )
 

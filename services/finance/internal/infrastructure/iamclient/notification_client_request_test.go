@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamclient"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNopClient_RequestNotification_ReturnsNil(t *testing.T) {

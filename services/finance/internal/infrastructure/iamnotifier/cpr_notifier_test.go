@@ -4,12 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamclient"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamnotifier"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 type mockNotifClient struct{ mock.Mock }
