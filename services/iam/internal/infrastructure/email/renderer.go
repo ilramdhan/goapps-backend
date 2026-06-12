@@ -4,7 +4,6 @@ package email
 import (
 	"bytes"
 	"embed"
-	"encoding/base64"
 	"fmt"
 	"html/template"
 	"strings"
@@ -14,9 +13,6 @@ import (
 
 //go:embed templates/*.html.tmpl
 var templateFS embed.FS
-
-//go:embed assets
-var assetFS embed.FS
 
 // SocialLink holds a social media link rendered in the email footer.
 type SocialLink struct {
@@ -114,21 +110,19 @@ type Renderer struct {
 
 // NewRenderer creates a Renderer populated with branding data derived from config.
 // The Year field is auto-set to the current year if zero.
-// If LogoURL or HeaderBgURL are empty, the renderer auto-populates them from the
-// embedded asset files (assets/logo.png, assets/header-bg.jpg) as base64 data URIs.
-// Providing explicit URLs in BaseData overrides the embedded assets.
+// Logo, header background, and footer URLs are auto-derived from AppURL when not
+// explicitly set. All images are served via public frontend URLs — data: URIs are
+// avoided because Gmail and Outlook block them since 2023.
 func NewRenderer(base BaseData) *Renderer {
 	if base.Year == 0 {
 		base.Year = time.Now().Year()
 	}
-	if base.LogoURL == "" {
-		if data, err := assetFS.ReadFile("assets/logo.png"); err == nil {
-			base.LogoURL = "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)
-		}
-	}
 	appBase := strings.TrimRight(base.AppURL, "/")
-	// Auto-construct URLs from AppURL so staging/production domains are picked up
-	// automatically when app_url is configured. Override via explicit config fields.
+	// Auto-construct public asset URLs from AppURL.
+	// Files must exist in goapps-frontend/public/ (logo.png, mutugading-base.jpg).
+	if base.LogoURL == "" && appBase != "" {
+		base.LogoURL = appBase + "/logo.png"
+	}
 	if base.HeaderBgURL == "" && appBase != "" {
 		base.HeaderBgURL = appBase + "/mutugading-base.jpg"
 	}
