@@ -1,12 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "finance/v1/cost_product_type.proto",
+    "title": "finance/v1/cost_import.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "CostProductTypeService"
+      "name": "CostDataImportService"
     }
   ],
   "consumes": [
@@ -16,14 +16,14 @@
     "application/json"
   ],
   "paths": {
-    "/api/v1/finance/cost-product-types": {
+    "/api/v1/finance/costing/capp/export": {
       "get": {
-        "operationId": "CostProductTypeService_ListCostProductTypes",
+        "operationId": "CostDataImportService_ExportCostApplicableParams",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListCostProductTypesResponse"
+              "$ref": "#/definitions/v1ExportCostApplicableParamsResponse"
             }
           },
           "default": {
@@ -35,15 +35,181 @@
         },
         "parameters": [
           {
-            "name": "search",
-            "description": "Free-text search across type_code and type_name (case-insensitive).",
+            "name": "productTypeCode",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
+    "/api/v1/finance/costing/capp/import": {
+      "post": {
+        "operationId": "CostDataImportService_ImportCostApplicableParams",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportCostApplicableParamsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportCostApplicableParamsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
+    "/api/v1/finance/costing/capp/template": {
+      "get": {
+        "operationId": "CostDataImportService_DownloadCostApplicableParamTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadCostApplicableParamTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
+    "/api/v1/finance/costing/cpp/export": {
+      "get": {
+        "operationId": "CostDataImportService_ExportCostProductParameters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportCostProductParametersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productTypeCode",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
+    "/api/v1/finance/costing/cpp/import": {
+      "post": {
+        "operationId": "CostDataImportService_ImportCostProductParameters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportCostProductParametersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportCostProductParametersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
+    "/api/v1/finance/costing/cpp/template": {
+      "get": {
+        "operationId": "CostDataImportService_DownloadCostProductParameterTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadCostProductParameterTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
+    "/api/v1/finance/costing/import-jobs": {
+      "get": {
+        "operationId": "CostDataImportService_ListCostImportJobs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCostImportJobsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
-            "name": "activeFilter",
-            "description": "\"all\" | \"active\" | \"inactive\" — empty defaults to \"all\".",
+            "name": "status",
             "in": "query",
             "required": false,
             "type": "string"
@@ -63,63 +229,21 @@
             "required": false,
             "type": "integer",
             "format": "int32"
-          },
-          {
-            "name": "sortBy",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "required": false,
-            "type": "string"
           }
         ],
         "tags": [
-          "CostProductTypeService"
-        ]
-      },
-      "post": {
-        "operationId": "CostProductTypeService_CreateCostProductType",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CreateCostProductTypeResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateCostProductTypeRequest"
-            }
-          }
-        ],
-        "tags": [
-          "CostProductTypeService"
+          "CostDataImportService"
         ]
       }
     },
-    "/api/v1/finance/cost-product-types/export": {
+    "/api/v1/finance/costing/import-jobs/{jobId}": {
       "get": {
-        "operationId": "CostProductTypeService_ExportCostProductTypes",
+        "operationId": "CostDataImportService_GetCostImportJob",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ExportCostProductTypesResponse"
+              "$ref": "#/definitions/v1GetCostImportJobResponse"
             }
           },
           "default": {
@@ -131,152 +255,20 @@
         },
         "parameters": [
           {
-            "name": "activeFilter",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CostProductTypeService"
-        ]
-      }
-    },
-    "/api/v1/finance/cost-product-types/import": {
-      "post": {
-        "operationId": "CostProductTypeService_ImportCostProductTypes",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ImportCostProductTypesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1ImportCostProductTypesRequest"
-            }
-          }
-        ],
-        "tags": [
-          "CostProductTypeService"
-        ]
-      }
-    },
-    "/api/v1/finance/cost-product-types/template": {
-      "get": {
-        "operationId": "CostProductTypeService_DownloadCostProductTypeTemplate",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DownloadCostProductTypeTemplateResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "CostProductTypeService"
-        ]
-      }
-    },
-    "/api/v1/finance/cost-product-types/{typeId}": {
-      "get": {
-        "operationId": "CostProductTypeService_GetCostProductType",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetCostProductTypeResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "typeId",
+            "name": "jobId",
             "in": "path",
             "required": true,
-            "type": "integer",
-            "format": "int32"
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
-          "CostProductTypeService"
-        ]
-      },
-      "put": {
-        "operationId": "CostProductTypeService_UpdateCostProductType",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateCostProductTypeResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "typeId",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CostProductTypeServiceUpdateCostProductTypeBody"
-            }
-          }
-        ],
-        "tags": [
-          "CostProductTypeService"
+          "CostDataImportService"
         ]
       }
     }
   },
   "definitions": {
-    "CostProductTypeServiceUpdateCostProductTypeBody": {
-      "type": "object",
-      "properties": {
-        "typeName": {
-          "type": "string"
-        },
-        "isActive": {
-          "type": "boolean"
-        }
-      }
-    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -305,28 +297,6 @@
         }
       }
     },
-    "v1AuditInfo": {
-      "type": "object",
-      "properties": {
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the record was created (ISO 8601)."
-        },
-        "createdBy": {
-          "type": "string",
-          "description": "User who created the record."
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the record was last updated (ISO 8601)."
-        },
-        "updatedBy": {
-          "type": "string",
-          "description": "User who last updated the record."
-        }
-      },
-      "description": "AuditInfo contains audit trail information."
-    },
     "v1BaseResponse": {
       "type": "object",
       "properties": {
@@ -353,51 +323,57 @@
       },
       "description": "BaseResponse is the standard response wrapper for all API responses."
     },
-    "v1CostProductType": {
+    "v1CostImportJob": {
       "type": "object",
       "properties": {
-        "typeId": {
+        "jobId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "entity": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "totalRows": {
           "type": "integer",
           "format": "int32"
         },
-        "typeCode": {
-          "type": "string",
-          "title": "max 5 chars uppercase"
+        "processed": {
+          "type": "integer",
+          "format": "int32"
         },
-        "typeName": {
+        "success": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "failed": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "skipped": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "errorFileUrl": {
           "type": "string"
         },
-        "isActive": {
-          "type": "boolean"
+        "createdBy": {
+          "type": "string"
         },
-        "audit": {
-          "$ref": "#/definitions/v1AuditInfo"
+        "createdAt": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "completedAt": {
+          "type": "string"
         }
       }
     },
-    "v1CreateCostProductTypeRequest": {
-      "type": "object",
-      "properties": {
-        "typeCode": {
-          "type": "string"
-        },
-        "typeName": {
-          "type": "string"
-        }
-      }
-    },
-    "v1CreateCostProductTypeResponse": {
-      "type": "object",
-      "properties": {
-        "base": {
-          "$ref": "#/definitions/v1BaseResponse"
-        },
-        "data": {
-          "$ref": "#/definitions/v1CostProductType"
-        }
-      }
-    },
-    "v1DownloadCostProductTypeTemplateResponse": {
+    "v1DownloadCostApplicableParamTemplateResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -412,7 +388,7 @@
         }
       }
     },
-    "v1ExportCostProductTypesResponse": {
+    "v1DownloadCostProductParameterTemplateResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -427,18 +403,48 @@
         }
       }
     },
-    "v1GetCostProductTypeResponse": {
+    "v1ExportCostApplicableParamsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExportCostProductParametersResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetCostImportJobResponse": {
       "type": "object",
       "properties": {
         "base": {
           "$ref": "#/definitions/v1BaseResponse"
         },
         "data": {
-          "$ref": "#/definitions/v1CostProductType"
+          "$ref": "#/definitions/v1CostImportJob"
         }
       }
     },
-    "v1ImportCostProductTypesRequest": {
+    "v1ImportCostApplicableParamsRequest": {
       "type": "object",
       "properties": {
         "fileContent": {
@@ -453,57 +459,46 @@
         }
       }
     },
-    "v1ImportCostProductTypesResponse": {
+    "v1ImportCostApplicableParamsResponse": {
       "type": "object",
       "properties": {
         "base": {
           "$ref": "#/definitions/v1BaseResponse"
         },
-        "successCount": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "skippedCount": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "updatedCount": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "failedCount": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "errors": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1ImportError"
-          }
+        "jobId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
-    "v1ImportError": {
+    "v1ImportCostProductParametersRequest": {
       "type": "object",
       "properties": {
-        "rowNumber": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Row number in the Excel file."
-        },
-        "field": {
+        "fileContent": {
           "type": "string",
-          "description": "Field that caused the error."
+          "format": "byte"
         },
-        "message": {
-          "type": "string",
-          "description": "Error message."
+        "fileName": {
+          "type": "string"
+        },
+        "duplicateAction": {
+          "type": "string"
         }
-      },
-      "description": "ImportError represents a single import error."
+      }
     },
-    "v1ListCostProductTypesResponse": {
+    "v1ImportCostProductParametersResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ListCostImportJobsResponse": {
       "type": "object",
       "properties": {
         "base": {
@@ -513,7 +508,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1CostProductType"
+            "$ref": "#/definitions/v1CostImportJob"
           }
         },
         "pagination": {
@@ -562,17 +557,6 @@
         }
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
-    },
-    "v1UpdateCostProductTypeResponse": {
-      "type": "object",
-      "properties": {
-        "base": {
-          "$ref": "#/definitions/v1BaseResponse"
-        },
-        "data": {
-          "$ref": "#/definitions/v1CostProductType"
-        }
-      }
     },
     "v1ValidationError": {
       "type": "object",

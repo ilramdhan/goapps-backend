@@ -26,6 +26,9 @@ const (
 	CostProductMasterService_UpdateCostProductMasterErpLinkage_FullMethodName = "/finance.v1.CostProductMasterService/UpdateCostProductMasterErpLinkage"
 	CostProductMasterService_DeactivateCostProductMaster_FullMethodName       = "/finance.v1.CostProductMasterService/DeactivateCostProductMaster"
 	CostProductMasterService_ListCostProductMasters_FullMethodName            = "/finance.v1.CostProductMasterService/ListCostProductMasters"
+	CostProductMasterService_ExportCostProductMasters_FullMethodName          = "/finance.v1.CostProductMasterService/ExportCostProductMasters"
+	CostProductMasterService_ImportCostProductMasters_FullMethodName          = "/finance.v1.CostProductMasterService/ImportCostProductMasters"
+	CostProductMasterService_DownloadCostProductMasterTemplate_FullMethodName = "/finance.v1.CostProductMasterService/DownloadCostProductMasterTemplate"
 )
 
 // CostProductMasterServiceClient is the client API for CostProductMasterService service.
@@ -39,6 +42,9 @@ type CostProductMasterServiceClient interface {
 	UpdateCostProductMasterErpLinkage(ctx context.Context, in *UpdateCostProductMasterErpLinkageRequest, opts ...grpc.CallOption) (*UpdateCostProductMasterErpLinkageResponse, error)
 	DeactivateCostProductMaster(ctx context.Context, in *DeactivateCostProductMasterRequest, opts ...grpc.CallOption) (*DeactivateCostProductMasterResponse, error)
 	ListCostProductMasters(ctx context.Context, in *ListCostProductMastersRequest, opts ...grpc.CallOption) (*ListCostProductMastersResponse, error)
+	ExportCostProductMasters(ctx context.Context, in *ExportCostProductMastersRequest, opts ...grpc.CallOption) (*ExportCostProductMastersResponse, error)
+	ImportCostProductMasters(ctx context.Context, in *ImportCostProductMastersRequest, opts ...grpc.CallOption) (*ImportCostProductMastersResponse, error)
+	DownloadCostProductMasterTemplate(ctx context.Context, in *DownloadCostProductMasterTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductMasterTemplateResponse, error)
 }
 
 type costProductMasterServiceClient struct {
@@ -119,6 +125,36 @@ func (c *costProductMasterServiceClient) ListCostProductMasters(ctx context.Cont
 	return out, nil
 }
 
+func (c *costProductMasterServiceClient) ExportCostProductMasters(ctx context.Context, in *ExportCostProductMastersRequest, opts ...grpc.CallOption) (*ExportCostProductMastersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportCostProductMastersResponse)
+	err := c.cc.Invoke(ctx, CostProductMasterService_ExportCostProductMasters_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductMasterServiceClient) ImportCostProductMasters(ctx context.Context, in *ImportCostProductMastersRequest, opts ...grpc.CallOption) (*ImportCostProductMastersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImportCostProductMastersResponse)
+	err := c.cc.Invoke(ctx, CostProductMasterService_ImportCostProductMasters_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductMasterServiceClient) DownloadCostProductMasterTemplate(ctx context.Context, in *DownloadCostProductMasterTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductMasterTemplateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DownloadCostProductMasterTemplateResponse)
+	err := c.cc.Invoke(ctx, CostProductMasterService_DownloadCostProductMasterTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostProductMasterServiceServer is the server API for CostProductMasterService service.
 // All implementations must embed UnimplementedCostProductMasterServiceServer
 // for forward compatibility.
@@ -130,6 +166,9 @@ type CostProductMasterServiceServer interface {
 	UpdateCostProductMasterErpLinkage(context.Context, *UpdateCostProductMasterErpLinkageRequest) (*UpdateCostProductMasterErpLinkageResponse, error)
 	DeactivateCostProductMaster(context.Context, *DeactivateCostProductMasterRequest) (*DeactivateCostProductMasterResponse, error)
 	ListCostProductMasters(context.Context, *ListCostProductMastersRequest) (*ListCostProductMastersResponse, error)
+	ExportCostProductMasters(context.Context, *ExportCostProductMastersRequest) (*ExportCostProductMastersResponse, error)
+	ImportCostProductMasters(context.Context, *ImportCostProductMastersRequest) (*ImportCostProductMastersResponse, error)
+	DownloadCostProductMasterTemplate(context.Context, *DownloadCostProductMasterTemplateRequest) (*DownloadCostProductMasterTemplateResponse, error)
 	mustEmbedUnimplementedCostProductMasterServiceServer()
 }
 
@@ -160,6 +199,15 @@ func (UnimplementedCostProductMasterServiceServer) DeactivateCostProductMaster(c
 }
 func (UnimplementedCostProductMasterServiceServer) ListCostProductMasters(context.Context, *ListCostProductMastersRequest) (*ListCostProductMastersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCostProductMasters not implemented")
+}
+func (UnimplementedCostProductMasterServiceServer) ExportCostProductMasters(context.Context, *ExportCostProductMastersRequest) (*ExportCostProductMastersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportCostProductMasters not implemented")
+}
+func (UnimplementedCostProductMasterServiceServer) ImportCostProductMasters(context.Context, *ImportCostProductMastersRequest) (*ImportCostProductMastersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportCostProductMasters not implemented")
+}
+func (UnimplementedCostProductMasterServiceServer) DownloadCostProductMasterTemplate(context.Context, *DownloadCostProductMasterTemplateRequest) (*DownloadCostProductMasterTemplateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DownloadCostProductMasterTemplate not implemented")
 }
 func (UnimplementedCostProductMasterServiceServer) mustEmbedUnimplementedCostProductMasterServiceServer() {
 }
@@ -309,6 +357,60 @@ func _CostProductMasterService_ListCostProductMasters_Handler(srv interface{}, c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductMasterService_ExportCostProductMasters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportCostProductMastersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductMasterServiceServer).ExportCostProductMasters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductMasterService_ExportCostProductMasters_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductMasterServiceServer).ExportCostProductMasters(ctx, req.(*ExportCostProductMastersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductMasterService_ImportCostProductMasters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportCostProductMastersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductMasterServiceServer).ImportCostProductMasters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductMasterService_ImportCostProductMasters_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductMasterServiceServer).ImportCostProductMasters(ctx, req.(*ImportCostProductMastersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductMasterService_DownloadCostProductMasterTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadCostProductMasterTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductMasterServiceServer).DownloadCostProductMasterTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductMasterService_DownloadCostProductMasterTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductMasterServiceServer).DownloadCostProductMasterTemplate(ctx, req.(*DownloadCostProductMasterTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostProductMasterService_ServiceDesc is the grpc.ServiceDesc for CostProductMasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -343,6 +445,18 @@ var CostProductMasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListCostProductMasters",
 			Handler:    _CostProductMasterService_ListCostProductMasters_Handler,
+		},
+		{
+			MethodName: "ExportCostProductMasters",
+			Handler:    _CostProductMasterService_ExportCostProductMasters_Handler,
+		},
+		{
+			MethodName: "ImportCostProductMasters",
+			Handler:    _CostProductMasterService_ImportCostProductMasters_Handler,
+		},
+		{
+			MethodName: "DownloadCostProductMasterTemplate",
+			Handler:    _CostProductMasterService_DownloadCostProductMasterTemplate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

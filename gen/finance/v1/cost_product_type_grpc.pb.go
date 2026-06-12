@@ -19,10 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CostProductTypeService_CreateCostProductType_FullMethodName = "/finance.v1.CostProductTypeService/CreateCostProductType"
-	CostProductTypeService_GetCostProductType_FullMethodName    = "/finance.v1.CostProductTypeService/GetCostProductType"
-	CostProductTypeService_UpdateCostProductType_FullMethodName = "/finance.v1.CostProductTypeService/UpdateCostProductType"
-	CostProductTypeService_ListCostProductTypes_FullMethodName  = "/finance.v1.CostProductTypeService/ListCostProductTypes"
+	CostProductTypeService_CreateCostProductType_FullMethodName           = "/finance.v1.CostProductTypeService/CreateCostProductType"
+	CostProductTypeService_GetCostProductType_FullMethodName              = "/finance.v1.CostProductTypeService/GetCostProductType"
+	CostProductTypeService_UpdateCostProductType_FullMethodName           = "/finance.v1.CostProductTypeService/UpdateCostProductType"
+	CostProductTypeService_ListCostProductTypes_FullMethodName            = "/finance.v1.CostProductTypeService/ListCostProductTypes"
+	CostProductTypeService_ExportCostProductTypes_FullMethodName          = "/finance.v1.CostProductTypeService/ExportCostProductTypes"
+	CostProductTypeService_ImportCostProductTypes_FullMethodName          = "/finance.v1.CostProductTypeService/ImportCostProductTypes"
+	CostProductTypeService_DownloadCostProductTypeTemplate_FullMethodName = "/finance.v1.CostProductTypeService/DownloadCostProductTypeTemplate"
 )
 
 // CostProductTypeServiceClient is the client API for CostProductTypeService service.
@@ -35,6 +38,9 @@ type CostProductTypeServiceClient interface {
 	GetCostProductType(ctx context.Context, in *GetCostProductTypeRequest, opts ...grpc.CallOption) (*GetCostProductTypeResponse, error)
 	UpdateCostProductType(ctx context.Context, in *UpdateCostProductTypeRequest, opts ...grpc.CallOption) (*UpdateCostProductTypeResponse, error)
 	ListCostProductTypes(ctx context.Context, in *ListCostProductTypesRequest, opts ...grpc.CallOption) (*ListCostProductTypesResponse, error)
+	ExportCostProductTypes(ctx context.Context, in *ExportCostProductTypesRequest, opts ...grpc.CallOption) (*ExportCostProductTypesResponse, error)
+	ImportCostProductTypes(ctx context.Context, in *ImportCostProductTypesRequest, opts ...grpc.CallOption) (*ImportCostProductTypesResponse, error)
+	DownloadCostProductTypeTemplate(ctx context.Context, in *DownloadCostProductTypeTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductTypeTemplateResponse, error)
 }
 
 type costProductTypeServiceClient struct {
@@ -85,6 +91,36 @@ func (c *costProductTypeServiceClient) ListCostProductTypes(ctx context.Context,
 	return out, nil
 }
 
+func (c *costProductTypeServiceClient) ExportCostProductTypes(ctx context.Context, in *ExportCostProductTypesRequest, opts ...grpc.CallOption) (*ExportCostProductTypesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportCostProductTypesResponse)
+	err := c.cc.Invoke(ctx, CostProductTypeService_ExportCostProductTypes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductTypeServiceClient) ImportCostProductTypes(ctx context.Context, in *ImportCostProductTypesRequest, opts ...grpc.CallOption) (*ImportCostProductTypesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImportCostProductTypesResponse)
+	err := c.cc.Invoke(ctx, CostProductTypeService_ImportCostProductTypes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductTypeServiceClient) DownloadCostProductTypeTemplate(ctx context.Context, in *DownloadCostProductTypeTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductTypeTemplateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DownloadCostProductTypeTemplateResponse)
+	err := c.cc.Invoke(ctx, CostProductTypeService_DownloadCostProductTypeTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostProductTypeServiceServer is the server API for CostProductTypeService service.
 // All implementations must embed UnimplementedCostProductTypeServiceServer
 // for forward compatibility.
@@ -95,6 +131,9 @@ type CostProductTypeServiceServer interface {
 	GetCostProductType(context.Context, *GetCostProductTypeRequest) (*GetCostProductTypeResponse, error)
 	UpdateCostProductType(context.Context, *UpdateCostProductTypeRequest) (*UpdateCostProductTypeResponse, error)
 	ListCostProductTypes(context.Context, *ListCostProductTypesRequest) (*ListCostProductTypesResponse, error)
+	ExportCostProductTypes(context.Context, *ExportCostProductTypesRequest) (*ExportCostProductTypesResponse, error)
+	ImportCostProductTypes(context.Context, *ImportCostProductTypesRequest) (*ImportCostProductTypesResponse, error)
+	DownloadCostProductTypeTemplate(context.Context, *DownloadCostProductTypeTemplateRequest) (*DownloadCostProductTypeTemplateResponse, error)
 	mustEmbedUnimplementedCostProductTypeServiceServer()
 }
 
@@ -116,6 +155,15 @@ func (UnimplementedCostProductTypeServiceServer) UpdateCostProductType(context.C
 }
 func (UnimplementedCostProductTypeServiceServer) ListCostProductTypes(context.Context, *ListCostProductTypesRequest) (*ListCostProductTypesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCostProductTypes not implemented")
+}
+func (UnimplementedCostProductTypeServiceServer) ExportCostProductTypes(context.Context, *ExportCostProductTypesRequest) (*ExportCostProductTypesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportCostProductTypes not implemented")
+}
+func (UnimplementedCostProductTypeServiceServer) ImportCostProductTypes(context.Context, *ImportCostProductTypesRequest) (*ImportCostProductTypesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportCostProductTypes not implemented")
+}
+func (UnimplementedCostProductTypeServiceServer) DownloadCostProductTypeTemplate(context.Context, *DownloadCostProductTypeTemplateRequest) (*DownloadCostProductTypeTemplateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DownloadCostProductTypeTemplate not implemented")
 }
 func (UnimplementedCostProductTypeServiceServer) mustEmbedUnimplementedCostProductTypeServiceServer() {
 }
@@ -211,6 +259,60 @@ func _CostProductTypeService_ListCostProductTypes_Handler(srv interface{}, ctx c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductTypeService_ExportCostProductTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportCostProductTypesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductTypeServiceServer).ExportCostProductTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductTypeService_ExportCostProductTypes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductTypeServiceServer).ExportCostProductTypes(ctx, req.(*ExportCostProductTypesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductTypeService_ImportCostProductTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportCostProductTypesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductTypeServiceServer).ImportCostProductTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductTypeService_ImportCostProductTypes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductTypeServiceServer).ImportCostProductTypes(ctx, req.(*ImportCostProductTypesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductTypeService_DownloadCostProductTypeTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadCostProductTypeTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductTypeServiceServer).DownloadCostProductTypeTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductTypeService_DownloadCostProductTypeTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductTypeServiceServer).DownloadCostProductTypeTemplate(ctx, req.(*DownloadCostProductTypeTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostProductTypeService_ServiceDesc is the grpc.ServiceDesc for CostProductTypeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -233,6 +335,18 @@ var CostProductTypeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListCostProductTypes",
 			Handler:    _CostProductTypeService_ListCostProductTypes_Handler,
+		},
+		{
+			MethodName: "ExportCostProductTypes",
+			Handler:    _CostProductTypeService_ExportCostProductTypes_Handler,
+		},
+		{
+			MethodName: "ImportCostProductTypes",
+			Handler:    _CostProductTypeService_ImportCostProductTypes_Handler,
+		},
+		{
+			MethodName: "DownloadCostProductTypeTemplate",
+			Handler:    _CostProductTypeService_DownloadCostProductTypeTemplate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

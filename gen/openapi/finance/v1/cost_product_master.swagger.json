@@ -289,6 +289,102 @@
           "CostProductMasterService"
         ]
       }
+    },
+    "/api/v1/finance/cost-product-masters/export": {
+      "get": {
+        "operationId": "CostProductMasterService_ExportCostProductMasters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportCostProductMastersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productTypeCode",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostProductMasterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-masters/import": {
+      "post": {
+        "operationId": "CostProductMasterService_ImportCostProductMasters",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportCostProductMastersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportCostProductMastersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductMasterService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-masters/template": {
+      "get": {
+        "operationId": "CostProductMasterService_DownloadCostProductMasterTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadCostProductMasterTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CostProductMasterService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -454,6 +550,18 @@
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo"
+        },
+        "shadeName": {
+          "type": "string"
+        },
+        "flex01": {
+          "type": "string"
+        },
+        "flex02": {
+          "type": "string"
+        },
+        "flex03": {
+          "type": "string"
         }
       }
     },
@@ -497,6 +605,36 @@
         }
       }
     },
+    "v1DownloadCostProductMasterTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExportCostProductMastersResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      }
+    },
     "v1GetCostProductMasterByCodeResponse": {
       "type": "object",
       "properties": {
@@ -516,6 +654,33 @@
         },
         "data": {
           "$ref": "#/definitions/v1CostProductMaster"
+        }
+      }
+    },
+    "v1ImportCostProductMastersRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "duplicateAction": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ImportCostProductMastersResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
