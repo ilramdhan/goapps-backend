@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/mutugading/goapps-backend/compare/iam-service/v0.15.0...iam-service/v0.15.1) (2026-06-12)
+
+
+### Bug Fixes
+
+* **iam:** fix email logo and social icons for Gmail/Outlook compatibility ([#118](https://github.com/mutugading/goapps-backend/issues/118)) ([1d9b0c5](https://github.com/mutugading/goapps-backend/commit/1d9b0c53c4db9f0bf905fb92299c0db0f59d7106))
+
 ## [0.15.0](https://github.com/mutugading/goapps-backend/compare/iam-service/v0.14.0...iam-service/v0.15.0) (2026-06-12)
 
 
