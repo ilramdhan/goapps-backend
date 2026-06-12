@@ -342,7 +342,7 @@ ON CONFLICT (capp_product_sys_id, capp_param_id) DO UPDATE SET
     capp_updated_by     = EXCLUDED.capp_created_by
 RETURNING capp_id
 `
-	var displayOrder interface{}
+	var displayOrder any
 	if a.DisplayOrder != nil {
 		displayOrder = *a.DisplayOrder
 	}
@@ -401,7 +401,7 @@ UPDATE cost_product_applicable_param SET
     capp_updated_by    = $5
 WHERE capp_product_sys_id = $1 AND capp_param_id = $2
 `
-	var dispArg interface{}
+	var dispArg any
 	if displayOrder != nil {
 		dispArg = *displayOrder
 	}
@@ -471,7 +471,7 @@ ORDER BY COALESCE(p.display_group, ''), p.display_order, p.param_code
 	return out, rows.Err()
 }
 
-func stringPtrOrNil(p *string) interface{} {
+func stringPtrOrNil(p *string) any {
 	if p == nil {
 		return nil
 	}
@@ -501,7 +501,7 @@ func (r *CostProductParameterRepository) CountApplicableForProducts(ctx context.
 	return n, nil
 }
 
-func boolPtrOrNil(p *bool) interface{} {
+func boolPtrOrNil(p *bool) any {
 	if p == nil {
 		return nil
 	}
