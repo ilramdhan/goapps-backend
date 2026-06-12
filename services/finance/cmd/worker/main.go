@@ -12,6 +12,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductapplicableparam"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
@@ -114,7 +117,20 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	// Create rm cost export handler.
 	rmCostExportHandler := workerinternal.NewRMCostExportHandler(jobRepo, rmCostRepo, rmCostDetailRepo, storageSvc, iamNotif, log.Logger)
 
-	consumers := buildConsumers(rmqConn, syncHandler, rmCostExec, rmCostExportHandler)
+	// Create costing import handler.
+	costImportJobRepo := postgres.NewCostImportJobRepository(db)
+	cptRepo := postgres.NewCostProductTypeRepository(db)
+	cpmRepo := postgres.NewCostProductMasterRepository(db)
+	cappRepo := postgres.NewCostProductParameterRepository(db)
+	cppRepo := postgres.NewCostProductParameterRepository(db)
+	cpmImportHandler := costproductmaster.NewAsyncImportHandler(cpmRepo, cptRepo, costImportJobRepo)
+	cappImportHandler := costproductapplicableparam.NewAsyncImportHandler(cappRepo, costImportJobRepo)
+	cppImportHandler := costproductparameter.NewAsyncImportHandler(cppRepo, costImportJobRepo)
+	costingImportHandler := workerinternal.NewCostingImportHandler(
+		costImportJobRepo, storageSvc, cpmImportHandler, cappImportHandler, cppImportHandler, log.Logger,
+	)
+
+	consumers := buildConsumers(rmqConn, syncHandler, rmCostExec, rmCostExportHandler, costingImportHandler)
 
 	go watchConnection(ctx, rmqConn)
 
@@ -128,13 +144,14 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	return nil
 }
 
-// buildConsumers wires the three rabbitmq consumers (oracle_sync, rm_cost_calc,
-// rm_cost_export) with their respective message handlers.
+// buildConsumers wires the four rabbitmq consumers (oracle_sync, rm_cost_calc,
+// rm_cost_export, costing_import) with their respective message handlers.
 func buildConsumers(
 	rmqConn *rabbitmq.Connection,
 	syncHandler *oraclesync.SyncHandler,
 	rmCostExec *apprmcost.ExecuteHandlerV2,
 	rmCostExportHandler *workerinternal.RMCostExportHandler,
+	costingImportHandler *workerinternal.CostingImportHandler,
 ) []*rabbitmq.Consumer {
 	syncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return runOracleSyncJob(ctx, syncHandler, msg)
@@ -145,10 +162,14 @@ func buildConsumers(
 	rmCostExportMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return rmCostExportHandler.Handle(ctx, msg)
 	}
+	costingImportMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		return costingImportHandler.Handle(ctx, msg)
+	}
 	return []*rabbitmq.Consumer{
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueOracleSync, syncMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostCalc, rmCostMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostExport, rmCostExportMsgHandler, log.Logger),
+		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueImportJob, costingImportMsgHandler, log.Logger),
 	}
 }
 

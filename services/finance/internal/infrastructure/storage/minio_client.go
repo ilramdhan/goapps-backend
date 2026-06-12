@@ -36,6 +36,8 @@ type Config struct {
 type Service interface {
 	// PutObject uploads an object at the given key. contentType drives the stored Content-Type.
 	PutObject(ctx context.Context, key string, reader io.Reader, size int64, contentType string) error
+	// GetObject downloads an object by key. The caller must close the returned ReadCloser.
+	GetObject(ctx context.Context, key string) (io.ReadCloser, int64, error)
 	// PresignedGetURL returns a signed download URL valid for `validity`.
 	PresignedGetURL(ctx context.Context, key string, validity time.Duration, downloadName string) (string, error)
 	// PresignedGetURLWithDisposition returns a signed URL with the explicit
@@ -134,6 +136,23 @@ func (m *MinIOClient) PutObject(ctx context.Context, key string, reader io.Reade
 		return fmt.Errorf("put object %s: %w", key, err)
 	}
 	return nil
+}
+
+// GetObject implements Service. Downloads the object at key from the upload (internal) endpoint.
+// The caller is responsible for closing the returned ReadCloser.
+func (m *MinIOClient) GetObject(ctx context.Context, key string) (io.ReadCloser, int64, error) {
+	obj, err := m.upload.GetObject(ctx, m.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, 0, fmt.Errorf("get object %s: %w", key, err)
+	}
+	stat, err := obj.Stat()
+	if err != nil {
+		if closeErr := obj.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Str("key", key).Msg("storage: close object after stat failure")
+		}
+		return nil, 0, fmt.Errorf("stat object %s: %w", key, err)
+	}
+	return obj, stat.Size, nil
 }
 
 // PresignedGetURL implements Service. Signed against the public endpoint so
