@@ -208,7 +208,7 @@ func (h *CostDataImportHandler) DownloadCostProductParameterTemplate(_ context.C
 
 // enqueueImport uploads the file content to MinIO, creates a PENDING job,
 // publishes it to RabbitMQ, and returns the job ID.
-func (h *CostDataImportHandler) enqueueImport(ctx context.Context, fileContent []byte, fileName, entity string) (int64, error) {
+func (h *CostDataImportHandler) enqueueImport(ctx context.Context, fileContent []byte, _ /*fileName*/ string, entity string) (int64, error) {
 	actor := getUserFromContext(ctx)
 	fileKey := fmt.Sprintf("imports/%s/%s_%d.xlsx", entity, actor, time.Now().UnixNano())
 
