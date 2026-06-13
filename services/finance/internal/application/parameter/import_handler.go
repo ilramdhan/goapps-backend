@@ -314,13 +314,14 @@ func (h *ImportHandler) updateExisting(ctx context.Context, code parameter.Code,
 	var uomIDPtr **uuid.UUID
 	if data.uomCode != "" {
 		resolvedID, resolveErr := h.repo.ResolveUOMCode(ctx, data.uomCode)
-		if errors.Is(resolveErr, parameter.ErrUOMNotFound) {
+		switch {
+		case errors.Is(resolveErr, parameter.ErrUOMNotFound):
 			result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "uom_code", Message: fmt.Sprintf("UOM code '%s' not found, field left unchanged", data.uomCode)})
-		} else if resolveErr != nil {
+		case resolveErr != nil:
 			result.FailedCount++
 			result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "uom_code", Message: fmt.Sprintf("failed to resolve UOM code: %v", resolveErr)})
 			return
-		} else {
+		default:
 			uomIDPtr = &resolvedID
 		}
 	}
@@ -377,13 +378,14 @@ func (h *ImportHandler) createParameter(
 	var uomID *uuid.UUID
 	if data.uomCode != "" {
 		resolvedID, resolveErr := h.repo.ResolveUOMCode(ctx, data.uomCode)
-		if errors.Is(resolveErr, parameter.ErrUOMNotFound) {
+		switch {
+		case errors.Is(resolveErr, parameter.ErrUOMNotFound):
 			result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "uom_code", Message: fmt.Sprintf("UOM code '%s' not found, field skipped", data.uomCode)})
-		} else if resolveErr != nil {
+		case resolveErr != nil:
 			result.FailedCount++
 			result.Errors = append(result.Errors, ImportError{RowNumber: rowNum, Field: "uom_code", Message: fmt.Sprintf("failed to resolve UOM code: %v", resolveErr)})
 			return
-		} else {
+		default:
 			uomID = resolvedID
 		}
 	}

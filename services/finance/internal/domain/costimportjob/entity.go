@@ -23,23 +23,23 @@ const (
 
 // CostImportJob tracks the lifecycle of a bulk import operation.
 type CostImportJob struct {
-	jobID              int64
-	entity             string
-	status             string
-	totalRows          int
-	processed          int
-	success            int
-	failed             int
-	skipped            int
-	fileKey            string
-	errorFile          string
-	errorDetail        string
-	createdAt          time.Time
-	createdBy          string
-	requestingUserID   string
-	startedAt          *time.Time
-	completedAt        *time.Time
-	parentJobID        *int64
+	jobID            int64
+	entity           string
+	status           string
+	totalRows        int
+	processed        int
+	success          int
+	failed           int
+	skipped          int
+	fileKey          string
+	errorFile        string
+	errorDetail      string
+	createdAt        time.Time
+	createdBy        string
+	requestingUserID string
+	startedAt        *time.Time
+	completedAt      *time.Time
+	parentJobID      *int64
 }
 
 // NewJob creates a new PENDING import job.
@@ -72,7 +72,7 @@ func Reconstruct(
 		fileKey: fileKey, errorFile: errorFile, errorDetail: errorDetail,
 		createdAt: createdAt, createdBy: createdBy,
 		requestingUserID: requestingUserID,
-		startedAt: startedAt, completedAt: completedAt,
+		startedAt:        startedAt, completedAt: completedAt,
 		parentJobID: parentJobID,
 	}
 }

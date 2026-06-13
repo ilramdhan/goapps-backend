@@ -184,16 +184,16 @@ func (r *CostImportJobRepository) List(
 
 func (r *CostImportJobRepository) scanRow(row *sql.Row) (*costimportjob.CostImportJob, error) {
 	var (
-		jobID                      int64
-		entity, status             string
-		totalRows, processed       int
-		success, failed, skipped   int
-		fileKey, errorFile         string
-		errorDetail                string
-		createdAt                  time.Time
+		jobID                       int64
+		entity, status              string
+		totalRows, processed        int
+		success, failed, skipped    int
+		fileKey, errorFile          string
+		errorDetail                 string
+		createdAt                   time.Time
 		createdBy, requestingUserID string
-		startedAt, completedAt     *time.Time
-		parentJobID                *int64
+		startedAt, completedAt      *time.Time
+		parentJobID                 *int64
 	)
 	err := row.Scan(
 		&jobID, &entity, &status,

@@ -114,7 +114,7 @@ type Renderer struct {
 // Logo, header background, and footer URLs are auto-derived from AppURL when not
 // explicitly set. All images are served via public frontend URLs — data: URIs are
 // avoided because Gmail and Outlook block them since 2023.
-func NewRenderer(base BaseData) *Renderer {
+func NewRenderer(base BaseData) *Renderer { //nolint:gocyclo // cohesive URL-derivation setup: each branch is a simple field default
 	if base.Year == 0 {
 		base.Year = time.Now().Year()
 	}
