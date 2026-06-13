@@ -16,7 +16,8 @@ type Code struct {
 }
 
 // codePattern defines the valid format for parameter codes.
-var codePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+// Hyphens are allowed to support Oracle-synced composite codes (e.g. PROD001-L_RAW_RATE).
+var codePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_-]*$`)
 
 // NewCode creates a new validated Code value object.
 func NewCode(code string) (Code, error) {
