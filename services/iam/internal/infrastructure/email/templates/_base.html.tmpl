@@ -61,7 +61,7 @@
                 <tr>
                   <td style="padding:0; background-color:#f0f6ff; border-radius:0 0 16px 16px;">
 
-                    <!-- Social links: branded pill buttons — Gmail/Outlook safe (no SVG, no data: URI) -->
+                    <!-- Social icons: hosted PNG images (Gmail/Outlook safe, no SVG, no data: URI) -->
                     {{if .SocialLinks}}
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
@@ -69,11 +69,17 @@
                           <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                               {{range .SocialLinks}}
-                              <td style="padding:0 4px;">
+                              <td style="padding:0 6px;">
+                                {{if .IconURL}}
+                                <a href="{{.URL}}" style="text-decoration:none; display:block;" title="{{.Name}}">
+                                  <img src="{{.IconURL | safeURL}}" width="36" height="36" alt="{{.Name}}" style="display:block; border:0; border-radius:18px;">
+                                </a>
+                                {{else}}
                                 <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{.URL}}" style="height:28px;v-text-anchor:middle;width:90px;" arcsize="50%" stroke="f" {{if eq .Name "LinkedIn"}}fillcolor="#0A66C2"{{else if eq .Name "Instagram"}}fillcolor="#E4405F"{{else}}fillcolor="#2563EB"{{end}}><w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:11px;font-weight:700;">{{.Name}}</center></v:roundrect><![endif]-->
                                 <!--[if !mso]><!-->
                                 <a href="{{.URL}}" style="display:inline-block;padding:6px 14px;border-radius:14px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;color:#ffffff;text-decoration:none;mso-hide:all;{{if eq .Name "LinkedIn"}}background-color:#0A66C2;{{else if eq .Name "Instagram"}}background-color:#E4405F;{{else}}background-color:#2563EB;{{end}}">{{.Name}}</a>
                                 <!--<![endif]-->
+                                {{end}}
                               </td>
                               {{end}}
                             </tr>
