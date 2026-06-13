@@ -127,7 +127,7 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	cappImportHandler := costproductapplicableparam.NewAsyncImportHandler(cappRepo, costImportJobRepo)
 	cppImportHandler := costproductparameter.NewAsyncImportHandler(cppRepo, costImportJobRepo)
 	costingImportHandler := workerinternal.NewCostingImportHandler(
-		costImportJobRepo, storageSvc, cpmImportHandler, cappImportHandler, cppImportHandler, log.Logger,
+		costImportJobRepo, storageSvc, cpmImportHandler, cappImportHandler, cppImportHandler, iamNotif, log.Logger,
 	)
 
 	consumers := buildConsumers(rmqConn, syncHandler, rmCostExec, rmCostExportHandler, costingImportHandler)

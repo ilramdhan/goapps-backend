@@ -210,6 +210,7 @@ func (h *CostDataImportHandler) DownloadCostProductParameterTemplate(_ context.C
 // publishes it to RabbitMQ, and returns the job ID.
 func (h *CostDataImportHandler) enqueueImport(ctx context.Context, fileContent []byte, _ /*fileName*/ string, entity string) (int64, error) {
 	actor := getUserFromContext(ctx)
+	requestingUserID, _ := GetUserIDFromCtx(ctx)
 	fileKey := fmt.Sprintf("imports/%s/%s_%d.xlsx", entity, actor, time.Now().UnixNano())
 
 	if h.storage != nil {
@@ -219,13 +220,13 @@ func (h *CostDataImportHandler) enqueueImport(ctx context.Context, fileContent [
 		}
 	}
 
-	job := costimportjob.NewJob(entity, fileKey, actor)
+	job := costimportjob.NewJob(entity, fileKey, actor, requestingUserID)
 	if err := h.jobRepo.Create(ctx, job); err != nil {
 		return 0, fmt.Errorf("create import job: %w", err)
 	}
 
 	if h.importPublisher != nil {
-		if err := h.importPublisher.PublishImportJob(ctx, job.JobID(), entity); err != nil {
+		if err := h.importPublisher.PublishImportJob(ctx, job.JobID(), entity, requestingUserID); err != nil {
 			return 0, fmt.Errorf("publish import job: %w", err)
 		}
 	}

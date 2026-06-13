@@ -233,6 +233,7 @@ func (h *CostProductMasterHandler) ImportCostProductMasters(ctx context.Context,
 	}
 
 	actor := getUserFromContext(ctx)
+	requestingUserID, _ := GetUserIDFromCtx(ctx)
 	fileContent := req.GetFileContent()
 	fileKey := fmt.Sprintf("imports/%s/%s_%d.xlsx", costimportjob.EntityProductMaster, actor, time.Now().UnixNano())
 
@@ -243,13 +244,13 @@ func (h *CostProductMasterHandler) ImportCostProductMasters(ctx context.Context,
 		}
 	}
 
-	job := costimportjob.NewJob(costimportjob.EntityProductMaster, fileKey, actor)
+	job := costimportjob.NewJob(costimportjob.EntityProductMaster, fileKey, actor, requestingUserID)
 	if err := h.jobRepo.Create(ctx, job); err != nil {
 		return &financev1.ImportCostProductMastersResponse{Base: InternalErrorResponse(fmt.Sprintf("create import job: %s", err.Error()))}, nil //nolint:nilerr // intentional BaseResponse pattern
 	}
 
 	if h.importPublisher != nil {
-		if err := h.importPublisher.PublishImportJob(ctx, job.JobID(), costimportjob.EntityProductMaster); err != nil {
+		if err := h.importPublisher.PublishImportJob(ctx, job.JobID(), costimportjob.EntityProductMaster, requestingUserID); err != nil {
 			return &financev1.ImportCostProductMastersResponse{Base: InternalErrorResponse(fmt.Sprintf("publish import job: %s", err.Error()))}, nil //nolint:nilerr // intentional BaseResponse pattern
 		}
 	}

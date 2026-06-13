@@ -30,11 +30,11 @@ func (r *CostImportJobRepository) Create(ctx context.Context, job *costimportjob
 			cij_entity, cij_status, cij_total_rows, cij_processed,
 			cij_success, cij_failed, cij_skipped,
 			cij_file_key, cij_error_file, cij_error_detail,
-			cij_created_at, cij_created_by,
+			cij_created_at, cij_created_by, cij_requesting_user_id,
 			cij_started_at, cij_completed_at, cij_parent_job_id
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-			$11, $12, $13, $14, $15
+			$11, $12, $13, $14, $15, $16
 		)
 		RETURNING cij_job_id
 	`
@@ -43,7 +43,7 @@ func (r *CostImportJobRepository) Create(ctx context.Context, job *costimportjob
 		job.Entity(), job.Status(), job.TotalRows(), job.Processed(),
 		job.Success(), job.Failed(), job.Skipped(),
 		job.FileKey(), job.ErrorFile(), job.ErrorDetail(),
-		job.CreatedAt(), job.CreatedBy(),
+		job.CreatedAt(), job.CreatedBy(), nullableString(job.RequestingUserID()),
 		job.StartedAt(), job.CompletedAt(), job.ParentJobID(),
 	).Scan(&id)
 	if err != nil {
@@ -60,7 +60,7 @@ func (r *CostImportJobRepository) GetByID(ctx context.Context, id int64) (*costi
 			cij_job_id, cij_entity, cij_status,
 			cij_total_rows, cij_processed, cij_success, cij_failed, cij_skipped,
 			cij_file_key, cij_error_file, cij_error_detail,
-			cij_created_at, cij_created_by,
+			cij_created_at, cij_created_by, COALESCE(cij_requesting_user_id, ''),
 			cij_started_at, cij_completed_at, cij_parent_job_id
 		FROM cost_import_job
 		WHERE cij_job_id = $1
@@ -149,7 +149,7 @@ func (r *CostImportJobRepository) List(
 			cij_job_id, cij_entity, cij_status,
 			cij_total_rows, cij_processed, cij_success, cij_failed, cij_skipped,
 			cij_file_key, cij_error_file, cij_error_detail,
-			cij_created_at, cij_created_by,
+			cij_created_at, cij_created_by, COALESCE(cij_requesting_user_id, ''),
 			cij_started_at, cij_completed_at, cij_parent_job_id
 		` + where + fmt.Sprintf(" ORDER BY cij_created_at DESC LIMIT $%d OFFSET $%d", idx, idx+1)
 	args = append(args, pageSize, offset)
@@ -191,7 +191,7 @@ func (r *CostImportJobRepository) scanRow(row *sql.Row) (*costimportjob.CostImpo
 		fileKey, errorFile         string
 		errorDetail                string
 		createdAt                  time.Time
-		createdBy                  string
+		createdBy, requestingUserID string
 		startedAt, completedAt     *time.Time
 		parentJobID                *int64
 	)
@@ -199,7 +199,7 @@ func (r *CostImportJobRepository) scanRow(row *sql.Row) (*costimportjob.CostImpo
 		&jobID, &entity, &status,
 		&totalRows, &processed, &success, &failed, &skipped,
 		&fileKey, &errorFile, &errorDetail,
-		&createdAt, &createdBy,
+		&createdAt, &createdBy, &requestingUserID,
 		&startedAt, &completedAt, &parentJobID,
 	)
 	if err != nil {
@@ -212,7 +212,7 @@ func (r *CostImportJobRepository) scanRow(row *sql.Row) (*costimportjob.CostImpo
 		jobID, entity, status,
 		totalRows, processed, success, failed, skipped,
 		fileKey, errorFile, errorDetail,
-		createdAt, createdBy,
+		createdAt, createdBy, requestingUserID,
 		startedAt, completedAt,
 		parentJobID,
 	), nil
@@ -220,22 +220,22 @@ func (r *CostImportJobRepository) scanRow(row *sql.Row) (*costimportjob.CostImpo
 
 func (r *CostImportJobRepository) scanRows(rows *sql.Rows) (*costimportjob.CostImportJob, error) {
 	var (
-		jobID                      int64
-		entity, status             string
-		totalRows, processed       int
-		success, failed, skipped   int
-		fileKey, errorFile         string
-		errorDetail                string
-		createdAt                  time.Time
-		createdBy                  string
-		startedAt, completedAt     *time.Time
-		parentJobID                *int64
+		jobID                       int64
+		entity, status              string
+		totalRows, processed        int
+		success, failed, skipped    int
+		fileKey, errorFile          string
+		errorDetail                 string
+		createdAt                   time.Time
+		createdBy, requestingUserID string
+		startedAt, completedAt      *time.Time
+		parentJobID                 *int64
 	)
 	err := rows.Scan(
 		&jobID, &entity, &status,
 		&totalRows, &processed, &success, &failed, &skipped,
 		&fileKey, &errorFile, &errorDetail,
-		&createdAt, &createdBy,
+		&createdAt, &createdBy, &requestingUserID,
 		&startedAt, &completedAt, &parentJobID,
 	)
 	if err != nil {
@@ -245,7 +245,7 @@ func (r *CostImportJobRepository) scanRows(rows *sql.Rows) (*costimportjob.CostI
 		jobID, entity, status,
 		totalRows, processed, success, failed, skipped,
 		fileKey, errorFile, errorDetail,
-		createdAt, createdBy,
+		createdAt, createdBy, requestingUserID,
 		startedAt, completedAt,
 		parentJobID,
 	), nil

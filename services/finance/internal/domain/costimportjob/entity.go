@@ -23,32 +23,36 @@ const (
 
 // CostImportJob tracks the lifecycle of a bulk import operation.
 type CostImportJob struct {
-	jobID       int64
-	entity      string
-	status      string
-	totalRows   int
-	processed   int
-	success     int
-	failed      int
-	skipped     int
-	fileKey     string
-	errorFile   string
-	errorDetail string
-	createdAt   time.Time
-	createdBy   string
-	startedAt   *time.Time
-	completedAt *time.Time
-	parentJobID *int64
+	jobID              int64
+	entity             string
+	status             string
+	totalRows          int
+	processed          int
+	success            int
+	failed             int
+	skipped            int
+	fileKey            string
+	errorFile          string
+	errorDetail        string
+	createdAt          time.Time
+	createdBy          string
+	requestingUserID   string
+	startedAt          *time.Time
+	completedAt        *time.Time
+	parentJobID        *int64
 }
 
 // NewJob creates a new PENDING import job.
-func NewJob(entity, fileKey, createdBy string) *CostImportJob {
+// requestingUserID is the UUID of the user who initiated the import; used for
+// result notifications. Empty string is safe (notification will be skipped).
+func NewJob(entity, fileKey, createdBy, requestingUserID string) *CostImportJob {
 	return &CostImportJob{
-		entity:    entity,
-		status:    StatusPending,
-		fileKey:   fileKey,
-		createdAt: time.Now().UTC(),
-		createdBy: createdBy,
+		entity:           entity,
+		status:           StatusPending,
+		fileKey:          fileKey,
+		createdAt:        time.Now().UTC(),
+		createdBy:        createdBy,
+		requestingUserID: requestingUserID,
 	}
 }
 
@@ -57,7 +61,7 @@ func Reconstruct(
 	jobID int64, entity, status string,
 	totalRows, processed, success, failed, skipped int,
 	fileKey, errorFile, errorDetail string,
-	createdAt time.Time, createdBy string,
+	createdAt time.Time, createdBy, requestingUserID string,
 	startedAt, completedAt *time.Time,
 	parentJobID *int64,
 ) *CostImportJob {
@@ -67,6 +71,7 @@ func Reconstruct(
 		success: success, failed: failed, skipped: skipped,
 		fileKey: fileKey, errorFile: errorFile, errorDetail: errorDetail,
 		createdAt: createdAt, createdBy: createdBy,
+		requestingUserID: requestingUserID,
 		startedAt: startedAt, completedAt: completedAt,
 		parentJobID: parentJobID,
 	}
@@ -110,6 +115,10 @@ func (j *CostImportJob) CreatedAt() time.Time { return j.createdAt }
 
 // CreatedBy returns the identifier of the user who created the job.
 func (j *CostImportJob) CreatedBy() string { return j.createdBy }
+
+// RequestingUserID returns the UUID of the user who initiated the import.
+// Used to route completion notifications. May be empty for legacy jobs.
+func (j *CostImportJob) RequestingUserID() string { return j.requestingUserID }
 
 // StartedAt returns the time the job started processing, or nil if not yet started.
 func (j *CostImportJob) StartedAt() *time.Time { return j.startedAt }
