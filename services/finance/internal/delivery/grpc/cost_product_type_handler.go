@@ -14,14 +14,14 @@ import (
 // CostProductTypeHandler implements financev1.CostProductTypeServiceServer.
 type CostProductTypeHandler struct {
 	financev1.UnimplementedCostProductTypeServiceServer
-	createHandler  *app.CreateHandler
-	getHandler     *app.GetHandler
-	updateHandler  *app.UpdateHandler
-	listHandler    *app.ListHandler
-	exportHandler  *app.ExportHandler
-	importHandler  *app.ImportHandler
+	createHandler   *app.CreateHandler
+	getHandler      *app.GetHandler
+	updateHandler   *app.UpdateHandler
+	listHandler     *app.ListHandler
+	exportHandler   *app.ExportHandler
+	importHandler   *app.ImportHandler
 	templateHandler *app.TemplateHandler
-	validation     *ValidationHelper
+	validation      *ValidationHelper
 }
 
 // NewCostProductTypeHandler constructs the handler.
