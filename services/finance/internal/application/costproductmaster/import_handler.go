@@ -190,7 +190,8 @@ func (h *AsyncImportHandler) processBatch(
 		rowNum := safeconv.IntToInt32(startRowNum + i)
 		data := parseCPMRow(row)
 
-		if data.productCode == "" {
+		// Skip truly empty rows (no code, no name, no type).
+		if data.productCode == "" && data.productName == "" && data.productType == "" {
 			skipped++
 			continue
 		}
