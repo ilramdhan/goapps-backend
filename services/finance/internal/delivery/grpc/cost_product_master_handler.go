@@ -10,8 +10,8 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
-	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costimportjob"
+	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/storage"
 )

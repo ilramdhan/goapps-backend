@@ -22,14 +22,14 @@ const importPresignValidity = 15 * time.Minute
 // CostDataImportHandler implements financev1.CostDataImportServiceServer.
 type CostDataImportHandler struct {
 	financev1.UnimplementedCostDataImportServiceServer
-	jobRepo        costimportjob.Repository
-	storage        storage.Service
-	cappExport     *cappapp.ExportHandler
-	cappTemplate   *cappapp.TemplateHandler
-	cppExport      *cppapp.ExportHandler
-	cppTemplate    *cppapp.TemplateHandler
-	cpmExport      *cpmapp.ExportHandler
-	cpmTemplate    *cpmapp.TemplateHandler
+	jobRepo         costimportjob.Repository
+	storage         storage.Service
+	cappExport      *cappapp.ExportHandler
+	cappTemplate    *cappapp.TemplateHandler
+	cppExport       *cppapp.ExportHandler
+	cppTemplate     *cppapp.TemplateHandler
+	cpmExport       *cpmapp.ExportHandler
+	cpmTemplate     *cpmapp.TemplateHandler
 	importPublisher *rabbitmq.JobPublisherAdapter
 }
 
