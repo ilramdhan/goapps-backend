@@ -33,14 +33,19 @@ type CostRouteHead struct {
 	ProductCode  string                 `protobuf:"bytes,3,opt,name=product_code,json=productCode,proto3" json:"product_code,omitempty"` // denorm for list views
 	ProductName  string                 `protobuf:"bytes,4,opt,name=product_name,json=productName,proto3" json:"product_name,omitempty"` // denorm
 	// DRAFT | COMPLETE | LOCKED
-	RoutingStatus       string        `protobuf:"bytes,5,opt,name=routing_status,json=routingStatus,proto3" json:"routing_status,omitempty"`
-	Version             int32         `protobuf:"varint,6,opt,name=version,proto3" json:"version,omitempty"`
-	PromotedFromDraftId int64         `protobuf:"varint,7,opt,name=promoted_from_draft_id,json=promotedFromDraftId,proto3" json:"promoted_from_draft_id,omitempty"`
-	CylTypeId           int32         `protobuf:"varint,8,opt,name=cyl_type_id,json=cylTypeId,proto3" json:"cyl_type_id,omitempty"`
-	Notes               string        `protobuf:"bytes,9,opt,name=notes,proto3" json:"notes,omitempty"`
-	Audit               *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	RoutingStatus       string `protobuf:"bytes,5,opt,name=routing_status,json=routingStatus,proto3" json:"routing_status,omitempty"`
+	Version             int32  `protobuf:"varint,6,opt,name=version,proto3" json:"version,omitempty"`
+	PromotedFromDraftId int64  `protobuf:"varint,7,opt,name=promoted_from_draft_id,json=promotedFromDraftId,proto3" json:"promoted_from_draft_id,omitempty"`
+	CylTypeId           int32  `protobuf:"varint,8,opt,name=cyl_type_id,json=cylTypeId,proto3" json:"cyl_type_id,omitempty"`
+	Notes               string `protobuf:"bytes,9,opt,name=notes,proto3" json:"notes,omitempty"`
+	// Lock tracking -- populated when routing_status = "LOCKED".
+	LockedBy      string        `protobuf:"bytes,17,opt,name=locked_by,json=lockedBy,proto3" json:"locked_by,omitempty"`
+	LockedAt      string        `protobuf:"bytes,18,opt,name=locked_at,json=lockedAt,proto3" json:"locked_at,omitempty"`
+	UnlockedBy    string        `protobuf:"bytes,19,opt,name=unlocked_by,json=unlockedBy,proto3" json:"unlocked_by,omitempty"`
+	UnlockedAt    string        `protobuf:"bytes,20,opt,name=unlocked_at,json=unlockedAt,proto3" json:"unlocked_at,omitempty"`
+	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CostRouteHead) Reset() {
@@ -132,6 +137,34 @@ func (x *CostRouteHead) GetCylTypeId() int32 {
 func (x *CostRouteHead) GetNotes() string {
 	if x != nil {
 		return x.Notes
+	}
+	return ""
+}
+
+func (x *CostRouteHead) GetLockedBy() string {
+	if x != nil {
+		return x.LockedBy
+	}
+	return ""
+}
+
+func (x *CostRouteHead) GetLockedAt() string {
+	if x != nil {
+		return x.LockedAt
+	}
+	return ""
+}
+
+func (x *CostRouteHead) GetUnlockedBy() string {
+	if x != nil {
+		return x.UnlockedBy
+	}
+	return ""
+}
+
+func (x *CostRouteHead) GetUnlockedAt() string {
+	if x != nil {
+		return x.UnlockedAt
 	}
 	return ""
 }
@@ -1780,7 +1813,7 @@ var File_finance_v1_cost_route_proto protoreflect.FileDescriptor
 const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\n" +
 	"\x1bfinance/v1/cost_route.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xec\x02\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xe8\x03\n" +
 	"\rCostRouteHead\x12\x17\n" +
 	"\ahead_id\x18\x01 \x01(\x03R\x06headId\x12$\n" +
 	"\x0eproduct_sys_id\x18\x02 \x01(\x03R\fproductSysId\x12!\n" +
@@ -1790,7 +1823,13 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\aversion\x18\x06 \x01(\x05R\aversion\x123\n" +
 	"\x16promoted_from_draft_id\x18\a \x01(\x03R\x13promotedFromDraftId\x12\x1e\n" +
 	"\vcyl_type_id\x18\b \x01(\x05R\tcylTypeId\x12\x14\n" +
-	"\x05notes\x18\t \x01(\tR\x05notes\x12*\n" +
+	"\x05notes\x18\t \x01(\tR\x05notes\x12\x1b\n" +
+	"\tlocked_by\x18\x11 \x01(\tR\blockedBy\x12\x1b\n" +
+	"\tlocked_at\x18\x12 \x01(\tR\blockedAt\x12\x1f\n" +
+	"\vunlocked_by\x18\x13 \x01(\tR\n" +
+	"unlockedBy\x12\x1f\n" +
+	"\vunlocked_at\x18\x14 \x01(\tR\n" +
+	"unlockedAt\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xec\x03\n" +
 	"\fCostRouteSeq\x12\x15\n" +
 	"\x06seq_id\x18\x01 \x01(\x03R\x05seqId\x12\x17\n" +

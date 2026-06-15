@@ -43,6 +43,7 @@ const (
 	CostProductRequestService_ApproveCostProductRequest_FullMethodName               = "/finance.v1.CostProductRequestService/ApproveCostProductRequest"
 	CostProductRequestService_ReleaseCostProductRequest_FullMethodName               = "/finance.v1.CostProductRequestService/ReleaseCostProductRequest"
 	CostProductRequestService_GetCostProductRequestHistory_FullMethodName            = "/finance.v1.CostProductRequestService/GetCostProductRequestHistory"
+	CostProductRequestService_GetParamSummary_FullMethodName                         = "/finance.v1.CostProductRequestService/GetParamSummary"
 )
 
 // CostProductRequestServiceClient is the client API for CostProductRequestService service.
@@ -85,6 +86,9 @@ type CostProductRequestServiceClient interface {
 	ReleaseCostProductRequest(ctx context.Context, in *ReleaseCostProductRequestRequest, opts ...grpc.CallOption) (*ReleaseCostProductRequestResponse, error)
 	// GetCostProductRequestHistory returns the full status-transition timeline for a request.
 	GetCostProductRequestHistory(ctx context.Context, in *GetCostProductRequestHistoryRequest, opts ...grpc.CallOption) (*GetCostProductRequestHistoryResponse, error)
+	// GetParamSummary returns all param values for the request grouped by product
+	// and fill level. Used by ParamSummaryPanel and ConfirmActionDialog.
+	GetParamSummary(ctx context.Context, in *GetParamSummaryRequest, opts ...grpc.CallOption) (*GetParamSummaryResponse, error)
 }
 
 type costProductRequestServiceClient struct {
@@ -335,6 +339,16 @@ func (c *costProductRequestServiceClient) GetCostProductRequestHistory(ctx conte
 	return out, nil
 }
 
+func (c *costProductRequestServiceClient) GetParamSummary(ctx context.Context, in *GetParamSummaryRequest, opts ...grpc.CallOption) (*GetParamSummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetParamSummaryResponse)
+	err := c.cc.Invoke(ctx, CostProductRequestService_GetParamSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostProductRequestServiceServer is the server API for CostProductRequestService service.
 // All implementations must embed UnimplementedCostProductRequestServiceServer
 // for forward compatibility.
@@ -375,6 +389,9 @@ type CostProductRequestServiceServer interface {
 	ReleaseCostProductRequest(context.Context, *ReleaseCostProductRequestRequest) (*ReleaseCostProductRequestResponse, error)
 	// GetCostProductRequestHistory returns the full status-transition timeline for a request.
 	GetCostProductRequestHistory(context.Context, *GetCostProductRequestHistoryRequest) (*GetCostProductRequestHistoryResponse, error)
+	// GetParamSummary returns all param values for the request grouped by product
+	// and fill level. Used by ParamSummaryPanel and ConfirmActionDialog.
+	GetParamSummary(context.Context, *GetParamSummaryRequest) (*GetParamSummaryResponse, error)
 	mustEmbedUnimplementedCostProductRequestServiceServer()
 }
 
@@ -456,6 +473,9 @@ func (UnimplementedCostProductRequestServiceServer) ReleaseCostProductRequest(co
 }
 func (UnimplementedCostProductRequestServiceServer) GetCostProductRequestHistory(context.Context, *GetCostProductRequestHistoryRequest) (*GetCostProductRequestHistoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCostProductRequestHistory not implemented")
+}
+func (UnimplementedCostProductRequestServiceServer) GetParamSummary(context.Context, *GetParamSummaryRequest) (*GetParamSummaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetParamSummary not implemented")
 }
 func (UnimplementedCostProductRequestServiceServer) mustEmbedUnimplementedCostProductRequestServiceServer() {
 }
@@ -911,6 +931,24 @@ func _CostProductRequestService_GetCostProductRequestHistory_Handler(srv interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductRequestService_GetParamSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetParamSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductRequestServiceServer).GetParamSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductRequestService_GetParamSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductRequestServiceServer).GetParamSummary(ctx, req.(*GetParamSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostProductRequestService_ServiceDesc is the grpc.ServiceDesc for CostProductRequestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1013,6 +1051,10 @@ var CostProductRequestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCostProductRequestHistory",
 			Handler:    _CostProductRequestService_GetCostProductRequestHistory_Handler,
+		},
+		{
+			MethodName: "GetParamSummary",
+			Handler:    _CostProductRequestService_GetParamSummary_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

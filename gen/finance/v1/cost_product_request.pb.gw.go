@@ -1069,6 +1069,45 @@ func local_request_CostProductRequestService_GetCostProductRequestHistory_0(ctx 
 	return msg, metadata, err
 }
 
+func request_CostProductRequestService_GetParamSummary_0(ctx context.Context, marshaler runtime.Marshaler, client CostProductRequestServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetParamSummaryRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["request_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "request_id")
+	}
+	protoReq.RequestId, err = runtime.Int64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "request_id", err)
+	}
+	msg, err := client.GetParamSummary(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostProductRequestService_GetParamSummary_0(ctx context.Context, marshaler runtime.Marshaler, server CostProductRequestServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetParamSummaryRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["request_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "request_id")
+	}
+	protoReq.RequestId, err = runtime.Int64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "request_id", err)
+	}
+	msg, err := server.GetParamSummary(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 // RegisterCostProductRequestServiceHandlerServer registers the http handlers for service CostProductRequestService to "mux".
 // UnaryRPC     :call CostProductRequestServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -1555,6 +1594,26 @@ func RegisterCostProductRequestServiceHandlerServer(ctx context.Context, mux *ru
 		}
 		forward_CostProductRequestService_GetCostProductRequestHistory_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_CostProductRequestService_GetParamSummary_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostProductRequestService/GetParamSummary", runtime.WithHTTPPathPattern("/api/v1/finance/cost-product-requests/{request_id}/param-summary"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostProductRequestService_GetParamSummary_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostProductRequestService_GetParamSummary_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 
 	return nil
 }
@@ -2003,6 +2062,23 @@ func RegisterCostProductRequestServiceHandlerClient(ctx context.Context, mux *ru
 		}
 		forward_CostProductRequestService_GetCostProductRequestHistory_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_CostProductRequestService_GetParamSummary_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostProductRequestService/GetParamSummary", runtime.WithHTTPPathPattern("/api/v1/finance/cost-product-requests/{request_id}/param-summary"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostProductRequestService_GetParamSummary_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostProductRequestService_GetParamSummary_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	return nil
 }
 
@@ -2031,6 +2107,7 @@ var (
 	pattern_CostProductRequestService_ApproveCostProductRequest_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-product-requests", "request_id", "approve"}, ""))
 	pattern_CostProductRequestService_ReleaseCostProductRequest_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-product-requests", "request_id", "release"}, ""))
 	pattern_CostProductRequestService_GetCostProductRequestHistory_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-product-requests", "request_id", "history"}, ""))
+	pattern_CostProductRequestService_GetParamSummary_0                         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-product-requests", "request_id", "param-summary"}, ""))
 )
 
 var (
@@ -2058,4 +2135,5 @@ var (
 	forward_CostProductRequestService_ApproveCostProductRequest_0               = runtime.ForwardResponseMessage
 	forward_CostProductRequestService_ReleaseCostProductRequest_0               = runtime.ForwardResponseMessage
 	forward_CostProductRequestService_GetCostProductRequestHistory_0            = runtime.ForwardResponseMessage
+	forward_CostProductRequestService_GetParamSummary_0                         = runtime.ForwardResponseMessage
 )

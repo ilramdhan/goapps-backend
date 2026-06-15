@@ -34,6 +34,7 @@ const (
 	AuthService_VerifyEmail_FullMethodName             = "/iam.v1.AuthService/VerifyEmail"
 	AuthService_ResendEmailVerification_FullMethodName = "/iam.v1.AuthService/ResendEmailVerification"
 	AuthService_ValidateUnlockPassword_FullMethodName  = "/iam.v1.AuthService/ValidateUnlockPassword"
+	AuthService_VerifyPassword_FullMethodName          = "/iam.v1.AuthService/VerifyPassword"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -78,6 +79,10 @@ type AuthServiceClient interface {
 	// Used by sensitive UIs (e.g., fill-task unlock dialogs) to re-confirm identity.
 	// The user identity is resolved from the JWT token; no user_id in the request.
 	ValidateUnlockPassword(ctx context.Context, in *ValidateUnlockPasswordRequest, opts ...grpc.CallOption) (*ValidateUnlockPasswordResponse, error)
+	// VerifyPassword checks the user's password without changing any state.
+	// Used by the BFF to gate route lock/unlock before calling Finance.
+	// No HTTP annotation -- BFF-only, not exposed via gRPC-Gateway.
+	VerifyPassword(ctx context.Context, in *VerifyPasswordRequest, opts ...grpc.CallOption) (*VerifyPasswordResponse, error)
 }
 
 type authServiceClient struct {
@@ -238,6 +243,16 @@ func (c *authServiceClient) ValidateUnlockPassword(ctx context.Context, in *Vali
 	return out, nil
 }
 
+func (c *authServiceClient) VerifyPassword(ctx context.Context, in *VerifyPasswordRequest, opts ...grpc.CallOption) (*VerifyPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyPasswordResponse)
+	err := c.cc.Invoke(ctx, AuthService_VerifyPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -280,6 +295,10 @@ type AuthServiceServer interface {
 	// Used by sensitive UIs (e.g., fill-task unlock dialogs) to re-confirm identity.
 	// The user identity is resolved from the JWT token; no user_id in the request.
 	ValidateUnlockPassword(context.Context, *ValidateUnlockPasswordRequest) (*ValidateUnlockPasswordResponse, error)
+	// VerifyPassword checks the user's password without changing any state.
+	// Used by the BFF to gate route lock/unlock before calling Finance.
+	// No HTTP annotation -- BFF-only, not exposed via gRPC-Gateway.
+	VerifyPassword(context.Context, *VerifyPasswordRequest) (*VerifyPasswordResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -334,6 +353,9 @@ func (UnimplementedAuthServiceServer) ResendEmailVerification(context.Context, *
 }
 func (UnimplementedAuthServiceServer) ValidateUnlockPassword(context.Context, *ValidateUnlockPasswordRequest) (*ValidateUnlockPasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ValidateUnlockPassword not implemented")
+}
+func (UnimplementedAuthServiceServer) VerifyPassword(context.Context, *VerifyPasswordRequest) (*VerifyPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyPassword not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -626,6 +648,24 @@ func _AuthService_ValidateUnlockPassword_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_VerifyPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).VerifyPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_VerifyPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).VerifyPassword(ctx, req.(*VerifyPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -692,6 +732,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ValidateUnlockPassword",
 			Handler:    _AuthService_ValidateUnlockPassword_Handler,
+		},
+		{
+			MethodName: "VerifyPassword",
+			Handler:    _AuthService_VerifyPassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

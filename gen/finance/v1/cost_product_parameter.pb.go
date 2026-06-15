@@ -1577,6 +1577,206 @@ func (x *UpdateApplicableParamResponse) GetBase() *v1.BaseResponse {
 	return nil
 }
 
+// OverrideParamValueItem holds the new value for a single product+param pair.
+type OverrideParamValueItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProductSysId  int64                  `protobuf:"varint,1,opt,name=product_sys_id,json=productSysId,proto3" json:"product_sys_id,omitempty"`
+	ParamId       string                 `protobuf:"bytes,2,opt,name=param_id,json=paramId,proto3" json:"param_id,omitempty"`
+	ValueNumeric  string                 `protobuf:"bytes,3,opt,name=value_numeric,json=valueNumeric,proto3" json:"value_numeric,omitempty"`
+	ValueText     string                 `protobuf:"bytes,4,opt,name=value_text,json=valueText,proto3" json:"value_text,omitempty"`
+	ValueFlag     bool                   `protobuf:"varint,5,opt,name=value_flag,json=valueFlag,proto3" json:"value_flag,omitempty"`
+	HasValueFlag  bool                   `protobuf:"varint,6,opt,name=has_value_flag,json=hasValueFlag,proto3" json:"has_value_flag,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OverrideParamValueItem) Reset() {
+	*x = OverrideParamValueItem{}
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OverrideParamValueItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OverrideParamValueItem) ProtoMessage() {}
+
+func (x *OverrideParamValueItem) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OverrideParamValueItem.ProtoReflect.Descriptor instead.
+func (*OverrideParamValueItem) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *OverrideParamValueItem) GetProductSysId() int64 {
+	if x != nil {
+		return x.ProductSysId
+	}
+	return 0
+}
+
+func (x *OverrideParamValueItem) GetParamId() string {
+	if x != nil {
+		return x.ParamId
+	}
+	return ""
+}
+
+func (x *OverrideParamValueItem) GetValueNumeric() string {
+	if x != nil {
+		return x.ValueNumeric
+	}
+	return ""
+}
+
+func (x *OverrideParamValueItem) GetValueText() string {
+	if x != nil {
+		return x.ValueText
+	}
+	return ""
+}
+
+func (x *OverrideParamValueItem) GetValueFlag() bool {
+	if x != nil {
+		return x.ValueFlag
+	}
+	return false
+}
+
+func (x *OverrideParamValueItem) GetHasValueFlag() bool {
+	if x != nil {
+		return x.HasValueFlag
+	}
+	return false
+}
+
+// OverrideParamValuesRequest overrides param values for one fill level of a request.
+// The route must NOT be locked; the caller must hold finance.costing.paramvalue.update.
+type OverrideParamValuesRequest struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	RequestId     int64                     `protobuf:"varint,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	RouteLevel    int32                     `protobuf:"varint,2,opt,name=route_level,json=routeLevel,proto3" json:"route_level,omitempty"`
+	Values        []*OverrideParamValueItem `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OverrideParamValuesRequest) Reset() {
+	*x = OverrideParamValuesRequest{}
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OverrideParamValuesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OverrideParamValuesRequest) ProtoMessage() {}
+
+func (x *OverrideParamValuesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OverrideParamValuesRequest.ProtoReflect.Descriptor instead.
+func (*OverrideParamValuesRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *OverrideParamValuesRequest) GetRequestId() int64 {
+	if x != nil {
+		return x.RequestId
+	}
+	return 0
+}
+
+func (x *OverrideParamValuesRequest) GetRouteLevel() int32 {
+	if x != nil {
+		return x.RouteLevel
+	}
+	return 0
+}
+
+func (x *OverrideParamValuesRequest) GetValues() []*OverrideParamValueItem {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+// OverrideParamValuesResponse summarizes the outcome.
+type OverrideParamValuesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	UpdatedCount  int32                  `protobuf:"varint,2,opt,name=updated_count,json=updatedCount,proto3" json:"updated_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OverrideParamValuesResponse) Reset() {
+	*x = OverrideParamValuesResponse{}
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OverrideParamValuesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OverrideParamValuesResponse) ProtoMessage() {}
+
+func (x *OverrideParamValuesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OverrideParamValuesResponse.ProtoReflect.Descriptor instead.
+func (*OverrideParamValuesResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *OverrideParamValuesResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *OverrideParamValuesResponse) GetUpdatedCount() int32 {
+	if x != nil {
+		return x.UpdatedCount
+	}
+	return 0
+}
+
 var File_finance_v1_cost_product_parameter_proto protoreflect.FileDescriptor
 
 const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
@@ -1718,7 +1918,25 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\f_is_requiredB\x10\n" +
 	"\x0e_display_order\"L\n" +
 	"\x1dUpdateApplicableParamResponse\x12+\n" +
-	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base2\xad\r\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xf5\x01\n" +
+	"\x16OverrideParamValueItem\x12-\n" +
+	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fproductSysId\x12#\n" +
+	"\bparam_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aparamId\x12#\n" +
+	"\rvalue_numeric\x18\x03 \x01(\tR\fvalueNumeric\x12\x1d\n" +
+	"\n" +
+	"value_text\x18\x04 \x01(\tR\tvalueText\x12\x1d\n" +
+	"\n" +
+	"value_flag\x18\x05 \x01(\bR\tvalueFlag\x12$\n" +
+	"\x0ehas_value_flag\x18\x06 \x01(\bR\fhasValueFlag\"\xb4\x01\n" +
+	"\x1aOverrideParamValuesRequest\x12&\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\trequestId\x12(\n" +
+	"\vroute_level\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\n" +
+	"routeLevel\x12D\n" +
+	"\x06values\x18\x03 \x03(\v2\".finance.v1.OverrideParamValueItemB\b\xbaH\x05\x92\x01\x02\b\x01R\x06values\"o\n" +
+	"\x1bOverrideParamValuesResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12#\n" +
+	"\rupdated_count\x18\x02 \x01(\x05R\fupdatedCount2\xe5\x0e\n" +
 	"\x1bCostProductParameterService\x12\xc3\x01\n" +
 	"\x19ListProductRequiredParams\x12,.finance.v1.ListProductRequiredParamsRequest\x1a-.finance.v1.ListProductRequiredParamsResponse\"I\x82\xd3\xe4\x93\x02C\x12A/api/v1/finance/cost-product-parameters/products/{product_sys_id}\x12\xad\x01\n" +
 	"\x17UpsertProductParamValue\x12*.finance.v1.UpsertProductParamValueRequest\x1a+.finance.v1.UpsertProductParamValueResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/finance/cost-product-parameters/upsert\x12\xc5\x01\n" +
@@ -1728,7 +1946,8 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\x13ListAvailableParams\x12&.finance.v1.ListAvailableParamsRequest\x1a'.finance.v1.ListAvailableParamsResponse\"S\x82\xd3\xe4\x93\x02M\x12K/api/v1/finance/cost-product-parameters/products/{product_sys_id}/available\x12\xa6\x01\n" +
 	"\x12AddApplicableParam\x12%.finance.v1.AddApplicableParamRequest\x1a&.finance.v1.AddApplicableParamResponse\"A\x82\xd3\xe4\x93\x02;:\x01*\"6/api/v1/finance/cost-product-parameters/applicable/add\x12\xb2\x01\n" +
 	"\x15RemoveApplicableParam\x12(.finance.v1.RemoveApplicableParamRequest\x1a).finance.v1.RemoveApplicableParamResponse\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/api/v1/finance/cost-product-parameters/applicable/remove\x12\xb2\x01\n" +
-	"\x15UpdateApplicableParam\x12(.finance.v1.UpdateApplicableParamRequest\x1a).finance.v1.UpdateApplicableParamResponse\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/api/v1/finance/cost-product-parameters/applicable/updateB\xb3\x01\n" +
+	"\x15UpdateApplicableParam\x12(.finance.v1.UpdateApplicableParamRequest\x1a).finance.v1.UpdateApplicableParamResponse\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/api/v1/finance/cost-product-parameters/applicable/update\x12\xb5\x01\n" +
+	"\x13OverrideParamValues\x12&.finance.v1.OverrideParamValuesRequest\x1a'.finance.v1.OverrideParamValuesResponse\"M\x82\xd3\xe4\x93\x02G:\x01*\"B/api/v1/finance/cost-product-requests/{request_id}/params/overrideB\xb3\x01\n" +
 	"\x0ecom.finance.v1B\x19CostProductParameterProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
 	"Finance.V1\xca\x02\n" +
 	"Finance\\V1\xe2\x02\x16Finance\\V1\\GPBMetadata\xea\x02\vFinance::V1b\x06proto3"
@@ -1745,7 +1964,7 @@ func file_finance_v1_cost_product_parameter_proto_rawDescGZIP() []byte {
 	return file_finance_v1_cost_product_parameter_proto_rawDescData
 }
 
-var file_finance_v1_cost_product_parameter_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_finance_v1_cost_product_parameter_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_finance_v1_cost_product_parameter_proto_goTypes = []any{
 	(*CostProductParameterValue)(nil),             // 0: finance.v1.CostProductParameterValue
 	(*RequiredParamEntry)(nil),                    // 1: finance.v1.RequiredParamEntry
@@ -1769,46 +1988,53 @@ var file_finance_v1_cost_product_parameter_proto_goTypes = []any{
 	(*RemoveApplicableParamResponse)(nil),         // 19: finance.v1.RemoveApplicableParamResponse
 	(*UpdateApplicableParamRequest)(nil),          // 20: finance.v1.UpdateApplicableParamRequest
 	(*UpdateApplicableParamResponse)(nil),         // 21: finance.v1.UpdateApplicableParamResponse
-	(*v1.BaseResponse)(nil),                       // 22: common.v1.BaseResponse
+	(*OverrideParamValueItem)(nil),                // 22: finance.v1.OverrideParamValueItem
+	(*OverrideParamValuesRequest)(nil),            // 23: finance.v1.OverrideParamValuesRequest
+	(*OverrideParamValuesResponse)(nil),           // 24: finance.v1.OverrideParamValuesResponse
+	(*v1.BaseResponse)(nil),                       // 25: common.v1.BaseResponse
 }
 var file_finance_v1_cost_product_parameter_proto_depIdxs = []int32{
-	22, // 0: finance.v1.ListProductRequiredParamsResponse.base:type_name -> common.v1.BaseResponse
+	25, // 0: finance.v1.ListProductRequiredParamsResponse.base:type_name -> common.v1.BaseResponse
 	1,  // 1: finance.v1.ListProductRequiredParamsResponse.data:type_name -> finance.v1.RequiredParamEntry
-	22, // 2: finance.v1.UpsertProductParamValueResponse.base:type_name -> common.v1.BaseResponse
+	25, // 2: finance.v1.UpsertProductParamValueResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 3: finance.v1.UpsertProductParamValueResponse.data:type_name -> finance.v1.CostProductParameterValue
 	4,  // 4: finance.v1.UpsertProductParamValuesBatchRequest.values:type_name -> finance.v1.UpsertProductParamValueRequest
-	22, // 5: finance.v1.UpsertProductParamValuesBatchResponse.base:type_name -> common.v1.BaseResponse
-	22, // 6: finance.v1.DeleteProductParamValueResponse.base:type_name -> common.v1.BaseResponse
-	22, // 7: finance.v1.CheckMissingRequiredParamsResponse.base:type_name -> common.v1.BaseResponse
+	25, // 5: finance.v1.UpsertProductParamValuesBatchResponse.base:type_name -> common.v1.BaseResponse
+	25, // 6: finance.v1.DeleteProductParamValueResponse.base:type_name -> common.v1.BaseResponse
+	25, // 7: finance.v1.CheckMissingRequiredParamsResponse.base:type_name -> common.v1.BaseResponse
 	11, // 8: finance.v1.CheckMissingRequiredParamsResponse.data:type_name -> finance.v1.MissingParam
-	22, // 9: finance.v1.ListAvailableParamsResponse.base:type_name -> common.v1.BaseResponse
+	25, // 9: finance.v1.ListAvailableParamsResponse.base:type_name -> common.v1.BaseResponse
 	13, // 10: finance.v1.ListAvailableParamsResponse.data:type_name -> finance.v1.AvailableParamEntry
-	22, // 11: finance.v1.AddApplicableParamResponse.base:type_name -> common.v1.BaseResponse
-	22, // 12: finance.v1.RemoveApplicableParamResponse.base:type_name -> common.v1.BaseResponse
-	22, // 13: finance.v1.UpdateApplicableParamResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 14: finance.v1.CostProductParameterService.ListProductRequiredParams:input_type -> finance.v1.ListProductRequiredParamsRequest
-	4,  // 15: finance.v1.CostProductParameterService.UpsertProductParamValue:input_type -> finance.v1.UpsertProductParamValueRequest
-	6,  // 16: finance.v1.CostProductParameterService.UpsertProductParamValuesBatch:input_type -> finance.v1.UpsertProductParamValuesBatchRequest
-	8,  // 17: finance.v1.CostProductParameterService.DeleteProductParamValue:input_type -> finance.v1.DeleteProductParamValueRequest
-	10, // 18: finance.v1.CostProductParameterService.CheckMissingRequiredParams:input_type -> finance.v1.CheckMissingRequiredParamsRequest
-	14, // 19: finance.v1.CostProductParameterService.ListAvailableParams:input_type -> finance.v1.ListAvailableParamsRequest
-	16, // 20: finance.v1.CostProductParameterService.AddApplicableParam:input_type -> finance.v1.AddApplicableParamRequest
-	18, // 21: finance.v1.CostProductParameterService.RemoveApplicableParam:input_type -> finance.v1.RemoveApplicableParamRequest
-	20, // 22: finance.v1.CostProductParameterService.UpdateApplicableParam:input_type -> finance.v1.UpdateApplicableParamRequest
-	3,  // 23: finance.v1.CostProductParameterService.ListProductRequiredParams:output_type -> finance.v1.ListProductRequiredParamsResponse
-	5,  // 24: finance.v1.CostProductParameterService.UpsertProductParamValue:output_type -> finance.v1.UpsertProductParamValueResponse
-	7,  // 25: finance.v1.CostProductParameterService.UpsertProductParamValuesBatch:output_type -> finance.v1.UpsertProductParamValuesBatchResponse
-	9,  // 26: finance.v1.CostProductParameterService.DeleteProductParamValue:output_type -> finance.v1.DeleteProductParamValueResponse
-	12, // 27: finance.v1.CostProductParameterService.CheckMissingRequiredParams:output_type -> finance.v1.CheckMissingRequiredParamsResponse
-	15, // 28: finance.v1.CostProductParameterService.ListAvailableParams:output_type -> finance.v1.ListAvailableParamsResponse
-	17, // 29: finance.v1.CostProductParameterService.AddApplicableParam:output_type -> finance.v1.AddApplicableParamResponse
-	19, // 30: finance.v1.CostProductParameterService.RemoveApplicableParam:output_type -> finance.v1.RemoveApplicableParamResponse
-	21, // 31: finance.v1.CostProductParameterService.UpdateApplicableParam:output_type -> finance.v1.UpdateApplicableParamResponse
-	23, // [23:32] is the sub-list for method output_type
-	14, // [14:23] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	25, // 11: finance.v1.AddApplicableParamResponse.base:type_name -> common.v1.BaseResponse
+	25, // 12: finance.v1.RemoveApplicableParamResponse.base:type_name -> common.v1.BaseResponse
+	25, // 13: finance.v1.UpdateApplicableParamResponse.base:type_name -> common.v1.BaseResponse
+	22, // 14: finance.v1.OverrideParamValuesRequest.values:type_name -> finance.v1.OverrideParamValueItem
+	25, // 15: finance.v1.OverrideParamValuesResponse.base:type_name -> common.v1.BaseResponse
+	2,  // 16: finance.v1.CostProductParameterService.ListProductRequiredParams:input_type -> finance.v1.ListProductRequiredParamsRequest
+	4,  // 17: finance.v1.CostProductParameterService.UpsertProductParamValue:input_type -> finance.v1.UpsertProductParamValueRequest
+	6,  // 18: finance.v1.CostProductParameterService.UpsertProductParamValuesBatch:input_type -> finance.v1.UpsertProductParamValuesBatchRequest
+	8,  // 19: finance.v1.CostProductParameterService.DeleteProductParamValue:input_type -> finance.v1.DeleteProductParamValueRequest
+	10, // 20: finance.v1.CostProductParameterService.CheckMissingRequiredParams:input_type -> finance.v1.CheckMissingRequiredParamsRequest
+	14, // 21: finance.v1.CostProductParameterService.ListAvailableParams:input_type -> finance.v1.ListAvailableParamsRequest
+	16, // 22: finance.v1.CostProductParameterService.AddApplicableParam:input_type -> finance.v1.AddApplicableParamRequest
+	18, // 23: finance.v1.CostProductParameterService.RemoveApplicableParam:input_type -> finance.v1.RemoveApplicableParamRequest
+	20, // 24: finance.v1.CostProductParameterService.UpdateApplicableParam:input_type -> finance.v1.UpdateApplicableParamRequest
+	23, // 25: finance.v1.CostProductParameterService.OverrideParamValues:input_type -> finance.v1.OverrideParamValuesRequest
+	3,  // 26: finance.v1.CostProductParameterService.ListProductRequiredParams:output_type -> finance.v1.ListProductRequiredParamsResponse
+	5,  // 27: finance.v1.CostProductParameterService.UpsertProductParamValue:output_type -> finance.v1.UpsertProductParamValueResponse
+	7,  // 28: finance.v1.CostProductParameterService.UpsertProductParamValuesBatch:output_type -> finance.v1.UpsertProductParamValuesBatchResponse
+	9,  // 29: finance.v1.CostProductParameterService.DeleteProductParamValue:output_type -> finance.v1.DeleteProductParamValueResponse
+	12, // 30: finance.v1.CostProductParameterService.CheckMissingRequiredParams:output_type -> finance.v1.CheckMissingRequiredParamsResponse
+	15, // 31: finance.v1.CostProductParameterService.ListAvailableParams:output_type -> finance.v1.ListAvailableParamsResponse
+	17, // 32: finance.v1.CostProductParameterService.AddApplicableParam:output_type -> finance.v1.AddApplicableParamResponse
+	19, // 33: finance.v1.CostProductParameterService.RemoveApplicableParam:output_type -> finance.v1.RemoveApplicableParamResponse
+	21, // 34: finance.v1.CostProductParameterService.UpdateApplicableParam:output_type -> finance.v1.UpdateApplicableParamResponse
+	24, // 35: finance.v1.CostProductParameterService.OverrideParamValues:output_type -> finance.v1.OverrideParamValuesResponse
+	26, // [26:36] is the sub-list for method output_type
+	16, // [16:26] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_product_parameter_proto_init() }
@@ -1823,7 +2049,7 @@ func file_finance_v1_cost_product_parameter_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_cost_product_parameter_proto_rawDesc), len(file_finance_v1_cost_product_parameter_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

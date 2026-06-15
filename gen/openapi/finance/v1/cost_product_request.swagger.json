@@ -615,6 +615,38 @@
         ]
       }
     },
+    "/api/v1/finance/cost-product-requests/{requestId}/param-summary": {
+      "get": {
+        "summary": "GetParamSummary returns all param values for the request grouped by product\nand fill level. Used by ParamSummaryPanel and ConfirmActionDialog.",
+        "operationId": "CostProductRequestService_GetParamSummary",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetParamSummaryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductRequestService"
+        ]
+      }
+    },
     "/api/v1/finance/cost-product-requests/{requestId}/reject": {
       "post": {
         "operationId": "CostProductRequestService_RejectCostProductRequest",
@@ -1470,6 +1502,48 @@
         }
       }
     },
+    "v1FillLevelSummary": {
+      "type": "object",
+      "properties": {
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "taskStatus": {
+          "type": "string"
+        },
+        "filledByUserId": {
+          "type": "string"
+        },
+        "filledAt": {
+          "type": "string"
+        },
+        "filledParams": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalParams": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ParamValueEntry"
+          }
+        },
+        "lastEditedBy": {
+          "type": "string",
+          "description": "last_edited_by is the user who last overrode a param value at this level (empty if no override)."
+        },
+        "lastEditedAt": {
+          "type": "string",
+          "description": "last_edited_at is when the most recent override occurred at this level."
+        }
+      },
+      "description": "FillLevelSummary groups params for one fill task level of a product."
+    },
     "v1GetCostProductRequestByNoResponse": {
       "type": "object",
       "properties": {
@@ -1505,6 +1579,29 @@
         },
         "data": {
           "$ref": "#/definitions/v1CostProductRequest"
+        }
+      }
+    },
+    "v1GetParamSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProductParamSummary"
+          }
+        },
+        "totalParams": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "filledParams": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -1629,6 +1726,66 @@
         }
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1ParamValueEntry": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramCode": {
+          "type": "string"
+        },
+        "paramName": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string"
+        },
+        "hasValue": {
+          "type": "boolean"
+        },
+        "valueNumeric": {
+          "type": "string"
+        },
+        "valueText": {
+          "type": "string"
+        },
+        "valueFlag": {
+          "type": "boolean"
+        },
+        "uomCode": {
+          "type": "string"
+        },
+        "isRequired": {
+          "type": "boolean"
+        }
+      },
+      "description": "ParamValueEntry is one parameter cell in the summary."
+    },
+    "v1ProductParamSummary": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        },
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FillLevelSummary"
+          }
+        }
+      },
+      "description": "ProductParamSummary groups fill levels for one product in the route."
     },
     "v1RejectCostProductRequestResponse": {
       "type": "object",

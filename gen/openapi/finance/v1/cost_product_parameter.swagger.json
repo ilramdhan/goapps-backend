@@ -316,9 +316,66 @@
           "CostProductParameterService"
         ]
       }
+    },
+    "/api/v1/finance/cost-product-requests/{requestId}/params/override": {
+      "post": {
+        "summary": "OverrideParamValues allows authorized users to override param values on an unlocked\nroute. Records an audit log entry, resets fill-task approval when the level has an\napprover configured, and emits a single notification summarizing all changed params.",
+        "operationId": "CostProductParameterService_OverrideParamValues",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1OverrideParamValuesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductParameterServiceOverrideParamValuesBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductParameterService"
+        ]
+      }
     }
   },
   "definitions": {
+    "CostProductParameterServiceOverrideParamValuesBody": {
+      "type": "object",
+      "properties": {
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OverrideParamValueItem"
+          }
+        }
+      },
+      "description": "OverrideParamValuesRequest overrides param values for one fill level of a request.\nThe route must NOT be locked; the caller must hold finance.costing.paramvalue.update."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -597,6 +654,44 @@
           "type": "string"
         }
       }
+    },
+    "v1OverrideParamValueItem": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramId": {
+          "type": "string"
+        },
+        "valueNumeric": {
+          "type": "string"
+        },
+        "valueText": {
+          "type": "string"
+        },
+        "valueFlag": {
+          "type": "boolean"
+        },
+        "hasValueFlag": {
+          "type": "boolean"
+        }
+      },
+      "description": "OverrideParamValueItem holds the new value for a single product+param pair."
+    },
+    "v1OverrideParamValuesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "OverrideParamValuesResponse summarizes the outcome."
     },
     "v1RemoveApplicableParamRequest": {
       "type": "object",

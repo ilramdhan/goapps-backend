@@ -596,6 +596,19 @@
         "notes": {
           "type": "string"
         },
+        "lockedBy": {
+          "type": "string",
+          "description": "Lock tracking -- populated when routing_status = \"LOCKED\"."
+        },
+        "lockedAt": {
+          "type": "string"
+        },
+        "unlockedBy": {
+          "type": "string"
+        },
+        "unlockedAt": {
+          "type": "string"
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo"
         }
