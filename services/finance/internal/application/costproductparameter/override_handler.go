@@ -145,9 +145,12 @@ func (h *OverrideParamValuesHandler) Handle(ctx context.Context, cmd OverrideCom
 		count++
 	}
 
-	// 4. Record audit log entries.
+	// 4. Record audit log entries — only for params whose value actually changed.
 	logEntries := make([]pginfra.ParamEditLogEntry, 0, len(changes))
 	for _, c := range changes {
+		if c.oldVal == c.newVal {
+			continue
+		}
 		logEntries = append(logEntries, pginfra.ParamEditLogEntry{
 			RequestID:  cmd.RequestID,
 			RouteLevel: cmd.RouteLevel,
