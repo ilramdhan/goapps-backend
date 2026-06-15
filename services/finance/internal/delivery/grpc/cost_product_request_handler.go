@@ -26,7 +26,8 @@ type CostProductRequestHandler struct {
 	linkRouteHandler   *app.LinkRouteHandler
 	unlinkRouteHandler *app.UnlinkRouteHandler
 	validation         *ValidationHelper
-	historyRepo        requesthistory.Repository // optional; nil disables GetCostProductRequestHistory
+	historyRepo        requesthistory.Repository        // optional; nil disables GetCostProductRequestHistory
+	paramSummary       *app.GetParamSummaryHandler      // optional; nil returns empty response
 }
 
 // NewCostProductRequestHandler constructs the handler. Pass auditEmitter=nil to
@@ -94,6 +95,12 @@ func (h *CostProductRequestHandler) WithCPRNotifier(n app.CPRNotifier) *CostProd
 func (h *CostProductRequestHandler) WithHistoryRepo(r requesthistory.Repository) *CostProductRequestHandler {
 	h.historyRepo = r
 	h.transitionHandler = h.transitionHandler.WithHistoryRepo(r)
+	return h
+}
+
+// WithParamSummary attaches the param summary handler, enabling the GetParamSummary RPC.
+func (h *CostProductRequestHandler) WithParamSummary(ps *app.GetParamSummaryHandler) *CostProductRequestHandler {
+	h.paramSummary = ps
 	return h
 }
 
@@ -622,6 +629,65 @@ func (h *CostProductRequestHandler) GetCostProductRequestHistory(
 	return &financev1.GetCostProductRequestHistoryResponse{
 		Base:    successResponse("OK"),
 		Entries: result,
+	}, nil
+}
+
+// GetParamSummary returns all param values for the request grouped by product and fill level.
+func (h *CostProductRequestHandler) GetParamSummary(ctx context.Context, req *financev1.GetParamSummaryRequest) (*financev1.GetParamSummaryResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.GetParamSummaryResponse{Base: baseResp}, nil
+	}
+	if h.paramSummary == nil {
+		return &financev1.GetParamSummaryResponse{
+			Base:     successResponse("OK"),
+			Products: nil,
+		}, nil
+	}
+	products, _, _, err := h.paramSummary.Handle(ctx, app.GetParamSummaryQuery{RequestID: req.GetRequestId()})
+	if err != nil {
+		log.Error().Err(err).Int64("request_id", req.GetRequestId()).Msg("GetParamSummary: failed")
+		return &financev1.GetParamSummaryResponse{
+			Base: InternalErrorResponse("internal server error"),
+		}, nil //nolint:nilerr // BaseResponse pattern
+	}
+	protoProducts := make([]*financev1.ProductParamSummary, 0, len(products))
+	for _, p := range products {
+		levels := make([]*financev1.FillLevelSummary, 0, len(p.Levels))
+		for _, l := range p.Levels {
+			params := make([]*financev1.ParamValueEntry, 0, len(l.Params))
+			for _, pv := range l.Params {
+				params = append(params, &financev1.ParamValueEntry{
+					ParamCode:    pv.ParamCode,
+					ParamName:    pv.ParamName,
+					DataType:     pv.DataType,
+					HasValue:     pv.HasValue,
+					ValueNumeric: pv.ValueNumeric,
+					ValueText:    pv.ValueText,
+					ValueFlag:    pv.ValueFlag,
+					UomCode:      pv.UOMCode,
+					IsRequired:   pv.IsRequired,
+				})
+			}
+			levels = append(levels, &financev1.FillLevelSummary{
+				RouteLevel:     l.RouteLevel,
+				TaskStatus:     l.TaskStatus,
+				FilledByUserId: l.FilledByUserID,
+				FilledAt:       l.FilledAt,
+				FilledParams:   l.FilledParams,
+				TotalParams:    l.TotalParams,
+				Params:         params,
+			})
+		}
+		protoProducts = append(protoProducts, &financev1.ProductParamSummary{
+			ProductSysId: p.ProductSysID,
+			ProductCode:  p.ProductCode,
+			ProductName:  p.ProductName,
+			Levels:       levels,
+		})
+	}
+	return &financev1.GetParamSummaryResponse{
+		Base:     successResponse("OK"),
+		Products: protoProducts,
 	}, nil
 }
 

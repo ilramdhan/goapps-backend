@@ -401,6 +401,11 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// the GetCostProductRequestHistory RPC is enabled.
 	costProductRequestHandler.WithHistoryRepo(requestHistoryRepo)
 
+	// Wire param summary handler for GetParamSummary RPC.
+	paramSummaryRepo := postgres.NewParamSummaryRepository(db)
+	paramSummaryHandler := cprapp.NewGetParamSummaryHandler(paramSummaryRepo)
+	costProductRequestHandler.WithParamSummary(paramSummaryHandler)
+
 	// Build the completion gate: L100-L102 chain creation + CPR state machine trigger.
 	cprCompleter := &cprCompleterAdapter{handler: costProductRequestHandler}
 	completionNotifier := &completionNotifierAdapter{emitter: costNotifEmitter}

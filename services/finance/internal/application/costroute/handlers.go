@@ -6,8 +6,21 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+
 	costroute "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 )
+
+// ParamCompletenessChecker counts unfilled required params for a route.
+type ParamCompletenessChecker interface {
+	CountUnfilledParams(ctx context.Context, headID int64) (int, error)
+}
+
+// RouteNotifier emits lock/unlock notifications for linked CPRs.
+type RouteNotifier interface {
+	NotifyRouteLocked(ctx context.Context, headID int64, actorID, actorName string) error
+	NotifyRouteUnlocked(ctx context.Context, headID int64, actorID, actorName string) error
+}
 
 // GetByProductHandler returns the active head for a product.
 type GetByProductHandler struct {
@@ -96,9 +109,11 @@ func (h *MarkCompleteHandler) Handle(ctx context.Context, headID int64, actor st
 	return head, nil
 }
 
-// LockHandler transitions COMPLETE -> LOCKED.
+// LockHandler transitions COMPLETE -> LOCKED, optionally checking param completeness.
 type LockHandler struct {
-	repo costroute.Repository
+	repo     costroute.Repository
+	checker  ParamCompletenessChecker
+	notifier RouteNotifier
 }
 
 // NewLockHandler constructs a LockHandler.
@@ -106,24 +121,51 @@ func NewLockHandler(repo costroute.Repository) *LockHandler {
 	return &LockHandler{repo: repo}
 }
 
-// Handle locks the head.
-func (h *LockHandler) Handle(ctx context.Context, headID int64, actor string) (*costroute.Head, error) {
+// WithParamChecker attaches an optional param completeness checker.
+func (h *LockHandler) WithParamChecker(c ParamCompletenessChecker) *LockHandler {
+	h.checker = c
+	return h
+}
+
+// WithNotifier attaches an optional route notifier.
+func (h *LockHandler) WithNotifier(n RouteNotifier) *LockHandler {
+	h.notifier = n
+	return h
+}
+
+// Handle locks the head, optionally checking param completeness first.
+func (h *LockHandler) Handle(ctx context.Context, headID int64, actorID, actorName string) (*costroute.Head, error) {
+	if h.checker != nil {
+		unfilled, err := h.checker.CountUnfilledParams(ctx, headID)
+		if err != nil {
+			return nil, fmt.Errorf("check params: %w", err)
+		}
+		if unfilled > 0 {
+			return nil, fmt.Errorf("%w: %d required params are empty", costroute.ErrParamIncomplete, unfilled)
+		}
+	}
 	head, err := h.repo.GetHead(ctx, headID)
 	if err != nil {
 		return nil, err
 	}
-	if err := head.Lock(); err != nil {
+	if err := head.Lock(actorID); err != nil {
 		return nil, err
 	}
-	if err := h.repo.SaveHead(ctx, head, actor); err != nil {
+	if err := h.repo.SaveHead(ctx, head, actorID); err != nil {
 		return nil, err
+	}
+	if h.notifier != nil {
+		if notifyErr := h.notifier.NotifyRouteLocked(ctx, headID, actorID, actorName); notifyErr != nil {
+			log.Warn().Err(notifyErr).Int64("head_id", headID).Msg("LockHandler: notify locked failed (non-blocking)")
+		}
 	}
 	return head, nil
 }
 
-// UnlockHandler transitions LOCKED -> COMPLETE.
+// UnlockHandler transitions LOCKED -> COMPLETE and records the actor.
 type UnlockHandler struct {
-	repo costroute.Repository
+	repo     costroute.Repository
+	notifier RouteNotifier
 }
 
 // NewUnlockHandler constructs an UnlockHandler.
@@ -131,17 +173,28 @@ func NewUnlockHandler(repo costroute.Repository) *UnlockHandler {
 	return &UnlockHandler{repo: repo}
 }
 
+// WithNotifier attaches an optional route notifier.
+func (h *UnlockHandler) WithNotifier(n RouteNotifier) *UnlockHandler {
+	h.notifier = n
+	return h
+}
+
 // Handle unlocks the head.
-func (h *UnlockHandler) Handle(ctx context.Context, headID int64, actor string) (*costroute.Head, error) {
+func (h *UnlockHandler) Handle(ctx context.Context, headID int64, actorID, actorName string) (*costroute.Head, error) {
 	head, err := h.repo.GetHead(ctx, headID)
 	if err != nil {
 		return nil, err
 	}
-	if err := head.Unlock(); err != nil {
+	if err := head.Unlock(actorID); err != nil {
 		return nil, err
 	}
-	if err := h.repo.SaveHead(ctx, head, actor); err != nil {
+	if err := h.repo.SaveHead(ctx, head, actorID); err != nil {
 		return nil, err
+	}
+	if h.notifier != nil {
+		if notifyErr := h.notifier.NotifyRouteUnlocked(ctx, headID, actorID, actorName); notifyErr != nil {
+			log.Warn().Err(notifyErr).Int64("head_id", headID).Msg("UnlockHandler: notify unlocked failed (non-blocking)")
+		}
 	}
 	return head, nil
 }

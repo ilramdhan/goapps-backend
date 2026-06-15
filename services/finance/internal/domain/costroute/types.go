@@ -40,6 +40,11 @@ type Head struct {
 	CreatedBy           string
 	UpdatedAt           time.Time
 	UpdatedBy           string
+	// Lock tracking — populated from DB on read, set by Lock/Unlock methods.
+	LockedBy   string
+	LockedAt   time.Time
+	UnlockedBy string
+	UnlockedAt time.Time
 }
 
 // Seq mirrors cost_route_seq columns.
@@ -104,6 +109,8 @@ var (
 	ErrAlreadyExists           = errors.New("route already exists for product")
 	ErrLocked                  = errors.New("route is locked")
 	ErrInvalidStatusTransition = errors.New("invalid route status transition")
+	// ErrParamIncomplete is returned when locking is attempted with unfilled required params.
+	ErrParamIncomplete = errors.New("required params incomplete")
 )
 
 // DuplicateInput is the use-case payload for a deep-fork of a route.

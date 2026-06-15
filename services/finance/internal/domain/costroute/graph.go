@@ -3,7 +3,11 @@ package costroute
 import (
 	"errors"
 	"fmt"
+	"time"
 )
+
+// now returns the current UTC time. Extracted for testability.
+var now = func() time.Time { return time.Now().UTC() }
 
 // Sentinel errors for graph validation.
 var (
@@ -124,21 +128,25 @@ func (h *Head) MarkComplete() error {
 	return nil
 }
 
-// Lock transitions COMPLETE -> LOCKED.
-func (h *Head) Lock() error {
+// Lock transitions COMPLETE -> LOCKED and records the actor and timestamp.
+func (h *Head) Lock(actor string) error {
 	if h.RoutingStatus != StatusComplete {
 		return ErrInvalidStatusTransition
 	}
 	h.RoutingStatus = StatusLocked
+	h.LockedBy = actor
+	h.LockedAt = now()
 	return nil
 }
 
-// Unlock transitions LOCKED -> COMPLETE.
-func (h *Head) Unlock() error {
+// Unlock transitions LOCKED -> COMPLETE and records the actor and timestamp.
+func (h *Head) Unlock(actor string) error {
 	if h.RoutingStatus != StatusLocked {
 		return ErrInvalidStatusTransition
 	}
 	h.RoutingStatus = StatusComplete
+	h.UnlockedBy = actor
+	h.UnlockedAt = now()
 	return nil
 }
 

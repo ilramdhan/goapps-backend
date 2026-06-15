@@ -110,24 +110,35 @@ func (r *CostRouteRepository) GetActiveByProduct(ctx context.Context, productSys
 		SELECT crh_head_id, crh_product_sys_id, crh_routing_status, crh_version,
 		       COALESCE(crh_promoted_from_draft_id, 0), COALESCE(crh_cyl_type_id, 0),
 		       COALESCE(crh_notes, ''),
-		       crh_created_at, crh_created_by, crh_updated_at, COALESCE(crh_updated_by, '')
+		       crh_created_at, crh_created_by, crh_updated_at, COALESCE(crh_updated_by, ''),
+		       COALESCE(crh_locked_by, ''), crh_locked_at,
+		       COALESCE(crh_unlocked_by, ''), crh_unlocked_at
 		FROM cost_route_head
 		WHERE crh_product_sys_id = $1
 		  AND crh_deleted_at IS NULL
 		  AND crh_routing_status <> 'LOCKED'
 		LIMIT 1`
 	h := &costroute.Head{}
+	var lockedAt, unlockedAt sql.NullTime
 	err := r.db.QueryRowContext(ctx, q, productSysID).Scan(
 		&h.HeadID, &h.ProductSysID, &h.RoutingStatus, &h.Version,
 		&h.PromotedFromDraftID, &h.CylTypeID,
 		&h.Notes,
 		&h.CreatedAt, &h.CreatedBy, &h.UpdatedAt, &h.UpdatedBy,
+		&h.LockedBy, &lockedAt,
+		&h.UnlockedBy, &unlockedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, costroute.ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get active route by product: %w", err)
+	}
+	if lockedAt.Valid {
+		h.LockedAt = lockedAt.Time
+	}
+	if unlockedAt.Valid {
+		h.UnlockedAt = unlockedAt.Time
 	}
 	return h, nil
 }
@@ -152,22 +163,33 @@ func (r *CostRouteRepository) GetHead(ctx context.Context, headID int64) (*costr
 		       h.crh_routing_status, h.crh_version,
 		       COALESCE(h.crh_promoted_from_draft_id, 0), COALESCE(h.crh_cyl_type_id, 0),
 		       COALESCE(h.crh_notes, ''),
-		       h.crh_created_at, h.crh_created_by, h.crh_updated_at, COALESCE(h.crh_updated_by, '')
+		       h.crh_created_at, h.crh_created_by, h.crh_updated_at, COALESCE(h.crh_updated_by, ''),
+		       COALESCE(h.crh_locked_by, ''), h.crh_locked_at,
+		       COALESCE(h.crh_unlocked_by, ''), h.crh_unlocked_at
 		FROM cost_route_head h
 		LEFT JOIN cost_product_master p ON p.cpm_product_sys_id = h.crh_product_sys_id
 		WHERE h.crh_head_id = $1 AND h.crh_deleted_at IS NULL`
 	h := &costroute.Head{}
+	var lockedAt, unlockedAt sql.NullTime
 	err := r.db.QueryRowContext(ctx, q, headID).Scan(
 		&h.HeadID, &h.ProductSysID, &h.ProductCode, &h.ProductName,
 		&h.RoutingStatus, &h.Version,
 		&h.PromotedFromDraftID, &h.CylTypeID, &h.Notes,
 		&h.CreatedAt, &h.CreatedBy, &h.UpdatedAt, &h.UpdatedBy,
+		&h.LockedBy, &lockedAt,
+		&h.UnlockedBy, &unlockedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, costroute.ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get route head: %w", err)
+	}
+	if lockedAt.Valid {
+		h.LockedAt = lockedAt.Time
+	}
+	if unlockedAt.Valid {
+		h.UnlockedAt = unlockedAt.Time
 	}
 	return h, nil
 }
@@ -472,15 +494,26 @@ func (r *CostRouteRepository) SaveGraph(ctx context.Context, headID int64, in *c
 	return r.GetGraph(ctx, headID)
 }
 
-// SaveHead persists status transitions on the head.
+// SaveHead persists status transitions and lock tracking on the head.
 func (r *CostRouteRepository) SaveHead(ctx context.Context, head *costroute.Head, actor string) error {
+	var lockedAt, unlockedAt sql.NullTime
+	if !head.LockedAt.IsZero() {
+		lockedAt = sql.NullTime{Time: head.LockedAt, Valid: true}
+	}
+	if !head.UnlockedAt.IsZero() {
+		unlockedAt = sql.NullTime{Time: head.UnlockedAt, Valid: true}
+	}
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE cost_route_head SET
 			crh_routing_status=$2,
 			crh_notes=NULLIF($3,''),
+			crh_locked_by=NULLIF($5,''), crh_locked_at=$6,
+			crh_unlocked_by=NULLIF($7,''), crh_unlocked_at=$8,
 			crh_updated_at=now(), crh_updated_by=$4
 		WHERE crh_head_id=$1 AND crh_deleted_at IS NULL`,
 		head.HeadID, head.RoutingStatus, head.Notes, actor,
+		head.LockedBy, lockedAt,
+		head.UnlockedBy, unlockedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("save route head: %w", err)
@@ -577,7 +610,9 @@ func (r *CostRouteRepository) ListHeads(ctx context.Context, f costroute.Filter)
 		       h.crh_routing_status, h.crh_version,
 		       COALESCE(h.crh_promoted_from_draft_id, 0), COALESCE(h.crh_cyl_type_id, 0),
 		       COALESCE(h.crh_notes, ''),
-		       h.crh_created_at, h.crh_created_by, h.crh_updated_at, COALESCE(h.crh_updated_by, '')
+		       h.crh_created_at, h.crh_created_by, h.crh_updated_at, COALESCE(h.crh_updated_by, ''),
+		       COALESCE(h.crh_locked_by, ''), h.crh_locked_at,
+		       COALESCE(h.crh_unlocked_by, ''), h.crh_unlocked_at
 		FROM cost_route_head h
 		LEFT JOIN cost_product_master p ON p.cpm_product_sys_id = h.crh_product_sys_id` + whereSQL + ` ORDER BY ` + orderBy + fmt.Sprintf(" LIMIT $%d OFFSET $%d", idx, idx+1)
 	args = append(args, pageSize, offset)
@@ -593,12 +628,21 @@ func (r *CostRouteRepository) ListHeads(ctx context.Context, f costroute.Filter)
 	out := []*costroute.Head{}
 	for rows.Next() {
 		h := &costroute.Head{}
+		var lockedAt, unlockedAt sql.NullTime
 		if err := rows.Scan(&h.HeadID, &h.ProductSysID, &h.ProductCode, &h.ProductName,
 			&h.RoutingStatus, &h.Version,
 			&h.PromotedFromDraftID, &h.CylTypeID, &h.Notes,
 			&h.CreatedAt, &h.CreatedBy, &h.UpdatedAt, &h.UpdatedBy,
+			&h.LockedBy, &lockedAt,
+			&h.UnlockedBy, &unlockedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan route row: %w", err)
+		}
+		if lockedAt.Valid {
+			h.LockedAt = lockedAt.Time
+		}
+		if unlockedAt.Valid {
+			h.UnlockedAt = unlockedAt.Time
 		}
 		out = append(out, h)
 	}

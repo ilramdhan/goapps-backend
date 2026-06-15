@@ -22,6 +22,11 @@ func actorFromCtx(ctx context.Context) string {
 	return id
 }
 
+func actorNameFromCtx(ctx context.Context) string {
+	name, _ := GetUsernameFromCtx(ctx)
+	return name
+}
+
 // CostRouteHandler implements financev1.CostRouteServiceServer.
 type CostRouteHandler struct {
 	financev1.UnimplementedCostRouteServiceServer
@@ -95,7 +100,7 @@ func (h *CostRouteHandler) CompleteRoute(ctx context.Context, req *financev1.Com
 
 // LockRoute marks the head LOCKED.
 func (h *CostRouteHandler) LockRoute(ctx context.Context, req *financev1.LockRouteRequest) (*financev1.LockRouteResponse, error) {
-	head, err := h.lock.Handle(ctx, req.GetHeadId(), actorFromCtx(ctx))
+	head, err := h.lock.Handle(ctx, req.GetHeadId(), actorFromCtx(ctx), actorNameFromCtx(ctx))
 	if err != nil {
 		return &financev1.LockRouteResponse{Base: routeErrToBase(err)}, nil
 	}
@@ -104,7 +109,7 @@ func (h *CostRouteHandler) LockRoute(ctx context.Context, req *financev1.LockRou
 
 // UnlockRoute reverts LOCKED -> COMPLETE.
 func (h *CostRouteHandler) UnlockRoute(ctx context.Context, req *financev1.UnlockRouteRequest) (*financev1.UnlockRouteResponse, error) {
-	head, err := h.unlock.Handle(ctx, req.GetHeadId(), actorFromCtx(ctx))
+	head, err := h.unlock.Handle(ctx, req.GetHeadId(), actorFromCtx(ctx), actorNameFromCtx(ctx))
 	if err != nil {
 		return &financev1.UnlockRouteResponse{Base: routeErrToBase(err)}, nil
 	}
@@ -231,7 +236,7 @@ func routeHeadToProto(h *costroute.Head) *financev1.CostRouteHead {
 	if h == nil {
 		return nil
 	}
-	return &financev1.CostRouteHead{
+	p := &financev1.CostRouteHead{
 		HeadId:              h.HeadID,
 		ProductSysId:        h.ProductSysID,
 		ProductCode:         h.ProductCode,
@@ -241,7 +246,16 @@ func routeHeadToProto(h *costroute.Head) *financev1.CostRouteHead {
 		PromotedFromDraftId: h.PromotedFromDraftID,
 		CylTypeId:           h.CylTypeID,
 		Notes:               h.Notes,
+		LockedBy:            h.LockedBy,
+		UnlockedBy:          h.UnlockedBy,
 	}
+	if !h.LockedAt.IsZero() {
+		p.LockedAt = h.LockedAt.UTC().Format("2006-01-02T15:04:05Z07:00")
+	}
+	if !h.UnlockedAt.IsZero() {
+		p.UnlockedAt = h.UnlockedAt.UTC().Format("2006-01-02T15:04:05Z07:00")
+	}
+	return p
 }
 
 func routeGraphToProto(g *costroute.Graph) *financev1.RouteGraph {
@@ -371,6 +385,8 @@ func routeErrToBase(err error) *commonv1.BaseResponse {
 		return ErrorResponse("409", "route is locked")
 	case errors.Is(err, costroute.ErrInvalidStatusTransition):
 		return ErrorResponse("400", "invalid status transition")
+	case errors.Is(err, costroute.ErrParamIncomplete):
+		return ErrorResponse("422", err.Error())
 	case errors.Is(err, costroute.ErrLevelOneMismatch),
 		errors.Is(err, costroute.ErrLevelOneMissing),
 		errors.Is(err, costroute.ErrUpstreamMissing),

@@ -142,16 +142,22 @@ func TestHead_StatusTransitions(t *testing.T) {
 	if h.RoutingStatus != costroute.StatusComplete {
 		t.Fatalf("expected COMPLETE, got %s", h.RoutingStatus)
 	}
-	if err := h.Lock(); err != nil {
+	if err := h.Lock("test-actor"); err != nil {
 		t.Fatalf("complete->lock should succeed, got %v", err)
 	}
 	if !h.IsLocked() {
 		t.Fatalf("expected locked")
 	}
+	if h.LockedBy != "test-actor" {
+		t.Fatalf("expected LockedBy=test-actor, got %s", h.LockedBy)
+	}
 	if err := h.MarkComplete(); !errors.Is(err, costroute.ErrInvalidStatusTransition) {
 		t.Fatalf("locked->complete via MarkComplete should fail")
 	}
-	if err := h.Unlock(); err != nil {
+	if err := h.Unlock("test-actor"); err != nil {
 		t.Fatalf("locked->complete via Unlock should succeed, got %v", err)
+	}
+	if h.UnlockedBy != "test-actor" {
+		t.Fatalf("expected UnlockedBy=test-actor, got %s", h.UnlockedBy)
 	}
 }
