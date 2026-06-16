@@ -26,8 +26,8 @@ type CostProductRequestHandler struct {
 	linkRouteHandler   *app.LinkRouteHandler
 	unlinkRouteHandler *app.UnlinkRouteHandler
 	validation         *ValidationHelper
-	historyRepo        requesthistory.Repository        // optional; nil disables GetCostProductRequestHistory
-	paramSummary       *app.GetParamSummaryHandler      // optional; nil returns empty response
+	historyRepo        requesthistory.Repository   // optional; nil disables GetCostProductRequestHistory
+	paramSummary       *app.GetParamSummaryHandler // optional; nil returns empty response
 }
 
 // NewCostProductRequestHandler constructs the handler. Pass auditEmitter=nil to
