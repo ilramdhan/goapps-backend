@@ -1,0 +1,3921 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/yarn_master.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "MachineService"
+    },
+    {
+      "name": "BoxBobbinCostService"
+    },
+    {
+      "name": "InterminglingService"
+    },
+    {
+      "name": "ProductGradeService"
+    },
+    {
+      "name": "MBHeadService"
+    },
+    {
+      "name": "MBSpinService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/box-bobbin-costs": {
+      "get": {
+        "summary": "ListBoxBobbinCosts lists configs with search, filter, and pagination.",
+        "operationId": "BoxBobbinCostService_ListBoxBobbinCosts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBoxBobbinCostsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (≥ 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search across code and name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "bbcType",
+            "description": "Filter by config type.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      },
+      "post": {
+        "summary": "CreateBoxBobbinCost creates a new packing config.",
+        "operationId": "BoxBobbinCostService_CreateBoxBobbinCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateBoxBobbinCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateBoxBobbinCostRequest is the request for creating a Box Bobbin Cost config.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateBoxBobbinCostRequest"
+            }
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/box-bobbin-costs/export": {
+      "get": {
+        "summary": "ExportBoxBobbinCosts exports configs to Excel.",
+        "operationId": "BoxBobbinCostService_ExportBoxBobbinCosts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportBoxBobbinCostsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/box-bobbin-costs/import": {
+      "post": {
+        "summary": "ImportBoxBobbinCosts imports configs from Excel.",
+        "operationId": "BoxBobbinCostService_ImportBoxBobbinCosts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportBoxBobbinCostsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportBoxBobbinCostsRequest is the request for importing configs from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportBoxBobbinCostsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/box-bobbin-costs/template": {
+      "get": {
+        "summary": "DownloadBoxBobbinCostTemplate downloads the Excel import template.",
+        "operationId": "BoxBobbinCostService_DownloadBoxBobbinCostTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadBoxBobbinCostTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/box-bobbin-costs/{bbcId}": {
+      "get": {
+        "summary": "GetBoxBobbinCost retrieves a config by ID (includes rates).",
+        "operationId": "BoxBobbinCostService_GetBoxBobbinCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetBoxBobbinCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "bbcId",
+            "description": "Config UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteBoxBobbinCost soft-deletes a config.",
+        "operationId": "BoxBobbinCostService_DeleteBoxBobbinCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteBoxBobbinCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "bbcId",
+            "description": "Config UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateBoxBobbinCost updates an existing config.",
+        "operationId": "BoxBobbinCostService_UpdateBoxBobbinCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateBoxBobbinCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "bbcId",
+            "description": "Config UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BoxBobbinCostServiceUpdateBoxBobbinCostBody"
+            }
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/box-bobbin-costs/{bbcId}/rates": {
+      "post": {
+        "summary": "CreateBoxBobbinCostRate adds a period rate entry to a config.",
+        "operationId": "BoxBobbinCostService_CreateBoxBobbinCostRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateBoxBobbinCostRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "bbcId",
+            "description": "Parent config UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BoxBobbinCostServiceCreateBoxBobbinCostRateBody"
+            }
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/box-bobbin-costs/{bbcId}/rates/{bbcrId}": {
+      "delete": {
+        "summary": "DeleteBoxBobbinCostRate removes a period rate entry.",
+        "operationId": "BoxBobbinCostService_DeleteBoxBobbinCostRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteBoxBobbinCostRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "bbcId",
+            "description": "Parent config UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "bbcrId",
+            "description": "Rate entry UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BoxBobbinCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/interminglings": {
+      "get": {
+        "summary": "ListInterminglings lists intermingling records with search, filter, and pagination.",
+        "operationId": "InterminglingService_ListInterminglings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListInterminglingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (≥ 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search across code and name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "InterminglingService"
+        ]
+      },
+      "post": {
+        "summary": "CreateIntermingling creates a new intermingling record.",
+        "operationId": "InterminglingService_CreateIntermingling",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateInterminglingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateInterminglingRequest is the request for creating an intermingling record.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateInterminglingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "InterminglingService"
+        ]
+      }
+    },
+    "/api/v1/finance/interminglings/export": {
+      "get": {
+        "summary": "ExportInterminglings exports records to Excel.",
+        "operationId": "InterminglingService_ExportInterminglings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportInterminglingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "InterminglingService"
+        ]
+      }
+    },
+    "/api/v1/finance/interminglings/import": {
+      "post": {
+        "summary": "ImportInterminglings imports records from Excel.",
+        "operationId": "InterminglingService_ImportInterminglings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportInterminglingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportInterminglingsRequest is the request for importing intermingling records from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportInterminglingsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "InterminglingService"
+        ]
+      }
+    },
+    "/api/v1/finance/interminglings/template": {
+      "get": {
+        "summary": "DownloadInterminglingTemplate downloads the Excel import template.",
+        "operationId": "InterminglingService_DownloadInterminglingTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadInterminglingTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "InterminglingService"
+        ]
+      }
+    },
+    "/api/v1/finance/interminglings/{intmId}": {
+      "get": {
+        "summary": "GetIntermingling retrieves an intermingling record by ID.",
+        "operationId": "InterminglingService_GetIntermingling",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetInterminglingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "intmId",
+            "description": "Intermingling UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "InterminglingService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteIntermingling soft-deletes an intermingling record.",
+        "operationId": "InterminglingService_DeleteIntermingling",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteInterminglingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "intmId",
+            "description": "Intermingling UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "InterminglingService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateIntermingling updates an existing intermingling record.",
+        "operationId": "InterminglingService_UpdateIntermingling",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateInterminglingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "intmId",
+            "description": "Intermingling UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/InterminglingServiceUpdateInterminglingBody"
+            }
+          }
+        ],
+        "tags": [
+          "InterminglingService"
+        ]
+      }
+    },
+    "/api/v1/finance/machines": {
+      "get": {
+        "summary": "ListMachines lists machine records with search, filter, and pagination.",
+        "operationId": "MachineService_ListMachines",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMachinesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (≥ 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search across code and name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "mcTypeFilter",
+            "description": "Filter by machine type.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MachineService"
+        ]
+      },
+      "post": {
+        "summary": "CreateMachine creates a new machine record.",
+        "operationId": "MachineService_CreateMachine",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateMachineResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateMachineRequest is the request for creating a machine.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateMachineRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MachineService"
+        ]
+      }
+    },
+    "/api/v1/finance/machines/export": {
+      "get": {
+        "summary": "ExportMachines exports machine records to Excel.",
+        "operationId": "MachineService_ExportMachines",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportMachinesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "MachineService"
+        ]
+      }
+    },
+    "/api/v1/finance/machines/import": {
+      "post": {
+        "summary": "ImportMachines imports machine records from Excel.",
+        "operationId": "MachineService_ImportMachines",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportMachinesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportMachinesRequest is the request for importing machines from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportMachinesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MachineService"
+        ]
+      }
+    },
+    "/api/v1/finance/machines/template": {
+      "get": {
+        "summary": "DownloadMachineTemplate downloads the Excel import template.",
+        "operationId": "MachineService_DownloadMachineTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadMachineTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "MachineService"
+        ]
+      }
+    },
+    "/api/v1/finance/machines/{machineId}": {
+      "get": {
+        "summary": "GetMachine retrieves a machine by ID.",
+        "operationId": "MachineService_GetMachine",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMachineResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "machineId",
+            "description": "Machine UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MachineService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteMachine soft-deletes a machine record.",
+        "operationId": "MachineService_DeleteMachine",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteMachineResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "machineId",
+            "description": "Machine UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MachineService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateMachine updates an existing machine record.",
+        "operationId": "MachineService_UpdateMachine",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateMachineResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "machineId",
+            "description": "Machine UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MachineServiceUpdateMachineBody"
+            }
+          }
+        ],
+        "tags": [
+          "MachineService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads": {
+      "get": {
+        "summary": "ListMBHeads lists MB Head records with search, filter, and pagination.",
+        "operationId": "MBHeadService_ListMBHeads",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMBHeadsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (≥ 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search across mb_costing and mgt_name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      },
+      "post": {
+        "summary": "CreateMBHead creates a new MB Head record.",
+        "operationId": "MBHeadService_CreateMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateMBHeadRequest is the request for creating an MB Head record.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateMBHeadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/export": {
+      "get": {
+        "summary": "ExportMBHeads exports MB Head records to Excel.",
+        "operationId": "MBHeadService_ExportMBHeads",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportMBHeadsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/import": {
+      "post": {
+        "summary": "ImportMBHeads imports MB Head records from Excel.",
+        "operationId": "MBHeadService_ImportMBHeads",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportMBHeadsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportMBHeadsRequest is the request for importing MB Head records from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportMBHeadsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/template": {
+      "get": {
+        "summary": "DownloadMBHeadTemplate downloads the Excel import template.",
+        "operationId": "MBHeadService_DownloadMBHeadTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadMBHeadTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}": {
+      "get": {
+        "summary": "GetMBHead retrieves an MB Head record by ID.",
+        "operationId": "MBHeadService_GetMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteMBHead soft-deletes an MB Head record.",
+        "operationId": "MBHeadService_DeleteMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateMBHead updates an existing MB Head record.",
+        "operationId": "MBHeadService_UpdateMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBHeadServiceUpdateMBHeadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/spins": {
+      "get": {
+        "summary": "ListMBSpins lists MB Spin records under a head.",
+        "operationId": "MBSpinService_ListMBSpins",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMBSpinsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "description": "Page number (≥ 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search across mgt_name and mb_costing.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      },
+      "post": {
+        "summary": "CreateMBSpin creates a new MB Spin record under a head.",
+        "operationId": "MBSpinService_CreateMBSpin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateMBSpinResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBSpinServiceCreateMBSpinBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/spins/export": {
+      "get": {
+        "summary": "ExportMBSpins exports MB Spin records to Excel.",
+        "operationId": "MBSpinService_ExportMBSpins",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportMBSpinsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID filter.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/spins/import": {
+      "post": {
+        "summary": "ImportMBSpins imports MB Spin records from Excel.",
+        "operationId": "MBSpinService_ImportMBSpins",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportMBSpinsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBSpinServiceImportMBSpinsBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/spins/template": {
+      "get": {
+        "summary": "DownloadMBSpinTemplate downloads the Excel import template.",
+        "operationId": "MBSpinService_DownloadMBSpinTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadMBSpinTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/spins/{mbsId}": {
+      "get": {
+        "summary": "GetMBSpin retrieves an MB Spin record by ID.",
+        "operationId": "MBSpinService_GetMBSpin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMBSpinResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "mbsId",
+            "description": "MB Spin UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteMBSpin soft-deletes an MB Spin record.",
+        "operationId": "MBSpinService_DeleteMBSpin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteMBSpinResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "mbsId",
+            "description": "MB Spin UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateMBSpin updates an existing MB Spin record.",
+        "operationId": "MBSpinService_UpdateMBSpin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateMBSpinResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "mbsId",
+            "description": "MB Spin UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBSpinServiceUpdateMBSpinBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      }
+    },
+    "/api/v1/finance/product-grades": {
+      "get": {
+        "summary": "ListProductGrades lists Product Grades with search, filter, and pagination.",
+        "operationId": "ProductGradeService_ListProductGrades",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProductGradesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (≥ 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search across code and name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ProductGradeService"
+        ]
+      },
+      "post": {
+        "summary": "CreateProductGrade creates a new Product Grade.",
+        "operationId": "ProductGradeService_CreateProductGrade",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateProductGradeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateProductGradeRequest is the request for creating a Product Grade.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateProductGradeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ProductGradeService"
+        ]
+      }
+    },
+    "/api/v1/finance/product-grades/export": {
+      "get": {
+        "summary": "ExportProductGrades exports Product Grades to Excel.",
+        "operationId": "ProductGradeService_ExportProductGrades",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportProductGradesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "ProductGradeService"
+        ]
+      }
+    },
+    "/api/v1/finance/product-grades/import": {
+      "post": {
+        "summary": "ImportProductGrades imports Product Grades from Excel.",
+        "operationId": "ProductGradeService_ImportProductGrades",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportProductGradesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportProductGradesRequest is the request for importing Product Grades from Excel.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportProductGradesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ProductGradeService"
+        ]
+      }
+    },
+    "/api/v1/finance/product-grades/template": {
+      "get": {
+        "summary": "DownloadProductGradeTemplate downloads the Excel import template.",
+        "operationId": "ProductGradeService_DownloadProductGradeTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadProductGradeTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ProductGradeService"
+        ]
+      }
+    },
+    "/api/v1/finance/product-grades/{pgId}": {
+      "get": {
+        "summary": "GetProductGrade retrieves a Product Grade by ID.",
+        "operationId": "ProductGradeService_GetProductGrade",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetProductGradeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pgId",
+            "description": "Product Grade UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ProductGradeService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteProductGrade soft-deletes a Product Grade.",
+        "operationId": "ProductGradeService_DeleteProductGrade",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteProductGradeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pgId",
+            "description": "Product Grade UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ProductGradeService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateProductGrade updates an existing Product Grade.",
+        "operationId": "ProductGradeService_UpdateProductGrade",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateProductGradeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pgId",
+            "description": "Product Grade UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductGradeServiceUpdateProductGradeBody"
+            }
+          }
+        ],
+        "tags": [
+          "ProductGradeService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "BoxBobbinCostServiceCreateBoxBobbinCostRateBody": {
+      "type": "object",
+      "properties": {
+        "bbcrPeriod": {
+          "type": "string",
+          "description": "Period identifier (YYYYMM)."
+        },
+        "bbcrBobRateMkt": {
+          "type": "number",
+          "format": "double",
+          "description": "Bobbin marketing rate (≥ 0)."
+        },
+        "bbcrBoxRateMkt": {
+          "type": "number",
+          "format": "double",
+          "description": "Box marketing rate (≥ 0)."
+        },
+        "bbcrBobRateVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional bobbin valuation rate."
+        },
+        "bbcrBoxRateVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional box valuation rate."
+        }
+      },
+      "description": "CreateBoxBobbinCostRateRequest is the request for adding a rate entry."
+    },
+    "BoxBobbinCostServiceUpdateBoxBobbinCostBody": {
+      "type": "object",
+      "properties": {
+        "bbcName": {
+          "type": "string",
+          "description": "Updated display name (max 100 chars)."
+        },
+        "bbcType": {
+          "type": "string",
+          "description": "Updated config type (max 20 chars)."
+        },
+        "noOfBob": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Updated number of bobbins per box."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Updated notes (max 1000 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateBoxBobbinCostRequest is the request for updating a Box Bobbin Cost config."
+    },
+    "InterminglingServiceUpdateInterminglingBody": {
+      "type": "object",
+      "properties": {
+        "intmName": {
+          "type": "string",
+          "description": "Updated display name (max 100 chars)."
+        },
+        "intmCostPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated cost per kg."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Updated notes (max 1000 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateInterminglingRequest is the request for updating an intermingling record."
+    },
+    "MBHeadServiceUpdateMBHeadBody": {
+      "type": "object",
+      "properties": {
+        "mbhMbCosting": {
+          "type": "string",
+          "description": "Updated batch cost code (max 100 chars)."
+        },
+        "mbhMgtName": {
+          "type": "string",
+          "description": "Updated management display name (max 100 chars)."
+        },
+        "mbhDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated yarn denier."
+        },
+        "mbhFilament": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Updated number of filaments."
+        },
+        "mbhDozing": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated dozing percentage."
+        },
+        "mbhIsActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateMBHeadRequest is the request for updating an MB Head record."
+    },
+    "MBSpinServiceCreateMBSpinBody": {
+      "type": "object",
+      "properties": {
+        "mbsMgtName": {
+          "type": "string",
+          "description": "Management display name (max 100 chars)."
+        },
+        "mbsOracleSysId": {
+          "type": "string",
+          "description": "Optional Oracle sys ID (max 30 chars)."
+        },
+        "mbsDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional spin denier."
+        },
+        "mbsFilament": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional number of filaments."
+        },
+        "mbsDozing": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional spin dozing percentage."
+        },
+        "mbsMbCosting": {
+          "type": "string",
+          "description": "Optional spin cost code (max 100 chars)."
+        }
+      },
+      "description": "CreateMBSpinRequest is the request for creating an MB Spin record."
+    },
+    "MBSpinServiceImportMBSpinsBody": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (max 10 MB)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "How to handle duplicates."
+        }
+      },
+      "description": "ImportMBSpinsRequest is the request for importing MB Spin records from Excel."
+    },
+    "MBSpinServiceUpdateMBSpinBody": {
+      "type": "object",
+      "properties": {
+        "mbsMgtName": {
+          "type": "string",
+          "description": "Updated management display name (max 100 chars)."
+        },
+        "mbsDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated spin denier."
+        },
+        "mbsFilament": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Updated number of filaments."
+        },
+        "mbsDozing": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated spin dozing percentage."
+        },
+        "mbsMbCosting": {
+          "type": "string",
+          "description": "Updated spin cost code (max 100 chars)."
+        },
+        "mbsIsActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateMBSpinRequest is the request for updating an MB Spin record."
+    },
+    "MachineServiceUpdateMachineBody": {
+      "type": "object",
+      "properties": {
+        "machineName": {
+          "type": "string",
+          "description": "Updated display name (max 100 chars)."
+        },
+        "mcType": {
+          "type": "string",
+          "description": "Updated machine type (max 30 chars)."
+        },
+        "mcLocation": {
+          "type": "string",
+          "description": "Updated physical location (max 100 chars)."
+        },
+        "noOfPosition": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Updated number of spindle positions."
+        },
+        "noOfEnd": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Updated number of ends per position."
+        },
+        "mcSpeed": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated machine speed."
+        },
+        "machineRpm": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated machine RPM."
+        },
+        "mcEfficiency": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated machine efficiency percentage."
+        },
+        "powerPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated power cost per day."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Updated notes (max 1000 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateMachineRequest is the request for updating a machine."
+    },
+    "ProductGradeServiceUpdateProductGradeBody": {
+      "type": "object",
+      "properties": {
+        "pgName": {
+          "type": "string",
+          "description": "Updated display name (max 100 chars)."
+        },
+        "pgDescription": {
+          "type": "string",
+          "description": "Updated description."
+        },
+        "bcPerc": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated BC percentage."
+        },
+        "nonStdPerc": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated Non-Standard percentage."
+        },
+        "bcRecoveryRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated BC recovery rate."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Updated notes (max 1000 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateProductGradeRequest is the request for updating a Product Grade."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1BoxBobbinCost": {
+      "type": "object",
+      "properties": {
+        "bbcId": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "bbcCode": {
+          "type": "string",
+          "description": "Unique config code. Immutable after creation."
+        },
+        "bbcName": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "bbcType": {
+          "type": "string",
+          "description": "Config type (CAPTIVE or DELIVERY)."
+        },
+        "noOfBob": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of bobbins per box."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes."
+        },
+        "rates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BoxBobbinCostRate"
+          },
+          "description": "Period-specific rate entries."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "BoxBobbinCost represents a packing configuration master record."
+    },
+    "v1BoxBobbinCostRate": {
+      "type": "object",
+      "properties": {
+        "bbcrId": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "bbcrBbcId": {
+          "type": "string",
+          "description": "Parent config UUID."
+        },
+        "bbcrPeriod": {
+          "type": "string",
+          "description": "Period identifier (YYYYMM)."
+        },
+        "bbcrBobRateMkt": {
+          "type": "number",
+          "format": "double",
+          "description": "Bobbin marketing rate (USD/bobbin)."
+        },
+        "bbcrBoxRateMkt": {
+          "type": "number",
+          "format": "double",
+          "description": "Box marketing rate (USD/box)."
+        },
+        "bbcrBobRateVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional bobbin valuation rate (falls back to mkt for ACTUAL CalcType)."
+        },
+        "bbcrBoxRateVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional box valuation rate (falls back to mkt for ACTUAL CalcType)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "BoxBobbinCostRate represents a period-specific rate for a Box Bobbin Cost config."
+    },
+    "v1CreateBoxBobbinCostRateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1BoxBobbinCostRate",
+          "description": "Created rate entry."
+        }
+      },
+      "description": "CreateBoxBobbinCostRateResponse is the response for adding a rate entry."
+    },
+    "v1CreateBoxBobbinCostRequest": {
+      "type": "object",
+      "properties": {
+        "bbcCode": {
+          "type": "string",
+          "description": "Unique config code (max 30 chars)."
+        },
+        "bbcName": {
+          "type": "string",
+          "description": "Display name (max 100 chars)."
+        },
+        "bbcType": {
+          "type": "string",
+          "description": "Config type (max 20 chars)."
+        },
+        "noOfBob": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of bobbins per box (≥ 1)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes (max 1000 chars)."
+        }
+      },
+      "description": "CreateBoxBobbinCostRequest is the request for creating a Box Bobbin Cost config."
+    },
+    "v1CreateBoxBobbinCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1BoxBobbinCost",
+          "description": "Created config data."
+        }
+      },
+      "description": "CreateBoxBobbinCostResponse is the response for creating a Box Bobbin Cost config."
+    },
+    "v1CreateInterminglingRequest": {
+      "type": "object",
+      "properties": {
+        "intmCode": {
+          "type": "string",
+          "description": "Unique code (max 20 chars)."
+        },
+        "intmName": {
+          "type": "string",
+          "description": "Display name (max 100 chars)."
+        },
+        "intmCostPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Cost per kg in USD (≥ 0)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes (max 1000 chars)."
+        }
+      },
+      "description": "CreateInterminglingRequest is the request for creating an intermingling record."
+    },
+    "v1CreateInterminglingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Intermingling",
+          "description": "Created intermingling data."
+        }
+      },
+      "description": "CreateInterminglingResponse is the response for creating an intermingling record."
+    },
+    "v1CreateMBHeadRequest": {
+      "type": "object",
+      "properties": {
+        "mbhMbCosting": {
+          "type": "string",
+          "description": "Batch cost code (max 100 chars)."
+        },
+        "mbhOracleSysId": {
+          "type": "string",
+          "description": "Optional Oracle sys ID (max 30 chars)."
+        },
+        "mbhMgtName": {
+          "type": "string",
+          "description": "Management display name (max 100 chars)."
+        },
+        "mbhDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional yarn denier."
+        },
+        "mbhFilament": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional number of filaments."
+        },
+        "mbhDozing": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional dozing percentage."
+        }
+      },
+      "description": "CreateMBHeadRequest is the request for creating an MB Head record."
+    },
+    "v1CreateMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "Created MB Head data."
+        }
+      },
+      "description": "CreateMBHeadResponse is the response for creating an MB Head record."
+    },
+    "v1CreateMBSpinResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBSpin",
+          "description": "Created MB Spin data."
+        }
+      },
+      "description": "CreateMBSpinResponse is the response for creating an MB Spin record."
+    },
+    "v1CreateMachineRequest": {
+      "type": "object",
+      "properties": {
+        "machineCode": {
+          "type": "string",
+          "description": "Unique machine code (max 30 chars)."
+        },
+        "machineName": {
+          "type": "string",
+          "description": "Display name (max 100 chars)."
+        },
+        "mcType": {
+          "type": "string",
+          "description": "Machine type (max 30 chars)."
+        },
+        "mcLocation": {
+          "type": "string",
+          "description": "Physical location (max 100 chars)."
+        },
+        "noOfPosition": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of spindle positions (≥ 0)."
+        },
+        "noOfEnd": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of ends per position (≥ 1)."
+        },
+        "mcSpeed": {
+          "type": "number",
+          "format": "double",
+          "description": "Machine speed in m/min (≥ 0)."
+        },
+        "machineRpm": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional machine RPM."
+        },
+        "mcEfficiency": {
+          "type": "number",
+          "format": "double",
+          "description": "Machine efficiency percentage (0-100)."
+        },
+        "powerPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional power cost per day in USD."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes (max 1000 chars)."
+        }
+      },
+      "description": "CreateMachineRequest is the request for creating a machine."
+    },
+    "v1CreateMachineResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Machine",
+          "description": "Created machine data."
+        }
+      },
+      "description": "CreateMachineResponse is the response for creating a machine."
+    },
+    "v1CreateProductGradeRequest": {
+      "type": "object",
+      "properties": {
+        "pgCode": {
+          "type": "string",
+          "description": "Unique code (max 30 chars)."
+        },
+        "pgName": {
+          "type": "string",
+          "description": "Display name (max 100 chars)."
+        },
+        "pgDescription": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "bcPerc": {
+          "type": "number",
+          "format": "double",
+          "description": "Percentage output as BC grade (0-100)."
+        },
+        "nonStdPerc": {
+          "type": "number",
+          "format": "double",
+          "description": "Percentage output as Non-Standard (0-100)."
+        },
+        "bcRecoveryRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Recovery rate for BC grade (0-100)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes (max 1000 chars)."
+        }
+      },
+      "description": "CreateProductGradeRequest is the request for creating a Product Grade."
+    },
+    "v1CreateProductGradeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1ProductGrade",
+          "description": "Created Product Grade data."
+        }
+      },
+      "description": "CreateProductGradeResponse is the response for creating a Product Grade."
+    },
+    "v1DeleteBoxBobbinCostRateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteBoxBobbinCostRateResponse is the response for removing a rate entry."
+    },
+    "v1DeleteBoxBobbinCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteBoxBobbinCostResponse is the response for soft-deleting a Box Bobbin Cost config."
+    },
+    "v1DeleteInterminglingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteInterminglingResponse is the response for soft-deleting an intermingling record."
+    },
+    "v1DeleteMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteMBHeadResponse is the response for soft-deleting an MB Head record."
+    },
+    "v1DeleteMBSpinResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteMBSpinResponse is the response for soft-deleting an MB Spin record."
+    },
+    "v1DeleteMachineResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteMachineResponse is the response for soft-deleting a machine."
+    },
+    "v1DeleteProductGradeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteProductGradeResponse is the response for soft-deleting a Product Grade."
+    },
+    "v1DownloadBoxBobbinCostTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "DownloadBoxBobbinCostTemplateResponse is the response for downloading the import template."
+    },
+    "v1DownloadInterminglingTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "DownloadInterminglingTemplateResponse is the response for downloading the import template."
+    },
+    "v1DownloadMBHeadTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "DownloadMBHeadTemplateResponse is the response for downloading the import template."
+    },
+    "v1DownloadMBSpinTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "DownloadMBSpinTemplateResponse is the response for downloading the import template."
+    },
+    "v1DownloadMachineTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "DownloadMachineTemplateResponse is the response for downloading the import template."
+    },
+    "v1DownloadProductGradeTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel template file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "DownloadProductGradeTemplateResponse is the response for downloading the import template."
+    },
+    "v1ExportBoxBobbinCostsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "ExportBoxBobbinCostsResponse is the response for exporting configs."
+    },
+    "v1ExportInterminglingsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "ExportInterminglingsResponse is the response for exporting intermingling records."
+    },
+    "v1ExportMBHeadsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "ExportMBHeadsResponse is the response for exporting MB Head records."
+    },
+    "v1ExportMBSpinsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "ExportMBSpinsResponse is the response for exporting MB Spin records."
+    },
+    "v1ExportMachinesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "ExportMachinesResponse is the response for exporting machines."
+    },
+    "v1ExportProductGradesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "ExportProductGradesResponse is the response for exporting Product Grades."
+    },
+    "v1GetBoxBobbinCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1BoxBobbinCost",
+          "description": "Config data including rates."
+        }
+      },
+      "description": "GetBoxBobbinCostResponse is the response for retrieving a Box Bobbin Cost config."
+    },
+    "v1GetInterminglingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Intermingling",
+          "description": "Intermingling data."
+        }
+      },
+      "description": "GetInterminglingResponse is the response for retrieving an intermingling record."
+    },
+    "v1GetMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "MB Head data."
+        }
+      },
+      "description": "GetMBHeadResponse is the response for retrieving an MB Head record."
+    },
+    "v1GetMBSpinResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBSpin",
+          "description": "MB Spin data."
+        }
+      },
+      "description": "GetMBSpinResponse is the response for retrieving an MB Spin record."
+    },
+    "v1GetMachineResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Machine",
+          "description": "Machine data."
+        }
+      },
+      "description": "GetMachineResponse is the response for retrieving a machine."
+    },
+    "v1GetProductGradeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1ProductGrade",
+          "description": "Product Grade data."
+        }
+      },
+      "description": "GetProductGradeResponse is the response for retrieving a Product Grade."
+    },
+    "v1ImportBoxBobbinCostsRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (max 10 MB)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "How to handle duplicate codes."
+        }
+      },
+      "description": "ImportBoxBobbinCostsRequest is the request for importing configs from Excel."
+    },
+    "v1ImportBoxBobbinCostsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully created records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Per-row import errors."
+        }
+      },
+      "description": "ImportBoxBobbinCostsResponse is the response for importing configs."
+    },
+    "v1ImportError": {
+      "type": "object",
+      "properties": {
+        "rowNumber": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Row number in the Excel file."
+        },
+        "field": {
+          "type": "string",
+          "description": "Field that caused the error."
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message."
+        }
+      },
+      "description": "ImportError represents a single import error."
+    },
+    "v1ImportInterminglingsRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (max 10 MB)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "How to handle duplicate codes."
+        }
+      },
+      "description": "ImportInterminglingsRequest is the request for importing intermingling records from Excel."
+    },
+    "v1ImportInterminglingsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully created records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Per-row import errors."
+        }
+      },
+      "description": "ImportInterminglingsResponse is the response for importing intermingling records."
+    },
+    "v1ImportMBHeadsRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (max 10 MB)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "How to handle duplicate mb_costing values."
+        }
+      },
+      "description": "ImportMBHeadsRequest is the request for importing MB Head records from Excel."
+    },
+    "v1ImportMBHeadsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully created records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Per-row import errors."
+        }
+      },
+      "description": "ImportMBHeadsResponse is the response for importing MB Head records."
+    },
+    "v1ImportMBSpinsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully created records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Per-row import errors."
+        }
+      },
+      "description": "ImportMBSpinsResponse is the response for importing MB Spin records."
+    },
+    "v1ImportMachinesRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (max 10 MB)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "How to handle duplicate codes."
+        }
+      },
+      "description": "ImportMachinesRequest is the request for importing machines from Excel."
+    },
+    "v1ImportMachinesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully created records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Per-row import errors."
+        }
+      },
+      "description": "ImportMachinesResponse is the response for importing machines."
+    },
+    "v1ImportProductGradesRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content (max 10 MB)."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        },
+        "duplicateAction": {
+          "type": "string",
+          "description": "How to handle duplicate codes."
+        }
+      },
+      "description": "ImportProductGradesRequest is the request for importing Product Grades from Excel."
+    },
+    "v1ImportProductGradesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of successfully created records."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped records."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed records."
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportError"
+          },
+          "description": "Per-row import errors."
+        }
+      },
+      "description": "ImportProductGradesResponse is the response for importing Product Grades."
+    },
+    "v1Intermingling": {
+      "type": "object",
+      "properties": {
+        "intmId": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "intmCode": {
+          "type": "string",
+          "description": "Unique intermingling code (HIM, SIM, LIM, etc.). Immutable after creation."
+        },
+        "intmName": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "intmCostPerKg": {
+          "type": "number",
+          "format": "double",
+          "description": "Cost per kg in USD."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "Intermingling represents an intermingling cost lookup record."
+    },
+    "v1ListBoxBobbinCostsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BoxBobbinCost"
+          },
+          "description": "Config records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListBoxBobbinCostsResponse is the response for listing Box Bobbin Cost configs."
+    },
+    "v1ListInterminglingsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Intermingling"
+          },
+          "description": "Intermingling records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListInterminglingsResponse is the response for listing intermingling records."
+    },
+    "v1ListMBHeadsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBHead"
+          },
+          "description": "MB Head records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListMBHeadsResponse is the response for listing MB Head records."
+    },
+    "v1ListMBSpinsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBSpin"
+          },
+          "description": "MB Spin records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListMBSpinsResponse is the response for listing MB Spin records."
+    },
+    "v1ListMachinesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Machine"
+          },
+          "description": "Machine records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListMachinesResponse is the response for listing machines."
+    },
+    "v1ListProductGradesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProductGrade"
+          },
+          "description": "Product Grade records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListProductGradesResponse is the response for listing Product Grades."
+    },
+    "v1MBHead": {
+      "type": "object",
+      "properties": {
+        "mbhId": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "mbhOracleSysId": {
+          "type": "string",
+          "description": "Oracle PK for import reconciliation (optional)."
+        },
+        "mbhMbCosting": {
+          "type": "string",
+          "description": "Batch cost code / identifier. Unique."
+        },
+        "mbhMgtName": {
+          "type": "string",
+          "description": "Management display name."
+        },
+        "mbhDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Yarn denier (dtex). Optional."
+        },
+        "mbhFilament": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of filaments. Optional."
+        },
+        "mbhDozing": {
+          "type": "number",
+          "format": "double",
+          "description": "Dozing percentage. Optional."
+        },
+        "mbhIsActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "MBHead represents a Melange Batch head master record (MEL yarn type only)."
+    },
+    "v1MBSpin": {
+      "type": "object",
+      "properties": {
+        "mbsId": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "mbsOracleSysId": {
+          "type": "string",
+          "description": "Oracle PK for import reconciliation (optional)."
+        },
+        "mbsMbhId": {
+          "type": "string",
+          "description": "Parent MB Head UUID."
+        },
+        "mbsMgtName": {
+          "type": "string",
+          "description": "Management display name."
+        },
+        "mbsDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Spin denier (dtex). Optional."
+        },
+        "mbsFilament": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of filaments. Optional."
+        },
+        "mbsDozing": {
+          "type": "number",
+          "format": "double",
+          "description": "Spin dozing percentage. Optional."
+        },
+        "mbsMbCosting": {
+          "type": "string",
+          "description": "Spin cost code / identifier. Optional."
+        },
+        "mbsIsActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "MBSpin represents a Melange Batch spin detail record (child of MBHead)."
+    },
+    "v1Machine": {
+      "type": "object",
+      "properties": {
+        "machineId": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "machineCode": {
+          "type": "string",
+          "description": "Unique machine code. Immutable after creation."
+        },
+        "machineName": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "mcType": {
+          "type": "string",
+          "description": "Machine type (DTY, POY, FDY, etc.)."
+        },
+        "mcLocation": {
+          "type": "string",
+          "description": "Physical location (plant/building/floor)."
+        },
+        "noOfPosition": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of spindle positions."
+        },
+        "noOfEnd": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of ends per position."
+        },
+        "mcSpeed": {
+          "type": "number",
+          "format": "double",
+          "description": "Machine speed in m/min."
+        },
+        "machineRpm": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional machine RPM."
+        },
+        "mcEfficiency": {
+          "type": "number",
+          "format": "double",
+          "description": "Machine efficiency as a percentage (default 95)."
+        },
+        "powerPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional power cost per day in USD."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "Machine represents a yarn machine master record."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1ProductGrade": {
+      "type": "object",
+      "properties": {
+        "pgId": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "pgCode": {
+          "type": "string",
+          "description": "Unique code. Immutable after creation."
+        },
+        "pgName": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "pgDescription": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "bcPerc": {
+          "type": "number",
+          "format": "double",
+          "description": "Percentage output as BC grade."
+        },
+        "nonStdPerc": {
+          "type": "number",
+          "format": "double",
+          "description": "Percentage output as Non-Standard."
+        },
+        "bcRecoveryRate": {
+          "type": "number",
+          "format": "double",
+          "description": "Percentage of value recovered from BC grade."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "ProductGrade represents a quality-loss configuration preset."
+    },
+    "v1UpdateBoxBobbinCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1BoxBobbinCost",
+          "description": "Updated config data."
+        }
+      },
+      "description": "UpdateBoxBobbinCostResponse is the response for updating a Box Bobbin Cost config."
+    },
+    "v1UpdateInterminglingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Intermingling",
+          "description": "Updated intermingling data."
+        }
+      },
+      "description": "UpdateInterminglingResponse is the response for updating an intermingling record."
+    },
+    "v1UpdateMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "Updated MB Head data."
+        }
+      },
+      "description": "UpdateMBHeadResponse is the response for updating an MB Head record."
+    },
+    "v1UpdateMBSpinResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBSpin",
+          "description": "Updated MB Spin data."
+        }
+      },
+      "description": "UpdateMBSpinResponse is the response for updating an MB Spin record."
+    },
+    "v1UpdateMachineResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1Machine",
+          "description": "Updated machine data."
+        }
+      },
+      "description": "UpdateMachineResponse is the response for updating a machine."
+    },
+    "v1UpdateProductGradeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1ProductGrade",
+          "description": "Updated Product Grade data."
+        }
+      },
+      "description": "UpdateProductGradeResponse is the response for updating a Product Grade."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

@@ -145,6 +145,12 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	rmCostRepo := postgres.NewRMCostRepository(db)
 	rmCostDetailRepo := postgres.NewRMCostDetailRepository(db)
 	rmCostInputsRepo := postgres.NewRMCostInputsRepository(db)
+	boxBobbinCostRepo := postgres.NewBoxBobbinCostRepository(db)
+	mbHeadRepo := postgres.NewMBHeadRepository(db)
+	mbSpinRepo := postgres.NewMBSpinRepository(db)
+	machineRepo := postgres.NewMachineRepository(db)
+	interminglingRepo := postgres.NewInterminglingRepository(db)
+	productGradeRepo := postgres.NewProductGradeRepository(db)
 	// NOTE: legacy productRepo / prdRequestRepo wired to dropped tables — removed.
 	// Canonical Phase B (cost_product_master, cost_product_order) wiring added in S2.8-S2.10.
 
@@ -188,6 +194,36 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	uomCategoryHandler, err := grpcdelivery.NewUOMCategoryHandler(uomCategoryRepo)
+	if err != nil {
+		return err
+	}
+
+	boxBobbinCostHandler, err := grpcdelivery.NewBoxBobbinCostHandler(boxBobbinCostRepo)
+	if err != nil {
+		return err
+	}
+
+	mbHeadHandler, err := grpcdelivery.NewMBHeadHandler(mbHeadRepo)
+	if err != nil {
+		return err
+	}
+
+	mbSpinHandler, err := grpcdelivery.NewMBSpinHandler(mbSpinRepo)
+	if err != nil {
+		return err
+	}
+
+	machineHandler, err := grpcdelivery.NewMachineHandler(machineRepo)
+	if err != nil {
+		return err
+	}
+
+	interminglingHandler, err := grpcdelivery.NewInterminglingHandler(interminglingRepo)
+	if err != nil {
+		return err
+	}
+
+	productGradeHandler, err := grpcdelivery.NewProductGradeHandler(productGradeRepo)
 	if err != nil {
 		return err
 	}
@@ -568,6 +604,9 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// Setup and start servers
 	return startServers(ctx, cfg,
 		uomHandler, rmCategoryHandler, parameterHandler, formulaHandler, uomCategoryHandler,
+		boxBobbinCostHandler,
+		mbHeadHandler, mbSpinHandler,
+		machineHandler, interminglingHandler, productGradeHandler,
 		oracleSyncHandler, rmGroupHandler, rmCostHandler,
 		costProductTypeHandler, costRmTypeHandler, costErpHandler, costProductMasterHandler, costRouteHandler,
 		costRequestTypeHandler, costPaperTubeTypeHandler, costProductRequestHandler,
@@ -681,6 +720,12 @@ func startServers(ctx context.Context, cfg *config.Config,
 	parameterHandler *grpcdelivery.ParameterHandler,
 	formulaHandler *grpcdelivery.FormulaHandler,
 	uomCategoryHandler *grpcdelivery.UOMCategoryHandler,
+	boxBobbinCostHandler *grpcdelivery.BoxBobbinCostHandler,
+	mbHeadHandler *grpcdelivery.MBHeadHandler,
+	mbSpinHandler *grpcdelivery.MBSpinHandler,
+	machineHandler *grpcdelivery.MachineHandler,
+	interminglingHandler *grpcdelivery.InterminglingHandler,
+	productGradeHandler *grpcdelivery.ProductGradeHandler,
 	oracleSyncHandler *grpcdelivery.OracleSyncHandler,
 	rmGroupHandler *grpcdelivery.RMGroupHandler,
 	rmCostHandler *grpcdelivery.RMCostHandler,
@@ -721,6 +766,13 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterParameterServiceServer(grpcServer.GRPCServer(), parameterHandler)
 	financev1.RegisterFormulaServiceServer(grpcServer.GRPCServer(), formulaHandler)
 	financev1.RegisterUOMCategoryServiceServer(grpcServer.GRPCServer(), uomCategoryHandler)
+	financev1.RegisterBoxBobbinCostServiceServer(grpcServer.GRPCServer(), boxBobbinCostHandler)
+	financev1.RegisterMBHeadServiceServer(grpcServer.GRPCServer(), mbHeadHandler)
+	financev1.RegisterMBSpinServiceServer(grpcServer.GRPCServer(), mbSpinHandler)
+	// Yarn master services.
+	financev1.RegisterMachineServiceServer(grpcServer.GRPCServer(), machineHandler)
+	financev1.RegisterInterminglingServiceServer(grpcServer.GRPCServer(), interminglingHandler)
+	financev1.RegisterProductGradeServiceServer(grpcServer.GRPCServer(), productGradeHandler)
 	financev1.RegisterOracleSyncServiceServer(grpcServer.GRPCServer(), oracleSyncHandler)
 	financev1.RegisterRMGroupServiceServer(grpcServer.GRPCServer(), rmGroupHandler)
 	financev1.RegisterRMCostServiceServer(grpcServer.GRPCServer(), rmCostHandler)
