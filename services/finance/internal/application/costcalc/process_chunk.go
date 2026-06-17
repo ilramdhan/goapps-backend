@@ -132,7 +132,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 	}
 
 	itemCodes := collectRMCodes(routes)
-	rmCosts, err := s.loader.LoadRMCosts(ctx, itemCodes, in.Period)
+	rmCosts, err := s.loader.LoadRMCosts(ctx, itemCodes, in.Period, string(in.CalcType))
 	if err != nil {
 		return nil, fmt.Errorf("load RM costs: %w", err)
 	}
@@ -255,14 +255,18 @@ func (s *Service) emitProductBlocked(ctx context.Context, in ProcessChunkInput, 
 // persistResult upserts the cost result, writes audit-history on supersede,
 // and marks the job_product row SUCCESS with a compact calc-log blob.
 func (s *Service) persistResult(ctx context.Context, in ProcessChunkInput, pid int64, route *costroute.Graph, out *ComputeOutput) error {
+	snap := out.ParamSnapshot
 	r := costcalcdom.NewResult(
 		pid, in.Period, in.CalcType, route.Head.HeadID, 1,
 		out.CostPerUnit, out.TotalRMCost, out.TotalConversion, out.TotalCost,
 		0, "IDR",
 		jsonOrNil(out.CostByLevel), jsonOrNil(out.RMCostDetail),
-		jsonOrNil(out.ParamSnapshot), jsonOrNil(out.FormulaTrace),
+		jsonOrNil(snap), jsonOrNil(out.FormulaTrace),
 		out.InputHash,
 		in.JobID, in.Actor,
+		snap["COST_CAP_FINAL"], snap["COST_DEL_FINAL"],
+		snap["VB1_DEL_COST"], snap["VB2_DEL_COST"], snap["VB3_DEL_COST"],
+		snap["VB4_DEL_COST"], snap["VB5_DEL_COST"],
 	)
 
 	newID, prevVer, prevTotal, prevID, err := s.resultRepo.UpsertWithSupersede(ctx, r)

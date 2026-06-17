@@ -372,7 +372,7 @@ func (s *LoaderSuite) TestLoader_LoadFormulas_TopoSort() {
 }
 
 func (s *LoaderSuite) TestLoader_LoadRMCosts_KeyFormat() {
-	got, err := s.loader.LoadRMCosts(s.ctx, []string{"GRP-AA", "ITM-XX", "ITM-NOPE"}, s.period)
+	got, err := s.loader.LoadRMCosts(s.ctx, []string{"GRP-AA", "ITM-XX", "ITM-NOPE"}, s.period, s.calcType)
 	require.NoError(s.T(), err)
 	// GROUP has empty item_code → trailing pipe.
 	require.InDelta(s.T(), 12.50, got["GRP-AA|"], 0.01)

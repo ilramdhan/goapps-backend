@@ -119,8 +119,12 @@ func insertNewResult(ctx context.Context, tx *sql.Tx, r *costcalc.Result, versio
 			cpc_version, cpc_cost_per_unit, cpc_total_rm_cost, cpc_total_conversion,
 			cpc_total_cost, cpc_uom_id, cpc_currency_code,
 			cpc_cost_by_level, cpc_rm_cost_detail, cpc_param_snapshot, cpc_formula_trace,
-			cpc_input_hash, cpc_status, cpc_job_id, cpc_calculated_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NULLIF($10,0),$11,$12,$13,$14,$15,NULLIF($16,''),$17,NULLIF($18,0),$19)
+			cpc_input_hash, cpc_status, cpc_job_id, cpc_calculated_by,
+			cpc_captive_cost, cpc_delivery_cost,
+			cpc_vb1_del_cost, cpc_vb2_del_cost, cpc_vb3_del_cost,
+			cpc_vb4_del_cost, cpc_vb5_del_cost
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NULLIF($10,0),$11,$12,$13,$14,$15,NULLIF($16,''),$17,NULLIF($18,0),$19,
+		          NULLIF($20,0),$21,NULLIF($22,0),NULLIF($23,0),NULLIF($24,0),NULLIF($25,0),NULLIF($26,0))
 		RETURNING cpc_cost_id`
 	var id int64
 	err := tx.QueryRowContext(ctx, q,
@@ -130,6 +134,9 @@ func insertNewResult(ctx context.Context, tx *sql.Tx, r *costcalc.Result, versio
 		nullableJSON(r.CostByLevel()), nullableJSON(r.RMCostDetail()),
 		nullableJSON(r.ParamSnapshot()), nullableJSON(r.FormulaTrace()),
 		r.InputHash(), string(r.Status()), r.JobID(), r.CalculatedBy(),
+		r.CaptiveCost(), r.DeliveryCost(),
+		r.VB1DelCost(), r.VB2DelCost(), r.VB3DelCost(),
+		r.VB4DelCost(), r.VB5DelCost(),
 	).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("insert new result: %w", err)

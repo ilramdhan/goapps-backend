@@ -38,6 +38,13 @@ type Result struct {
 	calculatedBy  string
 	verifiedAt    *time.Time
 	verifiedBy    string
+	captiveCost   float64
+	deliveryCost  float64
+	vb1DelCost    float64
+	vb2DelCost    float64
+	vb3DelCost    float64
+	vb4DelCost    float64
+	vb5DelCost    float64
 }
 
 // NewResult constructs a fresh CALCULATED Result.
@@ -46,6 +53,7 @@ func NewResult(
 	costPerUnit, totalRM, totalConv, totalCost float64, uomID int, currency string,
 	costByLevel, rmDetail, paramSnap, formulaTrace []byte, inputHash string,
 	jobID int64, calculatedBy string,
+	captiveCost, deliveryCost, vb1DelCost, vb2DelCost, vb3DelCost, vb4DelCost, vb5DelCost float64,
 ) *Result {
 	return &Result{
 		productSysID: productSysID, period: period, calcType: calcType, routeHeadID: routeHeadID, version: version,
@@ -54,6 +62,9 @@ func NewResult(
 		costByLevel: costByLevel, rmCostDetail: rmDetail, paramSnapshot: paramSnap, formulaTrace: formulaTrace,
 		inputHash: inputHash, status: ResultStatusCalculated, jobID: jobID,
 		calculatedAt: time.Now(), calculatedBy: calculatedBy,
+		captiveCost: captiveCost, deliveryCost: deliveryCost,
+		vb1DelCost: vb1DelCost, vb2DelCost: vb2DelCost, vb3DelCost: vb3DelCost,
+		vb4DelCost: vb4DelCost, vb5DelCost: vb5DelCost,
 	}
 }
 
@@ -145,6 +156,27 @@ func (r *Result) VerifiedAt() *time.Time { return r.verifiedAt }
 
 // VerifiedBy returns the verifier/approver.
 func (r *Result) VerifiedBy() string { return r.verifiedBy }
+
+// CaptiveCost returns COST_CAP_FINAL — captive packaging cost per kg.
+func (r *Result) CaptiveCost() float64 { return r.captiveCost }
+
+// DeliveryCost returns COST_DEL_FINAL — delivery packaging cost per kg.
+func (r *Result) DeliveryCost() float64 { return r.deliveryCost }
+
+// VB1DelCost returns VB1_DEL_COST — delivery cost at volume bucket 1 threshold.
+func (r *Result) VB1DelCost() float64 { return r.vb1DelCost }
+
+// VB2DelCost returns VB2_DEL_COST — delivery cost at volume bucket 2 threshold.
+func (r *Result) VB2DelCost() float64 { return r.vb2DelCost }
+
+// VB3DelCost returns VB3_DEL_COST — delivery cost at volume bucket 3 threshold.
+func (r *Result) VB3DelCost() float64 { return r.vb3DelCost }
+
+// VB4DelCost returns VB4_DEL_COST — delivery cost at volume bucket 4 threshold.
+func (r *Result) VB4DelCost() float64 { return r.vb4DelCost }
+
+// VB5DelCost returns VB5_DEL_COST — delivery cost at volume bucket 5 threshold.
+func (r *Result) VB5DelCost() float64 { return r.vb5DelCost }
 
 // MarkVerified transitions CALCULATED -> VERIFIED.
 func (r *Result) MarkVerified(by string) error {
