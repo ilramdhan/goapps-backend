@@ -236,6 +236,8 @@ type RequiredParamEntry struct {
 	LookupMasterCode     string                 `protobuf:"bytes,10,opt,name=lookup_master_code,json=lookupMasterCode,proto3" json:"lookup_master_code,omitempty"`
 	DisplayOrder         int32                  `protobuf:"varint,11,opt,name=display_order,json=displayOrder,proto3" json:"display_order,omitempty"`
 	DisplayGroup         string                 `protobuf:"bytes,12,opt,name=display_group,json=displayGroup,proto3" json:"display_group,omitempty"`
+	// param_code of the MASTER_LOOKUP trigger param this child belongs to (empty = not a child param).
+	LookupFillGroupCode string `protobuf:"bytes,13,opt,name=lookup_fill_group_code,json=lookupFillGroupCode,proto3" json:"lookup_fill_group_code,omitempty"`
 	// Existing value (zero/empty when not yet bound).
 	HasValue      bool   `protobuf:"varint,20,opt,name=has_value,json=hasValue,proto3" json:"has_value,omitempty"`
 	ValueNumeric  string `protobuf:"bytes,21,opt,name=value_numeric,json=valueNumeric,proto3" json:"value_numeric,omitempty"`
@@ -357,6 +359,13 @@ func (x *RequiredParamEntry) GetDisplayOrder() int32 {
 func (x *RequiredParamEntry) GetDisplayGroup() string {
 	if x != nil {
 		return x.DisplayGroup
+	}
+	return ""
+}
+
+func (x *RequiredParamEntry) GetLookupFillGroupCode() string {
+	if x != nil {
+		return x.LookupFillGroupCode
 	}
 	return ""
 }
@@ -1042,8 +1051,10 @@ type AvailableParamEntry struct {
 	LookupMasterCode     string                 `protobuf:"bytes,10,opt,name=lookup_master_code,json=lookupMasterCode,proto3" json:"lookup_master_code,omitempty"`
 	DisplayOrder         int32                  `protobuf:"varint,11,opt,name=display_order,json=displayOrder,proto3" json:"display_order,omitempty"`
 	DisplayGroup         string                 `protobuf:"bytes,12,opt,name=display_group,json=displayGroup,proto3" json:"display_group,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// param_code of the MASTER_LOOKUP trigger param this child belongs to (empty = not a child param).
+	LookupFillGroupCode string `protobuf:"bytes,13,opt,name=lookup_fill_group_code,json=lookupFillGroupCode,proto3" json:"lookup_fill_group_code,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *AvailableParamEntry) Reset() {
@@ -1156,6 +1167,13 @@ func (x *AvailableParamEntry) GetDisplayOrder() int32 {
 func (x *AvailableParamEntry) GetDisplayGroup() string {
 	if x != nil {
 		return x.DisplayGroup
+	}
+	return ""
+}
+
+func (x *AvailableParamEntry) GetLookupFillGroupCode() string {
+	if x != nil {
+		return x.LookupFillGroupCode
 	}
 	return ""
 }
@@ -2389,7 +2407,7 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\n" +
 	"value_flag\x18\x16 \x01(\bR\tvalueFlag\x12\x1b\n" +
 	"\tfilled_at\x18\x1e \x01(\tR\bfilledAt\x12\x1b\n" +
-	"\tfilled_by\x18\x1f \x01(\tR\bfilledBy\"\x8a\x05\n" +
+	"\tfilled_by\x18\x1f \x01(\tR\bfilledBy\"\xbf\x05\n" +
 	"\x12RequiredParamEntry\x12\x19\n" +
 	"\bparam_id\x18\x01 \x01(\tR\aparamId\x12\x1d\n" +
 	"\n" +
@@ -2405,7 +2423,8 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\x12lookup_master_code\x18\n" +
 	" \x01(\tR\x10lookupMasterCode\x12#\n" +
 	"\rdisplay_order\x18\v \x01(\x05R\fdisplayOrder\x12#\n" +
-	"\rdisplay_group\x18\f \x01(\tR\fdisplayGroup\x12\x1b\n" +
+	"\rdisplay_group\x18\f \x01(\tR\fdisplayGroup\x123\n" +
+	"\x16lookup_fill_group_code\x18\r \x01(\tR\x13lookupFillGroupCode\x12\x1b\n" +
 	"\thas_value\x18\x14 \x01(\bR\bhasValue\x12#\n" +
 	"\rvalue_numeric\x18\x15 \x01(\tR\fvalueNumeric\x12\x1d\n" +
 	"\n" +
@@ -2456,7 +2475,7 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\rdisplay_group\x18\x04 \x01(\tR\fdisplayGroup\"\x7f\n" +
 	"\"CheckMissingRequiredParamsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
-	"\x04data\x18\x02 \x03(\v2\x18.finance.v1.MissingParamR\x04data\"\xd1\x03\n" +
+	"\x04data\x18\x02 \x03(\v2\x18.finance.v1.MissingParamR\x04data\"\x86\x04\n" +
 	"\x13AvailableParamEntry\x12\x19\n" +
 	"\bparam_id\x18\x01 \x01(\tR\aparamId\x12\x1d\n" +
 	"\n" +
@@ -2472,7 +2491,8 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\x12lookup_master_code\x18\n" +
 	" \x01(\tR\x10lookupMasterCode\x12#\n" +
 	"\rdisplay_order\x18\v \x01(\x05R\fdisplayOrder\x12#\n" +
-	"\rdisplay_group\x18\f \x01(\tR\fdisplayGroup\"K\n" +
+	"\rdisplay_group\x18\f \x01(\tR\fdisplayGroup\x123\n" +
+	"\x16lookup_fill_group_code\x18\r \x01(\tR\x13lookupFillGroupCode\"K\n" +
 	"\x1aListAvailableParamsRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fproductSysId\"\x7f\n" +
 	"\x1bListAvailableParamsResponse\x12+\n" +

@@ -180,6 +180,7 @@ func (h *CostProductParameterHandler) ListAvailableParams(ctx context.Context, r
 			LookupMasterCode:     m.LookupMasterCode,
 			DisplayOrder:         m.DisplayOrder,
 			DisplayGroup:         m.DisplayGroup,
+			LookupFillGroupCode:  m.LookupFillGroupCode,
 		})
 	}
 	return &financev1.ListAvailableParamsResponse{Base: cppSuccessResponse("Available params loaded"), Data: out}, nil
@@ -400,6 +401,7 @@ func requiredEntryToProto(e cpp.RequiredEntry) *financev1.RequiredParamEntry {
 		LookupMasterCode:     e.Meta.LookupMasterCode,
 		DisplayOrder:         e.Meta.DisplayOrder,
 		DisplayGroup:         e.Meta.DisplayGroup,
+		LookupFillGroupCode:  e.Meta.LookupFillGroupCode,
 	}
 	applyEntryValue(out, e.Value)
 	return out

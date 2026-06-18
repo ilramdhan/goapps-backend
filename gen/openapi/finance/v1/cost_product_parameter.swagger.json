@@ -642,6 +642,10 @@
         },
         "displayGroup": {
           "type": "string"
+        },
+        "lookupFillGroupCode": {
+          "type": "string",
+          "description": "param_code of the MASTER_LOOKUP trigger param this child belongs to (empty = not a child param)."
         }
       }
     },
@@ -1034,6 +1038,10 @@
         },
         "displayGroup": {
           "type": "string"
+        },
+        "lookupFillGroupCode": {
+          "type": "string",
+          "description": "param_code of the MASTER_LOOKUP trigger param this child belongs to (empty = not a child param)."
         },
         "hasValue": {
           "type": "boolean",
