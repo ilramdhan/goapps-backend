@@ -235,7 +235,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	yarnLookupFillHandler, err := grpcdelivery.NewYarnLookupFillHandler(
-		machineRepo, interminglingRepo, productGradeRepo, mbHeadRepo, boxBobbinCostRepo,
+		machineRepo, interminglingRepo, productGradeRepo, mbHeadRepo, boxBobbinCostRepo, parameterRepo,
 	)
 	if err != nil {
 		return fmt.Errorf("new yarn lookup fill handler: %w", err)
