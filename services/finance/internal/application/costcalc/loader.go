@@ -38,7 +38,7 @@ type ProductLoader interface {
 	LoadRoutesByProducts(ctx context.Context, productSysIDs []int64) (map[int64]*costroute.Graph, error)
 	LoadCAPP(ctx context.Context, productSysIDs []int64) (map[int64]map[string]float64, error)
 	LoadFormulas(ctx context.Context, productSysIDs []int64) (map[int64][]Formula, error)
-	LoadRMCosts(ctx context.Context, itemCodes []string, period string) (map[string]float64, error)
+	LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]float64, error)
 	LoadUpstreamCosts(ctx context.Context, productSysIDs []int64, period, calcType string) (map[int64]float64, error)
 }
 
@@ -617,18 +617,24 @@ func topoSortFormulas(fs []Formula) ([]Formula, error) { //nolint:gocognit,gocyc
 // itemCodes here is overloaded for input filtering — the engine passes both
 // item codes (for ITEM-type RMs) and group codes (for GROUP-type RMs) since
 // cst_rm_cost stores them all in rm_code.
-func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, period string) (map[string]float64, error) {
+func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]float64, error) {
 	defer observeLoad(loaderKindRMCosts, time.Now())
 	out := map[string]float64{}
 	if len(itemCodes) == 0 || period == "" {
 		return out, nil
 	}
 	const q = `
-		SELECT rm_code, COALESCE(item_code, ''), COALESCE(cost_val, 0)
+		SELECT rm_code, COALESCE(item_code, ''),
+		       CASE $3
+		           WHEN 'ACTUAL'   THEN COALESCE(cost_val,  0)
+		           WHEN 'FORECAST' THEN COALESCE(cost_mark, 0)
+		           WHEN 'SELLING'  THEN COALESCE(cost_sim,  0)
+		           ELSE COALESCE(cost_val, 0)
+		       END
 		FROM cst_rm_cost
 		WHERE period = $1
 		  AND rm_code = ANY($2)`
-	rows, err := l.db.QueryContext(ctx, q, period, pq.Array(itemCodes))
+	rows, err := l.db.QueryContext(ctx, q, period, pq.Array(itemCodes), calcType)
 	if err != nil {
 		return nil, fmt.Errorf("load RM costs: %w", err)
 	}

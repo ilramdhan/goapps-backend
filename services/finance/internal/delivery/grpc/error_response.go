@@ -87,6 +87,18 @@ func wrapErrorInResponse(fullMethod string, grpcErr error) proto.Message {
 	return resp
 }
 
+// invalidIDResponse returns a BaseResponse for an invalid UUID field.
+func invalidIDResponse(fieldName string) *commonv1.BaseResponse {
+	return &commonv1.BaseResponse{
+		IsSuccess:  false,
+		StatusCode: "400",
+		Message:    fmt.Sprintf("invalid %s: must be a valid UUID", fieldName),
+		ValidationErrors: []*commonv1.ValidationError{
+			{Field: fieldName, Message: "must be a valid UUID"},
+		},
+	}
+}
+
 // grpcCodeToHTTPStatus maps gRPC status codes to HTTP status codes.
 func grpcCodeToHTTPStatus(code codes.Code) int {
 	switch code {

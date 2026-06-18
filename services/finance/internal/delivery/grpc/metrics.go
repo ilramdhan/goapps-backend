@@ -94,6 +94,54 @@ var (
 		[]string{"operation", "status"},
 	)
 
+	mbHeadOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "mb_head_operations_total",
+			Help: "Total number of MB Head operations",
+		},
+		[]string{"operation", "status"},
+	)
+
+	mbSpinOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "mb_spin_operations_total",
+			Help: "Total number of MB Spin operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
+	machineOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "machine_operations_total",
+			Help: "Total number of Machine operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
+	boxBobbinCostOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "box_bobbin_cost_operations_total",
+			Help: "Total number of Box Bobbin Cost operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
+	interminglingOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "intermingling_operations_total",
+			Help: "Total number of Intermingling operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
+	productGradeOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "product_grade_operations_total",
+			Help: "Total number of Product Grade operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
 	cacheHitsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cache_hits_total",
@@ -161,4 +209,34 @@ func RecordCacheHit(cache string) {
 // RecordCacheMiss records a cache miss.
 func RecordCacheMiss(cache string) {
 	cacheMissesTotal.WithLabelValues(cache).Inc()
+}
+
+// RecordMachineOperation records a Machine operation metric.
+func RecordMachineOperation(operation string, success bool) {
+	machineOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordInterminglingOperation records an Intermingling operation metric.
+func RecordInterminglingOperation(operation string, success bool) {
+	interminglingOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordProductGradeOperation records a Product Grade operation metric.
+func RecordProductGradeOperation(operation string, success bool) {
+	productGradeOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordMBHeadOperation records an MB Head operation metric.
+func RecordMBHeadOperation(operation string, success bool) {
+	mbHeadOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordMBSpinOperation records an MB Spin operation metric.
+func RecordMBSpinOperation(operation string, success bool) {
+	mbSpinOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordBoxBobbinCostOperation records a Box Bobbin Cost operation metric.
+func RecordBoxBobbinCostOperation(operation string, success bool) {
+	boxBobbinCostOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
 }

@@ -25,6 +25,7 @@ const (
 	filterActive     = "active"
 	filterInactive   = "inactive"
 	sortKeyCreatedAt = "created_at"
+	whereNotDeleted  = "WHERE deleted_at IS NULL"
 )
 
 // DB wraps the SQL database connection.

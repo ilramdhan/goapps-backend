@@ -87,6 +87,26 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 		return fmt.Errorf("failed to register UOM gateway: %w", err)
 	}
 
+	// Yarn master services.
+	if err := financev1.RegisterMachineServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register Machine gateway: %w", err)
+	}
+	if err := financev1.RegisterInterminglingServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register Intermingling gateway: %w", err)
+	}
+	if err := financev1.RegisterProductGradeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register ProductGrade gateway: %w", err)
+	}
+	if err := financev1.RegisterMBHeadServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register MBHead gateway: %w", err)
+	}
+	if err := financev1.RegisterMBSpinServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register MBSpin gateway: %w", err)
+	}
+	if err := financev1.RegisterBoxBobbinCostServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register BoxBobbinCost gateway: %w", err)
+	}
+
 	if err := financev1.RegisterRMCategoryServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register RMCategory gateway: %w", err)
 	}

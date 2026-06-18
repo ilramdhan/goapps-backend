@@ -244,6 +244,7 @@ func (s *CostCalcReposSuite) TestResult_UpsertWithSupersedeVersionBump() {
 		s.productSysID, "202605", costcalc.CalcTypeActual, s.routeHeadID, 1,
 		100.0, 60.0, 40.0, 100.0, 0, "IDR",
 		nil, nil, nil, nil, "hash-1", job.ID(), "integ-test",
+		0, 0, 0, 0, 0, 0, 0,
 	)
 	newID, prevVer, _, prevID, err := s.resultRepo.UpsertWithSupersede(s.ctx, first)
 	require.NoError(s.T(), err)
@@ -255,6 +256,7 @@ func (s *CostCalcReposSuite) TestResult_UpsertWithSupersedeVersionBump() {
 		s.productSysID, "202605", costcalc.CalcTypeActual, s.routeHeadID, 1,
 		120.0, 70.0, 50.0, 120.0, 0, "IDR",
 		nil, nil, nil, nil, "hash-2", job.ID(), "integ-test",
+		0, 0, 0, 0, 0, 0, 0,
 	)
 	newID2, prevVer2, prevTotal2, prevID2, err := s.resultRepo.UpsertWithSupersede(s.ctx, second)
 	require.NoError(s.T(), err)
