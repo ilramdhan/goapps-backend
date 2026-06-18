@@ -69,8 +69,11 @@ func (h *ParameterHandler) CreateParameter(ctx context.Context, req *financev1.C
 		IsRequiredForCosting: req.IsRequiredForCosting,
 		IsPeriodDependent:    req.IsPeriodDependent,
 		LookupMasterCode:     req.LookupMasterCode,
+		LookupFillGroupCode:  req.LookupFillGroupCode,
+		LookupSourceColumn:   req.LookupSourceColumn,
 		DisplayOrder:         req.DisplayOrder,
 		DisplayGroup:         req.DisplayGroup,
+		Notes:                req.Notes,
 		CreatedBy:            getUserFromContext(ctx),
 	}
 
@@ -163,11 +166,20 @@ func (h *ParameterHandler) UpdateParameter(ctx context.Context, req *financev1.U
 	if req.LookupMasterCode != nil {
 		cmd.LookupMasterCode = req.LookupMasterCode
 	}
+	if req.LookupFillGroupCode != nil {
+		cmd.LookupFillGroupCode = req.LookupFillGroupCode
+	}
+	if req.LookupSourceColumn != nil {
+		cmd.LookupSourceColumn = req.LookupSourceColumn
+	}
 	if req.DisplayOrder != nil {
 		cmd.DisplayOrder = req.DisplayOrder
 	}
 	if req.DisplayGroup != nil {
 		cmd.DisplayGroup = req.DisplayGroup
+	}
+	if req.Notes != nil {
+		cmd.Notes = req.Notes
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, cmd)
@@ -426,8 +438,11 @@ func stringToProtoDataType(dt string) financev1.DataType {
 	}
 }
 
-// paramCategoryCalculated is the string form of the CALCULATED param category.
-const paramCategoryCalculated = "CALCULATED"
+// param category string constants.
+const (
+	paramCategoryCalculated   = "CALCULATED"
+	paramCategoryMasterLookup = "MASTER_LOOKUP"
+)
 
 func protoParamCategoryToString(cat financev1.ParamCategory) string {
 	switch cat {
@@ -437,6 +452,8 @@ func protoParamCategoryToString(cat financev1.ParamCategory) string {
 		return "RATE"
 	case financev1.ParamCategory_PARAM_CATEGORY_CALCULATED:
 		return paramCategoryCalculated
+	case financev1.ParamCategory_PARAM_CATEGORY_MASTER_LOOKUP:
+		return paramCategoryMasterLookup
 	default:
 		return ""
 	}
@@ -450,6 +467,8 @@ func stringToProtoParamCategory(cat string) financev1.ParamCategory {
 		return financev1.ParamCategory_PARAM_CATEGORY_RATE
 	case paramCategoryCalculated:
 		return financev1.ParamCategory_PARAM_CATEGORY_CALCULATED
+	case paramCategoryMasterLookup:
+		return financev1.ParamCategory_PARAM_CATEGORY_MASTER_LOOKUP
 	default:
 		return financev1.ParamCategory_PARAM_CATEGORY_UNSPECIFIED
 	}
@@ -470,8 +489,11 @@ func paramEntityToProto(entity *parameter.Parameter) *financev1.Parameter {
 		IsRequiredForCosting: entity.IsRequiredForCosting(),
 		IsPeriodDependent:    entity.IsPeriodDependent(),
 		LookupMasterCode:     entity.LookupMasterCode(),
+		LookupFillGroupCode:  entity.LookupFillGroupCode(),
+		LookupSourceColumn:   entity.LookupSourceColumn(),
 		DisplayOrder:         entity.DisplayOrder(),
 		DisplayGroup:         entity.DisplayGroup(),
+		Notes:                entity.Notes(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: entity.CreatedAt().Format(time.RFC3339),
 			CreatedBy: entity.CreatedBy(),

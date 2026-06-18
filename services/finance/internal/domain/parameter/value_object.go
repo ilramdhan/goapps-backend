@@ -106,13 +106,16 @@ const (
 	ParamCategoryInput      ParamCategory = "INPUT"
 	ParamCategoryRate       ParamCategory = "RATE"
 	ParamCategoryCalculated ParamCategory = "CALCULATED"
+	// ParamCategoryMasterLookup is a selector param linked to a master table that triggers auto-fill.
+	ParamCategoryMasterLookup ParamCategory = "MASTER_LOOKUP"
 )
 
 // validParamCategories is a set of valid parameter category values.
 var validParamCategories = map[ParamCategory]bool{
-	ParamCategoryInput:      true,
-	ParamCategoryRate:       true,
-	ParamCategoryCalculated: true,
+	ParamCategoryInput:        true,
+	ParamCategoryRate:         true,
+	ParamCategoryCalculated:   true,
+	ParamCategoryMasterLookup: true,
 }
 
 // NewParamCategory creates a new validated ParamCategory value object.
@@ -136,5 +139,5 @@ func (c ParamCategory) IsValid() bool {
 
 // AllParamCategories returns a slice of all valid parameter categories.
 func AllParamCategories() []ParamCategory {
-	return []ParamCategory{ParamCategoryInput, ParamCategoryRate, ParamCategoryCalculated}
+	return []ParamCategory{ParamCategoryInput, ParamCategoryRate, ParamCategoryCalculated, ParamCategoryMasterLookup}
 }

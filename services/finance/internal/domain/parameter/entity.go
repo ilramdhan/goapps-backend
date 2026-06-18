@@ -28,8 +28,11 @@ type Parameter struct {
 	isRequiredForCosting bool
 	isPeriodDependent    bool
 	lookupMasterCode     string
+	lookupFillGroupCode  string
+	lookupSourceColumn   string
 	displayOrder         int32
 	displayGroup         string
+	notes                string
 
 	createdAt time.Time
 	createdBy string
@@ -46,8 +49,11 @@ type CostingMetadata struct {
 	IsRequiredForCosting bool
 	IsPeriodDependent    bool
 	LookupMasterCode     string
+	LookupFillGroupCode  string
+	LookupSourceColumn   string
 	DisplayOrder         int32
 	DisplayGroup         string
+	Notes                string
 }
 
 // NewParameter creates a new Parameter entity with validation.
@@ -88,11 +94,20 @@ func NewParameter(
 	if len(costing.LookupMasterCode) > 30 {
 		return nil, ErrLookupMasterCodeTooLong
 	}
+	if len(costing.LookupFillGroupCode) > 20 {
+		return nil, ErrLookupFillGroupCodeTooLong
+	}
+	if len(costing.LookupSourceColumn) > 50 {
+		return nil, ErrLookupSourceColumnTooLong
+	}
 	if len(costing.DisplayGroup) > 50 {
 		return nil, ErrDisplayGroupTooLong
 	}
 	if costing.DisplayOrder < 0 {
 		return nil, ErrInvalidDisplayOrder
+	}
+	if len(costing.Notes) > 500 {
+		return nil, ErrNotesTooLong
 	}
 
 	return &Parameter{
@@ -111,8 +126,11 @@ func NewParameter(
 		isRequiredForCosting: costing.IsRequiredForCosting,
 		isPeriodDependent:    costing.IsPeriodDependent,
 		lookupMasterCode:     costing.LookupMasterCode,
+		lookupFillGroupCode:  costing.LookupFillGroupCode,
+		lookupSourceColumn:   costing.LookupSourceColumn,
 		displayOrder:         costing.DisplayOrder,
 		displayGroup:         costing.DisplayGroup,
+		notes:                costing.Notes,
 		createdAt:            time.Now(),
 		createdBy:            createdBy,
 	}, nil
@@ -159,8 +177,11 @@ func ReconstructParameter(
 		isRequiredForCosting: costing.IsRequiredForCosting,
 		isPeriodDependent:    costing.IsPeriodDependent,
 		lookupMasterCode:     costing.LookupMasterCode,
+		lookupFillGroupCode:  costing.LookupFillGroupCode,
+		lookupSourceColumn:   costing.LookupSourceColumn,
 		displayOrder:         costing.DisplayOrder,
 		displayGroup:         costing.DisplayGroup,
+		notes:                costing.Notes,
 		createdAt:            createdAt,
 		createdBy:            createdBy,
 		updatedAt:            updatedAt,
@@ -246,11 +267,20 @@ func (p *Parameter) IsPeriodDependent() bool { return p.isPeriodDependent }
 // LookupMasterCode returns the optional lookup master code.
 func (p *Parameter) LookupMasterCode() string { return p.lookupMasterCode }
 
+// LookupFillGroupCode returns the param_code of the MASTER_LOOKUP trigger this child belongs to.
+func (p *Parameter) LookupFillGroupCode() string { return p.lookupFillGroupCode }
+
+// LookupSourceColumn returns the master entity column name that fills this param (e.g., "mc_speed").
+func (p *Parameter) LookupSourceColumn() string { return p.lookupSourceColumn }
+
 // DisplayOrder returns the render order within the display group.
 func (p *Parameter) DisplayOrder() int32 { return p.displayOrder }
 
 // DisplayGroup returns the form section grouping.
 func (p *Parameter) DisplayGroup() string { return p.displayGroup }
+
+// Notes returns the descriptive notes or formula hint.
+func (p *Parameter) Notes() string { return p.notes }
 
 // Costing returns the bundled costing metadata.
 func (p *Parameter) Costing() CostingMetadata {
@@ -259,8 +289,11 @@ func (p *Parameter) Costing() CostingMetadata {
 		IsRequiredForCosting: p.isRequiredForCosting,
 		IsPeriodDependent:    p.isPeriodDependent,
 		LookupMasterCode:     p.lookupMasterCode,
+		LookupFillGroupCode:  p.lookupFillGroupCode,
+		LookupSourceColumn:   p.lookupSourceColumn,
 		DisplayOrder:         p.displayOrder,
 		DisplayGroup:         p.displayGroup,
+		Notes:                p.notes,
 	}
 }
 
@@ -275,8 +308,11 @@ type CostingUpdate struct {
 	IsRequiredForCosting *bool
 	IsPeriodDependent    *bool
 	LookupMasterCode     *string
+	LookupFillGroupCode  *string
+	LookupSourceColumn   *string
 	DisplayOrder         *int32
 	DisplayGroup         *string
+	Notes                *string
 }
 
 // Update updates the Parameter with new values.
@@ -323,7 +359,7 @@ func (p *Parameter) Update(
 	return nil
 }
 
-func (p *Parameter) applyCostingUpdate(c CostingUpdate) error {
+func (p *Parameter) applyCostingUpdate(c CostingUpdate) error { //nolint:gocognit // cohesive costing-field patcher; each branch is a simple nil-guard + bounds check
 	if c.OwnerDepartment != nil {
 		if len(*c.OwnerDepartment) > 30 {
 			return ErrOwnerDepartmentTooLong
@@ -342,6 +378,12 @@ func (p *Parameter) applyCostingUpdate(c CostingUpdate) error {
 		}
 		p.lookupMasterCode = *c.LookupMasterCode
 	}
+	if err := p.applyLookupFillGroup(c.LookupFillGroupCode); err != nil {
+		return err
+	}
+	if err := p.applyLookupSourceColumn(c.LookupSourceColumn); err != nil {
+		return err
+	}
 	if c.DisplayOrder != nil {
 		if *c.DisplayOrder < 0 {
 			return ErrInvalidDisplayOrder
@@ -354,6 +396,34 @@ func (p *Parameter) applyCostingUpdate(c CostingUpdate) error {
 		}
 		p.displayGroup = *c.DisplayGroup
 	}
+	if c.Notes != nil {
+		if len(*c.Notes) > 500 {
+			return ErrNotesTooLong
+		}
+		p.notes = *c.Notes
+	}
+	return nil
+}
+
+func (p *Parameter) applyLookupFillGroup(v *string) error {
+	if v == nil {
+		return nil
+	}
+	if len(*v) > 20 {
+		return ErrLookupFillGroupCodeTooLong
+	}
+	p.lookupFillGroupCode = *v
+	return nil
+}
+
+func (p *Parameter) applyLookupSourceColumn(v *string) error {
+	if v == nil {
+		return nil
+	}
+	if len(*v) > 50 {
+		return ErrLookupSourceColumnTooLong
+	}
+	p.lookupSourceColumn = *v
 	return nil
 }
 

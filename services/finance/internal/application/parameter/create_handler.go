@@ -26,8 +26,11 @@ type CreateCommand struct {
 	IsRequiredForCosting bool
 	IsPeriodDependent    bool
 	LookupMasterCode     string
+	LookupFillGroupCode  string
+	LookupSourceColumn   string
 	DisplayOrder         int32
 	DisplayGroup         string
+	Notes                string
 
 	CreatedBy string
 }
@@ -97,8 +100,11 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*paramet
 		IsRequiredForCosting: cmd.IsRequiredForCosting,
 		IsPeriodDependent:    cmd.IsPeriodDependent,
 		LookupMasterCode:     cmd.LookupMasterCode,
+		LookupFillGroupCode:  cmd.LookupFillGroupCode,
+		LookupSourceColumn:   cmd.LookupSourceColumn,
 		DisplayOrder:         cmd.DisplayOrder,
 		DisplayGroup:         cmd.DisplayGroup,
+		Notes:                cmd.Notes,
 	}
 	entity, err := parameter.NewParameter(
 		code, cmd.ParamName, cmd.ParamShortName,

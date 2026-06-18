@@ -24,7 +24,7 @@ var (
 	ErrInvalidDataType = errors.New("invalid data type: must be NUMBER, TEXT, or BOOLEAN")
 
 	// ErrInvalidParamCategory is returned when the parameter category is invalid.
-	ErrInvalidParamCategory = errors.New("invalid parameter category: must be INPUT, RATE, or CALCULATED")
+	ErrInvalidParamCategory = errors.New("invalid parameter category: must be INPUT, RATE, CALCULATED, or MASTER_LOOKUP")
 
 	// ErrEmptyName is returned when the parameter name is empty.
 	ErrEmptyName = errors.New("parameter name cannot be empty")
@@ -53,9 +53,18 @@ var (
 	// ErrLookupMasterCodeTooLong is returned when lookup_master_code exceeds 30 chars.
 	ErrLookupMasterCodeTooLong = errors.New("lookup_master_code must be at most 30 characters")
 
+	// ErrLookupFillGroupCodeTooLong is returned when lookup_fill_group_code exceeds 20 chars.
+	ErrLookupFillGroupCodeTooLong = errors.New("lookup_fill_group_code must be at most 20 characters")
+
+	// ErrLookupSourceColumnTooLong is returned when lookup_source_column exceeds 50 chars.
+	ErrLookupSourceColumnTooLong = errors.New("lookup_source_column must be at most 50 characters")
+
 	// ErrDisplayGroupTooLong is returned when display_group exceeds 50 chars.
 	ErrDisplayGroupTooLong = errors.New("display_group must be at most 50 characters")
 
 	// ErrInvalidDisplayOrder is returned when display_order is negative.
 	ErrInvalidDisplayOrder = errors.New("display_order must be non-negative")
+
+	// ErrNotesTooLong is returned when notes exceeds 500 chars.
+	ErrNotesTooLong = errors.New("notes must be at most 500 characters")
 )

@@ -38,6 +38,10 @@ type Repository interface {
 
 	// ResolveUOMCode resolves a UOM code to its UUID. Returns nil if not found.
 	ResolveUOMCode(ctx context.Context, uomCode string) (*uuid.UUID, error)
+
+	// GetByFillGroup returns all active, non-deleted params with lookup_fill_group_code = fillGroupCode.
+	// Used by the fill handler to discover child params and their lookup_source_column.
+	GetByFillGroup(ctx context.Context, fillGroupCode string) ([]*Parameter, error)
 }
 
 // ListFilter contains filtering options for listing Parameters.
@@ -53,6 +57,9 @@ type ListFilter struct {
 
 	// IsActive filter.
 	IsActive *bool
+
+	// LookupFillGroupCodeFilter filters by lookup_fill_group_code. Empty string = no filter.
+	LookupFillGroupCodeFilter string
 
 	// Pagination.
 	Page     int

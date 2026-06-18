@@ -38,8 +38,10 @@ func (r *ParameterRepository) Create(ctx context.Context, entity *parameter.Para
 			is_active,
 			owner_department, is_required_for_costing, is_period_dependent,
 			lookup_master_code, display_order, display_group,
+			notes,
+			lookup_fill_group_code, lookup_source_column,
 			created_at, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -60,6 +62,9 @@ func (r *ParameterRepository) Create(ctx context.Context, entity *parameter.Para
 		nullableString(entity.LookupMasterCode()),
 		entity.DisplayOrder(),
 		nullableString(entity.DisplayGroup()),
+		nullableString(entity.Notes()),
+		nullableString(entity.LookupFillGroupCode()),
+		nullableString(entity.LookupSourceColumn()),
 		entity.CreatedAt(),
 		entity.CreatedBy(),
 	)
@@ -85,6 +90,9 @@ func selectWithUOMJoin() string {
 			   p.is_active,
 			   p.owner_department, p.is_required_for_costing, p.is_period_dependent,
 			   p.lookup_master_code, p.display_order, p.display_group,
+			   p.notes,
+			   COALESCE(p.lookup_fill_group_code, '') AS lookup_fill_group_code,
+			   COALESCE(p.lookup_source_column, '')   AS lookup_source_column,
 			   p.created_at, p.created_by,
 			   p.updated_at, p.updated_by, p.deleted_at, p.deleted_by
 		FROM mst_parameter p
@@ -147,6 +155,13 @@ func (r *ParameterRepository) List(ctx context.Context, filter parameter.ListFil
 		argIndex++
 	}
 
+	// LookupFillGroupCode filter
+	if filter.LookupFillGroupCodeFilter != "" {
+		baseQuery += fmt.Sprintf(` AND p.lookup_fill_group_code = $%d`, argIndex)
+		args = append(args, filter.LookupFillGroupCodeFilter)
+		argIndex++
+	}
+
 	// Count total
 	var total int64
 	countQuery := `SELECT COUNT(*) ` + baseQuery
@@ -181,6 +196,9 @@ func (r *ParameterRepository) List(ctx context.Context, filter parameter.ListFil
 			   p.is_active,
 			   p.owner_department, p.is_required_for_costing, p.is_period_dependent,
 			   p.lookup_master_code, p.display_order, p.display_group,
+			   p.notes,
+			   COALESCE(p.lookup_fill_group_code, '') AS lookup_fill_group_code,
+			   COALESCE(p.lookup_source_column, '')   AS lookup_source_column,
 			   p.created_at, p.created_by,
 			   p.updated_at, p.updated_by, p.deleted_at, p.deleted_by
 	` + baseQuery + fmt.Sprintf(
@@ -235,8 +253,11 @@ func (r *ParameterRepository) Update(ctx context.Context, entity *parameter.Para
 			lookup_master_code = $14,
 			display_order = $15,
 			display_group = $16,
-			updated_at = $17,
-			updated_by = $18
+			notes = $17,
+			lookup_fill_group_code = $18,
+			lookup_source_column = $19,
+			updated_at = $20,
+			updated_by = $21
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
@@ -257,6 +278,9 @@ func (r *ParameterRepository) Update(ctx context.Context, entity *parameter.Para
 		nullableString(entity.LookupMasterCode()),
 		entity.DisplayOrder(),
 		nullableString(entity.DisplayGroup()),
+		nullableString(entity.Notes()),
+		nullableString(entity.LookupFillGroupCode()),
+		nullableString(entity.LookupSourceColumn()),
 		entity.UpdatedAt(),
 		entity.UpdatedBy(),
 	)
@@ -379,6 +403,36 @@ func (r *ParameterRepository) ListAll(ctx context.Context, filter parameter.Expo
 	return params, nil
 }
 
+// GetByFillGroup returns all active, non-deleted params where lookup_fill_group_code = fillGroupCode.
+func (r *ParameterRepository) GetByFillGroup(ctx context.Context, fillGroupCode string) ([]*parameter.Parameter, error) {
+	query := selectWithUOMJoin() + `
+		WHERE p.lookup_fill_group_code = $1
+		  AND p.deleted_at IS NULL
+		  AND p.is_active = TRUE
+		ORDER BY p.display_order, p.param_code`
+
+	rows, err := r.db.QueryContext(ctx, query, fillGroupCode)
+	if err != nil {
+		return nil, fmt.Errorf("get params by fill group %q: %w", fillGroupCode, err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
+
+	var out []*parameter.Parameter
+	for rows.Next() {
+		p, scanErr := r.scanParameterFromRows(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, p)
+	}
+
+	return out, rows.Err()
+}
+
 // ResolveUOMCode resolves a UOM code to its UUID. Returns ErrUOMNotFound if not found.
 func (r *ParameterRepository) ResolveUOMCode(ctx context.Context, uomCode string) (*uuid.UUID, error) {
 	query := `SELECT uom_id FROM mst_uom WHERE uom_code = $1 AND deleted_at IS NULL`
@@ -421,6 +475,9 @@ func (r *ParameterRepository) scanParameter(row *sql.Row) (*parameter.Parameter,
 		&dto.LookupMasterCode,
 		&dto.DisplayOrder,
 		&dto.DisplayGroup,
+		&dto.Notes,
+		&dto.LookupFillGroupCode,
+		&dto.LookupSourceColumn,
 		&dto.CreatedAt,
 		&dto.CreatedBy,
 		&dto.UpdatedAt,
@@ -461,6 +518,9 @@ func (r *ParameterRepository) scanParameterFromRows(rows *sql.Rows) (*parameter.
 		&dto.LookupMasterCode,
 		&dto.DisplayOrder,
 		&dto.DisplayGroup,
+		&dto.Notes,
+		&dto.LookupFillGroupCode,
+		&dto.LookupSourceColumn,
 		&dto.CreatedAt,
 		&dto.CreatedBy,
 		&dto.UpdatedAt,
@@ -496,6 +556,9 @@ type parameterDTO struct {
 	LookupMasterCode     sql.NullString
 	DisplayOrder         int32
 	DisplayGroup         sql.NullString
+	Notes                sql.NullString
+	LookupFillGroupCode  string
+	LookupSourceColumn   string
 	CreatedAt            time.Time
 	CreatedBy            string
 	UpdatedAt            sql.NullTime
@@ -557,8 +620,11 @@ func (d *parameterDTO) ToEntity() (*parameter.Parameter, error) {
 		IsRequiredForCosting: d.IsRequiredForCosting,
 		IsPeriodDependent:    d.IsPeriodDependent,
 		LookupMasterCode:     d.LookupMasterCode.String,
+		LookupFillGroupCode:  d.LookupFillGroupCode,
+		LookupSourceColumn:   d.LookupSourceColumn,
 		DisplayOrder:         d.DisplayOrder,
 		DisplayGroup:         d.DisplayGroup.String,
+		Notes:                d.Notes.String,
 	}
 
 	return parameter.ReconstructParameter(
