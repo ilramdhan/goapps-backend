@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/boxbobbincost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/intermingling"
@@ -95,7 +97,7 @@ func (h *YarnLookupFillHandler) fillFromIntermingling(ctx context.Context, intmC
 	if err != nil {
 		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
 	}
-	label := fmt.Sprintf("%s — %.4f USD/kg", intm.Code(), intm.CostPerKg())
+	label := fmt.Sprintf("%s (%s) — %.4f USD/kg", intm.Name(), intm.Code(), intm.CostPerKg())
 	return &financev1.GetLookupFillValuesResponse{
 		Base:         successResponse("Intermingling fill values retrieved"),
 		NumericFills: map[string]float64{"INTERMINGLE_COST": intm.CostPerKg()},
@@ -162,7 +164,9 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 		prefix + "_NO_OF_BOB": float64(bbc.NoOfBob()),
 	}
 	rates, rateErr := h.boxBobbinRepo.ListRates(ctx, bbc.ID())
-	if rateErr == nil && len(rates) > 0 {
+	if rateErr != nil {
+		log.Ctx(ctx).Warn().Err(rateErr).Str("bbc_code", bbcCode).Msg("ListRates failed — returning without rate fills")
+	} else if len(rates) > 0 {
 		sort.Slice(rates, func(i, j int) bool { return rates[i].Period() > rates[j].Period() })
 		latest := rates[0]
 		nums[prefix+"_BOB_RATE"] = latest.BobRateMkt()
