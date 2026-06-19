@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/lookupmaster"
@@ -125,6 +126,83 @@ func (h *LookupMasterHandler) DeleteLookupMasterColumn(ctx context.Context, req 
 		return &financev1.DeleteLookupMasterColumnResponse{Base: domainErrorToBaseResponse(err)}, nil
 	}
 	return &financev1.DeleteLookupMasterColumnResponse{Base: successResponse("Column deleted")}, nil
+}
+
+// UpdateLookupMaster updates mutable fields of an existing lookup master.
+func (h *LookupMasterHandler) UpdateLookupMaster(ctx context.Context, req *financev1.UpdateLookupMasterRequest) (*financev1.UpdateLookupMasterResponse, error) { //nolint:nilerr // BaseResponse pattern
+	u := lookupmaster.UpdateMaster{}
+	if req.LmDisplayName != nil {
+		u.DisplayName = req.LmDisplayName
+	}
+	if req.LmTableName != nil {
+		u.TableName = req.LmTableName
+	}
+	if req.LmIsActive != nil {
+		u.IsActive = req.LmIsActive
+	}
+	if err := h.repo.UpdateMaster(ctx, req.GetLmCode(), u); err != nil {
+		return &financev1.UpdateLookupMasterResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	return &financev1.UpdateLookupMasterResponse{Base: successResponse("Lookup master updated")}, nil
+}
+
+// ListTableColumns introspects a registered PostgreSQL table's columns via information_schema.
+func (h *LookupMasterHandler) ListTableColumns(ctx context.Context, req *financev1.ListTableColumnsRequest) (*financev1.ListTableColumnsResponse, error) { //nolint:nilerr // BaseResponse pattern
+	cols, err := h.repo.ListTableColumns(ctx, req.GetTableName())
+	if err != nil {
+		return &financev1.ListTableColumnsResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	items := make([]*financev1.TableColumn, 0, len(cols))
+	for _, c := range cols {
+		items = append(items, &financev1.TableColumn{
+			ColumnName:      c.ColumnName,
+			DataType:        c.DataType,
+			RawType:         c.RawType,
+			OrdinalPosition: int32(c.OrdinalPosition), //nolint:gosec // ordinal_position is small (bounded by information_schema)
+		})
+	}
+	return &financev1.ListTableColumnsResponse{Base: successResponse(""), Data: items}, nil
+}
+
+// ListMasterOptions returns combobox options (value+label) by querying the registered table.
+func (h *LookupMasterHandler) ListMasterOptions(ctx context.Context, req *financev1.ListMasterOptionsRequest) (*financev1.ListMasterOptionsResponse, error) { //nolint:nilerr // BaseResponse pattern
+	opts, err := h.repo.ListMasterOptions(ctx, req.GetMasterCode())
+	if err != nil {
+		return &financev1.ListMasterOptionsResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	items := make([]*financev1.MasterOption, 0, len(opts))
+	for _, o := range opts {
+		items = append(items, &financev1.MasterOption{Value: o.Value, Label: o.Label})
+	}
+	return &financev1.ListMasterOptionsResponse{Base: successResponse(""), Data: items}, nil
+}
+
+// ExportLookupMasters exports all masters and columns to an Excel workbook.
+func (h *LookupMasterHandler) ExportLookupMasters(ctx context.Context, _ *financev1.ExportLookupMastersRequest) (*financev1.ExportLookupMastersResponse, error) { //nolint:nilerr // BaseResponse pattern
+	data, filename, err := h.repo.ExportMasters(ctx)
+	if err != nil {
+		return &financev1.ExportLookupMastersResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	return &financev1.ExportLookupMastersResponse{
+		Base:        successResponse("Export ready"),
+		FileContent: data,
+		FileName:    filename,
+	}, nil
+}
+
+// ImportLookupMasters imports masters and columns from an Excel workbook.
+func (h *LookupMasterHandler) ImportLookupMasters(ctx context.Context, req *financev1.ImportLookupMastersRequest) (*financev1.ImportLookupMastersResponse, error) { //nolint:nilerr // BaseResponse pattern
+	success, skipped, failed, errs, err := h.repo.ImportMasters(ctx, req.GetFileContent())
+	if err != nil {
+		return &financev1.ImportLookupMastersResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	return &financev1.ImportLookupMastersResponse{
+		Base:         successResponse(fmt.Sprintf("Imported %d masters", success)),
+		SuccessCount: int32(success), //nolint:gosec // small count bounded by Excel row limit
+		SkippedCount: int32(skipped), //nolint:gosec // small count bounded by Excel row limit
+		FailedCount:  int32(failed),  //nolint:gosec // small count bounded by Excel row limit
+		Errors:       errs,
+	}, nil
 }
 
 var _ financev1.LookupMasterServiceServer = (*LookupMasterHandler)(nil)

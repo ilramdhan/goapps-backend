@@ -16,4 +16,15 @@ type Repository interface {
 	CreateColumn(ctx context.Context, c *Column, createdBy string) (string, error)
 	// DeleteColumn removes a column by its UUID.
 	DeleteColumn(ctx context.Context, id string) error
+	// UpdateMaster applies partial updates to an existing master.
+	UpdateMaster(ctx context.Context, code string, updates UpdateMaster) error
+	// ListTableColumns introspects information_schema.columns for a registered table.
+	// tableName must exist in mst_lookup_master.lm_table_name (validated by caller).
+	ListTableColumns(ctx context.Context, tableName string) ([]*TableColumn, error)
+	// ListMasterOptions queries the master's registered table and returns code+label rows.
+	ListMasterOptions(ctx context.Context, masterCode string) ([]MasterOption, error)
+	// ExportMasters exports all masters+columns to an Excel workbook.
+	ExportMasters(ctx context.Context) ([]byte, string, error)
+	// ImportMasters imports masters+columns from an Excel workbook.
+	ImportMasters(ctx context.Context, content []byte) (success, skipped, failed int, errs []string, err error)
 }
