@@ -1937,6 +1937,138 @@ func local_request_LookupMasterService_ListLookupMasterColumns_0(ctx context.Con
 	return msg, metadata, err
 }
 
+func request_LookupMasterService_CreateLookupMaster_0(ctx context.Context, marshaler runtime.Marshaler, client LookupMasterServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateLookupMasterRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.CreateLookupMaster(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_LookupMasterService_CreateLookupMaster_0(ctx context.Context, marshaler runtime.Marshaler, server LookupMasterServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateLookupMasterRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.CreateLookupMaster(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_LookupMasterService_DeleteLookupMaster_0(ctx context.Context, marshaler runtime.Marshaler, client LookupMasterServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteLookupMasterRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["lm_code"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "lm_code")
+	}
+	protoReq.LmCode, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "lm_code", err)
+	}
+	msg, err := client.DeleteLookupMaster(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_LookupMasterService_DeleteLookupMaster_0(ctx context.Context, marshaler runtime.Marshaler, server LookupMasterServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteLookupMasterRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["lm_code"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "lm_code")
+	}
+	protoReq.LmCode, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "lm_code", err)
+	}
+	msg, err := server.DeleteLookupMaster(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_LookupMasterService_CreateLookupMasterColumn_0(ctx context.Context, marshaler runtime.Marshaler, client LookupMasterServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateLookupMasterColumnRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.CreateLookupMasterColumn(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_LookupMasterService_CreateLookupMasterColumn_0(ctx context.Context, marshaler runtime.Marshaler, server LookupMasterServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateLookupMasterColumnRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.CreateLookupMasterColumn(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_LookupMasterService_DeleteLookupMasterColumn_0(ctx context.Context, marshaler runtime.Marshaler, client LookupMasterServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteLookupMasterColumnRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["lmc_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "lmc_id")
+	}
+	protoReq.LmcId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "lmc_id", err)
+	}
+	msg, err := client.DeleteLookupMasterColumn(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_LookupMasterService_DeleteLookupMasterColumn_0(ctx context.Context, marshaler runtime.Marshaler, server LookupMasterServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteLookupMasterColumnRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["lmc_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "lmc_id")
+	}
+	protoReq.LmcId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "lmc_id", err)
+	}
+	msg, err := server.DeleteLookupMasterColumn(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 var filter_YarnLookupFillService_GetLookupFillValues_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_YarnLookupFillService_GetLookupFillValues_0(ctx context.Context, marshaler runtime.Marshaler, client YarnLookupFillServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
@@ -3077,6 +3209,86 @@ func RegisterLookupMasterServiceHandlerServer(ctx context.Context, mux *runtime.
 			return
 		}
 		forward_LookupMasterService_ListLookupMasterColumns_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_LookupMasterService_CreateLookupMaster_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.LookupMasterService/CreateLookupMaster", runtime.WithHTTPPathPattern("/api/v1/finance/lookup-masters"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_LookupMasterService_CreateLookupMaster_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_LookupMasterService_CreateLookupMaster_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_LookupMasterService_DeleteLookupMaster_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.LookupMasterService/DeleteLookupMaster", runtime.WithHTTPPathPattern("/api/v1/finance/lookup-masters/{lm_code}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_LookupMasterService_DeleteLookupMaster_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_LookupMasterService_DeleteLookupMaster_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_LookupMasterService_CreateLookupMasterColumn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.LookupMasterService/CreateLookupMasterColumn", runtime.WithHTTPPathPattern("/api/v1/finance/lookup-master-columns"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_LookupMasterService_CreateLookupMasterColumn_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_LookupMasterService_CreateLookupMasterColumn_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_LookupMasterService_DeleteLookupMasterColumn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.LookupMasterService/DeleteLookupMasterColumn", runtime.WithHTTPPathPattern("/api/v1/finance/lookup-master-columns/{lmc_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_LookupMasterService_DeleteLookupMasterColumn_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_LookupMasterService_DeleteLookupMasterColumn_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 
 	return nil
@@ -4402,17 +4614,93 @@ func RegisterLookupMasterServiceHandlerClient(ctx context.Context, mux *runtime.
 		}
 		forward_LookupMasterService_ListLookupMasterColumns_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_LookupMasterService_CreateLookupMaster_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.LookupMasterService/CreateLookupMaster", runtime.WithHTTPPathPattern("/api/v1/finance/lookup-masters"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_LookupMasterService_CreateLookupMaster_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_LookupMasterService_CreateLookupMaster_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_LookupMasterService_DeleteLookupMaster_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.LookupMasterService/DeleteLookupMaster", runtime.WithHTTPPathPattern("/api/v1/finance/lookup-masters/{lm_code}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_LookupMasterService_DeleteLookupMaster_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_LookupMasterService_DeleteLookupMaster_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_LookupMasterService_CreateLookupMasterColumn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.LookupMasterService/CreateLookupMasterColumn", runtime.WithHTTPPathPattern("/api/v1/finance/lookup-master-columns"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_LookupMasterService_CreateLookupMasterColumn_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_LookupMasterService_CreateLookupMasterColumn_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_LookupMasterService_DeleteLookupMasterColumn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.LookupMasterService/DeleteLookupMasterColumn", runtime.WithHTTPPathPattern("/api/v1/finance/lookup-master-columns/{lmc_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_LookupMasterService_DeleteLookupMasterColumn_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_LookupMasterService_DeleteLookupMasterColumn_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	return nil
 }
 
 var (
-	pattern_LookupMasterService_ListLookupMasters_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "lookup-masters"}, ""))
-	pattern_LookupMasterService_ListLookupMasterColumns_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "lookup-master-columns"}, ""))
+	pattern_LookupMasterService_ListLookupMasters_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "lookup-masters"}, ""))
+	pattern_LookupMasterService_ListLookupMasterColumns_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "lookup-master-columns"}, ""))
+	pattern_LookupMasterService_CreateLookupMaster_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "lookup-masters"}, ""))
+	pattern_LookupMasterService_DeleteLookupMaster_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "finance", "lookup-masters", "lm_code"}, ""))
+	pattern_LookupMasterService_CreateLookupMasterColumn_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "lookup-master-columns"}, ""))
+	pattern_LookupMasterService_DeleteLookupMasterColumn_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "finance", "lookup-master-columns", "lmc_id"}, ""))
 )
 
 var (
-	forward_LookupMasterService_ListLookupMasters_0       = runtime.ForwardResponseMessage
-	forward_LookupMasterService_ListLookupMasterColumns_0 = runtime.ForwardResponseMessage
+	forward_LookupMasterService_ListLookupMasters_0        = runtime.ForwardResponseMessage
+	forward_LookupMasterService_ListLookupMasterColumns_0  = runtime.ForwardResponseMessage
+	forward_LookupMasterService_CreateLookupMaster_0       = runtime.ForwardResponseMessage
+	forward_LookupMasterService_DeleteLookupMaster_0       = runtime.ForwardResponseMessage
+	forward_LookupMasterService_CreateLookupMasterColumn_0 = runtime.ForwardResponseMessage
+	forward_LookupMasterService_DeleteLookupMasterColumn_0 = runtime.ForwardResponseMessage
 )
 
 // RegisterYarnLookupFillServiceHandlerFromEndpoint is same as RegisterYarnLookupFillServiceHandler but

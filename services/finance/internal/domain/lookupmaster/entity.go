@@ -13,6 +13,7 @@ type LookupMaster struct {
 
 // Column represents one fillable column for a master.
 type Column struct {
+	ID          string // UUID primary key.
 	MasterCode  string
 	ColumnName  string
 	DisplayName string

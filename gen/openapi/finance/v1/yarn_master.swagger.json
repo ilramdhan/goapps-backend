@@ -802,6 +802,69 @@
         "tags": [
           "LookupMasterService"
         ]
+      },
+      "post": {
+        "summary": "CreateLookupMasterColumn adds a fillable column to a master.",
+        "operationId": "LookupMasterService_CreateLookupMasterColumn",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateLookupMasterColumnResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateLookupMasterColumnRequest is the request for adding a fillable column to a master.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateLookupMasterColumnRequest"
+            }
+          }
+        ],
+        "tags": [
+          "LookupMasterService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup-master-columns/{lmcId}": {
+      "delete": {
+        "summary": "DeleteLookupMasterColumn removes a column from a master.",
+        "operationId": "LookupMasterService_DeleteLookupMasterColumn",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteLookupMasterColumnResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "lmcId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "LookupMasterService"
+        ]
       }
     },
     "/api/v1/finance/lookup-masters": {
@@ -828,6 +891,69 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          }
+        ],
+        "tags": [
+          "LookupMasterService"
+        ]
+      },
+      "post": {
+        "summary": "CreateLookupMaster adds a new master to the registry.",
+        "operationId": "LookupMasterService_CreateLookupMaster",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateLookupMasterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateLookupMasterRequest is the request for adding a new master to the registry.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateLookupMasterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "LookupMasterService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup-masters/{lmCode}": {
+      "delete": {
+        "summary": "DeleteLookupMaster removes a master from the registry.",
+        "operationId": "LookupMasterService_DeleteLookupMaster",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteLookupMasterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "lmCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2653,6 +2779,73 @@
       },
       "description": "CreateInterminglingResponse is the response for creating an intermingling record."
     },
+    "v1CreateLookupMasterColumnRequest": {
+      "type": "object",
+      "properties": {
+        "lmcMasterCode": {
+          "type": "string"
+        },
+        "lmcColumnName": {
+          "type": "string"
+        },
+        "lmcDisplayName": {
+          "type": "string"
+        },
+        "lmcDataType": {
+          "type": "string"
+        },
+        "lmcSortOrder": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "CreateLookupMasterColumnRequest is the request for adding a fillable column to a master."
+    },
+    "v1CreateLookupMasterColumnResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1LookupMasterColumn"
+        }
+      },
+      "description": "CreateLookupMasterColumnResponse is the response for adding a column."
+    },
+    "v1CreateLookupMasterRequest": {
+      "type": "object",
+      "properties": {
+        "lmCode": {
+          "type": "string"
+        },
+        "lmDisplayName": {
+          "type": "string"
+        },
+        "lmApiPath": {
+          "type": "string"
+        },
+        "lmCodeField": {
+          "type": "string"
+        },
+        "lmLabelField": {
+          "type": "string"
+        }
+      },
+      "description": "CreateLookupMasterRequest is the request for adding a new master to the registry."
+    },
+    "v1CreateLookupMasterResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1LookupMaster"
+        }
+      },
+      "description": "CreateLookupMasterResponse is the response for adding a new master."
+    },
     "v1CreateMBHeadRequest": {
       "type": "object",
       "properties": {
@@ -2864,6 +3057,24 @@
         }
       },
       "description": "DeleteInterminglingResponse is the response for soft-deleting an intermingling record."
+    },
+    "v1DeleteLookupMasterColumnResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      },
+      "description": "DeleteLookupMasterColumnResponse is the response for removing a column."
+    },
+    "v1DeleteLookupMasterResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      },
+      "description": "DeleteLookupMasterResponse is the response for removing a master."
     },
     "v1DeleteMBHeadResponse": {
       "type": "object",
@@ -3798,6 +4009,10 @@
         "lmcSortOrder": {
           "type": "integer",
           "format": "int32"
+        },
+        "lmcId": {
+          "type": "string",
+          "description": "UUID primary key — needed for delete."
         }
       },
       "description": "LookupMasterColumn describes one selectable column from a lookup master table."
