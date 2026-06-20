@@ -2996,13 +2996,16 @@
           "type": "string"
         },
         "lmApiPath": {
-          "type": "string"
+          "type": "string",
+          "description": "Deprecated: no longer required. Send empty string or omit."
         },
         "lmCodeField": {
-          "type": "string"
+          "type": "string",
+          "description": "Deprecated: no longer required. Send empty string or omit."
         },
         "lmLabelField": {
-          "type": "string"
+          "type": "string",
+          "description": "Deprecated: no longer required. Send empty string or omit."
         },
         "lmTableName": {
           "type": "string",

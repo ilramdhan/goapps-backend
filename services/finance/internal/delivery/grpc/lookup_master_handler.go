@@ -34,6 +34,7 @@ func (h *LookupMasterHandler) ListLookupMasters(ctx context.Context, req *financ
 			LmCodeField:   m.CodeField,
 			LmLabelField:  m.LabelField,
 			LmIsActive:    m.IsActive,
+			LmTableName:   m.TableName,
 		})
 	}
 	return &financev1.ListLookupMastersResponse{Base: successResponse(""), Data: items}, nil
@@ -62,12 +63,17 @@ func (h *LookupMasterHandler) ListLookupMasterColumns(ctx context.Context, req *
 // CreateLookupMaster adds a new master to the registry.
 func (h *LookupMasterHandler) CreateLookupMaster(ctx context.Context, req *financev1.CreateLookupMasterRequest) (*financev1.CreateLookupMasterResponse, error) { //nolint:nilerr // BaseResponse pattern
 	actor := getUserFromContext(ctx)
+	tableName := ""
+	if req.LmTableName != nil {
+		tableName = req.GetLmTableName()
+	}
 	m := &lookupmaster.LookupMaster{
 		Code:        req.GetLmCode(),
 		DisplayName: req.GetLmDisplayName(),
 		APIPath:     req.GetLmApiPath(),
 		CodeField:   req.GetLmCodeField(),
 		LabelField:  req.GetLmLabelField(),
+		TableName:   tableName,
 		IsActive:    true,
 	}
 	if err := h.repo.CreateMaster(ctx, m, actor); err != nil {
@@ -81,6 +87,7 @@ func (h *LookupMasterHandler) CreateLookupMaster(ctx context.Context, req *finan
 			LmApiPath:     m.APIPath,
 			LmCodeField:   m.CodeField,
 			LmLabelField:  m.LabelField,
+			LmTableName:   m.TableName,
 			LmIsActive:    true,
 		},
 	}, nil

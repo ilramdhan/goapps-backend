@@ -7885,9 +7885,12 @@ type CreateLookupMasterRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LmCode        string                 `protobuf:"bytes,1,opt,name=lm_code,json=lmCode,proto3" json:"lm_code,omitempty"`
 	LmDisplayName string                 `protobuf:"bytes,2,opt,name=lm_display_name,json=lmDisplayName,proto3" json:"lm_display_name,omitempty"`
-	LmApiPath     string                 `protobuf:"bytes,3,opt,name=lm_api_path,json=lmApiPath,proto3" json:"lm_api_path,omitempty"`
-	LmCodeField   string                 `protobuf:"bytes,4,opt,name=lm_code_field,json=lmCodeField,proto3" json:"lm_code_field,omitempty"`
-	LmLabelField  string                 `protobuf:"bytes,5,opt,name=lm_label_field,json=lmLabelField,proto3" json:"lm_label_field,omitempty"`
+	// Deprecated: no longer required. Send empty string or omit.
+	LmApiPath string `protobuf:"bytes,3,opt,name=lm_api_path,json=lmApiPath,proto3" json:"lm_api_path,omitempty"`
+	// Deprecated: no longer required. Send empty string or omit.
+	LmCodeField string `protobuf:"bytes,4,opt,name=lm_code_field,json=lmCodeField,proto3" json:"lm_code_field,omitempty"`
+	// Deprecated: no longer required. Send empty string or omit.
+	LmLabelField string `protobuf:"bytes,5,opt,name=lm_label_field,json=lmLabelField,proto3" json:"lm_label_field,omitempty"`
 	// PostgreSQL table name for DB introspection (optional, max 63 chars).
 	LmTableName   *string `protobuf:"bytes,6,opt,name=lm_table_name,json=lmTableName,proto3,oneof" json:"lm_table_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -9674,14 +9677,13 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"masterCode\"\x82\x01\n" +
 	"\x1fListLookupMasterColumnsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x122\n" +
-	"\x04data\x18\x02 \x03(\v2\x1e.finance.v1.LookupMasterColumnR\x04data\"\xd5\x02\n" +
+	"\x04data\x18\x02 \x03(\v2\x1e.finance.v1.LookupMasterColumnR\x04data\"\xcf\x02\n" +
 	"\x19CreateLookupMasterRequest\x125\n" +
 	"\alm_code\x18\x01 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18\x1e2\x11^[A-Z][A-Z0-9_]*$R\x06lmCode\x121\n" +
-	"\x0flm_display_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\rlmDisplayName\x12*\n" +
-	"\vlm_api_path\x18\x03 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\tlmApiPath\x12-\n" +
-	"\rlm_code_field\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\vlmCodeField\x12/\n" +
-	"\x0elm_label_field\x18\x05 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\flmLabelField\x120\n" +
+	"\x0flm_display_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\rlmDisplayName\x12(\n" +
+	"\vlm_api_path\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tlmApiPath\x12+\n" +
+	"\rlm_code_field\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x182R\vlmCodeField\x12-\n" +
+	"\x0elm_label_field\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x182R\flmLabelField\x120\n" +
 	"\rlm_table_name\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18?H\x00R\vlmTableName\x88\x01\x01B\x10\n" +
 	"\x0e_lm_table_name\"w\n" +
 	"\x1aCreateLookupMasterResponse\x12+\n" +
