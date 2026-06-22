@@ -309,11 +309,12 @@ func (h *CostDataImportHandler) enqueueImport(ctx context.Context, fileContent [
 }
 
 // importJobToProto maps a domain CostImportJob to the proto CostImportJob.
-// If the job has an error file, it generates a presigned download URL.
+// If the job has a result/error file, it generates a presigned download URL.
 func (h *CostDataImportHandler) importJobToProto(ctx context.Context, job *costimportjob.CostImportJob) (*financev1.CostImportJob, error) {
 	errorFileURL := ""
 	if job.ErrorFile() != "" && h.storage != nil {
-		u, err := h.storage.PresignedGetURL(ctx, job.ErrorFile(), importPresignValidity, "import_errors.xlsx")
+		filename := downloadFilename(job.Entity())
+		u, err := h.storage.PresignedGetURL(ctx, job.ErrorFile(), importPresignValidity, filename)
 		if err != nil {
 			return nil, fmt.Errorf("presign error file URL: %w", err)
 		}
@@ -352,6 +353,15 @@ func marshalExportRequestKey(req costbulkimport.ExportRequest) (string, error) {
 		return "", fmt.Errorf("marshal export request: %w", err)
 	}
 	return string(b), nil
+}
+
+// downloadFilename returns the suggested download filename for a job's result/error file.
+// Export jobs produce an Excel workbook; import jobs produce an error report.
+func downloadFilename(entity string) string {
+	if entity == costimportjob.EntityBulkProductRoutingExport {
+		return "bulk_product_routing_export.xlsx"
+	}
+	return "import_errors.xlsx"
 }
 
 // toProtoBulkSheetResult converts a domain SheetResult to the proto BulkSheetValidationResult.
