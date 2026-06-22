@@ -132,6 +132,14 @@ func (f *fakeRepo) RemoveApplicableWithChildren(_ context.Context, _ int64, _ uu
 	return nil
 }
 
+func (f *fakeRepo) BulkUpsertValues(_ context.Context, _ []cpp.CPPUpsertInput, _ string) (int, int, error) {
+	return 0, 0, nil
+}
+
+func (f *fakeRepo) BulkUpsertApplicable(_ context.Context, _ []cpp.CAPPUpsertInput, _ string) (int, int, error) {
+	return 0, 0, nil
+}
+
 // =============================================================================
 // Upsert
 // =============================================================================

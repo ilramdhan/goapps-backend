@@ -77,4 +77,12 @@ type Repository interface {
 
 	// RemoveApplicableWithChildren removes a MASTER_LOOKUP param + all children + their CPP values atomically.
 	RemoveApplicableWithChildren(ctx context.Context, productSysID int64, triggerParamID uuid.UUID, deletedBy string) error
+
+	// BulkUpsertValues upserts multiple CPP value rows by (cpp_product_sys_id, cpp_param_id).
+	// Returns counts of rows inserted and updated.
+	BulkUpsertValues(ctx context.Context, items []CPPUpsertInput, actor string) (inserted, updated int, err error)
+
+	// BulkUpsertApplicable upserts CAPP rows by (capp_product_sys_id, capp_param_id).
+	// Returns counts of rows inserted and updated.
+	BulkUpsertApplicable(ctx context.Context, items []CAPPUpsertInput, actor string) (inserted, updated int, err error)
 }

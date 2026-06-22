@@ -116,6 +116,25 @@ type CPPRow struct {
 	ValueFlag    *bool
 }
 
+// CPPUpsertInput is a single row for BulkUpsertValues.
+type CPPUpsertInput struct {
+	ProductSysID int64
+	ParamID      uuid.UUID
+	ValueNumeric *float64 // nil when not set
+	ValueText    *string  // nil when not set
+	ValueFlag    *bool    // nil when not set
+	FilledAt     time.Time
+	FilledBy     string
+}
+
+// CAPPUpsertInput is a single row for BulkUpsertApplicable.
+type CAPPUpsertInput struct {
+	ProductSysID int64
+	ParamID      uuid.UUID
+	IsRequired   bool
+	DisplayOrder *int32 // nil when not provided
+}
+
 // EnsureValueShape verifies that the (numeric|text|flag) triple has exactly
 // one populated field and that it matches the declared data_type.
 func EnsureValueShape(dataType string, valueNumeric, valueText *string, valueFlag *bool) error {
