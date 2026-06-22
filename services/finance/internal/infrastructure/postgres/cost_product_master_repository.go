@@ -296,8 +296,8 @@ func (r *CostProductMasterRepository) BulkUpsertByLegacyID(ctx context.Context, 
 			$10, $11,
 			$12, $13, $12, $13,
 			COALESCE(
-				(SELECT cpm_product_code FROM cost_product_master WHERE cpm_flex_02 = $8 AND deleted_at IS NULL),
-				generate_cost_product_code()
+				(SELECT cpm_product_code FROM cost_product_master WHERE cpm_flex_02 = $8 AND cpm_is_active = TRUE),
+				generate_cost_product_code($1, $12)
 			)
 		)
 		ON CONFLICT (cpm_flex_02) WHERE cpm_flex_02 IS NOT NULL

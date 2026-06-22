@@ -1102,7 +1102,7 @@ func (r *CostRouteRepository) BulkUpsertHeads(ctx context.Context, items []costr
 			crh_created_at, crh_created_by, crh_updated_at, crh_updated_by
 		)
 		VALUES ($1, $2, $3, $4, $5, $4, $5)
-		ON CONFLICT (crh_product_sys_id) WHERE crh_deleted_at IS NULL
+		ON CONFLICT (crh_product_sys_id) WHERE crh_deleted_at IS NULL AND crh_routing_status <> 'LOCKED'
 		DO UPDATE SET
 			crh_notes      = CASE WHEN cost_route_head.crh_routing_status = 'LOCKED' THEN cost_route_head.crh_notes ELSE EXCLUDED.crh_notes END,
 			crh_updated_at = CASE WHEN cost_route_head.crh_routing_status = 'LOCKED' THEN cost_route_head.crh_updated_at ELSE EXCLUDED.crh_updated_at END,
@@ -1127,7 +1127,7 @@ func (r *CostRouteRepository) BulkUpsertHeads(ctx context.Context, items []costr
 			LegacySysID: item.LegacySysID,
 			HeadID:      headID,
 			WasInserted: xmax == "0",
-			Skipped:     routingStatus == costroute.StatusLocked,
+			Skipped:     routingStatus == costroute.StatusLocked && xmax != "0",
 		})
 	}
 
@@ -1159,7 +1159,7 @@ func (r *CostRouteRepository) BulkUpsertSeqs(ctx context.Context, items []costro
 			crs_created_at, crs_created_by, crs_updated_at, crs_updated_by
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $9, $10)
-		ON CONFLICT (crs_head_id, crs_route_level, crs_route_seq) WHERE crs_deleted_at IS NULL
+		ON CONFLICT (crs_head_id, crs_route_level, crs_route_seq)
 		DO UPDATE SET
 			crs_product_sys_id   = EXCLUDED.crs_product_sys_id,
 			crs_route_name       = EXCLUDED.crs_route_name,
