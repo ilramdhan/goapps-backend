@@ -27,6 +27,9 @@ const (
 	CostDataImportService_ImportCostProductParameters_FullMethodName          = "/finance.v1.CostDataImportService/ImportCostProductParameters"
 	CostDataImportService_ExportCostProductParameters_FullMethodName          = "/finance.v1.CostDataImportService/ExportCostProductParameters"
 	CostDataImportService_DownloadCostProductParameterTemplate_FullMethodName = "/finance.v1.CostDataImportService/DownloadCostProductParameterTemplate"
+	CostDataImportService_ImportBulkProductRouting_FullMethodName             = "/finance.v1.CostDataImportService/ImportBulkProductRouting"
+	CostDataImportService_ValidateBulkProductRoutingFile_FullMethodName       = "/finance.v1.CostDataImportService/ValidateBulkProductRoutingFile"
+	CostDataImportService_ExportBulkProductRouting_FullMethodName             = "/finance.v1.CostDataImportService/ExportBulkProductRouting"
 )
 
 // CostDataImportServiceClient is the client API for CostDataImportService service.
@@ -41,6 +44,9 @@ type CostDataImportServiceClient interface {
 	ImportCostProductParameters(ctx context.Context, in *ImportCostProductParametersRequest, opts ...grpc.CallOption) (*ImportCostProductParametersResponse, error)
 	ExportCostProductParameters(ctx context.Context, in *ExportCostProductParametersRequest, opts ...grpc.CallOption) (*ExportCostProductParametersResponse, error)
 	DownloadCostProductParameterTemplate(ctx context.Context, in *DownloadCostProductParameterTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductParameterTemplateResponse, error)
+	ImportBulkProductRouting(ctx context.Context, in *ImportBulkProductRoutingRequest, opts ...grpc.CallOption) (*ImportBulkProductRoutingResponse, error)
+	ValidateBulkProductRoutingFile(ctx context.Context, in *ValidateBulkProductRoutingFileRequest, opts ...grpc.CallOption) (*ValidateBulkProductRoutingFileResponse, error)
+	ExportBulkProductRouting(ctx context.Context, in *ExportBulkProductRoutingRequest, opts ...grpc.CallOption) (*ExportBulkProductRoutingResponse, error)
 }
 
 type costDataImportServiceClient struct {
@@ -131,6 +137,36 @@ func (c *costDataImportServiceClient) DownloadCostProductParameterTemplate(ctx c
 	return out, nil
 }
 
+func (c *costDataImportServiceClient) ImportBulkProductRouting(ctx context.Context, in *ImportBulkProductRoutingRequest, opts ...grpc.CallOption) (*ImportBulkProductRoutingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImportBulkProductRoutingResponse)
+	err := c.cc.Invoke(ctx, CostDataImportService_ImportBulkProductRouting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costDataImportServiceClient) ValidateBulkProductRoutingFile(ctx context.Context, in *ValidateBulkProductRoutingFileRequest, opts ...grpc.CallOption) (*ValidateBulkProductRoutingFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateBulkProductRoutingFileResponse)
+	err := c.cc.Invoke(ctx, CostDataImportService_ValidateBulkProductRoutingFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costDataImportServiceClient) ExportBulkProductRouting(ctx context.Context, in *ExportBulkProductRoutingRequest, opts ...grpc.CallOption) (*ExportBulkProductRoutingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportBulkProductRoutingResponse)
+	err := c.cc.Invoke(ctx, CostDataImportService_ExportBulkProductRouting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostDataImportServiceServer is the server API for CostDataImportService service.
 // All implementations must embed UnimplementedCostDataImportServiceServer
 // for forward compatibility.
@@ -143,6 +179,9 @@ type CostDataImportServiceServer interface {
 	ImportCostProductParameters(context.Context, *ImportCostProductParametersRequest) (*ImportCostProductParametersResponse, error)
 	ExportCostProductParameters(context.Context, *ExportCostProductParametersRequest) (*ExportCostProductParametersResponse, error)
 	DownloadCostProductParameterTemplate(context.Context, *DownloadCostProductParameterTemplateRequest) (*DownloadCostProductParameterTemplateResponse, error)
+	ImportBulkProductRouting(context.Context, *ImportBulkProductRoutingRequest) (*ImportBulkProductRoutingResponse, error)
+	ValidateBulkProductRoutingFile(context.Context, *ValidateBulkProductRoutingFileRequest) (*ValidateBulkProductRoutingFileResponse, error)
+	ExportBulkProductRouting(context.Context, *ExportBulkProductRoutingRequest) (*ExportBulkProductRoutingResponse, error)
 	mustEmbedUnimplementedCostDataImportServiceServer()
 }
 
@@ -176,6 +215,15 @@ func (UnimplementedCostDataImportServiceServer) ExportCostProductParameters(cont
 }
 func (UnimplementedCostDataImportServiceServer) DownloadCostProductParameterTemplate(context.Context, *DownloadCostProductParameterTemplateRequest) (*DownloadCostProductParameterTemplateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DownloadCostProductParameterTemplate not implemented")
+}
+func (UnimplementedCostDataImportServiceServer) ImportBulkProductRouting(context.Context, *ImportBulkProductRoutingRequest) (*ImportBulkProductRoutingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportBulkProductRouting not implemented")
+}
+func (UnimplementedCostDataImportServiceServer) ValidateBulkProductRoutingFile(context.Context, *ValidateBulkProductRoutingFileRequest) (*ValidateBulkProductRoutingFileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidateBulkProductRoutingFile not implemented")
+}
+func (UnimplementedCostDataImportServiceServer) ExportBulkProductRouting(context.Context, *ExportBulkProductRoutingRequest) (*ExportBulkProductRoutingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportBulkProductRouting not implemented")
 }
 func (UnimplementedCostDataImportServiceServer) mustEmbedUnimplementedCostDataImportServiceServer() {}
 func (UnimplementedCostDataImportServiceServer) testEmbeddedByValue()                               {}
@@ -342,6 +390,60 @@ func _CostDataImportService_DownloadCostProductParameterTemplate_Handler(srv int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostDataImportService_ImportBulkProductRouting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportBulkProductRoutingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostDataImportServiceServer).ImportBulkProductRouting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostDataImportService_ImportBulkProductRouting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostDataImportServiceServer).ImportBulkProductRouting(ctx, req.(*ImportBulkProductRoutingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostDataImportService_ValidateBulkProductRoutingFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateBulkProductRoutingFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostDataImportServiceServer).ValidateBulkProductRoutingFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostDataImportService_ValidateBulkProductRoutingFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostDataImportServiceServer).ValidateBulkProductRoutingFile(ctx, req.(*ValidateBulkProductRoutingFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostDataImportService_ExportBulkProductRouting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportBulkProductRoutingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostDataImportServiceServer).ExportBulkProductRouting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostDataImportService_ExportBulkProductRouting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostDataImportServiceServer).ExportBulkProductRouting(ctx, req.(*ExportBulkProductRoutingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostDataImportService_ServiceDesc is the grpc.ServiceDesc for CostDataImportService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -380,6 +482,18 @@ var CostDataImportService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DownloadCostProductParameterTemplate",
 			Handler:    _CostDataImportService_DownloadCostProductParameterTemplate_Handler,
+		},
+		{
+			MethodName: "ImportBulkProductRouting",
+			Handler:    _CostDataImportService_ImportBulkProductRouting_Handler,
+		},
+		{
+			MethodName: "ValidateBulkProductRoutingFile",
+			Handler:    _CostDataImportService_ValidateBulkProductRoutingFile_Handler,
+		},
+		{
+			MethodName: "ExportBulkProductRouting",
+			Handler:    _CostDataImportService_ExportBulkProductRouting_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

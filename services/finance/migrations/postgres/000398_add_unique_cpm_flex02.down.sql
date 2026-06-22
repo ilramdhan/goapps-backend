@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS uk_cpm_flex02;

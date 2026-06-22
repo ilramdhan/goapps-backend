@@ -184,6 +184,38 @@
         ]
       }
     },
+    "/api/v1/finance/costing/export/bulk_product_routing": {
+      "post": {
+        "operationId": "CostDataImportService_ExportBulkProductRouting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportBulkProductRoutingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ExportBulkProductRoutingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
     "/api/v1/finance/costing/import-jobs": {
       "get": {
         "operationId": "CostDataImportService_ListCostImportJobs",
@@ -266,6 +298,70 @@
           "CostDataImportService"
         ]
       }
+    },
+    "/api/v1/finance/costing/import/bulk_product_routing": {
+      "post": {
+        "operationId": "CostDataImportService_ImportBulkProductRouting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportBulkProductRoutingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportBulkProductRoutingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
+    "/api/v1/finance/costing/validate/bulk_product_routing": {
+      "post": {
+        "operationId": "CostDataImportService_ValidateBulkProductRoutingFile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ValidateBulkProductRoutingFileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ValidateBulkProductRoutingFileRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -322,6 +418,33 @@
         }
       },
       "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1BulkSheetValidationResult": {
+      "type": "object",
+      "properties": {
+        "sheetName": {
+          "type": "string"
+        },
+        "totalRows": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "errorCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "warningCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sampleErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ImportRowError"
+          }
+        }
+      }
     },
     "v1CostImportJob": {
       "type": "object",
@@ -403,6 +526,38 @@
         }
       }
     },
+    "v1ExportBulkProductRoutingRequest": {
+      "type": "object",
+      "properties": {
+        "productTypeCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "includeRouting": {
+          "type": "boolean"
+        },
+        "activeOnly": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1ExportBulkProductRoutingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
     "v1ExportCostApplicableParamsResponse": {
       "type": "object",
       "properties": {
@@ -441,6 +596,36 @@
         },
         "data": {
           "$ref": "#/definitions/v1CostImportJob"
+        }
+      }
+    },
+    "v1ImportBulkProductRoutingRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "duplicateAction": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ImportBulkProductRoutingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string"
         }
       }
     },
@@ -495,6 +680,21 @@
         "jobId": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "v1ImportRowError": {
+      "type": "object",
+      "properties": {
+        "rowNumber": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "field": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
         }
       }
     },
@@ -557,6 +757,36 @@
         }
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1ValidateBulkProductRoutingFileRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ValidateBulkProductRoutingFileResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "isValid": {
+          "type": "boolean"
+        },
+        "sheets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BulkSheetValidationResult"
+          }
+        }
+      }
     },
     "v1ValidationError": {
       "type": "object",

@@ -19,4 +19,6 @@ type Repository interface {
 	GetByCode(ctx context.Context, code string) (*CostProductType, error)
 	Update(ctx context.Context, t *CostProductType) error
 	List(ctx context.Context, f Filter) (items []*CostProductType, total int64, err error)
+	// ListAllActive returns all active cost_product_type rows for bulk import map preloading.
+	ListAllActive(ctx context.Context) ([]*CostProductType, error)
 }

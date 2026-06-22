@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq"
 
 	costroute "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 )
@@ -572,10 +574,7 @@ func (r *CostRouteRepository) ListHeads(ctx context.Context, f costroute.Filter)
 			whereSQL += " AND " + w
 		}
 	}
-	page := f.Page
-	if page < 1 {
-		page = 1
-	}
+	page := max(f.Page, 1)
 	pageSize := f.PageSize
 	if pageSize < 1 {
 		pageSize = 20
@@ -1073,4 +1072,298 @@ func (r *CostRouteRepository) ListLinkedRequests(ctx context.Context, headID int
 		out = append(out, lr)
 	}
 	return out, rows.Err()
+}
+
+// =============================================================================
+// Bulk import helpers (BulkUpsertHeads, BulkUpsertSeqs, BulkReplaceRMs)
+// =============================================================================
+
+// BulkUpsertHeads upserts route head rows by (crh_product_sys_id).
+// Rows whose existing crh_routing_status is 'LOCKED' are returned with Skipped=true.
+func (r *CostRouteRepository) BulkUpsertHeads(ctx context.Context, items []costroute.HeadUpsertInput, actor string) ([]costroute.HeadUpsertResult, error) {
+	if len(items) == 0 {
+		return []costroute.HeadUpsertResult{}, nil
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin BulkUpsertHeads tx: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	const q = `
+		INSERT INTO cost_route_head (
+			crh_product_sys_id, crh_routing_status, crh_notes,
+			crh_created_at, crh_created_by, crh_updated_at, crh_updated_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $4, $5)
+		ON CONFLICT (crh_product_sys_id) WHERE crh_deleted_at IS NULL AND crh_routing_status <> 'LOCKED'
+		DO UPDATE SET
+			crh_notes      = CASE WHEN cost_route_head.crh_routing_status = 'LOCKED' THEN cost_route_head.crh_notes ELSE EXCLUDED.crh_notes END,
+			crh_updated_at = CASE WHEN cost_route_head.crh_routing_status = 'LOCKED' THEN cost_route_head.crh_updated_at ELSE EXCLUDED.crh_updated_at END,
+			crh_updated_by = CASE WHEN cost_route_head.crh_routing_status = 'LOCKED' THEN cost_route_head.crh_updated_by ELSE EXCLUDED.crh_updated_by END
+		RETURNING crh_head_id, xmax::text, crh_routing_status`
+
+	results := make([]costroute.HeadUpsertResult, 0, len(items))
+	now := time.Now().UTC()
+	for _, item := range items {
+		status := item.RoutingStatus
+		if status == "" {
+			status = costroute.StatusDraft
+		}
+		var headID int64
+		var xmax, routingStatus string
+		if err := tx.QueryRowContext(ctx, q,
+			item.ProductSysID, status, item.Notes, now, actor,
+		).Scan(&headID, &xmax, &routingStatus); err != nil {
+			return nil, fmt.Errorf("BulkUpsertHeads upsert row: %w", err)
+		}
+		results = append(results, costroute.HeadUpsertResult{
+			LegacySysID: item.LegacySysID,
+			HeadID:      headID,
+			WasInserted: xmax == "0",
+			Skipped:     routingStatus == costroute.StatusLocked && xmax != "0",
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit BulkUpsertHeads: %w", err)
+	}
+	return results, nil
+}
+
+// BulkUpsertSeqs upserts route sequence rows by (crs_head_id, crs_route_level, crs_route_seq).
+func (r *CostRouteRepository) BulkUpsertSeqs(ctx context.Context, items []costroute.SeqUpsertInput, actor string) ([]costroute.SeqUpsertResult, error) {
+	if len(items) == 0 {
+		return []costroute.SeqUpsertResult{}, nil
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin BulkUpsertSeqs tx: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	const q = `
+		INSERT INTO cost_route_seq (
+			crs_head_id, crs_product_sys_id, crs_route_level, crs_route_seq,
+			crs_route_name, crs_route_item_code, crs_route_shade_code, crs_route_shade_name,
+			crs_created_at, crs_created_by, crs_updated_at, crs_updated_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $9, $10)
+		ON CONFLICT (crs_head_id, crs_route_level, crs_route_seq)
+		DO UPDATE SET
+			crs_product_sys_id   = EXCLUDED.crs_product_sys_id,
+			crs_route_name       = EXCLUDED.crs_route_name,
+			crs_route_item_code  = EXCLUDED.crs_route_item_code,
+			crs_route_shade_code = EXCLUDED.crs_route_shade_code,
+			crs_route_shade_name = EXCLUDED.crs_route_shade_name,
+			crs_updated_at       = EXCLUDED.crs_updated_at,
+			crs_updated_by       = EXCLUDED.crs_updated_by
+		RETURNING crs_seq_id, xmax::text`
+
+	results := make([]costroute.SeqUpsertResult, 0, len(items))
+	now := time.Now().UTC()
+	for _, item := range items {
+		var seqID int64
+		var xmax string
+		if err := tx.QueryRowContext(ctx, q,
+			item.HeadID, item.NodeProductSysID, item.RouteLevel, item.RouteSeq,
+			item.RouteName, item.RouteItemCode, item.RouteShadeCode, item.RouteShadeName,
+			now, actor,
+		).Scan(&seqID, &xmax); err != nil {
+			return nil, fmt.Errorf("BulkUpsertSeqs upsert row: %w", err)
+		}
+		results = append(results, costroute.SeqUpsertResult{
+			LegacySysID: item.HeadLegacySysID,
+			SeqID:       seqID,
+			HeadID:      item.HeadID,
+			RouteLevel:  item.RouteLevel,
+			RouteSeq:    item.RouteSeq,
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit BulkUpsertSeqs: %w", err)
+	}
+	return results, nil
+}
+
+// BulkReplaceRMs deletes all existing RMs for seqID and re-inserts the given rms in a single transaction.
+func (r *CostRouteRepository) BulkReplaceRMs(ctx context.Context, seqID int64, rms []costroute.RMInput, actor string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin BulkReplaceRMs tx: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM cost_route_rm WHERE crm_seq_id = $1`, seqID); err != nil {
+		return fmt.Errorf("BulkReplaceRMs delete: %w", err)
+	}
+
+	const insertRM = `
+		INSERT INTO cost_route_rm (
+			crm_seq_id, crm_rm_type,
+			crm_rm_product_sys_id, crm_rm_item_code, crm_rm_group_code,
+			crm_route_rm_ratio, crm_route_rm_name,
+			crm_route_rm_shade_code, crm_route_rm_shade_name,
+			crm_sub_type, crm_notes,
+			crm_created_at, crm_created_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+
+	now := time.Now().UTC()
+	for _, rm := range rms {
+		var rmProductSysID sql.NullInt64
+		if rm.RmType == costroute.RmTypeProduct && rm.RmProductSysID != 0 {
+			rmProductSysID = sql.NullInt64{Int64: rm.RmProductSysID, Valid: true}
+		}
+		if _, err := tx.ExecContext(ctx, insertRM,
+			seqID, rm.RmType,
+			rmProductSysID, nullableString(rm.RmItemCode), nullableString(rm.RmGroupCode),
+			rm.Ratio, nullableString(rm.RmName),
+			nullableString(rm.RmShadeCode), nullableString(rm.RmShadeName),
+			nullableString(rm.SubType), nullableString(rm.Notes),
+			now, actor,
+		); err != nil {
+			return fmt.Errorf("BulkReplaceRMs insert rm: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit BulkReplaceRMs: %w", err)
+	}
+	return nil
+}
+
+// ListAllHeadsForExport returns all non-deleted route heads for export, optionally
+// filtered to the given product sys IDs. An empty productSysIDs slice returns all heads.
+func (r *CostRouteRepository) ListAllHeadsForExport(ctx context.Context, productSysIDs []int64) ([]costroute.ExportRouteHead, error) {
+	q := `SELECT crh_head_id, crh_product_sys_id, crh_routing_status, COALESCE(crh_notes,'')
+          FROM cost_route_head
+          WHERE crh_deleted_at IS NULL`
+	var args []any
+	if len(productSysIDs) > 0 {
+		q += ` AND crh_product_sys_id = ANY($1)`
+		args = append(args, pq.Array(productSysIDs))
+	}
+	q += ` ORDER BY crh_head_id`
+	rows, err := r.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list all route heads for export: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	var out []costroute.ExportRouteHead
+	for rows.Next() {
+		var h costroute.ExportRouteHead
+		if scanErr := rows.Scan(&h.HeadID, &h.ProductSysID, &h.RoutingStatus, &h.Notes); scanErr != nil {
+			return nil, fmt.Errorf("scan export route head: %w", scanErr)
+		}
+		out = append(out, h)
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("iterate export route heads: %w", rowsErr)
+	}
+	return out, nil
+}
+
+// ListAllSeqsForExport returns all non-deleted route seqs for the given head IDs.
+func (r *CostRouteRepository) ListAllSeqsForExport(ctx context.Context, headIDs []int64) ([]costroute.ExportRouteSeq, error) {
+	if len(headIDs) == 0 {
+		return nil, nil
+	}
+	const q = `
+SELECT crs_seq_id, crs_head_id, crs_product_sys_id, crs_route_level, crs_route_seq,
+       COALESCE(crs_route_name,''), COALESCE(crs_route_item_code,''),
+       COALESCE(crs_route_shade_code,''), COALESCE(crs_route_shade_name,'')
+FROM cost_route_seq
+WHERE crs_head_id = ANY($1) AND crs_deleted_at IS NULL
+ORDER BY crs_head_id, crs_route_level, crs_route_seq`
+	rows, err := r.db.QueryContext(ctx, q, pq.Array(headIDs))
+	if err != nil {
+		return nil, fmt.Errorf("list all route seqs for export: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	var out []costroute.ExportRouteSeq
+	for rows.Next() {
+		var s costroute.ExportRouteSeq
+		if scanErr := rows.Scan(
+			&s.SeqID, &s.HeadID, &s.ProductSysID, &s.RouteLevel, &s.RouteSeq,
+			&s.RouteName, &s.RouteItemCode, &s.RouteShadeCode, &s.RouteShadeName,
+		); scanErr != nil {
+			return nil, fmt.Errorf("scan export route seq: %w", scanErr)
+		}
+		out = append(out, s)
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("iterate export route seqs: %w", rowsErr)
+	}
+	return out, nil
+}
+
+// ListAllRMsForExport returns all route RMs for the given seq IDs.
+// The HeadID field is populated from the caller-supplied seq→head mapping.
+func (r *CostRouteRepository) ListAllRMsForExport(ctx context.Context, seqIDs []int64) ([]costroute.ExportRouteRM, error) {
+	if len(seqIDs) == 0 {
+		return nil, nil
+	}
+	const q = `
+SELECT rm.crm_seq_id,
+       COALESCE(s.crs_route_level, 0), COALESCE(s.crs_route_seq, 0),
+       rm.crm_rm_type, COALESCE(rm.crm_rm_product_sys_id, 0),
+       COALESCE(rm.crm_rm_item_code,''), COALESCE(rm.crm_rm_group_code,''),
+       rm.crm_route_rm_ratio, COALESCE(rm.crm_route_rm_name,''),
+       COALESCE(rm.crm_route_rm_shade_code,''), COALESCE(rm.crm_route_rm_shade_name,''),
+       COALESCE(rm.crm_sub_type,''), COALESCE(rm.crm_notes,'')
+FROM cost_route_rm rm
+LEFT JOIN cost_route_seq s ON s.crs_seq_id = rm.crm_seq_id
+WHERE rm.crm_seq_id = ANY($1)
+ORDER BY rm.crm_seq_id`
+	rows, err := r.db.QueryContext(ctx, q, pq.Array(seqIDs))
+	if err != nil {
+		return nil, fmt.Errorf("list all route rms for export: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	var out []costroute.ExportRouteRM
+	for rows.Next() {
+		var rm costroute.ExportRouteRM
+		if scanErr := rows.Scan(
+			&rm.SeqID,
+			&rm.RouteLevel, &rm.RouteSeq,
+			&rm.RmType, &rm.RmProductSysID,
+			&rm.RmItemCode, &rm.RmGroupCode,
+			&rm.Ratio, &rm.RmName,
+			&rm.RmShadeCode, &rm.RmShadeName,
+			&rm.SubType, &rm.Notes,
+		); scanErr != nil {
+			return nil, fmt.Errorf("scan export route rm: %w", scanErr)
+		}
+		out = append(out, rm)
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("iterate export route rms: %w", rowsErr)
+	}
+	return out, nil
 }

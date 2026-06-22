@@ -868,3 +868,179 @@ WHERE cpp_product_sys_id = $1 AND cpp_param_id = $2`
 		return "", nil
 	}
 }
+
+// BulkUpsertValues upserts CPP value rows in a single transaction with batches of 200.
+func (r *CostProductParameterRepository) BulkUpsertValues(ctx context.Context, items []cpp.CPPUpsertInput, actor string) (inserted, updated int, err error) {
+	const batchSize = 200
+	now := time.Now()
+
+	tx, txErr := r.db.BeginTx(ctx, nil)
+	if txErr != nil {
+		return 0, 0, fmt.Errorf("begin tx: %w", txErr)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	for start := 0; start < len(items); start += batchSize {
+		end := min(start+batchSize, len(items))
+		ins, upd, batchErr := upsertCPPBatch(ctx, tx, items[start:end], actor, now)
+		if batchErr != nil {
+			return 0, 0, fmt.Errorf("upsert CPP batch: %w", batchErr)
+		}
+		inserted += ins
+		updated += upd
+	}
+
+	if commitErr := tx.Commit(); commitErr != nil {
+		return 0, 0, fmt.Errorf("commit CPP upsert: %w", commitErr)
+	}
+	return inserted, updated, nil
+}
+
+func upsertCPPBatch(ctx context.Context, tx *sql.Tx, items []cpp.CPPUpsertInput, actor string, now time.Time) (inserted, updated int, err error) {
+	const q = `
+INSERT INTO cost_product_parameter (
+    cpp_product_sys_id, cpp_param_id,
+    cpp_value_numeric, cpp_value_text, cpp_value_flag,
+    cpp_filled_at, cpp_filled_by,
+    cpp_created_at, cpp_created_by, cpp_updated_at, cpp_updated_by
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$8,$9)
+ON CONFLICT (cpp_product_sys_id, cpp_param_id) DO UPDATE SET
+    cpp_value_numeric = EXCLUDED.cpp_value_numeric,
+    cpp_value_text    = EXCLUDED.cpp_value_text,
+    cpp_value_flag    = EXCLUDED.cpp_value_flag,
+    cpp_filled_at     = EXCLUDED.cpp_filled_at,
+    cpp_filled_by     = EXCLUDED.cpp_filled_by,
+    cpp_updated_at    = EXCLUDED.cpp_updated_at,
+    cpp_updated_by    = EXCLUDED.cpp_updated_by
+RETURNING (xmax = 0)::int`
+
+	for _, item := range items {
+		var wasInserted int
+		if scanErr := tx.QueryRowContext(ctx, q,
+			item.ProductSysID, item.ParamID,
+			item.ValueNumeric, item.ValueText, item.ValueFlag,
+			item.FilledAt, item.FilledBy,
+			now, actor,
+		).Scan(&wasInserted); scanErr != nil {
+			return 0, 0, fmt.Errorf("upsert cpp row: %w", scanErr)
+		}
+		if wasInserted == 1 {
+			inserted++
+		} else {
+			updated++
+		}
+	}
+	return inserted, updated, nil
+}
+
+// BulkUpsertApplicable upserts CAPP rows in a single transaction with batches of 200.
+func (r *CostProductParameterRepository) BulkUpsertApplicable(ctx context.Context, items []cpp.CAPPUpsertInput, actor string) (inserted, updated int, err error) {
+	const batchSize = 200
+	now := time.Now()
+
+	tx, txErr := r.db.BeginTx(ctx, nil)
+	if txErr != nil {
+		return 0, 0, fmt.Errorf("begin tx: %w", txErr)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	for start := 0; start < len(items); start += batchSize {
+		end := min(start+batchSize, len(items))
+		ins, upd, batchErr := upsertCAPPBatch(ctx, tx, items[start:end], actor, now)
+		if batchErr != nil {
+			return 0, 0, fmt.Errorf("upsert CAPP batch: %w", batchErr)
+		}
+		inserted += ins
+		updated += upd
+	}
+
+	if commitErr := tx.Commit(); commitErr != nil {
+		return 0, 0, fmt.Errorf("commit CAPP upsert: %w", commitErr)
+	}
+	return inserted, updated, nil
+}
+
+func upsertCAPPBatch(ctx context.Context, tx *sql.Tx, items []cpp.CAPPUpsertInput, actor string, now time.Time) (inserted, updated int, err error) {
+	const q = `
+INSERT INTO cost_product_applicable_param (
+    capp_product_sys_id, capp_param_id, capp_is_required, capp_display_order,
+    capp_created_at, capp_created_by, capp_updated_at, capp_updated_by
+) VALUES ($1,$2,$3,$4,$5,$6,$5,$6)
+ON CONFLICT (capp_product_sys_id, capp_param_id) DO UPDATE SET
+    capp_is_required   = EXCLUDED.capp_is_required,
+    capp_display_order = EXCLUDED.capp_display_order,
+    capp_updated_at    = EXCLUDED.capp_updated_at,
+    capp_updated_by    = EXCLUDED.capp_updated_by
+RETURNING (xmax = 0)::int`
+
+	for _, item := range items {
+		var wasInserted int
+		if scanErr := tx.QueryRowContext(ctx, q,
+			item.ProductSysID, item.ParamID, item.IsRequired, item.DisplayOrder,
+			now, actor,
+		).Scan(&wasInserted); scanErr != nil {
+			return 0, 0, fmt.Errorf("upsert capp row: %w", scanErr)
+		}
+		if wasInserted == 1 {
+			inserted++
+		} else {
+			updated++
+		}
+	}
+	return inserted, updated, nil
+}
+
+// ListAllParams returns all non-deleted mst_parameter rows for map preloading.
+func (r *CostProductParameterRepository) ListAllParams(ctx context.Context) ([]cpp.ParamMeta, error) {
+	const q = `
+SELECT p.id, p.param_code, p.param_name, p.param_short_name,
+       p.data_type, p.param_category,
+       COALESCE(u.uom_code, '') AS uom_code,
+       COALESCE(p.owner_department, ''),
+       p.is_required_for_costing, p.is_period_dependent,
+       COALESCE(p.lookup_master_code, ''),
+       COALESCE(p.display_order, 0),
+       COALESCE(p.display_group, ''),
+       COALESCE(p.lookup_fill_group_code, ''),
+       COALESCE(p.lookup_source_column, '')
+FROM mst_parameter p
+LEFT JOIN mst_uom u ON u.uom_id = p.uom_id AND u.deleted_at IS NULL
+WHERE p.deleted_at IS NULL
+ORDER BY p.param_code`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list all params: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	var out []cpp.ParamMeta
+	for rows.Next() {
+		var m cpp.ParamMeta
+		if scanErr := rows.Scan(
+			&m.ParamID, &m.ParamCode, &m.ParamName, &m.ParamShortName,
+			&m.DataType, &m.ParamCategory,
+			&m.UOMCode, &m.OwnerDepartment,
+			&m.IsRequiredForCosting, &m.IsPeriodDependent,
+			&m.LookupMasterCode, &m.DisplayOrder, &m.DisplayGroup,
+			&m.LookupFillGroupCode, &m.LookupSourceColumn,
+		); scanErr != nil {
+			return nil, fmt.Errorf("scan param meta: %w", scanErr)
+		}
+		out = append(out, m)
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("iterate params: %w", rowsErr)
+	}
+	return out, nil
+}

@@ -194,3 +194,30 @@ func isProductTypeUniqueViolation(err error) bool {
 	}
 	return false
 }
+
+// ListAllActive returns all active cost_product_type rows for map preloading.
+func (r *CostProductTypeRepository) ListAllActive(ctx context.Context) ([]*costproducttype.CostProductType, error) {
+	const q = `SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at
+               FROM cost_product_type WHERE cpt_is_active = TRUE ORDER BY cpt_type_code`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list all active cost_product_type: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	var items []*costproducttype.CostProductType
+	for rows.Next() {
+		t, scanErr := r.scanRows(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		items = append(items, t)
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("iterate active cost_product_type: %w", rowsErr)
+	}
+	return items, nil
+}

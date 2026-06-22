@@ -53,6 +53,10 @@ func (m *mockRepository) List(ctx context.Context, f domain.Filter) ([]*domain.C
 	return args.Get(0).([]*domain.CostProductType), int64(args.Int(1)), args.Error(2)
 }
 
+func (m *mockRepository) ListAllActive(_ context.Context) ([]*domain.CostProductType, error) {
+	return nil, nil
+}
+
 // buildTestXLSX creates an in-memory xlsx file with the given rows (first row = header).
 func buildTestXLSX(t *testing.T, rows [][]string) []byte {
 	t.Helper()

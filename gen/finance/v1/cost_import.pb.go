@@ -1004,6 +1004,494 @@ func (x *DownloadCostProductParameterTemplateResponse) GetFileName() string {
 	return ""
 }
 
+type ImportRowError struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RowNumber     int32                  `protobuf:"varint,1,opt,name=row_number,json=rowNumber,proto3" json:"row_number,omitempty"`
+	Field         string                 `protobuf:"bytes,2,opt,name=field,proto3" json:"field,omitempty"`
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportRowError) Reset() {
+	*x = ImportRowError{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportRowError) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportRowError) ProtoMessage() {}
+
+func (x *ImportRowError) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportRowError.ProtoReflect.Descriptor instead.
+func (*ImportRowError) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ImportRowError) GetRowNumber() int32 {
+	if x != nil {
+		return x.RowNumber
+	}
+	return 0
+}
+
+func (x *ImportRowError) GetField() string {
+	if x != nil {
+		return x.Field
+	}
+	return ""
+}
+
+func (x *ImportRowError) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type BulkSheetValidationResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SheetName     string                 `protobuf:"bytes,1,opt,name=sheet_name,json=sheetName,proto3" json:"sheet_name,omitempty"`
+	TotalRows     int32                  `protobuf:"varint,2,opt,name=total_rows,json=totalRows,proto3" json:"total_rows,omitempty"`
+	ErrorCount    int32                  `protobuf:"varint,3,opt,name=error_count,json=errorCount,proto3" json:"error_count,omitempty"`
+	WarningCount  int32                  `protobuf:"varint,4,opt,name=warning_count,json=warningCount,proto3" json:"warning_count,omitempty"`
+	SampleErrors  []*ImportRowError      `protobuf:"bytes,5,rep,name=sample_errors,json=sampleErrors,proto3" json:"sample_errors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BulkSheetValidationResult) Reset() {
+	*x = BulkSheetValidationResult{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BulkSheetValidationResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BulkSheetValidationResult) ProtoMessage() {}
+
+func (x *BulkSheetValidationResult) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BulkSheetValidationResult.ProtoReflect.Descriptor instead.
+func (*BulkSheetValidationResult) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *BulkSheetValidationResult) GetSheetName() string {
+	if x != nil {
+		return x.SheetName
+	}
+	return ""
+}
+
+func (x *BulkSheetValidationResult) GetTotalRows() int32 {
+	if x != nil {
+		return x.TotalRows
+	}
+	return 0
+}
+
+func (x *BulkSheetValidationResult) GetErrorCount() int32 {
+	if x != nil {
+		return x.ErrorCount
+	}
+	return 0
+}
+
+func (x *BulkSheetValidationResult) GetWarningCount() int32 {
+	if x != nil {
+		return x.WarningCount
+	}
+	return 0
+}
+
+func (x *BulkSheetValidationResult) GetSampleErrors() []*ImportRowError {
+	if x != nil {
+		return x.SampleErrors
+	}
+	return nil
+}
+
+type ImportBulkProductRoutingRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	FileContent     []byte                 `protobuf:"bytes,1,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"`
+	FileName        string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	DuplicateAction string                 `protobuf:"bytes,3,opt,name=duplicate_action,json=duplicateAction,proto3" json:"duplicate_action,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ImportBulkProductRoutingRequest) Reset() {
+	*x = ImportBulkProductRoutingRequest{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportBulkProductRoutingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportBulkProductRoutingRequest) ProtoMessage() {}
+
+func (x *ImportBulkProductRoutingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportBulkProductRoutingRequest.ProtoReflect.Descriptor instead.
+func (*ImportBulkProductRoutingRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ImportBulkProductRoutingRequest) GetFileContent() []byte {
+	if x != nil {
+		return x.FileContent
+	}
+	return nil
+}
+
+func (x *ImportBulkProductRoutingRequest) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+func (x *ImportBulkProductRoutingRequest) GetDuplicateAction() string {
+	if x != nil {
+		return x.DuplicateAction
+	}
+	return ""
+}
+
+type ImportBulkProductRoutingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	JobId         int64                  `protobuf:"varint,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportBulkProductRoutingResponse) Reset() {
+	*x = ImportBulkProductRoutingResponse{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportBulkProductRoutingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportBulkProductRoutingResponse) ProtoMessage() {}
+
+func (x *ImportBulkProductRoutingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportBulkProductRoutingResponse.ProtoReflect.Descriptor instead.
+func (*ImportBulkProductRoutingResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ImportBulkProductRoutingResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ImportBulkProductRoutingResponse) GetJobId() int64 {
+	if x != nil {
+		return x.JobId
+	}
+	return 0
+}
+
+func (x *ImportBulkProductRoutingResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type ValidateBulkProductRoutingFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FileContent   []byte                 `protobuf:"bytes,1,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"`
+	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateBulkProductRoutingFileRequest) Reset() {
+	*x = ValidateBulkProductRoutingFileRequest{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateBulkProductRoutingFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateBulkProductRoutingFileRequest) ProtoMessage() {}
+
+func (x *ValidateBulkProductRoutingFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateBulkProductRoutingFileRequest.ProtoReflect.Descriptor instead.
+func (*ValidateBulkProductRoutingFileRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ValidateBulkProductRoutingFileRequest) GetFileContent() []byte {
+	if x != nil {
+		return x.FileContent
+	}
+	return nil
+}
+
+func (x *ValidateBulkProductRoutingFileRequest) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+type ValidateBulkProductRoutingFileResponse struct {
+	state         protoimpl.MessageState       `protogen:"open.v1"`
+	Base          *v1.BaseResponse             `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	IsValid       bool                         `protobuf:"varint,2,opt,name=is_valid,json=isValid,proto3" json:"is_valid,omitempty"`
+	Sheets        []*BulkSheetValidationResult `protobuf:"bytes,3,rep,name=sheets,proto3" json:"sheets,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateBulkProductRoutingFileResponse) Reset() {
+	*x = ValidateBulkProductRoutingFileResponse{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateBulkProductRoutingFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateBulkProductRoutingFileResponse) ProtoMessage() {}
+
+func (x *ValidateBulkProductRoutingFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateBulkProductRoutingFileResponse.ProtoReflect.Descriptor instead.
+func (*ValidateBulkProductRoutingFileResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ValidateBulkProductRoutingFileResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ValidateBulkProductRoutingFileResponse) GetIsValid() bool {
+	if x != nil {
+		return x.IsValid
+	}
+	return false
+}
+
+func (x *ValidateBulkProductRoutingFileResponse) GetSheets() []*BulkSheetValidationResult {
+	if x != nil {
+		return x.Sheets
+	}
+	return nil
+}
+
+type ExportBulkProductRoutingRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ProductTypeCodes []string               `protobuf:"bytes,1,rep,name=product_type_codes,json=productTypeCodes,proto3" json:"product_type_codes,omitempty"`
+	IncludeRouting   bool                   `protobuf:"varint,2,opt,name=include_routing,json=includeRouting,proto3" json:"include_routing,omitempty"`
+	ActiveOnly       bool                   `protobuf:"varint,3,opt,name=active_only,json=activeOnly,proto3" json:"active_only,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ExportBulkProductRoutingRequest) Reset() {
+	*x = ExportBulkProductRoutingRequest{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportBulkProductRoutingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportBulkProductRoutingRequest) ProtoMessage() {}
+
+func (x *ExportBulkProductRoutingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportBulkProductRoutingRequest.ProtoReflect.Descriptor instead.
+func (*ExportBulkProductRoutingRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ExportBulkProductRoutingRequest) GetProductTypeCodes() []string {
+	if x != nil {
+		return x.ProductTypeCodes
+	}
+	return nil
+}
+
+func (x *ExportBulkProductRoutingRequest) GetIncludeRouting() bool {
+	if x != nil {
+		return x.IncludeRouting
+	}
+	return false
+}
+
+func (x *ExportBulkProductRoutingRequest) GetActiveOnly() bool {
+	if x != nil {
+		return x.ActiveOnly
+	}
+	return false
+}
+
+type ExportBulkProductRoutingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	JobId         int64                  `protobuf:"varint,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportBulkProductRoutingResponse) Reset() {
+	*x = ExportBulkProductRoutingResponse{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportBulkProductRoutingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportBulkProductRoutingResponse) ProtoMessage() {}
+
+func (x *ExportBulkProductRoutingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportBulkProductRoutingResponse.ProtoReflect.Descriptor instead.
+func (*ExportBulkProductRoutingResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ExportBulkProductRoutingResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ExportBulkProductRoutingResponse) GetJobId() int64 {
+	if x != nil {
+		return x.JobId
+	}
+	return 0
+}
+
+func (x *ExportBulkProductRoutingResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 var File_finance_v1_cost_import_proto protoreflect.FileDescriptor
 
 const file_finance_v1_cost_import_proto_rawDesc = "" +
@@ -1033,9 +1521,9 @@ const file_finance_v1_cost_import_proto_rawDesc = "" +
 	"\x06job_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\x05jobId\"v\n" +
 	"\x18GetCostImportJobResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
-	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.CostImportJobR\x04data\"\xf8\x01\n" +
-	"\x19ListCostImportJobsRequest\x12S\n" +
-	"\x06entity\x18\x01 \x01(\tB;\xbaH8r6R\x00R\fproduct_typeR\tparameterR\x0eproduct_masterR\x04cappR\x03cppR\x06entity\x12H\n" +
+	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.CostImportJobR\x04data\"\xac\x02\n" +
+	"\x19ListCostImportJobsRequest\x12\x86\x01\n" +
+	"\x06entity\x18\x01 \x01(\tBn\xbaHkriR\x00R\fproduct_typeR\tparameterR\x0eproduct_masterR\x04cappR\x03cppR\x14bulk_product_routingR\x1bbulk_product_routing_exportR\x06entity\x12H\n" +
 	"\x06status\x18\x02 \x01(\tB0\xbaH-r+R\x00R\aPENDINGR\aRUNNINGR\x04DONER\x06FAILEDR\aPARTIALR\x06status\x12<\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1c.common.v1.PaginationRequestR\n" +
@@ -1081,7 +1569,45 @@ const file_finance_v1_cost_import_proto_rawDesc = "" +
 	",DownloadCostProductParameterTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName2\x88\v\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"_\n" +
+	"\x0eImportRowError\x12\x1d\n" +
+	"\n" +
+	"row_number\x18\x01 \x01(\x05R\trowNumber\x12\x14\n" +
+	"\x05field\x18\x02 \x01(\tR\x05field\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"\xe0\x01\n" +
+	"\x19BulkSheetValidationResult\x12\x1d\n" +
+	"\n" +
+	"sheet_name\x18\x01 \x01(\tR\tsheetName\x12\x1d\n" +
+	"\n" +
+	"total_rows\x18\x02 \x01(\x05R\ttotalRows\x12\x1f\n" +
+	"\verror_count\x18\x03 \x01(\x05R\n" +
+	"errorCount\x12#\n" +
+	"\rwarning_count\x18\x04 \x01(\x05R\fwarningCount\x12?\n" +
+	"\rsample_errors\x18\x05 \x03(\v2\x1a.finance.v1.ImportRowErrorR\fsampleErrors\"\xb1\x01\n" +
+	"\x1fImportBulkProductRoutingRequest\x12/\n" +
+	"\ffile_content\x18\x01 \x01(\fB\f\xbaH\tz\a\x10\x01\x18\x80\x80\x80\x19R\vfileContent\x12\x1b\n" +
+	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12@\n" +
+	"\x10duplicate_action\x18\x03 \x01(\tB\x15\xbaH\x12r\x10R\x00R\x04skipR\x06updateR\x0fduplicateAction\"~\n" +
+	" ImportBulkProductRoutingResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x15\n" +
+	"\x06job_id\x18\x02 \x01(\x03R\x05jobId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"u\n" +
+	"%ValidateBulkProductRoutingFileRequest\x12/\n" +
+	"\ffile_content\x18\x01 \x01(\fB\f\xbaH\tz\a\x10\x01\x18\x80\x80\x80\x05R\vfileContent\x12\x1b\n" +
+	"\tfile_name\x18\x02 \x01(\tR\bfileName\"\xaf\x01\n" +
+	"&ValidateBulkProductRoutingFileResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x19\n" +
+	"\bis_valid\x18\x02 \x01(\bR\aisValid\x12=\n" +
+	"\x06sheets\x18\x03 \x03(\v2%.finance.v1.BulkSheetValidationResultR\x06sheets\"\x99\x01\n" +
+	"\x1fExportBulkProductRoutingRequest\x12,\n" +
+	"\x12product_type_codes\x18\x01 \x03(\tR\x10productTypeCodes\x12'\n" +
+	"\x0finclude_routing\x18\x02 \x01(\bR\x0eincludeRouting\x12\x1f\n" +
+	"\vactive_only\x18\x03 \x01(\bR\n" +
+	"activeOnly\"~\n" +
+	" ExportBulkProductRoutingResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x15\n" +
+	"\x06job_id\x18\x02 \x01(\x03R\x05jobId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status2\xc4\x0f\n" +
 	"\x15CostDataImportService\x12\x93\x01\n" +
 	"\x10GetCostImportJob\x12#.finance.v1.GetCostImportJobRequest\x1a$.finance.v1.GetCostImportJobResponse\"4\x82\xd3\xe4\x93\x02.\x12,/api/v1/finance/costing/import-jobs/{job_id}\x12\x90\x01\n" +
 	"\x12ListCostImportJobs\x12%.finance.v1.ListCostImportJobsRequest\x1a&.finance.v1.ListCostImportJobsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/v1/finance/costing/import-jobs\x12\xab\x01\n" +
@@ -1090,7 +1616,10 @@ const file_finance_v1_cost_import_proto_rawDesc = "" +
 	"#DownloadCostApplicableParamTemplate\x126.finance.v1.DownloadCostApplicableParamTemplateRequest\x1a7.finance.v1.DownloadCostApplicableParamTemplateResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/finance/costing/capp/template\x12\xad\x01\n" +
 	"\x1bImportCostProductParameters\x12..finance.v1.ImportCostProductParametersRequest\x1a/.finance.v1.ImportCostProductParametersResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/finance/costing/cpp/import\x12\xaa\x01\n" +
 	"\x1bExportCostProductParameters\x12..finance.v1.ExportCostProductParametersRequest\x1a/.finance.v1.ExportCostProductParametersResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/finance/costing/cpp/export\x12\xc7\x01\n" +
-	"$DownloadCostProductParameterTemplate\x127.finance.v1.DownloadCostProductParameterTemplateRequest\x1a8.finance.v1.DownloadCostProductParameterTemplateResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/finance/costing/cpp/templateB\xa9\x01\n" +
+	"$DownloadCostProductParameterTemplate\x127.finance.v1.DownloadCostProductParameterTemplateRequest\x1a8.finance.v1.DownloadCostProductParameterTemplateResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/finance/costing/cpp/template\x12\xb5\x01\n" +
+	"\x18ImportBulkProductRouting\x12+.finance.v1.ImportBulkProductRoutingRequest\x1a,.finance.v1.ImportBulkProductRoutingResponse\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/finance/costing/import/bulk_product_routing\x12\xc9\x01\n" +
+	"\x1eValidateBulkProductRoutingFile\x121.finance.v1.ValidateBulkProductRoutingFileRequest\x1a2.finance.v1.ValidateBulkProductRoutingFileResponse\"@\x82\xd3\xe4\x93\x02::\x01*\"5/api/v1/finance/costing/validate/bulk_product_routing\x12\xb5\x01\n" +
+	"\x18ExportBulkProductRouting\x12+.finance.v1.ExportBulkProductRoutingRequest\x1a,.finance.v1.ExportBulkProductRoutingResponse\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/finance/costing/export/bulk_product_routingB\xa9\x01\n" +
 	"\x0ecom.finance.v1B\x0fCostImportProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
 	"Finance.V1\xca\x02\n" +
 	"Finance\\V1\xe2\x02\x16Finance\\V1\\GPBMetadata\xea\x02\vFinance::V1b\x06proto3"
@@ -1107,7 +1636,7 @@ func file_finance_v1_cost_import_proto_rawDescGZIP() []byte {
 	return file_finance_v1_cost_import_proto_rawDescData
 }
 
-var file_finance_v1_cost_import_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_finance_v1_cost_import_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_finance_v1_cost_import_proto_goTypes = []any{
 	(*CostImportJob)(nil),                                // 0: finance.v1.CostImportJob
 	(*GetCostImportJobRequest)(nil),                      // 1: finance.v1.GetCostImportJobRequest
@@ -1126,44 +1655,63 @@ var file_finance_v1_cost_import_proto_goTypes = []any{
 	(*DownloadCostApplicableParamTemplateResponse)(nil),  // 14: finance.v1.DownloadCostApplicableParamTemplateResponse
 	(*DownloadCostProductParameterTemplateRequest)(nil),  // 15: finance.v1.DownloadCostProductParameterTemplateRequest
 	(*DownloadCostProductParameterTemplateResponse)(nil), // 16: finance.v1.DownloadCostProductParameterTemplateResponse
-	(*v1.BaseResponse)(nil),                              // 17: common.v1.BaseResponse
-	(*v1.PaginationRequest)(nil),                         // 18: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),                        // 19: common.v1.PaginationResponse
+	(*ImportRowError)(nil),                               // 17: finance.v1.ImportRowError
+	(*BulkSheetValidationResult)(nil),                    // 18: finance.v1.BulkSheetValidationResult
+	(*ImportBulkProductRoutingRequest)(nil),              // 19: finance.v1.ImportBulkProductRoutingRequest
+	(*ImportBulkProductRoutingResponse)(nil),             // 20: finance.v1.ImportBulkProductRoutingResponse
+	(*ValidateBulkProductRoutingFileRequest)(nil),        // 21: finance.v1.ValidateBulkProductRoutingFileRequest
+	(*ValidateBulkProductRoutingFileResponse)(nil),       // 22: finance.v1.ValidateBulkProductRoutingFileResponse
+	(*ExportBulkProductRoutingRequest)(nil),              // 23: finance.v1.ExportBulkProductRoutingRequest
+	(*ExportBulkProductRoutingResponse)(nil),             // 24: finance.v1.ExportBulkProductRoutingResponse
+	(*v1.BaseResponse)(nil),                              // 25: common.v1.BaseResponse
+	(*v1.PaginationRequest)(nil),                         // 26: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),                        // 27: common.v1.PaginationResponse
 }
 var file_finance_v1_cost_import_proto_depIdxs = []int32{
-	17, // 0: finance.v1.GetCostImportJobResponse.base:type_name -> common.v1.BaseResponse
+	25, // 0: finance.v1.GetCostImportJobResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 1: finance.v1.GetCostImportJobResponse.data:type_name -> finance.v1.CostImportJob
-	18, // 2: finance.v1.ListCostImportJobsRequest.pagination:type_name -> common.v1.PaginationRequest
-	17, // 3: finance.v1.ListCostImportJobsResponse.base:type_name -> common.v1.BaseResponse
+	26, // 2: finance.v1.ListCostImportJobsRequest.pagination:type_name -> common.v1.PaginationRequest
+	25, // 3: finance.v1.ListCostImportJobsResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 4: finance.v1.ListCostImportJobsResponse.data:type_name -> finance.v1.CostImportJob
-	19, // 5: finance.v1.ListCostImportJobsResponse.pagination:type_name -> common.v1.PaginationResponse
-	17, // 6: finance.v1.ImportCostApplicableParamsResponse.base:type_name -> common.v1.BaseResponse
-	17, // 7: finance.v1.ImportCostProductParametersResponse.base:type_name -> common.v1.BaseResponse
-	17, // 8: finance.v1.ExportCostApplicableParamsResponse.base:type_name -> common.v1.BaseResponse
-	17, // 9: finance.v1.ExportCostProductParametersResponse.base:type_name -> common.v1.BaseResponse
-	17, // 10: finance.v1.DownloadCostApplicableParamTemplateResponse.base:type_name -> common.v1.BaseResponse
-	17, // 11: finance.v1.DownloadCostProductParameterTemplateResponse.base:type_name -> common.v1.BaseResponse
-	1,  // 12: finance.v1.CostDataImportService.GetCostImportJob:input_type -> finance.v1.GetCostImportJobRequest
-	3,  // 13: finance.v1.CostDataImportService.ListCostImportJobs:input_type -> finance.v1.ListCostImportJobsRequest
-	5,  // 14: finance.v1.CostDataImportService.ImportCostApplicableParams:input_type -> finance.v1.ImportCostApplicableParamsRequest
-	9,  // 15: finance.v1.CostDataImportService.ExportCostApplicableParams:input_type -> finance.v1.ExportCostApplicableParamsRequest
-	13, // 16: finance.v1.CostDataImportService.DownloadCostApplicableParamTemplate:input_type -> finance.v1.DownloadCostApplicableParamTemplateRequest
-	7,  // 17: finance.v1.CostDataImportService.ImportCostProductParameters:input_type -> finance.v1.ImportCostProductParametersRequest
-	11, // 18: finance.v1.CostDataImportService.ExportCostProductParameters:input_type -> finance.v1.ExportCostProductParametersRequest
-	15, // 19: finance.v1.CostDataImportService.DownloadCostProductParameterTemplate:input_type -> finance.v1.DownloadCostProductParameterTemplateRequest
-	2,  // 20: finance.v1.CostDataImportService.GetCostImportJob:output_type -> finance.v1.GetCostImportJobResponse
-	4,  // 21: finance.v1.CostDataImportService.ListCostImportJobs:output_type -> finance.v1.ListCostImportJobsResponse
-	6,  // 22: finance.v1.CostDataImportService.ImportCostApplicableParams:output_type -> finance.v1.ImportCostApplicableParamsResponse
-	10, // 23: finance.v1.CostDataImportService.ExportCostApplicableParams:output_type -> finance.v1.ExportCostApplicableParamsResponse
-	14, // 24: finance.v1.CostDataImportService.DownloadCostApplicableParamTemplate:output_type -> finance.v1.DownloadCostApplicableParamTemplateResponse
-	8,  // 25: finance.v1.CostDataImportService.ImportCostProductParameters:output_type -> finance.v1.ImportCostProductParametersResponse
-	12, // 26: finance.v1.CostDataImportService.ExportCostProductParameters:output_type -> finance.v1.ExportCostProductParametersResponse
-	16, // 27: finance.v1.CostDataImportService.DownloadCostProductParameterTemplate:output_type -> finance.v1.DownloadCostProductParameterTemplateResponse
-	20, // [20:28] is the sub-list for method output_type
-	12, // [12:20] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	27, // 5: finance.v1.ListCostImportJobsResponse.pagination:type_name -> common.v1.PaginationResponse
+	25, // 6: finance.v1.ImportCostApplicableParamsResponse.base:type_name -> common.v1.BaseResponse
+	25, // 7: finance.v1.ImportCostProductParametersResponse.base:type_name -> common.v1.BaseResponse
+	25, // 8: finance.v1.ExportCostApplicableParamsResponse.base:type_name -> common.v1.BaseResponse
+	25, // 9: finance.v1.ExportCostProductParametersResponse.base:type_name -> common.v1.BaseResponse
+	25, // 10: finance.v1.DownloadCostApplicableParamTemplateResponse.base:type_name -> common.v1.BaseResponse
+	25, // 11: finance.v1.DownloadCostProductParameterTemplateResponse.base:type_name -> common.v1.BaseResponse
+	17, // 12: finance.v1.BulkSheetValidationResult.sample_errors:type_name -> finance.v1.ImportRowError
+	25, // 13: finance.v1.ImportBulkProductRoutingResponse.base:type_name -> common.v1.BaseResponse
+	25, // 14: finance.v1.ValidateBulkProductRoutingFileResponse.base:type_name -> common.v1.BaseResponse
+	18, // 15: finance.v1.ValidateBulkProductRoutingFileResponse.sheets:type_name -> finance.v1.BulkSheetValidationResult
+	25, // 16: finance.v1.ExportBulkProductRoutingResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 17: finance.v1.CostDataImportService.GetCostImportJob:input_type -> finance.v1.GetCostImportJobRequest
+	3,  // 18: finance.v1.CostDataImportService.ListCostImportJobs:input_type -> finance.v1.ListCostImportJobsRequest
+	5,  // 19: finance.v1.CostDataImportService.ImportCostApplicableParams:input_type -> finance.v1.ImportCostApplicableParamsRequest
+	9,  // 20: finance.v1.CostDataImportService.ExportCostApplicableParams:input_type -> finance.v1.ExportCostApplicableParamsRequest
+	13, // 21: finance.v1.CostDataImportService.DownloadCostApplicableParamTemplate:input_type -> finance.v1.DownloadCostApplicableParamTemplateRequest
+	7,  // 22: finance.v1.CostDataImportService.ImportCostProductParameters:input_type -> finance.v1.ImportCostProductParametersRequest
+	11, // 23: finance.v1.CostDataImportService.ExportCostProductParameters:input_type -> finance.v1.ExportCostProductParametersRequest
+	15, // 24: finance.v1.CostDataImportService.DownloadCostProductParameterTemplate:input_type -> finance.v1.DownloadCostProductParameterTemplateRequest
+	19, // 25: finance.v1.CostDataImportService.ImportBulkProductRouting:input_type -> finance.v1.ImportBulkProductRoutingRequest
+	21, // 26: finance.v1.CostDataImportService.ValidateBulkProductRoutingFile:input_type -> finance.v1.ValidateBulkProductRoutingFileRequest
+	23, // 27: finance.v1.CostDataImportService.ExportBulkProductRouting:input_type -> finance.v1.ExportBulkProductRoutingRequest
+	2,  // 28: finance.v1.CostDataImportService.GetCostImportJob:output_type -> finance.v1.GetCostImportJobResponse
+	4,  // 29: finance.v1.CostDataImportService.ListCostImportJobs:output_type -> finance.v1.ListCostImportJobsResponse
+	6,  // 30: finance.v1.CostDataImportService.ImportCostApplicableParams:output_type -> finance.v1.ImportCostApplicableParamsResponse
+	10, // 31: finance.v1.CostDataImportService.ExportCostApplicableParams:output_type -> finance.v1.ExportCostApplicableParamsResponse
+	14, // 32: finance.v1.CostDataImportService.DownloadCostApplicableParamTemplate:output_type -> finance.v1.DownloadCostApplicableParamTemplateResponse
+	8,  // 33: finance.v1.CostDataImportService.ImportCostProductParameters:output_type -> finance.v1.ImportCostProductParametersResponse
+	12, // 34: finance.v1.CostDataImportService.ExportCostProductParameters:output_type -> finance.v1.ExportCostProductParametersResponse
+	16, // 35: finance.v1.CostDataImportService.DownloadCostProductParameterTemplate:output_type -> finance.v1.DownloadCostProductParameterTemplateResponse
+	20, // 36: finance.v1.CostDataImportService.ImportBulkProductRouting:output_type -> finance.v1.ImportBulkProductRoutingResponse
+	22, // 37: finance.v1.CostDataImportService.ValidateBulkProductRoutingFile:output_type -> finance.v1.ValidateBulkProductRoutingFileResponse
+	24, // 38: finance.v1.CostDataImportService.ExportBulkProductRouting:output_type -> finance.v1.ExportBulkProductRoutingResponse
+	28, // [28:39] is the sub-list for method output_type
+	17, // [17:28] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_import_proto_init() }
@@ -1177,7 +1725,7 @@ func file_finance_v1_cost_import_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_cost_import_proto_rawDesc), len(file_finance_v1_cost_import_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

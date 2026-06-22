@@ -4,11 +4,13 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costbulkimport"
 	cappapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductapplicableparam"
 	cpmapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
@@ -22,15 +24,17 @@ const importPresignValidity = 15 * time.Minute
 // CostDataImportHandler implements financev1.CostDataImportServiceServer.
 type CostDataImportHandler struct {
 	financev1.UnimplementedCostDataImportServiceServer
-	jobRepo         costimportjob.Repository
-	storage         storage.Service
-	cappExport      *cappapp.ExportHandler
-	cappTemplate    *cappapp.TemplateHandler
-	cppExport       *cppapp.ExportHandler
-	cppTemplate     *cppapp.TemplateHandler
-	cpmExport       *cpmapp.ExportHandler
-	cpmTemplate     *cpmapp.TemplateHandler
-	importPublisher *rabbitmq.JobPublisherAdapter
+	jobRepo             costimportjob.Repository
+	storage             storage.Service
+	cappExport          *cappapp.ExportHandler
+	cappTemplate        *cappapp.TemplateHandler
+	cppExport           *cppapp.ExportHandler
+	cppTemplate         *cppapp.TemplateHandler
+	cpmExport           *cpmapp.ExportHandler
+	cpmTemplate         *cpmapp.TemplateHandler
+	importPublisher     *rabbitmq.JobPublisherAdapter
+	validateBulkHandler *costbulkimport.ValidateHandler
+	templateBulkHandler *costbulkimport.TemplateHandler
 }
 
 // NewCostDataImportHandler constructs the handler.
@@ -44,17 +48,21 @@ func NewCostDataImportHandler(
 	cpmExport *cpmapp.ExportHandler,
 	cpmTemplate *cpmapp.TemplateHandler,
 	importPublisher *rabbitmq.JobPublisherAdapter,
+	validateBulkHandler *costbulkimport.ValidateHandler,
+	templateBulkHandler *costbulkimport.TemplateHandler,
 ) *CostDataImportHandler {
 	return &CostDataImportHandler{
-		jobRepo:         jobRepo,
-		storage:         storageSvc,
-		cappExport:      cappExport,
-		cappTemplate:    cappTemplate,
-		cppExport:       cppExport,
-		cppTemplate:     cppTemplate,
-		cpmExport:       cpmExport,
-		cpmTemplate:     cpmTemplate,
-		importPublisher: importPublisher,
+		jobRepo:             jobRepo,
+		storage:             storageSvc,
+		cappExport:          cappExport,
+		cappTemplate:        cappTemplate,
+		cppExport:           cppExport,
+		cppTemplate:         cppTemplate,
+		cpmExport:           cpmExport,
+		cpmTemplate:         cpmTemplate,
+		importPublisher:     importPublisher,
+		validateBulkHandler: validateBulkHandler,
+		templateBulkHandler: templateBulkHandler,
 	}
 }
 
@@ -202,6 +210,72 @@ func (h *CostDataImportHandler) DownloadCostProductParameterTemplate(_ context.C
 	}, nil
 }
 
+// ImportBulkProductRouting uploads file to MinIO, creates a PENDING job, and publishes to RabbitMQ.
+func (h *CostDataImportHandler) ImportBulkProductRouting(ctx context.Context, req *financev1.ImportBulkProductRoutingRequest) (*financev1.ImportBulkProductRoutingResponse, error) {
+	jobID, err := h.enqueueImport(ctx, req.GetFileContent(), req.GetFileName(), costimportjob.EntityBulkProductRouting)
+	if err != nil {
+		return &financev1.ImportBulkProductRoutingResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+
+	return &financev1.ImportBulkProductRoutingResponse{
+		Base:  successResponse("Bulk product routing import queued"),
+		JobId: jobID,
+	}, nil
+}
+
+// ValidateBulkProductRoutingFile performs a synchronous dry-run validation of a
+// bulk product routing import file and returns per-sheet validation results.
+func (h *CostDataImportHandler) ValidateBulkProductRoutingFile(ctx context.Context, req *financev1.ValidateBulkProductRoutingFileRequest) (*financev1.ValidateBulkProductRoutingFileResponse, error) {
+	result, err := h.validateBulkHandler.Validate(ctx, req.GetFileContent())
+	if err != nil {
+		return &financev1.ValidateBulkProductRoutingFileResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+
+	sheets := make([]*financev1.BulkSheetValidationResult, 0, len(result.Sheets))
+	for _, s := range result.Sheets {
+		sheets = append(sheets, toProtoBulkSheetResult(s))
+	}
+
+	return &financev1.ValidateBulkProductRoutingFileResponse{
+		Base:    successResponse("OK"),
+		IsValid: result.IsValid,
+		Sheets:  sheets,
+	}, nil
+}
+
+// ExportBulkProductRouting creates an async export job for bulk product routing data
+// and publishes it to RabbitMQ for the worker to process.
+func (h *CostDataImportHandler) ExportBulkProductRouting(ctx context.Context, req *financev1.ExportBulkProductRoutingRequest) (*financev1.ExportBulkProductRoutingResponse, error) {
+	actor := getUserFromContext(ctx)
+	requestingUserID, _ := GetUserIDFromCtx(ctx)
+
+	exportReq := costbulkimport.ExportRequest{
+		ProductTypeCodes: req.GetProductTypeCodes(),
+		IncludeRouting:   req.GetIncludeRouting(),
+		ActiveOnly:       req.GetActiveOnly(),
+		Actor:            actor,
+	}
+
+	fileKey, err := marshalExportRequestKey(exportReq)
+	if err != nil {
+		return &financev1.ExportBulkProductRoutingResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+
+	job := costimportjob.NewJob(costimportjob.EntityBulkProductRoutingExport, fileKey, actor, requestingUserID)
+	if err := h.jobRepo.Create(ctx, job); err != nil {
+		return &financev1.ExportBulkProductRoutingResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+
+	if err := h.importPublisher.PublishImportJob(ctx, job.JobID(), costimportjob.EntityBulkProductRoutingExport, requestingUserID); err != nil {
+		return &financev1.ExportBulkProductRoutingResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+
+	return &financev1.ExportBulkProductRoutingResponse{
+		Base:  successResponse("Bulk product routing export queued"),
+		JobId: job.JobID(),
+	}, nil
+}
+
 // =============================================================================
 // helpers
 // =============================================================================
@@ -235,11 +309,12 @@ func (h *CostDataImportHandler) enqueueImport(ctx context.Context, fileContent [
 }
 
 // importJobToProto maps a domain CostImportJob to the proto CostImportJob.
-// If the job has an error file, it generates a presigned download URL.
+// If the job has a result/error file, it generates a presigned download URL.
 func (h *CostDataImportHandler) importJobToProto(ctx context.Context, job *costimportjob.CostImportJob) (*financev1.CostImportJob, error) {
 	errorFileURL := ""
 	if job.ErrorFile() != "" && h.storage != nil {
-		u, err := h.storage.PresignedGetURL(ctx, job.ErrorFile(), importPresignValidity, "import_errors.xlsx")
+		filename := downloadFilename(job.Entity())
+		u, err := h.storage.PresignedGetURL(ctx, job.ErrorFile(), importPresignValidity, filename)
 		if err != nil {
 			return nil, fmt.Errorf("presign error file URL: %w", err)
 		}
@@ -268,4 +343,42 @@ func (h *CostDataImportHandler) importJobToProto(ctx context.Context, job *costi
 	}
 
 	return p, nil
+}
+
+// marshalExportRequestKey encodes an ExportRequest as a JSON string for storage
+// in the job's file_key field. The worker decodes it to reconstruct the request.
+func marshalExportRequestKey(req costbulkimport.ExportRequest) (string, error) {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("marshal export request: %w", err)
+	}
+	return string(b), nil
+}
+
+// downloadFilename returns the suggested download filename for a job's result/error file.
+// Export jobs produce an Excel workbook; import jobs produce an error report.
+func downloadFilename(entity string) string {
+	if entity == costimportjob.EntityBulkProductRoutingExport {
+		return "bulk_product_routing_export.xlsx"
+	}
+	return "import_errors.xlsx"
+}
+
+// toProtoBulkSheetResult converts a domain SheetResult to the proto BulkSheetValidationResult.
+func toProtoBulkSheetResult(s costbulkimport.SheetResult) *financev1.BulkSheetValidationResult {
+	sampleErrors := make([]*financev1.ImportRowError, 0, len(s.Errors))
+	for _, e := range s.Errors {
+		sampleErrors = append(sampleErrors, &financev1.ImportRowError{
+			RowNumber: e.RowNumber,
+			Field:     e.Field,
+			Message:   e.Message,
+		})
+	}
+	return &financev1.BulkSheetValidationResult{
+		SheetName:    s.SheetName,
+		TotalRows:    safeIntToInt32(s.TotalRows),
+		ErrorCount:   safeIntToInt32(len(s.Errors)),
+		WarningCount: 0,
+		SampleErrors: sampleErrors,
+	}
 }

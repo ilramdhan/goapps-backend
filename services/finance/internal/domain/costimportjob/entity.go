@@ -14,11 +14,13 @@ const (
 
 // Entity constants for CostImportJob.
 const (
-	EntityProductType   = "product_type"
-	EntityParameter     = "parameter"
-	EntityProductMaster = "product_master"
-	EntityCAPP          = "capp"
-	EntityCPP           = "cpp"
+	EntityProductType              = "product_type"
+	EntityParameter                = "parameter"
+	EntityProductMaster            = "product_master"
+	EntityCAPP                     = "capp"
+	EntityCPP                      = "cpp"
+	EntityBulkProductRouting       = "bulk_product_routing"
+	EntityBulkProductRoutingExport = "bulk_product_routing_export"
 )
 
 // CostImportJob tracks the lifecycle of a bulk import operation.

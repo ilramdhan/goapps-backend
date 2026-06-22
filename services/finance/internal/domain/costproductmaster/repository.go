@@ -2,6 +2,28 @@ package costproductmaster
 
 import "context"
 
+// ProductUpsertInput is a single row for BulkUpsertByLegacyID.
+type ProductUpsertInput struct {
+	LegacySysID   string // maps to cpm_flex_02
+	ProductTypeID int32
+	ProductName   string
+	ShadeCode     string
+	ShadeName     string
+	GradeCode     string
+	Description   string
+	ErpItemCode   string
+	Flex01        string // legacy_erp_compound_key
+	Flex03        string // legacy_type_label
+	IsActive      bool
+}
+
+// ProductUpsertResult reports the outcome for one upserted product.
+type ProductUpsertResult struct {
+	LegacySysID  string
+	ProductSysID int64
+	WasInserted  bool
+}
+
 // Filter for List query.
 type Filter struct {
 	Search        string // matches product_code OR product_name OR erp_item_code
@@ -27,4 +49,7 @@ type Repository interface {
 	BulkCreate(ctx context.Context, items []*CostProductMaster, updatedBy string) (map[string]int64, error)
 	// ListAll returns all products matching the filter with no pagination cap, for export/sync use.
 	ListAll(ctx context.Context, f Filter) ([]*CostProductMaster, error)
+	// BulkUpsertByLegacyID upserts products using cpm_flex_02 (legacy Oracle sys_id) as the
+	// conflict key. Returns a slice of results mapping each legacySysId to its assigned cpm_product_sys_id.
+	BulkUpsertByLegacyID(ctx context.Context, items []ProductUpsertInput, actor string) ([]ProductUpsertResult, error)
 }

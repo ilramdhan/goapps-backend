@@ -262,6 +262,110 @@ func (r *CostProductMasterRepository) BulkCreate(ctx context.Context, items []*c
 	return result, nil
 }
 
+const upsertByLegacyBatchSize = 200
+
+// BulkUpsertByLegacyID upserts products in batches of 200 using cpm_flex_02 as the conflict key.
+// Returns a result slice mapping each legacy sys_id to its assigned cpm_product_sys_id.
+func (r *CostProductMasterRepository) BulkUpsertByLegacyID(ctx context.Context, items []costproductmaster.ProductUpsertInput, actor string) ([]costproductmaster.ProductUpsertResult, error) {
+	if len(items) == 0 {
+		return []costproductmaster.ProductUpsertResult{}, nil
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin BulkUpsertByLegacyID tx: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	const q = `
+		INSERT INTO cost_product_master (
+			cpm_product_type_id, cpm_product_name,
+			cpm_shade_code, cpm_grade_code, cpm_description,
+			cpm_shade_name, cpm_flex_01, cpm_flex_02, cpm_flex_03,
+			cpm_erp_item_code, cpm_is_active,
+			cpm_created_at, cpm_created_by, cpm_updated_at, cpm_updated_by,
+			cpm_product_code
+		)
+		VALUES (
+			$1, $2,
+			$3, $4, $5,
+			$6, $7, $8, $9,
+			$10, $11,
+			$12, $13, $12, $13,
+			COALESCE(
+				(SELECT cpm_product_code FROM cost_product_master WHERE cpm_flex_02 = $8 AND cpm_is_active = TRUE),
+				generate_cost_product_code($1, $12)
+			)
+		)
+		ON CONFLICT (cpm_flex_02) WHERE cpm_flex_02 IS NOT NULL
+		DO UPDATE SET
+			cpm_product_type_id = EXCLUDED.cpm_product_type_id,
+			cpm_product_name    = EXCLUDED.cpm_product_name,
+			cpm_shade_code      = EXCLUDED.cpm_shade_code,
+			cpm_grade_code      = EXCLUDED.cpm_grade_code,
+			cpm_description     = EXCLUDED.cpm_description,
+			cpm_shade_name      = EXCLUDED.cpm_shade_name,
+			cpm_flex_01         = EXCLUDED.cpm_flex_01,
+			cpm_flex_03         = EXCLUDED.cpm_flex_03,
+			cpm_erp_item_code   = EXCLUDED.cpm_erp_item_code,
+			cpm_is_active       = EXCLUDED.cpm_is_active,
+			cpm_updated_at      = EXCLUDED.cpm_updated_at,
+			cpm_updated_by      = EXCLUDED.cpm_updated_by
+		RETURNING cpm_flex_02, cpm_product_sys_id, xmax::text`
+
+	results := make([]costproductmaster.ProductUpsertResult, 0, len(items))
+	now := time.Now().UTC()
+
+	for start := 0; start < len(items); start += upsertByLegacyBatchSize {
+		end := min(start+upsertByLegacyBatchSize, len(items))
+		batch := items[start:end]
+		batchResults, err := r.upsertLegacyBatch(ctx, tx, q, batch, actor, now)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, batchResults...)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit BulkUpsertByLegacyID: %w", err)
+	}
+	return results, nil
+}
+
+func (r *CostProductMasterRepository) upsertLegacyBatch(
+	ctx context.Context,
+	tx *sql.Tx,
+	q string,
+	batch []costproductmaster.ProductUpsertInput,
+	actor string,
+	now time.Time,
+) ([]costproductmaster.ProductUpsertResult, error) {
+	results := make([]costproductmaster.ProductUpsertResult, 0, len(batch))
+	for _, item := range batch {
+		var legacyID string
+		var sysID int64
+		var xmax string
+		if err := tx.QueryRowContext(ctx, q,
+			item.ProductTypeID, item.ProductName,
+			item.ShadeCode, item.GradeCode, item.Description,
+			item.ShadeName, item.Flex01, item.LegacySysID, item.Flex03,
+			item.ErpItemCode, item.IsActive,
+			now, actor,
+		).Scan(&legacyID, &sysID, &xmax); err != nil {
+			return nil, fmt.Errorf("BulkUpsertByLegacyID upsert row: %w", err)
+		}
+		results = append(results, costproductmaster.ProductUpsertResult{
+			LegacySysID:  legacyID,
+			ProductSysID: sysID,
+			WasInserted:  xmax == "0",
+		})
+	}
+	return results, nil
+}
+
 // ListAll returns all products matching the filter with no pagination cap.
 func (r *CostProductMasterRepository) ListAll(ctx context.Context, f costproductmaster.Filter) ([]*costproductmaster.CostProductMaster, error) {
 	f.Page = 1
