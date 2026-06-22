@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 
@@ -1074,3 +1075,176 @@ func (r *CostRouteRepository) ListLinkedRequests(ctx context.Context, headID int
 	}
 	return out, rows.Err()
 }
+
+// =============================================================================
+// Bulk import helpers (BulkUpsertHeads, BulkUpsertSeqs, BulkReplaceRMs)
+// =============================================================================
+
+// BulkUpsertHeads upserts route head rows by (crh_product_sys_id).
+// Rows whose existing crh_routing_status is 'LOCKED' are returned with Skipped=true.
+func (r *CostRouteRepository) BulkUpsertHeads(ctx context.Context, items []costroute.HeadUpsertInput, actor string) ([]costroute.HeadUpsertResult, error) {
+	if len(items) == 0 {
+		return []costroute.HeadUpsertResult{}, nil
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin BulkUpsertHeads tx: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	const q = `
+		INSERT INTO cost_route_head (
+			crh_product_sys_id, crh_routing_status, crh_notes,
+			crh_created_at, crh_created_by, crh_updated_at, crh_updated_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $4, $5)
+		ON CONFLICT (crh_product_sys_id) WHERE crh_deleted_at IS NULL
+		DO UPDATE SET
+			crh_notes      = CASE WHEN cost_route_head.crh_routing_status = 'LOCKED' THEN cost_route_head.crh_notes ELSE EXCLUDED.crh_notes END,
+			crh_updated_at = CASE WHEN cost_route_head.crh_routing_status = 'LOCKED' THEN cost_route_head.crh_updated_at ELSE EXCLUDED.crh_updated_at END,
+			crh_updated_by = CASE WHEN cost_route_head.crh_routing_status = 'LOCKED' THEN cost_route_head.crh_updated_by ELSE EXCLUDED.crh_updated_by END
+		RETURNING crh_head_id, xmax::text, crh_routing_status`
+
+	results := make([]costroute.HeadUpsertResult, 0, len(items))
+	now := time.Now().UTC()
+	for _, item := range items {
+		status := item.RoutingStatus
+		if status == "" {
+			status = costroute.StatusDraft
+		}
+		var headID int64
+		var xmax, routingStatus string
+		if err := tx.QueryRowContext(ctx, q,
+			item.ProductSysID, status, item.Notes, now, actor,
+		).Scan(&headID, &xmax, &routingStatus); err != nil {
+			return nil, fmt.Errorf("BulkUpsertHeads upsert row: %w", err)
+		}
+		results = append(results, costroute.HeadUpsertResult{
+			LegacySysID: item.LegacySysID,
+			HeadID:      headID,
+			WasInserted: xmax == "0",
+			Skipped:     routingStatus == costroute.StatusLocked,
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit BulkUpsertHeads: %w", err)
+	}
+	return results, nil
+}
+
+// BulkUpsertSeqs upserts route sequence rows by (crs_head_id, crs_route_level, crs_route_seq).
+func (r *CostRouteRepository) BulkUpsertSeqs(ctx context.Context, items []costroute.SeqUpsertInput, actor string) ([]costroute.SeqUpsertResult, error) {
+	if len(items) == 0 {
+		return []costroute.SeqUpsertResult{}, nil
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin BulkUpsertSeqs tx: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	const q = `
+		INSERT INTO cost_route_seq (
+			crs_head_id, crs_product_sys_id, crs_route_level, crs_route_seq,
+			crs_route_name, crs_route_item_code, crs_route_shade_code, crs_route_shade_name,
+			crs_created_at, crs_created_by, crs_updated_at, crs_updated_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $9, $10)
+		ON CONFLICT (crs_head_id, crs_route_level, crs_route_seq) WHERE crs_deleted_at IS NULL
+		DO UPDATE SET
+			crs_product_sys_id   = EXCLUDED.crs_product_sys_id,
+			crs_route_name       = EXCLUDED.crs_route_name,
+			crs_route_item_code  = EXCLUDED.crs_route_item_code,
+			crs_route_shade_code = EXCLUDED.crs_route_shade_code,
+			crs_route_shade_name = EXCLUDED.crs_route_shade_name,
+			crs_updated_at       = EXCLUDED.crs_updated_at,
+			crs_updated_by       = EXCLUDED.crs_updated_by
+		RETURNING crs_seq_id, xmax::text`
+
+	results := make([]costroute.SeqUpsertResult, 0, len(items))
+	now := time.Now().UTC()
+	for _, item := range items {
+		var seqID int64
+		var xmax string
+		if err := tx.QueryRowContext(ctx, q,
+			item.HeadID, item.NodeProductSysID, item.RouteLevel, item.RouteSeq,
+			item.RouteName, item.RouteItemCode, item.RouteShadeCode, item.RouteShadeName,
+			now, actor,
+		).Scan(&seqID, &xmax); err != nil {
+			return nil, fmt.Errorf("BulkUpsertSeqs upsert row: %w", err)
+		}
+		results = append(results, costroute.SeqUpsertResult{
+			LegacySysID: item.HeadLegacySysID,
+			SeqID:       seqID,
+			HeadID:      item.HeadID,
+			RouteLevel:  item.RouteLevel,
+			RouteSeq:    item.RouteSeq,
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit BulkUpsertSeqs: %w", err)
+	}
+	return results, nil
+}
+
+// BulkReplaceRMs deletes all existing RMs for seqID and re-inserts the given rms in a single transaction.
+func (r *CostRouteRepository) BulkReplaceRMs(ctx context.Context, seqID int64, rms []costroute.RMInput, actor string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin BulkReplaceRMs tx: %w", err)
+	}
+	defer func() {
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM cost_route_rm WHERE crm_seq_id = $1`, seqID); err != nil {
+		return fmt.Errorf("BulkReplaceRMs delete: %w", err)
+	}
+
+	const insertRM = `
+		INSERT INTO cost_route_rm (
+			crm_seq_id, crm_rm_type,
+			crm_rm_product_sys_id, crm_rm_item_code, crm_rm_group_code,
+			crm_route_rm_ratio, crm_route_rm_name,
+			crm_route_rm_shade_code, crm_route_rm_shade_name,
+			crm_sub_type, crm_notes,
+			crm_created_at, crm_created_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+
+	now := time.Now().UTC()
+	for _, rm := range rms {
+		var rmProductSysID sql.NullInt64
+		if rm.RmType == costroute.RmTypeProduct && rm.RmProductSysID != 0 {
+			rmProductSysID = sql.NullInt64{Int64: rm.RmProductSysID, Valid: true}
+		}
+		if _, err := tx.ExecContext(ctx, insertRM,
+			seqID, rm.RmType,
+			rmProductSysID, nullableString(rm.RmItemCode), nullableString(rm.RmGroupCode),
+			rm.Ratio, nullableString(rm.RmName),
+			nullableString(rm.RmShadeCode), nullableString(rm.RmShadeName),
+			nullableString(rm.SubType), nullableString(rm.Notes),
+			now, actor,
+		); err != nil {
+			return fmt.Errorf("BulkReplaceRMs insert rm: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit BulkReplaceRMs: %w", err)
+	}
+	return nil
+}
+

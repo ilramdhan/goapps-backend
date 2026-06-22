@@ -152,6 +152,58 @@ type Filter struct {
 	SortOrder string
 }
 
+// HeadUpsertInput is a single row for BulkUpsertHeads.
+type HeadUpsertInput struct {
+	LegacySysID   string // the legacy_oracle_sys_id used to look up ProductSysID
+	ProductSysID  int64
+	RoutingStatus string // default "DRAFT" if empty
+	Notes         string
+}
+
+// HeadUpsertResult reports the outcome for one upserted route head.
+type HeadUpsertResult struct {
+	LegacySysID string
+	HeadID      int64
+	WasInserted bool
+	Skipped     bool // true when route is LOCKED
+}
+
+// SeqUpsertInput is a single row for BulkUpsertSeqs.
+type SeqUpsertInput struct {
+	HeadLegacySysID  string // used to look up HeadID via RouteHeadMap
+	HeadID           int64
+	NodeProductSysID int64
+	RouteLevel       int32
+	RouteSeq         int32
+	RouteName        string
+	RouteItemCode    string
+	RouteShadeCode   string
+	RouteShadeName   string
+}
+
+// SeqUpsertResult reports the outcome for one upserted route sequence.
+type SeqUpsertResult struct {
+	LegacySysID string // HeadLegacySysID
+	SeqID       int64
+	HeadID      int64
+	RouteLevel  int32
+	RouteSeq    int32
+}
+
+// RMInput is a single RM row for BulkReplaceRMs.
+type RMInput struct {
+	RmType         string  // PRODUCT, ITEM, GROUP
+	RmProductSysID int64   // set when RmType=PRODUCT
+	RmItemCode     string  // set when RmType=ITEM
+	RmGroupCode    string  // set when RmType=GROUP
+	Ratio          float64
+	RmName         string
+	RmShadeCode    string
+	RmShadeName    string
+	SubType        string
+	Notes          string
+}
+
 // Repository persists CostRoute aggregates.
 type Repository interface {
 	// PromoteFromDraft creates a new cost_route_head + a level-1 SEQ producing
@@ -185,4 +237,11 @@ type Repository interface {
 	DuplicateRoute(ctx context.Context, in DuplicateInput) (DuplicateOutput, error)
 	// ListLinkedRequests returns requests linking to this route head.
 	ListLinkedRequests(ctx context.Context, headID int64) ([]LinkedRequest, error)
+	// BulkUpsertHeads upserts route head rows by (crh_product_sys_id).
+	// Rows where crh_routing_status = 'LOCKED' are skipped and returned with Skipped=true.
+	BulkUpsertHeads(ctx context.Context, items []HeadUpsertInput, actor string) ([]HeadUpsertResult, error)
+	// BulkUpsertSeqs upserts route sequence rows by (crs_head_id, crs_route_level, crs_route_seq).
+	BulkUpsertSeqs(ctx context.Context, items []SeqUpsertInput, actor string) ([]SeqUpsertResult, error)
+	// BulkReplaceRMs deletes all existing RMs for seqID and re-inserts the given rms.
+	BulkReplaceRMs(ctx context.Context, seqID int64, rms []RMInput, actor string) error
 }

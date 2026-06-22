@@ -36,6 +36,15 @@ func (fakeRepoForDup) DuplicateRoute(_ context.Context, _ costroute.DuplicateInp
 func (fakeRepoForDup) ListLinkedRequests(_ context.Context, _ int64) ([]costroute.LinkedRequest, error) {
 	return nil, nil
 }
+func (fakeRepoForDup) BulkUpsertHeads(_ context.Context, _ []costroute.HeadUpsertInput, _ string) ([]costroute.HeadUpsertResult, error) {
+	return nil, nil
+}
+func (fakeRepoForDup) BulkUpsertSeqs(_ context.Context, _ []costroute.SeqUpsertInput, _ string) ([]costroute.SeqUpsertResult, error) {
+	return nil, nil
+}
+func (fakeRepoForDup) BulkReplaceRMs(_ context.Context, _ int64, _ []costroute.RMInput, _ string) error {
+	return nil
+}
 
 func TestDuplicate_ValuesWithoutApplicabilityRejected(t *testing.T) {
 	t.Parallel()
