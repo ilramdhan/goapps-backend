@@ -348,6 +348,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	cpmExportH := cpmapp.NewExportHandler(costProductMasterRepo)
 	cpmTemplateH := cpmapp.NewTemplateHandler()
 	bulkValidateH := costbulkimport.NewValidateHandler(costProductParameterRepo, costProductTypeRepo)
+	bulkTemplateH := costbulkimport.NewTemplateHandler()
 	costDataImportHandler := grpcdelivery.NewCostDataImportHandler(
 		costImportJobRepo, storageSvc,
 		cappExportH, cappTemplateH,
@@ -355,6 +356,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		cpmExportH, cpmTemplateH,
 		rmqAdapter,
 		bulkValidateH,
+		bulkTemplateH,
 	)
 
 	costRouteHandler, err := grpcdelivery.NewCostRouteHandler(costRouteRepo, costProductRequestRepo)

@@ -34,6 +34,7 @@ type CostDataImportHandler struct {
 	cpmTemplate          *cpmapp.TemplateHandler
 	importPublisher      *rabbitmq.JobPublisherAdapter
 	validateBulkHandler  *costbulkimport.ValidateHandler
+	templateBulkHandler  *costbulkimport.TemplateHandler
 }
 
 // NewCostDataImportHandler constructs the handler.
@@ -48,6 +49,7 @@ func NewCostDataImportHandler(
 	cpmTemplate *cpmapp.TemplateHandler,
 	importPublisher *rabbitmq.JobPublisherAdapter,
 	validateBulkHandler *costbulkimport.ValidateHandler,
+	templateBulkHandler *costbulkimport.TemplateHandler,
 ) *CostDataImportHandler {
 	return &CostDataImportHandler{
 		jobRepo:             jobRepo,
@@ -60,6 +62,7 @@ func NewCostDataImportHandler(
 		cpmTemplate:         cpmTemplate,
 		importPublisher:     importPublisher,
 		validateBulkHandler: validateBulkHandler,
+		templateBulkHandler: templateBulkHandler,
 	}
 }
 
