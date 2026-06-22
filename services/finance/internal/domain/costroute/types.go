@@ -229,6 +229,8 @@ type ExportRouteSeq struct {
 type ExportRouteRM struct {
 	SeqID          int64
 	HeadID         int64
+	RouteLevel     int32
+	RouteSeq       int32
 	RmType         string
 	RmProductSysID int64
 	RmItemCode     string

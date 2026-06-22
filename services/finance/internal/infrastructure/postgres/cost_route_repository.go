@@ -1327,15 +1327,17 @@ func (r *CostRouteRepository) ListAllRMsForExport(ctx context.Context, seqIDs []
 		return nil, nil
 	}
 	const q = `
-SELECT crm_seq_id,
-       crm_rm_type, COALESCE(crm_rm_product_sys_id, 0),
-       COALESCE(crm_rm_item_code,''), COALESCE(crm_rm_group_code,''),
-       crm_route_rm_ratio, COALESCE(crm_route_rm_name,''),
-       COALESCE(crm_route_rm_shade_code,''), COALESCE(crm_route_rm_shade_name,''),
-       COALESCE(crm_sub_type,''), COALESCE(crm_notes,'')
-FROM cost_route_rm
-WHERE crm_seq_id = ANY($1)
-ORDER BY crm_seq_id`
+SELECT rm.crm_seq_id,
+       COALESCE(s.crs_route_level, 0), COALESCE(s.crs_route_seq, 0),
+       rm.crm_rm_type, COALESCE(rm.crm_rm_product_sys_id, 0),
+       COALESCE(rm.crm_rm_item_code,''), COALESCE(rm.crm_rm_group_code,''),
+       rm.crm_route_rm_ratio, COALESCE(rm.crm_route_rm_name,''),
+       COALESCE(rm.crm_route_rm_shade_code,''), COALESCE(rm.crm_route_rm_shade_name,''),
+       COALESCE(rm.crm_sub_type,''), COALESCE(rm.crm_notes,'')
+FROM cost_route_rm rm
+LEFT JOIN cost_route_seq s ON s.crs_seq_id = rm.crm_seq_id
+WHERE rm.crm_seq_id = ANY($1)
+ORDER BY rm.crm_seq_id`
 	rows, err := r.db.QueryContext(ctx, q, pq.Array(seqIDs))
 	if err != nil {
 		return nil, fmt.Errorf("list all route rms for export: %w", err)
@@ -1350,6 +1352,7 @@ ORDER BY crm_seq_id`
 		var rm costroute.ExportRouteRM
 		if scanErr := rows.Scan(
 			&rm.SeqID,
+			&rm.RouteLevel, &rm.RouteSeq,
 			&rm.RmType, &rm.RmProductSysID,
 			&rm.RmItemCode, &rm.RmGroupCode,
 			&rm.Ratio, &rm.RmName,

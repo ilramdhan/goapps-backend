@@ -52,10 +52,10 @@ func NewExportHandler(
 
 // ExportRequest carries the parameters for a bulk export.
 type ExportRequest struct {
-	ProductTypeCodes []string
-	IncludeRouting   bool
-	ActiveOnly       bool
-	Actor            string
+	ProductTypeCodes []string `json:"product_type_codes"`
+	IncludeRouting   bool     `json:"include_routing"`
+	ActiveOnly       bool     `json:"active_only"`
+	Actor            string   `json:"actor"`
 }
 
 // Handle executes the async export for the given job.
@@ -390,7 +390,7 @@ func writeRouteRMSheet(f *excelize.File, rms []costroute.ExportRouteRM) error {
 			rmLegacyID = strconv.FormatInt(rm.RmProductSysID, 10)
 		}
 		vals := []any{
-			strconv.FormatInt(rm.HeadID, 10), "", "",
+			strconv.FormatInt(rm.HeadID, 10), rm.RouteLevel, rm.RouteSeq,
 			rm.RmType, rm.Ratio, rmLegacyID,
 			rm.RmItemCode, rm.RmGroupCode, rm.RmName,
 			rm.RmShadeCode, rm.RmShadeName, rm.SubType, rm.Notes,

@@ -31,7 +31,6 @@ func processProductMaster(
 	}
 
 	inputs := make([]costproductmaster.ProductUpsertInput, 0, len(rows))
-	rowNums := make([]int32, 0, len(rows))
 
 	for i, row := range rows {
 		rowNum := int32(i + 2) //nolint:gosec // row count fits int32
@@ -76,7 +75,6 @@ func processProductMaster(
 			Flex03:        row["legacy_type_label"],
 			IsActive:      isActive,
 		})
-		rowNums = append(rowNums, rowNum)
 	}
 
 	if len(inputs) == 0 {
@@ -88,9 +86,8 @@ func processProductMaster(
 		return 0, 0, errs, repoErr
 	}
 
-	for j, r := range results {
+	for _, r := range results {
 		maps.ProductMap[r.LegacySysID] = r.ProductSysID
-		_ = rowNums[j] // index tracked for potential future per-row error mapping
 		if r.WasInserted {
 			inserted++
 		} else {
