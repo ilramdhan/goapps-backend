@@ -31,7 +31,7 @@ func processRouteRM(
 ) (seqsReplaced int, errs []SheetError, err error) {
 	const sheetName = "route_rms"
 	requiredHeaders := []string{
-		"route_head_legacy_product_id", "route_level", "route_seq", "rm_type", "ratio",
+		routeHeadLegacyIDField, "route_level", "route_seq", "rm_type", "ratio",
 	}
 	rows, parseErr := ParseSheet(f, sheetName, requiredHeaders)
 	if parseErr != nil {
@@ -44,9 +44,9 @@ func processRouteRM(
 
 	for i, row := range rows {
 		rowNum := int32(i+2) //nolint:gosec // row count fits int32
-		headLegacyID := row["route_head_legacy_product_id"]
+		headLegacyID := row[routeHeadLegacyIDField]
 		if headLegacyID == "" {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "route_head_legacy_product_id", Message: "required"})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: routeHeadLegacyIDField, Message: "required"})
 			continue
 		}
 
@@ -64,7 +64,7 @@ func processRouteRM(
 		compositeKey := fmt.Sprintf("%s:%d:%d", headLegacyID, routeLevel, routeSeq)
 		seqID, ok := maps.RouteSeqMap[compositeKey]
 		if !ok {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "route_head_legacy_product_id", Message: "seq node not found (key: " + compositeKey + ")"})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: routeHeadLegacyIDField, Message: "seq node not found (key: " + compositeKey + ")"})
 			continue
 		}
 

@@ -25,7 +25,7 @@ func processRouteSeq(
 ) (inserted, updated int, errs []SheetError, err error) {
 	const sheetName = "route_sequences"
 	requiredHeaders := []string{
-		"route_head_legacy_product_id", "node_product_legacy_id",
+		routeHeadLegacyIDField, nodeProductLegacyIDField,
 		"route_level", "route_seq",
 	}
 	rows, parseErr := ParseSheet(f, sheetName, requiredHeaders)
@@ -38,24 +38,24 @@ func processRouteSeq(
 
 	for i, row := range rows {
 		rowNum := int32(i+2) //nolint:gosec // row count fits int32
-		headLegacyID := row["route_head_legacy_product_id"]
+		headLegacyID := row[routeHeadLegacyIDField]
 		if headLegacyID == "" {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "route_head_legacy_product_id", Message: "required"})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: routeHeadLegacyIDField, Message: "required"})
 			continue
 		}
 		headID, ok := maps.RouteHeadMap[headLegacyID]
 		if !ok {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "route_head_legacy_product_id", Message: "head not found (route may be LOCKED or missing): " + headLegacyID})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: routeHeadLegacyIDField, Message: "head not found (route may be LOCKED or missing): " + headLegacyID})
 			continue
 		}
-		nodeLegacyID := row["node_product_legacy_id"]
+		nodeLegacyID := row[nodeProductLegacyIDField]
 		if nodeLegacyID == "" {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "node_product_legacy_id", Message: "required"})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: nodeProductLegacyIDField, Message: "required"})
 			continue
 		}
 		nodeProductSysID, ok2 := maps.ProductMap[nodeLegacyID]
 		if !ok2 {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "node_product_legacy_id", Message: "product not found: " + nodeLegacyID})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: nodeProductLegacyIDField, Message: "product not found: " + nodeLegacyID})
 			continue
 		}
 

@@ -22,7 +22,7 @@ func processRouteHead(
 	_ time.Time,
 ) (inserted, updated, skipped int, errs []SheetError, err error) {
 	const sheetName = "route_head"
-	requiredHeaders := []string{"legacy_oracle_sys_id"}
+	requiredHeaders := []string{legacyOracleSysIDField}
 	rows, parseErr := ParseSheet(f, sheetName, requiredHeaders)
 	if parseErr != nil {
 		return 0, 0, 0, nil, parseErr
@@ -33,14 +33,14 @@ func processRouteHead(
 
 	for i, row := range rows {
 		rowNum := int32(i+2) //nolint:gosec // row count fits int32
-		legacyID := row["legacy_oracle_sys_id"]
+		legacyID := row[legacyOracleSysIDField]
 		if legacyID == "" {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "legacy_oracle_sys_id", Message: "required"})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: legacyOracleSysIDField, Message: "required"})
 			continue
 		}
 		productSysID, ok := maps.ProductMap[legacyID]
 		if !ok {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "legacy_oracle_sys_id", Message: "product not found in ProductMap: " + legacyID})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: legacyOracleSysIDField, Message: "product not found in ProductMap: " + legacyID})
 			continue
 		}
 		routingStatus := row["routing_status"]
