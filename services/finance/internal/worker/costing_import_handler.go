@@ -107,6 +107,12 @@ func (h *CostingImportHandler) Handle(ctx context.Context, msg rabbitmq.JobMessa
 		requestingUserID = msg.RequestingUserID
 	}
 
+	// Export jobs store request parameters as JSON in FileKey — no file to fetch.
+	// Dispatch them early before the MinIO fetch path.
+	if job.Entity() == costimportjob.EntityBulkProductRoutingExport {
+		return h.handleExport(ctx, jobID, job, requestingUserID)
+	}
+
 	fileContent, fileName, fetchErr := h.fetchFile(ctx, job.FileKey())
 	if fetchErr != nil {
 		h.logger.Error().Err(fetchErr).Int64("job_id", jobID).Str("file_key", job.FileKey()).Msg("costing import: fetch file failed")
@@ -132,15 +138,6 @@ func (h *CostingImportHandler) Handle(ctx context.Context, msg rabbitmq.JobMessa
 			return fmt.Errorf("costing import: bulkImportHandler not configured for job %d", jobID)
 		}
 		dispatchErr = h.bulkImportHandler.Handle(ctx, jobID, fileContent, fileName)
-	case costimportjob.EntityBulkProductRoutingExport:
-		if h.bulkExportHandler == nil {
-			return fmt.Errorf("costing import: bulkExportHandler not configured for job %d", jobID)
-		}
-		req, parseErr := unmarshalExportRequest(job.FileKey())
-		if parseErr != nil {
-			return fmt.Errorf("costing import: parse export request for job %d: %w", jobID, parseErr)
-		}
-		dispatchErr = h.bulkExportHandler.Handle(ctx, jobID, req)
 	default:
 		return fmt.Errorf("costing import: unknown entity %q for job %d", job.Entity(), jobID)
 	}
@@ -239,6 +236,32 @@ func (h *CostingImportHandler) fetchFile(ctx context.Context, fileKey string) ([
 		return nil, "", fmt.Errorf("read object: %w", err)
 	}
 	return content, filepath.Base(fileKey), nil
+}
+
+// handleExport dispatches a bulk export job. Export jobs store their request
+// parameters as JSON in FileKey instead of a MinIO object path, so they bypass
+// the normal fetchFile path.
+func (h *CostingImportHandler) handleExport(
+	ctx context.Context,
+	jobID int64,
+	job *costimportjob.CostImportJob,
+	requestingUserID string,
+) error {
+	if h.bulkExportHandler == nil {
+		return fmt.Errorf("costing import: bulkExportHandler not configured for job %d", jobID)
+	}
+	req, parseErr := unmarshalExportRequest(job.FileKey())
+	if parseErr != nil {
+		return fmt.Errorf("costing import: parse export request for job %d: %w", jobID, parseErr)
+	}
+	dispatchErr := h.bulkExportHandler.Handle(ctx, jobID, req)
+	finalJob, loadErr := h.jobRepo.GetByID(ctx, jobID)
+	if loadErr != nil {
+		h.logger.Warn().Err(loadErr).Int64("job_id", jobID).Msg("costing import: reload export job for notification failed")
+		return dispatchErr
+	}
+	h.emitNotification(ctx, jobID, job.Entity(), requestingUserID, finalJob)
+	return dispatchErr
 }
 
 // unmarshalExportRequest decodes a JSON-encoded ExportRequest from the job's
