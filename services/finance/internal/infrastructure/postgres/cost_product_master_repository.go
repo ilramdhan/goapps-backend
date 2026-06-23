@@ -300,7 +300,7 @@ func (r *CostProductMasterRepository) BulkUpsertByLegacyID(ctx context.Context, 
 				generate_cost_product_code($1, $12)
 			)
 		)
-		ON CONFLICT (cpm_flex_02) WHERE cpm_flex_02 IS NOT NULL
+		ON CONFLICT (cpm_flex_02) WHERE cpm_flex_02 IS NOT NULL AND cpm_flex_02 <> ''
 		DO UPDATE SET
 			cpm_product_type_id = EXCLUDED.cpm_product_type_id,
 			cpm_product_name    = EXCLUDED.cpm_product_name,
