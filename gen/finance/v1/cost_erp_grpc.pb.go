@@ -21,6 +21,9 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	CostErpLookupService_ListCostErpItems_FullMethodName  = "/finance.v1.CostErpLookupService/ListCostErpItems"
 	CostErpLookupService_GetCostErpItem_FullMethodName    = "/finance.v1.CostErpLookupService/GetCostErpItem"
+	CostErpLookupService_CreateCostErpItem_FullMethodName = "/finance.v1.CostErpLookupService/CreateCostErpItem"
+	CostErpLookupService_UpdateCostErpItem_FullMethodName = "/finance.v1.CostErpLookupService/UpdateCostErpItem"
+	CostErpLookupService_DeleteCostErpItem_FullMethodName = "/finance.v1.CostErpLookupService/DeleteCostErpItem"
 	CostErpLookupService_ListCostErpGrades_FullMethodName = "/finance.v1.CostErpLookupService/ListCostErpGrades"
 	CostErpLookupService_ListCostErpShades_FullMethodName = "/finance.v1.CostErpLookupService/ListCostErpShades"
 )
@@ -29,10 +32,14 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// CostErpLookupService — read-only lookup for ERP replica tables.
+// CostErpLookupService — ERP lookup tables. Items are fully managed (CRUD);
+// grades and shades remain read-only lookups.
 type CostErpLookupServiceClient interface {
 	ListCostErpItems(ctx context.Context, in *ListCostErpItemsRequest, opts ...grpc.CallOption) (*ListCostErpItemsResponse, error)
 	GetCostErpItem(ctx context.Context, in *GetCostErpItemRequest, opts ...grpc.CallOption) (*GetCostErpItemResponse, error)
+	CreateCostErpItem(ctx context.Context, in *CreateCostErpItemRequest, opts ...grpc.CallOption) (*CreateCostErpItemResponse, error)
+	UpdateCostErpItem(ctx context.Context, in *UpdateCostErpItemRequest, opts ...grpc.CallOption) (*UpdateCostErpItemResponse, error)
+	DeleteCostErpItem(ctx context.Context, in *DeleteCostErpItemRequest, opts ...grpc.CallOption) (*DeleteCostErpItemResponse, error)
 	ListCostErpGrades(ctx context.Context, in *ListCostErpGradesRequest, opts ...grpc.CallOption) (*ListCostErpGradesResponse, error)
 	ListCostErpShades(ctx context.Context, in *ListCostErpShadesRequest, opts ...grpc.CallOption) (*ListCostErpShadesResponse, error)
 }
@@ -65,6 +72,36 @@ func (c *costErpLookupServiceClient) GetCostErpItem(ctx context.Context, in *Get
 	return out, nil
 }
 
+func (c *costErpLookupServiceClient) CreateCostErpItem(ctx context.Context, in *CreateCostErpItemRequest, opts ...grpc.CallOption) (*CreateCostErpItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateCostErpItemResponse)
+	err := c.cc.Invoke(ctx, CostErpLookupService_CreateCostErpItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costErpLookupServiceClient) UpdateCostErpItem(ctx context.Context, in *UpdateCostErpItemRequest, opts ...grpc.CallOption) (*UpdateCostErpItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateCostErpItemResponse)
+	err := c.cc.Invoke(ctx, CostErpLookupService_UpdateCostErpItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costErpLookupServiceClient) DeleteCostErpItem(ctx context.Context, in *DeleteCostErpItemRequest, opts ...grpc.CallOption) (*DeleteCostErpItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteCostErpItemResponse)
+	err := c.cc.Invoke(ctx, CostErpLookupService_DeleteCostErpItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *costErpLookupServiceClient) ListCostErpGrades(ctx context.Context, in *ListCostErpGradesRequest, opts ...grpc.CallOption) (*ListCostErpGradesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCostErpGradesResponse)
@@ -89,10 +126,14 @@ func (c *costErpLookupServiceClient) ListCostErpShades(ctx context.Context, in *
 // All implementations must embed UnimplementedCostErpLookupServiceServer
 // for forward compatibility.
 //
-// CostErpLookupService — read-only lookup for ERP replica tables.
+// CostErpLookupService — ERP lookup tables. Items are fully managed (CRUD);
+// grades and shades remain read-only lookups.
 type CostErpLookupServiceServer interface {
 	ListCostErpItems(context.Context, *ListCostErpItemsRequest) (*ListCostErpItemsResponse, error)
 	GetCostErpItem(context.Context, *GetCostErpItemRequest) (*GetCostErpItemResponse, error)
+	CreateCostErpItem(context.Context, *CreateCostErpItemRequest) (*CreateCostErpItemResponse, error)
+	UpdateCostErpItem(context.Context, *UpdateCostErpItemRequest) (*UpdateCostErpItemResponse, error)
+	DeleteCostErpItem(context.Context, *DeleteCostErpItemRequest) (*DeleteCostErpItemResponse, error)
 	ListCostErpGrades(context.Context, *ListCostErpGradesRequest) (*ListCostErpGradesResponse, error)
 	ListCostErpShades(context.Context, *ListCostErpShadesRequest) (*ListCostErpShadesResponse, error)
 	mustEmbedUnimplementedCostErpLookupServiceServer()
@@ -110,6 +151,15 @@ func (UnimplementedCostErpLookupServiceServer) ListCostErpItems(context.Context,
 }
 func (UnimplementedCostErpLookupServiceServer) GetCostErpItem(context.Context, *GetCostErpItemRequest) (*GetCostErpItemResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCostErpItem not implemented")
+}
+func (UnimplementedCostErpLookupServiceServer) CreateCostErpItem(context.Context, *CreateCostErpItemRequest) (*CreateCostErpItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateCostErpItem not implemented")
+}
+func (UnimplementedCostErpLookupServiceServer) UpdateCostErpItem(context.Context, *UpdateCostErpItemRequest) (*UpdateCostErpItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateCostErpItem not implemented")
+}
+func (UnimplementedCostErpLookupServiceServer) DeleteCostErpItem(context.Context, *DeleteCostErpItemRequest) (*DeleteCostErpItemResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteCostErpItem not implemented")
 }
 func (UnimplementedCostErpLookupServiceServer) ListCostErpGrades(context.Context, *ListCostErpGradesRequest) (*ListCostErpGradesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCostErpGrades not implemented")
@@ -174,6 +224,60 @@ func _CostErpLookupService_GetCostErpItem_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostErpLookupService_CreateCostErpItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateCostErpItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostErpLookupServiceServer).CreateCostErpItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostErpLookupService_CreateCostErpItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostErpLookupServiceServer).CreateCostErpItem(ctx, req.(*CreateCostErpItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostErpLookupService_UpdateCostErpItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCostErpItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostErpLookupServiceServer).UpdateCostErpItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostErpLookupService_UpdateCostErpItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostErpLookupServiceServer).UpdateCostErpItem(ctx, req.(*UpdateCostErpItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostErpLookupService_DeleteCostErpItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteCostErpItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostErpLookupServiceServer).DeleteCostErpItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostErpLookupService_DeleteCostErpItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostErpLookupServiceServer).DeleteCostErpItem(ctx, req.(*DeleteCostErpItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CostErpLookupService_ListCostErpGrades_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListCostErpGradesRequest)
 	if err := dec(in); err != nil {
@@ -224,6 +328,18 @@ var CostErpLookupService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCostErpItem",
 			Handler:    _CostErpLookupService_GetCostErpItem_Handler,
+		},
+		{
+			MethodName: "CreateCostErpItem",
+			Handler:    _CostErpLookupService_CreateCostErpItem_Handler,
+		},
+		{
+			MethodName: "UpdateCostErpItem",
+			Handler:    _CostErpLookupService_UpdateCostErpItem_Handler,
+		},
+		{
+			MethodName: "DeleteCostErpItem",
+			Handler:    _CostErpLookupService_DeleteCostErpItem_Handler,
 		},
 		{
 			MethodName: "ListCostErpGrades",

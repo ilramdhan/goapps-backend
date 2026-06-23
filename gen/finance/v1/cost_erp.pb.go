@@ -484,6 +484,340 @@ func (x *GetCostErpItemResponse) GetData() *CostErpItem {
 	return nil
 }
 
+// CreateCostErpItemRequest creates a new ERP item.
+type CreateCostErpItemRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty"`
+	ItemName      string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty"`
+	ItemType      string                 `protobuf:"bytes,3,opt,name=item_type,json=itemType,proto3" json:"item_type,omitempty"`
+	IsActive      bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCostErpItemRequest) Reset() {
+	*x = CreateCostErpItemRequest{}
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCostErpItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCostErpItemRequest) ProtoMessage() {}
+
+func (x *CreateCostErpItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCostErpItemRequest.ProtoReflect.Descriptor instead.
+func (*CreateCostErpItemRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CreateCostErpItemRequest) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *CreateCostErpItemRequest) GetItemName() string {
+	if x != nil {
+		return x.ItemName
+	}
+	return ""
+}
+
+func (x *CreateCostErpItemRequest) GetItemType() string {
+	if x != nil {
+		return x.ItemType
+	}
+	return ""
+}
+
+func (x *CreateCostErpItemRequest) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+// CreateCostErpItemResponse returns the created ERP item.
+type CreateCostErpItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Data          *CostErpItem           `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCostErpItemResponse) Reset() {
+	*x = CreateCostErpItemResponse{}
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCostErpItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCostErpItemResponse) ProtoMessage() {}
+
+func (x *CreateCostErpItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCostErpItemResponse.ProtoReflect.Descriptor instead.
+func (*CreateCostErpItemResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CreateCostErpItemResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *CreateCostErpItemResponse) GetData() *CostErpItem {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// UpdateCostErpItemRequest updates an existing ERP item.
+type UpdateCostErpItemRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemId        int64                  `protobuf:"varint,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	ItemName      *string                `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3,oneof" json:"item_name,omitempty"`
+	ItemType      *string                `protobuf:"bytes,3,opt,name=item_type,json=itemType,proto3,oneof" json:"item_type,omitempty"`
+	IsActive      *bool                  `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateCostErpItemRequest) Reset() {
+	*x = UpdateCostErpItemRequest{}
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCostErpItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCostErpItemRequest) ProtoMessage() {}
+
+func (x *UpdateCostErpItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCostErpItemRequest.ProtoReflect.Descriptor instead.
+func (*UpdateCostErpItemRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *UpdateCostErpItemRequest) GetItemId() int64 {
+	if x != nil {
+		return x.ItemId
+	}
+	return 0
+}
+
+func (x *UpdateCostErpItemRequest) GetItemName() string {
+	if x != nil && x.ItemName != nil {
+		return *x.ItemName
+	}
+	return ""
+}
+
+func (x *UpdateCostErpItemRequest) GetItemType() string {
+	if x != nil && x.ItemType != nil {
+		return *x.ItemType
+	}
+	return ""
+}
+
+func (x *UpdateCostErpItemRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
+}
+
+// UpdateCostErpItemResponse returns the updated ERP item.
+type UpdateCostErpItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Data          *CostErpItem           `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateCostErpItemResponse) Reset() {
+	*x = UpdateCostErpItemResponse{}
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCostErpItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCostErpItemResponse) ProtoMessage() {}
+
+func (x *UpdateCostErpItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCostErpItemResponse.ProtoReflect.Descriptor instead.
+func (*UpdateCostErpItemResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *UpdateCostErpItemResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *UpdateCostErpItemResponse) GetData() *CostErpItem {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// DeleteCostErpItemRequest deletes an ERP item by ID.
+type DeleteCostErpItemRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemId        int64                  `protobuf:"varint,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteCostErpItemRequest) Reset() {
+	*x = DeleteCostErpItemRequest{}
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteCostErpItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteCostErpItemRequest) ProtoMessage() {}
+
+func (x *DeleteCostErpItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteCostErpItemRequest.ProtoReflect.Descriptor instead.
+func (*DeleteCostErpItemRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *DeleteCostErpItemRequest) GetItemId() int64 {
+	if x != nil {
+		return x.ItemId
+	}
+	return 0
+}
+
+// DeleteCostErpItemResponse confirms deletion.
+type DeleteCostErpItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteCostErpItemResponse) Reset() {
+	*x = DeleteCostErpItemResponse{}
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteCostErpItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteCostErpItemResponse) ProtoMessage() {}
+
+func (x *DeleteCostErpItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteCostErpItemResponse.ProtoReflect.Descriptor instead.
+func (*DeleteCostErpItemResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *DeleteCostErpItemResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
 type ListCostErpGradesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Search        string                 `protobuf:"bytes,1,opt,name=search,proto3" json:"search,omitempty"`
@@ -495,7 +829,7 @@ type ListCostErpGradesRequest struct {
 
 func (x *ListCostErpGradesRequest) Reset() {
 	*x = ListCostErpGradesRequest{}
-	mi := &file_finance_v1_cost_erp_proto_msgTypes[7]
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -507,7 +841,7 @@ func (x *ListCostErpGradesRequest) String() string {
 func (*ListCostErpGradesRequest) ProtoMessage() {}
 
 func (x *ListCostErpGradesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_erp_proto_msgTypes[7]
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -520,7 +854,7 @@ func (x *ListCostErpGradesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCostErpGradesRequest.ProtoReflect.Descriptor instead.
 func (*ListCostErpGradesRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{7}
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListCostErpGradesRequest) GetSearch() string {
@@ -555,7 +889,7 @@ type ListCostErpGradesResponse struct {
 
 func (x *ListCostErpGradesResponse) Reset() {
 	*x = ListCostErpGradesResponse{}
-	mi := &file_finance_v1_cost_erp_proto_msgTypes[8]
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -567,7 +901,7 @@ func (x *ListCostErpGradesResponse) String() string {
 func (*ListCostErpGradesResponse) ProtoMessage() {}
 
 func (x *ListCostErpGradesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_erp_proto_msgTypes[8]
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -580,7 +914,7 @@ func (x *ListCostErpGradesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCostErpGradesResponse.ProtoReflect.Descriptor instead.
 func (*ListCostErpGradesResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{8}
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListCostErpGradesResponse) GetBase() *v1.BaseResponse {
@@ -615,7 +949,7 @@ type ListCostErpShadesRequest struct {
 
 func (x *ListCostErpShadesRequest) Reset() {
 	*x = ListCostErpShadesRequest{}
-	mi := &file_finance_v1_cost_erp_proto_msgTypes[9]
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -627,7 +961,7 @@ func (x *ListCostErpShadesRequest) String() string {
 func (*ListCostErpShadesRequest) ProtoMessage() {}
 
 func (x *ListCostErpShadesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_erp_proto_msgTypes[9]
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -640,7 +974,7 @@ func (x *ListCostErpShadesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCostErpShadesRequest.ProtoReflect.Descriptor instead.
 func (*ListCostErpShadesRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{9}
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListCostErpShadesRequest) GetSearch() string {
@@ -675,7 +1009,7 @@ type ListCostErpShadesResponse struct {
 
 func (x *ListCostErpShadesResponse) Reset() {
 	*x = ListCostErpShadesResponse{}
-	mi := &file_finance_v1_cost_erp_proto_msgTypes[10]
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -687,7 +1021,7 @@ func (x *ListCostErpShadesResponse) String() string {
 func (*ListCostErpShadesResponse) ProtoMessage() {}
 
 func (x *ListCostErpShadesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_erp_proto_msgTypes[10]
+	mi := &file_finance_v1_cost_erp_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +1034,7 @@ func (x *ListCostErpShadesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCostErpShadesResponse.ProtoReflect.Descriptor instead.
 func (*ListCostErpShadesResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{10}
+	return file_finance_v1_cost_erp_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListCostErpShadesResponse) GetBase() *v1.BaseResponse {
@@ -771,7 +1105,36 @@ const file_finance_v1_cost_erp_proto_rawDesc = "" +
 	"\aitem_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\x06itemId\"r\n" +
 	"\x16GetCostErpItemResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
-	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.CostErpItemR\x04data\"\xbf\x01\n" +
+	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.CostErpItemR\x04data\"\xae\x01\n" +
+	"\x18CreateCostErpItemRequest\x12&\n" +
+	"\titem_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\bitemCode\x12'\n" +
+	"\titem_name\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\bitemName\x12$\n" +
+	"\titem_type\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
+	"R\bitemType\x12\x1b\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\"u\n" +
+	"\x19CreateCostErpItemResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
+	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.CostErpItemR\x04data\"\xdf\x01\n" +
+	"\x18UpdateCostErpItemRequest\x12 \n" +
+	"\aitem_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x06itemId\x12*\n" +
+	"\titem_name\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01H\x00R\bitemName\x88\x01\x01\x12)\n" +
+	"\titem_type\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
+	"H\x01R\bitemType\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\x04 \x01(\bH\x02R\bisActive\x88\x01\x01B\f\n" +
+	"\n" +
+	"_item_nameB\f\n" +
+	"\n" +
+	"_item_typeB\f\n" +
+	"\n" +
+	"_is_active\"u\n" +
+	"\x19UpdateCostErpItemResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
+	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.CostErpItemR\x04data\"<\n" +
+	"\x18DeleteCostErpItemRequest\x12 \n" +
+	"\aitem_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x06itemId\"H\n" +
+	"\x19DeleteCostErpItemResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xbf\x01\n" +
 	"\x18ListCostErpGradesRequest\x12 \n" +
 	"\x06search\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x06search\x12C\n" +
 	"\ractive_filter\x18\x02 \x01(\tB\x1e\xbaH\x1br\x19R\x00R\x03allR\x06activeR\binactiveR\factiveFilter\x12<\n" +
@@ -795,10 +1158,13 @@ const file_finance_v1_cost_erp_proto_rawDesc = "" +
 	"\x04data\x18\x02 \x03(\v2\x18.finance.v1.CostErpShadeR\x04data\x12=\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination2\xc2\x04\n" +
+	"pagination2\xfd\a\n" +
 	"\x14CostErpLookupService\x12\x85\x01\n" +
 	"\x10ListCostErpItems\x12#.finance.v1.ListCostErpItemsRequest\x1a$.finance.v1.ListCostErpItemsResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/finance/cost-erp/items\x12\x89\x01\n" +
-	"\x0eGetCostErpItem\x12!.finance.v1.GetCostErpItemRequest\x1a\".finance.v1.GetCostErpItemResponse\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/finance/cost-erp/items/{item_id}\x12\x89\x01\n" +
+	"\x0eGetCostErpItem\x12!.finance.v1.GetCostErpItemRequest\x1a\".finance.v1.GetCostErpItemResponse\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/finance/cost-erp/items/{item_id}\x12\x8b\x01\n" +
+	"\x11CreateCostErpItem\x12$.finance.v1.CreateCostErpItemRequest\x1a%.finance.v1.CreateCostErpItemResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/finance/cost-erp/items\x12\x95\x01\n" +
+	"\x11UpdateCostErpItem\x12$.finance.v1.UpdateCostErpItemRequest\x1a%.finance.v1.UpdateCostErpItemResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\x1a(/api/v1/finance/cost-erp/items/{item_id}\x12\x92\x01\n" +
+	"\x11DeleteCostErpItem\x12$.finance.v1.DeleteCostErpItemRequest\x1a%.finance.v1.DeleteCostErpItemResponse\"0\x82\xd3\xe4\x93\x02**(/api/v1/finance/cost-erp/items/{item_id}\x12\x89\x01\n" +
 	"\x11ListCostErpGrades\x12$.finance.v1.ListCostErpGradesRequest\x1a%.finance.v1.ListCostErpGradesResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/finance/cost-erp/grades\x12\x89\x01\n" +
 	"\x11ListCostErpShades\x12$.finance.v1.ListCostErpShadesRequest\x1a%.finance.v1.ListCostErpShadesResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/finance/cost-erp/shadesB\xa6\x01\n" +
 	"\x0ecom.finance.v1B\fCostErpProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
@@ -817,7 +1183,7 @@ func file_finance_v1_cost_erp_proto_rawDescGZIP() []byte {
 	return file_finance_v1_cost_erp_proto_rawDescData
 }
 
-var file_finance_v1_cost_erp_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_finance_v1_cost_erp_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_finance_v1_cost_erp_proto_goTypes = []any{
 	(*CostErpItem)(nil),               // 0: finance.v1.CostErpItem
 	(*CostErpGrade)(nil),              // 1: finance.v1.CostErpGrade
@@ -826,42 +1192,59 @@ var file_finance_v1_cost_erp_proto_goTypes = []any{
 	(*ListCostErpItemsResponse)(nil),  // 4: finance.v1.ListCostErpItemsResponse
 	(*GetCostErpItemRequest)(nil),     // 5: finance.v1.GetCostErpItemRequest
 	(*GetCostErpItemResponse)(nil),    // 6: finance.v1.GetCostErpItemResponse
-	(*ListCostErpGradesRequest)(nil),  // 7: finance.v1.ListCostErpGradesRequest
-	(*ListCostErpGradesResponse)(nil), // 8: finance.v1.ListCostErpGradesResponse
-	(*ListCostErpShadesRequest)(nil),  // 9: finance.v1.ListCostErpShadesRequest
-	(*ListCostErpShadesResponse)(nil), // 10: finance.v1.ListCostErpShadesResponse
-	(*v1.PaginationRequest)(nil),      // 11: common.v1.PaginationRequest
-	(*v1.BaseResponse)(nil),           // 12: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),     // 13: common.v1.PaginationResponse
+	(*CreateCostErpItemRequest)(nil),  // 7: finance.v1.CreateCostErpItemRequest
+	(*CreateCostErpItemResponse)(nil), // 8: finance.v1.CreateCostErpItemResponse
+	(*UpdateCostErpItemRequest)(nil),  // 9: finance.v1.UpdateCostErpItemRequest
+	(*UpdateCostErpItemResponse)(nil), // 10: finance.v1.UpdateCostErpItemResponse
+	(*DeleteCostErpItemRequest)(nil),  // 11: finance.v1.DeleteCostErpItemRequest
+	(*DeleteCostErpItemResponse)(nil), // 12: finance.v1.DeleteCostErpItemResponse
+	(*ListCostErpGradesRequest)(nil),  // 13: finance.v1.ListCostErpGradesRequest
+	(*ListCostErpGradesResponse)(nil), // 14: finance.v1.ListCostErpGradesResponse
+	(*ListCostErpShadesRequest)(nil),  // 15: finance.v1.ListCostErpShadesRequest
+	(*ListCostErpShadesResponse)(nil), // 16: finance.v1.ListCostErpShadesResponse
+	(*v1.PaginationRequest)(nil),      // 17: common.v1.PaginationRequest
+	(*v1.BaseResponse)(nil),           // 18: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),     // 19: common.v1.PaginationResponse
 }
 var file_finance_v1_cost_erp_proto_depIdxs = []int32{
-	11, // 0: finance.v1.ListCostErpItemsRequest.pagination:type_name -> common.v1.PaginationRequest
-	12, // 1: finance.v1.ListCostErpItemsResponse.base:type_name -> common.v1.BaseResponse
+	17, // 0: finance.v1.ListCostErpItemsRequest.pagination:type_name -> common.v1.PaginationRequest
+	18, // 1: finance.v1.ListCostErpItemsResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 2: finance.v1.ListCostErpItemsResponse.data:type_name -> finance.v1.CostErpItem
-	13, // 3: finance.v1.ListCostErpItemsResponse.pagination:type_name -> common.v1.PaginationResponse
-	12, // 4: finance.v1.GetCostErpItemResponse.base:type_name -> common.v1.BaseResponse
+	19, // 3: finance.v1.ListCostErpItemsResponse.pagination:type_name -> common.v1.PaginationResponse
+	18, // 4: finance.v1.GetCostErpItemResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 5: finance.v1.GetCostErpItemResponse.data:type_name -> finance.v1.CostErpItem
-	11, // 6: finance.v1.ListCostErpGradesRequest.pagination:type_name -> common.v1.PaginationRequest
-	12, // 7: finance.v1.ListCostErpGradesResponse.base:type_name -> common.v1.BaseResponse
-	1,  // 8: finance.v1.ListCostErpGradesResponse.data:type_name -> finance.v1.CostErpGrade
-	13, // 9: finance.v1.ListCostErpGradesResponse.pagination:type_name -> common.v1.PaginationResponse
-	11, // 10: finance.v1.ListCostErpShadesRequest.pagination:type_name -> common.v1.PaginationRequest
-	12, // 11: finance.v1.ListCostErpShadesResponse.base:type_name -> common.v1.BaseResponse
-	2,  // 12: finance.v1.ListCostErpShadesResponse.data:type_name -> finance.v1.CostErpShade
-	13, // 13: finance.v1.ListCostErpShadesResponse.pagination:type_name -> common.v1.PaginationResponse
-	3,  // 14: finance.v1.CostErpLookupService.ListCostErpItems:input_type -> finance.v1.ListCostErpItemsRequest
-	5,  // 15: finance.v1.CostErpLookupService.GetCostErpItem:input_type -> finance.v1.GetCostErpItemRequest
-	7,  // 16: finance.v1.CostErpLookupService.ListCostErpGrades:input_type -> finance.v1.ListCostErpGradesRequest
-	9,  // 17: finance.v1.CostErpLookupService.ListCostErpShades:input_type -> finance.v1.ListCostErpShadesRequest
-	4,  // 18: finance.v1.CostErpLookupService.ListCostErpItems:output_type -> finance.v1.ListCostErpItemsResponse
-	6,  // 19: finance.v1.CostErpLookupService.GetCostErpItem:output_type -> finance.v1.GetCostErpItemResponse
-	8,  // 20: finance.v1.CostErpLookupService.ListCostErpGrades:output_type -> finance.v1.ListCostErpGradesResponse
-	10, // 21: finance.v1.CostErpLookupService.ListCostErpShades:output_type -> finance.v1.ListCostErpShadesResponse
-	18, // [18:22] is the sub-list for method output_type
-	14, // [14:18] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	18, // 6: finance.v1.CreateCostErpItemResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 7: finance.v1.CreateCostErpItemResponse.data:type_name -> finance.v1.CostErpItem
+	18, // 8: finance.v1.UpdateCostErpItemResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 9: finance.v1.UpdateCostErpItemResponse.data:type_name -> finance.v1.CostErpItem
+	18, // 10: finance.v1.DeleteCostErpItemResponse.base:type_name -> common.v1.BaseResponse
+	17, // 11: finance.v1.ListCostErpGradesRequest.pagination:type_name -> common.v1.PaginationRequest
+	18, // 12: finance.v1.ListCostErpGradesResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 13: finance.v1.ListCostErpGradesResponse.data:type_name -> finance.v1.CostErpGrade
+	19, // 14: finance.v1.ListCostErpGradesResponse.pagination:type_name -> common.v1.PaginationResponse
+	17, // 15: finance.v1.ListCostErpShadesRequest.pagination:type_name -> common.v1.PaginationRequest
+	18, // 16: finance.v1.ListCostErpShadesResponse.base:type_name -> common.v1.BaseResponse
+	2,  // 17: finance.v1.ListCostErpShadesResponse.data:type_name -> finance.v1.CostErpShade
+	19, // 18: finance.v1.ListCostErpShadesResponse.pagination:type_name -> common.v1.PaginationResponse
+	3,  // 19: finance.v1.CostErpLookupService.ListCostErpItems:input_type -> finance.v1.ListCostErpItemsRequest
+	5,  // 20: finance.v1.CostErpLookupService.GetCostErpItem:input_type -> finance.v1.GetCostErpItemRequest
+	7,  // 21: finance.v1.CostErpLookupService.CreateCostErpItem:input_type -> finance.v1.CreateCostErpItemRequest
+	9,  // 22: finance.v1.CostErpLookupService.UpdateCostErpItem:input_type -> finance.v1.UpdateCostErpItemRequest
+	11, // 23: finance.v1.CostErpLookupService.DeleteCostErpItem:input_type -> finance.v1.DeleteCostErpItemRequest
+	13, // 24: finance.v1.CostErpLookupService.ListCostErpGrades:input_type -> finance.v1.ListCostErpGradesRequest
+	15, // 25: finance.v1.CostErpLookupService.ListCostErpShades:input_type -> finance.v1.ListCostErpShadesRequest
+	4,  // 26: finance.v1.CostErpLookupService.ListCostErpItems:output_type -> finance.v1.ListCostErpItemsResponse
+	6,  // 27: finance.v1.CostErpLookupService.GetCostErpItem:output_type -> finance.v1.GetCostErpItemResponse
+	8,  // 28: finance.v1.CostErpLookupService.CreateCostErpItem:output_type -> finance.v1.CreateCostErpItemResponse
+	10, // 29: finance.v1.CostErpLookupService.UpdateCostErpItem:output_type -> finance.v1.UpdateCostErpItemResponse
+	12, // 30: finance.v1.CostErpLookupService.DeleteCostErpItem:output_type -> finance.v1.DeleteCostErpItemResponse
+	14, // 31: finance.v1.CostErpLookupService.ListCostErpGrades:output_type -> finance.v1.ListCostErpGradesResponse
+	16, // 32: finance.v1.CostErpLookupService.ListCostErpShades:output_type -> finance.v1.ListCostErpShadesResponse
+	26, // [26:33] is the sub-list for method output_type
+	19, // [19:26] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_erp_proto_init() }
@@ -869,13 +1252,14 @@ func file_finance_v1_cost_erp_proto_init() {
 	if File_finance_v1_cost_erp_proto != nil {
 		return
 	}
+	file_finance_v1_cost_erp_proto_msgTypes[9].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_cost_erp_proto_rawDesc), len(file_finance_v1_cost_erp_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

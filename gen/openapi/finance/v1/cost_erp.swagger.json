@@ -125,6 +125,37 @@
         "tags": [
           "CostErpLookupService"
         ]
+      },
+      "post": {
+        "operationId": "CostErpLookupService_CreateCostErpItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostErpItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateCostErpItemRequest creates a new ERP item.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostErpItemRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostErpLookupService"
+        ]
       }
     },
     "/api/v1/finance/cost-erp/items/{itemId}": {
@@ -151,6 +182,72 @@
             "required": true,
             "type": "string",
             "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostErpLookupService"
+        ]
+      },
+      "delete": {
+        "operationId": "CostErpLookupService_DeleteCostErpItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteCostErpItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostErpLookupService"
+        ]
+      },
+      "put": {
+        "operationId": "CostErpLookupService_UpdateCostErpItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCostErpItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostErpLookupServiceUpdateCostErpItemBody"
+            }
           }
         ],
         "tags": [
@@ -212,6 +309,21 @@
     }
   },
   "definitions": {
+    "CostErpLookupServiceUpdateCostErpItemBody": {
+      "type": "object",
+      "properties": {
+        "itemName": {
+          "type": "string"
+        },
+        "itemType": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "description": "UpdateCostErpItemRequest updates an existing ERP item."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -333,6 +445,45 @@
         }
       }
     },
+    "v1CreateCostErpItemRequest": {
+      "type": "object",
+      "properties": {
+        "itemCode": {
+          "type": "string"
+        },
+        "itemName": {
+          "type": "string"
+        },
+        "itemType": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "description": "CreateCostErpItemRequest creates a new ERP item."
+    },
+    "v1CreateCostErpItemResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostErpItem"
+        }
+      },
+      "description": "CreateCostErpItemResponse returns the created ERP item."
+    },
+    "v1DeleteCostErpItemResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      },
+      "description": "DeleteCostErpItemResponse confirms deletion."
+    },
     "v1GetCostErpItemResponse": {
       "type": "object",
       "properties": {
@@ -439,6 +590,18 @@
         }
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1UpdateCostErpItemResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostErpItem"
+        }
+      },
+      "description": "UpdateCostErpItemResponse returns the updated ERP item."
     },
     "v1ValidationError": {
       "type": "object",

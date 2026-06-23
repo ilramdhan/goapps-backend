@@ -27,7 +27,7 @@ func NewCostErpHandler(repo domain.Repository) (*CostErpHandler, error) {
 }
 
 // =============================================================================
-// Items
+// Items — read
 // =============================================================================
 
 // ListCostErpItems lists ERP items.
@@ -68,6 +68,66 @@ func (h *CostErpHandler) GetCostErpItem(ctx context.Context, req *financev1.GetC
 		Base: successResponse("OK"),
 		Data: erpItemToProto(it),
 	}, nil
+}
+
+// =============================================================================
+// Items — write
+// =============================================================================
+
+// CreateCostErpItem creates a new ERP item.
+func (h *CostErpHandler) CreateCostErpItem(ctx context.Context, req *financev1.CreateCostErpItemRequest) (*financev1.CreateCostErpItemResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.CreateCostErpItemResponse{Base: baseResp}, nil
+	}
+	actor := actorFromCtx(ctx)
+	it, err := h.repo.CreateItem(ctx, domain.CreateInput{
+		ItemCode: req.GetItemCode(),
+		ItemName: req.GetItemName(),
+		ItemType: req.GetItemType(),
+		IsActive: req.GetIsActive(),
+	}, actor)
+	if err != nil {
+		return &financev1.CreateCostErpItemResponse{Base: erpErrToBase(err)}, nil
+	}
+	return &financev1.CreateCostErpItemResponse{Base: successResponse("created"), Data: erpItemToProto(it)}, nil
+}
+
+// UpdateCostErpItem updates an existing ERP item.
+func (h *CostErpHandler) UpdateCostErpItem(ctx context.Context, req *financev1.UpdateCostErpItemRequest) (*financev1.UpdateCostErpItemResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.UpdateCostErpItemResponse{Base: baseResp}, nil
+	}
+	actor := actorFromCtx(ctx)
+	in := domain.UpdateInput{ItemID: req.GetItemId()}
+	if req.ItemName != nil {
+		s := req.GetItemName()
+		in.ItemName = &s
+	}
+	if req.ItemType != nil {
+		s := req.GetItemType()
+		in.ItemType = &s
+	}
+	if req.IsActive != nil {
+		b := req.GetIsActive()
+		in.IsActive = &b
+	}
+	it, err := h.repo.UpdateItem(ctx, in, actor)
+	if err != nil {
+		return &financev1.UpdateCostErpItemResponse{Base: erpErrToBase(err)}, nil
+	}
+	return &financev1.UpdateCostErpItemResponse{Base: successResponse("updated"), Data: erpItemToProto(it)}, nil
+}
+
+// DeleteCostErpItem deletes an ERP item by ID.
+func (h *CostErpHandler) DeleteCostErpItem(ctx context.Context, req *financev1.DeleteCostErpItemRequest) (*financev1.DeleteCostErpItemResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.DeleteCostErpItemResponse{Base: baseResp}, nil
+	}
+	actor := actorFromCtx(ctx)
+	if err := h.repo.DeleteItem(ctx, req.GetItemId(), actor); err != nil {
+		return &financev1.DeleteCostErpItemResponse{Base: erpErrToBase(err)}, nil
+	}
+	return &financev1.DeleteCostErpItemResponse{Base: successResponse("deleted")}, nil
 }
 
 // =============================================================================
@@ -172,6 +232,9 @@ func paginationResponse(page, pageSize int32, total int64) *commonv1.PaginationR
 func erpErrToBase(err error) *commonv1.BaseResponse {
 	if errors.Is(err, domain.ErrNotFound) {
 		return NotFoundResponse(err.Error())
+	}
+	if errors.Is(err, domain.ErrAlreadyExists) {
+		return ConflictResponse(err.Error())
 	}
 	return InternalErrorResponse(err.Error())
 }
