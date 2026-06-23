@@ -296,7 +296,7 @@ func (r *CostProductMasterRepository) BulkUpsertByLegacyID(ctx context.Context, 
 			$10, $11,
 			$12, $13, $12, $13,
 			COALESCE(
-				(SELECT cpm_product_code FROM cost_product_master WHERE cpm_flex_02 = $8::text AND cpm_is_active = TRUE),
+				(SELECT cpm_product_code FROM cost_product_master WHERE cpm_flex_02 = $14 AND cpm_is_active = TRUE),
 				generate_cost_product_code($1, $12)
 			)
 		)
@@ -354,6 +354,7 @@ func (r *CostProductMasterRepository) upsertLegacyBatch(
 			item.ShadeName, item.Flex01, item.LegacySysID, item.Flex03,
 			item.ErpItemCode, item.IsActive,
 			now, actor,
+			item.LegacySysID, // $14 — separate copy avoids SQLSTATE 42P08 type-inference conflict
 		).Scan(&legacyID, &sysID, &xmax); err != nil {
 			return nil, fmt.Errorf("BulkUpsertByLegacyID upsert row: %w", err)
 		}
