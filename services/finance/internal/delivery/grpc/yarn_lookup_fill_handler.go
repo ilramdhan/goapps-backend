@@ -36,6 +36,60 @@ var machineNumericReaders = map[string]func(*machine.Entity) (float64, bool){
 		}
 		return 0, false
 	},
+	"mp_per_day": func(e *machine.Entity) (float64, bool) {
+		if v := e.MpPerDay(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	"ohs_per_day": func(e *machine.Entity) (float64, bool) {
+		if v := e.OhsPerDay(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	"spares_per_day": func(e *machine.Entity) (float64, bool) {
+		if v := e.SparesPerDay(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	"kgs_lost_change": func(e *machine.Entity) (float64, bool) {
+		if v := e.KgsLostChange(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	"vb1_qty": func(e *machine.Entity) (float64, bool) {
+		if v := e.Vb1Qty(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	"vb2_qty": func(e *machine.Entity) (float64, bool) {
+		if v := e.Vb2Qty(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	"vb3_qty": func(e *machine.Entity) (float64, bool) {
+		if v := e.Vb3Qty(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	"vb4_qty": func(e *machine.Entity) (float64, bool) {
+		if v := e.Vb4Qty(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	"vb5_qty": func(e *machine.Entity) (float64, bool) {
+		if v := e.Vb5Qty(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
 }
 
 // interminglingNumericReaders maps lookup_source_column → value extractor for mst_intermingling entity.

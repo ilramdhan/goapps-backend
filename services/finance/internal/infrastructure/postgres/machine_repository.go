@@ -34,9 +34,12 @@ func (r *MachineRepository) Create(ctx context.Context, entity *machine.Entity) 
 		INSERT INTO mst_machine (
 			mc_id, mc_code, mc_name, mc_type, mc_location,
 			no_of_position, no_of_end, mc_speed, machine_rpm,
-			mc_efficiency, power_per_day, is_active, notes,
+			mc_efficiency, power_per_day,
+			mp_per_day, ohs_per_day, spares_per_day, kgs_lost_change,
+			vb1_qty, vb2_qty, vb3_qty, vb4_qty, vb5_qty,
+			is_active, notes,
 			created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		entity.ID(),
@@ -50,6 +53,15 @@ func (r *MachineRepository) Create(ctx context.Context, entity *machine.Entity) 
 		entity.MachineRPM(),
 		entity.MCEfficiency(),
 		entity.PowerPerDay(),
+		entity.MpPerDay(),
+		entity.OhsPerDay(),
+		entity.SparesPerDay(),
+		entity.KgsLostChange(),
+		entity.Vb1Qty(),
+		entity.Vb2Qty(),
+		entity.Vb3Qty(),
+		entity.Vb4Qty(),
+		entity.Vb5Qty(),
 		entity.IsActive(),
 		nullableString(entity.Notes()),
 		entity.CreatedAt(),
@@ -142,19 +154,28 @@ func (r *MachineRepository) List(ctx context.Context, filter machine.ListFilter)
 func (r *MachineRepository) Update(ctx context.Context, entity *machine.Entity) error {
 	query := `
 		UPDATE mst_machine SET
-			mc_name        = $2,
-			mc_type        = $3,
-			mc_location    = $4,
-			no_of_position = $5,
-			no_of_end      = $6,
-			mc_speed       = $7,
-			machine_rpm    = $8,
-			mc_efficiency  = $9,
-			power_per_day  = $10,
-			is_active      = $11,
-			notes          = $12,
-			updated_at     = $13,
-			updated_by     = $14
+			mc_name         = $2,
+			mc_type         = $3,
+			mc_location     = $4,
+			no_of_position  = $5,
+			no_of_end       = $6,
+			mc_speed        = $7,
+			machine_rpm     = $8,
+			mc_efficiency   = $9,
+			power_per_day   = $10,
+			mp_per_day      = $11,
+			ohs_per_day     = $12,
+			spares_per_day  = $13,
+			kgs_lost_change = $14,
+			vb1_qty         = $15,
+			vb2_qty         = $16,
+			vb3_qty         = $17,
+			vb4_qty         = $18,
+			vb5_qty         = $19,
+			is_active       = $20,
+			notes           = $21,
+			updated_at      = $22,
+			updated_by      = $23
 		WHERE mc_id = $1 AND deleted_at IS NULL
 	`
 	result, err := r.db.ExecContext(ctx, query,
@@ -168,6 +189,15 @@ func (r *MachineRepository) Update(ctx context.Context, entity *machine.Entity) 
 		entity.MachineRPM(),
 		entity.MCEfficiency(),
 		entity.PowerPerDay(),
+		entity.MpPerDay(),
+		entity.OhsPerDay(),
+		entity.SparesPerDay(),
+		entity.KgsLostChange(),
+		entity.Vb1Qty(),
+		entity.Vb2Qty(),
+		entity.Vb3Qty(),
+		entity.Vb4Qty(),
+		entity.Vb5Qty(),
 		entity.IsActive(),
 		nullableString(entity.Notes()),
 		entity.UpdatedAt(),
@@ -237,7 +267,10 @@ func (r *MachineRepository) selectCols() string {
 	return `
 		SELECT mc_id, mc_code, mc_name, mc_type, mc_location,
 		       no_of_position, no_of_end, mc_speed, machine_rpm,
-		       mc_efficiency, power_per_day, is_active, notes,
+		       mc_efficiency, power_per_day,
+		       mp_per_day, ohs_per_day, spares_per_day, kgs_lost_change,
+		       vb1_qty, vb2_qty, vb3_qty, vb4_qty, vb5_qty,
+		       is_active, notes,
 		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
 		FROM mst_machine
 	`
@@ -256,25 +289,34 @@ func (r *MachineRepository) resolveSort(sortBy string) string {
 }
 
 type machineDTO struct {
-	ID           uuid.UUID
-	Code         string
-	Name         string
-	MCType       sql.NullString
-	Location     sql.NullString
-	NoOfPosition int
-	NoOfEnd      int
-	MCSpeed      float64
-	MachineRPM   sql.NullFloat64
-	MCEfficiency float64
-	PowerPerDay  sql.NullFloat64
-	IsActive     bool
-	Notes        sql.NullString
-	CreatedAt    time.Time
-	CreatedBy    string
-	UpdatedAt    sql.NullTime
-	UpdatedBy    sql.NullString
-	DeletedAt    sql.NullTime
-	DeletedBy    sql.NullString
+	ID            uuid.UUID
+	Code          string
+	Name          string
+	MCType        sql.NullString
+	Location      sql.NullString
+	NoOfPosition  int
+	NoOfEnd       int
+	MCSpeed       float64
+	MachineRPM    sql.NullFloat64
+	MCEfficiency  float64
+	PowerPerDay   sql.NullFloat64
+	MpPerDay      sql.NullFloat64
+	OhsPerDay     sql.NullFloat64
+	SparesPerDay  sql.NullFloat64
+	KgsLostChange sql.NullFloat64
+	Vb1Qty        sql.NullFloat64
+	Vb2Qty        sql.NullFloat64
+	Vb3Qty        sql.NullFloat64
+	Vb4Qty        sql.NullFloat64
+	Vb5Qty        sql.NullFloat64
+	IsActive      bool
+	Notes         sql.NullString
+	CreatedAt     time.Time
+	CreatedBy     string
+	UpdatedAt     sql.NullTime
+	UpdatedBy     sql.NullString
+	DeletedAt     sql.NullTime
+	DeletedBy     sql.NullString
 }
 
 func (d *machineDTO) toEntity() *machine.Entity {
@@ -290,6 +332,15 @@ func (d *machineDTO) toEntity() *machine.Entity {
 		nullableFloat64Ptr(d.MachineRPM),
 		d.MCEfficiency,
 		nullableFloat64Ptr(d.PowerPerDay),
+		nullableFloat64Ptr(d.MpPerDay),
+		nullableFloat64Ptr(d.OhsPerDay),
+		nullableFloat64Ptr(d.SparesPerDay),
+		nullableFloat64Ptr(d.KgsLostChange),
+		nullableFloat64Ptr(d.Vb1Qty),
+		nullableFloat64Ptr(d.Vb2Qty),
+		nullableFloat64Ptr(d.Vb3Qty),
+		nullableFloat64Ptr(d.Vb4Qty),
+		nullableFloat64Ptr(d.Vb5Qty),
 		d.IsActive,
 		d.Notes.String,
 		d.CreatedAt,
@@ -306,7 +357,10 @@ func (r *MachineRepository) scanOne(row *sql.Row) (*machine.Entity, error) {
 	err := row.Scan(
 		&d.ID, &d.Code, &d.Name, &d.MCType, &d.Location,
 		&d.NoOfPosition, &d.NoOfEnd, &d.MCSpeed, &d.MachineRPM,
-		&d.MCEfficiency, &d.PowerPerDay, &d.IsActive, &d.Notes,
+		&d.MCEfficiency, &d.PowerPerDay,
+		&d.MpPerDay, &d.OhsPerDay, &d.SparesPerDay, &d.KgsLostChange,
+		&d.Vb1Qty, &d.Vb2Qty, &d.Vb3Qty, &d.Vb4Qty, &d.Vb5Qty,
+		&d.IsActive, &d.Notes,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -323,7 +377,10 @@ func (r *MachineRepository) scanRow(rows *sql.Rows) (*machine.Entity, error) {
 	err := rows.Scan(
 		&d.ID, &d.Code, &d.Name, &d.MCType, &d.Location,
 		&d.NoOfPosition, &d.NoOfEnd, &d.MCSpeed, &d.MachineRPM,
-		&d.MCEfficiency, &d.PowerPerDay, &d.IsActive, &d.Notes,
+		&d.MCEfficiency, &d.PowerPerDay,
+		&d.MpPerDay, &d.OhsPerDay, &d.SparesPerDay, &d.KgsLostChange,
+		&d.Vb1Qty, &d.Vb2Qty, &d.Vb3Qty, &d.Vb4Qty, &d.Vb5Qty,
+		&d.IsActive, &d.Notes,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
 	if err != nil {
