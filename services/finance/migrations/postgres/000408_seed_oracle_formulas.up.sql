@@ -1,11 +1,6 @@
 -- 000408_seed_oracle_formulas.up.sql
--- Seeds 77 formulas (64 active + 13 pending).
+-- Seeds 75 formulas (62 active + 13 pending).
 -- LOOKUP (29) and INTERMINGLING (1) types are skipped — handled by fill-group at form-fill time.
---
--- NOTE: F_YARN_OIL_GAIN and F_YARN_OIL_GAIN_ZERO both target OIL_GAIN as result_param_id.
--- The unique index on (result_param_id) WHERE deleted_at IS NULL prevents two active formulas
--- sharing the same result param. F_YARN_OIL_GAIN_ZERO is therefore seeded as is_active=FALSE
--- (it is a semantically identical zero-constant alias; the active F_YARN_OIL_GAIN takes precedence).
 
 -- ============================================================
 -- PART 1: Insert formulas (active=TRUE unless PENDING or duplicate result_param)
@@ -37,7 +32,6 @@ FROM (VALUES
   ('F_YARN_SPARES_KG','Spares Per Kg','CALCULATION','NET_PRODUCTION > 0 ? SPARESCOST_PER_DAY / NET_PRODUCTION : 0','SPARESCOST_PER_KG','Spares cost per kg',TRUE),
   ('F_YARN_TOTAL_FIXED','Total Fixed Cost Per Kg','CALCULATION','POWER_PER_KG + MANPOWER_PER_KG + OVERHEAD_PER_KG + SPARESCOST_PER_KG','TOTAL_FIXEDCOST_PER_KG','Sum of fixed costs per kg',TRUE),
   ('F_YARN_MB_COST','MB Cost Marketing','CALCULATION','MB_RATE_MKT * MB_SP_DOZING / 100.0','MB_COST_MKT','MB cost per kg',TRUE),
-  ('F_YARN_HEATSET_KG','Heatset Cost Per Kg','CALCULATION','BATCH_WEIGHT > 0 ? HEATSET_COST_PER_BATCH / BATCH_WEIGHT : 0','HEATSET_COST_PER_KG','Heatset cost per kg',TRUE),
   ('F_YARN_CAP_BOX_WT','Captive Box Weight','CALCULATION','CAPTIVE_NO_OF_BOB * NET_BOB_WT * RM_NORMS','CAPTIVE_BOX_WT','Captive box weight',TRUE),
   ('F_YARN_DEL_BOX_WT','Delivery Box Weight','CALCULATION','DELIVERY_NO_OF_BOB * NET_BOB_WT * RM_NORMS','DELIVERY_BOX_WT','Delivery box weight',TRUE),
   ('F_YARN_CAP_PACK','Captive Pack Cost','CALCULATION','CAPTIVE_BOX_WT > 0 ? (CAPTIVE_NO_OF_BOB * CAPTIVE_BOB_RATE + CAPTIVE_BOX_RATE) / CAPTIVE_BOX_WT : 0','CAPTIVE_PACK_COST','Packing cost captive',TRUE),
@@ -65,9 +59,6 @@ FROM (VALUES
   ('F_YARN_VB5_DEL','VB5 Delivery Cost','CALCULATION','DELIVERY_COST_QLTY_LOSS + VOLUME_BUCKET_5_LOSS','VOLUME_BUCKET_5_DEL_COST','Delivery cost VB5',TRUE),
   ('F_YARN_WASHING_COST','Washing Cost','CALCULATION','0','WASHING_COST','Always 0',TRUE),
   ('F_YARN_STEAM_COST','Steam Cost CNG','CALCULATION','0','STEAM_COST_CNG','Always 0',TRUE),
-  -- F_YARN_OIL_GAIN_ZERO shares OIL_GAIN result_param_id with F_YARN_OIL_GAIN (active).
-  -- Seeded as is_active=FALSE to satisfy the unique index on (result_param_id) WHERE deleted_at IS NULL.
-  ('F_YARN_OIL_GAIN_ZERO','Oil Gain Zero','CALCULATION','0','OIL_GAIN','Always 0 (oil gain not costed)',FALSE),
   ('F_YARN_CONV_FACTOR','Conversion Factor','CALCULATION','1','CONV_FACTOR','Always 1 (no conversion)',TRUE),
   ('F_YARN_RP_CC','RP-CC','CALCULATION','CROSS_SECTION','RP_CC','Copy cross section to RP-CC',TRUE),
   ('F_YARN_SPECIAL_COST_2','Special Cost 2','CALCULATION','SPECIAL_COST_1','SPECIAL_COST_2','Mirror of special cost 1',TRUE),
@@ -156,8 +147,6 @@ FROM (VALUES
   ('F_YARN_TOTAL_FIXED','POWER_PER_KG',1),('F_YARN_TOTAL_FIXED','MANPOWER_PER_KG',2),('F_YARN_TOTAL_FIXED','OVERHEAD_PER_KG',3),('F_YARN_TOTAL_FIXED','SPARESCOST_PER_KG',4),
 -- F_YARN_MB_COST: MB_RATE_MKT, MB_SP_DOZING
   ('F_YARN_MB_COST','MB_RATE_MKT',1),('F_YARN_MB_COST','MB_SP_DOZING',2),
--- F_YARN_HEATSET_KG: HEATSET_COST_PER_BATCH, BATCH_WEIGHT
-  ('F_YARN_HEATSET_KG','HEATSET_COST_PER_BATCH',1),('F_YARN_HEATSET_KG','BATCH_WEIGHT',2),
 -- F_YARN_CAP_BOX_WT: CAPTIVE_NO_OF_BOB, NET_BOB_WT, RM_NORMS
   ('F_YARN_CAP_BOX_WT','CAPTIVE_NO_OF_BOB',1),('F_YARN_CAP_BOX_WT','NET_BOB_WT',2),('F_YARN_CAP_BOX_WT','RM_NORMS',3),
 -- F_YARN_DEL_BOX_WT: DELIVERY_NO_OF_BOB, NET_BOB_WT, RM_NORMS
