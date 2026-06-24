@@ -2536,6 +2536,15 @@
         "mbsMbCosting": {
           "type": "string",
           "description": "Optional spin cost code (max 100 chars)."
+        },
+        "mbsCc": {
+          "type": "string",
+          "description": "Optional MB/SP cost code (max 100 chars)."
+        },
+        "mbsCostRateMkt": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional MB rate MKT in USD/kg."
         }
       },
       "description": "CreateMBSpinRequest is the request for creating an MB Spin record."
@@ -2588,6 +2597,15 @@
         "mbsIsActive": {
           "type": "boolean",
           "description": "Updated active status."
+        },
+        "mbsCc": {
+          "type": "string",
+          "description": "Optional MB/SP cost code (max 100 chars)."
+        },
+        "mbsCostRateMkt": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional MB rate MKT in USD/kg."
         }
       },
       "description": "UpdateMBSpinRequest is the request for updating an MB Spin record."
@@ -2644,6 +2662,51 @@
         "isActive": {
           "type": "boolean",
           "description": "Updated active status."
+        },
+        "mpPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional manpower cost per day in USD."
+        },
+        "ohsPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional overhead per head per day in USD."
+        },
+        "sparesPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional spares cost per day in USD."
+        },
+        "kgsLostChange": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional change-over quality loss in kgs."
+        },
+        "vb1Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 1 quantity threshold."
+        },
+        "vb2Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 2 quantity threshold."
+        },
+        "vb3Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 3 quantity threshold."
+        },
+        "vb4Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 4 quantity threshold."
+        },
+        "vb5Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 5 quantity threshold."
         }
       },
       "description": "UpdateMachineRequest is the request for updating a machine."
@@ -2681,6 +2744,24 @@
         "isActive": {
           "type": "boolean",
           "description": "Updated active status."
+        },
+        "pgDetailProduct": {
+          "type": "string",
+          "description": "Optional pattern match key (max 100 chars)."
+        },
+        "pgGradeLabel": {
+          "type": "string",
+          "description": "Optional grade label for STD_VALUE_LOSS (max 50 chars)."
+        },
+        "stdSellingPrice": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional BC_SPECIAL_PROD rate (≥ 0)."
+        },
+        "spValue": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional VALUE_LOSS rate (≥ 0)."
         }
       },
       "description": "UpdateProductGradeRequest is the request for updating a Product Grade."
@@ -3139,6 +3220,51 @@
         "notes": {
           "type": "string",
           "description": "Optional notes (max 1000 chars)."
+        },
+        "mpPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional manpower cost per day in USD."
+        },
+        "ohsPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional overhead per head per day in USD."
+        },
+        "sparesPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional spares cost per day in USD."
+        },
+        "kgsLostChange": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional change-over quality loss in kgs."
+        },
+        "vb1Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 1 quantity threshold."
+        },
+        "vb2Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 2 quantity threshold."
+        },
+        "vb3Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 3 quantity threshold."
+        },
+        "vb4Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 4 quantity threshold."
+        },
+        "vb5Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 5 quantity threshold."
         }
       },
       "description": "CreateMachineRequest is the request for creating a machine."
@@ -3190,6 +3316,24 @@
         "notes": {
           "type": "string",
           "description": "Optional notes (max 1000 chars)."
+        },
+        "pgDetailProduct": {
+          "type": "string",
+          "description": "Pattern match key (max 100 chars)."
+        },
+        "pgGradeLabel": {
+          "type": "string",
+          "description": "Grade label for STD_VALUE_LOSS (max 50 chars)."
+        },
+        "stdSellingPrice": {
+          "type": "number",
+          "format": "double",
+          "description": "BC_SPECIAL_PROD rate (≥ 0)."
+        },
+        "spValue": {
+          "type": "number",
+          "format": "double",
+          "description": "VALUE_LOSS rate (≥ 0)."
         }
       },
       "description": "CreateProductGradeRequest is the request for creating a Product Grade."
@@ -4376,6 +4520,15 @@
           "type": "boolean",
           "description": "Whether the record is active."
         },
+        "mbsCc": {
+          "type": "string",
+          "description": "Optional MB/SP cost code."
+        },
+        "mbsCostRateMkt": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional MB rate MKT in USD/kg."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
@@ -4444,9 +4597,54 @@
           "type": "string",
           "description": "Optional notes."
         },
+        "mpPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional manpower cost per day in USD."
+        },
+        "ohsPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional overhead per head per day in USD."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
+        },
+        "sparesPerDay": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional spares cost per day in USD."
+        },
+        "kgsLostChange": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional change-over quality loss in kgs."
+        },
+        "vb1Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 1 quantity threshold."
+        },
+        "vb2Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 2 quantity threshold."
+        },
+        "vb3Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 3 quantity threshold."
+        },
+        "vb4Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 4 quantity threshold."
+        },
+        "vb5Qty": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional volume bucket 5 quantity threshold."
         }
       },
       "description": "Machine represents a yarn machine master record."
@@ -4532,6 +4730,24 @@
         "notes": {
           "type": "string",
           "description": "Optional notes."
+        },
+        "pgDetailProduct": {
+          "type": "string",
+          "description": "Pattern match key (e.g., \"DBR \u003c=600D\")."
+        },
+        "pgGradeLabel": {
+          "type": "string",
+          "description": "Grade label for STD_VALUE_LOSS."
+        },
+        "stdSellingPrice": {
+          "type": "number",
+          "format": "double",
+          "description": "BC_SPECIAL_PROD rate."
+        },
+        "spValue": {
+          "type": "number",
+          "format": "double",
+          "description": "VALUE_LOSS rate."
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
