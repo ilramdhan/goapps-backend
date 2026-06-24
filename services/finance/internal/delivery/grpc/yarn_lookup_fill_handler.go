@@ -100,9 +100,27 @@ var interminglingNumericReaders = map[string]func(*intermingling.Entity) (float6
 
 // productGradeNumericReaders maps lookup_source_column → value extractor for mst_product_grade entity.
 var productGradeNumericReaders = map[string]func(*productgrade.Entity) (float64, bool){
-	"bc_perc":          func(e *productgrade.Entity) (float64, bool) { return e.BCPerc(), true },
-	"non_std_perc":     func(e *productgrade.Entity) (float64, bool) { return e.NonStdPerc(), true },
-	"bc_recovery_rate": func(e *productgrade.Entity) (float64, bool) { return e.BCRecoveryRate(), true },
+	"bc_perc":           func(e *productgrade.Entity) (float64, bool) { return e.BCPerc(), true },
+	"non_std_perc":      func(e *productgrade.Entity) (float64, bool) { return e.NonStdPerc(), true },
+	"bc_recovery_rate":  func(e *productgrade.Entity) (float64, bool) { return e.BCRecoveryRate(), true },
+	"std_selling_price": func(e *productgrade.Entity) (float64, bool) { return e.StdSellingPrice(), true },
+	"sp_value":          func(e *productgrade.Entity) (float64, bool) { return e.SpValue(), true },
+}
+
+// productGradeTextReaders maps lookup_source_column → text value extractor for mst_product_grade entity.
+var productGradeTextReaders = map[string]func(*productgrade.Entity) (string, bool){
+	"pg_detail_product": func(e *productgrade.Entity) (string, bool) {
+		if v := e.PgDetailProduct(); v != "" {
+			return v, true
+		}
+		return "", false
+	},
+	"pg_grade_label": func(e *productgrade.Entity) (string, bool) {
+		if v := e.PgGradeLabel(); v != "" {
+			return v, true
+		}
+		return "", false
+	},
 }
 
 // mbHeadNumericReaders maps lookup_source_column → numeric value extractor for mst_mb_head entity.
@@ -296,10 +314,16 @@ func (h *YarnLookupFillHandler) fillFromProductGrade(ctx context.Context, pgCode
 	}
 
 	nums := make(map[string]float64, len(childParams))
+	texts := make(map[string]string, len(childParams))
 	for _, p := range childParams {
 		if reader, ok := productGradeNumericReaders[p.LookupSourceColumn()]; ok {
 			if val, hasVal := reader(grade); hasVal {
 				nums[p.Code().String()] = val
+			}
+		}
+		if reader, ok := productGradeTextReaders[p.LookupSourceColumn()]; ok {
+			if val, hasVal := reader(grade); hasVal {
+				texts[p.Code().String()] = val
 			}
 		}
 	}
@@ -309,7 +333,7 @@ func (h *YarnLookupFillHandler) fillFromProductGrade(ctx context.Context, pgCode
 	return &financev1.GetLookupFillValuesResponse{
 		Base:         successResponse("Product grade fill values retrieved"),
 		NumericFills: nums,
-		TextFills:    map[string]string{},
+		TextFills:    texts,
 		DisplayLabel: label,
 	}, nil
 }
@@ -399,12 +423,12 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 	}, nil
 }
 
-func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) { //nolint:nilerr // BaseResponse pattern
+func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
 	spin, err := h.mbSpinRepo.GetByMBCosting(ctx, selectedKey)
 	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{
+		return &financev1.GetLookupFillValuesResponse{ //nolint:nilerr // BaseResponse pattern: error surfaced in response body
 			Base: ErrorResponse("404", fmt.Sprintf("MB Spin not found: %s", selectedKey)),
-		}, nil //nolint:nilerr // BaseResponse pattern
+		}, nil
 	}
 
 	children, err := h.paramRepo.GetByFillGroup(ctx, sourceParamCode)

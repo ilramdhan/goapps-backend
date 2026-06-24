@@ -50,14 +50,18 @@ func (h *ProductGradeHandler) CreateProductGrade(ctx context.Context, req *finan
 	}
 
 	entity, err := h.createHandler.Handle(ctx, appproductgrade.CreateCommand{
-		Code:           req.PgCode,
-		Name:           req.PgName,
-		Description:    req.PgDescription,
-		BCPerc:         req.BcPerc,
-		NonStdPerc:     req.NonStdPerc,
-		BCRecoveryRate: req.BcRecoveryRate,
-		Notes:          req.Notes,
-		CreatedBy:      getUserFromContext(ctx),
+		Code:            req.PgCode,
+		Name:            req.PgName,
+		Description:     req.PgDescription,
+		BCPerc:          req.BcPerc,
+		NonStdPerc:      req.NonStdPerc,
+		BCRecoveryRate:  req.BcRecoveryRate,
+		PgDetailProduct: req.PgDetailProduct,
+		PgGradeLabel:    req.PgGradeLabel,
+		StdSellingPrice: req.StdSellingPrice,
+		SpValue:         req.SpValue,
+		Notes:           req.Notes,
+		CreatedBy:       getUserFromContext(ctx),
 	})
 	if err != nil {
 		RecordProductGradeOperation("create", false)
@@ -111,15 +115,19 @@ func (h *ProductGradeHandler) UpdateProductGrade(ctx context.Context, req *finan
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, appproductgrade.UpdateCommand{
-		ProductGradeID: id,
-		Name:           req.PgName,
-		Description:    req.PgDescription,
-		BCPerc:         req.BcPerc,
-		NonStdPerc:     req.NonStdPerc,
-		BCRecoveryRate: req.BcRecoveryRate,
-		Notes:          req.Notes,
-		IsActive:       req.IsActive,
-		UpdatedBy:      getUserFromContext(ctx),
+		ProductGradeID:  id,
+		Name:            req.PgName,
+		Description:     req.PgDescription,
+		BCPerc:          req.BcPerc,
+		NonStdPerc:      req.NonStdPerc,
+		BCRecoveryRate:  req.BcRecoveryRate,
+		PgDetailProduct: req.PgDetailProduct,
+		PgGradeLabel:    req.PgGradeLabel,
+		StdSellingPrice: req.StdSellingPrice,
+		SpValue:         req.SpValue,
+		Notes:           req.Notes,
+		IsActive:        req.IsActive,
+		UpdatedBy:       getUserFromContext(ctx),
 	})
 	if err != nil {
 		RecordProductGradeOperation("update", false)
@@ -227,15 +235,19 @@ func (h *ProductGradeHandler) DownloadProductGradeTemplate(_ context.Context, _ 
 // productGradeEntityToProto converts a domain ProductGrade entity to its proto representation.
 func productGradeEntityToProto(e *productgrade.Entity) *financev1.ProductGrade {
 	p := &financev1.ProductGrade{
-		PgId:           e.ID().String(),
-		PgCode:         e.Code(),
-		PgName:         e.Name(),
-		PgDescription:  e.Description(),
-		BcPerc:         e.BCPerc(),
-		NonStdPerc:     e.NonStdPerc(),
-		BcRecoveryRate: e.BCRecoveryRate(),
-		IsActive:       e.IsActive(),
-		Notes:          e.Notes(),
+		PgId:            e.ID().String(),
+		PgCode:          e.Code(),
+		PgName:          e.Name(),
+		PgDescription:   e.Description(),
+		BcPerc:          e.BCPerc(),
+		NonStdPerc:      e.NonStdPerc(),
+		BcRecoveryRate:  e.BCRecoveryRate(),
+		PgDetailProduct: e.PgDetailProduct(),
+		PgGradeLabel:    e.PgGradeLabel(),
+		StdSellingPrice: e.StdSellingPrice(),
+		SpValue:         e.SpValue(),
+		IsActive:        e.IsActive(),
+		Notes:           e.Notes(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: e.CreatedAt().Format(time.RFC3339),
 			CreatedBy: e.CreatedBy(),

@@ -67,7 +67,7 @@ func (m *MockRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, er
 
 func newTestProductGrade(t *testing.T) *productgradedomain.Entity {
 	t.Helper()
-	entity, err := productgradedomain.New("A", "Grade A", "Top quality", 2.0, 1.5, 0.8, "notes", "admin")
+	entity, err := productgradedomain.New("A", "Grade A", "Top quality", 2.0, 1.5, 0.8, "", "", 0, 0, "notes", "admin")
 	require.NoError(t, err)
 	return entity
 }
@@ -310,7 +310,7 @@ func TestListHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		grade1 := newTestProductGrade(t)
-		grade2, err := productgradedomain.New("B", "Grade B", "Standard quality", 3.0, 2.0, 0.7, "", "admin")
+		grade2, err := productgradedomain.New("B", "Grade B", "Standard quality", 3.0, 2.0, 0.7, "", "", 0, 0, "", "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("productgrade.ListFilter")).Return(

@@ -34,8 +34,9 @@ func (r *ProductGradeRepository) Create(ctx context.Context, entity *productgrad
 		INSERT INTO mst_product_grade (
 			pg_id, pg_code, pg_name, pg_description,
 			bc_perc, non_std_perc, bc_recovery_rate,
+			pg_detail_product, pg_grade_label, std_selling_price, sp_value,
 			is_active, notes, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 	`,
 		entity.ID(),
 		entity.Code(),
@@ -44,6 +45,10 @@ func (r *ProductGradeRepository) Create(ctx context.Context, entity *productgrad
 		entity.BCPerc(),
 		entity.NonStdPerc(),
 		entity.BCRecoveryRate(),
+		nullableString(entity.PgDetailProduct()),
+		nullableString(entity.PgGradeLabel()),
+		entity.StdSellingPrice(),
+		entity.SpValue(),
 		entity.IsActive(),
 		nullableString(entity.Notes()),
 		entity.CreatedAt(),
@@ -125,15 +130,19 @@ func (r *ProductGradeRepository) List(ctx context.Context, filter productgrade.L
 func (r *ProductGradeRepository) Update(ctx context.Context, entity *productgrade.Entity) error {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE mst_product_grade SET
-			pg_name         = $2,
-			pg_description  = $3,
-			bc_perc         = $4,
-			non_std_perc    = $5,
-			bc_recovery_rate= $6,
-			is_active       = $7,
-			notes           = $8,
-			updated_at      = $9,
-			updated_by      = $10
+			pg_name          = $2,
+			pg_description   = $3,
+			bc_perc          = $4,
+			non_std_perc     = $5,
+			bc_recovery_rate = $6,
+			pg_detail_product= $7,
+			pg_grade_label   = $8,
+			std_selling_price= $9,
+			sp_value         = $10,
+			is_active        = $11,
+			notes            = $12,
+			updated_at       = $13,
+			updated_by       = $14
 		WHERE pg_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -142,6 +151,10 @@ func (r *ProductGradeRepository) Update(ctx context.Context, entity *productgrad
 		entity.BCPerc(),
 		entity.NonStdPerc(),
 		entity.BCRecoveryRate(),
+		nullableString(entity.PgDetailProduct()),
+		nullableString(entity.PgGradeLabel()),
+		entity.StdSellingPrice(),
+		entity.SpValue(),
 		entity.IsActive(),
 		nullableString(entity.Notes()),
 		entity.UpdatedAt(),
@@ -211,6 +224,8 @@ func (r *ProductGradeRepository) selectCols() string {
 	return `
 		SELECT pg_id, pg_code, pg_name, pg_description,
 		       bc_perc, non_std_perc, bc_recovery_rate,
+		       COALESCE(pg_detail_product, ''), COALESCE(pg_grade_label, ''),
+		       COALESCE(std_selling_price, 0), COALESCE(sp_value, 0),
 		       is_active, notes, created_at, created_by,
 		       updated_at, updated_by, deleted_at, deleted_by
 		FROM mst_product_grade
@@ -229,27 +244,33 @@ func (r *ProductGradeRepository) resolveSort(sortBy string) string {
 }
 
 type productGradeDTO struct {
-	ID             uuid.UUID
-	Code           string
-	Name           string
-	Description    sql.NullString
-	BCPerc         float64
-	NonStdPerc     float64
-	BCRecoveryRate float64
-	IsActive       bool
-	Notes          sql.NullString
-	CreatedAt      time.Time
-	CreatedBy      string
-	UpdatedAt      sql.NullTime
-	UpdatedBy      sql.NullString
-	DeletedAt      sql.NullTime
-	DeletedBy      sql.NullString
+	ID              uuid.UUID
+	Code            string
+	Name            string
+	Description     sql.NullString
+	BCPerc          float64
+	NonStdPerc      float64
+	BCRecoveryRate  float64
+	PgDetailProduct string
+	PgGradeLabel    string
+	StdSellingPrice float64
+	SpValue         float64
+	IsActive        bool
+	Notes           sql.NullString
+	CreatedAt       time.Time
+	CreatedBy       string
+	UpdatedAt       sql.NullTime
+	UpdatedBy       sql.NullString
+	DeletedAt       sql.NullTime
+	DeletedBy       sql.NullString
 }
 
 func (d *productGradeDTO) toEntity() *productgrade.Entity {
 	return productgrade.Reconstruct(
 		d.ID, d.Code, d.Name, d.Description.String,
 		d.BCPerc, d.NonStdPerc, d.BCRecoveryRate,
+		d.PgDetailProduct, d.PgGradeLabel,
+		d.StdSellingPrice, d.SpValue,
 		d.IsActive, d.Notes.String,
 		d.CreatedAt, d.CreatedBy,
 		nullableTimePtr(d.UpdatedAt), nullableStringPtr(d.UpdatedBy),
@@ -262,6 +283,8 @@ func (r *ProductGradeRepository) scanOne(row *sql.Row) (*productgrade.Entity, er
 	err := row.Scan(
 		&d.ID, &d.Code, &d.Name, &d.Description,
 		&d.BCPerc, &d.NonStdPerc, &d.BCRecoveryRate,
+		&d.PgDetailProduct, &d.PgGradeLabel,
+		&d.StdSellingPrice, &d.SpValue,
 		&d.IsActive, &d.Notes, &d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
@@ -279,6 +302,8 @@ func (r *ProductGradeRepository) scanRow(rows *sql.Rows) (*productgrade.Entity, 
 	err := rows.Scan(
 		&d.ID, &d.Code, &d.Name, &d.Description,
 		&d.BCPerc, &d.NonStdPerc, &d.BCRecoveryRate,
+		&d.PgDetailProduct, &d.PgGradeLabel,
+		&d.StdSellingPrice, &d.SpValue,
 		&d.IsActive, &d.Notes, &d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
