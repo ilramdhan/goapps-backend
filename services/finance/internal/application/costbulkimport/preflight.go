@@ -79,9 +79,13 @@ func preflightParamSheet(
 	sheetName string,
 	requiredHeaders []string,
 ) SheetResult {
-	rows, parseErr := ParseSheet(f, sheetName, requiredHeaders)
+	rows, parseErr := ParseSheetOptional(f, sheetName, requiredHeaders)
 	if parseErr != nil {
 		return sheetErrResult(sheetName, parseErr)
+	}
+	// Sheet absent or empty — skip silently (param sheets are optional).
+	if len(rows) == 0 {
+		return SheetResult{SheetName: sheetName}
 	}
 
 	result := SheetResult{SheetName: sheetName, TotalRows: len(rows)}

@@ -37,6 +37,17 @@ func ParseSheet(f *excelize.File, baseName string, requiredHeaders []string) ([]
 	return mergeSheetRows(f, baseName, matched, requiredHeaders)
 }
 
+// ParseSheetOptional is like ParseSheet but returns nil, nil when no matching sheet
+// exists instead of an error. Use for sheets that are optional in a bulk import file
+// (e.g. product_parameters when the user only wants to import product master + routing).
+func ParseSheetOptional(f *excelize.File, baseName string, requiredHeaders []string) ([]map[string]string, error) {
+	matched := findMatchingSheets(f, baseName)
+	if len(matched) == 0 {
+		return nil, nil // sheet absent — caller should treat as zero rows
+	}
+	return mergeSheetRows(f, baseName, matched, requiredHeaders)
+}
+
 // findMatchingSheets returns sheets from f whose name matches baseName.
 // Exact match wins exclusively; otherwise all contains-matches sorted alpha.
 func findMatchingSheets(f *excelize.File, baseName string) []string {

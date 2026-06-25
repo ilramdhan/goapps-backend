@@ -24,9 +24,12 @@ func processCPP(
 ) (inserted, updated int, errs []SheetError, err error) {
 	const sheetName = "product_parameters"
 	requiredHeaders := []string{"legacy_oracle_sys_id", "param_code", "data_type"}
-	rows, parseErr := ParseSheet(f, sheetName, requiredHeaders)
+	rows, parseErr := ParseSheetOptional(f, sheetName, requiredHeaders)
 	if parseErr != nil {
 		return 0, 0, nil, parseErr
+	}
+	if len(rows) == 0 {
+		return 0, 0, nil, nil // sheet absent or empty — skip silently
 	}
 
 	inputs := make([]costproductparameter.CPPUpsertInput, 0, len(rows))
