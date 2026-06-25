@@ -473,3 +473,39 @@ func isProductMasterUniqueViolation(err error) bool {
 	}
 	return false
 }
+
+// ListAllLegacyIDs returns a map of flex02OrCode → cpm_product_sys_id for all
+// active products. flex02OrCode = cpm_flex_02 if set, else cpm_product_code.
+// Used by the params-only import to resolve legacy_oracle_sys_id without
+// requiring a product_master sheet in the same file.
+func (r *CostProductMasterRepository) ListAllLegacyIDs(ctx context.Context) (map[string]int64, error) {
+	const q = `SELECT cpm_product_sys_id, cpm_product_code, COALESCE(cpm_flex_02, '')
+               FROM cost_product_master
+               WHERE cpm_is_active = TRUE AND cpm_deleted_at IS NULL`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list product legacy IDs: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	result := make(map[string]int64)
+	for rows.Next() {
+		var sysID int64
+		var code, flex02 string
+		if scanErr := rows.Scan(&sysID, &code, &flex02); scanErr != nil {
+			return nil, fmt.Errorf("scan product legacy ID: %w", scanErr)
+		}
+		key := flex02
+		if key == "" {
+			key = code
+		}
+		result[key] = sysID
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate product legacy IDs: %w", err)
+	}
+	return result, nil
+}

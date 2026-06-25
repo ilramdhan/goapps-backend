@@ -223,6 +223,19 @@ func (h *CostDataImportHandler) ImportBulkProductRouting(ctx context.Context, re
 	}, nil
 }
 
+// ImportBulkParamsOnly uploads a params-only file to MinIO, creates a PENDING job,
+// and publishes to RabbitMQ. Products must already exist from a prior bulk import.
+func (h *CostDataImportHandler) ImportBulkParamsOnly(ctx context.Context, req *financev1.ImportBulkParamsOnlyRequest) (*financev1.ImportBulkParamsOnlyResponse, error) {
+	jobID, err := h.enqueueImport(ctx, req.GetFileContent(), req.GetFileName(), costimportjob.EntityBulkParamsOnly)
+	if err != nil {
+		return &financev1.ImportBulkParamsOnlyResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+	return &financev1.ImportBulkParamsOnlyResponse{
+		Base:  successResponse("Bulk params-only import queued"),
+		JobId: jobID,
+	}, nil
+}
+
 // ValidateBulkProductRoutingFile performs a synchronous dry-run validation of a
 // bulk product routing import file and returns per-sheet validation results.
 func (h *CostDataImportHandler) ValidateBulkProductRoutingFile(ctx context.Context, req *financev1.ValidateBulkProductRoutingFileRequest) (*financev1.ValidateBulkProductRoutingFileResponse, error) {

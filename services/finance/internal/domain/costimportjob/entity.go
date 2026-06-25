@@ -21,6 +21,7 @@ const (
 	EntityCPP                      = "cpp"
 	EntityBulkProductRouting       = "bulk_product_routing"
 	EntityBulkProductRoutingExport = "bulk_product_routing_export"
+	EntityBulkParamsOnly           = "bulk_params_only"
 )
 
 // CostImportJob tracks the lifecycle of a bulk import operation.

@@ -52,4 +52,9 @@ type Repository interface {
 	// BulkUpsertByLegacyID upserts products using cpm_flex_02 (legacy Oracle sys_id) as the
 	// conflict key. Returns a slice of results mapping each legacySysId to its assigned cpm_product_sys_id.
 	BulkUpsertByLegacyID(ctx context.Context, items []ProductUpsertInput, actor string) ([]ProductUpsertResult, error)
+	// ListAllLegacyIDs returns a map of flex02OrCode → cpm_product_sys_id for all
+	// active products. flex02OrCode = cpm_flex_02 if set, else cpm_product_code.
+	// Used by the params-only import to resolve legacy_oracle_sys_id without
+	// requiring a product_master sheet in the same file.
+	ListAllLegacyIDs(ctx context.Context) (map[string]int64, error)
 }

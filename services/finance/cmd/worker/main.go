@@ -134,10 +134,14 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	bulkExportHandler := costbulkimport.NewExportHandler(
 		cpmRepo, cppRepo, cptRepo, costRouteRepo, costImportJobRepo, storageSvc, log.Logger,
 	)
+	paramOnlyImportHandler := costbulkimport.NewParamOnlyImportHandler(
+		costImportJobRepo, cpmRepo, cppRepo, storageSvc, log.Logger,
+	)
 	costingImportHandler := workerinternal.NewCostingImportHandler(
 		costImportJobRepo, storageSvc,
 		cpmImportHandler, cappImportHandler, cppImportHandler,
 		bulkImportHandler, bulkExportHandler,
+		paramOnlyImportHandler,
 		iamNotif, log.Logger,
 	)
 

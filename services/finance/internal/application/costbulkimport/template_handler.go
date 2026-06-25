@@ -79,6 +79,57 @@ func (h *TemplateHandler) Handle(_ context.Context) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// ParamsOnlyTemplateHandler generates a downloadable Excel template for the
+// params-only bulk import (product_parameters + product_applicable_params only).
+type ParamsOnlyTemplateHandler struct{}
+
+// NewParamsOnlyTemplateHandler constructs a ParamsOnlyTemplateHandler.
+func NewParamsOnlyTemplateHandler() *ParamsOnlyTemplateHandler {
+	return &ParamsOnlyTemplateHandler{}
+}
+
+// Handle returns a 2-sheet Excel template with headers and one sample row.
+func (h *ParamsOnlyTemplateHandler) Handle(_ context.Context) ([]byte, error) {
+	f := excelize.NewFile()
+	defer func() {
+		if err := f.Close(); err != nil {
+			_ = err
+		}
+	}()
+
+	sheets := []struct {
+		name    string
+		headers []string
+		sample  []string
+	}{
+		{
+			name:    "product_parameters",
+			headers: []string{"legacy_oracle_sys_id", "param_code", "data_type", "value_numeric", "value_text", "value_flag"},
+			sample:  []string{"2512", "PARAM_CODE", "NUMERIC", "100.5", "", ""},
+		},
+		{
+			name:    "product_applicable_params",
+			headers: []string{"legacy_oracle_sys_id", "param_code", "is_required", "display_order"},
+			sample:  []string{"2512", "PARAM_CODE", boolTrueStr, "1"},
+		},
+	}
+
+	if err := f.DeleteSheet("Sheet1"); err != nil {
+		_ = err
+	}
+	for _, s := range sheets {
+		if err := populateTemplateSheet(f, s.name, s.headers, s.sample); err != nil {
+			return nil, err
+		}
+	}
+
+	buf, err := f.WriteToBuffer()
+	if err != nil {
+		return nil, fmt.Errorf("write params-only template to buffer: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
 // populateTemplateSheet creates a named sheet and writes headers in row 1 and sample values in row 2.
 func populateTemplateSheet(f *excelize.File, name string, headers []string, sample []string) error {
 	if _, err := f.NewSheet(name); err != nil {

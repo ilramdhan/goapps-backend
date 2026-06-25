@@ -351,10 +351,10 @@ func (h *ExportHandler) generateExcel(data *exportData) ([]byte, error) {
 	if err := writeProductMasterSheet(f, data.products, data.typeIDToCode); err != nil {
 		return nil, err
 	}
-	if err := writeCPPSheet(f, filteredCPP, codeToLegacyID); err != nil {
+	if err := writeCPPSheets(f, filteredCPP, codeToLegacyID); err != nil {
 		return nil, err
 	}
-	if err := writeCAPPSheet(f, filteredCAPP, codeToLegacyID); err != nil {
+	if err := writeCAPPSheets(f, filteredCAPP, codeToLegacyID); err != nil {
 		return nil, err
 	}
 	if err := writeRouteHeadSheet(f, data.heads, sysIDToCode); err != nil {
@@ -463,27 +463,35 @@ func writeProductMasterSheet(f *excelize.File, products []*costproductmaster.Cos
 	return nil
 }
 
-// writeCPPSheet writes the product_parameters sheet.
-// Includes a data_type column (NUMERIC/TEXT/FLAG) required by the import validator.
-// codeToLegacyID translates auto-generated ProductCode → legacy_oracle_sys_id.
-func writeCPPSheet(f *excelize.File, rows []costproductparameter.CPPRow, codeToLegacyID map[string]string) error {
-	const sheetName = "product_parameters"
-	if _, err := f.NewSheet(sheetName); err != nil {
-		return fmt.Errorf("create sheet %s: %w", sheetName, err)
-	}
+// maxRowsPerSheet is the maximum data rows written to a single Excel sheet.
+// Excel supports ~1,048,576 rows total; leaving 100k buffer for safety.
+const maxRowsPerSheet = 900_000
+
+// writeCPPSheets writes product_parameters data, splitting into multiple numbered
+// part-sheets ("product_parameters_p1", "_p2", …) when rows exceed maxRowsPerSheet.
+// The import ParseSheet fuzzy-matching merges them back automatically.
+func writeCPPSheets(f *excelize.File, rows []costproductparameter.CPPRow, codeToLegacyID map[string]string) error {
+	const base = "product_parameters"
 	headers := []string{"legacy_oracle_sys_id", "param_code", "data_type", "value_numeric", "value_text", "value_flag"}
-	if err := writeSheetHeaders(f, sheetName, headers); err != nil {
-		return err
-	}
-	for rowIdx, r := range rows {
-		legacyID := codeToLegacyID[r.ProductCode]
-		if legacyID == "" {
-			legacyID = r.ProductCode
+
+	parts := splitCPPRows(rows, maxRowsPerSheet)
+	for i, part := range parts {
+		name := partSheetName(base, i+1, len(parts))
+		if _, err := f.NewSheet(name); err != nil {
+			return fmt.Errorf("create sheet %s: %w", name, err)
 		}
-		dataType := cppDataType(r)
-		vals := []any{legacyID, r.ParamCode, dataType, ptrStringOrEmpty(r.ValueNumeric), ptrStringOrEmpty(r.ValueText), ptrBoolOrEmpty(r.ValueFlag)}
-		if err := writeSheetRow(f, sheetName, rowIdx+2, vals); err != nil {
+		if err := writeSheetHeaders(f, name, headers); err != nil {
 			return err
+		}
+		for rowIdx, r := range part {
+			legacyID := codeToLegacyID[r.ProductCode]
+			if legacyID == "" {
+				legacyID = r.ProductCode
+			}
+			vals := []any{legacyID, r.ParamCode, cppDataType(r), ptrStringOrEmpty(r.ValueNumeric), ptrStringOrEmpty(r.ValueText), ptrBoolOrEmpty(r.ValueFlag)}
+			if err := writeSheetRow(f, name, rowIdx+2, vals); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -503,28 +511,66 @@ func cppDataType(r costproductparameter.CPPRow) string {
 	}
 }
 
-// writeCAPPSheet writes the product_applicable_params sheet.
-// codeToLegacyID translates auto-generated ProductCode → legacy_oracle_sys_id.
-func writeCAPPSheet(f *excelize.File, rows []costproductparameter.CAPPRow, codeToLegacyID map[string]string) error {
-	const sheetName = "product_applicable_params"
-	if _, err := f.NewSheet(sheetName); err != nil {
-		return fmt.Errorf("create sheet %s: %w", sheetName, err)
-	}
+// writeCAPPSheets writes product_applicable_params data, splitting into part-sheets
+// when rows exceed maxRowsPerSheet.
+func writeCAPPSheets(f *excelize.File, rows []costproductparameter.CAPPRow, codeToLegacyID map[string]string) error {
+	const base = "product_applicable_params"
 	headers := []string{"legacy_oracle_sys_id", "param_code", "is_required", "display_order"}
-	if err := writeSheetHeaders(f, sheetName, headers); err != nil {
-		return err
-	}
-	for rowIdx, r := range rows {
-		legacyID := codeToLegacyID[r.ProductCode]
-		if legacyID == "" {
-			legacyID = r.ProductCode
+
+	parts := splitCAPPRows(rows, maxRowsPerSheet)
+	for i, part := range parts {
+		name := partSheetName(base, i+1, len(parts))
+		if _, err := f.NewSheet(name); err != nil {
+			return fmt.Errorf("create sheet %s: %w", name, err)
 		}
-		vals := []any{legacyID, r.ParamCode, r.IsRequired, ptrInt32OrEmpty(r.DisplayOrder)}
-		if err := writeSheetRow(f, sheetName, rowIdx+2, vals); err != nil {
+		if err := writeSheetHeaders(f, name, headers); err != nil {
 			return err
+		}
+		for rowIdx, r := range part {
+			legacyID := codeToLegacyID[r.ProductCode]
+			if legacyID == "" {
+				legacyID = r.ProductCode
+			}
+			vals := []any{legacyID, r.ParamCode, r.IsRequired, ptrInt32OrEmpty(r.DisplayOrder)}
+			if err := writeSheetRow(f, name, rowIdx+2, vals); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+// partSheetName returns the sheet name for part i of total.
+// If total == 1, returns base (no suffix) so single-sheet exports keep their exact name.
+func partSheetName(base string, i, total int) string {
+	if total == 1 {
+		return base
+	}
+	return fmt.Sprintf("%s_p%d", base, i)
+}
+
+func splitCPPRows(rows []costproductparameter.CPPRow, size int) [][]costproductparameter.CPPRow {
+	if len(rows) <= size {
+		return [][]costproductparameter.CPPRow{rows}
+	}
+	var parts [][]costproductparameter.CPPRow
+	for start := 0; start < len(rows); start += size {
+		end := min(start+size, len(rows))
+		parts = append(parts, rows[start:end])
+	}
+	return parts
+}
+
+func splitCAPPRows(rows []costproductparameter.CAPPRow, size int) [][]costproductparameter.CAPPRow {
+	if len(rows) <= size {
+		return [][]costproductparameter.CAPPRow{rows}
+	}
+	var parts [][]costproductparameter.CAPPRow
+	for start := 0; start < len(rows); start += size {
+		end := min(start+size, len(rows))
+		parts = append(parts, rows[start:end])
+	}
+	return parts
 }
 
 // writeRouteHeadSheet writes the route_head sheet.
