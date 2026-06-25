@@ -521,7 +521,7 @@ func isProductMasterUniqueViolation(err error) bool {
 func (r *CostProductMasterRepository) ListAllLegacyIDs(ctx context.Context) (map[string]int64, error) {
 	const q = `SELECT cpm_product_sys_id, cpm_product_code, COALESCE(cpm_flex_02, '')
                FROM cost_product_master
-               WHERE cpm_is_active = TRUE AND cpm_deleted_at IS NULL`
+               WHERE cpm_is_active = TRUE`
 	rows, err := r.db.QueryContext(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("list product legacy IDs: %w", err)
