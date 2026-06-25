@@ -155,22 +155,30 @@ func preValidateParamSheets(f *excelize.File, maps *ImportMaps) []SheetResult {
 	return []SheetResult{s2, s3}
 }
 
-// crossCheckProductMap adds errors for rows whose legacy_oracle_sys_id is not in ProductMap.
-// This is separate from preflightParamSheet which uses inProducts (in-sheet set) vs DB map.
+// crossCheckProductMap records unique product IDs that are not in ProductMap.
+// Instead of adding per-row errors (which can be millions), it emits exactly
+// one synthetic error per unique missing product ID using the missProductPrefix
+// sentinel so GenerateErrorReport can surface them in a dedicated summary sheet.
 func crossCheckProductMap(existing SheetResult, f *excelize.File, maps *ImportMaps, sheetName, idField string) SheetResult {
 	rows, parseErr := ParseSheet(f, sheetName, []string{idField})
 	if parseErr != nil {
 		return existing
 	}
-	for i, row := range rows {
+	missing := make(map[string]int) // legacyID → affected row count
+	for _, row := range rows {
 		legacyID := row[idField]
 		if legacyID == "" {
 			continue
 		}
 		if _, ok := maps.ProductMap[legacyID]; !ok {
-			rowNum := int32(i+2) //nolint:gosec // row index fits int32
-			existing.Errors = append(existing.Errors, SheetError{rowNum, idField, "product not found in database: " + legacyID})
+			missing[legacyID]++
 		}
+	}
+	// Emit one synthetic error per unique missing product ID.
+	for id, cnt := range missing {
+		existing.Errors = append(existing.Errors,
+			SheetError{0, idField, missProductPrefix + id + ":" + fmt.Sprintf("%d", cnt)},
+		)
 	}
 	return existing
 }
