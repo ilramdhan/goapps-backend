@@ -234,7 +234,7 @@ func preflightRMRow(rowNum int32, row map[string]string, inSeqs map[string]struc
 	if inSeqs != nil {
 		key := fmt.Sprintf("%s:%d:%d", headID, level, seq)
 		if _, ok := inSeqs[key]; !ok {
-			return &SheetError{rowNum, routeHeadLegacyIDField, "sequence not found in route_sequences sheet: " + key}
+			return &SheetError{rowNum, "route_level:route_seq", "sequence not found in route_sequences sheet for key " + key + " — add row (route_head=" + headID + " level=" + row["route_level"] + " seq=" + row["route_seq"] + ") to route_sequences"}
 		}
 	}
 	rmType := row["rm_type"]
