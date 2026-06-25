@@ -258,7 +258,9 @@ func preflightRMRow(rowNum int32, row map[string]string, inSeqs map[string]struc
 	case "GROUP":
 		groupCode := row["rm_group_code"]
 		if groupCode == "" {
-			return &SheetError{rowNum, "rm_group_code", "required when rm_type=GROUP"}
+			// Empty GROUP rows (no group_code, no item_code) are Oracle placeholder rows.
+			// They are skipped silently during import — not a hard error.
+			return nil
 		}
 		if maps != nil && len(maps.RmGroupMap) > 0 {
 			if !maps.RmGroupMap[groupCode] {

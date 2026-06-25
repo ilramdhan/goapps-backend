@@ -83,6 +83,10 @@ func processRouteRM( //nolint:gocognit,gocyclo // cohesive row-validation pipeli
 
 		rmInput, rmErr := buildRMInput(rowNum, rmType, ratio, row, maps)
 		if rmErr != nil {
+			if strings.HasPrefix(rmErr.Message, "skip:") {
+				// Oracle placeholder rows with no data — skip silently, don't count as error.
+				continue
+			}
 			errs = append(errs, *rmErr)
 			continue
 		}
@@ -138,7 +142,8 @@ func buildRMInput(rowNum int32, rmType string, ratio float64, row map[string]str
 	case costroute.RmTypeGroup:
 		inp.RmGroupCode = row["rm_group_code"]
 		if inp.RmGroupCode == "" {
-			return inp, &SheetError{RowNumber: rowNum, Field: "rm_group_code", Message: "required when rm_type=GROUP"}
+			// Empty GROUP code = Oracle placeholder row with no data. Signal caller to skip.
+			return inp, &SheetError{RowNumber: rowNum, Field: "rm_group_code", Message: "skip:empty_group"}
 		}
 	}
 	return inp, nil
