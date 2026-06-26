@@ -29,6 +29,10 @@ type Repository interface {
 
 	// GetByMBCosting retrieves an MB Spin by its MB costing code.
 	GetByMBCosting(ctx context.Context, code string) (*Entity, error)
+
+	// GetByOrionItemCode retrieves the first active MB Spin with the given ORION item code.
+	// Returns ErrNotFound if no match exists.
+	GetByOrionItemCode(ctx context.Context, code string) (*Entity, error)
 }
 
 // ListFilter contains filtering options for listing MB Spins.

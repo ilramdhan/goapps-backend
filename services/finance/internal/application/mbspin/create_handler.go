@@ -36,7 +36,7 @@ func NewCreateHandler(repo mbspin.Repository) *CreateHandler {
 // Handle executes the create MB Spin command.
 func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbspin.Entity, error) {
 	entity, err := mbspin.New(
-		cmd.HeadID, cmd.MgtName, cmd.OracleSysID,
+		cmd.HeadID, cmd.MgtName, cmd.OracleSysID, nil,
 		cmd.Denier, cmd.Filament, cmd.Dozing, cmd.MBCosting,
 		cmd.CC, cmd.CostRateMkt,
 		cmd.CreatedBy,

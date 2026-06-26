@@ -424,11 +424,16 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 }
 
 func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	spin, err := h.mbSpinRepo.GetByMBCosting(ctx, selectedKey)
+	// Try ORION item code first (product params use CMBS_ORION_ITEM_CODE as key).
+	spin, err := h.mbSpinRepo.GetByOrionItemCode(ctx, selectedKey)
 	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{ //nolint:nilerr // BaseResponse pattern: error surfaced in response body
-			Base: ErrorResponse("404", fmt.Sprintf("MB Spin not found: %s", selectedKey)),
-		}, nil
+		// Fallback to mb_costing lookup (legacy / direct entry).
+		spin, err = h.mbSpinRepo.GetByMBCosting(ctx, selectedKey)
+		if err != nil {
+			return &financev1.GetLookupFillValuesResponse{
+				Base: domainErrorToBaseResponse(err),
+			}, nil //nolint:nilerr // BaseResponse pattern
+		}
 	}
 
 	children, err := h.paramRepo.GetByFillGroup(ctx, sourceParamCode)

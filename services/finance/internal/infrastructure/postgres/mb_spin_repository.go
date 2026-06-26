@@ -32,14 +32,15 @@ var _ mbspin.Repository = (*MBSpinRepository)(nil)
 func (r *MBSpinRepository) Create(ctx context.Context, entity *mbspin.Entity) error {
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO mst_mb_spin (
-			mbs_id, mbs_oracle_sys_id, mbs_mbh_id, mbs_mgt_name,
+			mbs_id, mbs_oracle_sys_id, mbs_orion_item_code, mbs_mbh_id, mbs_mgt_name,
 			mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
 			mbs_cc, mbs_cost_rate_mkt,
 			mbs_is_active, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
+		entity.OrionItemCode(),
 		entity.HeadID(),
 		entity.MgtName(),
 		entity.Denier(),
@@ -201,13 +202,18 @@ func (r *MBSpinRepository) GetByMBCosting(ctx context.Context, code string) (*mb
 	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_mb_costing = $1 AND deleted_at IS NULL`, code))
 }
 
+// GetByOrionItemCode retrieves the first active MB Spin with the given ORION item code.
+func (r *MBSpinRepository) GetByOrionItemCode(ctx context.Context, code string) (*mbspin.Entity, error) {
+	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_orion_item_code = $1 AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1`, code))
+}
+
 // =============================================================================
 // Helpers
 // =============================================================================
 
 func (r *MBSpinRepository) selectCols() string {
 	return `
-		SELECT mbs_id, mbs_oracle_sys_id, mbs_mbh_id, mbs_mgt_name,
+		SELECT mbs_id, mbs_oracle_sys_id, mbs_orion_item_code, mbs_mbh_id, mbs_mgt_name,
 		       mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
 		       mbs_cc, mbs_cost_rate_mkt, mbs_is_active,
 		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
@@ -227,29 +233,31 @@ func (r *MBSpinRepository) resolveSort(sortBy string) string {
 }
 
 type mbSpinDTO struct {
-	ID          uuid.UUID
-	OracleSysID sql.NullString
-	HeadID      uuid.UUID
-	MgtName     string
-	Denier      sql.NullFloat64
-	Filament    sql.NullInt64
-	Dozing      sql.NullFloat64
-	MBCosting   sql.NullString
-	CC          sql.NullString
-	CostRateMkt sql.NullFloat64
-	IsActive    bool
-	CreatedAt   time.Time
-	CreatedBy   string
-	UpdatedAt   sql.NullTime
-	UpdatedBy   sql.NullString
-	DeletedAt   sql.NullTime
-	DeletedBy   sql.NullString
+	ID             uuid.UUID
+	OracleSysID    sql.NullString
+	OrionItemCode  sql.NullString
+	HeadID         uuid.UUID
+	MgtName        string
+	Denier         sql.NullFloat64
+	Filament       sql.NullInt64
+	Dozing         sql.NullFloat64
+	MBCosting      sql.NullString
+	CC             sql.NullString
+	CostRateMkt    sql.NullFloat64
+	IsActive       bool
+	CreatedAt      time.Time
+	CreatedBy      string
+	UpdatedAt      sql.NullTime
+	UpdatedBy      sql.NullString
+	DeletedAt      sql.NullTime
+	DeletedBy      sql.NullString
 }
 
 func (d *mbSpinDTO) toEntity() *mbspin.Entity {
 	return mbspin.Reconstruct(
 		d.ID,
 		nullableStringPtr(d.OracleSysID),
+		nullableStringPtr(d.OrionItemCode),
 		d.HeadID,
 		d.MgtName,
 		nullableFloat64Ptr(d.Denier),
@@ -268,7 +276,7 @@ func (d *mbSpinDTO) toEntity() *mbspin.Entity {
 func (r *MBSpinRepository) scanOne(row *sql.Row) (*mbspin.Entity, error) {
 	var d mbSpinDTO
 	err := row.Scan(
-		&d.ID, &d.OracleSysID, &d.HeadID, &d.MgtName,
+		&d.ID, &d.OracleSysID, &d.OrionItemCode, &d.HeadID, &d.MgtName,
 		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting,
 		&d.CC, &d.CostRateMkt, &d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
@@ -285,7 +293,7 @@ func (r *MBSpinRepository) scanOne(row *sql.Row) (*mbspin.Entity, error) {
 func (r *MBSpinRepository) scanRow(rows *sql.Rows) (*mbspin.Entity, error) {
 	var d mbSpinDTO
 	err := rows.Scan(
-		&d.ID, &d.OracleSysID, &d.HeadID, &d.MgtName,
+		&d.ID, &d.OracleSysID, &d.OrionItemCode, &d.HeadID, &d.MgtName,
 		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting,
 		&d.CC, &d.CostRateMkt, &d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,

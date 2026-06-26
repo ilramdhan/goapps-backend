@@ -9,29 +9,30 @@ import (
 
 // Entity is the aggregate root for the MB Spin domain.
 type Entity struct {
-	id          uuid.UUID
-	oracleSysID *string
-	headID      uuid.UUID
-	mgtName     string
-	denier      *float64
-	filament    *int
-	dozing      *float64
-	mbCosting   *string
-	cc          *string
-	costRateMkt *float64
-	isActive    bool
-	createdAt   time.Time
-	createdBy   string
-	updatedAt   *time.Time
-	updatedBy   *string
-	deletedAt   *time.Time
-	deletedBy   *string
+	id             uuid.UUID
+	oracleSysID    *string
+	orionItemCode  *string
+	headID         uuid.UUID
+	mgtName        string
+	denier         *float64
+	filament       *int
+	dozing         *float64
+	mbCosting      *string
+	cc             *string
+	costRateMkt    *float64
+	isActive       bool
+	createdAt      time.Time
+	createdBy      string
+	updatedAt      *time.Time
+	updatedBy      *string
+	deletedAt      *time.Time
+	deletedBy      *string
 }
 
 // New creates a new MB Spin entity with validation.
 //
 //nolint:revive // Many parameters required for construction.
-func New(headID uuid.UUID, mgtName string, oracleSysID *string, denier *float64, filament *int, dozing *float64, mbCosting *string, cc *string, costRateMkt *float64, createdBy string) (*Entity, error) {
+func New(headID uuid.UUID, mgtName string, oracleSysID, orionItemCode *string, denier *float64, filament *int, dozing *float64, mbCosting *string, cc *string, costRateMkt *float64, createdBy string) (*Entity, error) {
 	if headID == uuid.Nil {
 		return nil, ErrInvalidHeadID
 	}
@@ -45,7 +46,7 @@ func New(headID uuid.UUID, mgtName string, oracleSysID *string, denier *float64,
 		return nil, ErrEmptyCreatedBy
 	}
 	return &Entity{
-		id: uuid.New(), oracleSysID: oracleSysID, headID: headID, mgtName: mgtName,
+		id: uuid.New(), oracleSysID: oracleSysID, orionItemCode: orionItemCode, headID: headID, mgtName: mgtName,
 		denier: denier, filament: filament, dozing: dozing, mbCosting: mbCosting,
 		cc: cc, costRateMkt: costRateMkt,
 		isActive: true, createdAt: time.Now(), createdBy: createdBy,
@@ -55,9 +56,9 @@ func New(headID uuid.UUID, mgtName string, oracleSysID *string, denier *float64,
 // Reconstruct rebuilds an MB Spin from persistence data.
 //
 //nolint:revive // Many parameters required for persistence reconstitution.
-func Reconstruct(id uuid.UUID, oracleSysID *string, headID uuid.UUID, mgtName string, denier *float64, filament *int, dozing *float64, mbCosting *string, cc *string, costRateMkt *float64, isActive bool, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
+func Reconstruct(id uuid.UUID, oracleSysID, orionItemCode *string, headID uuid.UUID, mgtName string, denier *float64, filament *int, dozing *float64, mbCosting *string, cc *string, costRateMkt *float64, isActive bool, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
 	return &Entity{
-		id: id, oracleSysID: oracleSysID, headID: headID, mgtName: mgtName,
+		id: id, oracleSysID: oracleSysID, orionItemCode: orionItemCode, headID: headID, mgtName: mgtName,
 		denier: denier, filament: filament, dozing: dozing, mbCosting: mbCosting,
 		cc: cc, costRateMkt: costRateMkt,
 		isActive: isActive, createdAt: createdAt, createdBy: createdBy,
@@ -70,6 +71,9 @@ func (e *Entity) ID() uuid.UUID { return e.id }
 
 // OracleSysID returns the optional Oracle system ID.
 func (e *Entity) OracleSysID() *string { return e.oracleSysID }
+
+// OrionItemCode returns the optional Oracle ORION ERP item code (CMBS_ORION_ITEM_CODE).
+func (e *Entity) OrionItemCode() *string { return e.orionItemCode }
 
 // HeadID returns the parent MB head UUID.
 func (e *Entity) HeadID() uuid.UUID { return e.headID }

@@ -12,7 +12,7 @@ import (
 
 func TestNew_Success(t *testing.T) {
 	headID := uuid.New()
-	e, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 	assert.Equal(t, headID, e.HeadID())
 	assert.Equal(t, "MB Spin A", e.MgtName())
@@ -22,25 +22,25 @@ func TestNew_Success(t *testing.T) {
 }
 
 func TestNew_InvalidHeadID(t *testing.T) {
-	_, err := mbspin.New(uuid.Nil, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, "admin")
+	_, err := mbspin.New(uuid.Nil, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	assert.ErrorIs(t, err, mbspin.ErrInvalidHeadID)
 }
 
 func TestNew_EmptyMgtName(t *testing.T) {
 	headID := uuid.New()
-	_, err := mbspin.New(headID, "", nil, nil, nil, nil, nil, nil, nil, "admin")
+	_, err := mbspin.New(headID, "", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	assert.ErrorIs(t, err, mbspin.ErrEmptyMgtName)
 }
 
 func TestNew_EmptyCreatedBy(t *testing.T) {
 	headID := uuid.New()
-	_, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, "")
+	_, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, "")
 	assert.ErrorIs(t, err, mbspin.ErrEmptyCreatedBy)
 }
 
 func TestUpdate_Success(t *testing.T) {
 	headID := uuid.New()
-	e, err := mbspin.New(headID, "Old Name", nil, nil, nil, nil, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "Old Name", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 
 	newName := "New Name"
@@ -53,7 +53,7 @@ func TestNew_WithCCAndCostRateMkt(t *testing.T) {
 	headID := uuid.New()
 	cc := "CC-001"
 	rate := 12.5
-	e, err := mbspin.New(headID, "MB Spin B", nil, nil, nil, nil, nil, &cc, &rate, "admin")
+	e, err := mbspin.New(headID, "MB Spin B", nil, nil, nil, nil, nil, nil, &cc, &rate, "admin")
 	require.NoError(t, err)
 	require.NotNil(t, e.CC())
 	assert.Equal(t, "CC-001", *e.CC())
@@ -63,7 +63,7 @@ func TestNew_WithCCAndCostRateMkt(t *testing.T) {
 
 func TestUpdate_CCAndCostRateMkt(t *testing.T) {
 	headID := uuid.New()
-	e, err := mbspin.New(headID, "MB Spin C", nil, nil, nil, nil, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "MB Spin C", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 
 	cc := "CC-002"
@@ -78,7 +78,7 @@ func TestUpdate_CCAndCostRateMkt(t *testing.T) {
 
 func TestSoftDelete_AlreadyDeleted(t *testing.T) {
 	headID := uuid.New()
-	e, err := mbspin.New(headID, "Name", nil, nil, nil, nil, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "Name", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 	require.NoError(t, e.SoftDelete("admin"))
 	assert.ErrorIs(t, e.SoftDelete("admin"), mbspin.ErrAlreadyDeleted)
