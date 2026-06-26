@@ -1479,7 +1479,7 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xea\x01\n" +
 	"(UpdateCostProductMasterErpLinkageRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\fproductSysId\x12+\n" +
-	"\rerp_item_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\verpItemCode\x120\n" +
+	"\rerp_item_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x182R\verpItemCode\x120\n" +
 	"\x10erp_grade_code_1\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\rerpGradeCode1\x120\n" +
 	"\x10erp_grade_code_2\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\rerpGradeCode2\"\x8b\x01\n" +
 	")UpdateCostProductMasterErpLinkageResponse\x12+\n" +

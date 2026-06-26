@@ -2462,6 +2462,16 @@
           "type": "number",
           "format": "double",
           "description": "Optional updated VAL bobbin rate in USD/bobbin (≥ 0)."
+        },
+        "bbnReuseVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBBC_BBN_REUSE_VAL (≥ 0)."
+        },
+        "boxReuseVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBBC_BOX_REUSE_VAL (≥ 0)."
         }
       },
       "description": "UpdateBoxBobbinCostRequest is the request for updating a Box Bobbin Cost config."
@@ -2533,6 +2543,27 @@
         "mbhIsActive": {
           "type": "boolean",
           "description": "Updated active status."
+        },
+        "mbhCheckStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_CHECK_STATUS (max 50 chars)."
+        },
+        "mbhStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_STATUS (max 100 chars)."
+        },
+        "mbhLdrPrsn": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBH_LDR_PRSN (≥ 0)."
+        },
+        "mbhFinalProduct": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_FINAL_PRODUCT (max 200 chars)."
+        },
+        "mbhCode": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_CODE (max 100 chars)."
         }
       },
       "description": "UpdateMBHeadRequest is the request for updating an MB Head record."
@@ -2575,6 +2606,19 @@
           "type": "number",
           "format": "double",
           "description": "Optional MB rate MKT in USD/kg."
+        },
+        "mbsStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBS_STATUS (max 100 chars)."
+        },
+        "mbsLdrPrsn": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBS_LDR_PRSN (≥ 0)."
+        },
+        "mbsFinalProduct": {
+          "type": "string",
+          "description": "Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars)."
         }
       },
       "description": "CreateMBSpinRequest is the request for creating an MB Spin record."
@@ -2636,6 +2680,19 @@
           "type": "number",
           "format": "double",
           "description": "Optional MB rate MKT in USD/kg."
+        },
+        "mbsStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBS_STATUS (max 100 chars)."
+        },
+        "mbsLdrPrsn": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBS_LDR_PRSN (≥ 0)."
+        },
+        "mbsFinalProduct": {
+          "type": "string",
+          "description": "Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars)."
         }
       },
       "description": "UpdateMBSpinRequest is the request for updating an MB Spin record."
@@ -2737,6 +2794,36 @@
           "type": "number",
           "format": "double",
           "description": "Optional volume bucket 5 quantity threshold."
+        },
+        "mcPoyBobbinWeight": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated Oracle CMM_POY_BOBBIN_WEIGHT (≥ 0)."
+        },
+        "mcTotFxdCst": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated Oracle CMM_TOT_FXD_CST (≥ 0)."
+        },
+        "mcBobbinPerTrolly": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated Oracle CMM_BOBBIN_PER_TROLLY (≥ 0)."
+        },
+        "mcBoxCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated Oracle CMM_BOX_COST (≥ 0)."
+        },
+        "mcCaptivePerBobbin": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated Oracle CMM_CAPTIVE_PER_BOBBIN (≥ 0)."
+        },
+        "mcWeightage": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated Oracle CMM_WEIGHTAGE (≥ 0)."
         }
       },
       "description": "UpdateMachineRequest is the request for updating a machine."
@@ -2962,9 +3049,19 @@
           "format": "double",
           "description": "Optional VAL bobbin rate in USD/bobbin (param CAPTIVE/DELIVERY_BOB_RATE VAL)."
         },
+        "bbnReuseVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBBC_BBN_REUSE_VAL — bobbin reuse count for VAL session."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
+        },
+        "boxReuseVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBBC_BOX_REUSE_VAL — box reuse count for VAL session."
         }
       },
       "description": "BoxBobbinCost represents a packing configuration master record."
@@ -3078,6 +3175,16 @@
           "type": "number",
           "format": "double",
           "description": "Optional VAL bobbin rate in USD/bobbin (≥ 0)."
+        },
+        "bbnReuseVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBBC_BBN_REUSE_VAL (≥ 0)."
+        },
+        "boxReuseVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBBC_BOX_REUSE_VAL (≥ 0)."
         }
       },
       "description": "CreateBoxBobbinCostRequest is the request for creating a Box Bobbin Cost config."
@@ -3236,6 +3343,27 @@
           "type": "number",
           "format": "double",
           "description": "Optional dozing percentage."
+        },
+        "mbhCheckStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_CHECK_STATUS (max 50 chars)."
+        },
+        "mbhStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_STATUS (max 100 chars)."
+        },
+        "mbhLdrPrsn": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBH_LDR_PRSN (≥ 0)."
+        },
+        "mbhFinalProduct": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_FINAL_PRODUCT (max 200 chars)."
+        },
+        "mbhCode": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_CODE (max 100 chars)."
         }
       },
       "description": "CreateMBHeadRequest is the request for creating an MB Head record."
@@ -3365,6 +3493,36 @@
           "type": "number",
           "format": "double",
           "description": "Optional volume bucket 5 quantity threshold."
+        },
+        "mcPoyBobbinWeight": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_POY_BOBBIN_WEIGHT (≥ 0)."
+        },
+        "mcTotFxdCst": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_TOT_FXD_CST (≥ 0)."
+        },
+        "mcBobbinPerTrolly": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_BOBBIN_PER_TROLLY (≥ 0)."
+        },
+        "mcBoxCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_BOX_COST (≥ 0)."
+        },
+        "mcCaptivePerBobbin": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_CAPTIVE_PER_BOBBIN (≥ 0)."
+        },
+        "mcWeightage": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_WEIGHTAGE (≥ 0)."
         }
       },
       "description": "CreateMachineRequest is the request for creating a machine."
@@ -4581,6 +4739,27 @@
           "type": "boolean",
           "description": "Whether the record is active."
         },
+        "mbhCheckStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_CHECK_STATUS — check status (Waiting/Current/Approved)."
+        },
+        "mbhStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_STATUS — head status (R and D/Spinning/Boughtout)."
+        },
+        "mbhLdrPrsn": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBH_LDR_PRSN — LDR person value."
+        },
+        "mbhFinalProduct": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_FINAL_PRODUCT — final product description."
+        },
+        "mbhCode": {
+          "type": "string",
+          "description": "Optional Oracle CMBH_CODE — product code."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
@@ -4638,6 +4817,19 @@
           "type": "number",
           "format": "double",
           "description": "Optional MB rate MKT in USD/kg."
+        },
+        "mbsStatus": {
+          "type": "string",
+          "description": "Optional Oracle CMBS_STATUS — spinning status (Spinning/R and D/Boughtout)."
+        },
+        "mbsLdrPrsn": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBS_LDR_PRSN — LDR person value."
+        },
+        "mbsFinalProduct": {
+          "type": "string",
+          "description": "Optional Oracle CMBS_FINAL_PRODUCT — final product description."
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
@@ -4755,6 +4947,36 @@
           "type": "number",
           "format": "double",
           "description": "Optional volume bucket 5 quantity threshold."
+        },
+        "mcPoyBobbinWeight": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_POY_BOBBIN_WEIGHT — kg per bobbin."
+        },
+        "mcTotFxdCst": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_TOT_FXD_CST — total fixed cost."
+        },
+        "mcBobbinPerTrolly": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_BOBBIN_PER_TROLLY — bobbins per trolley."
+        },
+        "mcBoxCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_BOX_COST — box cost per unit."
+        },
+        "mcCaptivePerBobbin": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_CAPTIVE_PER_BOBBIN — captive cost per bobbin."
+        },
+        "mcWeightage": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMM_WEIGHTAGE — machine weightage factor."
         }
       },
       "description": "Machine represents a yarn machine master record."
