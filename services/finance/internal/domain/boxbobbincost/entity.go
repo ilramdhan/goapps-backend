@@ -9,20 +9,26 @@ import (
 
 // Entity is the aggregate root for the Box Bobbin Cost domain (parent config).
 type Entity struct {
-	id        uuid.UUID
-	code      string
-	name      string
-	bbcType   string
-	noOfBob   int
-	isActive  bool
-	rates     []*RateEntry
-	notes     string
-	createdAt time.Time
-	createdBy string
-	updatedAt *time.Time
-	updatedBy *string
-	deletedAt *time.Time
-	deletedBy *string
+	id           uuid.UUID
+	code         string
+	name         string
+	bbcType      string
+	noOfBob      int
+	isActive     bool
+	rates        []*RateEntry
+	notes        string
+	bbnReuse     *float64
+	boxReuse     *float64
+	boxCost      *float64
+	bobinCost    *float64
+	boxCostVal   *float64
+	bobinCostVal *float64
+	createdAt    time.Time
+	createdBy    string
+	updatedAt    *time.Time
+	updatedBy    *string
+	deletedAt    *time.Time
+	deletedBy    *string
 }
 
 // RateEntry represents period-specific market and valuation rates.
@@ -43,7 +49,9 @@ type RateEntry struct {
 }
 
 // New creates a new Box Bobbin Cost entity with validation.
-func New(code, name, bbcType string, noOfBob int, notes, createdBy string) (*Entity, error) {
+//
+//nolint:revive // Many parameters required for construction.
+func New(code, name, bbcType string, noOfBob int, notes string, bbnReuse, boxReuse, boxCost, bobinCost, boxCostVal, bobinCostVal *float64, createdBy string) (*Entity, error) {
 	if code == "" {
 		return nil, ErrEmptyCode
 	}
@@ -62,6 +70,8 @@ func New(code, name, bbcType string, noOfBob int, notes, createdBy string) (*Ent
 	return &Entity{
 		id: uuid.New(), code: code, name: name, bbcType: bbcType,
 		noOfBob: noOfBob, isActive: true, notes: notes,
+		bbnReuse: bbnReuse, boxReuse: boxReuse, boxCost: boxCost,
+		bobinCost: bobinCost, boxCostVal: boxCostVal, bobinCostVal: bobinCostVal,
 		createdAt: time.Now(), createdBy: createdBy,
 	}, nil
 }
@@ -69,10 +79,12 @@ func New(code, name, bbcType string, noOfBob int, notes, createdBy string) (*Ent
 // Reconstruct rebuilds an Entity from persistence data.
 //
 //nolint:revive // Many parameters required for persistence reconstitution.
-func Reconstruct(id uuid.UUID, code, name, bbcType string, noOfBob int, isActive bool, rates []*RateEntry, notes string, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
+func Reconstruct(id uuid.UUID, code, name, bbcType string, noOfBob int, isActive bool, rates []*RateEntry, notes string, bbnReuse, boxReuse, boxCost, bobinCost, boxCostVal, bobinCostVal *float64, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
 	return &Entity{
 		id: id, code: code, name: name, bbcType: bbcType, noOfBob: noOfBob,
 		isActive: isActive, rates: rates, notes: notes,
+		bbnReuse: bbnReuse, boxReuse: boxReuse, boxCost: boxCost,
+		bobinCost: bobinCost, boxCostVal: boxCostVal, bobinCostVal: bobinCostVal,
 		createdAt: createdAt, createdBy: createdBy, updatedAt: updatedAt, updatedBy: updatedBy,
 		deletedAt: deletedAt, deletedBy: deletedBy,
 	}
@@ -129,6 +141,24 @@ func (e *Entity) Rates() []*RateEntry { return e.rates }
 // Notes returns optional notes.
 func (e *Entity) Notes() string { return e.notes }
 
+// BbnReuse returns the optional bobbin reuse count.
+func (e *Entity) BbnReuse() *float64 { return e.bbnReuse }
+
+// BoxReuse returns the optional box reuse count.
+func (e *Entity) BoxReuse() *float64 { return e.boxReuse }
+
+// BoxCost returns the optional MKT box rate in USD/box.
+func (e *Entity) BoxCost() *float64 { return e.boxCost }
+
+// BobinCost returns the optional MKT bobbin rate in USD/bobbin.
+func (e *Entity) BobinCost() *float64 { return e.bobinCost }
+
+// BoxCostVal returns the optional VAL box rate in USD/box.
+func (e *Entity) BoxCostVal() *float64 { return e.boxCostVal }
+
+// BobinCostVal returns the optional VAL bobbin rate in USD/bobbin.
+func (e *Entity) BobinCostVal() *float64 { return e.bobinCostVal }
+
 // CreatedAt returns the creation timestamp.
 func (e *Entity) CreatedAt() time.Time { return e.createdAt }
 
@@ -156,11 +186,17 @@ func (e *Entity) IsDeleted() bool { return e.deletedAt != nil }
 
 // UpdateInput carries optional field mutations for Update.
 type UpdateInput struct {
-	Name     *string
-	BBCType  *string
-	NoOfBob  *int
-	Notes    *string
-	IsActive *bool
+	Name         *string
+	BBCType      *string
+	NoOfBob      *int
+	Notes        *string
+	IsActive     *bool
+	BbnReuse     *float64
+	BoxReuse     *float64
+	BoxCost      *float64
+	BobinCost    *float64
+	BoxCostVal   *float64
+	BobinCostVal *float64
 }
 
 // Update applies optional field changes to the entity.
@@ -216,6 +252,24 @@ func (e *Entity) applyOptionalFields(in UpdateInput) {
 	}
 	if in.IsActive != nil {
 		e.isActive = *in.IsActive
+	}
+	if in.BbnReuse != nil {
+		e.bbnReuse = in.BbnReuse
+	}
+	if in.BoxReuse != nil {
+		e.boxReuse = in.BoxReuse
+	}
+	if in.BoxCost != nil {
+		e.boxCost = in.BoxCost
+	}
+	if in.BobinCost != nil {
+		e.bobinCost = in.BobinCost
+	}
+	if in.BoxCostVal != nil {
+		e.boxCostVal = in.BoxCostVal
+	}
+	if in.BobinCostVal != nil {
+		e.bobinCostVal = in.BobinCostVal
 	}
 }
 

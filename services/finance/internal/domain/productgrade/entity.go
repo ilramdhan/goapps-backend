@@ -20,6 +20,8 @@ type Entity struct {
 	pgGradeLabel    string
 	stdSellingPrice float64
 	spValue         float64
+	lossPct         *float64
+	seqNo           *int32
 	isActive        bool
 	notes           string
 	createdAt       time.Time
@@ -33,7 +35,7 @@ type Entity struct {
 // New creates a new Product Grade entity with validation.
 //
 //nolint:revive // Many parameters required for construction.
-func New(code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate float64, pgDetailProduct, pgGradeLabel string, stdSellingPrice, spValue float64, notes, createdBy string) (*Entity, error) {
+func New(code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate float64, pgDetailProduct, pgGradeLabel string, stdSellingPrice, spValue float64, lossPct *float64, seqNo *int32, notes, createdBy string) (*Entity, error) {
 	if code == "" {
 		return nil, ErrEmptyCode
 	}
@@ -54,6 +56,7 @@ func New(code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate floa
 		bcPerc: bcPerc, nonStdPerc: nonStdPerc, bcRecoveryRate: bcRecoveryRate,
 		pgDetailProduct: pgDetailProduct, pgGradeLabel: pgGradeLabel,
 		stdSellingPrice: stdSellingPrice, spValue: spValue,
+		lossPct: lossPct, seqNo: seqNo,
 		isActive: true, notes: notes, createdAt: time.Now(), createdBy: createdBy,
 	}, nil
 }
@@ -61,12 +64,13 @@ func New(code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate floa
 // Reconstruct rebuilds a Product Grade from persistence data.
 //
 //nolint:revive // Many parameters required for persistence reconstitution.
-func Reconstruct(id uuid.UUID, code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate float64, pgDetailProduct, pgGradeLabel string, stdSellingPrice, spValue float64, isActive bool, notes string, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
+func Reconstruct(id uuid.UUID, code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate float64, pgDetailProduct, pgGradeLabel string, stdSellingPrice, spValue float64, lossPct *float64, seqNo *int32, isActive bool, notes string, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
 	return &Entity{
 		id: id, code: code, name: name, description: description,
 		bcPerc: bcPerc, nonStdPerc: nonStdPerc, bcRecoveryRate: bcRecoveryRate,
 		pgDetailProduct: pgDetailProduct, pgGradeLabel: pgGradeLabel,
 		stdSellingPrice: stdSellingPrice, spValue: spValue,
+		lossPct: lossPct, seqNo: seqNo,
 		isActive: isActive, notes: notes, createdAt: createdAt, createdBy: createdBy,
 		updatedAt: updatedAt, updatedBy: updatedBy, deletedAt: deletedAt, deletedBy: deletedBy,
 	}
@@ -104,6 +108,12 @@ func (e *Entity) StdSellingPrice() float64 { return e.stdSellingPrice }
 
 // SpValue returns the VALUE_LOSS rate.
 func (e *Entity) SpValue() float64 { return e.spValue }
+
+// LossPct returns the optional loss factor.
+func (e *Entity) LossPct() *float64 { return e.lossPct }
+
+// SeqNo returns the optional display sequence number.
+func (e *Entity) SeqNo() *int32 { return e.seqNo }
 
 // IsActive returns whether the grade is active.
 func (e *Entity) IsActive() bool { return e.isActive }
@@ -143,6 +153,8 @@ type UpdateInput struct {
 	PgGradeLabel    *string
 	StdSellingPrice *float64
 	SpValue         *float64
+	LossPct         *float64
+	SeqNo           *int32
 	IsActive        *bool
 	Notes           *string
 }
@@ -212,6 +224,12 @@ func (e *Entity) applyOptionalFields(in UpdateInput) {
 	}
 	if in.SpValue != nil {
 		e.spValue = *in.SpValue
+	}
+	if in.LossPct != nil {
+		e.lossPct = in.LossPct
+	}
+	if in.SeqNo != nil {
+		e.seqNo = in.SeqNo
 	}
 	if in.IsActive != nil {
 		e.isActive = *in.IsActive
