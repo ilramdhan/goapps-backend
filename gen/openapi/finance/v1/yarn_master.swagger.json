@@ -2432,6 +2432,36 @@
         "isActive": {
           "type": "boolean",
           "description": "Updated active status."
+        },
+        "bbnReuse": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated bobbin reuse count (≥ 0)."
+        },
+        "boxReuse": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated box reuse count (≥ 0)."
+        },
+        "boxCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated MKT box rate in USD/box (≥ 0)."
+        },
+        "bobinCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated MKT bobbin rate in USD/bobbin (≥ 0)."
+        },
+        "boxCostVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated VAL box rate in USD/box (≥ 0)."
+        },
+        "bobinCostVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated VAL bobbin rate in USD/bobbin (≥ 0)."
         }
       },
       "description": "UpdateBoxBobbinCostRequest is the request for updating a Box Bobbin Cost config."
@@ -2762,6 +2792,16 @@
           "type": "number",
           "format": "double",
           "description": "Optional VALUE_LOSS rate (≥ 0)."
+        },
+        "lossPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional updated loss factor (≥ 0)."
+        },
+        "seqNo": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional updated display sequence number (≥ 0)."
         }
       },
       "description": "UpdateProductGradeRequest is the request for updating a Product Grade."
@@ -2892,6 +2932,36 @@
           },
           "description": "Period-specific rate entries."
         },
+        "bbnReuse": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional bobbin reuse count (from Oracle CMBBC_BBN_REUSE)."
+        },
+        "boxReuse": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional box reuse count (from Oracle CMBBC_BOX_REUSE)."
+        },
+        "boxCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional MKT box rate in USD/box (param CAPTIVE/DELIVERY_BOX_RATE MKT)."
+        },
+        "bobinCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional MKT bobbin rate in USD/bobbin (param CAPTIVE/DELIVERY_BOB_RATE MKT)."
+        },
+        "boxCostVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional VAL box rate in USD/box (param CAPTIVE/DELIVERY_BOX_RATE VAL)."
+        },
+        "bobinCostVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional VAL bobbin rate in USD/bobbin (param CAPTIVE/DELIVERY_BOB_RATE VAL)."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
@@ -2978,6 +3048,36 @@
         "notes": {
           "type": "string",
           "description": "Optional notes (max 1000 chars)."
+        },
+        "bbnReuse": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional bobbin reuse count (≥ 0)."
+        },
+        "boxReuse": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional box reuse count (≥ 0)."
+        },
+        "boxCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional MKT box rate in USD/box (≥ 0)."
+        },
+        "bobinCost": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional MKT bobbin rate in USD/bobbin (≥ 0)."
+        },
+        "boxCostVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional VAL box rate in USD/box (≥ 0)."
+        },
+        "bobinCostVal": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional VAL bobbin rate in USD/bobbin (≥ 0)."
         }
       },
       "description": "CreateBoxBobbinCostRequest is the request for creating a Box Bobbin Cost config."
@@ -3334,6 +3434,16 @@
           "type": "number",
           "format": "double",
           "description": "VALUE_LOSS rate (≥ 0)."
+        },
+        "lossPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional loss factor (≥ 0)."
+        },
+        "seqNo": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional display sequence number (≥ 0)."
         }
       },
       "description": "CreateProductGradeRequest is the request for creating a Product Grade."
@@ -4748,6 +4858,16 @@
           "type": "number",
           "format": "double",
           "description": "VALUE_LOSS rate."
+        },
+        "lossPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional loss factor (param NON_STD_SPECIAL_PROD, from Oracle CMPG_LOSS)."
+        },
+        "seqNo": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional display sequence number (from Oracle CMPG_SEQ_NO)."
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
