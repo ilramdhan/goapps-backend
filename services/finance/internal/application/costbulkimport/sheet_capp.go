@@ -42,7 +42,7 @@ func processCAP(
 		}
 		productSysID, ok := maps.ProductMap[legacyID]
 		if !ok {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "legacy_oracle_sys_id", Message: "product not found: " + legacyID})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: "legacy_oracle_sys_id", Message: "product not found in ProductMap: " + legacyID})
 			continue
 		}
 		paramCode := row["param_code"]
