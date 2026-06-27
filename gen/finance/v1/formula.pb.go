@@ -36,21 +36,53 @@ const (
 	FormulaType_FORMULA_TYPE_SQL_QUERY FormulaType = 2
 	// Constant value (no calculation).
 	FormulaType_FORMULA_TYPE_CONSTANT FormulaType = 3
+	// Conditional expression with if/else branching.
+	FormulaType_FORMULA_TYPE_CONDITIONAL FormulaType = 4
+	// Lookup from a master table via param code.
+	FormulaType_FORMULA_TYPE_LOOKUP FormulaType = 5
+	// Lookup using RM group cost rates.
+	FormulaType_FORMULA_TYPE_RM_LOOKUP FormulaType = 6
+	// Copy value from the SELLING (marketing) session result.
+	FormulaType_FORMULA_TYPE_FROM_MARKETING FormulaType = 7
+	// Intermingling cost lookup.
+	FormulaType_FORMULA_TYPE_INTERMINGLING FormulaType = 8
+	// Snapshot of a previously computed value.
+	FormulaType_FORMULA_TYPE_SNAPSHOT FormulaType = 9
+	// Placeholder — formula not yet defined.
+	FormulaType_FORMULA_TYPE_PENDING FormulaType = 10
+	// Seeds an initial value before the formula chain starts.
+	FormulaType_FORMULA_TYPE_INITIAL_VALUE FormulaType = 11
 )
 
 // Enum value maps for FormulaType.
 var (
 	FormulaType_name = map[int32]string{
-		0: "FORMULA_TYPE_UNSPECIFIED",
-		1: "FORMULA_TYPE_CALCULATION",
-		2: "FORMULA_TYPE_SQL_QUERY",
-		3: "FORMULA_TYPE_CONSTANT",
+		0:  "FORMULA_TYPE_UNSPECIFIED",
+		1:  "FORMULA_TYPE_CALCULATION",
+		2:  "FORMULA_TYPE_SQL_QUERY",
+		3:  "FORMULA_TYPE_CONSTANT",
+		4:  "FORMULA_TYPE_CONDITIONAL",
+		5:  "FORMULA_TYPE_LOOKUP",
+		6:  "FORMULA_TYPE_RM_LOOKUP",
+		7:  "FORMULA_TYPE_FROM_MARKETING",
+		8:  "FORMULA_TYPE_INTERMINGLING",
+		9:  "FORMULA_TYPE_SNAPSHOT",
+		10: "FORMULA_TYPE_PENDING",
+		11: "FORMULA_TYPE_INITIAL_VALUE",
 	}
 	FormulaType_value = map[string]int32{
-		"FORMULA_TYPE_UNSPECIFIED": 0,
-		"FORMULA_TYPE_CALCULATION": 1,
-		"FORMULA_TYPE_SQL_QUERY":   2,
-		"FORMULA_TYPE_CONSTANT":    3,
+		"FORMULA_TYPE_UNSPECIFIED":    0,
+		"FORMULA_TYPE_CALCULATION":    1,
+		"FORMULA_TYPE_SQL_QUERY":      2,
+		"FORMULA_TYPE_CONSTANT":       3,
+		"FORMULA_TYPE_CONDITIONAL":    4,
+		"FORMULA_TYPE_LOOKUP":         5,
+		"FORMULA_TYPE_RM_LOOKUP":      6,
+		"FORMULA_TYPE_FROM_MARKETING": 7,
+		"FORMULA_TYPE_INTERMINGLING":  8,
+		"FORMULA_TYPE_SNAPSHOT":       9,
+		"FORMULA_TYPE_PENDING":        10,
+		"FORMULA_TYPE_INITIAL_VALUE":  11,
 	}
 )
 
@@ -1489,12 +1521,21 @@ const file_finance_v1_formula_proto_rawDesc = "" +
 	"\x1fDownloadFormulaTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName*\x80\x01\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName*\xe9\x02\n" +
 	"\vFormulaType\x12\x1c\n" +
 	"\x18FORMULA_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18FORMULA_TYPE_CALCULATION\x10\x01\x12\x1a\n" +
 	"\x16FORMULA_TYPE_SQL_QUERY\x10\x02\x12\x19\n" +
-	"\x15FORMULA_TYPE_CONSTANT\x10\x032\xb4\b\n" +
+	"\x15FORMULA_TYPE_CONSTANT\x10\x03\x12\x1c\n" +
+	"\x18FORMULA_TYPE_CONDITIONAL\x10\x04\x12\x17\n" +
+	"\x13FORMULA_TYPE_LOOKUP\x10\x05\x12\x1a\n" +
+	"\x16FORMULA_TYPE_RM_LOOKUP\x10\x06\x12\x1f\n" +
+	"\x1bFORMULA_TYPE_FROM_MARKETING\x10\a\x12\x1e\n" +
+	"\x1aFORMULA_TYPE_INTERMINGLING\x10\b\x12\x19\n" +
+	"\x15FORMULA_TYPE_SNAPSHOT\x10\t\x12\x18\n" +
+	"\x14FORMULA_TYPE_PENDING\x10\n" +
+	"\x12\x1e\n" +
+	"\x1aFORMULA_TYPE_INITIAL_VALUE\x10\v2\xb4\b\n" +
 	"\x0eFormulaService\x12y\n" +
 	"\rCreateFormula\x12 .finance.v1.CreateFormulaRequest\x1a!.finance.v1.CreateFormulaResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/finance/formulas\x12z\n" +
 	"\n" +
