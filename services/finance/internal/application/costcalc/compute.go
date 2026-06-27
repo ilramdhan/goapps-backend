@@ -267,6 +267,12 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		finalCost = fc
 	}
 	conv, _ := scopeFloat(scope, ScopeKeyConversion)
+	// If no formula explicitly writes COST_CONVERSION, derive it from final - RM.
+	// This gives accurate conversion reporting even when the formula chain does not
+	// produce an explicit COST_CONVERSION output.
+	if conv == 0 && finalCost > totalRM {
+		conv = finalCost - totalRM
+	}
 
 	span.SetAttributes(attribute.String("status", "success"))
 	return &ComputeOutput{
