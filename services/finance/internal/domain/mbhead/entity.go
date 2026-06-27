@@ -61,7 +61,7 @@ func Reconstruct(id uuid.UUID, oracleSysID *string, mbCosting string, mgtName *s
 		denier: denier, filament: filament, dozing: dozing,
 		mbhCheckStatus: mbhCheckStatus, mbhStatus: mbhStatus, mbhLdrPrsn: mbhLdrPrsn,
 		mbhFinalProduct: mbhFinalProduct, mbhCode: mbhCode,
-		isActive: isActive,
+		isActive:  isActive,
 		createdAt: createdAt, createdBy: createdBy, updatedAt: updatedAt, updatedBy: updatedBy,
 		deletedAt: deletedAt, deletedBy: deletedBy,
 	}

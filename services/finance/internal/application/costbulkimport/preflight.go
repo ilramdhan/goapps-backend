@@ -112,17 +112,8 @@ func preflightParamSheet(
 			continue
 		}
 		// Validate MASTER_LOOKUP values against the referenced master table.
-		if masterCode, isMasterLookup := maps.ParamLookupMap[paramCode]; isMasterLookup {
-			if optSet, loaded := maps.MasterLookupValues[masterCode]; loaded && len(optSet) > 0 {
-				value := row["value_text"]
-				if value == "" {
-					value = row["value_numeric"]
-				}
-				if value != "" && !optSet[value] {
-					result.Errors = append(result.Errors, SheetError{rowNum, "value_text",
-						unknownMasterValuePrefix + masterCode + ":" + value})
-				}
-			}
+		if errMsg := validateMasterLookupValue(row, paramCode, maps); errMsg != "" {
+			result.Errors = append(result.Errors, SheetError{rowNum, "value_text", errMsg})
 		}
 	}
 	return result
@@ -293,3 +284,25 @@ func sheetErrResult(sheetName string, parseErr error) SheetResult {
 	}
 }
 
+
+// validateMasterLookupValue checks that a MASTER_LOOKUP param's value exists
+// in the referenced master table option set. Returns an error sentinel string
+// or "" if the value is valid / no master validation applies.
+func validateMasterLookupValue(row map[string]string, paramCode string, maps *ImportMaps) string {
+	masterCode, isMasterLookup := maps.ParamLookupMap[paramCode]
+	if !isMasterLookup {
+		return ""
+	}
+	optSet, loaded := maps.MasterLookupValues[masterCode]
+	if !loaded || len(optSet) == 0 {
+		return ""
+	}
+	value := row["value_text"]
+	if value == "" {
+		value = row["value_numeric"]
+	}
+	if value != "" && !optSet[value] {
+		return unknownMasterValuePrefix + masterCode + ":" + value
+	}
+	return ""
+}

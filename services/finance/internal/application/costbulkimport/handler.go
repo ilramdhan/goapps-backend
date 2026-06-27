@@ -257,6 +257,13 @@ func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent
 	job.UpdateProgress(totalProcessed, totalSuccess, totalFailed, totalSkipped)
 	h.updateJob(ctx, jobID, job)
 
+	// Generate error report if any rows failed or missing products.
+	if countErrors(allResults) > 0 {
+		if errorKey := h.maybeUploadErrorReport(ctx, jobID, allResults); errorKey != "" {
+			job.SetErrorFile(errorKey)
+		}
+	}
+
 	job.MarkDone("")
 	h.updateJob(ctx, jobID, job)
 	return nil

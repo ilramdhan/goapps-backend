@@ -70,9 +70,9 @@ func GenerateErrorReport(results []SheetResult) ([]byte, error) {
 		if len(filtered) == 0 {
 			continue
 		}
-		copy := r
-		copy.Errors = filtered
-		if err := writeErrorSheet(f, copy); err != nil {
+		errSheet := r
+		errSheet.Errors = filtered
+		if err := writeErrorSheet(f, errSheet); err != nil {
 			return nil, err
 		}
 	}

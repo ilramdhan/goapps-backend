@@ -9,40 +9,40 @@ import (
 
 // Entity is the aggregate root for the Machine domain.
 type Entity struct {
-	id            uuid.UUID
-	code          string
-	name          string
-	mcType        string
-	location      string
-	noOfPosition  int
-	noOfEnd       int
-	mcSpeed       float64
-	machineRPM    *float64
-	mcEfficiency  float64
-	powerPerDay   *float64
-	mpPerDay      *float64
-	ohsPerDay     *float64
-	sparesPerDay  *float64
-	kgsLostChange *float64
-	vb1Qty              *float64
-	vb2Qty              *float64
-	vb3Qty              *float64
-	vb4Qty              *float64
-	vb5Qty              *float64
-	mcPoyBobbinWeight   *float64
-	mcTotFxdCst         *float64
-	mcBobbinPerTrolly   *float64
-	mcBoxCost           *float64
-	mcCaptivePerBobbin  *float64
-	mcWeightage         *float64
-	isActive            bool
-	notes         string
-	createdAt     time.Time
-	createdBy     string
-	updatedAt     *time.Time
-	updatedBy     *string
-	deletedAt     *time.Time
-	deletedBy     *string
+	id                 uuid.UUID
+	code               string
+	name               string
+	mcType             string
+	location           string
+	noOfPosition       int
+	noOfEnd            int
+	mcSpeed            float64
+	machineRPM         *float64
+	mcEfficiency       float64
+	powerPerDay        *float64
+	mpPerDay           *float64
+	ohsPerDay          *float64
+	sparesPerDay       *float64
+	kgsLostChange      *float64
+	vb1Qty             *float64
+	vb2Qty             *float64
+	vb3Qty             *float64
+	vb4Qty             *float64
+	vb5Qty             *float64
+	mcPoyBobbinWeight  *float64
+	mcTotFxdCst        *float64
+	mcBobbinPerTrolly  *float64
+	mcBoxCost          *float64
+	mcCaptivePerBobbin *float64
+	mcWeightage        *float64
+	isActive           bool
+	notes              string
+	createdAt          time.Time
+	createdBy          string
+	updatedAt          *time.Time
+	updatedBy          *string
+	deletedAt          *time.Time
+	deletedBy          *string
 }
 
 // New creates a new Machine entity with validation.
@@ -215,19 +215,19 @@ func (e *Entity) IsDeleted() bool { return e.deletedAt != nil }
 
 // UpdateInput carries optional field mutations for Update.
 type UpdateInput struct {
-	Name          *string
-	MCType        *string
-	Location      *string
-	NoOfPosition  *int
-	NoOfEnd       *int
-	MCSpeed       *float64
-	MachineRPM    *float64
-	MCEfficiency  *float64
-	PowerPerDay   *float64
-	MpPerDay      *float64
-	OhsPerDay     *float64
-	SparesPerDay  *float64
-	KgsLostChange *float64
+	Name               *string
+	MCType             *string
+	Location           *string
+	NoOfPosition       *int
+	NoOfEnd            *int
+	MCSpeed            *float64
+	MachineRPM         *float64
+	MCEfficiency       *float64
+	PowerPerDay        *float64
+	MpPerDay           *float64
+	OhsPerDay          *float64
+	SparesPerDay       *float64
+	KgsLostChange      *float64
 	Vb1Qty             *float64
 	Vb2Qty             *float64
 	Vb3Qty             *float64
