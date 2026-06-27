@@ -140,11 +140,21 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	// panics like "<nil> > int". Defaulting to 0 is safe: conditional formulas
 	// (e.g. VB_QTY > 0 ? X/VB_QTY : 0) will take the zero branch, and additive
 	// formulas produce 0 contributions rather than crashing.
+	// Also pre-fill the formula's own ResultParamCode: some formulas (e.g.
+	// F_YARN_SPECIAL_COST_FLAG_PASS with expression "SPECIAL_COST_FLAG") read
+	// their own result param but declare no explicit InputParamCodes entries.
 	for _, f := range in.Formulas {
+		if f.FormulaType == FormulaTypeRMLookup {
+			continue // RM_LOOKUP handled separately below
+		}
 		for _, code := range f.InputParamCodes {
 			if _, exists := scope[code]; !exists {
 				scope[code] = float64(0)
 			}
+		}
+		// Ensure the result param itself is 0-defaulted for pass-through formulas.
+		if _, exists := scope[f.ResultParamCode]; !exists {
+			scope[f.ResultParamCode] = float64(0)
 		}
 	}
 
@@ -184,8 +194,25 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	scope[ScopeKeyCostRMTotal] = totalRM
 
 	// 3. Evaluate formulas in topo order (loader pre-sorted).
+	// RM_LOOKUP formulas use a custom Oracle DSL that expr-lang cannot parse.
+	// They compute "sum of RM costs for current level" — identical to what
+	// aggregateRMCost() already computed as COST_RM_TOTAL. Phase-1 approximation:
+	// alias totalRM into the formula's ResultParamCode so downstream CALCULATION
+	// formulas can proceed. Phase-2 will implement per-pricing-type splitting.
 	formulaTrace := make([]FormulaEvalTrace, 0, len(in.Formulas))
 	for _, f := range in.Formulas {
+		if f.FormulaType == FormulaTypeRMLookup {
+			// Phase-1: RM_LOOKUP → alias totalRM into result param.
+			scope[f.ResultParamCode] = totalRM
+			formulaTrace = append(formulaTrace, FormulaEvalTrace{
+				FormulaCode:     f.FormulaCode,
+				Expression:      f.Expression,
+				ResultParamCode: f.ResultParamCode,
+				Output:          totalRM,
+				Inputs:          map[string]float64{"COST_RM_TOTAL": totalRM},
+			})
+			continue
+		}
 		formulaResult, evalErr := evalOneFormula(ctx, in.EvalCache, f, scope)
 		if evalErr != nil {
 			wrapped := fmt.Errorf("%w: %s for product %d: %w",

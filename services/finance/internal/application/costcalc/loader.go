@@ -462,6 +462,7 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 		    f.id            AS formula_id,
 		    f.formula_code,
 		    f.formula_name,
+		    f.formula_type,
 		    f.expression,
 		    rp.param_code   AS result_param_code
 		FROM cost_product_applicable_param capp
@@ -485,6 +486,7 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 	type formulaHead struct {
 		code        string
 		name        string
+		formulaType string
 		expr        string
 		resultParam string
 	}
@@ -500,7 +502,7 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 			formulaID    string
 			head         formulaHead
 		)
-		if err := rows.Scan(&productSysID, &formulaID, &head.code, &head.name, &head.expr, &head.resultParam); err != nil {
+		if err := rows.Scan(&productSysID, &formulaID, &head.code, &head.name, &head.formulaType, &head.expr, &head.resultParam); err != nil {
 			return nil, fmt.Errorf("scan per-product formula head: %w", err)
 		}
 		headByID[formulaID] = head
@@ -538,6 +540,7 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 			formulas = append(formulas, Formula{
 				FormulaCode:     head.code,
 				FormulaName:     head.name,
+				FormulaType:     head.formulaType,
 				Expression:      head.expr,
 				ResultParamCode: head.resultParam,
 				InputParamCodes: inputsByID[fid],
