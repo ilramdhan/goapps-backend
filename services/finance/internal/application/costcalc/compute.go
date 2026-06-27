@@ -81,7 +81,9 @@ type FormulaEvalTrace struct {
 }
 
 // LevelContribution rolls up contributions per route level.
+// ProductSysID is 0 for the FG (current product) and non-zero for upstream products.
 type LevelContribution struct {
+	ProductSysID int64   `json:"product_sys_id,omitempty"`
 	Level      int32   `json:"level"`
 	RMCost     float64 `json:"rm_cost"`
 	Conversion float64 `json:"conversion"`
@@ -283,7 +285,7 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		RMCostDetail:    rmDetail,
 		ParamSnapshot:   scopeSnapshot(scope),
 		FormulaTrace:    formulaTrace,
-		CostByLevel:     buildCostByLevel(levelMap, conv),
+		CostByLevel:     buildCostByLevel(levelMap, conv, in.Route, in.ProductSysID, in.UpstreamCosts),
 		InputHash:       inputHash(in, totalRM),
 	}, nil
 }
@@ -468,26 +470,63 @@ func scopeSnapshot(scope map[string]any) map[string]float64 {
 	return out
 }
 
-func buildCostByLevel(byLevel map[int32]float64, totalConv float64) []LevelContribution {
-	levels := make([]int32, 0, len(byLevel))
-	for l := range byLevel {
-		levels = append(levels, l)
-	}
-	slices.Sort(levels)
+// buildCostByLevel constructs the full multi-level cost breakdown.
+// It combines:
+//   - The FG's own RM contributions (from aggregateRMCost byLevel map)
+//   - All upstream products' costs keyed by their route level
+//
+// This gives the user visibility into all levels of the DAG, not just
+// the FG's direct RM input.
+func buildCostByLevel(
+	byLevel map[int32]float64,
+	totalConv float64,
+	route *costroute.Graph,
+	fgProductID int64,
+	upstreamCosts map[int64]float64,
+) []LevelContribution {
+	seen := make(map[int32]bool)
+	var out []LevelContribution
 
-	out := make([]LevelContribution, 0, len(levels))
-	for _, l := range levels {
+	// Level 1: FG itself — use aggregated RM cost from byLevel
+	for l, rmCost := range byLevel {
 		out = append(out, LevelContribution{
-			Level:      l,
-			RMCost:     byLevel[l],
-			Conversion: 0,
+			ProductSysID: fgProductID,
+			Level:        l,
+			RMCost:       rmCost,
+			Conversion:   totalConv, // assign all conversion to FG level for now
 		})
+		seen[l] = true
 	}
-	// Conversion cost is assigned to the FG (lowest-level=1) seq for now; a
-	// future per-level OH allocation can replace this once modeled.
-	if totalConv > 0 && len(out) > 0 {
-		out[0].Conversion = totalConv
+
+	// Upstream levels: each route seq that is NOT the FG
+	if route != nil {
+		for _, seq := range route.Seqs {
+			if seq == nil || seq.ProductSysID == fgProductID {
+				continue
+			}
+			level := seq.RouteLevel
+			if seen[level] {
+				continue // don't overwrite FG level
+			}
+			cost := upstreamCosts[seq.ProductSysID]
+			out = append(out, LevelContribution{
+				ProductSysID: seq.ProductSysID,
+				Level:        level,
+				RMCost:       cost,
+			})
+			seen[level] = true
+		}
 	}
+
+	slices.SortFunc(out, func(a, b LevelContribution) int {
+		if a.Level != b.Level {
+			if a.Level < b.Level {
+				return -1
+			}
+			return 1
+		}
+		return 0
+	})
 	return out
 }
 
