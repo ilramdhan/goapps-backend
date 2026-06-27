@@ -55,6 +55,9 @@ type ComputeInput struct {
 	RMCosts       map[string]float64 // key matches loader.LoadRMCosts: "<rmCode>|<itemCode>"
 	UpstreamCosts map[int64]float64
 	EvalCache     *evaluator.Cache
+	// SellingSnapshot holds param values from the SELLING session for this product+period.
+	// Used to implement marketing_result() built-in. Empty map when no SELLING result exists.
+	SellingSnapshot map[string]float64
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
@@ -78,10 +81,12 @@ type FormulaEvalTrace struct {
 }
 
 // LevelContribution rolls up contributions per route level.
+// ProductSysID is 0 for the FG (current product) and non-zero for upstream products.
 type LevelContribution struct {
-	Level      int32   `json:"level"`
-	RMCost     float64 `json:"rm_cost"`
-	Conversion float64 `json:"conversion"`
+	ProductSysID int64   `json:"product_sys_id,omitempty"`
+	Level        int32   `json:"level"`
+	RMCost       float64 `json:"rm_cost"`
+	Conversion   float64 `json:"conversion"`
 }
 
 // ComputeOutput is the result of one product compute pass.
@@ -126,11 +131,8 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		return nil, err
 	}
 
-	// 1. Initialize scope from CAPP values.
-	scope := make(map[string]any, len(in.CAPP)+len(in.Formulas)+8)
-	for k, v := range in.CAPP {
-		scope[k] = v
-	}
+	// 1. Initialize scope from CAPP values and pre-fill missing params with 0.
+	scope := buildInitialScope(in)
 
 	// 2. Aggregate RM cost across every sequence in the route.
 	totalRM, rmDetail, levelMap, err := aggregateRMCost(in)
@@ -141,17 +143,10 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	scope[ScopeKeyCostRMTotal] = totalRM
 
 	// 3. Evaluate formulas in topo order (loader pre-sorted).
-	formulaTrace := make([]FormulaEvalTrace, 0, len(in.Formulas))
-	for _, f := range in.Formulas {
-		formulaResult, evalErr := evalOneFormula(ctx, in.EvalCache, f, scope)
-		if evalErr != nil {
-			wrapped := fmt.Errorf("%w: %s for product %d: %w",
-				costcalcdom.ErrFormulaEval, f.FormulaCode, in.ProductSysID, evalErr)
-			recordProductSpanError(span, wrapped)
-			return nil, wrapped
-		}
-		formulaTrace = append(formulaTrace, formulaResult)
-		scope[f.ResultParamCode] = formulaResult.Output
+	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, in.Formulas, in.ProductSysID)
+	if err != nil {
+		recordProductSpanError(span, err)
+		return nil, err
 	}
 
 	// 4. Extract final cost + optional conversion.
@@ -171,6 +166,12 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		finalCost = fc
 	}
 	conv, _ := scopeFloat(scope, ScopeKeyConversion)
+	// If no formula explicitly writes COST_CONVERSION, derive it from final - RM.
+	// This gives accurate conversion reporting even when the formula chain does not
+	// produce an explicit COST_CONVERSION output.
+	if conv == 0 && finalCost > totalRM {
+		conv = finalCost - totalRM
+	}
 
 	span.SetAttributes(attribute.String("status", "success"))
 	return &ComputeOutput{
@@ -181,9 +182,161 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		RMCostDetail:    rmDetail,
 		ParamSnapshot:   scopeSnapshot(scope),
 		FormulaTrace:    formulaTrace,
-		CostByLevel:     buildCostByLevel(levelMap, conv),
+		CostByLevel:     buildCostByLevel(levelMap, conv, in.Route, in.ProductSysID, in.UpstreamCosts),
 		InputHash:       inputHash(in, totalRM),
 	}, nil
+}
+
+// buildInitialScope creates and populates the formula evaluation scope.
+// It copies CAPP values, pre-fills missing formula input params with 0, and
+// injects the marketing_result() built-in function.
+func buildInitialScope(in ComputeInput) map[string]any {
+	scope := make(map[string]any, len(in.CAPP)+len(in.Formulas)+8)
+	for k, v := range in.CAPP {
+		scope[k] = v
+	}
+
+	// Pre-fill missing formula input params with 0 so expr-lang never sees nil.
+	// AllowUndefinedVariables() returns nil for absent vars, causing arithmetic
+	// panics like "<nil> > int". Defaulting to 0 is safe: conditional formulas
+	// (e.g. VB_QTY > 0 ? X/VB_QTY : 0) will take the zero branch, and additive
+	// formulas produce 0 contributions rather than crashing.
+	// Also pre-fill the formula's own ResultParamCode: some formulas (e.g.
+	// F_YARN_SPECIAL_COST_FLAG_PASS with expression "SPECIAL_COST_FLAG") read
+	// their own result param but declare no explicit InputParamCodes entries.
+	for _, f := range in.Formulas {
+		if f.FormulaType == FormulaTypeRMLookup {
+			continue // RM_LOOKUP handled separately in evalFormulaChain
+		}
+		for _, code := range f.InputParamCodes {
+			if _, exists := scope[code]; !exists {
+				scope[code] = float64(0)
+			}
+		}
+		// Ensure the result param itself is 0-defaulted for pass-through formulas.
+		if _, exists := scope[f.ResultParamCode]; !exists {
+			scope[f.ResultParamCode] = float64(0)
+		}
+	}
+
+	injectMarketingResult(scope, in.SellingSnapshot)
+	return scope
+}
+
+// injectMarketingResult adds the marketing_result() built-in function to scope.
+// Priority: (1) SELLING session snapshot, (2) existing CAPP scope value, (3) 0.
+// Falling back to CAPP preserves the imported param value when no SELLING session
+// has run yet — prevents FROM_MARKETING formulas from zeroing out user-supplied data.
+// Signature matches expr-lang's Function type alias: func(...any) (any, error).
+func injectMarketingResult(scope map[string]any, sellingSnap map[string]float64) {
+	scope["marketing_result"] = func(args ...any) (any, error) {
+		// args: product (any), paramCode (string), period (any) — matches expr call signature.
+		if len(args) < 2 {
+			return float64(0), nil
+		}
+		paramCode, ok := args[1].(string)
+		if !ok {
+			return float64(0), nil
+		}
+		if v, found := sellingSnap[paramCode]; found {
+			return v, nil
+		}
+		// Fallback to CAPP scope value — preserves imported param when no SELLING session exists.
+		if existing, found := scope[paramCode]; found {
+			if fv, ok2 := existing.(float64); ok2 {
+				return fv, nil
+			}
+		}
+		return float64(0), nil
+	}
+}
+
+// evalFormulaChain evaluates all formulas in topological order and updates scope in place.
+// RM_LOOKUP formulas use a custom Oracle DSL; they are approximated as totalRM aliases.
+// SNAPSHOT formulas capture a param value at evaluation time.
+// CALCULATION formulas are evaluated by the expr-lang evaluator.
+func evalFormulaChain(
+	ctx context.Context,
+	cache *evaluator.Cache,
+	scope map[string]any,
+	totalRM float64,
+	formulas []Formula,
+	productSysID int64,
+) ([]FormulaEvalTrace, error) {
+	trace := make([]FormulaEvalTrace, 0, len(formulas))
+	for _, f := range formulas {
+		t, err := evalSingleFormulaStep(ctx, cache, scope, totalRM, f, productSysID)
+		if err != nil {
+			return nil, err
+		}
+		trace = append(trace, t)
+		scope[f.ResultParamCode] = t.Output
+	}
+	return trace, nil
+}
+
+// evalSingleFormulaStep dispatches one formula by type and returns its trace entry.
+func evalSingleFormulaStep(
+	ctx context.Context,
+	cache *evaluator.Cache,
+	scope map[string]any,
+	totalRM float64,
+	f Formula,
+	productSysID int64,
+) (FormulaEvalTrace, error) {
+	switch f.FormulaType {
+	case "SNAPSHOT":
+		return evalSnapshotFormula(f, scope), nil
+	case FormulaTypeRMLookup:
+		// Phase-1: RM_LOOKUP → alias totalRM into result param.
+		// Phase-2 will implement per-pricing-type splitting.
+		return FormulaEvalTrace{
+			FormulaCode:     f.FormulaCode,
+			Expression:      f.Expression,
+			ResultParamCode: f.ResultParamCode,
+			Output:          totalRM,
+			Inputs:          map[string]float64{"COST_RM_TOTAL": totalRM},
+		}, nil
+	default:
+		result, evalErr := evalOneFormula(ctx, cache, f, scope)
+		if evalErr != nil {
+			return FormulaEvalTrace{}, fmt.Errorf("%w: %s for product %d: %w",
+				costcalcdom.ErrFormulaEval, f.FormulaCode, productSysID, evalErr)
+		}
+		return result, nil
+	}
+}
+
+// evalSnapshotFormula handles a SNAPSHOT formula.
+// SNAPSHOT formulas capture a value at a point in time — they read the referenced
+// param from scope (already computed) and echo it as a pass-through.
+func evalSnapshotFormula(f Formula, scope map[string]any) FormulaEvalTrace {
+	val := snapshotValue(f, scope)
+	return FormulaEvalTrace{
+		FormulaCode:     f.FormulaCode,
+		Expression:      f.Expression,
+		ResultParamCode: f.ResultParamCode,
+		Output:          val,
+	}
+}
+
+// snapshotValue resolves the float64 value for a SNAPSHOT formula from scope.
+// It tries the first input param first, then falls back to the result param itself.
+func snapshotValue(f Formula, scope map[string]any) float64 {
+	if len(f.InputParamCodes) > 0 {
+		if v, ok := scope[f.InputParamCodes[0]]; ok {
+			if fv, ok2 := v.(float64); ok2 {
+				return fv
+			}
+		}
+		return float64(0)
+	}
+	if v, ok := scope[f.ResultParamCode]; ok {
+		if fv, ok2 := v.(float64); ok2 {
+			return fv
+		}
+	}
+	return float64(0)
 }
 
 // aggregateRMCost iterates every sequence in the route and sums the RM
@@ -366,59 +519,143 @@ func scopeSnapshot(scope map[string]any) map[string]float64 {
 	return out
 }
 
-func buildCostByLevel(byLevel map[int32]float64, totalConv float64) []LevelContribution {
-	levels := make([]int32, 0, len(byLevel))
-	for l := range byLevel {
-		levels = append(levels, l)
+// buildCostByLevel constructs the full multi-level cost breakdown.
+// It combines:
+//   - The FG's own RM contributions (from aggregateRMCost byLevel map)
+//   - All upstream products' costs keyed by their route level
+//
+// This gives the user visibility into all levels of the DAG, not just
+// the FG's direct RM input.
+func buildCostByLevel(
+	byLevel map[int32]float64,
+	totalConv float64,
+	route *costroute.Graph,
+	fgProductID int64,
+	upstreamCosts map[int64]float64,
+) []LevelContribution {
+	seen := make(map[int32]bool)
+	routeLen := 0
+	if route != nil {
+		routeLen = len(route.Seqs)
 	}
-	slices.Sort(levels)
+	out := make([]LevelContribution, 0, len(byLevel)+routeLen)
 
-	out := make([]LevelContribution, 0, len(levels))
-	for _, l := range levels {
+	// Level 1: FG itself — use aggregated RM cost from byLevel
+	for l, rmCost := range byLevel {
 		out = append(out, LevelContribution{
-			Level:      l,
-			RMCost:     byLevel[l],
-			Conversion: 0,
+			ProductSysID: fgProductID,
+			Level:        l,
+			RMCost:       rmCost,
+			Conversion:   totalConv, // assign all conversion to FG level for now
 		})
+		seen[l] = true
 	}
-	// Conversion cost is assigned to the FG (lowest-level=1) seq for now; a
-	// future per-level OH allocation can replace this once modeled.
-	if totalConv > 0 && len(out) > 0 {
-		out[0].Conversion = totalConv
+
+	// Upstream levels: each route seq that is NOT the FG
+	if route != nil {
+		for _, seq := range route.Seqs {
+			if seq == nil || seq.ProductSysID == fgProductID {
+				continue
+			}
+			level := seq.RouteLevel
+			if seen[level] {
+				continue // don't overwrite FG level
+			}
+			cost := upstreamCosts[seq.ProductSysID]
+			out = append(out, LevelContribution{
+				ProductSysID: seq.ProductSysID,
+				Level:        level,
+				RMCost:       cost,
+			})
+			seen[level] = true
+		}
 	}
+
+	slices.SortFunc(out, func(a, b LevelContribution) int {
+		if a.Level != b.Level {
+			if a.Level < b.Level {
+				return -1
+			}
+			return 1
+		}
+		return 0
+	})
 	return out
 }
 
 // findTerminalFormula returns the single formula whose result param is not
 // consumed as an input by any other formula in the set — i.e. the DAG sink.
 // Used when a product's formula chain does not explicitly produce COST_STAGE_OUT.
-// Returns an error if the number of sink formulas is not exactly one.
-func findTerminalFormula(formulas []Formula) (*Formula, error) {
+//
+// When multiple sinks exist (e.g. CAP_FINAL + VB1_DEL…VB5_DEL), the function
+// picks the terminal with the deepest computation chain (most formula ancestors).
+// This is robust to product type changes and param renames: the "primary" cost
+// formula naturally has more intermediate steps feeding it than variant/helper
+// terminals like OIL_GAIN or VOLUME_BUCKET_X_DEL_COST.
+func findTerminalFormula(formulas []Formula) (*Formula, error) { //nolint:gocognit,gocyclo // depth-first memoised DAG traversal is cohesive and cannot be split further
+	// Build set of all params consumed as inputs (to identify terminals).
 	allInputs := make(map[string]bool, len(formulas)*2)
 	for _, f := range formulas {
 		for _, inp := range f.InputParamCodes {
 			allInputs[inp] = true
 		}
 	}
+
+	// Map resultParamCode → formula for depth traversal.
+	byResult := make(map[string]*Formula, len(formulas))
+	for i := range formulas {
+		byResult[formulas[i].ResultParamCode] = &formulas[i]
+	}
+
+	// computeDepth returns the length of the longest formula ancestor chain.
+	// Memoised via depthCache to avoid re-traversal.
+	depthCache := make(map[string]int, len(formulas))
+	var computeDepth func(code string) int
+	computeDepth = func(resultCode string) int {
+		if v, ok := depthCache[resultCode]; ok {
+			return v
+		}
+		f, ok := byResult[resultCode]
+		if !ok {
+			depthCache[resultCode] = 0
+			return 0
+		}
+		maxParent := 0
+		for _, inp := range f.InputParamCodes {
+			if d := computeDepth(inp); d > maxParent {
+				maxParent = d
+			}
+		}
+		depth := maxParent + 1
+		depthCache[resultCode] = depth
+		return depth
+	}
+
 	var terminals []Formula
 	for _, f := range formulas {
 		if !allInputs[f.ResultParamCode] {
 			terminals = append(terminals, f)
 		}
 	}
+
 	switch len(terminals) {
 	case 1:
 		return &terminals[0], nil
 	case 0:
 		return nil, fmt.Errorf("formula DAG has no terminal node (cycle or empty set)")
 	default:
-		codes := make([]string, len(terminals))
-		for i, t := range terminals {
-			codes[i] = t.FormulaCode
+		// Multiple terminals: pick the one with the deepest computation chain.
+		// Ties broken by FormulaCode for determinism.
+		best := &terminals[0]
+		bestDepth := computeDepth(best.ResultParamCode)
+		for i := 1; i < len(terminals); i++ {
+			d := computeDepth(terminals[i].ResultParamCode)
+			if d > bestDepth || (d == bestDepth && terminals[i].FormulaCode < best.FormulaCode) {
+				best = &terminals[i]
+				bestDepth = d
+			}
 		}
-		return nil, fmt.Errorf(
-			"formula chain has %d terminal nodes (%v); add a formula that outputs %s to disambiguate",
-			len(terminals), codes, ScopeKeyFinalCost)
+		return best, nil
 	}
 }
 

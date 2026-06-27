@@ -9,13 +9,18 @@ import (
 
 // CreateCommand represents the create MB Head command.
 type CreateCommand struct {
-	MBCosting   string
-	OracleSysID *string
-	MgtName     *string
-	Denier      *float64
-	Filament    *int
-	Dozing      *float64
-	CreatedBy   string
+	MBCosting       string
+	OracleSysID     *string
+	MgtName         *string
+	Denier          *float64
+	Filament        *int
+	Dozing          *float64
+	MBHCheckStatus  *string
+	MBHStatus       *string
+	MBHLdrPrsn      *float64
+	MBHFinalProduct *string
+	MBHCode         *string
+	CreatedBy       string
 }
 
 // CreateHandler handles the CreateMBHead command.
@@ -40,7 +45,9 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbhead.
 
 	entity, err := mbhead.New(
 		cmd.MBCosting, cmd.OracleSysID, cmd.MgtName,
-		cmd.Denier, cmd.Filament, cmd.Dozing, cmd.CreatedBy,
+		cmd.Denier, cmd.Filament, cmd.Dozing,
+		cmd.MBHCheckStatus, cmd.MBHStatus, cmd.MBHLdrPrsn, cmd.MBHFinalProduct, cmd.MBHCode,
+		cmd.CreatedBy,
 	)
 	if err != nil {
 		return nil, err

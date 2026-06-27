@@ -115,8 +115,38 @@ type Machine struct {
 	IsActive bool `protobuf:"varint,12,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	// Optional notes.
 	Notes string `protobuf:"bytes,13,opt,name=notes,proto3" json:"notes,omitempty"`
+	// Optional manpower cost per day in USD.
+	MpPerDay *float64 `protobuf:"fixed64,14,opt,name=mp_per_day,json=mpPerDay,proto3,oneof" json:"mp_per_day,omitempty"`
+	// Optional overhead per head per day in USD.
+	OhsPerDay *float64 `protobuf:"fixed64,15,opt,name=ohs_per_day,json=ohsPerDay,proto3,oneof" json:"ohs_per_day,omitempty"`
 	// Audit metadata.
-	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	Audit *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	// Optional spares cost per day in USD.
+	SparesPerDay *float64 `protobuf:"fixed64,17,opt,name=spares_per_day,json=sparesPerDay,proto3,oneof" json:"spares_per_day,omitempty"`
+	// Optional change-over quality loss in kgs.
+	KgsLostChange *float64 `protobuf:"fixed64,18,opt,name=kgs_lost_change,json=kgsLostChange,proto3,oneof" json:"kgs_lost_change,omitempty"`
+	// Optional volume bucket 1 quantity threshold.
+	Vb1Qty *float64 `protobuf:"fixed64,19,opt,name=vb1_qty,json=vb1Qty,proto3,oneof" json:"vb1_qty,omitempty"`
+	// Optional volume bucket 2 quantity threshold.
+	Vb2Qty *float64 `protobuf:"fixed64,20,opt,name=vb2_qty,json=vb2Qty,proto3,oneof" json:"vb2_qty,omitempty"`
+	// Optional volume bucket 3 quantity threshold.
+	Vb3Qty *float64 `protobuf:"fixed64,21,opt,name=vb3_qty,json=vb3Qty,proto3,oneof" json:"vb3_qty,omitempty"`
+	// Optional volume bucket 4 quantity threshold.
+	Vb4Qty *float64 `protobuf:"fixed64,22,opt,name=vb4_qty,json=vb4Qty,proto3,oneof" json:"vb4_qty,omitempty"`
+	// Optional volume bucket 5 quantity threshold.
+	Vb5Qty *float64 `protobuf:"fixed64,23,opt,name=vb5_qty,json=vb5Qty,proto3,oneof" json:"vb5_qty,omitempty"`
+	// Optional Oracle CMM_POY_BOBBIN_WEIGHT — kg per bobbin.
+	McPoyBobbinWeight *float64 `protobuf:"fixed64,24,opt,name=mc_poy_bobbin_weight,json=mcPoyBobbinWeight,proto3,oneof" json:"mc_poy_bobbin_weight,omitempty"`
+	// Optional Oracle CMM_TOT_FXD_CST — total fixed cost.
+	McTotFxdCst *float64 `protobuf:"fixed64,25,opt,name=mc_tot_fxd_cst,json=mcTotFxdCst,proto3,oneof" json:"mc_tot_fxd_cst,omitempty"`
+	// Optional Oracle CMM_BOBBIN_PER_TROLLY — bobbins per trolley.
+	McBobbinPerTrolly *float64 `protobuf:"fixed64,26,opt,name=mc_bobbin_per_trolly,json=mcBobbinPerTrolly,proto3,oneof" json:"mc_bobbin_per_trolly,omitempty"`
+	// Optional Oracle CMM_BOX_COST — box cost per unit.
+	McBoxCost *float64 `protobuf:"fixed64,27,opt,name=mc_box_cost,json=mcBoxCost,proto3,oneof" json:"mc_box_cost,omitempty"`
+	// Optional Oracle CMM_CAPTIVE_PER_BOBBIN — captive cost per bobbin.
+	McCaptivePerBobbin *float64 `protobuf:"fixed64,28,opt,name=mc_captive_per_bobbin,json=mcCaptivePerBobbin,proto3,oneof" json:"mc_captive_per_bobbin,omitempty"`
+	// Optional Oracle CMM_WEIGHTAGE — machine weightage factor.
+	McWeightage   *float64 `protobuf:"fixed64,29,opt,name=mc_weightage,json=mcWeightage,proto3,oneof" json:"mc_weightage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -242,11 +272,116 @@ func (x *Machine) GetNotes() string {
 	return ""
 }
 
+func (x *Machine) GetMpPerDay() float64 {
+	if x != nil && x.MpPerDay != nil {
+		return *x.MpPerDay
+	}
+	return 0
+}
+
+func (x *Machine) GetOhsPerDay() float64 {
+	if x != nil && x.OhsPerDay != nil {
+		return *x.OhsPerDay
+	}
+	return 0
+}
+
 func (x *Machine) GetAudit() *v1.AuditInfo {
 	if x != nil {
 		return x.Audit
 	}
 	return nil
+}
+
+func (x *Machine) GetSparesPerDay() float64 {
+	if x != nil && x.SparesPerDay != nil {
+		return *x.SparesPerDay
+	}
+	return 0
+}
+
+func (x *Machine) GetKgsLostChange() float64 {
+	if x != nil && x.KgsLostChange != nil {
+		return *x.KgsLostChange
+	}
+	return 0
+}
+
+func (x *Machine) GetVb1Qty() float64 {
+	if x != nil && x.Vb1Qty != nil {
+		return *x.Vb1Qty
+	}
+	return 0
+}
+
+func (x *Machine) GetVb2Qty() float64 {
+	if x != nil && x.Vb2Qty != nil {
+		return *x.Vb2Qty
+	}
+	return 0
+}
+
+func (x *Machine) GetVb3Qty() float64 {
+	if x != nil && x.Vb3Qty != nil {
+		return *x.Vb3Qty
+	}
+	return 0
+}
+
+func (x *Machine) GetVb4Qty() float64 {
+	if x != nil && x.Vb4Qty != nil {
+		return *x.Vb4Qty
+	}
+	return 0
+}
+
+func (x *Machine) GetVb5Qty() float64 {
+	if x != nil && x.Vb5Qty != nil {
+		return *x.Vb5Qty
+	}
+	return 0
+}
+
+func (x *Machine) GetMcPoyBobbinWeight() float64 {
+	if x != nil && x.McPoyBobbinWeight != nil {
+		return *x.McPoyBobbinWeight
+	}
+	return 0
+}
+
+func (x *Machine) GetMcTotFxdCst() float64 {
+	if x != nil && x.McTotFxdCst != nil {
+		return *x.McTotFxdCst
+	}
+	return 0
+}
+
+func (x *Machine) GetMcBobbinPerTrolly() float64 {
+	if x != nil && x.McBobbinPerTrolly != nil {
+		return *x.McBobbinPerTrolly
+	}
+	return 0
+}
+
+func (x *Machine) GetMcBoxCost() float64 {
+	if x != nil && x.McBoxCost != nil {
+		return *x.McBoxCost
+	}
+	return 0
+}
+
+func (x *Machine) GetMcCaptivePerBobbin() float64 {
+	if x != nil && x.McCaptivePerBobbin != nil {
+		return *x.McCaptivePerBobbin
+	}
+	return 0
+}
+
+func (x *Machine) GetMcWeightage() float64 {
+	if x != nil && x.McWeightage != nil {
+		return *x.McWeightage
+	}
+	return 0
 }
 
 // CreateMachineRequest is the request for creating a machine.
@@ -273,7 +408,37 @@ type CreateMachineRequest struct {
 	// Optional power cost per day in USD.
 	PowerPerDay *float64 `protobuf:"fixed64,10,opt,name=power_per_day,json=powerPerDay,proto3,oneof" json:"power_per_day,omitempty"`
 	// Optional notes (max 1000 chars).
-	Notes         string `protobuf:"bytes,11,opt,name=notes,proto3" json:"notes,omitempty"`
+	Notes string `protobuf:"bytes,11,opt,name=notes,proto3" json:"notes,omitempty"`
+	// Optional manpower cost per day in USD.
+	MpPerDay *float64 `protobuf:"fixed64,12,opt,name=mp_per_day,json=mpPerDay,proto3,oneof" json:"mp_per_day,omitempty"`
+	// Optional overhead per head per day in USD.
+	OhsPerDay *float64 `protobuf:"fixed64,13,opt,name=ohs_per_day,json=ohsPerDay,proto3,oneof" json:"ohs_per_day,omitempty"`
+	// Optional spares cost per day in USD.
+	SparesPerDay *float64 `protobuf:"fixed64,14,opt,name=spares_per_day,json=sparesPerDay,proto3,oneof" json:"spares_per_day,omitempty"`
+	// Optional change-over quality loss in kgs.
+	KgsLostChange *float64 `protobuf:"fixed64,15,opt,name=kgs_lost_change,json=kgsLostChange,proto3,oneof" json:"kgs_lost_change,omitempty"`
+	// Optional volume bucket 1 quantity threshold.
+	Vb1Qty *float64 `protobuf:"fixed64,16,opt,name=vb1_qty,json=vb1Qty,proto3,oneof" json:"vb1_qty,omitempty"`
+	// Optional volume bucket 2 quantity threshold.
+	Vb2Qty *float64 `protobuf:"fixed64,17,opt,name=vb2_qty,json=vb2Qty,proto3,oneof" json:"vb2_qty,omitempty"`
+	// Optional volume bucket 3 quantity threshold.
+	Vb3Qty *float64 `protobuf:"fixed64,18,opt,name=vb3_qty,json=vb3Qty,proto3,oneof" json:"vb3_qty,omitempty"`
+	// Optional volume bucket 4 quantity threshold.
+	Vb4Qty *float64 `protobuf:"fixed64,19,opt,name=vb4_qty,json=vb4Qty,proto3,oneof" json:"vb4_qty,omitempty"`
+	// Optional volume bucket 5 quantity threshold.
+	Vb5Qty *float64 `protobuf:"fixed64,20,opt,name=vb5_qty,json=vb5Qty,proto3,oneof" json:"vb5_qty,omitempty"`
+	// Optional Oracle CMM_POY_BOBBIN_WEIGHT (≥ 0).
+	McPoyBobbinWeight *float64 `protobuf:"fixed64,21,opt,name=mc_poy_bobbin_weight,json=mcPoyBobbinWeight,proto3,oneof" json:"mc_poy_bobbin_weight,omitempty"`
+	// Optional Oracle CMM_TOT_FXD_CST (≥ 0).
+	McTotFxdCst *float64 `protobuf:"fixed64,22,opt,name=mc_tot_fxd_cst,json=mcTotFxdCst,proto3,oneof" json:"mc_tot_fxd_cst,omitempty"`
+	// Optional Oracle CMM_BOBBIN_PER_TROLLY (≥ 0).
+	McBobbinPerTrolly *float64 `protobuf:"fixed64,23,opt,name=mc_bobbin_per_trolly,json=mcBobbinPerTrolly,proto3,oneof" json:"mc_bobbin_per_trolly,omitempty"`
+	// Optional Oracle CMM_BOX_COST (≥ 0).
+	McBoxCost *float64 `protobuf:"fixed64,24,opt,name=mc_box_cost,json=mcBoxCost,proto3,oneof" json:"mc_box_cost,omitempty"`
+	// Optional Oracle CMM_CAPTIVE_PER_BOBBIN (≥ 0).
+	McCaptivePerBobbin *float64 `protobuf:"fixed64,25,opt,name=mc_captive_per_bobbin,json=mcCaptivePerBobbin,proto3,oneof" json:"mc_captive_per_bobbin,omitempty"`
+	// Optional Oracle CMM_WEIGHTAGE (≥ 0).
+	McWeightage   *float64 `protobuf:"fixed64,26,opt,name=mc_weightage,json=mcWeightage,proto3,oneof" json:"mc_weightage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -383,6 +548,111 @@ func (x *CreateMachineRequest) GetNotes() string {
 		return x.Notes
 	}
 	return ""
+}
+
+func (x *CreateMachineRequest) GetMpPerDay() float64 {
+	if x != nil && x.MpPerDay != nil {
+		return *x.MpPerDay
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetOhsPerDay() float64 {
+	if x != nil && x.OhsPerDay != nil {
+		return *x.OhsPerDay
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetSparesPerDay() float64 {
+	if x != nil && x.SparesPerDay != nil {
+		return *x.SparesPerDay
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetKgsLostChange() float64 {
+	if x != nil && x.KgsLostChange != nil {
+		return *x.KgsLostChange
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetVb1Qty() float64 {
+	if x != nil && x.Vb1Qty != nil {
+		return *x.Vb1Qty
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetVb2Qty() float64 {
+	if x != nil && x.Vb2Qty != nil {
+		return *x.Vb2Qty
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetVb3Qty() float64 {
+	if x != nil && x.Vb3Qty != nil {
+		return *x.Vb3Qty
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetVb4Qty() float64 {
+	if x != nil && x.Vb4Qty != nil {
+		return *x.Vb4Qty
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetVb5Qty() float64 {
+	if x != nil && x.Vb5Qty != nil {
+		return *x.Vb5Qty
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetMcPoyBobbinWeight() float64 {
+	if x != nil && x.McPoyBobbinWeight != nil {
+		return *x.McPoyBobbinWeight
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetMcTotFxdCst() float64 {
+	if x != nil && x.McTotFxdCst != nil {
+		return *x.McTotFxdCst
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetMcBobbinPerTrolly() float64 {
+	if x != nil && x.McBobbinPerTrolly != nil {
+		return *x.McBobbinPerTrolly
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetMcBoxCost() float64 {
+	if x != nil && x.McBoxCost != nil {
+		return *x.McBoxCost
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetMcCaptivePerBobbin() float64 {
+	if x != nil && x.McCaptivePerBobbin != nil {
+		return *x.McCaptivePerBobbin
+	}
+	return 0
+}
+
+func (x *CreateMachineRequest) GetMcWeightage() float64 {
+	if x != nil && x.McWeightage != nil {
+		return *x.McWeightage
+	}
+	return 0
 }
 
 // CreateMachineResponse is the response for creating a machine.
@@ -567,7 +837,37 @@ type UpdateMachineRequest struct {
 	// Updated notes (max 1000 chars).
 	Notes *string `protobuf:"bytes,11,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	// Updated active status.
-	IsActive      *bool `protobuf:"varint,12,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	IsActive *bool `protobuf:"varint,12,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// Optional manpower cost per day in USD.
+	MpPerDay *float64 `protobuf:"fixed64,13,opt,name=mp_per_day,json=mpPerDay,proto3,oneof" json:"mp_per_day,omitempty"`
+	// Optional overhead per head per day in USD.
+	OhsPerDay *float64 `protobuf:"fixed64,14,opt,name=ohs_per_day,json=ohsPerDay,proto3,oneof" json:"ohs_per_day,omitempty"`
+	// Optional spares cost per day in USD.
+	SparesPerDay *float64 `protobuf:"fixed64,15,opt,name=spares_per_day,json=sparesPerDay,proto3,oneof" json:"spares_per_day,omitempty"`
+	// Optional change-over quality loss in kgs.
+	KgsLostChange *float64 `protobuf:"fixed64,16,opt,name=kgs_lost_change,json=kgsLostChange,proto3,oneof" json:"kgs_lost_change,omitempty"`
+	// Optional volume bucket 1 quantity threshold.
+	Vb1Qty *float64 `protobuf:"fixed64,17,opt,name=vb1_qty,json=vb1Qty,proto3,oneof" json:"vb1_qty,omitempty"`
+	// Optional volume bucket 2 quantity threshold.
+	Vb2Qty *float64 `protobuf:"fixed64,18,opt,name=vb2_qty,json=vb2Qty,proto3,oneof" json:"vb2_qty,omitempty"`
+	// Optional volume bucket 3 quantity threshold.
+	Vb3Qty *float64 `protobuf:"fixed64,19,opt,name=vb3_qty,json=vb3Qty,proto3,oneof" json:"vb3_qty,omitempty"`
+	// Optional volume bucket 4 quantity threshold.
+	Vb4Qty *float64 `protobuf:"fixed64,20,opt,name=vb4_qty,json=vb4Qty,proto3,oneof" json:"vb4_qty,omitempty"`
+	// Optional volume bucket 5 quantity threshold.
+	Vb5Qty *float64 `protobuf:"fixed64,21,opt,name=vb5_qty,json=vb5Qty,proto3,oneof" json:"vb5_qty,omitempty"`
+	// Optional updated Oracle CMM_POY_BOBBIN_WEIGHT (≥ 0).
+	McPoyBobbinWeight *float64 `protobuf:"fixed64,22,opt,name=mc_poy_bobbin_weight,json=mcPoyBobbinWeight,proto3,oneof" json:"mc_poy_bobbin_weight,omitempty"`
+	// Optional updated Oracle CMM_TOT_FXD_CST (≥ 0).
+	McTotFxdCst *float64 `protobuf:"fixed64,23,opt,name=mc_tot_fxd_cst,json=mcTotFxdCst,proto3,oneof" json:"mc_tot_fxd_cst,omitempty"`
+	// Optional updated Oracle CMM_BOBBIN_PER_TROLLY (≥ 0).
+	McBobbinPerTrolly *float64 `protobuf:"fixed64,24,opt,name=mc_bobbin_per_trolly,json=mcBobbinPerTrolly,proto3,oneof" json:"mc_bobbin_per_trolly,omitempty"`
+	// Optional updated Oracle CMM_BOX_COST (≥ 0).
+	McBoxCost *float64 `protobuf:"fixed64,25,opt,name=mc_box_cost,json=mcBoxCost,proto3,oneof" json:"mc_box_cost,omitempty"`
+	// Optional updated Oracle CMM_CAPTIVE_PER_BOBBIN (≥ 0).
+	McCaptivePerBobbin *float64 `protobuf:"fixed64,26,opt,name=mc_captive_per_bobbin,json=mcCaptivePerBobbin,proto3,oneof" json:"mc_captive_per_bobbin,omitempty"`
+	// Optional updated Oracle CMM_WEIGHTAGE (≥ 0).
+	McWeightage   *float64 `protobuf:"fixed64,27,opt,name=mc_weightage,json=mcWeightage,proto3,oneof" json:"mc_weightage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -684,6 +984,111 @@ func (x *UpdateMachineRequest) GetIsActive() bool {
 		return *x.IsActive
 	}
 	return false
+}
+
+func (x *UpdateMachineRequest) GetMpPerDay() float64 {
+	if x != nil && x.MpPerDay != nil {
+		return *x.MpPerDay
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetOhsPerDay() float64 {
+	if x != nil && x.OhsPerDay != nil {
+		return *x.OhsPerDay
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetSparesPerDay() float64 {
+	if x != nil && x.SparesPerDay != nil {
+		return *x.SparesPerDay
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetKgsLostChange() float64 {
+	if x != nil && x.KgsLostChange != nil {
+		return *x.KgsLostChange
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetVb1Qty() float64 {
+	if x != nil && x.Vb1Qty != nil {
+		return *x.Vb1Qty
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetVb2Qty() float64 {
+	if x != nil && x.Vb2Qty != nil {
+		return *x.Vb2Qty
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetVb3Qty() float64 {
+	if x != nil && x.Vb3Qty != nil {
+		return *x.Vb3Qty
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetVb4Qty() float64 {
+	if x != nil && x.Vb4Qty != nil {
+		return *x.Vb4Qty
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetVb5Qty() float64 {
+	if x != nil && x.Vb5Qty != nil {
+		return *x.Vb5Qty
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetMcPoyBobbinWeight() float64 {
+	if x != nil && x.McPoyBobbinWeight != nil {
+		return *x.McPoyBobbinWeight
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetMcTotFxdCst() float64 {
+	if x != nil && x.McTotFxdCst != nil {
+		return *x.McTotFxdCst
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetMcBobbinPerTrolly() float64 {
+	if x != nil && x.McBobbinPerTrolly != nil {
+		return *x.McBobbinPerTrolly
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetMcBoxCost() float64 {
+	if x != nil && x.McBoxCost != nil {
+		return *x.McBoxCost
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetMcCaptivePerBobbin() float64 {
+	if x != nil && x.McCaptivePerBobbin != nil {
+		return *x.McCaptivePerBobbin
+	}
+	return 0
+}
+
+func (x *UpdateMachineRequest) GetMcWeightage() float64 {
+	if x != nil && x.McWeightage != nil {
+		return *x.McWeightage
+	}
+	return 0
 }
 
 // UpdateMachineResponse is the response for updating a machine.
@@ -1482,8 +1887,24 @@ type BoxBobbinCost struct {
 	Notes string `protobuf:"bytes,7,opt,name=notes,proto3" json:"notes,omitempty"`
 	// Period-specific rate entries.
 	Rates []*BoxBobbinCostRate `protobuf:"bytes,8,rep,name=rates,proto3" json:"rates,omitempty"`
+	// Optional bobbin reuse count (from Oracle CMBBC_BBN_REUSE).
+	BbnReuse *float64 `protobuf:"fixed64,9,opt,name=bbn_reuse,json=bbnReuse,proto3,oneof" json:"bbn_reuse,omitempty"`
+	// Optional box reuse count (from Oracle CMBBC_BOX_REUSE).
+	BoxReuse *float64 `protobuf:"fixed64,10,opt,name=box_reuse,json=boxReuse,proto3,oneof" json:"box_reuse,omitempty"`
+	// Optional MKT box rate in USD/box (param CAPTIVE/DELIVERY_BOX_RATE MKT).
+	BoxCost *float64 `protobuf:"fixed64,11,opt,name=box_cost,json=boxCost,proto3,oneof" json:"box_cost,omitempty"`
+	// Optional MKT bobbin rate in USD/bobbin (param CAPTIVE/DELIVERY_BOB_RATE MKT).
+	BobinCost *float64 `protobuf:"fixed64,12,opt,name=bobin_cost,json=bobinCost,proto3,oneof" json:"bobin_cost,omitempty"`
+	// Optional VAL box rate in USD/box (param CAPTIVE/DELIVERY_BOX_RATE VAL).
+	BoxCostVal *float64 `protobuf:"fixed64,13,opt,name=box_cost_val,json=boxCostVal,proto3,oneof" json:"box_cost_val,omitempty"`
+	// Optional VAL bobbin rate in USD/bobbin (param CAPTIVE/DELIVERY_BOB_RATE VAL).
+	BobinCostVal *float64 `protobuf:"fixed64,14,opt,name=bobin_cost_val,json=bobinCostVal,proto3,oneof" json:"bobin_cost_val,omitempty"`
+	// Optional Oracle CMBBC_BBN_REUSE_VAL — bobbin reuse count for VAL session.
+	BbnReuseVal *float64 `protobuf:"fixed64,15,opt,name=bbn_reuse_val,json=bbnReuseVal,proto3,oneof" json:"bbn_reuse_val,omitempty"`
 	// Audit metadata.
-	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	Audit *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	// Optional Oracle CMBBC_BOX_REUSE_VAL — box reuse count for VAL session.
+	BoxReuseVal   *float64 `protobuf:"fixed64,17,opt,name=box_reuse_val,json=boxReuseVal,proto3,oneof" json:"box_reuse_val,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1574,11 +1995,67 @@ func (x *BoxBobbinCost) GetRates() []*BoxBobbinCostRate {
 	return nil
 }
 
+func (x *BoxBobbinCost) GetBbnReuse() float64 {
+	if x != nil && x.BbnReuse != nil {
+		return *x.BbnReuse
+	}
+	return 0
+}
+
+func (x *BoxBobbinCost) GetBoxReuse() float64 {
+	if x != nil && x.BoxReuse != nil {
+		return *x.BoxReuse
+	}
+	return 0
+}
+
+func (x *BoxBobbinCost) GetBoxCost() float64 {
+	if x != nil && x.BoxCost != nil {
+		return *x.BoxCost
+	}
+	return 0
+}
+
+func (x *BoxBobbinCost) GetBobinCost() float64 {
+	if x != nil && x.BobinCost != nil {
+		return *x.BobinCost
+	}
+	return 0
+}
+
+func (x *BoxBobbinCost) GetBoxCostVal() float64 {
+	if x != nil && x.BoxCostVal != nil {
+		return *x.BoxCostVal
+	}
+	return 0
+}
+
+func (x *BoxBobbinCost) GetBobinCostVal() float64 {
+	if x != nil && x.BobinCostVal != nil {
+		return *x.BobinCostVal
+	}
+	return 0
+}
+
+func (x *BoxBobbinCost) GetBbnReuseVal() float64 {
+	if x != nil && x.BbnReuseVal != nil {
+		return *x.BbnReuseVal
+	}
+	return 0
+}
+
 func (x *BoxBobbinCost) GetAudit() *v1.AuditInfo {
 	if x != nil {
 		return x.Audit
 	}
 	return nil
+}
+
+func (x *BoxBobbinCost) GetBoxReuseVal() float64 {
+	if x != nil && x.BoxReuseVal != nil {
+		return *x.BoxReuseVal
+	}
+	return 0
 }
 
 // CreateBoxBobbinCostRequest is the request for creating a Box Bobbin Cost config.
@@ -1593,7 +2070,23 @@ type CreateBoxBobbinCostRequest struct {
 	// Number of bobbins per box (≥ 1).
 	NoOfBob int32 `protobuf:"varint,4,opt,name=no_of_bob,json=noOfBob,proto3" json:"no_of_bob,omitempty"`
 	// Optional notes (max 1000 chars).
-	Notes         string `protobuf:"bytes,5,opt,name=notes,proto3" json:"notes,omitempty"`
+	Notes string `protobuf:"bytes,5,opt,name=notes,proto3" json:"notes,omitempty"`
+	// Optional bobbin reuse count (≥ 0).
+	BbnReuse *float64 `protobuf:"fixed64,6,opt,name=bbn_reuse,json=bbnReuse,proto3,oneof" json:"bbn_reuse,omitempty"`
+	// Optional box reuse count (≥ 0).
+	BoxReuse *float64 `protobuf:"fixed64,7,opt,name=box_reuse,json=boxReuse,proto3,oneof" json:"box_reuse,omitempty"`
+	// Optional MKT box rate in USD/box (≥ 0).
+	BoxCost *float64 `protobuf:"fixed64,8,opt,name=box_cost,json=boxCost,proto3,oneof" json:"box_cost,omitempty"`
+	// Optional MKT bobbin rate in USD/bobbin (≥ 0).
+	BobinCost *float64 `protobuf:"fixed64,9,opt,name=bobin_cost,json=bobinCost,proto3,oneof" json:"bobin_cost,omitempty"`
+	// Optional VAL box rate in USD/box (≥ 0).
+	BoxCostVal *float64 `protobuf:"fixed64,10,opt,name=box_cost_val,json=boxCostVal,proto3,oneof" json:"box_cost_val,omitempty"`
+	// Optional VAL bobbin rate in USD/bobbin (≥ 0).
+	BobinCostVal *float64 `protobuf:"fixed64,11,opt,name=bobin_cost_val,json=bobinCostVal,proto3,oneof" json:"bobin_cost_val,omitempty"`
+	// Optional Oracle CMBBC_BBN_REUSE_VAL (≥ 0).
+	BbnReuseVal *float64 `protobuf:"fixed64,12,opt,name=bbn_reuse_val,json=bbnReuseVal,proto3,oneof" json:"bbn_reuse_val,omitempty"`
+	// Optional Oracle CMBBC_BOX_REUSE_VAL (≥ 0).
+	BoxReuseVal   *float64 `protobuf:"fixed64,13,opt,name=box_reuse_val,json=boxReuseVal,proto3,oneof" json:"box_reuse_val,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1661,6 +2154,62 @@ func (x *CreateBoxBobbinCostRequest) GetNotes() string {
 		return x.Notes
 	}
 	return ""
+}
+
+func (x *CreateBoxBobbinCostRequest) GetBbnReuse() float64 {
+	if x != nil && x.BbnReuse != nil {
+		return *x.BbnReuse
+	}
+	return 0
+}
+
+func (x *CreateBoxBobbinCostRequest) GetBoxReuse() float64 {
+	if x != nil && x.BoxReuse != nil {
+		return *x.BoxReuse
+	}
+	return 0
+}
+
+func (x *CreateBoxBobbinCostRequest) GetBoxCost() float64 {
+	if x != nil && x.BoxCost != nil {
+		return *x.BoxCost
+	}
+	return 0
+}
+
+func (x *CreateBoxBobbinCostRequest) GetBobinCost() float64 {
+	if x != nil && x.BobinCost != nil {
+		return *x.BobinCost
+	}
+	return 0
+}
+
+func (x *CreateBoxBobbinCostRequest) GetBoxCostVal() float64 {
+	if x != nil && x.BoxCostVal != nil {
+		return *x.BoxCostVal
+	}
+	return 0
+}
+
+func (x *CreateBoxBobbinCostRequest) GetBobinCostVal() float64 {
+	if x != nil && x.BobinCostVal != nil {
+		return *x.BobinCostVal
+	}
+	return 0
+}
+
+func (x *CreateBoxBobbinCostRequest) GetBbnReuseVal() float64 {
+	if x != nil && x.BbnReuseVal != nil {
+		return *x.BbnReuseVal
+	}
+	return 0
+}
+
+func (x *CreateBoxBobbinCostRequest) GetBoxReuseVal() float64 {
+	if x != nil && x.BoxReuseVal != nil {
+		return *x.BoxReuseVal
+	}
+	return 0
 }
 
 // CreateBoxBobbinCostResponse is the response for creating a Box Bobbin Cost config.
@@ -1833,7 +2382,23 @@ type UpdateBoxBobbinCostRequest struct {
 	// Updated notes (max 1000 chars).
 	Notes *string `protobuf:"bytes,5,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	// Updated active status.
-	IsActive      *bool `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	IsActive *bool `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// Optional updated bobbin reuse count (≥ 0).
+	BbnReuse *float64 `protobuf:"fixed64,7,opt,name=bbn_reuse,json=bbnReuse,proto3,oneof" json:"bbn_reuse,omitempty"`
+	// Optional updated box reuse count (≥ 0).
+	BoxReuse *float64 `protobuf:"fixed64,8,opt,name=box_reuse,json=boxReuse,proto3,oneof" json:"box_reuse,omitempty"`
+	// Optional updated MKT box rate in USD/box (≥ 0).
+	BoxCost *float64 `protobuf:"fixed64,9,opt,name=box_cost,json=boxCost,proto3,oneof" json:"box_cost,omitempty"`
+	// Optional updated MKT bobbin rate in USD/bobbin (≥ 0).
+	BobinCost *float64 `protobuf:"fixed64,10,opt,name=bobin_cost,json=bobinCost,proto3,oneof" json:"bobin_cost,omitempty"`
+	// Optional updated VAL box rate in USD/box (≥ 0).
+	BoxCostVal *float64 `protobuf:"fixed64,11,opt,name=box_cost_val,json=boxCostVal,proto3,oneof" json:"box_cost_val,omitempty"`
+	// Optional updated VAL bobbin rate in USD/bobbin (≥ 0).
+	BobinCostVal *float64 `protobuf:"fixed64,12,opt,name=bobin_cost_val,json=bobinCostVal,proto3,oneof" json:"bobin_cost_val,omitempty"`
+	// Optional Oracle CMBBC_BBN_REUSE_VAL (≥ 0).
+	BbnReuseVal *float64 `protobuf:"fixed64,13,opt,name=bbn_reuse_val,json=bbnReuseVal,proto3,oneof" json:"bbn_reuse_val,omitempty"`
+	// Optional Oracle CMBBC_BOX_REUSE_VAL (≥ 0).
+	BoxReuseVal   *float64 `protobuf:"fixed64,14,opt,name=box_reuse_val,json=boxReuseVal,proto3,oneof" json:"box_reuse_val,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1908,6 +2473,62 @@ func (x *UpdateBoxBobbinCostRequest) GetIsActive() bool {
 		return *x.IsActive
 	}
 	return false
+}
+
+func (x *UpdateBoxBobbinCostRequest) GetBbnReuse() float64 {
+	if x != nil && x.BbnReuse != nil {
+		return *x.BbnReuse
+	}
+	return 0
+}
+
+func (x *UpdateBoxBobbinCostRequest) GetBoxReuse() float64 {
+	if x != nil && x.BoxReuse != nil {
+		return *x.BoxReuse
+	}
+	return 0
+}
+
+func (x *UpdateBoxBobbinCostRequest) GetBoxCost() float64 {
+	if x != nil && x.BoxCost != nil {
+		return *x.BoxCost
+	}
+	return 0
+}
+
+func (x *UpdateBoxBobbinCostRequest) GetBobinCost() float64 {
+	if x != nil && x.BobinCost != nil {
+		return *x.BobinCost
+	}
+	return 0
+}
+
+func (x *UpdateBoxBobbinCostRequest) GetBoxCostVal() float64 {
+	if x != nil && x.BoxCostVal != nil {
+		return *x.BoxCostVal
+	}
+	return 0
+}
+
+func (x *UpdateBoxBobbinCostRequest) GetBobinCostVal() float64 {
+	if x != nil && x.BobinCostVal != nil {
+		return *x.BobinCostVal
+	}
+	return 0
+}
+
+func (x *UpdateBoxBobbinCostRequest) GetBbnReuseVal() float64 {
+	if x != nil && x.BbnReuseVal != nil {
+		return *x.BbnReuseVal
+	}
+	return 0
+}
+
+func (x *UpdateBoxBobbinCostRequest) GetBoxReuseVal() float64 {
+	if x != nil && x.BoxReuseVal != nil {
+		return *x.BoxReuseVal
+	}
+	return 0
 }
 
 // UpdateBoxBobbinCostResponse is the response for updating a Box Bobbin Cost config.
@@ -3916,6 +4537,18 @@ type ProductGrade struct {
 	IsActive bool `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	// Optional notes.
 	Notes string `protobuf:"bytes,9,opt,name=notes,proto3" json:"notes,omitempty"`
+	// Pattern match key (e.g., "DBR <=600D").
+	PgDetailProduct string `protobuf:"bytes,10,opt,name=pg_detail_product,json=pgDetailProduct,proto3" json:"pg_detail_product,omitempty"`
+	// Grade label for STD_VALUE_LOSS.
+	PgGradeLabel string `protobuf:"bytes,11,opt,name=pg_grade_label,json=pgGradeLabel,proto3" json:"pg_grade_label,omitempty"`
+	// BC_SPECIAL_PROD rate.
+	StdSellingPrice float64 `protobuf:"fixed64,12,opt,name=std_selling_price,json=stdSellingPrice,proto3" json:"std_selling_price,omitempty"`
+	// VALUE_LOSS rate.
+	SpValue float64 `protobuf:"fixed64,13,opt,name=sp_value,json=spValue,proto3" json:"sp_value,omitempty"`
+	// Optional loss factor (param NON_STD_SPECIAL_PROD, from Oracle CMPG_LOSS).
+	LossPct *float64 `protobuf:"fixed64,14,opt,name=loss_pct,json=lossPct,proto3,oneof" json:"loss_pct,omitempty"`
+	// Optional display sequence number (from Oracle CMPG_SEQ_NO).
+	SeqNo *int32 `protobuf:"varint,15,opt,name=seq_no,json=seqNo,proto3,oneof" json:"seq_no,omitempty"`
 	// Audit metadata.
 	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -4015,6 +4648,48 @@ func (x *ProductGrade) GetNotes() string {
 	return ""
 }
 
+func (x *ProductGrade) GetPgDetailProduct() string {
+	if x != nil {
+		return x.PgDetailProduct
+	}
+	return ""
+}
+
+func (x *ProductGrade) GetPgGradeLabel() string {
+	if x != nil {
+		return x.PgGradeLabel
+	}
+	return ""
+}
+
+func (x *ProductGrade) GetStdSellingPrice() float64 {
+	if x != nil {
+		return x.StdSellingPrice
+	}
+	return 0
+}
+
+func (x *ProductGrade) GetSpValue() float64 {
+	if x != nil {
+		return x.SpValue
+	}
+	return 0
+}
+
+func (x *ProductGrade) GetLossPct() float64 {
+	if x != nil && x.LossPct != nil {
+		return *x.LossPct
+	}
+	return 0
+}
+
+func (x *ProductGrade) GetSeqNo() int32 {
+	if x != nil && x.SeqNo != nil {
+		return *x.SeqNo
+	}
+	return 0
+}
+
 func (x *ProductGrade) GetAudit() *v1.AuditInfo {
 	if x != nil {
 		return x.Audit
@@ -4038,7 +4713,19 @@ type CreateProductGradeRequest struct {
 	// Recovery rate for BC grade (0-100).
 	BcRecoveryRate float64 `protobuf:"fixed64,6,opt,name=bc_recovery_rate,json=bcRecoveryRate,proto3" json:"bc_recovery_rate,omitempty"`
 	// Optional notes (max 1000 chars).
-	Notes         string `protobuf:"bytes,7,opt,name=notes,proto3" json:"notes,omitempty"`
+	Notes string `protobuf:"bytes,7,opt,name=notes,proto3" json:"notes,omitempty"`
+	// Pattern match key (max 100 chars).
+	PgDetailProduct string `protobuf:"bytes,8,opt,name=pg_detail_product,json=pgDetailProduct,proto3" json:"pg_detail_product,omitempty"`
+	// Grade label for STD_VALUE_LOSS (max 50 chars).
+	PgGradeLabel string `protobuf:"bytes,9,opt,name=pg_grade_label,json=pgGradeLabel,proto3" json:"pg_grade_label,omitempty"`
+	// BC_SPECIAL_PROD rate (≥ 0).
+	StdSellingPrice float64 `protobuf:"fixed64,10,opt,name=std_selling_price,json=stdSellingPrice,proto3" json:"std_selling_price,omitempty"`
+	// VALUE_LOSS rate (≥ 0).
+	SpValue float64 `protobuf:"fixed64,11,opt,name=sp_value,json=spValue,proto3" json:"sp_value,omitempty"`
+	// Optional loss factor (≥ 0).
+	LossPct *float64 `protobuf:"fixed64,12,opt,name=loss_pct,json=lossPct,proto3,oneof" json:"loss_pct,omitempty"`
+	// Optional display sequence number (≥ 0).
+	SeqNo         *int32 `protobuf:"varint,13,opt,name=seq_no,json=seqNo,proto3,oneof" json:"seq_no,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4120,6 +4807,48 @@ func (x *CreateProductGradeRequest) GetNotes() string {
 		return x.Notes
 	}
 	return ""
+}
+
+func (x *CreateProductGradeRequest) GetPgDetailProduct() string {
+	if x != nil {
+		return x.PgDetailProduct
+	}
+	return ""
+}
+
+func (x *CreateProductGradeRequest) GetPgGradeLabel() string {
+	if x != nil {
+		return x.PgGradeLabel
+	}
+	return ""
+}
+
+func (x *CreateProductGradeRequest) GetStdSellingPrice() float64 {
+	if x != nil {
+		return x.StdSellingPrice
+	}
+	return 0
+}
+
+func (x *CreateProductGradeRequest) GetSpValue() float64 {
+	if x != nil {
+		return x.SpValue
+	}
+	return 0
+}
+
+func (x *CreateProductGradeRequest) GetLossPct() float64 {
+	if x != nil && x.LossPct != nil {
+		return *x.LossPct
+	}
+	return 0
+}
+
+func (x *CreateProductGradeRequest) GetSeqNo() int32 {
+	if x != nil && x.SeqNo != nil {
+		return *x.SeqNo
+	}
+	return 0
 }
 
 // CreateProductGradeResponse is the response for creating a Product Grade.
@@ -4296,7 +5025,19 @@ type UpdateProductGradeRequest struct {
 	// Updated notes (max 1000 chars).
 	Notes *string `protobuf:"bytes,7,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	// Updated active status.
-	IsActive      *bool `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	IsActive *bool `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// Optional pattern match key (max 100 chars).
+	PgDetailProduct *string `protobuf:"bytes,9,opt,name=pg_detail_product,json=pgDetailProduct,proto3,oneof" json:"pg_detail_product,omitempty"`
+	// Optional grade label for STD_VALUE_LOSS (max 50 chars).
+	PgGradeLabel *string `protobuf:"bytes,10,opt,name=pg_grade_label,json=pgGradeLabel,proto3,oneof" json:"pg_grade_label,omitempty"`
+	// Optional BC_SPECIAL_PROD rate (≥ 0).
+	StdSellingPrice *float64 `protobuf:"fixed64,11,opt,name=std_selling_price,json=stdSellingPrice,proto3,oneof" json:"std_selling_price,omitempty"`
+	// Optional VALUE_LOSS rate (≥ 0).
+	SpValue *float64 `protobuf:"fixed64,12,opt,name=sp_value,json=spValue,proto3,oneof" json:"sp_value,omitempty"`
+	// Optional updated loss factor (≥ 0).
+	LossPct *float64 `protobuf:"fixed64,13,opt,name=loss_pct,json=lossPct,proto3,oneof" json:"loss_pct,omitempty"`
+	// Optional updated display sequence number (≥ 0).
+	SeqNo         *int32 `protobuf:"varint,14,opt,name=seq_no,json=seqNo,proto3,oneof" json:"seq_no,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4385,6 +5126,48 @@ func (x *UpdateProductGradeRequest) GetIsActive() bool {
 		return *x.IsActive
 	}
 	return false
+}
+
+func (x *UpdateProductGradeRequest) GetPgDetailProduct() string {
+	if x != nil && x.PgDetailProduct != nil {
+		return *x.PgDetailProduct
+	}
+	return ""
+}
+
+func (x *UpdateProductGradeRequest) GetPgGradeLabel() string {
+	if x != nil && x.PgGradeLabel != nil {
+		return *x.PgGradeLabel
+	}
+	return ""
+}
+
+func (x *UpdateProductGradeRequest) GetStdSellingPrice() float64 {
+	if x != nil && x.StdSellingPrice != nil {
+		return *x.StdSellingPrice
+	}
+	return 0
+}
+
+func (x *UpdateProductGradeRequest) GetSpValue() float64 {
+	if x != nil && x.SpValue != nil {
+		return *x.SpValue
+	}
+	return 0
+}
+
+func (x *UpdateProductGradeRequest) GetLossPct() float64 {
+	if x != nil && x.LossPct != nil {
+		return *x.LossPct
+	}
+	return 0
+}
+
+func (x *UpdateProductGradeRequest) GetSeqNo() int32 {
+	if x != nil && x.SeqNo != nil {
+		return *x.SeqNo
+	}
+	return 0
 }
 
 // UpdateProductGradeResponse is the response for updating a Product Grade.
@@ -5065,6 +5848,16 @@ type MBHead struct {
 	MbhDozing *float64 `protobuf:"fixed64,7,opt,name=mbh_dozing,json=mbhDozing,proto3,oneof" json:"mbh_dozing,omitempty"`
 	// Whether the record is active.
 	MbhIsActive bool `protobuf:"varint,8,opt,name=mbh_is_active,json=mbhIsActive,proto3" json:"mbh_is_active,omitempty"`
+	// Optional Oracle CMBH_CHECK_STATUS — check status (Waiting/Current/Approved).
+	MbhCheckStatus *string `protobuf:"bytes,9,opt,name=mbh_check_status,json=mbhCheckStatus,proto3,oneof" json:"mbh_check_status,omitempty"`
+	// Optional Oracle CMBH_STATUS — head status (R and D/Spinning/Boughtout).
+	MbhStatus *string `protobuf:"bytes,10,opt,name=mbh_status,json=mbhStatus,proto3,oneof" json:"mbh_status,omitempty"`
+	// Optional Oracle CMBH_LDR_PRSN — LDR person value.
+	MbhLdrPrsn *float64 `protobuf:"fixed64,11,opt,name=mbh_ldr_prsn,json=mbhLdrPrsn,proto3,oneof" json:"mbh_ldr_prsn,omitempty"`
+	// Optional Oracle CMBH_FINAL_PRODUCT — final product description.
+	MbhFinalProduct *string `protobuf:"bytes,12,opt,name=mbh_final_product,json=mbhFinalProduct,proto3,oneof" json:"mbh_final_product,omitempty"`
+	// Optional Oracle CMBH_CODE — product code.
+	MbhCode *string `protobuf:"bytes,13,opt,name=mbh_code,json=mbhCode,proto3,oneof" json:"mbh_code,omitempty"`
 	// Audit metadata.
 	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -5157,6 +5950,41 @@ func (x *MBHead) GetMbhIsActive() bool {
 	return false
 }
 
+func (x *MBHead) GetMbhCheckStatus() string {
+	if x != nil && x.MbhCheckStatus != nil {
+		return *x.MbhCheckStatus
+	}
+	return ""
+}
+
+func (x *MBHead) GetMbhStatus() string {
+	if x != nil && x.MbhStatus != nil {
+		return *x.MbhStatus
+	}
+	return ""
+}
+
+func (x *MBHead) GetMbhLdrPrsn() float64 {
+	if x != nil && x.MbhLdrPrsn != nil {
+		return *x.MbhLdrPrsn
+	}
+	return 0
+}
+
+func (x *MBHead) GetMbhFinalProduct() string {
+	if x != nil && x.MbhFinalProduct != nil {
+		return *x.MbhFinalProduct
+	}
+	return ""
+}
+
+func (x *MBHead) GetMbhCode() string {
+	if x != nil && x.MbhCode != nil {
+		return *x.MbhCode
+	}
+	return ""
+}
+
 func (x *MBHead) GetAudit() *v1.AuditInfo {
 	if x != nil {
 		return x.Audit
@@ -5178,7 +6006,17 @@ type CreateMBHeadRequest struct {
 	// Optional number of filaments.
 	MbhFilament *int32 `protobuf:"varint,5,opt,name=mbh_filament,json=mbhFilament,proto3,oneof" json:"mbh_filament,omitempty"`
 	// Optional dozing percentage.
-	MbhDozing     *float64 `protobuf:"fixed64,6,opt,name=mbh_dozing,json=mbhDozing,proto3,oneof" json:"mbh_dozing,omitempty"`
+	MbhDozing *float64 `protobuf:"fixed64,6,opt,name=mbh_dozing,json=mbhDozing,proto3,oneof" json:"mbh_dozing,omitempty"`
+	// Optional Oracle CMBH_CHECK_STATUS (max 50 chars).
+	MbhCheckStatus *string `protobuf:"bytes,7,opt,name=mbh_check_status,json=mbhCheckStatus,proto3,oneof" json:"mbh_check_status,omitempty"`
+	// Optional Oracle CMBH_STATUS (max 100 chars).
+	MbhStatus *string `protobuf:"bytes,8,opt,name=mbh_status,json=mbhStatus,proto3,oneof" json:"mbh_status,omitempty"`
+	// Optional Oracle CMBH_LDR_PRSN (≥ 0).
+	MbhLdrPrsn *float64 `protobuf:"fixed64,9,opt,name=mbh_ldr_prsn,json=mbhLdrPrsn,proto3,oneof" json:"mbh_ldr_prsn,omitempty"`
+	// Optional Oracle CMBH_FINAL_PRODUCT (max 200 chars).
+	MbhFinalProduct *string `protobuf:"bytes,10,opt,name=mbh_final_product,json=mbhFinalProduct,proto3,oneof" json:"mbh_final_product,omitempty"`
+	// Optional Oracle CMBH_CODE (max 100 chars).
+	MbhCode       *string `protobuf:"bytes,11,opt,name=mbh_code,json=mbhCode,proto3,oneof" json:"mbh_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5253,6 +6091,41 @@ func (x *CreateMBHeadRequest) GetMbhDozing() float64 {
 		return *x.MbhDozing
 	}
 	return 0
+}
+
+func (x *CreateMBHeadRequest) GetMbhCheckStatus() string {
+	if x != nil && x.MbhCheckStatus != nil {
+		return *x.MbhCheckStatus
+	}
+	return ""
+}
+
+func (x *CreateMBHeadRequest) GetMbhStatus() string {
+	if x != nil && x.MbhStatus != nil {
+		return *x.MbhStatus
+	}
+	return ""
+}
+
+func (x *CreateMBHeadRequest) GetMbhLdrPrsn() float64 {
+	if x != nil && x.MbhLdrPrsn != nil {
+		return *x.MbhLdrPrsn
+	}
+	return 0
+}
+
+func (x *CreateMBHeadRequest) GetMbhFinalProduct() string {
+	if x != nil && x.MbhFinalProduct != nil {
+		return *x.MbhFinalProduct
+	}
+	return ""
+}
+
+func (x *CreateMBHeadRequest) GetMbhCode() string {
+	if x != nil && x.MbhCode != nil {
+		return *x.MbhCode
+	}
+	return ""
 }
 
 // CreateMBHeadResponse is the response for creating an MB Head record.
@@ -5427,7 +6300,17 @@ type UpdateMBHeadRequest struct {
 	// Updated dozing percentage.
 	MbhDozing *float64 `protobuf:"fixed64,6,opt,name=mbh_dozing,json=mbhDozing,proto3,oneof" json:"mbh_dozing,omitempty"`
 	// Updated active status.
-	MbhIsActive   *bool `protobuf:"varint,7,opt,name=mbh_is_active,json=mbhIsActive,proto3,oneof" json:"mbh_is_active,omitempty"`
+	MbhIsActive *bool `protobuf:"varint,7,opt,name=mbh_is_active,json=mbhIsActive,proto3,oneof" json:"mbh_is_active,omitempty"`
+	// Optional Oracle CMBH_CHECK_STATUS (max 50 chars).
+	MbhCheckStatus *string `protobuf:"bytes,8,opt,name=mbh_check_status,json=mbhCheckStatus,proto3,oneof" json:"mbh_check_status,omitempty"`
+	// Optional Oracle CMBH_STATUS (max 100 chars).
+	MbhStatus *string `protobuf:"bytes,9,opt,name=mbh_status,json=mbhStatus,proto3,oneof" json:"mbh_status,omitempty"`
+	// Optional Oracle CMBH_LDR_PRSN (≥ 0).
+	MbhLdrPrsn *float64 `protobuf:"fixed64,10,opt,name=mbh_ldr_prsn,json=mbhLdrPrsn,proto3,oneof" json:"mbh_ldr_prsn,omitempty"`
+	// Optional Oracle CMBH_FINAL_PRODUCT (max 200 chars).
+	MbhFinalProduct *string `protobuf:"bytes,11,opt,name=mbh_final_product,json=mbhFinalProduct,proto3,oneof" json:"mbh_final_product,omitempty"`
+	// Optional Oracle CMBH_CODE (max 100 chars).
+	MbhCode       *string `protobuf:"bytes,12,opt,name=mbh_code,json=mbhCode,proto3,oneof" json:"mbh_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5509,6 +6392,41 @@ func (x *UpdateMBHeadRequest) GetMbhIsActive() bool {
 		return *x.MbhIsActive
 	}
 	return false
+}
+
+func (x *UpdateMBHeadRequest) GetMbhCheckStatus() string {
+	if x != nil && x.MbhCheckStatus != nil {
+		return *x.MbhCheckStatus
+	}
+	return ""
+}
+
+func (x *UpdateMBHeadRequest) GetMbhStatus() string {
+	if x != nil && x.MbhStatus != nil {
+		return *x.MbhStatus
+	}
+	return ""
+}
+
+func (x *UpdateMBHeadRequest) GetMbhLdrPrsn() float64 {
+	if x != nil && x.MbhLdrPrsn != nil {
+		return *x.MbhLdrPrsn
+	}
+	return 0
+}
+
+func (x *UpdateMBHeadRequest) GetMbhFinalProduct() string {
+	if x != nil && x.MbhFinalProduct != nil {
+		return *x.MbhFinalProduct
+	}
+	return ""
+}
+
+func (x *UpdateMBHeadRequest) GetMbhCode() string {
+	if x != nil && x.MbhCode != nil {
+		return *x.MbhCode
+	}
+	return ""
 }
 
 // UpdateMBHeadResponse is the response for updating an MB Head record.
@@ -6191,6 +7109,16 @@ type MBSpin struct {
 	MbsMbCosting string `protobuf:"bytes,8,opt,name=mbs_mb_costing,json=mbsMbCosting,proto3" json:"mbs_mb_costing,omitempty"`
 	// Whether the record is active.
 	MbsIsActive bool `protobuf:"varint,9,opt,name=mbs_is_active,json=mbsIsActive,proto3" json:"mbs_is_active,omitempty"`
+	// Optional MB/SP cost code.
+	MbsCc *string `protobuf:"bytes,10,opt,name=mbs_cc,json=mbsCc,proto3,oneof" json:"mbs_cc,omitempty"`
+	// Optional MB rate MKT in USD/kg.
+	MbsCostRateMkt *float64 `protobuf:"fixed64,11,opt,name=mbs_cost_rate_mkt,json=mbsCostRateMkt,proto3,oneof" json:"mbs_cost_rate_mkt,omitempty"`
+	// Optional Oracle CMBS_STATUS — spinning status (Spinning/R and D/Boughtout).
+	MbsStatus *string `protobuf:"bytes,12,opt,name=mbs_status,json=mbsStatus,proto3,oneof" json:"mbs_status,omitempty"`
+	// Optional Oracle CMBS_LDR_PRSN — LDR person value.
+	MbsLdrPrsn *float64 `protobuf:"fixed64,13,opt,name=mbs_ldr_prsn,json=mbsLdrPrsn,proto3,oneof" json:"mbs_ldr_prsn,omitempty"`
+	// Optional Oracle CMBS_FINAL_PRODUCT — final product description.
+	MbsFinalProduct *string `protobuf:"bytes,14,opt,name=mbs_final_product,json=mbsFinalProduct,proto3,oneof" json:"mbs_final_product,omitempty"`
 	// Audit metadata.
 	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -6290,6 +7218,41 @@ func (x *MBSpin) GetMbsIsActive() bool {
 	return false
 }
 
+func (x *MBSpin) GetMbsCc() string {
+	if x != nil && x.MbsCc != nil {
+		return *x.MbsCc
+	}
+	return ""
+}
+
+func (x *MBSpin) GetMbsCostRateMkt() float64 {
+	if x != nil && x.MbsCostRateMkt != nil {
+		return *x.MbsCostRateMkt
+	}
+	return 0
+}
+
+func (x *MBSpin) GetMbsStatus() string {
+	if x != nil && x.MbsStatus != nil {
+		return *x.MbsStatus
+	}
+	return ""
+}
+
+func (x *MBSpin) GetMbsLdrPrsn() float64 {
+	if x != nil && x.MbsLdrPrsn != nil {
+		return *x.MbsLdrPrsn
+	}
+	return 0
+}
+
+func (x *MBSpin) GetMbsFinalProduct() string {
+	if x != nil && x.MbsFinalProduct != nil {
+		return *x.MbsFinalProduct
+	}
+	return ""
+}
+
 func (x *MBSpin) GetAudit() *v1.AuditInfo {
 	if x != nil {
 		return x.Audit
@@ -6313,9 +7276,19 @@ type CreateMBSpinRequest struct {
 	// Optional spin dozing percentage.
 	MbsDozing *float64 `protobuf:"fixed64,6,opt,name=mbs_dozing,json=mbsDozing,proto3,oneof" json:"mbs_dozing,omitempty"`
 	// Optional spin cost code (max 100 chars).
-	MbsMbCosting  *string `protobuf:"bytes,7,opt,name=mbs_mb_costing,json=mbsMbCosting,proto3,oneof" json:"mbs_mb_costing,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MbsMbCosting *string `protobuf:"bytes,7,opt,name=mbs_mb_costing,json=mbsMbCosting,proto3,oneof" json:"mbs_mb_costing,omitempty"`
+	// Optional MB/SP cost code (max 100 chars).
+	MbsCc *string `protobuf:"bytes,8,opt,name=mbs_cc,json=mbsCc,proto3,oneof" json:"mbs_cc,omitempty"`
+	// Optional MB rate MKT in USD/kg.
+	MbsCostRateMkt *float64 `protobuf:"fixed64,9,opt,name=mbs_cost_rate_mkt,json=mbsCostRateMkt,proto3,oneof" json:"mbs_cost_rate_mkt,omitempty"`
+	// Optional Oracle CMBS_STATUS (max 100 chars).
+	MbsStatus *string `protobuf:"bytes,10,opt,name=mbs_status,json=mbsStatus,proto3,oneof" json:"mbs_status,omitempty"`
+	// Optional Oracle CMBS_LDR_PRSN (≥ 0).
+	MbsLdrPrsn *float64 `protobuf:"fixed64,11,opt,name=mbs_ldr_prsn,json=mbsLdrPrsn,proto3,oneof" json:"mbs_ldr_prsn,omitempty"`
+	// Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars).
+	MbsFinalProduct *string `protobuf:"bytes,12,opt,name=mbs_final_product,json=mbsFinalProduct,proto3,oneof" json:"mbs_final_product,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateMBSpinRequest) Reset() {
@@ -6393,6 +7366,41 @@ func (x *CreateMBSpinRequest) GetMbsDozing() float64 {
 func (x *CreateMBSpinRequest) GetMbsMbCosting() string {
 	if x != nil && x.MbsMbCosting != nil {
 		return *x.MbsMbCosting
+	}
+	return ""
+}
+
+func (x *CreateMBSpinRequest) GetMbsCc() string {
+	if x != nil && x.MbsCc != nil {
+		return *x.MbsCc
+	}
+	return ""
+}
+
+func (x *CreateMBSpinRequest) GetMbsCostRateMkt() float64 {
+	if x != nil && x.MbsCostRateMkt != nil {
+		return *x.MbsCostRateMkt
+	}
+	return 0
+}
+
+func (x *CreateMBSpinRequest) GetMbsStatus() string {
+	if x != nil && x.MbsStatus != nil {
+		return *x.MbsStatus
+	}
+	return ""
+}
+
+func (x *CreateMBSpinRequest) GetMbsLdrPrsn() float64 {
+	if x != nil && x.MbsLdrPrsn != nil {
+		return *x.MbsLdrPrsn
+	}
+	return 0
+}
+
+func (x *CreateMBSpinRequest) GetMbsFinalProduct() string {
+	if x != nil && x.MbsFinalProduct != nil {
+		return *x.MbsFinalProduct
 	}
 	return ""
 }
@@ -6580,9 +7588,19 @@ type UpdateMBSpinRequest struct {
 	// Updated spin cost code (max 100 chars).
 	MbsMbCosting *string `protobuf:"bytes,7,opt,name=mbs_mb_costing,json=mbsMbCosting,proto3,oneof" json:"mbs_mb_costing,omitempty"`
 	// Updated active status.
-	MbsIsActive   *bool `protobuf:"varint,8,opt,name=mbs_is_active,json=mbsIsActive,proto3,oneof" json:"mbs_is_active,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MbsIsActive *bool `protobuf:"varint,8,opt,name=mbs_is_active,json=mbsIsActive,proto3,oneof" json:"mbs_is_active,omitempty"`
+	// Optional MB/SP cost code (max 100 chars).
+	MbsCc *string `protobuf:"bytes,9,opt,name=mbs_cc,json=mbsCc,proto3,oneof" json:"mbs_cc,omitempty"`
+	// Optional MB rate MKT in USD/kg.
+	MbsCostRateMkt *float64 `protobuf:"fixed64,10,opt,name=mbs_cost_rate_mkt,json=mbsCostRateMkt,proto3,oneof" json:"mbs_cost_rate_mkt,omitempty"`
+	// Optional Oracle CMBS_STATUS (max 100 chars).
+	MbsStatus *string `protobuf:"bytes,11,opt,name=mbs_status,json=mbsStatus,proto3,oneof" json:"mbs_status,omitempty"`
+	// Optional Oracle CMBS_LDR_PRSN (≥ 0).
+	MbsLdrPrsn *float64 `protobuf:"fixed64,12,opt,name=mbs_ldr_prsn,json=mbsLdrPrsn,proto3,oneof" json:"mbs_ldr_prsn,omitempty"`
+	// Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars).
+	MbsFinalProduct *string `protobuf:"bytes,13,opt,name=mbs_final_product,json=mbsFinalProduct,proto3,oneof" json:"mbs_final_product,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpdateMBSpinRequest) Reset() {
@@ -6669,6 +7687,41 @@ func (x *UpdateMBSpinRequest) GetMbsIsActive() bool {
 		return *x.MbsIsActive
 	}
 	return false
+}
+
+func (x *UpdateMBSpinRequest) GetMbsCc() string {
+	if x != nil && x.MbsCc != nil {
+		return *x.MbsCc
+	}
+	return ""
+}
+
+func (x *UpdateMBSpinRequest) GetMbsCostRateMkt() float64 {
+	if x != nil && x.MbsCostRateMkt != nil {
+		return *x.MbsCostRateMkt
+	}
+	return 0
+}
+
+func (x *UpdateMBSpinRequest) GetMbsStatus() string {
+	if x != nil && x.MbsStatus != nil {
+		return *x.MbsStatus
+	}
+	return ""
+}
+
+func (x *UpdateMBSpinRequest) GetMbsLdrPrsn() float64 {
+	if x != nil && x.MbsLdrPrsn != nil {
+		return *x.MbsLdrPrsn
+	}
+	return 0
+}
+
+func (x *UpdateMBSpinRequest) GetMbsFinalProduct() string {
+	if x != nil && x.MbsFinalProduct != nil {
+		return *x.MbsFinalProduct
+	}
+	return ""
 }
 
 // UpdateMBSpinResponse is the response for updating an MB Spin record.
@@ -9013,7 +10066,8 @@ var File_finance_v1_yarn_master_proto protoreflect.FileDescriptor
 const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\n" +
 	"\x1cfinance/v1/yarn_master.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xfa\x03\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xcd\n" +
+	"\n" +
 	"\aMachine\x12\x1d\n" +
 	"\n" +
 	"machine_id\x18\x01 \x01(\tR\tmachineId\x12!\n" +
@@ -9031,10 +10085,47 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	" \x01(\x01R\fmcEfficiency\x12'\n" +
 	"\rpower_per_day\x18\v \x01(\x01H\x01R\vpowerPerDay\x88\x01\x01\x12\x1b\n" +
 	"\tis_active\x18\f \x01(\bR\bisActive\x12\x14\n" +
-	"\x05notes\x18\r \x01(\tR\x05notes\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\x0e\n" +
+	"\x05notes\x18\r \x01(\tR\x05notes\x12!\n" +
+	"\n" +
+	"mp_per_day\x18\x0e \x01(\x01H\x02R\bmpPerDay\x88\x01\x01\x12#\n" +
+	"\vohs_per_day\x18\x0f \x01(\x01H\x03R\tohsPerDay\x88\x01\x01\x12*\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12)\n" +
+	"\x0espares_per_day\x18\x11 \x01(\x01H\x04R\fsparesPerDay\x88\x01\x01\x12+\n" +
+	"\x0fkgs_lost_change\x18\x12 \x01(\x01H\x05R\rkgsLostChange\x88\x01\x01\x12\x1c\n" +
+	"\avb1_qty\x18\x13 \x01(\x01H\x06R\x06vb1Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb2_qty\x18\x14 \x01(\x01H\aR\x06vb2Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb3_qty\x18\x15 \x01(\x01H\bR\x06vb3Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb4_qty\x18\x16 \x01(\x01H\tR\x06vb4Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb5_qty\x18\x17 \x01(\x01H\n" +
+	"R\x06vb5Qty\x88\x01\x01\x124\n" +
+	"\x14mc_poy_bobbin_weight\x18\x18 \x01(\x01H\vR\x11mcPoyBobbinWeight\x88\x01\x01\x12(\n" +
+	"\x0emc_tot_fxd_cst\x18\x19 \x01(\x01H\fR\vmcTotFxdCst\x88\x01\x01\x124\n" +
+	"\x14mc_bobbin_per_trolly\x18\x1a \x01(\x01H\rR\x11mcBobbinPerTrolly\x88\x01\x01\x12#\n" +
+	"\vmc_box_cost\x18\x1b \x01(\x01H\x0eR\tmcBoxCost\x88\x01\x01\x126\n" +
+	"\x15mc_captive_per_bobbin\x18\x1c \x01(\x01H\x0fR\x12mcCaptivePerBobbin\x88\x01\x01\x12&\n" +
+	"\fmc_weightage\x18\x1d \x01(\x01H\x10R\vmcWeightage\x88\x01\x01B\x0e\n" +
 	"\f_machine_rpmB\x10\n" +
-	"\x0e_power_per_day\"\x8c\x04\n" +
+	"\x0e_power_per_dayB\r\n" +
+	"\v_mp_per_dayB\x0e\n" +
+	"\f_ohs_per_dayB\x11\n" +
+	"\x0f_spares_per_dayB\x12\n" +
+	"\x10_kgs_lost_changeB\n" +
+	"\n" +
+	"\b_vb1_qtyB\n" +
+	"\n" +
+	"\b_vb2_qtyB\n" +
+	"\n" +
+	"\b_vb3_qtyB\n" +
+	"\n" +
+	"\b_vb4_qtyB\n" +
+	"\n" +
+	"\b_vb5_qtyB\x17\n" +
+	"\x15_mc_poy_bobbin_weightB\x11\n" +
+	"\x0f_mc_tot_fxd_cstB\x17\n" +
+	"\x15_mc_bobbin_per_trollyB\x0e\n" +
+	"\f_mc_box_costB\x18\n" +
+	"\x16_mc_captive_per_bobbinB\x0f\n" +
+	"\r_mc_weightage\"\xbf\v\n" +
 	"\x14CreateMachineRequest\x12,\n" +
 	"\fmachine_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x1eR\vmachineCode\x12,\n" +
 	"\fmachine_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\vmachineName\x12 \n" +
@@ -9049,9 +10140,46 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\rmc_efficiency\x18\t \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00Y@)\x00\x00\x00\x00\x00\x00\x00\x00R\fmcEfficiency\x12'\n" +
 	"\rpower_per_day\x18\n" +
 	" \x01(\x01H\x01R\vpowerPerDay\x88\x01\x01\x12\x1e\n" +
-	"\x05notes\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x05notesB\x0e\n" +
+	"\x05notes\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x05notes\x12!\n" +
+	"\n" +
+	"mp_per_day\x18\f \x01(\x01H\x02R\bmpPerDay\x88\x01\x01\x12#\n" +
+	"\vohs_per_day\x18\r \x01(\x01H\x03R\tohsPerDay\x88\x01\x01\x12)\n" +
+	"\x0espares_per_day\x18\x0e \x01(\x01H\x04R\fsparesPerDay\x88\x01\x01\x12+\n" +
+	"\x0fkgs_lost_change\x18\x0f \x01(\x01H\x05R\rkgsLostChange\x88\x01\x01\x12\x1c\n" +
+	"\avb1_qty\x18\x10 \x01(\x01H\x06R\x06vb1Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb2_qty\x18\x11 \x01(\x01H\aR\x06vb2Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb3_qty\x18\x12 \x01(\x01H\bR\x06vb3Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb4_qty\x18\x13 \x01(\x01H\tR\x06vb4Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb5_qty\x18\x14 \x01(\x01H\n" +
+	"R\x06vb5Qty\x88\x01\x01\x12D\n" +
+	"\x14mc_poy_bobbin_weight\x18\x15 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\vR\x11mcPoyBobbinWeight\x88\x01\x01\x128\n" +
+	"\x0emc_tot_fxd_cst\x18\x16 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\fR\vmcTotFxdCst\x88\x01\x01\x12D\n" +
+	"\x14mc_bobbin_per_trolly\x18\x17 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\rR\x11mcBobbinPerTrolly\x88\x01\x01\x123\n" +
+	"\vmc_box_cost\x18\x18 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x0eR\tmcBoxCost\x88\x01\x01\x12F\n" +
+	"\x15mc_captive_per_bobbin\x18\x19 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x0fR\x12mcCaptivePerBobbin\x88\x01\x01\x126\n" +
+	"\fmc_weightage\x18\x1a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x10R\vmcWeightage\x88\x01\x01B\x0e\n" +
 	"\f_machine_rpmB\x10\n" +
-	"\x0e_power_per_day\"m\n" +
+	"\x0e_power_per_dayB\r\n" +
+	"\v_mp_per_dayB\x0e\n" +
+	"\f_ohs_per_dayB\x11\n" +
+	"\x0f_spares_per_dayB\x12\n" +
+	"\x10_kgs_lost_changeB\n" +
+	"\n" +
+	"\b_vb1_qtyB\n" +
+	"\n" +
+	"\b_vb2_qtyB\n" +
+	"\n" +
+	"\b_vb3_qtyB\n" +
+	"\n" +
+	"\b_vb4_qtyB\n" +
+	"\n" +
+	"\b_vb5_qtyB\x17\n" +
+	"\x15_mc_poy_bobbin_weightB\x11\n" +
+	"\x0f_mc_tot_fxd_cstB\x17\n" +
+	"\x15_mc_bobbin_per_trollyB\x0e\n" +
+	"\f_mc_box_costB\x18\n" +
+	"\x16_mc_captive_per_bobbinB\x0f\n" +
+	"\r_mc_weightage\"m\n" +
 	"\x15CreateMachineResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12'\n" +
 	"\x04data\x18\x02 \x01(\v2\x13.finance.v1.MachineR\x04data\"<\n" +
@@ -9060,7 +10188,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"machine_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tmachineId\"j\n" +
 	"\x12GetMachineResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12'\n" +
-	"\x04data\x18\x02 \x01(\v2\x13.finance.v1.MachineR\x04data\"\xd6\x05\n" +
+	"\x04data\x18\x02 \x01(\v2\x13.finance.v1.MachineR\x04data\"\x89\r\n" +
 	"\x14UpdateMachineRequest\x12'\n" +
 	"\n" +
 	"machine_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tmachineId\x121\n" +
@@ -9078,7 +10206,23 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	" \x01(\x01H\bR\vpowerPerDay\x88\x01\x01\x12#\n" +
 	"\x05notes\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aH\tR\x05notes\x88\x01\x01\x12 \n" +
 	"\tis_active\x18\f \x01(\bH\n" +
-	"R\bisActive\x88\x01\x01B\x0f\n" +
+	"R\bisActive\x88\x01\x01\x12!\n" +
+	"\n" +
+	"mp_per_day\x18\r \x01(\x01H\vR\bmpPerDay\x88\x01\x01\x12#\n" +
+	"\vohs_per_day\x18\x0e \x01(\x01H\fR\tohsPerDay\x88\x01\x01\x12)\n" +
+	"\x0espares_per_day\x18\x0f \x01(\x01H\rR\fsparesPerDay\x88\x01\x01\x12+\n" +
+	"\x0fkgs_lost_change\x18\x10 \x01(\x01H\x0eR\rkgsLostChange\x88\x01\x01\x12\x1c\n" +
+	"\avb1_qty\x18\x11 \x01(\x01H\x0fR\x06vb1Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb2_qty\x18\x12 \x01(\x01H\x10R\x06vb2Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb3_qty\x18\x13 \x01(\x01H\x11R\x06vb3Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb4_qty\x18\x14 \x01(\x01H\x12R\x06vb4Qty\x88\x01\x01\x12\x1c\n" +
+	"\avb5_qty\x18\x15 \x01(\x01H\x13R\x06vb5Qty\x88\x01\x01\x12D\n" +
+	"\x14mc_poy_bobbin_weight\x18\x16 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x14R\x11mcPoyBobbinWeight\x88\x01\x01\x128\n" +
+	"\x0emc_tot_fxd_cst\x18\x17 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x15R\vmcTotFxdCst\x88\x01\x01\x12D\n" +
+	"\x14mc_bobbin_per_trolly\x18\x18 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x16R\x11mcBobbinPerTrolly\x88\x01\x01\x123\n" +
+	"\vmc_box_cost\x18\x19 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x17R\tmcBoxCost\x88\x01\x01\x12F\n" +
+	"\x15mc_captive_per_bobbin\x18\x1a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x18R\x12mcCaptivePerBobbin\x88\x01\x01\x126\n" +
+	"\fmc_weightage\x18\x1b \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x19R\vmcWeightage\x88\x01\x01B\x0f\n" +
 	"\r_machine_nameB\n" +
 	"\n" +
 	"\b_mc_typeB\x0e\n" +
@@ -9092,7 +10236,27 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x0e_power_per_dayB\b\n" +
 	"\x06_notesB\f\n" +
 	"\n" +
-	"_is_active\"m\n" +
+	"_is_activeB\r\n" +
+	"\v_mp_per_dayB\x0e\n" +
+	"\f_ohs_per_dayB\x11\n" +
+	"\x0f_spares_per_dayB\x12\n" +
+	"\x10_kgs_lost_changeB\n" +
+	"\n" +
+	"\b_vb1_qtyB\n" +
+	"\n" +
+	"\b_vb2_qtyB\n" +
+	"\n" +
+	"\b_vb3_qtyB\n" +
+	"\n" +
+	"\b_vb4_qtyB\n" +
+	"\n" +
+	"\b_vb5_qtyB\x17\n" +
+	"\x15_mc_poy_bobbin_weightB\x11\n" +
+	"\x0f_mc_tot_fxd_cstB\x17\n" +
+	"\x15_mc_bobbin_per_trollyB\x0e\n" +
+	"\f_mc_box_costB\x18\n" +
+	"\x16_mc_captive_per_bobbinB\x0f\n" +
+	"\r_mc_weightage\"m\n" +
 	"\x15UpdateMachineResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12'\n" +
 	"\x04data\x18\x02 \x01(\v2\x13.finance.v1.MachineR\x04data\"?\n" +
@@ -9150,7 +10314,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x11bbcr_box_rate_val\x18\a \x01(\x01H\x01R\x0ebbcrBoxRateVal\x88\x01\x01\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\x14\n" +
 	"\x12_bbcr_bob_rate_valB\x14\n" +
-	"\x12_bbcr_box_rate_val\"\xa7\x02\n" +
+	"\x12_bbcr_box_rate_val\"\xd3\x05\n" +
 	"\rBoxBobbinCost\x12\x15\n" +
 	"\x06bbc_id\x18\x01 \x01(\tR\x05bbcId\x12\x19\n" +
 	"\bbbc_code\x18\x02 \x01(\tR\abbcCode\x12\x19\n" +
@@ -9159,14 +10323,56 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\tno_of_bob\x18\x05 \x01(\x05R\anoOfBob\x12\x1b\n" +
 	"\tis_active\x18\x06 \x01(\bR\bisActive\x12\x14\n" +
 	"\x05notes\x18\a \x01(\tR\x05notes\x123\n" +
-	"\x05rates\x18\b \x03(\v2\x1d.finance.v1.BoxBobbinCostRateR\x05rates\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xd1\x01\n" +
+	"\x05rates\x18\b \x03(\v2\x1d.finance.v1.BoxBobbinCostRateR\x05rates\x12 \n" +
+	"\tbbn_reuse\x18\t \x01(\x01H\x00R\bbbnReuse\x88\x01\x01\x12 \n" +
+	"\tbox_reuse\x18\n" +
+	" \x01(\x01H\x01R\bboxReuse\x88\x01\x01\x12\x1e\n" +
+	"\bbox_cost\x18\v \x01(\x01H\x02R\aboxCost\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"bobin_cost\x18\f \x01(\x01H\x03R\tbobinCost\x88\x01\x01\x12%\n" +
+	"\fbox_cost_val\x18\r \x01(\x01H\x04R\n" +
+	"boxCostVal\x88\x01\x01\x12)\n" +
+	"\x0ebobin_cost_val\x18\x0e \x01(\x01H\x05R\fbobinCostVal\x88\x01\x01\x12'\n" +
+	"\rbbn_reuse_val\x18\x0f \x01(\x01H\x06R\vbbnReuseVal\x88\x01\x01\x12*\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12'\n" +
+	"\rbox_reuse_val\x18\x11 \x01(\x01H\aR\vboxReuseVal\x88\x01\x01B\f\n" +
+	"\n" +
+	"_bbn_reuseB\f\n" +
+	"\n" +
+	"_box_reuseB\v\n" +
+	"\t_box_costB\r\n" +
+	"\v_bobin_costB\x0f\n" +
+	"\r_box_cost_valB\x11\n" +
+	"\x0f_bobin_cost_valB\x10\n" +
+	"\x0e_bbn_reuse_valB\x10\n" +
+	"\x0e_box_reuse_val\"\xfd\x05\n" +
 	"\x1aCreateBoxBobbinCostRequest\x12$\n" +
 	"\bbbc_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x1eR\abbcCode\x12$\n" +
 	"\bbbc_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\abbcName\x12\"\n" +
 	"\bbbc_type\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\abbcType\x12#\n" +
 	"\tno_of_bob\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\anoOfBob\x12\x1e\n" +
-	"\x05notes\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x05notes\"y\n" +
+	"\x05notes\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x05notes\x120\n" +
+	"\tbbn_reuse\x18\x06 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x00R\bbbnReuse\x88\x01\x01\x120\n" +
+	"\tbox_reuse\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x01R\bboxReuse\x88\x01\x01\x12.\n" +
+	"\bbox_cost\x18\b \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x02R\aboxCost\x88\x01\x01\x122\n" +
+	"\n" +
+	"bobin_cost\x18\t \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x03R\tbobinCost\x88\x01\x01\x125\n" +
+	"\fbox_cost_val\x18\n" +
+	" \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x04R\n" +
+	"boxCostVal\x88\x01\x01\x129\n" +
+	"\x0ebobin_cost_val\x18\v \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x05R\fbobinCostVal\x88\x01\x01\x127\n" +
+	"\rbbn_reuse_val\x18\f \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x06R\vbbnReuseVal\x88\x01\x01\x127\n" +
+	"\rbox_reuse_val\x18\r \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\aR\vboxReuseVal\x88\x01\x01B\f\n" +
+	"\n" +
+	"_bbn_reuseB\f\n" +
+	"\n" +
+	"_box_reuseB\v\n" +
+	"\t_box_costB\r\n" +
+	"\v_bobin_costB\x0f\n" +
+	"\r_box_cost_valB\x11\n" +
+	"\x0f_bobin_cost_valB\x10\n" +
+	"\x0e_bbn_reuse_valB\x10\n" +
+	"\x0e_box_reuse_val\"y\n" +
 	"\x1bCreateBoxBobbinCostResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
 	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.BoxBobbinCostR\x04data\":\n" +
@@ -9174,21 +10380,43 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06bbc_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05bbcId\"v\n" +
 	"\x18GetBoxBobbinCostResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
-	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.BoxBobbinCostR\x04data\"\xc2\x02\n" +
+	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.BoxBobbinCostR\x04data\"\xee\x06\n" +
 	"\x1aUpdateBoxBobbinCostRequest\x12\x1f\n" +
 	"\x06bbc_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05bbcId\x12)\n" +
 	"\bbbc_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dH\x00R\abbcName\x88\x01\x01\x12'\n" +
 	"\bbbc_type\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18\x14H\x01R\abbcType\x88\x01\x01\x12(\n" +
 	"\tno_of_bob\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01H\x02R\anoOfBob\x88\x01\x01\x12#\n" +
 	"\x05notes\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aH\x03R\x05notes\x88\x01\x01\x12 \n" +
-	"\tis_active\x18\x06 \x01(\bH\x04R\bisActive\x88\x01\x01B\v\n" +
+	"\tis_active\x18\x06 \x01(\bH\x04R\bisActive\x88\x01\x01\x120\n" +
+	"\tbbn_reuse\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x05R\bbbnReuse\x88\x01\x01\x120\n" +
+	"\tbox_reuse\x18\b \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x06R\bboxReuse\x88\x01\x01\x12.\n" +
+	"\bbox_cost\x18\t \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\aR\aboxCost\x88\x01\x01\x122\n" +
+	"\n" +
+	"bobin_cost\x18\n" +
+	" \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\bR\tbobinCost\x88\x01\x01\x125\n" +
+	"\fbox_cost_val\x18\v \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\tR\n" +
+	"boxCostVal\x88\x01\x01\x129\n" +
+	"\x0ebobin_cost_val\x18\f \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\n" +
+	"R\fbobinCostVal\x88\x01\x01\x127\n" +
+	"\rbbn_reuse_val\x18\r \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\vR\vbbnReuseVal\x88\x01\x01\x127\n" +
+	"\rbox_reuse_val\x18\x0e \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\fR\vboxReuseVal\x88\x01\x01B\v\n" +
 	"\t_bbc_nameB\v\n" +
 	"\t_bbc_typeB\f\n" +
 	"\n" +
 	"_no_of_bobB\b\n" +
 	"\x06_notesB\f\n" +
 	"\n" +
-	"_is_active\"y\n" +
+	"_is_activeB\f\n" +
+	"\n" +
+	"_bbn_reuseB\f\n" +
+	"\n" +
+	"_box_reuseB\v\n" +
+	"\t_box_costB\r\n" +
+	"\v_bobin_costB\x0f\n" +
+	"\r_box_cost_valB\x11\n" +
+	"\x0f_bobin_cost_valB\x10\n" +
+	"\x0e_bbn_reuse_valB\x10\n" +
+	"\x0e_box_reuse_val\"y\n" +
 	"\x1bUpdateBoxBobbinCostResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
 	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.BoxBobbinCostR\x04data\"=\n" +
@@ -9329,7 +10557,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"%DownloadInterminglingTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xc0\x02\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xad\x04\n" +
 	"\fProductGrade\x12\x13\n" +
 	"\x05pg_id\x18\x01 \x01(\tR\x04pgId\x12\x17\n" +
 	"\apg_code\x18\x02 \x01(\tR\x06pgCode\x12\x17\n" +
@@ -9341,7 +10569,16 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x10bc_recovery_rate\x18\a \x01(\x01R\x0ebcRecoveryRate\x12\x1b\n" +
 	"\tis_active\x18\b \x01(\bR\bisActive\x12\x14\n" +
 	"\x05notes\x18\t \x01(\tR\x05notes\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xe4\x02\n" +
+	"\x11pg_detail_product\x18\n" +
+	" \x01(\tR\x0fpgDetailProduct\x12$\n" +
+	"\x0epg_grade_label\x18\v \x01(\tR\fpgGradeLabel\x12*\n" +
+	"\x11std_selling_price\x18\f \x01(\x01R\x0fstdSellingPrice\x12\x19\n" +
+	"\bsp_value\x18\r \x01(\x01R\aspValue\x12\x1e\n" +
+	"\bloss_pct\x18\x0e \x01(\x01H\x00R\alossPct\x88\x01\x01\x12\x1a\n" +
+	"\x06seq_no\x18\x0f \x01(\x05H\x01R\x05seqNo\x88\x01\x01\x12*\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\v\n" +
+	"\t_loss_pctB\t\n" +
+	"\a_seq_no\"\x9c\x05\n" +
 	"\x19CreateProductGradeRequest\x12\"\n" +
 	"\apg_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x1eR\x06pgCode\x12\"\n" +
 	"\apg_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\x06pgName\x12/\n" +
@@ -9350,7 +10587,16 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\fnon_std_perc\x18\x05 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00Y@)\x00\x00\x00\x00\x00\x00\x00\x00R\n" +
 	"nonStdPerc\x12A\n" +
 	"\x10bc_recovery_rate\x18\x06 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00Y@)\x00\x00\x00\x00\x00\x00\x00\x00R\x0ebcRecoveryRate\x12\x1e\n" +
-	"\x05notes\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x05notes\"w\n" +
+	"\x05notes\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x05notes\x123\n" +
+	"\x11pg_detail_product\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\x0fpgDetailProduct\x12-\n" +
+	"\x0epg_grade_label\x18\t \x01(\tB\a\xbaH\x04r\x02\x182R\fpgGradeLabel\x12:\n" +
+	"\x11std_selling_price\x18\n" +
+	" \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x0fstdSellingPrice\x12)\n" +
+	"\bsp_value\x18\v \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\aspValue\x12.\n" +
+	"\bloss_pct\x18\f \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x00R\alossPct\x88\x01\x01\x12#\n" +
+	"\x06seq_no\x18\r \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x01R\x05seqNo\x88\x01\x01B\v\n" +
+	"\t_loss_pctB\t\n" +
+	"\a_seq_no\"w\n" +
 	"\x1aCreateProductGradeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x04data\x18\x02 \x01(\v2\x18.finance.v1.ProductGradeR\x04data\"7\n" +
@@ -9358,7 +10604,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x05pg_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x04pgId\"t\n" +
 	"\x17GetProductGradeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
-	"\x04data\x18\x02 \x01(\v2\x18.finance.v1.ProductGradeR\x04data\"\x88\x04\n" +
+	"\x04data\x18\x02 \x01(\v2\x18.finance.v1.ProductGradeR\x04data\"\xa0\a\n" +
 	"\x19UpdateProductGradeRequest\x12\x1d\n" +
 	"\x05pg_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x04pgId\x12'\n" +
 	"\apg_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dH\x00R\x06pgName\x88\x01\x01\x124\n" +
@@ -9368,7 +10614,15 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"nonStdPerc\x88\x01\x01\x12F\n" +
 	"\x10bc_recovery_rate\x18\x06 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00Y@)\x00\x00\x00\x00\x00\x00\x00\x00H\x04R\x0ebcRecoveryRate\x88\x01\x01\x12#\n" +
 	"\x05notes\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aH\x05R\x05notes\x88\x01\x01\x12 \n" +
-	"\tis_active\x18\b \x01(\bH\x06R\bisActive\x88\x01\x01B\n" +
+	"\tis_active\x18\b \x01(\bH\x06R\bisActive\x88\x01\x01\x128\n" +
+	"\x11pg_detail_product\x18\t \x01(\tB\a\xbaH\x04r\x02\x18dH\aR\x0fpgDetailProduct\x88\x01\x01\x122\n" +
+	"\x0epg_grade_label\x18\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x182H\bR\fpgGradeLabel\x88\x01\x01\x12?\n" +
+	"\x11std_selling_price\x18\v \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\tR\x0fstdSellingPrice\x88\x01\x01\x12.\n" +
+	"\bsp_value\x18\f \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\n" +
+	"R\aspValue\x88\x01\x01\x12.\n" +
+	"\bloss_pct\x18\r \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\vR\alossPct\x88\x01\x01\x12#\n" +
+	"\x06seq_no\x18\x0e \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\fR\x05seqNo\x88\x01\x01B\n" +
 	"\n" +
 	"\b_pg_nameB\x11\n" +
 	"\x0f_pg_descriptionB\n" +
@@ -9378,7 +10632,13 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x11_bc_recovery_rateB\b\n" +
 	"\x06_notesB\f\n" +
 	"\n" +
-	"_is_active\"w\n" +
+	"_is_activeB\x14\n" +
+	"\x12_pg_detail_productB\x11\n" +
+	"\x0f_pg_grade_labelB\x14\n" +
+	"\x12_std_selling_priceB\v\n" +
+	"\t_sp_valueB\v\n" +
+	"\t_loss_pctB\t\n" +
+	"\a_seq_no\"w\n" +
 	"\x1aUpdateProductGradeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x04data\x18\x02 \x01(\v2\x18.finance.v1.ProductGradeR\x04data\":\n" +
@@ -9422,7 +10682,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"$DownloadProductGradeTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\x81\x03\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xa4\x05\n" +
 	"\x06MBHead\x12\x15\n" +
 	"\x06mbh_id\x18\x01 \x01(\tR\x05mbhId\x12)\n" +
 	"\x11mbh_oracle_sys_id\x18\x02 \x01(\tR\x0embhOracleSysId\x12$\n" +
@@ -9434,11 +10694,24 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\fmbh_filament\x18\x06 \x01(\x05H\x01R\vmbhFilament\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"mbh_dozing\x18\a \x01(\x01H\x02R\tmbhDozing\x88\x01\x01\x12\"\n" +
-	"\rmbh_is_active\x18\b \x01(\bR\vmbhIsActive\x12*\n" +
+	"\rmbh_is_active\x18\b \x01(\bR\vmbhIsActive\x12-\n" +
+	"\x10mbh_check_status\x18\t \x01(\tH\x03R\x0embhCheckStatus\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"mbh_status\x18\n" +
+	" \x01(\tH\x04R\tmbhStatus\x88\x01\x01\x12%\n" +
+	"\fmbh_ldr_prsn\x18\v \x01(\x01H\x05R\n" +
+	"mbhLdrPrsn\x88\x01\x01\x12/\n" +
+	"\x11mbh_final_product\x18\f \x01(\tH\x06R\x0fmbhFinalProduct\x88\x01\x01\x12\x1e\n" +
+	"\bmbh_code\x18\r \x01(\tH\aR\ambhCode\x88\x01\x01\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
 	"\r_mbh_filamentB\r\n" +
-	"\v_mbh_dozing\"\xf5\x02\n" +
+	"\v_mbh_dozingB\x13\n" +
+	"\x11_mbh_check_statusB\r\n" +
+	"\v_mbh_statusB\x0f\n" +
+	"\r_mbh_ldr_prsnB\x14\n" +
+	"\x12_mbh_final_productB\v\n" +
+	"\t_mbh_code\"\xcd\x05\n" +
 	"\x13CreateMBHeadRequest\x12/\n" +
 	"\x0embh_mb_costing\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\fmbhMbCosting\x127\n" +
 	"\x11mbh_oracle_sys_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x1eH\x00R\x0embhOracleSysId\x88\x01\x01\x12.\n" +
@@ -9448,12 +10721,25 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"mbh_denier\x18\x04 \x01(\x01H\x02R\tmbhDenier\x88\x01\x01\x12&\n" +
 	"\fmbh_filament\x18\x05 \x01(\x05H\x03R\vmbhFilament\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"mbh_dozing\x18\x06 \x01(\x01H\x04R\tmbhDozing\x88\x01\x01B\x14\n" +
+	"mbh_dozing\x18\x06 \x01(\x01H\x04R\tmbhDozing\x88\x01\x01\x126\n" +
+	"\x10mbh_check_status\x18\a \x01(\tB\a\xbaH\x04r\x02\x182H\x05R\x0embhCheckStatus\x88\x01\x01\x12+\n" +
+	"\n" +
+	"mbh_status\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dH\x06R\tmbhStatus\x88\x01\x01\x125\n" +
+	"\fmbh_ldr_prsn\x18\t \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\aR\n" +
+	"mbhLdrPrsn\x88\x01\x01\x129\n" +
+	"\x11mbh_final_product\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\bR\x0fmbhFinalProduct\x88\x01\x01\x12'\n" +
+	"\bmbh_code\x18\v \x01(\tB\a\xbaH\x04r\x02\x18dH\tR\ambhCode\x88\x01\x01B\x14\n" +
 	"\x12_mbh_oracle_sys_idB\x0f\n" +
 	"\r_mbh_mgt_nameB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
 	"\r_mbh_filamentB\r\n" +
-	"\v_mbh_dozing\"k\n" +
+	"\v_mbh_dozingB\x13\n" +
+	"\x11_mbh_check_statusB\r\n" +
+	"\v_mbh_statusB\x0f\n" +
+	"\r_mbh_ldr_prsnB\x14\n" +
+	"\x12_mbh_final_productB\v\n" +
+	"\t_mbh_code\"k\n" +
 	"\x14CreateMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"3\n" +
@@ -9461,7 +10747,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\"h\n" +
 	"\x11GetMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\x9a\x03\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xf2\x05\n" +
 	"\x13UpdateMBHeadRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x124\n" +
 	"\x0embh_mb_costing\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dH\x00R\fmbhMbCosting\x88\x01\x01\x12.\n" +
@@ -9472,13 +10758,27 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\fmbh_filament\x18\x05 \x01(\x05H\x03R\vmbhFilament\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"mbh_dozing\x18\x06 \x01(\x01H\x04R\tmbhDozing\x88\x01\x01\x12'\n" +
-	"\rmbh_is_active\x18\a \x01(\bH\x05R\vmbhIsActive\x88\x01\x01B\x11\n" +
+	"\rmbh_is_active\x18\a \x01(\bH\x05R\vmbhIsActive\x88\x01\x01\x126\n" +
+	"\x10mbh_check_status\x18\b \x01(\tB\a\xbaH\x04r\x02\x182H\x06R\x0embhCheckStatus\x88\x01\x01\x12+\n" +
+	"\n" +
+	"mbh_status\x18\t \x01(\tB\a\xbaH\x04r\x02\x18dH\aR\tmbhStatus\x88\x01\x01\x125\n" +
+	"\fmbh_ldr_prsn\x18\n" +
+	" \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\bR\n" +
+	"mbhLdrPrsn\x88\x01\x01\x129\n" +
+	"\x11mbh_final_product\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\tR\x0fmbhFinalProduct\x88\x01\x01\x12'\n" +
+	"\bmbh_code\x18\f \x01(\tB\a\xbaH\x04r\x02\x18dH\n" +
+	"R\ambhCode\x88\x01\x01B\x11\n" +
 	"\x0f_mbh_mb_costingB\x0f\n" +
 	"\r_mbh_mgt_nameB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
 	"\r_mbh_filamentB\r\n" +
 	"\v_mbh_dozingB\x10\n" +
-	"\x0e_mbh_is_active\"k\n" +
+	"\x0e_mbh_is_activeB\x13\n" +
+	"\x11_mbh_check_statusB\r\n" +
+	"\v_mbh_statusB\x0f\n" +
+	"\r_mbh_ldr_prsnB\x14\n" +
+	"\x12_mbh_final_productB\v\n" +
+	"\t_mbh_code\"k\n" +
 	"\x14UpdateMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"6\n" +
@@ -9523,7 +10823,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x1eDownloadMBHeadTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\x9f\x03\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xbe\x05\n" +
 	"\x06MBSpin\x12\x15\n" +
 	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12)\n" +
 	"\x11mbs_oracle_sys_id\x18\x02 \x01(\tR\x0embsOracleSysId\x12\x1c\n" +
@@ -9537,11 +10837,24 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\n" +
 	"mbs_dozing\x18\a \x01(\x01H\x02R\tmbsDozing\x88\x01\x01\x12$\n" +
 	"\x0embs_mb_costing\x18\b \x01(\tR\fmbsMbCosting\x12\"\n" +
-	"\rmbs_is_active\x18\t \x01(\bR\vmbsIsActive\x12*\n" +
+	"\rmbs_is_active\x18\t \x01(\bR\vmbsIsActive\x12\x1a\n" +
+	"\x06mbs_cc\x18\n" +
+	" \x01(\tH\x03R\x05mbsCc\x88\x01\x01\x12.\n" +
+	"\x11mbs_cost_rate_mkt\x18\v \x01(\x01H\x04R\x0embsCostRateMkt\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"mbs_status\x18\f \x01(\tH\x05R\tmbsStatus\x88\x01\x01\x12%\n" +
+	"\fmbs_ldr_prsn\x18\r \x01(\x01H\x06R\n" +
+	"mbsLdrPrsn\x88\x01\x01\x12/\n" +
+	"\x11mbs_final_product\x18\x0e \x01(\tH\aR\x0fmbsFinalProduct\x88\x01\x01\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
-	"\v_mbs_dozing\"\x98\x03\n" +
+	"\v_mbs_dozingB\t\n" +
+	"\a_mbs_ccB\x14\n" +
+	"\x12_mbs_cost_rate_mktB\r\n" +
+	"\v_mbs_statusB\x0f\n" +
+	"\r_mbs_ldr_prsnB\x14\n" +
+	"\x12_mbs_final_product\"\xe3\x05\n" +
 	"\x13CreateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12+\n" +
 	"\fmbs_mgt_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\n" +
@@ -9552,12 +10865,25 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\fmbs_filament\x18\x05 \x01(\x05H\x02R\vmbsFilament\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"mbs_dozing\x18\x06 \x01(\x01H\x03R\tmbsDozing\x88\x01\x01\x122\n" +
-	"\x0embs_mb_costing\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dH\x04R\fmbsMbCosting\x88\x01\x01B\x14\n" +
+	"\x0embs_mb_costing\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dH\x04R\fmbsMbCosting\x88\x01\x01\x12#\n" +
+	"\x06mbs_cc\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dH\x05R\x05mbsCc\x88\x01\x01\x12.\n" +
+	"\x11mbs_cost_rate_mkt\x18\t \x01(\x01H\x06R\x0embsCostRateMkt\x88\x01\x01\x12+\n" +
+	"\n" +
+	"mbs_status\x18\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x18dH\aR\tmbsStatus\x88\x01\x01\x125\n" +
+	"\fmbs_ldr_prsn\x18\v \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\bR\n" +
+	"mbsLdrPrsn\x88\x01\x01\x129\n" +
+	"\x11mbs_final_product\x18\f \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\tR\x0fmbsFinalProduct\x88\x01\x01B\x14\n" +
 	"\x12_mbs_oracle_sys_idB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
 	"\v_mbs_dozingB\x11\n" +
-	"\x0f_mbs_mb_costing\"k\n" +
+	"\x0f_mbs_mb_costingB\t\n" +
+	"\a_mbs_ccB\x14\n" +
+	"\x12_mbs_cost_rate_mktB\r\n" +
+	"\v_mbs_statusB\x0f\n" +
+	"\r_mbs_ldr_prsnB\x14\n" +
+	"\x12_mbs_final_product\"k\n" +
 	"\x14CreateMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"T\n" +
@@ -9566,7 +10892,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\"h\n" +
 	"\x11GetMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"\xbb\x03\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"\x86\x06\n" +
 	"\x13UpdateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\x120\n" +
@@ -9578,13 +10904,27 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\n" +
 	"mbs_dozing\x18\x06 \x01(\x01H\x03R\tmbsDozing\x88\x01\x01\x122\n" +
 	"\x0embs_mb_costing\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dH\x04R\fmbsMbCosting\x88\x01\x01\x12'\n" +
-	"\rmbs_is_active\x18\b \x01(\bH\x05R\vmbsIsActive\x88\x01\x01B\x0f\n" +
+	"\rmbs_is_active\x18\b \x01(\bH\x05R\vmbsIsActive\x88\x01\x01\x12#\n" +
+	"\x06mbs_cc\x18\t \x01(\tB\a\xbaH\x04r\x02\x18dH\x06R\x05mbsCc\x88\x01\x01\x12.\n" +
+	"\x11mbs_cost_rate_mkt\x18\n" +
+	" \x01(\x01H\aR\x0embsCostRateMkt\x88\x01\x01\x12+\n" +
+	"\n" +
+	"mbs_status\x18\v \x01(\tB\a\xbaH\x04r\x02\x18dH\bR\tmbsStatus\x88\x01\x01\x125\n" +
+	"\fmbs_ldr_prsn\x18\f \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\tR\n" +
+	"mbsLdrPrsn\x88\x01\x01\x129\n" +
+	"\x11mbs_final_product\x18\r \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\n" +
+	"R\x0fmbsFinalProduct\x88\x01\x01B\x0f\n" +
 	"\r_mbs_mgt_nameB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
 	"\v_mbs_dozingB\x11\n" +
 	"\x0f_mbs_mb_costingB\x10\n" +
-	"\x0e_mbs_is_active\"k\n" +
+	"\x0e_mbs_is_activeB\t\n" +
+	"\a_mbs_ccB\x14\n" +
+	"\x12_mbs_cost_rate_mktB\r\n" +
+	"\v_mbs_statusB\x0f\n" +
+	"\r_mbs_ldr_prsnB\x14\n" +
+	"\x12_mbs_final_product\"k\n" +
 	"\x14UpdateMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"W\n" +
@@ -10264,9 +11604,13 @@ func file_finance_v1_yarn_master_proto_init() {
 	file_finance_v1_yarn_master_proto_msgTypes[1].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[5].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[17].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[18].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[19].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[23].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[29].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[44].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[56].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[57].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[61].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[73].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[74].OneofWrappers = []any{}

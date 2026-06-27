@@ -11,15 +11,21 @@ import (
 
 // UpdateCommand represents the update Product Grade command.
 type UpdateCommand struct {
-	ProductGradeID uuid.UUID
-	Name           *string
-	Description    *string
-	BCPerc         *float64
-	NonStdPerc     *float64
-	BCRecoveryRate *float64
-	Notes          *string
-	IsActive       *bool
-	UpdatedBy      string
+	ProductGradeID  uuid.UUID
+	Name            *string
+	Description     *string
+	BCPerc          *float64
+	NonStdPerc      *float64
+	BCRecoveryRate  *float64
+	PgDetailProduct *string
+	PgGradeLabel    *string
+	StdSellingPrice *float64
+	SpValue         *float64
+	LossPct         *float64
+	SeqNo           *int32
+	Notes           *string
+	IsActive        *bool
+	UpdatedBy       string
 }
 
 // UpdateHandler handles the UpdateProductGrade command.
@@ -40,13 +46,19 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*product
 	}
 
 	if err := entity.Update(productgrade.UpdateInput{
-		Name:           cmd.Name,
-		Description:    cmd.Description,
-		BCPerc:         cmd.BCPerc,
-		NonStdPerc:     cmd.NonStdPerc,
-		BCRecoveryRate: cmd.BCRecoveryRate,
-		Notes:          cmd.Notes,
-		IsActive:       cmd.IsActive,
+		Name:            cmd.Name,
+		Description:     cmd.Description,
+		BCPerc:          cmd.BCPerc,
+		NonStdPerc:      cmd.NonStdPerc,
+		BCRecoveryRate:  cmd.BCRecoveryRate,
+		PgDetailProduct: cmd.PgDetailProduct,
+		PgGradeLabel:    cmd.PgGradeLabel,
+		StdSellingPrice: cmd.StdSellingPrice,
+		SpValue:         cmd.SpValue,
+		LossPct:         cmd.LossPct,
+		SeqNo:           cmd.SeqNo,
+		Notes:           cmd.Notes,
+		IsActive:        cmd.IsActive,
 	}, cmd.UpdatedBy); err != nil {
 		return nil, err
 	}

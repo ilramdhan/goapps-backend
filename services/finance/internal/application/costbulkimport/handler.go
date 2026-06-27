@@ -15,19 +15,23 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductparameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproducttype"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/lookupmaster"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmgroup"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/storage"
 )
 
 // BulkImportHandler processes async bulk import of a 6-sheet Excel file
 // containing product master and routing data from a legacy Oracle system.
 type BulkImportHandler struct {
-	jobRepo   costimportjob.Repository
-	cpmRepo   costproductmaster.Repository
-	cppRepo   costproductparameter.Repository
-	routeRepo costroute.Repository
-	typeRepo  costproducttype.Repository
-	storage   storage.Service
-	logger    zerolog.Logger
+	jobRepo          costimportjob.Repository
+	cpmRepo          costproductmaster.Repository
+	cppRepo          costproductparameter.Repository
+	routeRepo        costroute.Repository
+	typeRepo         costproducttype.Repository
+	rmGroupRepo      rmgroup.Repository
+	lookupMasterRepo lookupmaster.Repository
+	storage          storage.Service
+	logger           zerolog.Logger
 }
 
 // NewBulkImportHandler creates a new BulkImportHandler.
@@ -37,23 +41,41 @@ func NewBulkImportHandler(
 	cppRepo costproductparameter.Repository,
 	routeRepo costroute.Repository,
 	typeRepo costproducttype.Repository,
+	rmGroupRepo rmgroup.Repository,
+	lookupMasterRepo lookupmaster.Repository,
 	storageSvc storage.Service,
 	logger zerolog.Logger,
 ) *BulkImportHandler {
 	return &BulkImportHandler{
-		jobRepo:   jobRepo,
-		cpmRepo:   cpmRepo,
-		cppRepo:   cppRepo,
-		routeRepo: routeRepo,
-		typeRepo:  typeRepo,
-		storage:   storageSvc,
-		logger:    logger,
+		jobRepo:          jobRepo,
+		cpmRepo:          cpmRepo,
+		cppRepo:          cppRepo,
+		routeRepo:        routeRepo,
+		typeRepo:         typeRepo,
+		rmGroupRepo:      rmGroupRepo,
+		lookupMasterRepo: lookupMasterRepo,
+		storage:          storageSvc,
+		logger:           logger,
 	}
 }
 
 // Handle processes a bulk import job. Called by finance-worker after dequeuing.
-// Lifecycle: PENDING → RUNNING → DONE/PARTIAL/FAILED.
-// Progress is reported as cumulative row counts after each sheet.
+//
+// Lifecycle: PENDING → RUNNING → DONE/FAILED.
+//
+// The handler runs in two phases:
+//
+//  1. Pre-validation — every sheet is parsed and validated without any DB
+//     writes. Cross-sheet references (param codes, product IDs, route head
+//     IDs) are checked using in-memory sets built from the file itself.
+//     If any validation error is found the import is aborted entirely — no
+//     partial rows are written.  An error report is uploaded to MinIO; the
+//     "missing_param_codes" sheet in that report lists every unknown param
+//     code with its row-skip count so the operator can resolve them all at
+//     once before re-importing.
+//
+//  2. Write — only reached when pre-validation is fully clean.  All six
+//     sheets are processed and written to the database.
 func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent []byte, fileName string) error {
 	h.logger.Info().Int64("job_id", jobID).Str("file_name", fileName).Msg("bulk import: starting")
 	job, err := h.jobRepo.GetByID(ctx, jobID)
@@ -86,6 +108,26 @@ func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent
 		return mapsErr
 	}
 
+	// === Phase 1: pre-validation (no DB writes) ===
+	preResults := preValidateAll(f, maps)
+	if countErrors(preResults) > 0 {
+		h.logger.Warn().
+			Int64("job_id", jobID).
+			Int("error_count", countErrors(preResults)).
+			Msg("bulk import: pre-validation failed — aborting, no rows written")
+		errorKey := h.maybeUploadErrorReport(ctx, jobID, preResults)
+		job.MarkFailed(fmt.Sprintf(
+			"validation failed: %d error(s) across %d sheet(s) — see error report",
+			countErrors(preResults), len(preResults),
+		))
+		if errorKey != "" {
+			job.SetErrorFile(errorKey)
+		}
+		h.updateJob(ctx, jobID, job)
+		return nil
+	}
+
+	// === Phase 2: write (all rows validated) ===
 	var allResults []SheetResult
 	totalProcessed, totalSuccess, totalFailed, totalSkipped := 0, 0, 0, 0
 
@@ -119,6 +161,7 @@ func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent
 		Errors:    errs2,
 	})
 	if s2Err != nil {
+		h.rollbackWritePhase(ctx, jobID, maps)
 		job.MarkFailed(s2Err.Error())
 		h.updateJob(ctx, jobID, job)
 		return s2Err
@@ -139,6 +182,7 @@ func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent
 		Errors:    errs3,
 	})
 	if s3Err != nil {
+		h.rollbackWritePhase(ctx, jobID, maps)
 		job.MarkFailed(s3Err.Error())
 		h.updateJob(ctx, jobID, job)
 		return s3Err
@@ -160,6 +204,7 @@ func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent
 		Errors:    errs4,
 	})
 	if s4Err != nil {
+		h.rollbackWritePhase(ctx, jobID, maps)
 		job.MarkFailed(s4Err.Error())
 		h.updateJob(ctx, jobID, job)
 		return s4Err
@@ -181,6 +226,7 @@ func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent
 		Errors:    errs5,
 	})
 	if s5Err != nil {
+		h.rollbackWritePhase(ctx, jobID, maps)
 		job.MarkFailed(s5Err.Error())
 		h.updateJob(ctx, jobID, job)
 		return s5Err
@@ -200,6 +246,7 @@ func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent
 		Errors:    errs6,
 	})
 	if s6Err != nil {
+		h.rollbackWritePhase(ctx, jobID, maps)
 		job.MarkFailed(s6Err.Error())
 		h.updateJob(ctx, jobID, job)
 		return s6Err
@@ -210,22 +257,47 @@ func (h *BulkImportHandler) Handle(ctx context.Context, jobID int64, fileContent
 	job.UpdateProgress(totalProcessed, totalSuccess, totalFailed, totalSkipped)
 	h.updateJob(ctx, jobID, job)
 
-	errorFileKey := h.maybeUploadErrorReport(ctx, jobID, allResults)
-	job.MarkDone(errorFileKey)
+	// Generate error report if any rows failed or missing products.
+	if countErrors(allResults) > 0 {
+		if errorKey := h.maybeUploadErrorReport(ctx, jobID, allResults); errorKey != "" {
+			job.SetErrorFile(errorKey)
+		}
+	}
+
+	job.MarkDone("")
 	h.updateJob(ctx, jobID, job)
 	return nil
 }
 
-// loadMaps preloads ParamMap and ProductTypeMap from the database.
+// loadMaps preloads ParamMap, ProductTypeMap, and RmGroupMap from the database.
 func (h *BulkImportHandler) loadMaps(ctx context.Context) (*ImportMaps, error) {
-	maps := NewImportMaps()
+	m := NewImportMaps()
 
 	params, err := h.cppRepo.ListAllParams(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load param map: %w", err)
 	}
+	// Collect unique MASTER_LOOKUP codes to load options for.
+	masterCodesToLoad := make(map[string]struct{})
 	for _, p := range params {
-		maps.ParamMap[p.ParamCode] = p.ParamID
+		m.ParamMap[p.ParamCode] = p.ParamID
+		if p.ParamCategory == "MASTER_LOOKUP" && p.LookupMasterCode != "" {
+			m.ParamLookupMap[p.ParamCode] = p.LookupMasterCode
+			masterCodesToLoad[p.LookupMasterCode] = struct{}{}
+		}
+	}
+	// Load valid option codes for each referenced lookup master.
+	for masterCode := range masterCodesToLoad {
+		opts, optErr := h.lookupMasterRepo.ListMasterOptions(ctx, masterCode)
+		if optErr != nil {
+			h.logger.Warn().Err(optErr).Str("master_code", masterCode).Msg("loadMaps: failed to load master options — MASTER_LOOKUP values will not be validated")
+			continue
+		}
+		optSet := make(map[string]bool, len(opts))
+		for _, o := range opts {
+			optSet[o.Value] = true
+		}
+		m.MasterLookupValues[masterCode] = optSet
 	}
 
 	types, err := h.typeRepo.ListAllActive(ctx)
@@ -233,10 +305,34 @@ func (h *BulkImportHandler) loadMaps(ctx context.Context) (*ImportMaps, error) {
 		return nil, fmt.Errorf("load product type map: %w", err)
 	}
 	for _, t := range types {
-		maps.ProductTypeMap[t.TypeCode()] = t.TypeID()
+		m.ProductTypeMap[t.TypeCode()] = t.TypeID()
 	}
 
-	return maps, nil
+	active := true
+	groups, err := h.rmGroupRepo.ListAllHeads(ctx, &active)
+	if err != nil {
+		return nil, fmt.Errorf("load rm group map: %w", err)
+	}
+	for _, g := range groups {
+		m.RmGroupMap[g.Code().String()] = true
+	}
+
+	return m, nil
+}
+
+// rollbackWritePhase deletes all products (and their cascaded/ordered routing data)
+// that were newly inserted during Sheet 1. Called when any later write step fails.
+func (h *BulkImportHandler) rollbackWritePhase(ctx context.Context, jobID int64, maps *ImportMaps) {
+	if len(maps.InsertedProductSysIDs) == 0 {
+		return
+	}
+	h.logger.Info().
+		Int64("job_id", jobID).
+		Int("count", len(maps.InsertedProductSysIDs)).
+		Msg("bulk import: rolling back newly inserted products")
+	if rbErr := h.cpmRepo.RollbackImport(ctx, maps.InsertedProductSysIDs); rbErr != nil {
+		h.logger.Error().Err(rbErr).Int64("job_id", jobID).Msg("bulk import: rollback failed — DB may be partially written")
+	}
 }
 
 // updateJob persists job state and logs on failure without propagating.

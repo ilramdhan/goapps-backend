@@ -34,8 +34,9 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 		INSERT INTO mst_mb_head (
 			mbh_id, mbh_oracle_sys_id, mbh_mb_costing, mbh_mgt_name,
 			mbh_denier, mbh_filament, mbh_dozing,
+			mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_final_product, mbh_code,
 			mbh_is_active, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -44,6 +45,11 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 		entity.Denier(),
 		entity.Filament(),
 		entity.Dozing(),
+		entity.MBHCheckStatus(),
+		entity.MBHStatus(),
+		entity.MBHLdrPrsn(),
+		entity.MBHFinalProduct(),
+		entity.MBHCode(),
 		entity.IsActive(),
 		entity.CreatedAt(),
 		entity.CreatedBy(),
@@ -124,14 +130,19 @@ func (r *MBHeadRepository) List(ctx context.Context, filter mbhead.ListFilter) (
 func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) error {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE mst_mb_head SET
-			mbh_mb_costing = $2,
-			mbh_mgt_name   = $3,
-			mbh_denier     = $4,
-			mbh_filament   = $5,
-			mbh_dozing     = $6,
-			mbh_is_active  = $7,
-			updated_at     = $8,
-			updated_by     = $9
+			mbh_mb_costing    = $2,
+			mbh_mgt_name      = $3,
+			mbh_denier        = $4,
+			mbh_filament      = $5,
+			mbh_dozing        = $6,
+			mbh_check_status  = $7,
+			mbh_status        = $8,
+			mbh_ldr_prsn      = $9,
+			mbh_final_product = $10,
+			mbh_code          = $11,
+			mbh_is_active     = $12,
+			updated_at        = $13,
+			updated_by        = $14
 		WHERE mbh_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -140,6 +151,11 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 		entity.Denier(),
 		entity.Filament(),
 		entity.Dozing(),
+		entity.MBHCheckStatus(),
+		entity.MBHStatus(),
+		entity.MBHLdrPrsn(),
+		entity.MBHFinalProduct(),
+		entity.MBHCode(),
 		entity.IsActive(),
 		entity.UpdatedAt(),
 		entity.UpdatedBy(),
@@ -207,7 +223,9 @@ func (r *MBHeadRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, 
 func (r *MBHeadRepository) selectCols() string {
 	return `
 		SELECT mbh_id, mbh_oracle_sys_id, mbh_mb_costing, mbh_mgt_name,
-		       mbh_denier, mbh_filament, mbh_dozing, mbh_is_active,
+		       mbh_denier, mbh_filament, mbh_dozing,
+		       mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_final_product, mbh_code,
+		       mbh_is_active,
 		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
 		FROM mst_mb_head
 	`
@@ -225,20 +243,25 @@ func (r *MBHeadRepository) resolveSort(sortBy string) string {
 }
 
 type mbHeadDTO struct {
-	ID          uuid.UUID
-	OracleSysID sql.NullString
-	MBCosting   string
-	MgtName     sql.NullString
-	Denier      sql.NullFloat64
-	Filament    sql.NullInt64
-	Dozing      sql.NullFloat64
-	IsActive    bool
-	CreatedAt   time.Time
-	CreatedBy   string
-	UpdatedAt   sql.NullTime
-	UpdatedBy   sql.NullString
-	DeletedAt   sql.NullTime
-	DeletedBy   sql.NullString
+	ID              uuid.UUID
+	OracleSysID     sql.NullString
+	MBCosting       string
+	MgtName         sql.NullString
+	Denier          sql.NullFloat64
+	Filament        sql.NullInt64
+	Dozing          sql.NullFloat64
+	MBHCheckStatus  sql.NullString
+	MBHStatus       sql.NullString
+	MBHLdrPrsn      sql.NullFloat64
+	MBHFinalProduct sql.NullString
+	MBHCode         sql.NullString
+	IsActive        bool
+	CreatedAt       time.Time
+	CreatedBy       string
+	UpdatedAt       sql.NullTime
+	UpdatedBy       sql.NullString
+	DeletedAt       sql.NullTime
+	DeletedBy       sql.NullString
 }
 
 func (d *mbHeadDTO) toEntity() *mbhead.Entity {
@@ -250,6 +273,11 @@ func (d *mbHeadDTO) toEntity() *mbhead.Entity {
 		nullableFloat64Ptr(d.Denier),
 		nullableIntPtr(d.Filament),
 		nullableFloat64Ptr(d.Dozing),
+		nullableStringPtr(d.MBHCheckStatus),
+		nullableStringPtr(d.MBHStatus),
+		nullableFloat64Ptr(d.MBHLdrPrsn),
+		nullableStringPtr(d.MBHFinalProduct),
+		nullableStringPtr(d.MBHCode),
 		d.IsActive,
 		d.CreatedAt, d.CreatedBy,
 		nullableTimePtr(d.UpdatedAt), nullableStringPtr(d.UpdatedBy),
@@ -261,7 +289,9 @@ func (r *MBHeadRepository) scanOne(row *sql.Row) (*mbhead.Entity, error) {
 	var d mbHeadDTO
 	err := row.Scan(
 		&d.ID, &d.OracleSysID, &d.MBCosting, &d.MgtName,
-		&d.Denier, &d.Filament, &d.Dozing, &d.IsActive,
+		&d.Denier, &d.Filament, &d.Dozing,
+		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHFinalProduct, &d.MBHCode,
+		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -277,7 +307,9 @@ func (r *MBHeadRepository) scanRow(rows *sql.Rows) (*mbhead.Entity, error) {
 	var d mbHeadDTO
 	err := rows.Scan(
 		&d.ID, &d.OracleSysID, &d.MBCosting, &d.MgtName,
-		&d.Denier, &d.Filament, &d.Dozing, &d.IsActive,
+		&d.Denier, &d.Filament, &d.Dozing,
+		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHFinalProduct, &d.MBHCode,
+		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
 	if err != nil {

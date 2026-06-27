@@ -1,5 +1,6 @@
 // Package costerp contains read-only domain types for ERP lookup tables
 // (cost_erp_item, cost_erp_grade, cost_erp_shade — PRD Phase B §7.3).
+// Items are Oracle replicas synced via ETL; grades and shades are read-only.
 package costerp
 
 import (
@@ -11,14 +12,18 @@ import (
 // ErrNotFound is returned when an ERP lookup row is not found.
 var ErrNotFound = errors.New("erp lookup record not found")
 
-// Item is a read-only ERP master_item row.
+// Item is an ERP master_item row.
 type Item struct {
-	ItemID   int64
-	ItemCode string
-	ItemName string
-	ItemType string
-	IsActive bool
-	SyncedAt time.Time
+	ItemID    int64
+	ItemCode  string
+	ItemName  string
+	ItemType  string
+	IsActive  bool
+	SyncedAt  time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	CreatedBy string
+	UpdatedBy string
 }
 
 // Grade is a read-only ERP grade row.
@@ -56,7 +61,7 @@ type LookupFilter struct {
 	PageSize     int
 }
 
-// Repository exposes read-only ERP lookups.
+// Repository exposes read-only ERP lookup queries.
 type Repository interface {
 	ListItems(ctx context.Context, f ItemFilter) (items []*Item, total int64, err error)
 	GetItem(ctx context.Context, itemID int64) (*Item, error)

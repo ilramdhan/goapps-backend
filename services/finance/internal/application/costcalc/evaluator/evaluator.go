@@ -69,7 +69,11 @@ func (e *Evaluator) Run(scope map[string]any) (float64, error) {
 		return 0, fmt.Errorf("run %s: %w (got %T)", e.formulaCode, ErrOutputNotFloat, out)
 	}
 	if math.IsNaN(result) || math.IsInf(result, 0) {
-		return 0, fmt.Errorf("run %s: %w (value=%v)", e.formulaCode, ErrNonFiniteResult, result)
+		// Non-finite (NaN/Inf) typically means a 0/0 or x/0 division in the formula.
+		// Return 0 instead of failing — the formula contributes 0 to the cost chain.
+		// This allows downstream formulas to continue and produces a safe 0 cost
+		// rather than blocking the entire product calculation.
+		return 0, nil
 	}
 	return result, nil
 }

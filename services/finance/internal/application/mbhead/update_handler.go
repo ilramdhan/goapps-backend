@@ -11,14 +11,19 @@ import (
 
 // UpdateCommand represents the update MB Head command.
 type UpdateCommand struct {
-	ID        uuid.UUID
-	MBCosting *string
-	MgtName   *string
-	Denier    *float64
-	Filament  *int
-	Dozing    *float64
-	IsActive  *bool
-	UpdatedBy string
+	ID              uuid.UUID
+	MBCosting       *string
+	MgtName         *string
+	Denier          *float64
+	Filament        *int
+	Dozing          *float64
+	MBHCheckStatus  *string
+	MBHStatus       *string
+	MBHLdrPrsn      *float64
+	MBHFinalProduct *string
+	MBHCode         *string
+	IsActive        *bool
+	UpdatedBy       string
 }
 
 // UpdateHandler handles the UpdateMBHead command.
@@ -39,12 +44,17 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 	}
 
 	if err := entity.Update(mbhead.UpdateInput{
-		MBCosting: cmd.MBCosting,
-		MgtName:   cmd.MgtName,
-		Denier:    cmd.Denier,
-		Filament:  cmd.Filament,
-		Dozing:    cmd.Dozing,
-		IsActive:  cmd.IsActive,
+		MBCosting:       cmd.MBCosting,
+		MgtName:         cmd.MgtName,
+		Denier:          cmd.Denier,
+		Filament:        cmd.Filament,
+		Dozing:          cmd.Dozing,
+		MBHCheckStatus:  cmd.MBHCheckStatus,
+		MBHStatus:       cmd.MBHStatus,
+		MBHLdrPrsn:      cmd.MBHLdrPrsn,
+		MBHFinalProduct: cmd.MBHFinalProduct,
+		MBHCode:         cmd.MBHCode,
+		IsActive:        cmd.IsActive,
 	}, cmd.UpdatedBy); err != nil {
 		return nil, err
 	}

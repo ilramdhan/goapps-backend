@@ -90,6 +90,7 @@ func processProductMaster( //nolint:gocognit // cohesive row-validation pipeline
 		maps.ProductMap[r.LegacySysID] = r.ProductSysID
 		if r.WasInserted {
 			inserted++
+			maps.InsertedProductSysIDs = append(maps.InsertedProductSysIDs, r.ProductSysID)
 		} else {
 			updated++
 		}

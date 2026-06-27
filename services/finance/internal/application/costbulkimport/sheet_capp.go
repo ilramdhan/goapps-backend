@@ -24,9 +24,12 @@ func processCAP(
 ) (inserted, updated int, errs []SheetError, err error) {
 	const sheetName = "product_applicable_params"
 	requiredHeaders := []string{"legacy_oracle_sys_id", "param_code", "is_required"}
-	rows, parseErr := ParseSheet(f, sheetName, requiredHeaders)
+	rows, parseErr := ParseSheetOptional(f, sheetName, requiredHeaders)
 	if parseErr != nil {
 		return 0, 0, nil, parseErr
+	}
+	if len(rows) == 0 {
+		return 0, 0, nil, nil // sheet absent or empty — skip silently
 	}
 
 	inputs := make([]costproductparameter.CAPPUpsertInput, 0, len(rows))
@@ -39,7 +42,7 @@ func processCAP(
 		}
 		productSysID, ok := maps.ProductMap[legacyID]
 		if !ok {
-			errs = append(errs, SheetError{RowNumber: rowNum, Field: "legacy_oracle_sys_id", Message: "product not found: " + legacyID})
+			errs = append(errs, SheetError{RowNumber: rowNum, Field: "legacy_oracle_sys_id", Message: "product not found in ProductMap: " + legacyID})
 			continue
 		}
 		paramCode := row["param_code"]

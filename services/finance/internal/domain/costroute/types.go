@@ -192,16 +192,17 @@ type SeqUpsertResult struct {
 
 // RMInput is a single RM row for BulkReplaceRMs.
 type RMInput struct {
-	RmType         string // PRODUCT, ITEM, GROUP
-	RmProductSysID int64  // set when RmType=PRODUCT
-	RmItemCode     string // set when RmType=ITEM
-	RmGroupCode    string // set when RmType=GROUP
-	Ratio          float64
-	RmName         string
-	RmShadeCode    string
-	RmShadeName    string
-	SubType        string
-	Notes          string
+	ParentProductSysID int64  // crm_parent_product_sys_id — the FG product that owns this route (NOT NULL)
+	RmType             string // PRODUCT, ITEM, GROUP
+	RmProductSysID     int64  // set when RmType=PRODUCT
+	RmItemCode         string // set when RmType=ITEM
+	RmGroupCode        string // set when RmType=GROUP
+	Ratio              float64
+	RmName             string
+	RmShadeCode        string
+	RmShadeName        string
+	SubType            string
+	Notes              string
 }
 
 // ExportRouteHead is a flat projection of cost_route_head used for bulk export.

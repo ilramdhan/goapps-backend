@@ -46,13 +46,15 @@ func TestEvaluator_RejectsForbidden(t *testing.T) {
 	}
 }
 
-func TestEvaluator_DivByZeroReturnsError(t *testing.T) {
+func TestEvaluator_DivByZeroReturnsZero(t *testing.T) {
 	ev, err := Compile("F3", "a / b")
 	require.NoError(t, err)
-	// expr's float division of x/0 yields +Inf rather than a runtime error,
-	// so Run() guards against non-finite results explicitly.
-	_, err = ev.Run(map[string]any{"a": 1.0, "b": 0.0})
-	require.ErrorIs(t, err, ErrNonFiniteResult)
+	// expr's float division of x/0 yields +Inf. Run() converts non-finite
+	// results to 0 so downstream formulas in the chain can continue safely
+	// rather than blocking the entire product calculation.
+	result, err := ev.Run(map[string]any{"a": 1.0, "b": 0.0})
+	require.NoError(t, err)
+	require.Equal(t, float64(0), result)
 }
 
 func TestEvaluator_UndefinedVariableYieldsError(t *testing.T) {

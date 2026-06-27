@@ -29,7 +29,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// CostErpLookupService — read-only lookup for ERP replica tables.
+// CostErpLookupService — read-only ERP lookup tables for pickers and autocomplete.
 type CostErpLookupServiceClient interface {
 	ListCostErpItems(ctx context.Context, in *ListCostErpItemsRequest, opts ...grpc.CallOption) (*ListCostErpItemsResponse, error)
 	GetCostErpItem(ctx context.Context, in *GetCostErpItemRequest, opts ...grpc.CallOption) (*GetCostErpItemResponse, error)
@@ -89,7 +89,7 @@ func (c *costErpLookupServiceClient) ListCostErpShades(ctx context.Context, in *
 // All implementations must embed UnimplementedCostErpLookupServiceServer
 // for forward compatibility.
 //
-// CostErpLookupService — read-only lookup for ERP replica tables.
+// CostErpLookupService — read-only ERP lookup tables for pickers and autocomplete.
 type CostErpLookupServiceServer interface {
 	ListCostErpItems(context.Context, *ListCostErpItemsRequest) (*ListCostErpItemsResponse, error)
 	GetCostErpItem(context.Context, *GetCostErpItemRequest) (*GetCostErpItemResponse, error)

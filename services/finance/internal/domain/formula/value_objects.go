@@ -46,9 +46,17 @@ type Type struct {
 
 // Valid formula types.
 var (
-	TypeCalculation = Type{value: "CALCULATION"}
-	TypeSQLQuery    = Type{value: "SQL_QUERY"}
-	TypeConstant    = Type{value: "CONSTANT"}
+	TypeCalculation   = Type{value: "CALCULATION"}
+	TypeSQLQuery      = Type{value: "SQL_QUERY"}
+	TypeConstant      = Type{value: "CONSTANT"}
+	TypeLookup        = Type{value: "LOOKUP"}
+	TypeRMLookup      = Type{value: "RM_LOOKUP"}
+	TypeConditional   = Type{value: "CONDITIONAL"}
+	TypeFromMarketing = Type{value: "FROM_MARKETING"}
+	TypeIntermingling = Type{value: "INTERMINGLING"}
+	TypeSnapshot      = Type{value: "SNAPSHOT"}
+	TypePending       = Type{value: "PENDING"}
+	TypeInitialValue  = Type{value: "INITIAL_VALUE"}
 )
 
 // NewType creates a Type from a string.
@@ -61,6 +69,22 @@ func NewType(s string) (Type, error) {
 		return TypeSQLQuery, nil
 	case "CONSTANT":
 		return TypeConstant, nil
+	case "LOOKUP":
+		return TypeLookup, nil
+	case "RM_LOOKUP":
+		return TypeRMLookup, nil
+	case "CONDITIONAL":
+		return TypeConditional, nil
+	case "FROM_MARKETING":
+		return TypeFromMarketing, nil
+	case "INTERMINGLING":
+		return TypeIntermingling, nil
+	case "SNAPSHOT":
+		return TypeSnapshot, nil
+	case "PENDING":
+		return TypePending, nil
+	case "INITIAL_VALUE":
+		return TypeInitialValue, nil
 	default:
 		return Type{}, ErrInvalidFormulaType
 	}
@@ -71,5 +95,6 @@ func (f Type) String() string { return f.value }
 
 // IsValid returns true if the formula type is valid.
 func (f Type) IsValid() bool {
-	return f.value == "CALCULATION" || f.value == "SQL_QUERY" || f.value == "CONSTANT"
+	_, err := NewType(f.value)
+	return err == nil
 }

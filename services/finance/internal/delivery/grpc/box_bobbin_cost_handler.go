@@ -55,12 +55,20 @@ func (h *BoxBobbinCostHandler) CreateBoxBobbinCost(ctx context.Context, req *fin
 	}
 
 	entity, err := h.createHandler.Handle(ctx, appboxbobbincost.CreateCommand{
-		Code:      req.BbcCode,
-		Name:      req.BbcName,
-		BBCType:   req.BbcType,
-		NoOfBob:   int(req.NoOfBob),
-		Notes:     req.Notes,
-		CreatedBy: getUserFromContext(ctx),
+		Code:         req.BbcCode,
+		Name:         req.BbcName,
+		BBCType:      req.BbcType,
+		NoOfBob:      int(req.NoOfBob),
+		Notes:        req.Notes,
+		BbnReuse:     req.BbnReuse,
+		BoxReuse:     req.BoxReuse,
+		BoxCost:      req.BoxCost,
+		BobinCost:    req.BobinCost,
+		BoxCostVal:   req.BoxCostVal,
+		BobinCostVal: req.BobinCostVal,
+		BbnReuseVal:  req.BbnReuseVal,
+		BoxReuseVal:  req.BoxReuseVal,
+		CreatedBy:    getUserFromContext(ctx),
 	})
 	if err != nil {
 		RecordBoxBobbinCostOperation("create", false)
@@ -120,13 +128,21 @@ func (h *BoxBobbinCostHandler) UpdateBoxBobbinCost(ctx context.Context, req *fin
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, appboxbobbincost.UpdateCommand{
-		ID:        id,
-		Name:      req.BbcName,
-		BBCType:   req.BbcType,
-		NoOfBob:   noOfBob,
-		Notes:     req.Notes,
-		IsActive:  req.IsActive,
-		UpdatedBy: getUserFromContext(ctx),
+		ID:           id,
+		Name:         req.BbcName,
+		BBCType:      req.BbcType,
+		NoOfBob:      noOfBob,
+		Notes:        req.Notes,
+		IsActive:     req.IsActive,
+		BbnReuse:     req.BbnReuse,
+		BoxReuse:     req.BoxReuse,
+		BoxCost:      req.BoxCost,
+		BobinCost:    req.BobinCost,
+		BoxCostVal:   req.BoxCostVal,
+		BobinCostVal: req.BobinCostVal,
+		BbnReuseVal:  req.BbnReuseVal,
+		BoxReuseVal:  req.BoxReuseVal,
+		UpdatedBy:    getUserFromContext(ctx),
 	})
 	if err != nil {
 		RecordBoxBobbinCostOperation("update", false)
@@ -290,13 +306,21 @@ func (h *BoxBobbinCostHandler) DownloadBoxBobbinCostTemplate(_ context.Context, 
 // boxBobbinCostEntityToProto converts a domain BoxBobbinCost entity to its proto representation.
 func boxBobbinCostEntityToProto(e *boxbobbincost.Entity) *financev1.BoxBobbinCost {
 	p := &financev1.BoxBobbinCost{
-		BbcId:    e.ID().String(),
-		BbcCode:  e.Code(),
-		BbcName:  e.Name(),
-		BbcType:  e.BBCType(),
-		NoOfBob:  safeconv.IntToInt32(e.NoOfBob()),
-		IsActive: e.IsActive(),
-		Notes:    e.Notes(),
+		BbcId:        e.ID().String(),
+		BbcCode:      e.Code(),
+		BbcName:      e.Name(),
+		BbcType:      e.BBCType(),
+		NoOfBob:      safeconv.IntToInt32(e.NoOfBob()),
+		IsActive:     e.IsActive(),
+		Notes:        e.Notes(),
+		BbnReuse:     e.BbnReuse(),
+		BoxReuse:     e.BoxReuse(),
+		BoxCost:      e.BoxCost(),
+		BobinCost:    e.BobinCost(),
+		BoxCostVal:   e.BoxCostVal(),
+		BobinCostVal: e.BobinCostVal(),
+		BbnReuseVal:  e.BbnReuseVal(),
+		BoxReuseVal:  e.BoxReuseVal(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: e.CreatedAt().Format(time.RFC3339),
 			CreatedBy: e.CreatedBy(),

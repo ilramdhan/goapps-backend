@@ -110,11 +110,12 @@ func finalChunkStatus(out *ProcessChunkOutput) costcalcdom.ChunkStatus {
 
 // loadedBundle holds the pre-fetched dependencies for a chunk.
 type loadedBundle struct {
-	routes        map[int64]*costroute.Graph
-	capp          map[int64]map[string]float64
-	formulas      map[int64][]Formula
-	rmCosts       map[string]float64
-	upstreamCosts map[int64]float64
+	routes           map[int64]*costroute.Graph
+	capp             map[int64]map[string]float64
+	formulas         map[int64][]Formula
+	rmCosts          map[string]float64
+	upstreamCosts    map[int64]float64
+	sellingSnapshots map[int64]map[string]float64
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -143,12 +144,20 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		return nil, fmt.Errorf("load upstream costs: %w", err)
 	}
 
+	sellingSnaps, snapErr := s.loader.LoadSellingSnapshots(ctx, in.Products, in.Period)
+	if snapErr != nil {
+		// Non-fatal: proceed with empty snapshots so marketing_result() returns 0
+		// for all FROM_MARKETING formulas rather than aborting the chunk.
+		sellingSnaps = make(map[int64]map[string]float64, len(in.Products))
+	}
+
 	return &loadedBundle{
-		routes:        routes,
-		capp:          capp,
-		formulas:      formulas,
-		rmCosts:       rmCosts,
-		upstreamCosts: upstreamCosts,
+		routes:           routes,
+		capp:             capp,
+		formulas:         formulas,
+		rmCosts:          rmCosts,
+		upstreamCosts:    upstreamCosts,
+		sellingSnapshots: sellingSnaps,
 	}, nil
 }
 
@@ -172,16 +181,21 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		return productOutcomeBlocked
 	}
 
+	sellingSnap := loaded.sellingSnapshots[pid]
+	if sellingSnap == nil {
+		sellingSnap = map[string]float64{}
+	}
 	out, err := ComputeProduct(ctx, ComputeInput{
-		ProductSysID:  pid,
-		Period:        in.Period,
-		CalcType:      in.CalcType,
-		Route:         route,
-		CAPP:          loaded.capp[pid],
-		Formulas:      loaded.formulas[pid],
-		RMCosts:       loaded.rmCosts,
-		UpstreamCosts: loaded.upstreamCosts,
-		EvalCache:     s.cache,
+		ProductSysID:    pid,
+		Period:          in.Period,
+		CalcType:        in.CalcType,
+		Route:           route,
+		CAPP:            loaded.capp[pid],
+		Formulas:        loaded.formulas[pid],
+		RMCosts:         loaded.rmCosts,
+		UpstreamCosts:   loaded.upstreamCosts,
+		EvalCache:       s.cache,
+		SellingSnapshot: sellingSnap,
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)

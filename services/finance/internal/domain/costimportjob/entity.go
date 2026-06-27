@@ -21,6 +21,7 @@ const (
 	EntityCPP                      = "cpp"
 	EntityBulkProductRouting       = "bulk_product_routing"
 	EntityBulkProductRoutingExport = "bulk_product_routing_export"
+	EntityBulkParamsOnly           = "bulk_params_only"
 )
 
 // CostImportJob tracks the lifecycle of a bulk import operation.
@@ -153,11 +154,14 @@ func (j *CostImportJob) UpdateProgress(processed, success, failed, skipped int) 
 }
 
 // MarkDone finalizes the job. If any rows failed the status is set to PARTIAL;
-// otherwise it is set to DONE.
+// otherwise it is set to DONE. errorFile is only applied when non-empty so that
+// a key set earlier via SetErrorFile is not overwritten by a bare MarkDone("").
 func (j *CostImportJob) MarkDone(errorFile string) {
 	now := time.Now().UTC()
 	j.completedAt = &now
-	j.errorFile = errorFile
+	if errorFile != "" {
+		j.errorFile = errorFile
+	}
 	if j.failed > 0 {
 		j.status = StatusPartial
 	} else {
@@ -171,4 +175,10 @@ func (j *CostImportJob) MarkFailed(detail string) {
 	j.status = StatusFailed
 	j.completedAt = &now
 	j.errorDetail = detail
+}
+
+// SetErrorFile attaches a downloadable error-report file key to the job.
+// Call after MarkFailed when a report has been uploaded.
+func (j *CostImportJob) SetErrorFile(key string) {
+	j.errorFile = key
 }

@@ -28,6 +28,7 @@ const (
 	CostDataImportService_ExportCostProductParameters_FullMethodName          = "/finance.v1.CostDataImportService/ExportCostProductParameters"
 	CostDataImportService_DownloadCostProductParameterTemplate_FullMethodName = "/finance.v1.CostDataImportService/DownloadCostProductParameterTemplate"
 	CostDataImportService_ImportBulkProductRouting_FullMethodName             = "/finance.v1.CostDataImportService/ImportBulkProductRouting"
+	CostDataImportService_ImportBulkParamsOnly_FullMethodName                 = "/finance.v1.CostDataImportService/ImportBulkParamsOnly"
 	CostDataImportService_ValidateBulkProductRoutingFile_FullMethodName       = "/finance.v1.CostDataImportService/ValidateBulkProductRoutingFile"
 	CostDataImportService_ExportBulkProductRouting_FullMethodName             = "/finance.v1.CostDataImportService/ExportBulkProductRouting"
 )
@@ -45,6 +46,9 @@ type CostDataImportServiceClient interface {
 	ExportCostProductParameters(ctx context.Context, in *ExportCostProductParametersRequest, opts ...grpc.CallOption) (*ExportCostProductParametersResponse, error)
 	DownloadCostProductParameterTemplate(ctx context.Context, in *DownloadCostProductParameterTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductParameterTemplateResponse, error)
 	ImportBulkProductRouting(ctx context.Context, in *ImportBulkProductRoutingRequest, opts ...grpc.CallOption) (*ImportBulkProductRoutingResponse, error)
+	// ImportBulkParamsOnly imports product parameters from a params-only file.
+	// Products must already exist in the database from a prior bulk import run.
+	ImportBulkParamsOnly(ctx context.Context, in *ImportBulkParamsOnlyRequest, opts ...grpc.CallOption) (*ImportBulkParamsOnlyResponse, error)
 	ValidateBulkProductRoutingFile(ctx context.Context, in *ValidateBulkProductRoutingFileRequest, opts ...grpc.CallOption) (*ValidateBulkProductRoutingFileResponse, error)
 	ExportBulkProductRouting(ctx context.Context, in *ExportBulkProductRoutingRequest, opts ...grpc.CallOption) (*ExportBulkProductRoutingResponse, error)
 }
@@ -147,6 +151,16 @@ func (c *costDataImportServiceClient) ImportBulkProductRouting(ctx context.Conte
 	return out, nil
 }
 
+func (c *costDataImportServiceClient) ImportBulkParamsOnly(ctx context.Context, in *ImportBulkParamsOnlyRequest, opts ...grpc.CallOption) (*ImportBulkParamsOnlyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImportBulkParamsOnlyResponse)
+	err := c.cc.Invoke(ctx, CostDataImportService_ImportBulkParamsOnly_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *costDataImportServiceClient) ValidateBulkProductRoutingFile(ctx context.Context, in *ValidateBulkProductRoutingFileRequest, opts ...grpc.CallOption) (*ValidateBulkProductRoutingFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ValidateBulkProductRoutingFileResponse)
@@ -180,6 +194,9 @@ type CostDataImportServiceServer interface {
 	ExportCostProductParameters(context.Context, *ExportCostProductParametersRequest) (*ExportCostProductParametersResponse, error)
 	DownloadCostProductParameterTemplate(context.Context, *DownloadCostProductParameterTemplateRequest) (*DownloadCostProductParameterTemplateResponse, error)
 	ImportBulkProductRouting(context.Context, *ImportBulkProductRoutingRequest) (*ImportBulkProductRoutingResponse, error)
+	// ImportBulkParamsOnly imports product parameters from a params-only file.
+	// Products must already exist in the database from a prior bulk import run.
+	ImportBulkParamsOnly(context.Context, *ImportBulkParamsOnlyRequest) (*ImportBulkParamsOnlyResponse, error)
 	ValidateBulkProductRoutingFile(context.Context, *ValidateBulkProductRoutingFileRequest) (*ValidateBulkProductRoutingFileResponse, error)
 	ExportBulkProductRouting(context.Context, *ExportBulkProductRoutingRequest) (*ExportBulkProductRoutingResponse, error)
 	mustEmbedUnimplementedCostDataImportServiceServer()
@@ -218,6 +235,9 @@ func (UnimplementedCostDataImportServiceServer) DownloadCostProductParameterTemp
 }
 func (UnimplementedCostDataImportServiceServer) ImportBulkProductRouting(context.Context, *ImportBulkProductRoutingRequest) (*ImportBulkProductRoutingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ImportBulkProductRouting not implemented")
+}
+func (UnimplementedCostDataImportServiceServer) ImportBulkParamsOnly(context.Context, *ImportBulkParamsOnlyRequest) (*ImportBulkParamsOnlyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportBulkParamsOnly not implemented")
 }
 func (UnimplementedCostDataImportServiceServer) ValidateBulkProductRoutingFile(context.Context, *ValidateBulkProductRoutingFileRequest) (*ValidateBulkProductRoutingFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ValidateBulkProductRoutingFile not implemented")
@@ -408,6 +428,24 @@ func _CostDataImportService_ImportBulkProductRouting_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostDataImportService_ImportBulkParamsOnly_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportBulkParamsOnlyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostDataImportServiceServer).ImportBulkParamsOnly(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostDataImportService_ImportBulkParamsOnly_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostDataImportServiceServer).ImportBulkParamsOnly(ctx, req.(*ImportBulkParamsOnlyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CostDataImportService_ValidateBulkProductRoutingFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ValidateBulkProductRoutingFileRequest)
 	if err := dec(in); err != nil {
@@ -486,6 +524,10 @@ var CostDataImportService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ImportBulkProductRouting",
 			Handler:    _CostDataImportService_ImportBulkProductRouting_Handler,
+		},
+		{
+			MethodName: "ImportBulkParamsOnly",
+			Handler:    _CostDataImportService_ImportBulkParamsOnly_Handler,
 		},
 		{
 			MethodName: "ValidateBulkProductRoutingFile",

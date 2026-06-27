@@ -33,8 +33,11 @@ func (r *BoxBobbinCostRepository) Create(ctx context.Context, entity *boxbobbinc
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO mst_box_bobbin_cost (
 			bbc_id, bbc_code, bbc_name, bbc_type, no_of_bob,
-			is_active, notes, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			is_active, notes,
+			bbn_reuse, box_reuse, box_cost, bobin_cost, box_cost_val, bobin_cost_val,
+			bbn_reuse_val, box_reuse_val,
+			created_at, created_by
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 	`,
 		entity.ID(),
 		entity.Code(),
@@ -43,6 +46,14 @@ func (r *BoxBobbinCostRepository) Create(ctx context.Context, entity *boxbobbinc
 		entity.NoOfBob(),
 		entity.IsActive(),
 		nullableString(entity.Notes()),
+		entity.BbnReuse(),
+		entity.BoxReuse(),
+		entity.BoxCost(),
+		entity.BobinCost(),
+		entity.BoxCostVal(),
+		entity.BobinCostVal(),
+		entity.BbnReuseVal(),
+		entity.BoxReuseVal(),
 		entity.CreatedAt(),
 		entity.CreatedBy(),
 	)
@@ -68,6 +79,8 @@ func (r *BoxBobbinCostRepository) GetByID(ctx context.Context, id uuid.UUID) (*b
 	return boxbobbincost.Reconstruct(
 		entity.ID(), entity.Code(), entity.Name(), entity.BBCType(), entity.NoOfBob(),
 		entity.IsActive(), rates, entity.Notes(),
+		entity.BbnReuse(), entity.BoxReuse(), entity.BoxCost(), entity.BobinCost(), entity.BoxCostVal(), entity.BobinCostVal(),
+		entity.BbnReuseVal(), entity.BoxReuseVal(),
 		entity.CreatedAt(), entity.CreatedBy(),
 		entity.UpdatedAt(), entity.UpdatedBy(),
 		entity.DeletedAt(), entity.DeletedBy(),
@@ -141,13 +154,21 @@ func (r *BoxBobbinCostRepository) List(ctx context.Context, filter boxbobbincost
 func (r *BoxBobbinCostRepository) Update(ctx context.Context, entity *boxbobbincost.Entity) error {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE mst_box_bobbin_cost SET
-			bbc_name   = $2,
-			bbc_type   = $3,
-			no_of_bob  = $4,
-			is_active  = $5,
-			notes      = $6,
-			updated_at = $7,
-			updated_by = $8
+			bbc_name      = $2,
+			bbc_type      = $3,
+			no_of_bob     = $4,
+			is_active     = $5,
+			notes         = $6,
+			bbn_reuse     = $7,
+			box_reuse     = $8,
+			box_cost      = $9,
+			bobin_cost    = $10,
+			box_cost_val  = $11,
+			bobin_cost_val= $12,
+			bbn_reuse_val = $13,
+			box_reuse_val = $14,
+			updated_at    = $15,
+			updated_by    = $16
 		WHERE bbc_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -156,6 +177,14 @@ func (r *BoxBobbinCostRepository) Update(ctx context.Context, entity *boxbobbinc
 		entity.NoOfBob(),
 		entity.IsActive(),
 		nullableString(entity.Notes()),
+		entity.BbnReuse(),
+		entity.BoxReuse(),
+		entity.BoxCost(),
+		entity.BobinCost(),
+		entity.BoxCostVal(),
+		entity.BobinCostVal(),
+		entity.BbnReuseVal(),
+		entity.BoxReuseVal(),
 		entity.UpdatedAt(),
 		entity.UpdatedBy(),
 	)
@@ -286,7 +315,10 @@ func (r *BoxBobbinCostRepository) ExistsByCode(ctx context.Context, code string)
 func (r *BoxBobbinCostRepository) selectCols() string {
 	return `
 		SELECT bbc_id, bbc_code, bbc_name, bbc_type, no_of_bob,
-		       is_active, notes, created_at, created_by,
+		       is_active, notes,
+		       bbn_reuse, box_reuse, box_cost, bobin_cost, box_cost_val, bobin_cost_val,
+		       bbn_reuse_val, box_reuse_val,
+		       created_at, created_by,
 		       updated_at, updated_by, deleted_at, deleted_by
 		FROM mst_box_bobbin_cost
 	`
@@ -304,24 +336,36 @@ func (r *BoxBobbinCostRepository) resolveSort(sortBy string) string {
 }
 
 type boxBobbinCostDTO struct {
-	ID        uuid.UUID
-	Code      string
-	Name      string
-	BBCType   string
-	NoOfBob   int
-	IsActive  bool
-	Notes     sql.NullString
-	CreatedAt time.Time
-	CreatedBy string
-	UpdatedAt sql.NullTime
-	UpdatedBy sql.NullString
-	DeletedAt sql.NullTime
-	DeletedBy sql.NullString
+	ID           uuid.UUID
+	Code         string
+	Name         string
+	BBCType      string
+	NoOfBob      int
+	IsActive     bool
+	Notes        sql.NullString
+	BbnReuse     sql.NullFloat64
+	BoxReuse     sql.NullFloat64
+	BoxCost      sql.NullFloat64
+	BobinCost    sql.NullFloat64
+	BoxCostVal   sql.NullFloat64
+	BobinCostVal sql.NullFloat64
+	BbnReuseVal  sql.NullFloat64
+	BoxReuseVal  sql.NullFloat64
+	CreatedAt    time.Time
+	CreatedBy    string
+	UpdatedAt    sql.NullTime
+	UpdatedBy    sql.NullString
+	DeletedAt    sql.NullTime
+	DeletedBy    sql.NullString
 }
 
 func (d *boxBobbinCostDTO) toEntity() *boxbobbincost.Entity {
 	return boxbobbincost.Reconstruct(
 		d.ID, d.Code, d.Name, d.BBCType, d.NoOfBob, d.IsActive, nil, d.Notes.String,
+		nullableFloat64Ptr(d.BbnReuse), nullableFloat64Ptr(d.BoxReuse),
+		nullableFloat64Ptr(d.BoxCost), nullableFloat64Ptr(d.BobinCost),
+		nullableFloat64Ptr(d.BoxCostVal), nullableFloat64Ptr(d.BobinCostVal),
+		nullableFloat64Ptr(d.BbnReuseVal), nullableFloat64Ptr(d.BoxReuseVal),
 		d.CreatedAt, d.CreatedBy,
 		nullableTimePtr(d.UpdatedAt), nullableStringPtr(d.UpdatedBy),
 		nullableTimePtr(d.DeletedAt), nullableStringPtr(d.DeletedBy),
@@ -332,7 +376,10 @@ func (r *BoxBobbinCostRepository) scanOne(row *sql.Row) (*boxbobbincost.Entity, 
 	var d boxBobbinCostDTO
 	err := row.Scan(
 		&d.ID, &d.Code, &d.Name, &d.BBCType, &d.NoOfBob,
-		&d.IsActive, &d.Notes, &d.CreatedAt, &d.CreatedBy,
+		&d.IsActive, &d.Notes,
+		&d.BbnReuse, &d.BoxReuse, &d.BoxCost, &d.BobinCost, &d.BoxCostVal, &d.BobinCostVal,
+		&d.BbnReuseVal, &d.BoxReuseVal,
+		&d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -348,7 +395,10 @@ func (r *BoxBobbinCostRepository) scanRow(rows *sql.Rows) (*boxbobbincost.Entity
 	var d boxBobbinCostDTO
 	err := rows.Scan(
 		&d.ID, &d.Code, &d.Name, &d.BBCType, &d.NoOfBob,
-		&d.IsActive, &d.Notes, &d.CreatedAt, &d.CreatedBy,
+		&d.IsActive, &d.Notes,
+		&d.BbnReuse, &d.BoxReuse, &d.BoxCost, &d.BobinCost, &d.BoxCostVal, &d.BobinCostVal,
+		&d.BbnReuseVal, &d.BoxReuseVal,
+		&d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
 	if err != nil {

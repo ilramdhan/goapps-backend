@@ -299,6 +299,40 @@
         ]
       }
     },
+    "/api/v1/finance/costing/import/bulk_params_only": {
+      "post": {
+        "summary": "ImportBulkParamsOnly imports product parameters from a params-only file.\nProducts must already exist in the database from a prior bulk import run.",
+        "operationId": "CostDataImportService_ImportBulkParamsOnly",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ImportBulkParamsOnlyResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ImportBulkParamsOnlyRequest imports product_parameters + product_applicable_params\nfrom a file that does NOT contain a product_master sheet. Products must already\nexist in the database from a prior bulk import. Supports split part-sheets\n(e.g. \"product_parameters_p1\" + \"_p2\"). Max 50 MB.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportBulkParamsOnlyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
     "/api/v1/finance/costing/import/bulk_product_routing": {
       "post": {
         "operationId": "CostDataImportService_ImportBulkProductRouting",
@@ -606,6 +640,35 @@
           "$ref": "#/definitions/v1CostImportJob"
         }
       }
+    },
+    "v1ImportBulkParamsOnlyRequest": {
+      "type": "object",
+      "properties": {
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      },
+      "description": "ImportBulkParamsOnlyRequest imports product_parameters + product_applicable_params\nfrom a file that does NOT contain a product_master sheet. Products must already\nexist in the database from a prior bulk import. Supports split part-sheets\n(e.g. \"product_parameters_p1\" + \"_p2\"). Max 50 MB."
+    },
+    "v1ImportBulkParamsOnlyResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "description": "ImportBulkParamsOnlyResponse returns the created async job ID."
     },
     "v1ImportBulkProductRoutingRequest": {
       "type": "object",

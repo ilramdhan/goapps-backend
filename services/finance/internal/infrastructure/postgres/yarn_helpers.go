@@ -40,3 +40,12 @@ func nullableStringPtr(n sql.NullString) *string {
 	v := n.String
 	return &v
 }
+
+// nullableInt32Ptr converts sql.NullInt32 to *int32.
+func nullableInt32Ptr(n sql.NullInt32) *int32 {
+	if !n.Valid {
+		return nil
+	}
+	v := n.Int32
+	return &v
+}

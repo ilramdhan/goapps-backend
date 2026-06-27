@@ -12,13 +12,21 @@ import (
 
 // UpdateCommand is the input for updating a Box Bobbin Cost.
 type UpdateCommand struct {
-	ID        uuid.UUID
-	Name      *string
-	BBCType   *string
-	NoOfBob   *int
-	Notes     *string
-	IsActive  *bool
-	UpdatedBy string
+	ID           uuid.UUID
+	Name         *string
+	BBCType      *string
+	NoOfBob      *int
+	Notes        *string
+	IsActive     *bool
+	BbnReuse     *float64
+	BoxReuse     *float64
+	BoxCost      *float64
+	BobinCost    *float64
+	BoxCostVal   *float64
+	BobinCostVal *float64
+	BbnReuseVal  *float64
+	BoxReuseVal  *float64
+	UpdatedBy    string
 }
 
 // UpdateHandler handles the UpdateBoxBobbinCost command.
@@ -39,11 +47,19 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*boxbobb
 	}
 
 	if err := entity.Update(boxbobbincost.UpdateInput{
-		Name:     cmd.Name,
-		BBCType:  cmd.BBCType,
-		NoOfBob:  cmd.NoOfBob,
-		Notes:    cmd.Notes,
-		IsActive: cmd.IsActive,
+		Name:         cmd.Name,
+		BBCType:      cmd.BBCType,
+		NoOfBob:      cmd.NoOfBob,
+		Notes:        cmd.Notes,
+		IsActive:     cmd.IsActive,
+		BbnReuse:     cmd.BbnReuse,
+		BoxReuse:     cmd.BoxReuse,
+		BoxCost:      cmd.BoxCost,
+		BobinCost:    cmd.BobinCost,
+		BoxCostVal:   cmd.BoxCostVal,
+		BobinCostVal: cmd.BobinCostVal,
+		BbnReuseVal:  cmd.BbnReuseVal,
+		BoxReuseVal:  cmd.BoxReuseVal,
 	}, cmd.UpdatedBy); err != nil {
 		return nil, err
 	}

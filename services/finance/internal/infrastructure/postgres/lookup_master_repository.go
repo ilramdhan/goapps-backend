@@ -240,10 +240,13 @@ func (r *LookupMasterRepository) ListMasterOptions(ctx context.Context, masterCo
 
 	// Table and column names come from the registry (not user input).
 	// quoteIdent double-quotes each identifier for safety.
+	// Filter out NULL code-field rows (e.g. mbs_orion_item_code is nullable) to
+	// avoid scan errors and meaningless empty-string options in the validation set.
 	q := fmt.Sprintf(
-		`SELECT %s::text, %s::text FROM %s WHERE deleted_at IS NULL ORDER BY %s LIMIT 500`,
+		`SELECT %s::text, COALESCE(%s::text,'') FROM %s WHERE deleted_at IS NULL AND %s IS NOT NULL ORDER BY %s`,
 		quoteIdent(codeField), quoteIdent(labelField),
 		quoteIdent(tableName),
+		quoteIdent(codeField),
 		quoteIdent(labelField),
 	)
 	rows, err := r.db.QueryContext(ctx, q)

@@ -18,7 +18,7 @@ var (
 	ErrInvalidCodeFormat = errors.New("parameter code must start with uppercase letter and contain only uppercase letters, numbers, and underscores")
 
 	// ErrCodeTooLong is returned when the parameter code exceeds max length.
-	ErrCodeTooLong = errors.New("parameter code must be at most 20 characters")
+	ErrCodeTooLong = errors.New("parameter code must be at most 50 characters")
 
 	// ErrInvalidDataType is returned when the data type is invalid.
 	ErrInvalidDataType = errors.New("invalid data type: must be NUMBER, TEXT, or BOOLEAN")
@@ -54,7 +54,7 @@ var (
 	ErrLookupMasterCodeTooLong = errors.New("lookup_master_code must be at most 30 characters")
 
 	// ErrLookupFillGroupCodeTooLong is returned when lookup_fill_group_code exceeds 20 chars.
-	ErrLookupFillGroupCodeTooLong = errors.New("lookup_fill_group_code must be at most 20 characters")
+	ErrLookupFillGroupCodeTooLong = errors.New("lookup_fill_group_code must be at most 50 characters")
 
 	// ErrLookupSourceColumnTooLong is returned when lookup_source_column exceeds 50 chars.
 	ErrLookupSourceColumnTooLong = errors.New("lookup_source_column must be at most 50 characters")

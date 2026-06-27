@@ -57,13 +57,18 @@ func (h *MBHeadHandler) CreateMBHead(ctx context.Context, req *financev1.CreateM
 	}
 
 	entity, err := h.createHandler.Handle(ctx, appmbhead.CreateCommand{
-		MBCosting:   req.MbhMbCosting,
-		OracleSysID: req.MbhOracleSysId,
-		MgtName:     req.MbhMgtName,
-		Denier:      req.MbhDenier,
-		Filament:    filament,
-		Dozing:      req.MbhDozing,
-		CreatedBy:   getUserFromContext(ctx),
+		MBCosting:       req.MbhMbCosting,
+		OracleSysID:     req.MbhOracleSysId,
+		MgtName:         req.MbhMgtName,
+		Denier:          req.MbhDenier,
+		Filament:        filament,
+		Dozing:          req.MbhDozing,
+		MBHCheckStatus:  req.MbhCheckStatus,
+		MBHStatus:       req.MbhStatus,
+		MBHLdrPrsn:      req.MbhLdrPrsn,
+		MBHFinalProduct: req.MbhFinalProduct,
+		MBHCode:         req.MbhCode,
+		CreatedBy:       getUserFromContext(ctx),
 	})
 	if err != nil {
 		RecordMBHeadOperation("create", false)
@@ -123,14 +128,19 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, appmbhead.UpdateCommand{
-		ID:        id,
-		MBCosting: req.MbhMbCosting,
-		MgtName:   req.MbhMgtName,
-		Denier:    req.MbhDenier,
-		Filament:  filament,
-		Dozing:    req.MbhDozing,
-		IsActive:  req.MbhIsActive,
-		UpdatedBy: getUserFromContext(ctx),
+		ID:              id,
+		MBCosting:       req.MbhMbCosting,
+		MgtName:         req.MbhMgtName,
+		Denier:          req.MbhDenier,
+		Filament:        filament,
+		Dozing:          req.MbhDozing,
+		MBHCheckStatus:  req.MbhCheckStatus,
+		MBHStatus:       req.MbhStatus,
+		MBHLdrPrsn:      req.MbhLdrPrsn,
+		MBHFinalProduct: req.MbhFinalProduct,
+		MBHCode:         req.MbhCode,
+		IsActive:        req.MbhIsActive,
+		UpdatedBy:       getUserFromContext(ctx),
 	})
 	if err != nil {
 		RecordMBHeadOperation("update", false)
@@ -258,6 +268,11 @@ func mbHeadEntityToProto(e *mbhead.Entity) *financev1.MBHead {
 		p.MbhFilament = &v
 	}
 	p.MbhDozing = e.Dozing()
+	p.MbhCheckStatus = e.MBHCheckStatus()
+	p.MbhStatus = e.MBHStatus()
+	p.MbhLdrPrsn = e.MBHLdrPrsn()
+	p.MbhFinalProduct = e.MBHFinalProduct()
+	p.MbhCode = e.MBHCode()
 	if e.UpdatedAt() != nil {
 		p.Audit.UpdatedAt = e.UpdatedAt().Format(time.RFC3339)
 	}

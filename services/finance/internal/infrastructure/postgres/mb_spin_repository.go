@@ -32,19 +32,27 @@ var _ mbspin.Repository = (*MBSpinRepository)(nil)
 func (r *MBSpinRepository) Create(ctx context.Context, entity *mbspin.Entity) error {
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO mst_mb_spin (
-			mbs_id, mbs_oracle_sys_id, mbs_mbh_id, mbs_mgt_name,
+			mbs_id, mbs_oracle_sys_id, mbs_orion_item_code, mbs_mbh_id, mbs_mgt_name,
 			mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
+			mbs_cc, mbs_cost_rate_mkt,
+			mbs_status, mbs_ldr_prsn, mbs_final_product,
 			mbs_is_active, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
+		entity.OrionItemCode(),
 		entity.HeadID(),
 		entity.MgtName(),
 		entity.Denier(),
 		entity.Filament(),
 		entity.Dozing(),
 		entity.MBCosting(),
+		entity.CC(),
+		entity.CostRateMkt(),
+		entity.MBSStatus(),
+		entity.MBSLdrPrsn(),
+		entity.MBSFinalProduct(),
 		entity.IsActive(),
 		entity.CreatedAt(),
 		entity.CreatedBy(),
@@ -125,14 +133,19 @@ func (r *MBSpinRepository) List(ctx context.Context, filter mbspin.ListFilter) (
 func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) error {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE mst_mb_spin SET
-			mbs_mgt_name   = $2,
-			mbs_denier     = $3,
-			mbs_filament   = $4,
-			mbs_dozing     = $5,
-			mbs_mb_costing = $6,
-			mbs_is_active  = $7,
-			updated_at     = $8,
-			updated_by     = $9
+			mbs_mgt_name      = $2,
+			mbs_denier        = $3,
+			mbs_filament      = $4,
+			mbs_dozing        = $5,
+			mbs_mb_costing    = $6,
+			mbs_cc            = $7,
+			mbs_cost_rate_mkt = $8,
+			mbs_status        = $9,
+			mbs_ldr_prsn      = $10,
+			mbs_final_product = $11,
+			mbs_is_active     = $12,
+			updated_at        = $13,
+			updated_by        = $14
 		WHERE mbs_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -141,6 +154,11 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 		entity.Filament(),
 		entity.Dozing(),
 		entity.MBCosting(),
+		entity.CC(),
+		entity.CostRateMkt(),
+		entity.MBSStatus(),
+		entity.MBSLdrPrsn(),
+		entity.MBSFinalProduct(),
 		entity.IsActive(),
 		entity.UpdatedAt(),
 		entity.UpdatedBy(),
@@ -189,14 +207,27 @@ func (r *MBSpinRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, 
 	return exists, nil
 }
 
+// GetByMBCosting retrieves an MB Spin by its MB costing code.
+func (r *MBSpinRepository) GetByMBCosting(ctx context.Context, code string) (*mbspin.Entity, error) {
+	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_mb_costing = $1 AND deleted_at IS NULL`, code))
+}
+
+// GetByOrionItemCode retrieves the first active MB Spin with the given ORION item code.
+func (r *MBSpinRepository) GetByOrionItemCode(ctx context.Context, code string) (*mbspin.Entity, error) {
+	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_orion_item_code = $1 AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1`, code))
+}
+
 // =============================================================================
 // Helpers
 // =============================================================================
 
 func (r *MBSpinRepository) selectCols() string {
 	return `
-		SELECT mbs_id, mbs_oracle_sys_id, mbs_mbh_id, mbs_mgt_name,
-		       mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing, mbs_is_active,
+		SELECT mbs_id, mbs_oracle_sys_id, mbs_orion_item_code, mbs_mbh_id, mbs_mgt_name,
+		       mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
+		       mbs_cc, mbs_cost_rate_mkt,
+		       mbs_status, mbs_ldr_prsn, mbs_final_product,
+		       mbs_is_active,
 		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
 		FROM mst_mb_spin
 	`
@@ -214,33 +245,45 @@ func (r *MBSpinRepository) resolveSort(sortBy string) string {
 }
 
 type mbSpinDTO struct {
-	ID          uuid.UUID
-	OracleSysID sql.NullString
-	HeadID      uuid.UUID
-	MgtName     string
-	Denier      sql.NullFloat64
-	Filament    sql.NullInt64
-	Dozing      sql.NullFloat64
-	MBCosting   sql.NullString
-	IsActive    bool
-	CreatedAt   time.Time
-	CreatedBy   string
-	UpdatedAt   sql.NullTime
-	UpdatedBy   sql.NullString
-	DeletedAt   sql.NullTime
-	DeletedBy   sql.NullString
+	ID              uuid.UUID
+	OracleSysID     sql.NullString
+	OrionItemCode   sql.NullString
+	HeadID          uuid.UUID
+	MgtName         string
+	Denier          sql.NullFloat64
+	Filament        sql.NullInt64
+	Dozing          sql.NullFloat64
+	MBCosting       sql.NullString
+	CC              sql.NullString
+	CostRateMkt     sql.NullFloat64
+	MBSStatus       sql.NullString
+	MBSLdrPrsn      sql.NullFloat64
+	MBSFinalProduct sql.NullString
+	IsActive        bool
+	CreatedAt       time.Time
+	CreatedBy       string
+	UpdatedAt       sql.NullTime
+	UpdatedBy       sql.NullString
+	DeletedAt       sql.NullTime
+	DeletedBy       sql.NullString
 }
 
 func (d *mbSpinDTO) toEntity() *mbspin.Entity {
 	return mbspin.Reconstruct(
 		d.ID,
 		nullableStringPtr(d.OracleSysID),
+		nullableStringPtr(d.OrionItemCode),
 		d.HeadID,
 		d.MgtName,
 		nullableFloat64Ptr(d.Denier),
 		nullableIntPtr(d.Filament),
 		nullableFloat64Ptr(d.Dozing),
 		nullableStringPtr(d.MBCosting),
+		nullableStringPtr(d.CC),
+		nullableFloat64Ptr(d.CostRateMkt),
+		nullableStringPtr(d.MBSStatus),
+		nullableFloat64Ptr(d.MBSLdrPrsn),
+		nullableStringPtr(d.MBSFinalProduct),
 		d.IsActive,
 		d.CreatedAt, d.CreatedBy,
 		nullableTimePtr(d.UpdatedAt), nullableStringPtr(d.UpdatedBy),
@@ -251,8 +294,11 @@ func (d *mbSpinDTO) toEntity() *mbspin.Entity {
 func (r *MBSpinRepository) scanOne(row *sql.Row) (*mbspin.Entity, error) {
 	var d mbSpinDTO
 	err := row.Scan(
-		&d.ID, &d.OracleSysID, &d.HeadID, &d.MgtName,
-		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting, &d.IsActive,
+		&d.ID, &d.OracleSysID, &d.OrionItemCode, &d.HeadID, &d.MgtName,
+		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting,
+		&d.CC, &d.CostRateMkt,
+		&d.MBSStatus, &d.MBSLdrPrsn, &d.MBSFinalProduct,
+		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -267,8 +313,11 @@ func (r *MBSpinRepository) scanOne(row *sql.Row) (*mbspin.Entity, error) {
 func (r *MBSpinRepository) scanRow(rows *sql.Rows) (*mbspin.Entity, error) {
 	var d mbSpinDTO
 	err := rows.Scan(
-		&d.ID, &d.OracleSysID, &d.HeadID, &d.MgtName,
-		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting, &d.IsActive,
+		&d.ID, &d.OracleSysID, &d.OrionItemCode, &d.HeadID, &d.MgtName,
+		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting,
+		&d.CC, &d.CostRateMkt,
+		&d.MBSStatus, &d.MBSLdrPrsn, &d.MBSFinalProduct,
+		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
 	if err != nil {

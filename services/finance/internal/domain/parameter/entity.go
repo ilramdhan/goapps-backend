@@ -94,7 +94,7 @@ func NewParameter(
 	if len(costing.LookupMasterCode) > 30 {
 		return nil, ErrLookupMasterCodeTooLong
 	}
-	if len(costing.LookupFillGroupCode) > 20 {
+	if len(costing.LookupFillGroupCode) > 50 {
 		return nil, ErrLookupFillGroupCodeTooLong
 	}
 	if len(costing.LookupSourceColumn) > 50 {
@@ -409,7 +409,7 @@ func (p *Parameter) applyLookupFillGroup(v *string) error {
 	if v == nil {
 		return nil
 	}
-	if len(*v) > 20 {
+	if len(*v) > 50 {
 		return ErrLookupFillGroupCodeTooLong
 	}
 	p.lookupFillGroupCode = *v

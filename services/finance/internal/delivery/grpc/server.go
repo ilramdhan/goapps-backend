@@ -61,8 +61,8 @@ func NewServer(cfg *config.ServerConfig, db *postgres.DB, jwtCfg *config.JWTConf
 			MinTime:             1 * time.Minute,
 			PermitWithoutStream: true,
 		}),
-		grpc.MaxRecvMsgSize(10 * 1024 * 1024), // 10MB for file uploads
-		grpc.MaxSendMsgSize(10 * 1024 * 1024), // 10MB for file downloads
+		grpc.MaxRecvMsgSize(100 * 1024 * 1024), // 100MB — supports large bulk import files
+		grpc.MaxSendMsgSize(100 * 1024 * 1024), // 100MB — supports large bulk export files
 	}
 
 	// Create server

@@ -26,7 +26,7 @@ func TestNewCode(t *testing.T) {
 		{name: "invalid - lowercase", input: "speed", wantErr: true, errType: parameter.ErrInvalidCodeFormat},
 		{name: "invalid - starts with number", input: "1SPEED", wantErr: true, errType: parameter.ErrInvalidCodeFormat},
 		{name: "invalid - special characters", input: "SP@ED", wantErr: true, errType: parameter.ErrInvalidCodeFormat},
-		{name: "invalid - too long", input: "ABCDEFGHIJKLMNOPQRSTUVWXYZ", wantErr: true, errType: parameter.ErrCodeTooLong},
+		{name: "invalid - too long", input: "ABCDEFGHIJKLMNOPQRSTUVWXYZ_ABCDEFGHIJKLMNOPQRSTUVWXYZ", wantErr: true, errType: parameter.ErrCodeTooLong},
 	}
 
 	for _, tt := range tests {

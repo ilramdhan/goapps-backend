@@ -9,31 +9,54 @@ import (
 
 // Entity is the aggregate root for the Machine domain.
 type Entity struct {
-	id           uuid.UUID
-	code         string
-	name         string
-	mcType       string
-	location     string
-	noOfPosition int
-	noOfEnd      int
-	mcSpeed      float64
-	machineRPM   *float64
-	mcEfficiency float64
-	powerPerDay  *float64
-	isActive     bool
-	notes        string
-	createdAt    time.Time
-	createdBy    string
-	updatedAt    *time.Time
-	updatedBy    *string
-	deletedAt    *time.Time
-	deletedBy    *string
+	id                 uuid.UUID
+	code               string
+	name               string
+	mcType             string
+	location           string
+	noOfPosition       int
+	noOfEnd            int
+	mcSpeed            float64
+	machineRPM         *float64
+	mcEfficiency       float64
+	powerPerDay        *float64
+	mpPerDay           *float64
+	ohsPerDay          *float64
+	sparesPerDay       *float64
+	kgsLostChange      *float64
+	vb1Qty             *float64
+	vb2Qty             *float64
+	vb3Qty             *float64
+	vb4Qty             *float64
+	vb5Qty             *float64
+	mcPoyBobbinWeight  *float64
+	mcTotFxdCst        *float64
+	mcBobbinPerTrolly  *float64
+	mcBoxCost          *float64
+	mcCaptivePerBobbin *float64
+	mcWeightage        *float64
+	isActive           bool
+	notes              string
+	createdAt          time.Time
+	createdBy          string
+	updatedAt          *time.Time
+	updatedBy          *string
+	deletedAt          *time.Time
+	deletedBy          *string
 }
 
 // New creates a new Machine entity with validation.
 //
 //nolint:revive // Many parameters required for construction.
-func New(code, name, mcType, location string, noOfPosition, noOfEnd int, mcSpeed float64, machineRPM *float64, mcEfficiency float64, powerPerDay *float64, notes, createdBy string) (*Entity, error) {
+func New(
+	code, name, mcType, location string,
+	noOfPosition, noOfEnd int,
+	mcSpeed float64, machineRPM *float64, mcEfficiency float64, powerPerDay *float64,
+	mpPerDay, ohsPerDay, sparesPerDay, kgsLostChange *float64,
+	vb1Qty, vb2Qty, vb3Qty, vb4Qty, vb5Qty *float64,
+	mcPoyBobbinWeight, mcTotFxdCst, mcBobbinPerTrolly, mcBoxCost, mcCaptivePerBobbin, mcWeightage *float64,
+	notes, createdBy string,
+) (*Entity, error) {
 	if err := validateCode(code); err != nil {
 		return nil, err
 	}
@@ -46,7 +69,12 @@ func New(code, name, mcType, location string, noOfPosition, noOfEnd int, mcSpeed
 	return &Entity{
 		id: uuid.New(), code: code, name: name, mcType: mcType, location: location,
 		noOfPosition: noOfPosition, noOfEnd: noOfEnd, mcSpeed: mcSpeed, machineRPM: machineRPM,
-		mcEfficiency: mcEfficiency, powerPerDay: powerPerDay, isActive: true, notes: notes,
+		mcEfficiency: mcEfficiency, powerPerDay: powerPerDay,
+		mpPerDay: mpPerDay, ohsPerDay: ohsPerDay, sparesPerDay: sparesPerDay, kgsLostChange: kgsLostChange,
+		vb1Qty: vb1Qty, vb2Qty: vb2Qty, vb3Qty: vb3Qty, vb4Qty: vb4Qty, vb5Qty: vb5Qty,
+		mcPoyBobbinWeight: mcPoyBobbinWeight, mcTotFxdCst: mcTotFxdCst, mcBobbinPerTrolly: mcBobbinPerTrolly,
+		mcBoxCost: mcBoxCost, mcCaptivePerBobbin: mcCaptivePerBobbin, mcWeightage: mcWeightage,
+		isActive: true, notes: notes,
 		createdAt: time.Now(), createdBy: createdBy,
 	}, nil
 }
@@ -54,11 +82,27 @@ func New(code, name, mcType, location string, noOfPosition, noOfEnd int, mcSpeed
 // Reconstruct rebuilds a Machine from persistence data.
 //
 //nolint:revive // Many parameters required for persistence reconstitution.
-func Reconstruct(id uuid.UUID, code, name, mcType, location string, noOfPosition, noOfEnd int, mcSpeed float64, machineRPM *float64, mcEfficiency float64, powerPerDay *float64, isActive bool, notes string, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
+func Reconstruct(
+	id uuid.UUID,
+	code, name, mcType, location string,
+	noOfPosition, noOfEnd int,
+	mcSpeed float64, machineRPM *float64, mcEfficiency float64, powerPerDay *float64,
+	mpPerDay, ohsPerDay, sparesPerDay, kgsLostChange *float64,
+	vb1Qty, vb2Qty, vb3Qty, vb4Qty, vb5Qty *float64,
+	mcPoyBobbinWeight, mcTotFxdCst, mcBobbinPerTrolly, mcBoxCost, mcCaptivePerBobbin, mcWeightage *float64,
+	isActive bool, notes string,
+	createdAt time.Time, createdBy string,
+	updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string,
+) *Entity {
 	return &Entity{
 		id: id, code: code, name: name, mcType: mcType, location: location,
 		noOfPosition: noOfPosition, noOfEnd: noOfEnd, mcSpeed: mcSpeed, machineRPM: machineRPM,
-		mcEfficiency: mcEfficiency, powerPerDay: powerPerDay, isActive: isActive, notes: notes,
+		mcEfficiency: mcEfficiency, powerPerDay: powerPerDay,
+		mpPerDay: mpPerDay, ohsPerDay: ohsPerDay, sparesPerDay: sparesPerDay, kgsLostChange: kgsLostChange,
+		vb1Qty: vb1Qty, vb2Qty: vb2Qty, vb3Qty: vb3Qty, vb4Qty: vb4Qty, vb5Qty: vb5Qty,
+		mcPoyBobbinWeight: mcPoyBobbinWeight, mcTotFxdCst: mcTotFxdCst, mcBobbinPerTrolly: mcBobbinPerTrolly,
+		mcBoxCost: mcBoxCost, mcCaptivePerBobbin: mcCaptivePerBobbin, mcWeightage: mcWeightage,
+		isActive: isActive, notes: notes,
 		createdAt: createdAt, createdBy: createdBy, updatedAt: updatedAt, updatedBy: updatedBy,
 		deletedAt: deletedAt, deletedBy: deletedBy,
 	}
@@ -97,6 +141,51 @@ func (e *Entity) MCEfficiency() float64 { return e.mcEfficiency }
 // PowerPerDay returns the optional power cost per day in USD.
 func (e *Entity) PowerPerDay() *float64 { return e.powerPerDay }
 
+// MpPerDay returns optional manpower cost per day USD.
+func (e *Entity) MpPerDay() *float64 { return e.mpPerDay }
+
+// OhsPerDay returns optional overhead per head USD.
+func (e *Entity) OhsPerDay() *float64 { return e.ohsPerDay }
+
+// SparesPerDay returns optional spares cost per day USD.
+func (e *Entity) SparesPerDay() *float64 { return e.sparesPerDay }
+
+// KgsLostChange returns optional change-over quality loss kgs.
+func (e *Entity) KgsLostChange() *float64 { return e.kgsLostChange }
+
+// Vb1Qty returns optional volume bucket 1 quantity threshold.
+func (e *Entity) Vb1Qty() *float64 { return e.vb1Qty }
+
+// Vb2Qty returns optional volume bucket 2 quantity threshold.
+func (e *Entity) Vb2Qty() *float64 { return e.vb2Qty }
+
+// Vb3Qty returns optional volume bucket 3 quantity threshold.
+func (e *Entity) Vb3Qty() *float64 { return e.vb3Qty }
+
+// Vb4Qty returns optional volume bucket 4 quantity threshold.
+func (e *Entity) Vb4Qty() *float64 { return e.vb4Qty }
+
+// Vb5Qty returns optional volume bucket 5 quantity threshold.
+func (e *Entity) Vb5Qty() *float64 { return e.vb5Qty }
+
+// McPoyBobbinWeight returns optional Oracle CMM_POY_BOBBIN_WEIGHT value.
+func (e *Entity) McPoyBobbinWeight() *float64 { return e.mcPoyBobbinWeight }
+
+// McTotFxdCst returns optional Oracle CMM_TOT_FXD_CST value.
+func (e *Entity) McTotFxdCst() *float64 { return e.mcTotFxdCst }
+
+// McBobbinPerTrolly returns optional Oracle CMM_BOBBIN_PER_TROLLY value.
+func (e *Entity) McBobbinPerTrolly() *float64 { return e.mcBobbinPerTrolly }
+
+// McBoxCost returns optional Oracle CMM_BOX_COST value.
+func (e *Entity) McBoxCost() *float64 { return e.mcBoxCost }
+
+// McCaptivePerBobbin returns optional Oracle CMM_CAPTIVE_PER_BOBBIN value.
+func (e *Entity) McCaptivePerBobbin() *float64 { return e.mcCaptivePerBobbin }
+
+// McWeightage returns optional Oracle CMM_WEIGHTAGE value.
+func (e *Entity) McWeightage() *float64 { return e.mcWeightage }
+
 // IsActive returns whether the machine is active.
 func (e *Entity) IsActive() bool { return e.isActive }
 
@@ -126,17 +215,32 @@ func (e *Entity) IsDeleted() bool { return e.deletedAt != nil }
 
 // UpdateInput carries optional field mutations for Update.
 type UpdateInput struct {
-	Name         *string
-	MCType       *string
-	Location     *string
-	NoOfPosition *int
-	NoOfEnd      *int
-	MCSpeed      *float64
-	MachineRPM   *float64
-	MCEfficiency *float64
-	PowerPerDay  *float64
-	IsActive     *bool
-	Notes        *string
+	Name               *string
+	MCType             *string
+	Location           *string
+	NoOfPosition       *int
+	NoOfEnd            *int
+	MCSpeed            *float64
+	MachineRPM         *float64
+	MCEfficiency       *float64
+	PowerPerDay        *float64
+	MpPerDay           *float64
+	OhsPerDay          *float64
+	SparesPerDay       *float64
+	KgsLostChange      *float64
+	Vb1Qty             *float64
+	Vb2Qty             *float64
+	Vb3Qty             *float64
+	Vb4Qty             *float64
+	Vb5Qty             *float64
+	McPoyBobbinWeight  *float64
+	McTotFxdCst        *float64
+	McBobbinPerTrolly  *float64
+	McBoxCost          *float64
+	McCaptivePerBobbin *float64
+	McWeightage        *float64
+	IsActive           *bool
+	Notes              *string
 }
 
 // Update applies optional field changes to the machine entity.
@@ -178,6 +282,19 @@ func (e *Entity) applyName(name *string) error {
 }
 
 func (e *Entity) applyOptionalFields(in UpdateInput) {
+	e.applyMachineParams(in)
+	e.applyCostFields(in)
+	e.applyVolumeFields(in)
+	e.applyOracleFields(in)
+	if in.IsActive != nil {
+		e.isActive = *in.IsActive
+	}
+	if in.Notes != nil {
+		e.notes = *in.Notes
+	}
+}
+
+func (e *Entity) applyMachineParams(in UpdateInput) {
 	if in.MCType != nil {
 		e.mcType = *in.MCType
 	}
@@ -199,14 +316,62 @@ func (e *Entity) applyOptionalFields(in UpdateInput) {
 	if in.MCEfficiency != nil {
 		e.mcEfficiency = *in.MCEfficiency
 	}
+}
+
+func (e *Entity) applyCostFields(in UpdateInput) {
 	if in.PowerPerDay != nil {
 		e.powerPerDay = in.PowerPerDay
 	}
-	if in.IsActive != nil {
-		e.isActive = *in.IsActive
+	if in.MpPerDay != nil {
+		e.mpPerDay = in.MpPerDay
 	}
-	if in.Notes != nil {
-		e.notes = *in.Notes
+	if in.OhsPerDay != nil {
+		e.ohsPerDay = in.OhsPerDay
+	}
+	if in.SparesPerDay != nil {
+		e.sparesPerDay = in.SparesPerDay
+	}
+	if in.KgsLostChange != nil {
+		e.kgsLostChange = in.KgsLostChange
+	}
+}
+
+func (e *Entity) applyVolumeFields(in UpdateInput) {
+	if in.Vb1Qty != nil {
+		e.vb1Qty = in.Vb1Qty
+	}
+	if in.Vb2Qty != nil {
+		e.vb2Qty = in.Vb2Qty
+	}
+	if in.Vb3Qty != nil {
+		e.vb3Qty = in.Vb3Qty
+	}
+	if in.Vb4Qty != nil {
+		e.vb4Qty = in.Vb4Qty
+	}
+	if in.Vb5Qty != nil {
+		e.vb5Qty = in.Vb5Qty
+	}
+}
+
+func (e *Entity) applyOracleFields(in UpdateInput) {
+	if in.McPoyBobbinWeight != nil {
+		e.mcPoyBobbinWeight = in.McPoyBobbinWeight
+	}
+	if in.McTotFxdCst != nil {
+		e.mcTotFxdCst = in.McTotFxdCst
+	}
+	if in.McBobbinPerTrolly != nil {
+		e.mcBobbinPerTrolly = in.McBobbinPerTrolly
+	}
+	if in.McBoxCost != nil {
+		e.mcBoxCost = in.McBoxCost
+	}
+	if in.McCaptivePerBobbin != nil {
+		e.mcCaptivePerBobbin = in.McCaptivePerBobbin
+	}
+	if in.McWeightage != nil {
+		e.mcWeightage = in.McWeightage
 	}
 }
 

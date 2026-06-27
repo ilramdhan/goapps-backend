@@ -227,6 +227,10 @@ type CreateCostProductMasterRequest struct {
 	ShadeCode     string                 `protobuf:"bytes,3,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
 	GradeCode     string                 `protobuf:"bytes,4,opt,name=grade_code,json=gradeCode,proto3" json:"grade_code,omitempty"`
 	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	// Legacy / import identifiers — plain text, no validation constraint.
+	Flex_01       string `protobuf:"bytes,6,opt,name=flex_01,json=flex01,proto3" json:"flex_01,omitempty"` // legacy_erp_compound_key
+	Flex_02       string `protobuf:"bytes,7,opt,name=flex_02,json=flex02,proto3" json:"flex_02,omitempty"` // legacy_oracle_sys_id
+	Flex_03       string `protobuf:"bytes,8,opt,name=flex_03,json=flex03,proto3" json:"flex_03,omitempty"` // legacy_type_label
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -292,6 +296,27 @@ func (x *CreateCostProductMasterRequest) GetGradeCode() string {
 func (x *CreateCostProductMasterRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateCostProductMasterRequest) GetFlex_01() string {
+	if x != nil {
+		return x.Flex_01
+	}
+	return ""
+}
+
+func (x *CreateCostProductMasterRequest) GetFlex_02() string {
+	if x != nil {
+		return x.Flex_02
+	}
+	return ""
+}
+
+func (x *CreateCostProductMasterRequest) GetFlex_03() string {
+	if x != nil {
+		return x.Flex_03
 	}
 	return ""
 }
@@ -541,12 +566,16 @@ func (x *GetCostProductMasterByCodeResponse) GetData() *CostProductMaster {
 }
 
 type UpdateCostProductMasterRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductSysId  int64                  `protobuf:"varint,1,opt,name=product_sys_id,json=productSysId,proto3" json:"product_sys_id,omitempty"`
-	ProductName   string                 `protobuf:"bytes,2,opt,name=product_name,json=productName,proto3" json:"product_name,omitempty"`
-	ShadeCode     string                 `protobuf:"bytes,3,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
-	GradeCode     string                 `protobuf:"bytes,4,opt,name=grade_code,json=gradeCode,proto3" json:"grade_code,omitempty"`
-	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	ProductSysId int64                  `protobuf:"varint,1,opt,name=product_sys_id,json=productSysId,proto3" json:"product_sys_id,omitempty"`
+	ProductName  string                 `protobuf:"bytes,2,opt,name=product_name,json=productName,proto3" json:"product_name,omitempty"`
+	ShadeCode    string                 `protobuf:"bytes,3,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
+	GradeCode    string                 `protobuf:"bytes,4,opt,name=grade_code,json=gradeCode,proto3" json:"grade_code,omitempty"`
+	Description  string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	// Legacy / import identifiers — plain text, no validation constraint.
+	Flex_01       string `protobuf:"bytes,6,opt,name=flex_01,json=flex01,proto3" json:"flex_01,omitempty"` // legacy_erp_compound_key
+	Flex_02       string `protobuf:"bytes,7,opt,name=flex_02,json=flex02,proto3" json:"flex_02,omitempty"` // legacy_oracle_sys_id
+	Flex_03       string `protobuf:"bytes,8,opt,name=flex_03,json=flex03,proto3" json:"flex_03,omitempty"` // legacy_type_label
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -612,6 +641,27 @@ func (x *UpdateCostProductMasterRequest) GetGradeCode() string {
 func (x *UpdateCostProductMasterRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetFlex_01() string {
+	if x != nil {
+		return x.Flex_01
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetFlex_02() string {
+	if x != nil {
+		return x.Flex_02
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetFlex_03() string {
+	if x != nil {
+		return x.Flex_03
 	}
 	return ""
 }
@@ -1386,7 +1436,7 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"shade_name\x18\x11 \x01(\tR\tshadeName\x12\x17\n" +
 	"\aflex_01\x18\x12 \x01(\tR\x06flex01\x12\x17\n" +
 	"\aflex_02\x18\x13 \x01(\tR\x06flex02\x12\x17\n" +
-	"\aflex_03\x18\x14 \x01(\tR\x06flex03\"\xfe\x01\n" +
+	"\aflex_03\x18\x14 \x01(\tR\x06flex03\"\xe5\x02\n" +
 	"\x1eCreateCostProductMasterRequest\x12/\n" +
 	"\x0fproduct_type_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rproductTypeId\x12-\n" +
 	"\fproduct_name\x18\x02 \x01(\tB\n" +
@@ -1395,7 +1445,10 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"shade_code\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x182R\tshadeCode\x12(\n" +
 	"\n" +
 	"grade_code\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\tgradeCode\x12*\n" +
-	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\"\x81\x01\n" +
+	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\x12!\n" +
+	"\aflex_01\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x06flex01\x12 \n" +
+	"\aflex_02\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex02\x12 \n" +
+	"\aflex_03\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex03\"\x81\x01\n" +
 	"\x1fCreateCostProductMasterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
 	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"L\n" +
@@ -1408,7 +1461,7 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\fproduct_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\vproductCode\"\x84\x01\n" +
 	"\"GetCostProductMasterByCodeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
-	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xfc\x01\n" +
+	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xe3\x02\n" +
 	"\x1eUpdateCostProductMasterRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\fproductSysId\x12-\n" +
 	"\fproduct_name\x18\x02 \x01(\tB\n" +
@@ -1417,13 +1470,16 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"shade_code\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x182R\tshadeCode\x12(\n" +
 	"\n" +
 	"grade_code\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\tgradeCode\x12*\n" +
-	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\"\x81\x01\n" +
+	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\x12!\n" +
+	"\aflex_01\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x06flex01\x12 \n" +
+	"\aflex_02\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex02\x12 \n" +
+	"\aflex_03\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex03\"\x81\x01\n" +
 	"\x1fUpdateCostProductMasterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
 	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xea\x01\n" +
 	"(UpdateCostProductMasterErpLinkageRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\fproductSysId\x12+\n" +
-	"\rerp_item_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\verpItemCode\x120\n" +
+	"\rerp_item_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x182R\verpItemCode\x120\n" +
 	"\x10erp_grade_code_1\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\rerpGradeCode1\x120\n" +
 	"\x10erp_grade_code_2\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\rerpGradeCode2\"\x8b\x01\n" +
 	")UpdateCostProductMasterErpLinkageResponse\x12+\n" +

@@ -186,7 +186,7 @@ func TestGetHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		id := uuid.New()
-		expected, err := bbcdomain.New("BBC001", "Box Bobbin A", "BOX", 10, "", "admin")
+		expected, err := bbcdomain.New("BBC001", "Box Bobbin A", "BOX", 10, "", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
@@ -238,7 +238,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		id := uuid.New()
-		entity, err := bbcdomain.New("BBC001", "Box Bobbin A", "BOX", 10, "", "admin")
+		entity, err := bbcdomain.New("BBC001", "Box Bobbin A", "BOX", 10, "", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		newName := "Box Bobbin Updated"
@@ -314,9 +314,9 @@ func TestListHandler_Handle(t *testing.T) {
 		handler := boxbobbincost.NewListHandler(mockRepo)
 		ctx := context.Background()
 
-		entity1, err := bbcdomain.New("BBC001", "Box Bobbin A", "BOX", 10, "", "admin")
+		entity1, err := bbcdomain.New("BBC001", "Box Bobbin A", "BOX", 10, "", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
-		entity2, err := bbcdomain.New("BBC002", "Box Bobbin B", "BOB", 5, "", "admin")
+		entity2, err := bbcdomain.New("BBC002", "Box Bobbin B", "BOB", 5, "", nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("boxbobbincost.ListFilter")).Return(

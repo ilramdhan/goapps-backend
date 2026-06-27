@@ -24,6 +24,38 @@ var _ costerp.Repository = (*CostErpRepository)(nil)
 // Items
 // =============================================================================
 
+// scanItem scans a full cost_erp_item row (10 columns including audit fields).
+// Columns must be: cei_item_id, cei_item_code, cei_item_name, cei_item_type,
+// cei_is_active, cei_synced_at, cei_created_at, cei_updated_at,
+// cei_created_by, cei_updated_by.
+func scanItem(row interface {
+	Scan(...any) error
+}) (*costerp.Item, error) {
+	it := &costerp.Item{}
+	var itemName, itemType sql.NullString
+	var syncedAt time.Time
+	var createdAt, updatedAt time.Time
+	var createdBy, updatedBy sql.NullString
+	if err := row.Scan(
+		&it.ItemID, &it.ItemCode, &itemName, &itemType, &it.IsActive, &syncedAt,
+		&createdAt, &updatedAt, &createdBy, &updatedBy,
+	); err != nil {
+		return nil, err
+	}
+	it.ItemName = itemName.String
+	it.ItemType = itemType.String
+	it.SyncedAt = syncedAt
+	it.CreatedAt = createdAt
+	it.UpdatedAt = updatedAt
+	it.CreatedBy = createdBy.String
+	it.UpdatedBy = updatedBy.String
+	return it, nil
+}
+
+const itemSelectCols = `cei_item_id, cei_item_code, cei_item_name, cei_item_type,
+	cei_is_active, cei_synced_at, cei_created_at, cei_updated_at,
+	cei_created_by, cei_updated_by`
+
 // ListItems returns a filtered paginated list of cost_erp_item rows.
 func (r *CostErpRepository) ListItems(ctx context.Context, f costerp.ItemFilter) ([]*costerp.Item, int64, error) {
 	where := "FROM cost_erp_item WHERE 1=1"
@@ -59,8 +91,7 @@ func (r *CostErpRepository) ListItems(ctx context.Context, f costerp.ItemFilter)
 	pageSize = min(pageSize, 200)
 	offset := (page - 1) * pageSize
 
-	q := `
-		SELECT cei_item_id,cei_item_code,cei_item_name,cei_item_type,cei_is_active,cei_synced_at
+	q := `SELECT ` + itemSelectCols + `
 		` + where + fmt.Sprintf(` ORDER BY cei_item_code ASC LIMIT $%d OFFSET $%d`, idx, idx+1)
 	args = append(args, pageSize, offset)
 
@@ -76,15 +107,10 @@ func (r *CostErpRepository) ListItems(ctx context.Context, f costerp.ItemFilter)
 
 	items := []*costerp.Item{}
 	for rows.Next() {
-		it := &costerp.Item{}
-		var itemName, itemType sql.NullString
-		var syncedAt time.Time
-		if sErr := rows.Scan(&it.ItemID, &it.ItemCode, &itemName, &itemType, &it.IsActive, &syncedAt); sErr != nil {
+		it, sErr := scanItem(rows)
+		if sErr != nil {
 			return nil, 0, fmt.Errorf("scan cost_erp_item: %w", sErr)
 		}
-		it.ItemName = itemName.String
-		it.ItemType = itemType.String
-		it.SyncedAt = syncedAt
 		items = append(items, it)
 	}
 	if err := rows.Err(); err != nil {
@@ -95,23 +121,15 @@ func (r *CostErpRepository) ListItems(ctx context.Context, f costerp.ItemFilter)
 
 // GetItem loads a single cost_erp_item by id.
 func (r *CostErpRepository) GetItem(ctx context.Context, itemID int64) (*costerp.Item, error) {
-	const q = `
-		SELECT cei_item_id,cei_item_code,cei_item_name,cei_item_type,cei_is_active,cei_synced_at
-		FROM cost_erp_item WHERE cei_item_id=$1`
-	it := &costerp.Item{}
-	var itemName, itemType sql.NullString
-	var syncedAt time.Time
-	if err := r.db.QueryRowContext(ctx, q, itemID).Scan(
-		&it.ItemID, &it.ItemCode, &itemName, &itemType, &it.IsActive, &syncedAt,
-	); err != nil {
+	q := `SELECT ` + itemSelectCols + `
+		FROM cost_erp_item WHERE cei_item_id = $1`
+	it, err := scanItem(r.db.QueryRowContext(ctx, q, itemID))
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, costerp.ErrNotFound
 		}
 		return nil, fmt.Errorf("get cost_erp_item: %w", err)
 	}
-	it.ItemName = itemName.String
-	it.ItemType = itemType.String
-	it.SyncedAt = syncedAt
 	return it, nil
 }
 

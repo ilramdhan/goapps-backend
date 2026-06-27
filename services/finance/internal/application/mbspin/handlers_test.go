@@ -52,6 +52,22 @@ func (m *MockRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, er
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockRepository) GetByMBCosting(ctx context.Context, code string) (*mbspindomain.Entity, error) {
+	args := m.Called(ctx, code)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*mbspindomain.Entity), args.Error(1)
+}
+
+func (m *MockRepository) GetByOrionItemCode(ctx context.Context, code string) (*mbspindomain.Entity, error) {
+	args := m.Called(ctx, code)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*mbspindomain.Entity), args.Error(1)
+}
+
 func TestCreateHandler_Handle(t *testing.T) {
 	t.Run("success - creates new MB Spin", func(t *testing.T) {
 		mockRepo := new(MockRepository)
@@ -159,7 +175,7 @@ func TestGetHandler_Handle(t *testing.T) {
 
 		id := uuid.New()
 		headID := uuid.New()
-		expected, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, "admin")
+		expected, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
@@ -212,7 +228,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 
 		id := uuid.New()
 		headID := uuid.New()
-		entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, "admin")
+		entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		newName := "Spin Beta"
@@ -289,9 +305,9 @@ func TestListHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		headID := uuid.New()
-		entity1, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, "admin")
+		entity1, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
-		entity2, err := mbspindomain.New(headID, "Spin Beta", nil, nil, nil, nil, nil, "admin")
+		entity2, err := mbspindomain.New(headID, "Spin Beta", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("mbspin.ListFilter")).Return(

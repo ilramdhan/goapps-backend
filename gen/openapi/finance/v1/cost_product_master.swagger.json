@@ -402,6 +402,18 @@
         },
         "description": {
           "type": "string"
+        },
+        "flex01": {
+          "type": "string",
+          "description": "Legacy / import identifiers — plain text, no validation constraint.\n\nlegacy_erp_compound_key"
+        },
+        "flex02": {
+          "type": "string",
+          "title": "legacy_oracle_sys_id"
+        },
+        "flex03": {
+          "type": "string",
+          "title": "legacy_type_label"
         }
       }
     },
@@ -583,6 +595,18 @@
         },
         "description": {
           "type": "string"
+        },
+        "flex01": {
+          "type": "string",
+          "description": "Legacy / import identifiers — plain text, no validation constraint.\n\nlegacy_erp_compound_key"
+        },
+        "flex02": {
+          "type": "string",
+          "title": "legacy_oracle_sys_id"
+        },
+        "flex03": {
+          "type": "string",
+          "title": "legacy_type_label"
         }
       }
     },

@@ -1213,14 +1213,14 @@ func (r *CostRouteRepository) BulkReplaceRMs(ctx context.Context, seqID int64, r
 
 	const insertRM = `
 		INSERT INTO cost_route_rm (
-			crm_seq_id, crm_rm_type,
+			crm_seq_id, crm_parent_product_sys_id, crm_rm_type,
 			crm_rm_product_sys_id, crm_rm_item_code, crm_rm_group_code,
 			crm_route_rm_ratio, crm_route_rm_name,
 			crm_route_rm_shade_code, crm_route_rm_shade_name,
 			crm_sub_type, crm_notes,
 			crm_created_at, crm_created_by
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
 
 	now := time.Now().UTC()
 	for _, rm := range rms {
@@ -1229,7 +1229,7 @@ func (r *CostRouteRepository) BulkReplaceRMs(ctx context.Context, seqID int64, r
 			rmProductSysID = sql.NullInt64{Int64: rm.RmProductSysID, Valid: true}
 		}
 		if _, err := tx.ExecContext(ctx, insertRM,
-			seqID, rm.RmType,
+			seqID, rm.ParentProductSysID, rm.RmType,
 			rmProductSysID, nullableString(rm.RmItemCode), nullableString(rm.RmGroupCode),
 			rm.Ratio, nullableString(rm.RmName),
 			nullableString(rm.RmShadeCode), nullableString(rm.RmShadeName),

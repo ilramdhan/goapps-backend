@@ -11,14 +11,19 @@ import (
 
 // UpdateCommand represents the update MB Spin command.
 type UpdateCommand struct {
-	ID        uuid.UUID
-	MgtName   *string
-	MBCosting *string
-	Denier    *float64
-	Filament  *int
-	Dozing    *float64
-	IsActive  *bool
-	UpdatedBy string
+	ID              uuid.UUID
+	MgtName         *string
+	MBCosting       *string
+	Denier          *float64
+	Filament        *int
+	Dozing          *float64
+	CC              *string
+	CostRateMkt     *float64
+	MBSStatus       *string
+	MBSLdrPrsn      *float64
+	MBSFinalProduct *string
+	IsActive        *bool
+	UpdatedBy       string
 }
 
 // UpdateHandler handles the UpdateMBSpin command.
@@ -39,12 +44,17 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbspin.
 	}
 
 	if err := entity.Update(mbspin.UpdateInput{
-		MgtName:   cmd.MgtName,
-		MBCosting: cmd.MBCosting,
-		Denier:    cmd.Denier,
-		Filament:  cmd.Filament,
-		Dozing:    cmd.Dozing,
-		IsActive:  cmd.IsActive,
+		MgtName:         cmd.MgtName,
+		MBCosting:       cmd.MBCosting,
+		Denier:          cmd.Denier,
+		Filament:        cmd.Filament,
+		Dozing:          cmd.Dozing,
+		CC:              cmd.CC,
+		CostRateMkt:     cmd.CostRateMkt,
+		MBSStatus:       cmd.MBSStatus,
+		MBSLdrPrsn:      cmd.MBSLdrPrsn,
+		MBSFinalProduct: cmd.MBSFinalProduct,
+		IsActive:        cmd.IsActive,
 	}, cmd.UpdatedBy); err != nil {
 		return nil, err
 	}

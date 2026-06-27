@@ -9,27 +9,33 @@ import (
 
 // Entity is the aggregate root for the Product Grade domain.
 type Entity struct {
-	id             uuid.UUID
-	code           string
-	name           string
-	description    string
-	bcPerc         float64
-	nonStdPerc     float64
-	bcRecoveryRate float64
-	isActive       bool
-	notes          string
-	createdAt      time.Time
-	createdBy      string
-	updatedAt      *time.Time
-	updatedBy      *string
-	deletedAt      *time.Time
-	deletedBy      *string
+	id              uuid.UUID
+	code            string
+	name            string
+	description     string
+	bcPerc          float64
+	nonStdPerc      float64
+	bcRecoveryRate  float64
+	pgDetailProduct string
+	pgGradeLabel    string
+	stdSellingPrice float64
+	spValue         float64
+	lossPct         *float64
+	seqNo           *int32
+	isActive        bool
+	notes           string
+	createdAt       time.Time
+	createdBy       string
+	updatedAt       *time.Time
+	updatedBy       *string
+	deletedAt       *time.Time
+	deletedBy       *string
 }
 
 // New creates a new Product Grade entity with validation.
 //
 //nolint:revive // Many parameters required for construction.
-func New(code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate float64, notes, createdBy string) (*Entity, error) {
+func New(code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate float64, pgDetailProduct, pgGradeLabel string, stdSellingPrice, spValue float64, lossPct *float64, seqNo *int32, notes, createdBy string) (*Entity, error) {
 	if code == "" {
 		return nil, ErrEmptyCode
 	}
@@ -48,6 +54,9 @@ func New(code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate floa
 	return &Entity{
 		id: uuid.New(), code: code, name: name, description: description,
 		bcPerc: bcPerc, nonStdPerc: nonStdPerc, bcRecoveryRate: bcRecoveryRate,
+		pgDetailProduct: pgDetailProduct, pgGradeLabel: pgGradeLabel,
+		stdSellingPrice: stdSellingPrice, spValue: spValue,
+		lossPct: lossPct, seqNo: seqNo,
 		isActive: true, notes: notes, createdAt: time.Now(), createdBy: createdBy,
 	}, nil
 }
@@ -55,10 +64,13 @@ func New(code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate floa
 // Reconstruct rebuilds a Product Grade from persistence data.
 //
 //nolint:revive // Many parameters required for persistence reconstitution.
-func Reconstruct(id uuid.UUID, code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate float64, isActive bool, notes string, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
+func Reconstruct(id uuid.UUID, code, name, description string, bcPerc, nonStdPerc, bcRecoveryRate float64, pgDetailProduct, pgGradeLabel string, stdSellingPrice, spValue float64, lossPct *float64, seqNo *int32, isActive bool, notes string, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
 	return &Entity{
 		id: id, code: code, name: name, description: description,
 		bcPerc: bcPerc, nonStdPerc: nonStdPerc, bcRecoveryRate: bcRecoveryRate,
+		pgDetailProduct: pgDetailProduct, pgGradeLabel: pgGradeLabel,
+		stdSellingPrice: stdSellingPrice, spValue: spValue,
+		lossPct: lossPct, seqNo: seqNo,
 		isActive: isActive, notes: notes, createdAt: createdAt, createdBy: createdBy,
 		updatedAt: updatedAt, updatedBy: updatedBy, deletedAt: deletedAt, deletedBy: deletedBy,
 	}
@@ -84,6 +96,24 @@ func (e *Entity) NonStdPerc() float64 { return e.nonStdPerc }
 
 // BCRecoveryRate returns BC value recovery rate percentage.
 func (e *Entity) BCRecoveryRate() float64 { return e.bcRecoveryRate }
+
+// PgDetailProduct returns the Oracle CMPG_DETAIL_PRODUCT pattern key.
+func (e *Entity) PgDetailProduct() string { return e.pgDetailProduct }
+
+// PgGradeLabel returns the grade label for STD_VALUE_LOSS.
+func (e *Entity) PgGradeLabel() string { return e.pgGradeLabel }
+
+// StdSellingPrice returns the BC_SPECIAL_PROD rate.
+func (e *Entity) StdSellingPrice() float64 { return e.stdSellingPrice }
+
+// SpValue returns the VALUE_LOSS rate.
+func (e *Entity) SpValue() float64 { return e.spValue }
+
+// LossPct returns the optional loss factor.
+func (e *Entity) LossPct() *float64 { return e.lossPct }
+
+// SeqNo returns the optional display sequence number.
+func (e *Entity) SeqNo() *int32 { return e.seqNo }
 
 // IsActive returns whether the grade is active.
 func (e *Entity) IsActive() bool { return e.isActive }
@@ -114,13 +144,19 @@ func (e *Entity) IsDeleted() bool { return e.deletedAt != nil }
 
 // UpdateInput carries optional field mutations for Update.
 type UpdateInput struct {
-	Name           *string
-	Description    *string
-	BCPerc         *float64
-	NonStdPerc     *float64
-	BCRecoveryRate *float64
-	IsActive       *bool
-	Notes          *string
+	Name            *string
+	Description     *string
+	BCPerc          *float64
+	NonStdPerc      *float64
+	BCRecoveryRate  *float64
+	PgDetailProduct *string
+	PgGradeLabel    *string
+	StdSellingPrice *float64
+	SpValue         *float64
+	LossPct         *float64
+	SeqNo           *int32
+	IsActive        *bool
+	Notes           *string
 }
 
 // Update applies optional field changes to the entity.
@@ -176,6 +212,24 @@ func (e *Entity) applyOptionalFields(in UpdateInput) {
 	}
 	if in.BCRecoveryRate != nil {
 		e.bcRecoveryRate = *in.BCRecoveryRate
+	}
+	if in.PgDetailProduct != nil {
+		e.pgDetailProduct = *in.PgDetailProduct
+	}
+	if in.PgGradeLabel != nil {
+		e.pgGradeLabel = *in.PgGradeLabel
+	}
+	if in.StdSellingPrice != nil {
+		e.stdSellingPrice = *in.StdSellingPrice
+	}
+	if in.SpValue != nil {
+		e.spValue = *in.SpValue
+	}
+	if in.LossPct != nil {
+		e.lossPct = in.LossPct
+	}
+	if in.SeqNo != nil {
+		e.seqNo = in.SeqNo
 	}
 	if in.IsActive != nil {
 		e.isActive = *in.IsActive

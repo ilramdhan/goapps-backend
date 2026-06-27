@@ -3,6 +3,7 @@ package costbulkimport
 import (
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/xuri/excelize/v2"
@@ -15,47 +16,134 @@ type SheetError struct {
 	Message   string
 }
 
-// ParseSheet reads a named sheet from the Excel file and returns parsed rows.
-// Each row is a map of header→value. Rows where ALL cells are empty are skipped.
-// Returns an error if the sheet is missing or required headers are absent.
-func ParseSheet(f *excelize.File, sheetName string, requiredHeaders []string) ([]map[string]string, error) {
-	rows, err := f.GetRows(sheetName)
-	if err != nil {
-		return nil, fmt.Errorf("sheet %q not found or unreadable: %w", sheetName, err)
+// ParseSheet reads sheet(s) from the Excel file that match baseName and returns
+// all data rows merged in order.
+//
+// Matching rules (in priority order):
+//  1. Exact match — sheet named exactly baseName is used alone.
+//  2. Contains match — all sheets whose name contains baseName as a
+//     case-insensitive substring are merged alphabetically.
+//     This transparently handles:
+//     - Number-prefixed sheets  ("1_product_master" → baseName "product_master")
+//     - Split part sheets       ("product_parameters_p1", "_p2" → merged)
+//
+// Required headers are validated against the first matching sheet only.
+// Subsequent sheets must have compatible columns (their header row is skipped).
+func ParseSheet(f *excelize.File, baseName string, requiredHeaders []string) ([]map[string]string, error) {
+	matched := findMatchingSheets(f, baseName)
+	if len(matched) == 0 {
+		return nil, fmt.Errorf("no sheet found matching %q — available: %v", baseName, f.GetSheetList())
 	}
-	if len(rows) == 0 {
-		return nil, fmt.Errorf("sheet %q is empty", sheetName)
-	}
+	return mergeSheetRows(f, baseName, matched, requiredHeaders)
+}
 
-	headers := make([]string, len(rows[0]))
-	for i, h := range rows[0] {
-		headers[i] = strings.TrimSpace(h)
+// ParseSheetOptional is like ParseSheet but returns nil, nil when no matching sheet
+// exists instead of an error. Use for sheets that are optional in a bulk import file
+// (e.g. product_parameters when the user only wants to import product master + routing).
+func ParseSheetOptional(f *excelize.File, baseName string, requiredHeaders []string) ([]map[string]string, error) {
+	matched := findMatchingSheets(f, baseName)
+	if len(matched) == 0 {
+		return nil, nil // sheet absent — caller should treat as zero rows
 	}
+	return mergeSheetRows(f, baseName, matched, requiredHeaders)
+}
 
-	for _, required := range requiredHeaders {
-		if !slices.Contains(headers, required) {
-			return nil, fmt.Errorf("sheet %q missing required header %q", sheetName, required)
+// findMatchingSheets returns sheets from f whose name matches baseName.
+// Exact match wins exclusively; otherwise all contains-matches sorted alpha.
+func findMatchingSheets(f *excelize.File, baseName string) []string {
+	all := f.GetSheetList()
+	lower := strings.ToLower(baseName)
+
+	for _, s := range all {
+		if s == baseName {
+			return []string{s}
 		}
 	}
 
-	result := make([]map[string]string, 0, len(rows)-1)
-	for _, row := range rows[1:] {
-		allEmpty := true
-		rowMap := make(map[string]string, len(headers))
-		for i, h := range headers {
-			if i < len(row) {
-				val := strings.TrimSpace(row[i])
-				rowMap[h] = val
-				if val != "" {
-					allEmpty = false
-				}
-			} else {
-				rowMap[h] = ""
+	var found []string
+	for _, s := range all {
+		if strings.Contains(strings.ToLower(s), lower) {
+			found = append(found, s)
+		}
+	}
+	sort.Strings(found)
+	return found
+}
+
+// mergeSheetRows reads and concatenates data rows from all given sheets.
+// Headers are taken from the first sheet; subsequent header rows are skipped.
+func mergeSheetRows(f *excelize.File, baseName string, sheets []string, requiredHeaders []string) ([]map[string]string, error) {
+	var headers []string
+	var result []map[string]string
+
+	for i, sheet := range sheets {
+		rows, err := f.GetRows(sheet)
+		if err != nil {
+			return nil, fmt.Errorf("sheet %q not found or unreadable: %w", sheet, err)
+		}
+		if len(rows) == 0 {
+			continue
+		}
+
+		sheetHeaders := trimHeaders(rows[0])
+
+		if i == 0 {
+			headers = sheetHeaders
+			if err := checkRequiredHeaders(baseName, sheet, headers, requiredHeaders); err != nil {
+				return nil, err
 			}
 		}
-		if !allEmpty {
-			result = append(result, rowMap)
-		}
+
+		result = appendDataRows(result, rows[1:], headers)
 	}
 	return result, nil
+}
+
+// trimHeaders returns a copy of rawHeaders with each element whitespace-trimmed.
+func trimHeaders(rawHeaders []string) []string {
+	out := make([]string, len(rawHeaders))
+	for i, h := range rawHeaders {
+		out[i] = strings.TrimSpace(h)
+	}
+	return out
+}
+
+// checkRequiredHeaders verifies that every required header is present in headers.
+func checkRequiredHeaders(baseName, sheet string, headers, requiredHeaders []string) error {
+	for _, req := range requiredHeaders {
+		if !slices.Contains(headers, req) {
+			return fmt.Errorf("sheet matching %q (found %q) missing required header %q", baseName, sheet, req)
+		}
+	}
+	return nil
+}
+
+// appendDataRows maps each non-empty row to the given headers and appends to dst.
+func appendDataRows(dst []map[string]string, rows [][]string, headers []string) []map[string]string {
+	for _, row := range rows {
+		rowMap, allEmpty := buildRowMap(row, headers)
+		if !allEmpty {
+			dst = append(dst, rowMap)
+		}
+	}
+	return dst
+}
+
+// buildRowMap converts a single row slice to a header→value map.
+// It also reports whether every value was empty.
+func buildRowMap(row []string, headers []string) (map[string]string, bool) {
+	allEmpty := true
+	rowMap := make(map[string]string, len(headers))
+	for j, h := range headers {
+		if j < len(row) {
+			val := strings.TrimSpace(row[j])
+			rowMap[h] = val
+			if val != "" {
+				allEmpty = false
+			}
+		} else {
+			rowMap[h] = ""
+		}
+	}
+	return rowMap, allEmpty
 }

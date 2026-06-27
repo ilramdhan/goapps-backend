@@ -14,6 +14,9 @@ type CreateCommand struct {
 	ShadeCode     string
 	GradeCode     string
 	Description   string
+	Flex01        string // legacy_erp_compound_key
+	Flex02        string // legacy_oracle_sys_id
+	Flex03        string // legacy_type_label
 	ActorUserID   string
 }
 
@@ -31,6 +34,9 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*domain.
 		ShadeCode:     cmd.ShadeCode,
 		GradeCode:     cmd.GradeCode,
 		Description:   cmd.Description,
+		Flex01:        cmd.Flex01,
+		Flex02:        cmd.Flex02,
+		Flex03:        cmd.Flex03,
 		ActorUserID:   cmd.ActorUserID,
 	})
 	if err != nil {
@@ -69,6 +75,9 @@ type UpdateCommand struct {
 	ShadeCode    string
 	GradeCode    string
 	Description  string
+	Flex01       string // legacy_erp_compound_key
+	Flex02       string // legacy_oracle_sys_id
+	Flex03       string // legacy_type_label
 	ActorUserID  string
 }
 
@@ -84,7 +93,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*domain.
 	if err != nil {
 		return nil, err
 	}
-	if err := p.Update(cmd.ProductName, cmd.ShadeCode, cmd.GradeCode, cmd.Description, cmd.ActorUserID); err != nil {
+	if err := p.Update(cmd.ProductName, cmd.ShadeCode, cmd.GradeCode, cmd.Description, cmd.Flex01, cmd.Flex02, cmd.Flex03, cmd.ActorUserID); err != nil {
 		return nil, err
 	}
 	if err := h.repo.Update(ctx, p); err != nil {

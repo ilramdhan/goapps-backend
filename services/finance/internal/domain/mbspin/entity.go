@@ -9,27 +9,33 @@ import (
 
 // Entity is the aggregate root for the MB Spin domain.
 type Entity struct {
-	id          uuid.UUID
-	oracleSysID *string
-	headID      uuid.UUID
-	mgtName     string
-	denier      *float64
-	filament    *int
-	dozing      *float64
-	mbCosting   *string
-	isActive    bool
-	createdAt   time.Time
-	createdBy   string
-	updatedAt   *time.Time
-	updatedBy   *string
-	deletedAt   *time.Time
-	deletedBy   *string
+	id              uuid.UUID
+	oracleSysID     *string
+	orionItemCode   *string
+	headID          uuid.UUID
+	mgtName         string
+	denier          *float64
+	filament        *int
+	dozing          *float64
+	mbCosting       *string
+	cc              *string
+	costRateMkt     *float64
+	mbsStatus       *string
+	mbsLdrPrsn      *float64
+	mbsFinalProduct *string
+	isActive        bool
+	createdAt       time.Time
+	createdBy       string
+	updatedAt       *time.Time
+	updatedBy       *string
+	deletedAt       *time.Time
+	deletedBy       *string
 }
 
 // New creates a new MB Spin entity with validation.
 //
 //nolint:revive // Many parameters required for construction.
-func New(headID uuid.UUID, mgtName string, oracleSysID *string, denier *float64, filament *int, dozing *float64, mbCosting *string, createdBy string) (*Entity, error) {
+func New(headID uuid.UUID, mgtName string, oracleSysID, orionItemCode *string, denier *float64, filament *int, dozing *float64, mbCosting *string, cc *string, costRateMkt *float64, mbsStatus *string, mbsLdrPrsn *float64, mbsFinalProduct *string, createdBy string) (*Entity, error) {
 	if headID == uuid.Nil {
 		return nil, ErrInvalidHeadID
 	}
@@ -43,8 +49,10 @@ func New(headID uuid.UUID, mgtName string, oracleSysID *string, denier *float64,
 		return nil, ErrEmptyCreatedBy
 	}
 	return &Entity{
-		id: uuid.New(), oracleSysID: oracleSysID, headID: headID, mgtName: mgtName,
+		id: uuid.New(), oracleSysID: oracleSysID, orionItemCode: orionItemCode, headID: headID, mgtName: mgtName,
 		denier: denier, filament: filament, dozing: dozing, mbCosting: mbCosting,
+		cc: cc, costRateMkt: costRateMkt,
+		mbsStatus: mbsStatus, mbsLdrPrsn: mbsLdrPrsn, mbsFinalProduct: mbsFinalProduct,
 		isActive: true, createdAt: time.Now(), createdBy: createdBy,
 	}, nil
 }
@@ -52,10 +60,12 @@ func New(headID uuid.UUID, mgtName string, oracleSysID *string, denier *float64,
 // Reconstruct rebuilds an MB Spin from persistence data.
 //
 //nolint:revive // Many parameters required for persistence reconstitution.
-func Reconstruct(id uuid.UUID, oracleSysID *string, headID uuid.UUID, mgtName string, denier *float64, filament *int, dozing *float64, mbCosting *string, isActive bool, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
+func Reconstruct(id uuid.UUID, oracleSysID, orionItemCode *string, headID uuid.UUID, mgtName string, denier *float64, filament *int, dozing *float64, mbCosting *string, cc *string, costRateMkt *float64, mbsStatus *string, mbsLdrPrsn *float64, mbsFinalProduct *string, isActive bool, createdAt time.Time, createdBy string, updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string) *Entity {
 	return &Entity{
-		id: id, oracleSysID: oracleSysID, headID: headID, mgtName: mgtName,
+		id: id, oracleSysID: oracleSysID, orionItemCode: orionItemCode, headID: headID, mgtName: mgtName,
 		denier: denier, filament: filament, dozing: dozing, mbCosting: mbCosting,
+		cc: cc, costRateMkt: costRateMkt,
+		mbsStatus: mbsStatus, mbsLdrPrsn: mbsLdrPrsn, mbsFinalProduct: mbsFinalProduct,
 		isActive: isActive, createdAt: createdAt, createdBy: createdBy,
 		updatedAt: updatedAt, updatedBy: updatedBy, deletedAt: deletedAt, deletedBy: deletedBy,
 	}
@@ -66,6 +76,9 @@ func (e *Entity) ID() uuid.UUID { return e.id }
 
 // OracleSysID returns the optional Oracle system ID.
 func (e *Entity) OracleSysID() *string { return e.oracleSysID }
+
+// OrionItemCode returns the optional Oracle ORION ERP item code (CMBS_ORION_ITEM_CODE).
+func (e *Entity) OrionItemCode() *string { return e.orionItemCode }
 
 // HeadID returns the parent MB head UUID.
 func (e *Entity) HeadID() uuid.UUID { return e.headID }
@@ -84,6 +97,21 @@ func (e *Entity) Dozing() *float64 { return e.dozing }
 
 // MBCosting returns the optional spin cost code.
 func (e *Entity) MBCosting() *string { return e.mbCosting }
+
+// CC returns the optional MB/SP cost code.
+func (e *Entity) CC() *string { return e.cc }
+
+// CostRateMkt returns the optional MB rate MKT USD/kg.
+func (e *Entity) CostRateMkt() *float64 { return e.costRateMkt }
+
+// MBSStatus returns the optional Oracle spin status.
+func (e *Entity) MBSStatus() *string { return e.mbsStatus }
+
+// MBSLdrPrsn returns the optional Oracle leader person value.
+func (e *Entity) MBSLdrPrsn() *float64 { return e.mbsLdrPrsn }
+
+// MBSFinalProduct returns the optional Oracle final product code.
+func (e *Entity) MBSFinalProduct() *string { return e.mbsFinalProduct }
 
 // IsActive returns whether the spin is active.
 func (e *Entity) IsActive() bool { return e.isActive }
@@ -111,12 +139,17 @@ func (e *Entity) IsDeleted() bool { return e.deletedAt != nil }
 
 // UpdateInput carries optional field mutations for Update.
 type UpdateInput struct {
-	MgtName   *string
-	Denier    *float64
-	Filament  *int
-	Dozing    *float64
-	MBCosting *string
-	IsActive  *bool
+	MgtName         *string
+	Denier          *float64
+	Filament        *int
+	Dozing          *float64
+	MBCosting       *string
+	CC              *string
+	CostRateMkt     *float64
+	MBSStatus       *string
+	MBSLdrPrsn      *float64
+	MBSFinalProduct *string
+	IsActive        *bool
 }
 
 // Update applies optional field changes to the entity.
@@ -172,6 +205,21 @@ func (e *Entity) applyOptionalFields(in UpdateInput) {
 	}
 	if in.MBCosting != nil {
 		e.mbCosting = in.MBCosting
+	}
+	if in.CC != nil {
+		e.cc = in.CC
+	}
+	if in.CostRateMkt != nil {
+		e.costRateMkt = in.CostRateMkt
+	}
+	if in.MBSStatus != nil {
+		e.mbsStatus = in.MBSStatus
+	}
+	if in.MBSLdrPrsn != nil {
+		e.mbsLdrPrsn = in.MBSLdrPrsn
+	}
+	if in.MBSFinalProduct != nil {
+		e.mbsFinalProduct = in.MBSFinalProduct
 	}
 	if in.IsActive != nil {
 		e.isActive = *in.IsActive

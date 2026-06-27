@@ -9,14 +9,20 @@ import (
 
 // CreateCommand represents the create Product Grade command.
 type CreateCommand struct {
-	Code           string
-	Name           string
-	Description    string
-	BCPerc         float64
-	NonStdPerc     float64
-	BCRecoveryRate float64
-	Notes          string
-	CreatedBy      string
+	Code            string
+	Name            string
+	Description     string
+	BCPerc          float64
+	NonStdPerc      float64
+	BCRecoveryRate  float64
+	PgDetailProduct string
+	PgGradeLabel    string
+	StdSellingPrice float64
+	SpValue         float64
+	LossPct         *float64
+	SeqNo           *int32
+	Notes           string
+	CreatedBy       string
 }
 
 // CreateHandler handles the CreateProductGrade command.
@@ -42,6 +48,9 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*product
 	entity, err := productgrade.New(
 		cmd.Code, cmd.Name, cmd.Description,
 		cmd.BCPerc, cmd.NonStdPerc, cmd.BCRecoveryRate,
+		cmd.PgDetailProduct, cmd.PgGradeLabel,
+		cmd.StdSellingPrice, cmd.SpValue,
+		cmd.LossPct, cmd.SeqNo,
 		cmd.Notes, cmd.CreatedBy,
 	)
 	if err != nil {

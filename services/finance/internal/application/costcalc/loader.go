@@ -3,6 +3,7 @@ package costcalc
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -17,12 +18,13 @@ import (
 
 // loaderKind* constants identify a bulk loader stage for metrics labels.
 const (
-	loaderKindProducts = "products"
-	loaderKindRoutes   = "routes"
-	loaderKindCAPP     = "capp"
-	loaderKindFormulas = "formulas"
-	loaderKindRMCosts  = "rmcosts"
-	loaderKindUpstream = "upstream"
+	loaderKindProducts        = "products"
+	loaderKindRoutes          = "routes"
+	loaderKindCAPP            = "capp"
+	loaderKindFormulas        = "formulas"
+	loaderKindRMCosts         = "rmcosts"
+	loaderKindUpstream        = "upstream"
+	loaderKindSellingSnapshot = "selling_snapshot"
 )
 
 // observeLoad observes bulk loader latency under the given kind label.
@@ -40,6 +42,10 @@ type ProductLoader interface {
 	LoadFormulas(ctx context.Context, productSysIDs []int64) (map[int64][]Formula, error)
 	LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]float64, error)
 	LoadUpstreamCosts(ctx context.Context, productSysIDs []int64, period, calcType string) (map[int64]float64, error)
+	// LoadSellingSnapshots returns the param_snapshot from the most recent SELLING
+	// calc result for each product+period. Returns empty inner map if no SELLING
+	// result exists for a product. Never returns an error for missing data.
+	LoadSellingSnapshots(ctx context.Context, productSysIDs []int64, period string) (map[int64]map[string]float64, error)
 }
 
 type productLoader struct {
@@ -456,6 +462,7 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 		    f.id            AS formula_id,
 		    f.formula_code,
 		    f.formula_name,
+		    f.formula_type,
 		    f.expression,
 		    rp.param_code   AS result_param_code
 		FROM cost_product_applicable_param capp
@@ -479,6 +486,7 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 	type formulaHead struct {
 		code        string
 		name        string
+		formulaType string
 		expr        string
 		resultParam string
 	}
@@ -494,7 +502,7 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 			formulaID    string
 			head         formulaHead
 		)
-		if err := rows.Scan(&productSysID, &formulaID, &head.code, &head.name, &head.expr, &head.resultParam); err != nil {
+		if err := rows.Scan(&productSysID, &formulaID, &head.code, &head.name, &head.formulaType, &head.expr, &head.resultParam); err != nil {
 			return nil, fmt.Errorf("scan per-product formula head: %w", err)
 		}
 		headByID[formulaID] = head
@@ -532,6 +540,7 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 			formulas = append(formulas, Formula{
 				FormulaCode:     head.code,
 				FormulaName:     head.name,
+				FormulaType:     head.formulaType,
 				Expression:      head.expr,
 				ResultParamCode: head.resultParam,
 				InputParamCodes: inputsByID[fid],
@@ -577,6 +586,62 @@ func (l *productLoader) loadFormulaInputsByIDs(ctx context.Context, formulaIDs [
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate formula inputs by ID: %w", err)
+	}
+	return out, nil
+}
+
+// =============================================================================
+// LoadSellingSnapshots
+// =============================================================================
+
+// LoadSellingSnapshots returns the cpc_param_snapshot JSONB from the most
+// recent SELLING session result for each product+period.
+// Used to inject marketing_result() values into the ACTUAL/FORECAST evaluator scope.
+// Returns an empty inner map (not nil, not error) when no SELLING result exists.
+func (l *productLoader) LoadSellingSnapshots(ctx context.Context, productSysIDs []int64, period string) (map[int64]map[string]float64, error) {
+	defer observeLoad(loaderKindSellingSnapshot, time.Now())
+	out := make(map[int64]map[string]float64, len(productSysIDs))
+	for _, id := range productSysIDs {
+		out[id] = map[string]float64{}
+	}
+	if len(productSysIDs) == 0 || period == "" {
+		return out, nil
+	}
+	const q = `
+		SELECT DISTINCT ON (cpc_product_sys_id)
+			cpc_product_sys_id, cpc_param_snapshot
+		FROM cst_product_cost
+		WHERE cpc_product_sys_id = ANY($1)
+		  AND cpc_period = $2
+		  AND cpc_calculation_type = 'SELLING'
+		  AND cpc_status <> 'SUPERSEDED'
+		ORDER BY cpc_product_sys_id, cpc_version DESC`
+	rows, err := l.db.QueryContext(ctx, q, pq.Array(productSysIDs), period)
+	if err != nil {
+		return nil, fmt.Errorf("load selling snapshots: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	for rows.Next() {
+		var (
+			productSysID int64
+			snapshot     []byte
+		)
+		if scanErr := rows.Scan(&productSysID, &snapshot); scanErr != nil {
+			return nil, fmt.Errorf("scan selling snapshot: %w", scanErr)
+		}
+		parsed := map[string]float64{}
+		if len(snapshot) > 0 && string(snapshot) != "null" {
+			if jErr := json.Unmarshal(snapshot, &parsed); jErr == nil {
+				out[productSysID] = parsed
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate selling snapshot rows: %w", err)
 	}
 	return out, nil
 }

@@ -1260,6 +1260,123 @@ func (x *ImportBulkProductRoutingResponse) GetStatus() string {
 	return ""
 }
 
+// ImportBulkParamsOnlyRequest imports product_parameters + product_applicable_params
+// from a file that does NOT contain a product_master sheet. Products must already
+// exist in the database from a prior bulk import. Supports split part-sheets
+// (e.g. "product_parameters_p1" + "_p2"). Max 50 MB.
+type ImportBulkParamsOnlyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FileContent   []byte                 `protobuf:"bytes,1,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"`
+	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportBulkParamsOnlyRequest) Reset() {
+	*x = ImportBulkParamsOnlyRequest{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportBulkParamsOnlyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportBulkParamsOnlyRequest) ProtoMessage() {}
+
+func (x *ImportBulkParamsOnlyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportBulkParamsOnlyRequest.ProtoReflect.Descriptor instead.
+func (*ImportBulkParamsOnlyRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ImportBulkParamsOnlyRequest) GetFileContent() []byte {
+	if x != nil {
+		return x.FileContent
+	}
+	return nil
+}
+
+func (x *ImportBulkParamsOnlyRequest) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+// ImportBulkParamsOnlyResponse returns the created async job ID.
+type ImportBulkParamsOnlyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	JobId         int64                  `protobuf:"varint,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportBulkParamsOnlyResponse) Reset() {
+	*x = ImportBulkParamsOnlyResponse{}
+	mi := &file_finance_v1_cost_import_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportBulkParamsOnlyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportBulkParamsOnlyResponse) ProtoMessage() {}
+
+func (x *ImportBulkParamsOnlyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_import_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportBulkParamsOnlyResponse.ProtoReflect.Descriptor instead.
+func (*ImportBulkParamsOnlyResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ImportBulkParamsOnlyResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ImportBulkParamsOnlyResponse) GetJobId() int64 {
+	if x != nil {
+		return x.JobId
+	}
+	return 0
+}
+
+func (x *ImportBulkParamsOnlyResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 type ValidateBulkProductRoutingFileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FileContent   []byte                 `protobuf:"bytes,1,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"`
@@ -1270,7 +1387,7 @@ type ValidateBulkProductRoutingFileRequest struct {
 
 func (x *ValidateBulkProductRoutingFileRequest) Reset() {
 	*x = ValidateBulkProductRoutingFileRequest{}
-	mi := &file_finance_v1_cost_import_proto_msgTypes[21]
+	mi := &file_finance_v1_cost_import_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1282,7 +1399,7 @@ func (x *ValidateBulkProductRoutingFileRequest) String() string {
 func (*ValidateBulkProductRoutingFileRequest) ProtoMessage() {}
 
 func (x *ValidateBulkProductRoutingFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_import_proto_msgTypes[21]
+	mi := &file_finance_v1_cost_import_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1295,7 +1412,7 @@ func (x *ValidateBulkProductRoutingFileRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ValidateBulkProductRoutingFileRequest.ProtoReflect.Descriptor instead.
 func (*ValidateBulkProductRoutingFileRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{21}
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ValidateBulkProductRoutingFileRequest) GetFileContent() []byte {
@@ -1323,7 +1440,7 @@ type ValidateBulkProductRoutingFileResponse struct {
 
 func (x *ValidateBulkProductRoutingFileResponse) Reset() {
 	*x = ValidateBulkProductRoutingFileResponse{}
-	mi := &file_finance_v1_cost_import_proto_msgTypes[22]
+	mi := &file_finance_v1_cost_import_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1335,7 +1452,7 @@ func (x *ValidateBulkProductRoutingFileResponse) String() string {
 func (*ValidateBulkProductRoutingFileResponse) ProtoMessage() {}
 
 func (x *ValidateBulkProductRoutingFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_import_proto_msgTypes[22]
+	mi := &file_finance_v1_cost_import_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1348,7 +1465,7 @@ func (x *ValidateBulkProductRoutingFileResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ValidateBulkProductRoutingFileResponse.ProtoReflect.Descriptor instead.
 func (*ValidateBulkProductRoutingFileResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{22}
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ValidateBulkProductRoutingFileResponse) GetBase() *v1.BaseResponse {
@@ -1388,7 +1505,7 @@ type ExportBulkProductRoutingRequest struct {
 
 func (x *ExportBulkProductRoutingRequest) Reset() {
 	*x = ExportBulkProductRoutingRequest{}
-	mi := &file_finance_v1_cost_import_proto_msgTypes[23]
+	mi := &file_finance_v1_cost_import_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1400,7 +1517,7 @@ func (x *ExportBulkProductRoutingRequest) String() string {
 func (*ExportBulkProductRoutingRequest) ProtoMessage() {}
 
 func (x *ExportBulkProductRoutingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_import_proto_msgTypes[23]
+	mi := &file_finance_v1_cost_import_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1413,7 +1530,7 @@ func (x *ExportBulkProductRoutingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportBulkProductRoutingRequest.ProtoReflect.Descriptor instead.
 func (*ExportBulkProductRoutingRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{23}
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ExportBulkProductRoutingRequest) GetProductTypeCodes() []string {
@@ -1455,7 +1572,7 @@ type ExportBulkProductRoutingResponse struct {
 
 func (x *ExportBulkProductRoutingResponse) Reset() {
 	*x = ExportBulkProductRoutingResponse{}
-	mi := &file_finance_v1_cost_import_proto_msgTypes[24]
+	mi := &file_finance_v1_cost_import_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1467,7 +1584,7 @@ func (x *ExportBulkProductRoutingResponse) String() string {
 func (*ExportBulkProductRoutingResponse) ProtoMessage() {}
 
 func (x *ExportBulkProductRoutingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_import_proto_msgTypes[24]
+	mi := &file_finance_v1_cost_import_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1480,7 +1597,7 @@ func (x *ExportBulkProductRoutingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportBulkProductRoutingResponse.ProtoReflect.Descriptor instead.
 func (*ExportBulkProductRoutingResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{24}
+	return file_finance_v1_cost_import_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ExportBulkProductRoutingResponse) GetBase() *v1.BaseResponse {
@@ -1603,6 +1720,13 @@ const file_finance_v1_cost_import_proto_rawDesc = "" +
 	" ImportBulkProductRoutingResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x15\n" +
 	"\x06job_id\x18\x02 \x01(\x03R\x05jobId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"k\n" +
+	"\x1bImportBulkParamsOnlyRequest\x12/\n" +
+	"\ffile_content\x18\x01 \x01(\fB\f\xbaH\tz\a\x10\x01\x18\x80\x80\x80\x19R\vfileContent\x12\x1b\n" +
+	"\tfile_name\x18\x02 \x01(\tR\bfileName\"z\n" +
+	"\x1cImportBulkParamsOnlyResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x15\n" +
+	"\x06job_id\x18\x02 \x01(\x03R\x05jobId\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\"u\n" +
 	"%ValidateBulkProductRoutingFileRequest\x12/\n" +
 	"\ffile_content\x18\x01 \x01(\fB\f\xbaH\tz\a\x10\x01\x18\x80\x80\x80\x05R\vfileContent\x12\x1b\n" +
@@ -1620,7 +1744,7 @@ const file_finance_v1_cost_import_proto_rawDesc = "" +
 	" ExportBulkProductRoutingResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x15\n" +
 	"\x06job_id\x18\x02 \x01(\x03R\x05jobId\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status2\xc4\x0f\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status2\xec\x10\n" +
 	"\x15CostDataImportService\x12\x93\x01\n" +
 	"\x10GetCostImportJob\x12#.finance.v1.GetCostImportJobRequest\x1a$.finance.v1.GetCostImportJobResponse\"4\x82\xd3\xe4\x93\x02.\x12,/api/v1/finance/costing/import-jobs/{job_id}\x12\x90\x01\n" +
 	"\x12ListCostImportJobs\x12%.finance.v1.ListCostImportJobsRequest\x1a&.finance.v1.ListCostImportJobsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/v1/finance/costing/import-jobs\x12\xab\x01\n" +
@@ -1630,7 +1754,8 @@ const file_finance_v1_cost_import_proto_rawDesc = "" +
 	"\x1bImportCostProductParameters\x12..finance.v1.ImportCostProductParametersRequest\x1a/.finance.v1.ImportCostProductParametersResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/finance/costing/cpp/import\x12\xaa\x01\n" +
 	"\x1bExportCostProductParameters\x12..finance.v1.ExportCostProductParametersRequest\x1a/.finance.v1.ExportCostProductParametersResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/finance/costing/cpp/export\x12\xc7\x01\n" +
 	"$DownloadCostProductParameterTemplate\x127.finance.v1.DownloadCostProductParameterTemplateRequest\x1a8.finance.v1.DownloadCostProductParameterTemplateResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/finance/costing/cpp/template\x12\xb5\x01\n" +
-	"\x18ImportBulkProductRouting\x12+.finance.v1.ImportBulkProductRoutingRequest\x1a,.finance.v1.ImportBulkProductRoutingResponse\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/finance/costing/import/bulk_product_routing\x12\xc9\x01\n" +
+	"\x18ImportBulkProductRouting\x12+.finance.v1.ImportBulkProductRoutingRequest\x1a,.finance.v1.ImportBulkProductRoutingResponse\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/finance/costing/import/bulk_product_routing\x12\xa5\x01\n" +
+	"\x14ImportBulkParamsOnly\x12'.finance.v1.ImportBulkParamsOnlyRequest\x1a(.finance.v1.ImportBulkParamsOnlyResponse\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/finance/costing/import/bulk_params_only\x12\xc9\x01\n" +
 	"\x1eValidateBulkProductRoutingFile\x121.finance.v1.ValidateBulkProductRoutingFileRequest\x1a2.finance.v1.ValidateBulkProductRoutingFileResponse\"@\x82\xd3\xe4\x93\x02::\x01*\"5/api/v1/finance/costing/validate/bulk_product_routing\x12\xb5\x01\n" +
 	"\x18ExportBulkProductRouting\x12+.finance.v1.ExportBulkProductRoutingRequest\x1a,.finance.v1.ExportBulkProductRoutingResponse\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/finance/costing/export/bulk_product_routingB\xa9\x01\n" +
 	"\x0ecom.finance.v1B\x0fCostImportProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
@@ -1649,7 +1774,7 @@ func file_finance_v1_cost_import_proto_rawDescGZIP() []byte {
 	return file_finance_v1_cost_import_proto_rawDescData
 }
 
-var file_finance_v1_cost_import_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_finance_v1_cost_import_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_finance_v1_cost_import_proto_goTypes = []any{
 	(*CostImportJob)(nil),                                // 0: finance.v1.CostImportJob
 	(*GetCostImportJobRequest)(nil),                      // 1: finance.v1.GetCostImportJobRequest
@@ -1672,59 +1797,64 @@ var file_finance_v1_cost_import_proto_goTypes = []any{
 	(*BulkSheetValidationResult)(nil),                    // 18: finance.v1.BulkSheetValidationResult
 	(*ImportBulkProductRoutingRequest)(nil),              // 19: finance.v1.ImportBulkProductRoutingRequest
 	(*ImportBulkProductRoutingResponse)(nil),             // 20: finance.v1.ImportBulkProductRoutingResponse
-	(*ValidateBulkProductRoutingFileRequest)(nil),        // 21: finance.v1.ValidateBulkProductRoutingFileRequest
-	(*ValidateBulkProductRoutingFileResponse)(nil),       // 22: finance.v1.ValidateBulkProductRoutingFileResponse
-	(*ExportBulkProductRoutingRequest)(nil),              // 23: finance.v1.ExportBulkProductRoutingRequest
-	(*ExportBulkProductRoutingResponse)(nil),             // 24: finance.v1.ExportBulkProductRoutingResponse
-	(*v1.BaseResponse)(nil),                              // 25: common.v1.BaseResponse
-	(*v1.PaginationRequest)(nil),                         // 26: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),                        // 27: common.v1.PaginationResponse
+	(*ImportBulkParamsOnlyRequest)(nil),                  // 21: finance.v1.ImportBulkParamsOnlyRequest
+	(*ImportBulkParamsOnlyResponse)(nil),                 // 22: finance.v1.ImportBulkParamsOnlyResponse
+	(*ValidateBulkProductRoutingFileRequest)(nil),        // 23: finance.v1.ValidateBulkProductRoutingFileRequest
+	(*ValidateBulkProductRoutingFileResponse)(nil),       // 24: finance.v1.ValidateBulkProductRoutingFileResponse
+	(*ExportBulkProductRoutingRequest)(nil),              // 25: finance.v1.ExportBulkProductRoutingRequest
+	(*ExportBulkProductRoutingResponse)(nil),             // 26: finance.v1.ExportBulkProductRoutingResponse
+	(*v1.BaseResponse)(nil),                              // 27: common.v1.BaseResponse
+	(*v1.PaginationRequest)(nil),                         // 28: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),                        // 29: common.v1.PaginationResponse
 }
 var file_finance_v1_cost_import_proto_depIdxs = []int32{
-	25, // 0: finance.v1.GetCostImportJobResponse.base:type_name -> common.v1.BaseResponse
+	27, // 0: finance.v1.GetCostImportJobResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 1: finance.v1.GetCostImportJobResponse.data:type_name -> finance.v1.CostImportJob
-	26, // 2: finance.v1.ListCostImportJobsRequest.pagination:type_name -> common.v1.PaginationRequest
-	25, // 3: finance.v1.ListCostImportJobsResponse.base:type_name -> common.v1.BaseResponse
+	28, // 2: finance.v1.ListCostImportJobsRequest.pagination:type_name -> common.v1.PaginationRequest
+	27, // 3: finance.v1.ListCostImportJobsResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 4: finance.v1.ListCostImportJobsResponse.data:type_name -> finance.v1.CostImportJob
-	27, // 5: finance.v1.ListCostImportJobsResponse.pagination:type_name -> common.v1.PaginationResponse
-	25, // 6: finance.v1.ImportCostApplicableParamsResponse.base:type_name -> common.v1.BaseResponse
-	25, // 7: finance.v1.ImportCostProductParametersResponse.base:type_name -> common.v1.BaseResponse
-	25, // 8: finance.v1.ExportCostApplicableParamsResponse.base:type_name -> common.v1.BaseResponse
-	25, // 9: finance.v1.ExportCostProductParametersResponse.base:type_name -> common.v1.BaseResponse
-	25, // 10: finance.v1.DownloadCostApplicableParamTemplateResponse.base:type_name -> common.v1.BaseResponse
-	25, // 11: finance.v1.DownloadCostProductParameterTemplateResponse.base:type_name -> common.v1.BaseResponse
+	29, // 5: finance.v1.ListCostImportJobsResponse.pagination:type_name -> common.v1.PaginationResponse
+	27, // 6: finance.v1.ImportCostApplicableParamsResponse.base:type_name -> common.v1.BaseResponse
+	27, // 7: finance.v1.ImportCostProductParametersResponse.base:type_name -> common.v1.BaseResponse
+	27, // 8: finance.v1.ExportCostApplicableParamsResponse.base:type_name -> common.v1.BaseResponse
+	27, // 9: finance.v1.ExportCostProductParametersResponse.base:type_name -> common.v1.BaseResponse
+	27, // 10: finance.v1.DownloadCostApplicableParamTemplateResponse.base:type_name -> common.v1.BaseResponse
+	27, // 11: finance.v1.DownloadCostProductParameterTemplateResponse.base:type_name -> common.v1.BaseResponse
 	17, // 12: finance.v1.BulkSheetValidationResult.sample_errors:type_name -> finance.v1.ImportRowError
-	25, // 13: finance.v1.ImportBulkProductRoutingResponse.base:type_name -> common.v1.BaseResponse
-	25, // 14: finance.v1.ValidateBulkProductRoutingFileResponse.base:type_name -> common.v1.BaseResponse
-	18, // 15: finance.v1.ValidateBulkProductRoutingFileResponse.sheets:type_name -> finance.v1.BulkSheetValidationResult
-	25, // 16: finance.v1.ExportBulkProductRoutingResponse.base:type_name -> common.v1.BaseResponse
-	1,  // 17: finance.v1.CostDataImportService.GetCostImportJob:input_type -> finance.v1.GetCostImportJobRequest
-	3,  // 18: finance.v1.CostDataImportService.ListCostImportJobs:input_type -> finance.v1.ListCostImportJobsRequest
-	5,  // 19: finance.v1.CostDataImportService.ImportCostApplicableParams:input_type -> finance.v1.ImportCostApplicableParamsRequest
-	9,  // 20: finance.v1.CostDataImportService.ExportCostApplicableParams:input_type -> finance.v1.ExportCostApplicableParamsRequest
-	13, // 21: finance.v1.CostDataImportService.DownloadCostApplicableParamTemplate:input_type -> finance.v1.DownloadCostApplicableParamTemplateRequest
-	7,  // 22: finance.v1.CostDataImportService.ImportCostProductParameters:input_type -> finance.v1.ImportCostProductParametersRequest
-	11, // 23: finance.v1.CostDataImportService.ExportCostProductParameters:input_type -> finance.v1.ExportCostProductParametersRequest
-	15, // 24: finance.v1.CostDataImportService.DownloadCostProductParameterTemplate:input_type -> finance.v1.DownloadCostProductParameterTemplateRequest
-	19, // 25: finance.v1.CostDataImportService.ImportBulkProductRouting:input_type -> finance.v1.ImportBulkProductRoutingRequest
-	21, // 26: finance.v1.CostDataImportService.ValidateBulkProductRoutingFile:input_type -> finance.v1.ValidateBulkProductRoutingFileRequest
-	23, // 27: finance.v1.CostDataImportService.ExportBulkProductRouting:input_type -> finance.v1.ExportBulkProductRoutingRequest
-	2,  // 28: finance.v1.CostDataImportService.GetCostImportJob:output_type -> finance.v1.GetCostImportJobResponse
-	4,  // 29: finance.v1.CostDataImportService.ListCostImportJobs:output_type -> finance.v1.ListCostImportJobsResponse
-	6,  // 30: finance.v1.CostDataImportService.ImportCostApplicableParams:output_type -> finance.v1.ImportCostApplicableParamsResponse
-	10, // 31: finance.v1.CostDataImportService.ExportCostApplicableParams:output_type -> finance.v1.ExportCostApplicableParamsResponse
-	14, // 32: finance.v1.CostDataImportService.DownloadCostApplicableParamTemplate:output_type -> finance.v1.DownloadCostApplicableParamTemplateResponse
-	8,  // 33: finance.v1.CostDataImportService.ImportCostProductParameters:output_type -> finance.v1.ImportCostProductParametersResponse
-	12, // 34: finance.v1.CostDataImportService.ExportCostProductParameters:output_type -> finance.v1.ExportCostProductParametersResponse
-	16, // 35: finance.v1.CostDataImportService.DownloadCostProductParameterTemplate:output_type -> finance.v1.DownloadCostProductParameterTemplateResponse
-	20, // 36: finance.v1.CostDataImportService.ImportBulkProductRouting:output_type -> finance.v1.ImportBulkProductRoutingResponse
-	22, // 37: finance.v1.CostDataImportService.ValidateBulkProductRoutingFile:output_type -> finance.v1.ValidateBulkProductRoutingFileResponse
-	24, // 38: finance.v1.CostDataImportService.ExportBulkProductRouting:output_type -> finance.v1.ExportBulkProductRoutingResponse
-	28, // [28:39] is the sub-list for method output_type
-	17, // [17:28] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	27, // 13: finance.v1.ImportBulkProductRoutingResponse.base:type_name -> common.v1.BaseResponse
+	27, // 14: finance.v1.ImportBulkParamsOnlyResponse.base:type_name -> common.v1.BaseResponse
+	27, // 15: finance.v1.ValidateBulkProductRoutingFileResponse.base:type_name -> common.v1.BaseResponse
+	18, // 16: finance.v1.ValidateBulkProductRoutingFileResponse.sheets:type_name -> finance.v1.BulkSheetValidationResult
+	27, // 17: finance.v1.ExportBulkProductRoutingResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 18: finance.v1.CostDataImportService.GetCostImportJob:input_type -> finance.v1.GetCostImportJobRequest
+	3,  // 19: finance.v1.CostDataImportService.ListCostImportJobs:input_type -> finance.v1.ListCostImportJobsRequest
+	5,  // 20: finance.v1.CostDataImportService.ImportCostApplicableParams:input_type -> finance.v1.ImportCostApplicableParamsRequest
+	9,  // 21: finance.v1.CostDataImportService.ExportCostApplicableParams:input_type -> finance.v1.ExportCostApplicableParamsRequest
+	13, // 22: finance.v1.CostDataImportService.DownloadCostApplicableParamTemplate:input_type -> finance.v1.DownloadCostApplicableParamTemplateRequest
+	7,  // 23: finance.v1.CostDataImportService.ImportCostProductParameters:input_type -> finance.v1.ImportCostProductParametersRequest
+	11, // 24: finance.v1.CostDataImportService.ExportCostProductParameters:input_type -> finance.v1.ExportCostProductParametersRequest
+	15, // 25: finance.v1.CostDataImportService.DownloadCostProductParameterTemplate:input_type -> finance.v1.DownloadCostProductParameterTemplateRequest
+	19, // 26: finance.v1.CostDataImportService.ImportBulkProductRouting:input_type -> finance.v1.ImportBulkProductRoutingRequest
+	21, // 27: finance.v1.CostDataImportService.ImportBulkParamsOnly:input_type -> finance.v1.ImportBulkParamsOnlyRequest
+	23, // 28: finance.v1.CostDataImportService.ValidateBulkProductRoutingFile:input_type -> finance.v1.ValidateBulkProductRoutingFileRequest
+	25, // 29: finance.v1.CostDataImportService.ExportBulkProductRouting:input_type -> finance.v1.ExportBulkProductRoutingRequest
+	2,  // 30: finance.v1.CostDataImportService.GetCostImportJob:output_type -> finance.v1.GetCostImportJobResponse
+	4,  // 31: finance.v1.CostDataImportService.ListCostImportJobs:output_type -> finance.v1.ListCostImportJobsResponse
+	6,  // 32: finance.v1.CostDataImportService.ImportCostApplicableParams:output_type -> finance.v1.ImportCostApplicableParamsResponse
+	10, // 33: finance.v1.CostDataImportService.ExportCostApplicableParams:output_type -> finance.v1.ExportCostApplicableParamsResponse
+	14, // 34: finance.v1.CostDataImportService.DownloadCostApplicableParamTemplate:output_type -> finance.v1.DownloadCostApplicableParamTemplateResponse
+	8,  // 35: finance.v1.CostDataImportService.ImportCostProductParameters:output_type -> finance.v1.ImportCostProductParametersResponse
+	12, // 36: finance.v1.CostDataImportService.ExportCostProductParameters:output_type -> finance.v1.ExportCostProductParametersResponse
+	16, // 37: finance.v1.CostDataImportService.DownloadCostProductParameterTemplate:output_type -> finance.v1.DownloadCostProductParameterTemplateResponse
+	20, // 38: finance.v1.CostDataImportService.ImportBulkProductRouting:output_type -> finance.v1.ImportBulkProductRoutingResponse
+	22, // 39: finance.v1.CostDataImportService.ImportBulkParamsOnly:output_type -> finance.v1.ImportBulkParamsOnlyResponse
+	24, // 40: finance.v1.CostDataImportService.ValidateBulkProductRoutingFile:output_type -> finance.v1.ValidateBulkProductRoutingFileResponse
+	26, // 41: finance.v1.CostDataImportService.ExportBulkProductRouting:output_type -> finance.v1.ExportBulkProductRoutingResponse
+	30, // [30:42] is the sub-list for method output_type
+	18, // [18:30] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_import_proto_init() }
@@ -1738,7 +1868,7 @@ func file_finance_v1_cost_import_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_cost_import_proto_rawDesc), len(file_finance_v1_cost_import_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   25,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

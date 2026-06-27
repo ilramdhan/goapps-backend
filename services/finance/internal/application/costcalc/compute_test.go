@@ -125,20 +125,29 @@ func TestComputeProduct_TwoStage_PRODUCTUpstream(t *testing.T) {
 	assert.Equal(t, "product:20", out.RMCostDetail[0].RefCode)
 }
 
-func TestComputeProduct_MissingCAPP_SurfacesAsFormulaErr(t *testing.T) {
-	// CAPP omits WASTE_PCT; evaluator treats undefined vars as nil → arithmetic
-	// fails with non-numeric output, which our evaluator wraps as a run error.
+func TestComputeProduct_MissingCAPP_DefaultsToZero(t *testing.T) {
+	// CAPP omits WASTE_PCT; the engine pre-fills missing input params with 0
+	// so the expression evaluates as COST_RM_TOTAL * (1 + 0/100) = RM_TOTAL.
+	// This prevents nil-arithmetic panics for products that have partial CAPP data.
 	in := ComputeInput{
 		ProductSysID: 1,
 		Route:        buildOneStageRoute(1, costroute.RmTypeItem, "X", 1.0),
 		CAPP:         map[string]float64{},
-		Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL * (1 + WASTE_PCT/100)")},
-		RMCosts:      map[string]float64{"X|": 10.0},
-		EvalCache:    evaluator.NewCache(),
+		Formulas: []Formula{
+			{
+				FormulaCode:     "F_FINAL",
+				Expression:      "COST_RM_TOTAL * (1 + WASTE_PCT/100)",
+				ResultParamCode: "COST_STAGE_OUT",
+				InputParamCodes: []string{"WASTE_PCT"},
+			},
+		},
+		RMCosts:   map[string]float64{"X|": 10.0},
+		EvalCache: evaluator.NewCache(),
 	}
-	_, err := ComputeProduct(context.Background(), in)
-	require.Error(t, err)
-	require.ErrorIs(t, err, costcalcdom.ErrFormulaEval)
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+	// WASTE_PCT defaults to 0 → 10.0 * (1 + 0/100) = 10.0
+	require.InDelta(t, 10.0, out.CostPerUnit, 0.001)
 }
 
 func TestComputeProduct_MissingRMCost(t *testing.T) {
@@ -168,7 +177,9 @@ func TestComputeProduct_MissingUpstream(t *testing.T) {
 	require.ErrorIs(t, err, costcalcdom.ErrMissingUpstreamCost)
 }
 
-func TestComputeProduct_DivByZero_ReturnsFormulaError(t *testing.T) {
+func TestComputeProduct_DivByZero_ReturnsZeroCost(t *testing.T) {
+	// Division by zero produces NaN/Inf which the evaluator converts to 0.
+	// The product computes successfully with 0 cost rather than blocking.
 	in := ComputeInput{
 		ProductSysID: 1,
 		Route:        buildOneStageRoute(1, costroute.RmTypeItem, "X", 1.0),
@@ -182,9 +193,9 @@ func TestComputeProduct_DivByZero_ReturnsFormulaError(t *testing.T) {
 		RMCosts:   map[string]float64{"X|": 10.0},
 		EvalCache: evaluator.NewCache(),
 	}
-	_, err := ComputeProduct(context.Background(), in)
-	require.Error(t, err)
-	require.ErrorIs(t, err, costcalcdom.ErrFormulaEval)
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+	require.Equal(t, float64(0), out.CostPerUnit)
 }
 
 func TestComputeProduct_NoFinalCostKey_SingleTerminal_Succeeds(t *testing.T) {
@@ -208,32 +219,45 @@ func TestComputeProduct_NoFinalCostKey_SingleTerminal_Succeeds(t *testing.T) {
 	assert.Equal(t, 10.0, out.CostPerUnit)
 }
 
-func TestComputeProduct_NoFinalCostKey_MultipleTerminals_Errors(t *testing.T) {
-	// Two independent formulas (neither feeds the other) → two terminal nodes →
-	// ambiguous final cost → error.
+func TestComputeProduct_NoFinalCostKey_MultipleTerminals_PicksDeepest(t *testing.T) {
+	// Two terminal formulas with different chain depths.
+	// F_B is deeper (F_A's output feeds F_B's sibling chain, making F_B
+	// accumulate more ancestors), so F_B's output should be chosen as final cost.
+	// Actually for simplicity: F_DEEP uses OUT_A as input (depth=2),
+	// F_SHALLOW uses only COST_RM_TOTAL (depth=1).
+	// Engine picks F_DEEP's output as final cost without error.
 	in := ComputeInput{
 		ProductSysID: 1,
 		Route:        buildOneStageRoute(1, costroute.RmTypeItem, "X", 1.0),
 		Formulas: []Formula{
 			{
-				FormulaCode:     "F_A",
+				FormulaCode:     "F_SHALLOW",
 				Expression:      "COST_RM_TOTAL",
-				ResultParamCode: "OUT_A",
+				ResultParamCode: "OUT_SHALLOW",
 				InputParamCodes: []string{ScopeKeyCostRMTotal},
 			},
 			{
-				FormulaCode:     "F_B",
+				// depth=2: consumes OUT_SHALLOW which itself has depth=1
+				FormulaCode:     "F_DEEP",
+				Expression:      "OUT_SHALLOW * 1",
+				ResultParamCode: "OUT_DEEP",
+				InputParamCodes: []string{"OUT_SHALLOW"},
+			},
+			{
+				// pure helper, depth=1, terminal
+				FormulaCode:     "F_HELPER",
 				Expression:      "COST_RM_TOTAL",
-				ResultParamCode: "OUT_B",
+				ResultParamCode: "OUT_HELPER",
 				InputParamCodes: []string{ScopeKeyCostRMTotal},
 			},
 		},
 		RMCosts:   map[string]float64{"X|": 10.0},
 		EvalCache: evaluator.NewCache(),
 	}
-	_, err := ComputeProduct(context.Background(), in)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), ScopeKeyFinalCost)
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+	// F_DEEP has depth 2 → picked as final; its output = OUT_SHALLOW * 1 = totalRM = 10
+	require.InDelta(t, 10.0, out.CostPerUnit, 0.001)
 }
 
 func TestComputeProduct_SnapshotIncludesInputs(t *testing.T) {
@@ -314,6 +338,54 @@ func TestComputeProduct_CostByLevel_Aggregates(t *testing.T) {
 //	COST_DEL_FINAL ≈ 3.244    (delivery packing slightly higher)
 //	VB1_DEL_COST   ≈ 3.264    (COST_DEL_FINAL + 100/5000)
 //	VB2_DEL_COST   ≈ 3.254    (COST_DEL_FINAL + 100/10000)
+func TestComputeProduct_MarketingResult_UsesSellingSnapshot(t *testing.T) {
+	// Formula calls marketing_result(product,'AX_WT',period).
+	// SellingSnapshot has AX_WT=4.8 → COST_STAGE_OUT = 100 + 4.8 = 104.8.
+	in := ComputeInput{
+		ProductSysID: 55,
+		Period:       "202606",
+		CalcType:     costcalcdom.CalcTypeActual,
+		Route:        buildOneStageRoute(55, costroute.RmTypeItem, "RM_X", 1.0),
+		CAPP:         map[string]float64{},
+		Formulas: []Formula{{
+			FormulaCode:     "F_YARN_AX_WT_FROM_MKT",
+			Expression:      "COST_RM_TOTAL + marketing_result(1, \"AX_WT\", \"202606\")",
+			ResultParamCode: ScopeKeyFinalCost,
+			InputParamCodes: []string{ScopeKeyCostRMTotal},
+		}},
+		RMCosts:         map[string]float64{"RM_X|": 100.0},
+		EvalCache:       evaluator.NewCache(),
+		SellingSnapshot: map[string]float64{"AX_WT": 4.8},
+	}
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+	assert.InDelta(t, 104.8, out.CostPerUnit, 1e-9)
+}
+
+func TestComputeProduct_MarketingResult_EmptySnapshot_ReturnsZero(t *testing.T) {
+	// No SELLING session available — SellingSnapshot is empty.
+	// marketing_result() should return 0 gracefully; COST_STAGE_OUT = 100 + 0 = 100.
+	in := ComputeInput{
+		ProductSysID: 56,
+		Period:       "202606",
+		CalcType:     costcalcdom.CalcTypeActual,
+		Route:        buildOneStageRoute(56, costroute.RmTypeItem, "RM_Y", 1.0),
+		CAPP:         map[string]float64{},
+		Formulas: []Formula{{
+			FormulaCode:     "F_YARN_AX_WT_FROM_MKT",
+			Expression:      "COST_RM_TOTAL + marketing_result(1, \"AX_WT\", \"202606\")",
+			ResultParamCode: ScopeKeyFinalCost,
+			InputParamCodes: []string{ScopeKeyCostRMTotal},
+		}},
+		RMCosts:         map[string]float64{"RM_Y|": 100.0},
+		EvalCache:       evaluator.NewCache(),
+		SellingSnapshot: map[string]float64{}, // no SELLING result yet
+	}
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+	assert.InDelta(t, 100.0, out.CostPerUnit, 1e-9)
+}
+
 func TestComputePTYMELANGEOracleReference(t *testing.T) {
 	t.Parallel()
 

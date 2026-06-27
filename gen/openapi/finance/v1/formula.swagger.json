@@ -60,7 +60,7 @@
           },
           {
             "name": "formulaType",
-            "description": "Filter by formula type.\nFORMULA_TYPE_UNSPECIFIED (0) means \"show all types\" (no filter).\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation).",
+            "description": "Filter by formula type.\nFORMULA_TYPE_UNSPECIFIED (0) means \"show all types\" (no filter).\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation).\n - FORMULA_TYPE_CONDITIONAL: Conditional expression with if/else branching.\n - FORMULA_TYPE_LOOKUP: Lookup from a master table via param code.\n - FORMULA_TYPE_RM_LOOKUP: Lookup using RM group cost rates.\n - FORMULA_TYPE_FROM_MARKETING: Copy value from the SELLING (marketing) session result.\n - FORMULA_TYPE_INTERMINGLING: Intermingling cost lookup.\n - FORMULA_TYPE_SNAPSHOT: Snapshot of a previously computed value.\n - FORMULA_TYPE_PENDING: Placeholder — formula not yet defined.\n - FORMULA_TYPE_INITIAL_VALUE: Seeds an initial value before the formula chain starts.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -68,7 +68,15 @@
               "FORMULA_TYPE_UNSPECIFIED",
               "FORMULA_TYPE_CALCULATION",
               "FORMULA_TYPE_SQL_QUERY",
-              "FORMULA_TYPE_CONSTANT"
+              "FORMULA_TYPE_CONSTANT",
+              "FORMULA_TYPE_CONDITIONAL",
+              "FORMULA_TYPE_LOOKUP",
+              "FORMULA_TYPE_RM_LOOKUP",
+              "FORMULA_TYPE_FROM_MARKETING",
+              "FORMULA_TYPE_INTERMINGLING",
+              "FORMULA_TYPE_SNAPSHOT",
+              "FORMULA_TYPE_PENDING",
+              "FORMULA_TYPE_INITIAL_VALUE"
             ],
             "default": "FORMULA_TYPE_UNSPECIFIED"
           },
@@ -158,7 +166,7 @@
         "parameters": [
           {
             "name": "formulaType",
-            "description": "Filter by formula type.\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation).",
+            "description": "Filter by formula type.\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation).\n - FORMULA_TYPE_CONDITIONAL: Conditional expression with if/else branching.\n - FORMULA_TYPE_LOOKUP: Lookup from a master table via param code.\n - FORMULA_TYPE_RM_LOOKUP: Lookup using RM group cost rates.\n - FORMULA_TYPE_FROM_MARKETING: Copy value from the SELLING (marketing) session result.\n - FORMULA_TYPE_INTERMINGLING: Intermingling cost lookup.\n - FORMULA_TYPE_SNAPSHOT: Snapshot of a previously computed value.\n - FORMULA_TYPE_PENDING: Placeholder — formula not yet defined.\n - FORMULA_TYPE_INITIAL_VALUE: Seeds an initial value before the formula chain starts.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -166,7 +174,15 @@
               "FORMULA_TYPE_UNSPECIFIED",
               "FORMULA_TYPE_CALCULATION",
               "FORMULA_TYPE_SQL_QUERY",
-              "FORMULA_TYPE_CONSTANT"
+              "FORMULA_TYPE_CONSTANT",
+              "FORMULA_TYPE_CONDITIONAL",
+              "FORMULA_TYPE_LOOKUP",
+              "FORMULA_TYPE_RM_LOOKUP",
+              "FORMULA_TYPE_FROM_MARKETING",
+              "FORMULA_TYPE_INTERMINGLING",
+              "FORMULA_TYPE_SNAPSHOT",
+              "FORMULA_TYPE_PENDING",
+              "FORMULA_TYPE_INITIAL_VALUE"
             ],
             "default": "FORMULA_TYPE_UNSPECIFIED"
           },
@@ -666,10 +682,18 @@
         "FORMULA_TYPE_UNSPECIFIED",
         "FORMULA_TYPE_CALCULATION",
         "FORMULA_TYPE_SQL_QUERY",
-        "FORMULA_TYPE_CONSTANT"
+        "FORMULA_TYPE_CONSTANT",
+        "FORMULA_TYPE_CONDITIONAL",
+        "FORMULA_TYPE_LOOKUP",
+        "FORMULA_TYPE_RM_LOOKUP",
+        "FORMULA_TYPE_FROM_MARKETING",
+        "FORMULA_TYPE_INTERMINGLING",
+        "FORMULA_TYPE_SNAPSHOT",
+        "FORMULA_TYPE_PENDING",
+        "FORMULA_TYPE_INITIAL_VALUE"
       ],
       "default": "FORMULA_TYPE_UNSPECIFIED",
-      "description": "FormulaType represents the type of a formula expression.\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation)."
+      "description": "FormulaType represents the type of a formula expression.\n\n - FORMULA_TYPE_UNSPECIFIED: Default unspecified value - used as \"no filter\" in list/export requests.\n - FORMULA_TYPE_CALCULATION: Mathematical calculation using parameter codes (e.g., \"ELEC_CONSUMPTION * ELEC_RATE\").\n - FORMULA_TYPE_SQL_QUERY: SQL query to fetch data from other tables.\n - FORMULA_TYPE_CONSTANT: Constant value (no calculation).\n - FORMULA_TYPE_CONDITIONAL: Conditional expression with if/else branching.\n - FORMULA_TYPE_LOOKUP: Lookup from a master table via param code.\n - FORMULA_TYPE_RM_LOOKUP: Lookup using RM group cost rates.\n - FORMULA_TYPE_FROM_MARKETING: Copy value from the SELLING (marketing) session result.\n - FORMULA_TYPE_INTERMINGLING: Intermingling cost lookup.\n - FORMULA_TYPE_SNAPSHOT: Snapshot of a previously computed value.\n - FORMULA_TYPE_PENDING: Placeholder — formula not yet defined.\n - FORMULA_TYPE_INITIAL_VALUE: Seeds an initial value before the formula chain starts."
     },
     "v1GetFormulaResponse": {
       "type": "object",

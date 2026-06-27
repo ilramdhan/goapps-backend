@@ -16,6 +16,12 @@ type GetCostBreakdownQuery struct {
 	CalcType     costcalcdom.CalculationType
 }
 
+// LevelProductInfo holds resolved product metadata for a level entry.
+type LevelProductInfo struct {
+	ProductCode string
+	ProductName string
+}
+
 // CostBreakdownView combines the active Result with its decoded JSONB blobs.
 type CostBreakdownView struct {
 	Result        *costcalcdom.Result
@@ -23,6 +29,8 @@ type CostBreakdownView struct {
 	RMCostDetail  []RMCostDetail
 	ParamSnapshot map[string]float64
 	FormulaTrace  []FormulaEvalTrace
+	// LevelProducts maps product_sys_id → product code+name for the by-level tab.
+	LevelProducts map[int64]LevelProductInfo
 }
 
 // GetCostBreakdownHandler loads the active result and decodes every JSONB blob
@@ -56,6 +64,7 @@ func (h *GetCostBreakdownHandler) Handle(ctx context.Context, q GetCostBreakdown
 		RMCostDetail:  []RMCostDetail{},
 		ParamSnapshot: map[string]float64{},
 		FormulaTrace:  []FormulaEvalTrace{},
+		LevelProducts: map[int64]LevelProductInfo{},
 	}
 	if err := decodeJSONBlob(result.CostByLevel(), &view.CostByLevel); err != nil {
 		return nil, fmt.Errorf("decode cost_by_level: %w", err)
@@ -69,6 +78,26 @@ func (h *GetCostBreakdownHandler) Handle(ctx context.Context, q GetCostBreakdown
 	if err := decodeJSONBlob(result.FormulaTrace(), &view.FormulaTrace); err != nil {
 		return nil, fmt.Errorf("decode formula_trace: %w", err)
 	}
+
+	// Resolve product code+name for each level entry that has a product_sys_id.
+	var productIDs []int64
+	for _, lc := range view.CostByLevel {
+		if lc.ProductSysID > 0 {
+			productIDs = append(productIDs, lc.ProductSysID)
+		}
+	}
+	if len(productIDs) > 0 {
+		products, loadErr := h.svc.loader.LoadProducts(ctx, productIDs)
+		if loadErr == nil {
+			for id, p := range products {
+				view.LevelProducts[id] = LevelProductInfo{
+					ProductCode: p.ProductCode(),
+					ProductName: p.ProductName(),
+				}
+			}
+		}
+	}
+
 	return view, nil
 }
 

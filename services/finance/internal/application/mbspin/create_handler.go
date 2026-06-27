@@ -11,14 +11,19 @@ import (
 
 // CreateCommand represents the create MB Spin command.
 type CreateCommand struct {
-	HeadID      uuid.UUID
-	MgtName     string
-	OracleSysID *string
-	Denier      *float64
-	Filament    *int
-	Dozing      *float64
-	MBCosting   *string
-	CreatedBy   string
+	HeadID          uuid.UUID
+	MgtName         string
+	OracleSysID     *string
+	Denier          *float64
+	Filament        *int
+	Dozing          *float64
+	MBCosting       *string
+	CC              *string
+	CostRateMkt     *float64
+	MBSStatus       *string
+	MBSLdrPrsn      *float64
+	MBSFinalProduct *string
+	CreatedBy       string
 }
 
 // CreateHandler handles the CreateMBSpin command.
@@ -34,8 +39,10 @@ func NewCreateHandler(repo mbspin.Repository) *CreateHandler {
 // Handle executes the create MB Spin command.
 func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbspin.Entity, error) {
 	entity, err := mbspin.New(
-		cmd.HeadID, cmd.MgtName, cmd.OracleSysID,
+		cmd.HeadID, cmd.MgtName, cmd.OracleSysID, nil,
 		cmd.Denier, cmd.Filament, cmd.Dozing, cmd.MBCosting,
+		cmd.CC, cmd.CostRateMkt,
+		cmd.MBSStatus, cmd.MBSLdrPrsn, cmd.MBSFinalProduct,
 		cmd.CreatedBy,
 	)
 	if err != nil {

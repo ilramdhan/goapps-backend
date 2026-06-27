@@ -123,7 +123,7 @@ func (p *CostProductMaster) SetGeneratedCode(sysID int64, code string) {
 }
 
 // Update mutates editable descriptive fields. product_type_id is immutable.
-func (p *CostProductMaster) Update(productName, shadeCode, gradeCode, description, actor string) error {
+func (p *CostProductMaster) Update(productName, shadeCode, gradeCode, description, flex01, flex02, flex03, actor string) error {
 	if !p.isActive {
 		return ErrInactive
 	}
@@ -142,6 +142,9 @@ func (p *CostProductMaster) Update(productName, shadeCode, gradeCode, descriptio
 	p.shadeCode = strings.TrimSpace(shadeCode)
 	p.gradeCode = grade
 	p.description = strings.TrimSpace(description)
+	p.flex01 = strings.TrimSpace(flex01)
+	p.flex02 = strings.TrimSpace(flex02)
+	p.flex03 = strings.TrimSpace(flex03)
 	p.updatedAt = time.Now().UTC()
 	p.updatedBy = actor
 	return nil

@@ -150,7 +150,7 @@ func TestGetHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		id := uuid.New()
-		expected, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, "admin")
+		expected, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
@@ -202,7 +202,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		id := uuid.New()
-		entity, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, "admin")
+		entity, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		newCosting := "MB001-UPD"
@@ -278,9 +278,9 @@ func TestListHandler_Handle(t *testing.T) {
 		handler := mbhead.NewListHandler(mockRepo)
 		ctx := context.Background()
 
-		entity1, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, "admin")
+		entity1, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
-		entity2, err := mbheaddomain.New("MB002", nil, nil, nil, nil, nil, "admin")
+		entity2, err := mbheaddomain.New("MB002", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("mbhead.ListFilter")).Return(

@@ -25,7 +25,7 @@ func NewCode(code string) (Code, error) {
 	if code == "" {
 		return Code{}, ErrEmptyCode
 	}
-	if len(code) > 20 {
+	if len(code) > 50 {
 		return Code{}, ErrCodeTooLong
 	}
 	if !codePattern.MatchString(code) {
