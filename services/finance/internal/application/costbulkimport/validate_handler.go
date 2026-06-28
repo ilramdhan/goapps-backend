@@ -55,8 +55,20 @@ func (h *ValidateHandler) Validate(ctx context.Context, fileContent []byte) (*Va
 		return nil, mapsErr
 	}
 
-	// Run the same full validation as the import handler (cross-sheet FK included).
-	allSheets := preValidateAll(f, maps)
+	// Run preValidateAll in a goroutine so the caller's context deadline is honored.
+	// preValidateAll is CPU-bound and does not accept a context; the goroutine may outlive
+	// a ctx cancellation, but it is bounded and will finish on its own.
+	type sheetResults struct{ sheets []SheetResult }
+	ch := make(chan sheetResults, 1)
+	go func() { ch <- sheetResults{preValidateAll(f, maps)} }()
+
+	var allSheets []SheetResult
+	select {
+	case r := <-ch:
+		allSheets = r.sheets
+	case <-ctx.Done():
+		return nil, fmt.Errorf("validation timed out — file may be too large; import directly to get the full error report")
+	}
 
 	// Cap errors per sheet for the modal response.
 	result := &ValidateResult{IsValid: true}

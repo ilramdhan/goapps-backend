@@ -318,7 +318,7 @@ func (r *CostFillTaskRepository) ListPendingFill(ctx context.Context, reminderGa
 		   FROM cost_fill_task t
 		  WHERE t.cft_status IN ('ACTIVE','FILLING')
 		    AND (t.cft_last_notified_at IS NULL
-		         OR t.cft_last_notified_at < NOW() - ($1 || ' hours')::interval)`,
+		         OR t.cft_last_notified_at < NOW() - make_interval(hours => $1))`,
 		reminderGapHours)
 	if err != nil {
 		return nil, fmt.Errorf("list pending fill tasks: %w", err)
@@ -339,7 +339,7 @@ func (r *CostFillTaskRepository) ListPendingApproval(ctx context.Context, remind
 		   FROM cost_fill_task t
 		  WHERE t.cft_status = 'APPROVAL_PENDING'
 		    AND (t.cft_last_notified_at IS NULL
-		         OR t.cft_last_notified_at < NOW() - ($1 || ' hours')::interval)`,
+		         OR t.cft_last_notified_at < NOW() - make_interval(hours => $1))`,
 		reminderGapHours)
 	if err != nil {
 		return nil, fmt.Errorf("list pending approval tasks: %w", err)
