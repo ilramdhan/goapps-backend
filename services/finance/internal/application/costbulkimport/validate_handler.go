@@ -1,3 +1,4 @@
+// Package costbulkimport contains the application-layer logic for the cost calculation engine.
 package costbulkimport
 
 import (
@@ -11,7 +12,16 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproducttype"
 )
 
-const maxSampleErrors = 20
+const (
+	maxSampleErrors = 20
+
+	// validateMaxFileBytes is the maximum file size accepted by the preview validation
+	// endpoint. Files larger than this are rejected immediately with a clear message
+	// directing the user to import directly (which also validates and produces an
+	// error report Excel file). Keeping this limit low ensures the synchronous
+	// validate call completes well within the 30-second gRPC server timeout.
+	validateMaxFileBytes = 5 * 1024 * 1024 // 5 MB
+)
 
 // ValidateHandler performs a synchronous dry-run validation of a bulk import file.
 // It parses all 6 sheets and returns per-sheet validation results without writing to the database.
@@ -35,42 +45,57 @@ type ValidateResult struct {
 }
 
 // Validate parses and validates the file without writing to the database.
-// Uses the same cross-sheet FK checks as the actual import (preValidateAll) so
-// the modal result is always consistent with what will happen when the user
-// clicks Import. At most maxSampleErrors errors are shown per sheet in the
-// modal response (the full set is in the error report on failure).
+// Files larger than validateMaxFileBytes are rejected immediately.
+// Both excelize.OpenReader and preValidateAll run inside a goroutine so the
+// caller's context deadline is honored without a race against the gRPC transport
+// layer's RST_STREAM on context cancellation.
 func (h *ValidateHandler) Validate(ctx context.Context, fileContent []byte) (*ValidateResult, error) {
-	f, openErr := excelize.OpenReader(bytes.NewReader(fileContent))
-	if openErr != nil {
-		return nil, fmt.Errorf("open file: %w", openErr)
+	if len(fileContent) > validateMaxFileBytes {
+		return nil, fmt.Errorf(
+			"file too large for preview validation (%.1f MB > 5 MB limit); import directly to get the full error report",
+			float64(len(fileContent))/(1024*1024), //nolint:mnd // 1024*1024 = bytes-to-MB, not a magic number
+		)
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			_ = err
-		}
-	}()
 
 	maps, mapsErr := h.loadMaps(ctx)
 	if mapsErr != nil {
 		return nil, mapsErr
 	}
 
-	// Run preValidateAll in a goroutine so the caller's context deadline is honored.
-	// preValidateAll is CPU-bound and does not accept a context; the goroutine may outlive
-	// a ctx cancellation, but it is bounded and will finish on its own.
-	type sheetResults struct{ sheets []SheetResult }
-	ch := make(chan sheetResults, 1)
-	go func() { ch <- sheetResults{preValidateAll(f, maps)} }()
+	// Both OpenReader and preValidateAll run in a goroutine so that:
+	//   1. ctx.Done() is reached before the gRPC transport sends RST_STREAM,
+	//      avoiding the "Connection dropped" UNAVAILABLE race.
+	//   2. f.Close() is deferred inside the goroutine, preventing use-after-close
+	//      when ctx is cancelled while preValidateAll is still running.
+	// The goroutine is bounded — it will finish on its own even if ctx is cancelled.
+	type asyncResult struct {
+		sheets []SheetResult
+		err    error
+	}
+	ch := make(chan asyncResult, 1)
+	go func() {
+		f, openErr := excelize.OpenReader(bytes.NewReader(fileContent))
+		if openErr != nil {
+			ch <- asyncResult{err: fmt.Errorf("open file: %w", openErr)}
+			return
+		}
+		defer func() { _ = f.Close() }()
+		ch <- asyncResult{sheets: preValidateAll(f, maps)}
+	}()
 
-	var allSheets []SheetResult
 	select {
 	case r := <-ch:
-		allSheets = r.sheets
+		if r.err != nil {
+			return nil, r.err
+		}
+		return buildValidateResult(r.sheets), nil
 	case <-ctx.Done():
 		return nil, fmt.Errorf("validation timed out — file may be too large; import directly to get the full error report")
 	}
+}
 
-	// Cap errors per sheet for the modal response.
+// buildValidateResult caps per-sheet errors for the modal response.
+func buildValidateResult(allSheets []SheetResult) *ValidateResult {
 	result := &ValidateResult{IsValid: true}
 	for _, s := range allSheets {
 		capped := s
@@ -82,7 +107,7 @@ func (h *ValidateHandler) Validate(ctx context.Context, fileContent []byte) (*Va
 			result.IsValid = false
 		}
 	}
-	return result, nil
+	return result
 }
 
 // loadMaps preloads ParamMap and ProductTypeMap for validation lookups.
