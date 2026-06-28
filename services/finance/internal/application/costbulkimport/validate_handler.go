@@ -79,7 +79,11 @@ func (h *ValidateHandler) Validate(ctx context.Context, fileContent []byte) (*Va
 			ch <- asyncResult{err: fmt.Errorf("open file: %w", openErr)}
 			return
 		}
-		defer func() { _ = f.Close() }()
+		defer func() {
+			if closeErr := f.Close(); closeErr != nil {
+				_ = closeErr
+			}
+		}()
 		ch <- asyncResult{sheets: preValidateAll(f, maps)}
 	}()
 
