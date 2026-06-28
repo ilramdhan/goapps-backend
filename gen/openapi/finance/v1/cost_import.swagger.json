@@ -320,7 +320,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "ImportBulkParamsOnlyRequest imports product_parameters + product_applicable_params\nfrom a file that does NOT contain a product_master sheet. Products must already\nexist in the database from a prior bulk import. Supports split part-sheets\n(e.g. \"product_parameters_p1\" + \"_p2\"). Max 50 MB.",
+            "description": "ImportBulkParamsOnlyRequest imports product_parameters + product_applicable_params\nfrom a file that does NOT contain a product_master sheet. Products must already\nexist in the database from a prior bulk import. Supports split part-sheets\n(e.g. \"product_parameters_p1\" + \"_p2\"). Max 200 MB.",
             "in": "body",
             "required": true,
             "schema": {
@@ -652,7 +652,7 @@
           "type": "string"
         }
       },
-      "description": "ImportBulkParamsOnlyRequest imports product_parameters + product_applicable_params\nfrom a file that does NOT contain a product_master sheet. Products must already\nexist in the database from a prior bulk import. Supports split part-sheets\n(e.g. \"product_parameters_p1\" + \"_p2\"). Max 50 MB."
+      "description": "ImportBulkParamsOnlyRequest imports product_parameters + product_applicable_params\nfrom a file that does NOT contain a product_master sheet. Products must already\nexist in the database from a prior bulk import. Supports split part-sheets\n(e.g. \"product_parameters_p1\" + \"_p2\"). Max 200 MB."
     },
     "v1ImportBulkParamsOnlyResponse": {
       "type": "object",

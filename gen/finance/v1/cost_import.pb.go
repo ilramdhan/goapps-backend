@@ -1263,7 +1263,7 @@ func (x *ImportBulkProductRoutingResponse) GetStatus() string {
 // ImportBulkParamsOnlyRequest imports product_parameters + product_applicable_params
 // from a file that does NOT contain a product_master sheet. Products must already
 // exist in the database from a prior bulk import. Supports split part-sheets
-// (e.g. "product_parameters_p1" + "_p2"). Max 50 MB.
+// (e.g. "product_parameters_p1" + "_p2"). Max 200 MB.
 type ImportBulkParamsOnlyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FileContent   []byte                 `protobuf:"bytes,1,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"`
@@ -1722,7 +1722,7 @@ const file_finance_v1_cost_import_proto_rawDesc = "" +
 	"\x06job_id\x18\x02 \x01(\x03R\x05jobId\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\"k\n" +
 	"\x1bImportBulkParamsOnlyRequest\x12/\n" +
-	"\ffile_content\x18\x01 \x01(\fB\f\xbaH\tz\a\x10\x01\x18\x80\x80\x80\x19R\vfileContent\x12\x1b\n" +
+	"\ffile_content\x18\x01 \x01(\fB\f\xbaH\tz\a\x10\x01\x18\x80\x80\x80dR\vfileContent\x12\x1b\n" +
 	"\tfile_name\x18\x02 \x01(\tR\bfileName\"z\n" +
 	"\x1cImportBulkParamsOnlyResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x15\n" +
