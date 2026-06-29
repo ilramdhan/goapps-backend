@@ -144,6 +144,14 @@ func (b *DagBuilder) productsOfRouteHead(ctx context.Context, headID int64) ([]i
 
 // loadProductRMEdges returns the PRODUCT-type RM edges (downstream -> upstream)
 // for the given set of product_sys_ids.
+//
+// An edge is only followed when the upstream RM target is itself a calc-able
+// product, i.e. it has an active (COMPLETE/LOCKED) route head of its own.
+// A PRODUCT-type RM whose target has no active route is a raw cost INPUT, not a
+// calc target: it carries a known price (RM cost) rather than a computed route
+// cost, so it must NOT become a graph node. Without this guard such a target
+// would be added as a headless node and later fail the cal_job_product insert
+// (cjp_route_head_id NOT NULL), aborting the whole job.
 func (b *DagBuilder) loadProductRMEdges(ctx context.Context, productSysIDs []int64) ([]edge, error) {
 	const q = `
 		SELECT crs.crs_product_sys_id, crm.crm_rm_product_sys_id
@@ -156,6 +164,12 @@ func (b *DagBuilder) loadProductRMEdges(ctx context.Context, productSysIDs []int
 		  AND crs.crs_product_sys_id = ANY($1)
 		  AND crm.crm_rm_type        = 'PRODUCT'
 		  AND crm.crm_rm_product_sys_id IS NOT NULL
+		  AND EXISTS (
+		    SELECT 1 FROM cost_route_head up
+		    WHERE up.crh_product_sys_id = crm.crm_rm_product_sys_id
+		      AND up.crh_routing_status IN ('COMPLETE','LOCKED')
+		      AND up.crh_deleted_at IS NULL
+		  )
 	`
 	rows, err := b.db.QueryContext(ctx, q, pq.Array(productSysIDs))
 	if err != nil {

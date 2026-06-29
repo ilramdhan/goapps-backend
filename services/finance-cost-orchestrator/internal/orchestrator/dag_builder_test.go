@@ -85,6 +85,35 @@ func TestDagBuilder_All_TraversesEverything(t *testing.T) {
 	}
 }
 
+// TestDagBuilder_All_NoHeadlessNodes asserts the invariant that makes the
+// cal_job_product persist safe: every node in a ScopeAll graph resolves to an
+// active route head. A PRODUCT-type RM target with no active route (a raw cost
+// input) must be excluded from the graph by loadProductRMEdges — otherwise it
+// becomes a headless node and the bulk insert hits cjp_route_head_id NOT NULL,
+// failing the whole job (the production 202605 failure).
+func TestDagBuilder_All_NoHeadlessNodes(t *testing.T) {
+	db := openTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	b := NewDagBuilder(db)
+	_, nodes, err := b.Build(context.Background(), ScopeInput{Scope: costcalc.ScopeAll})
+	require.NoError(t, err)
+	if len(nodes) == 0 {
+		t.Skip("no active routes in dev DB")
+	}
+
+	routeMap, err := NewJobProductRepo(db).ResolveProductRouteMap(context.Background(), nodes)
+	require.NoError(t, err)
+
+	var headless []int64
+	for _, n := range nodes {
+		if _, ok := routeMap[n]; !ok {
+			headless = append(headless, n)
+		}
+	}
+	require.Empty(t, headless, "every ScopeAll node must resolve to an active route head (no headless RM-input leaves in the graph)")
+}
+
 func TestDagBuilder_SingleProduct_NoRoute_EmptyGraph(t *testing.T) {
 	db := openTestDB(t)
 	defer func() { _ = db.Close() }()
