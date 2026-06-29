@@ -24,6 +24,11 @@ type ImportMaps struct {
 	// ProductMap maps legacy_oracle_sys_id → cpm_product_sys_id (int64).
 	// Populated during Sheet 1 (product_master) processing.
 	ProductMap map[string]int64
+	// DbProductSet is the set of legacy_oracle_sys_id values for ALL products
+	// currently in the database. Pre-loaded before validation so that route_sequences
+	// and route_rms can reference intermediate products from other chunks (already
+	// imported in earlier chunks) without triggering "product not found" errors.
+	DbProductSet map[string]struct{}
 	// InsertedProductSysIDs records product_sys_ids newly INSERTED (not updated)
 	// during Sheet 1. Used to roll back the write phase if a later sheet fails.
 	InsertedProductSysIDs []int64
@@ -44,6 +49,7 @@ func NewImportMaps() *ImportMaps {
 		ParamLookupMap:     make(map[string]string),
 		MasterLookupValues: make(map[string]map[string]bool),
 		ProductMap:         make(map[string]int64),
+		DbProductSet:       make(map[string]struct{}),
 		RouteHeadMap:       make(map[string]int64),
 		RouteSeqMap:        make(map[string]int64),
 	}

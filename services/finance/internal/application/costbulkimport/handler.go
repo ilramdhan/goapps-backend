@@ -317,6 +317,17 @@ func (h *BulkImportHandler) loadMaps(ctx context.Context) (*ImportMaps, error) {
 		m.RmGroupMap[g.Code().String()] = true
 	}
 
+	// Pre-load all existing product legacy IDs from DB so route_sequences and
+	// route_rms can reference intermediate products from previous chunks without
+	// triggering "product not found in product_master sheet" validation errors.
+	existingProducts, err := h.cpmRepo.ListAllLegacyIDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("load existing product set: %w", err)
+	}
+	for legacyID := range existingProducts {
+		m.DbProductSet[legacyID] = struct{}{}
+	}
+
 	return m, nil
 }
 

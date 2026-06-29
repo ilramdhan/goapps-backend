@@ -24,11 +24,16 @@ func preValidateAll(f *excelize.File, maps *ImportMaps) []SheetResult { //nolint
 	// Sheet 4 — route_head (cross-ref to inProducts); build inHeads set.
 	s4, inHeads := preflightRouteHead(f, inProducts)
 
-	// Sheet 5 — route_sequences (cross-ref to inHeads + inProducts); build inSeqs set.
-	s5, inSeqs := preflightRouteSeq(f, inHeads, inProducts)
+	// For route_sequences and route_rms, merge file-level products with DB products
+	// so that intermediate products from other chunks (already in the database) are
+	// not flagged as missing. This makes chunked imports work correctly.
+	allKnownProducts := mergeProductSets(inProducts, maps.DbProductSet)
+
+	// Sheet 5 — route_sequences (cross-ref to inHeads + allKnownProducts); build inSeqs set.
+	s5, inSeqs := preflightRouteSeq(f, inHeads, allKnownProducts)
 
 	// Sheet 6 — route_rms (cross-ref to inSeqs; validates rm_group_code against RmGroupMap).
-	s6 := preflightRouteRM(f, inSeqs, inProducts, maps)
+	s6 := preflightRouteRM(f, inSeqs, allKnownProducts, maps)
 
 	return []SheetResult{s1, s2, s3, s4, s5, s6}
 }
@@ -285,6 +290,21 @@ func preflightRMRow(rowNum int32, row map[string]string, inSeqs map[string]struc
 		}
 	}
 	return nil
+}
+
+// mergeProductSets returns a new set containing all keys from both a and b.
+// Used to combine file-level inProducts with DB-level DbProductSet so that
+// intermediate products from other chunks (already in the database) are not
+// treated as missing during route_sequences / route_rms validation.
+func mergeProductSets(a map[string]struct{}, b map[string]struct{}) map[string]struct{} {
+	out := make(map[string]struct{}, len(a)+len(b))
+	for k := range a {
+		out[k] = struct{}{}
+	}
+	for k := range b {
+		out[k] = struct{}{}
+	}
+	return out
 }
 
 // sheetErrResult creates a SheetResult for a parse-level failure (missing sheet / header).
