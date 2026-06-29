@@ -57,8 +57,19 @@ help:
 run:
 	go run cmd/server/main.go
 
+# run-worker kills any existing worker FIRST to avoid duplicate RabbitMQ consumers
+# (an orphaned old binary keeps consuming finance.jobs.rm_cost_calc and round-robins
+# half the jobs to stale code). Builds a named binary and execs it so SIGINT/SIGHUP
+# reach the worker directly instead of orphaning a `go run` child.
 run-worker:
-	go run cmd/worker/main.go
+	@echo ">> Stopping any existing rm-cost worker (prevents duplicate consumers)..."
+	@pkill -f '[c]md/worker/main.go' 2>/dev/null || true
+	@pkill -f '[b]in/finance-worker' 2>/dev/null || true
+	@sleep 1
+	@mkdir -p bin
+	go build -o bin/finance-worker cmd/worker/main.go
+	@echo ">> Starting bin/finance-worker (Ctrl+C to stop)"
+	exec bin/finance-worker
 
 build:
 	@mkdir -p bin

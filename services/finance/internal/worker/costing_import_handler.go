@@ -12,6 +12,7 @@ import (
 
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costbulkimport"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costimportetl"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductapplicableparam"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
@@ -46,45 +47,42 @@ func entityLabel(entity string) string {
 // entity-specific async import handler based on the job's entity field.
 // On completion it emits a notification to the requesting user via IAM.
 type CostingImportHandler struct {
-	jobRepo                costimportjob.Repository
-	storage                storage.Service
-	cpmHandler             *costproductmaster.AsyncImportHandler
-	cappHandler            *costproductapplicableparam.AsyncImportHandler
-	cppHandler             *costproductparameter.AsyncImportHandler
-	bulkImportHandler      *costbulkimport.BulkImportHandler
-	bulkExportHandler      *costbulkimport.ExportHandler
-	paramOnlyImportHandler *costbulkimport.ParamOnlyImportHandler
-	notif                  iamclient.NotificationClient
-	logger                 zerolog.Logger
+	jobRepo           costimportjob.Repository
+	storage           storage.Service
+	cpmHandler        *costproductmaster.AsyncImportHandler
+	cappHandler       *costproductapplicableparam.AsyncImportHandler
+	cppHandler        *costproductparameter.AsyncImportHandler
+	etlHandler        *costimportetl.Handler
+	bulkExportHandler *costbulkimport.ExportHandler
+	notif             iamclient.NotificationClient
+	logger            zerolog.Logger
 }
 
 // NewCostingImportHandler constructs the handler.
 // notif may be nil (a NopClient) — notification emission is always best-effort.
-// bulkImportHandler, bulkExportHandler, and paramOnlyImportHandler may be nil; the
-// corresponding entity cases will return an error if they arrive and the handler is absent.
+// etlHandler and bulkExportHandler may be nil; the corresponding entity cases
+// will return an error if they arrive and the handler is absent.
 func NewCostingImportHandler(
 	jobRepo costimportjob.Repository,
 	storageSvc storage.Service,
 	cpmHandler *costproductmaster.AsyncImportHandler,
 	cappHandler *costproductapplicableparam.AsyncImportHandler,
 	cppHandler *costproductparameter.AsyncImportHandler,
-	bulkImportHandler *costbulkimport.BulkImportHandler,
+	etlHandler *costimportetl.Handler,
 	bulkExportHandler *costbulkimport.ExportHandler,
-	paramOnlyImportHandler *costbulkimport.ParamOnlyImportHandler,
 	notif iamclient.NotificationClient,
 	logger zerolog.Logger,
 ) *CostingImportHandler {
 	return &CostingImportHandler{
-		jobRepo:                jobRepo,
-		storage:                storageSvc,
-		cpmHandler:             cpmHandler,
-		cappHandler:            cappHandler,
-		cppHandler:             cppHandler,
-		bulkImportHandler:      bulkImportHandler,
-		bulkExportHandler:      bulkExportHandler,
-		paramOnlyImportHandler: paramOnlyImportHandler,
-		notif:                  notif,
-		logger:                 logger,
+		jobRepo:           jobRepo,
+		storage:           storageSvc,
+		cpmHandler:        cpmHandler,
+		cappHandler:       cappHandler,
+		cppHandler:        cppHandler,
+		etlHandler:        etlHandler,
+		bulkExportHandler: bulkExportHandler,
+		notif:             notif,
+		logger:            logger,
 	}
 }
 
@@ -118,6 +116,12 @@ func (h *CostingImportHandler) Handle(ctx context.Context, msg rabbitmq.JobMessa
 		return h.handleExport(ctx, jobID, job, requestingUserID)
 	}
 
+	// Bulk ETL imports stream the uploaded file straight from storage into staging
+	// (low memory by design) — they must NOT be buffered whole via fetchFile.
+	if job.Entity() == costimportjob.EntityBulkProductRouting || job.Entity() == costimportjob.EntityBulkParamsOnly {
+		return h.handleETLImport(ctx, jobID, job, requestingUserID)
+	}
+
 	fileContent, fileName, fetchErr := h.fetchFile(ctx, job.FileKey())
 	if fetchErr != nil {
 		h.logger.Error().Err(fetchErr).Int64("job_id", jobID).Str("file_key", job.FileKey()).Msg("costing import: fetch file failed")
@@ -138,16 +142,6 @@ func (h *CostingImportHandler) Handle(ctx context.Context, msg rabbitmq.JobMessa
 		dispatchErr = h.cappHandler.Handle(ctx, jobID, fileContent, fileName)
 	case costimportjob.EntityCPP:
 		dispatchErr = h.cppHandler.Handle(ctx, jobID, fileContent, fileName)
-	case costimportjob.EntityBulkProductRouting:
-		if h.bulkImportHandler == nil {
-			return fmt.Errorf("costing import: bulkImportHandler not configured for job %d", jobID)
-		}
-		dispatchErr = h.bulkImportHandler.Handle(ctx, jobID, fileContent, fileName)
-	case costimportjob.EntityBulkParamsOnly:
-		if h.paramOnlyImportHandler == nil {
-			return fmt.Errorf("costing import: paramOnlyImportHandler not configured for job %d", jobID)
-		}
-		dispatchErr = h.paramOnlyImportHandler.Handle(ctx, jobID, fileContent, fileName)
 	default:
 		return fmt.Errorf("costing import: unknown entity %q for job %d", job.Entity(), jobID)
 	}
@@ -246,6 +240,30 @@ func (h *CostingImportHandler) fetchFile(ctx context.Context, fileKey string) ([
 		return nil, "", fmt.Errorf("read object: %w", err)
 	}
 	return content, filepath.Base(fileKey), nil
+}
+
+// handleETLImport dispatches a bulk import job to the streaming ETL pipeline.
+// The ETL handler fetches the uploaded object from storage as a stream, copies
+// it into the staging tables, and resolves it set-based — transitioning the job
+// to DONE/PARTIAL/FAILED internally. After it returns we reload the job and emit
+// a best-effort completion notification.
+func (h *CostingImportHandler) handleETLImport(
+	ctx context.Context,
+	jobID int64,
+	job *costimportjob.CostImportJob,
+	requestingUserID string,
+) error {
+	if h.etlHandler == nil {
+		return fmt.Errorf("costing import: etlHandler not configured for job %d", jobID)
+	}
+	dispatchErr := h.etlHandler.Handle(ctx, jobID, job.Entity())
+	finalJob, loadErr := h.jobRepo.GetByID(ctx, jobID)
+	if loadErr != nil {
+		h.logger.Warn().Err(loadErr).Int64("job_id", jobID).Msg("costing import: reload ETL job for notification failed")
+		return dispatchErr
+	}
+	h.emitNotification(ctx, jobID, job.Entity(), requestingUserID, finalJob)
+	return dispatchErr
 }
 
 // handleExport dispatches a bulk export job. Export jobs store their request

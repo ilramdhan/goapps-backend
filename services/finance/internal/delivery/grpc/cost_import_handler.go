@@ -6,7 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
@@ -24,17 +28,15 @@ const importPresignValidity = 15 * time.Minute
 // CostDataImportHandler implements financev1.CostDataImportServiceServer.
 type CostDataImportHandler struct {
 	financev1.UnimplementedCostDataImportServiceServer
-	jobRepo             costimportjob.Repository
-	storage             storage.Service
-	cappExport          *cappapp.ExportHandler
-	cappTemplate        *cappapp.TemplateHandler
-	cppExport           *cppapp.ExportHandler
-	cppTemplate         *cppapp.TemplateHandler
-	cpmExport           *cpmapp.ExportHandler
-	cpmTemplate         *cpmapp.TemplateHandler
-	importPublisher     *rabbitmq.JobPublisherAdapter
-	validateBulkHandler *costbulkimport.ValidateHandler
-	templateBulkHandler *costbulkimport.TemplateHandler
+	jobRepo         costimportjob.Repository
+	storage         storage.Service
+	cappExport      *cappapp.ExportHandler
+	cappTemplate    *cappapp.TemplateHandler
+	cppExport       *cppapp.ExportHandler
+	cppTemplate     *cppapp.TemplateHandler
+	cpmExport       *cpmapp.ExportHandler
+	cpmTemplate     *cpmapp.TemplateHandler
+	importPublisher *rabbitmq.JobPublisherAdapter
 }
 
 // NewCostDataImportHandler constructs the handler.
@@ -48,21 +50,17 @@ func NewCostDataImportHandler(
 	cpmExport *cpmapp.ExportHandler,
 	cpmTemplate *cpmapp.TemplateHandler,
 	importPublisher *rabbitmq.JobPublisherAdapter,
-	validateBulkHandler *costbulkimport.ValidateHandler,
-	templateBulkHandler *costbulkimport.TemplateHandler,
 ) *CostDataImportHandler {
 	return &CostDataImportHandler{
-		jobRepo:             jobRepo,
-		storage:             storageSvc,
-		cappExport:          cappExport,
-		cappTemplate:        cappTemplate,
-		cppExport:           cppExport,
-		cppTemplate:         cppTemplate,
-		cpmExport:           cpmExport,
-		cpmTemplate:         cpmTemplate,
-		importPublisher:     importPublisher,
-		validateBulkHandler: validateBulkHandler,
-		templateBulkHandler: templateBulkHandler,
+		jobRepo:         jobRepo,
+		storage:         storageSvc,
+		cappExport:      cappExport,
+		cappTemplate:    cappTemplate,
+		cppExport:       cppExport,
+		cppTemplate:     cppTemplate,
+		cpmExport:       cpmExport,
+		cpmTemplate:     cpmTemplate,
+		importPublisher: importPublisher,
 	}
 }
 
@@ -210,49 +208,57 @@ func (h *CostDataImportHandler) DownloadCostProductParameterTemplate(_ context.C
 	}, nil
 }
 
-// ImportBulkProductRouting uploads file to MinIO, creates a PENDING job, and publishes to RabbitMQ.
-func (h *CostDataImportHandler) ImportBulkProductRouting(ctx context.Context, req *financev1.ImportBulkProductRoutingRequest) (*financev1.ImportBulkProductRoutingResponse, error) {
-	jobID, err := h.enqueueImport(ctx, req.GetFileContent(), req.GetFileName(), costimportjob.EntityBulkProductRouting)
-	if err != nil {
-		return &financev1.ImportBulkProductRoutingResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+// GetImportUploadURL issues a presigned PUT URL so the browser can upload a large
+// import file (xlsx or zipped CSV) straight to object storage, bypassing the BFF
+// and the gRPC message path. The returned object_key is handed back to
+// StartCostingImport once the upload completes.
+func (h *CostDataImportHandler) GetImportUploadURL(ctx context.Context, req *financev1.GetImportUploadURLRequest) (*financev1.GetImportUploadURLResponse, error) {
+	if h.storage == nil {
+		return &financev1.GetImportUploadURLResponse{Base: InternalErrorResponse("storage unavailable")}, nil
 	}
 
-	return &financev1.ImportBulkProductRoutingResponse{
-		Base:  successResponse("Bulk product routing import queued"),
-		JobId: jobID,
+	objectKey := buildImportObjectKey(req.GetKind(), req.GetFileName())
+	uploadURL, err := h.storage.PresignPutURL(ctx, objectKey, importPresignValidity)
+	if err != nil {
+		return &financev1.GetImportUploadURLResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+	}
+
+	return &financev1.GetImportUploadURLResponse{
+		Base:             successResponse("OK"),
+		UploadUrl:        uploadURL,
+		ObjectKey:        objectKey,
+		ExpiresInSeconds: int64(importPresignValidity.Seconds()),
 	}, nil
 }
 
-// ImportBulkParamsOnly uploads a params-only file to MinIO, creates a PENDING job,
-// and publishes to RabbitMQ. Products must already exist from a prior bulk import.
-func (h *CostDataImportHandler) ImportBulkParamsOnly(ctx context.Context, req *financev1.ImportBulkParamsOnlyRequest) (*financev1.ImportBulkParamsOnlyResponse, error) {
-	jobID, err := h.enqueueImport(ctx, req.GetFileContent(), req.GetFileName(), costimportjob.EntityBulkParamsOnly)
+// StartCostingImport enqueues an async ETL import job for an already-uploaded
+// object (identified by object_key from GetImportUploadURL). It creates a PENDING
+// job whose file_key is the object key and publishes one RabbitMQ message; the
+// worker streams the object from storage into staging and resolves it set-based.
+func (h *CostDataImportHandler) StartCostingImport(ctx context.Context, req *financev1.StartCostingImportRequest) (*financev1.StartCostingImportResponse, error) {
+	entity, err := importKindToEntity(req.GetKind())
 	if err != nil {
-		return &financev1.ImportBulkParamsOnlyResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
-	}
-	return &financev1.ImportBulkParamsOnlyResponse{
-		Base:  successResponse("Bulk params-only import queued"),
-		JobId: jobID,
-	}, nil
-}
-
-// ValidateBulkProductRoutingFile performs a synchronous dry-run validation of a
-// bulk product routing import file and returns per-sheet validation results.
-func (h *CostDataImportHandler) ValidateBulkProductRoutingFile(ctx context.Context, req *financev1.ValidateBulkProductRoutingFileRequest) (*financev1.ValidateBulkProductRoutingFileResponse, error) {
-	result, err := h.validateBulkHandler.Validate(ctx, req.GetFileContent())
-	if err != nil {
-		return &financev1.ValidateBulkProductRoutingFileResponse{Base: InternalErrorResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+		return &financev1.StartCostingImportResponse{Base: BadRequestResponse(err.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
 	}
 
-	sheets := make([]*financev1.BulkSheetValidationResult, 0, len(result.Sheets))
-	for _, s := range result.Sheets {
-		sheets = append(sheets, toProtoBulkSheetResult(s))
+	actor := getUserFromContext(ctx)
+	requestingUserID, _ := GetUserIDFromCtx(ctx)
+
+	job := costimportjob.NewJob(entity, req.GetObjectKey(), actor, requestingUserID)
+	if createErr := h.jobRepo.Create(ctx, job); createErr != nil {
+		return &financev1.StartCostingImportResponse{Base: InternalErrorResponse(createErr.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
 	}
 
-	return &financev1.ValidateBulkProductRoutingFileResponse{
-		Base:    successResponse("OK"),
-		IsValid: result.IsValid,
-		Sheets:  sheets,
+	if h.importPublisher != nil {
+		if pubErr := h.importPublisher.PublishImportJob(ctx, job.JobID(), entity, requestingUserID); pubErr != nil {
+			return &financev1.StartCostingImportResponse{Base: InternalErrorResponse(pubErr.Error())}, nil //nolint:nilerr // intentional BaseResponse pattern
+		}
+	}
+
+	return &financev1.StartCostingImportResponse{
+		Base:   successResponse("Import queued"),
+		JobId:  job.JobID(),
+		Status: job.Status(),
 	}, nil
 }
 
@@ -378,21 +384,32 @@ func downloadFilename(entity string) string {
 	return "import_errors.xlsx"
 }
 
-// toProtoBulkSheetResult converts a domain SheetResult to the proto BulkSheetValidationResult.
-func toProtoBulkSheetResult(s costbulkimport.SheetResult) *financev1.BulkSheetValidationResult {
-	sampleErrors := make([]*financev1.ImportRowError, 0, len(s.Errors))
-	for _, e := range s.Errors {
-		sampleErrors = append(sampleErrors, &financev1.ImportRowError{
-			RowNumber: e.RowNumber,
-			Field:     e.Field,
-			Message:   e.Message,
-		})
+// importKindToEntity maps the proto ImportKind to the internal cost-import-job
+// entity key the worker dispatches on.
+func importKindToEntity(kind financev1.ImportKind) (string, error) {
+	switch kind {
+	case financev1.ImportKind_IMPORT_KIND_PRODUCT_ROUTING:
+		return costimportjob.EntityBulkProductRouting, nil
+	case financev1.ImportKind_IMPORT_KIND_PARAMS_ONLY:
+		return costimportjob.EntityBulkParamsOnly, nil
+	case financev1.ImportKind_IMPORT_KIND_UNSPECIFIED:
+		return "", fmt.Errorf("import kind must be specified")
+	default:
+		return "", fmt.Errorf("unsupported import kind: %s", kind)
 	}
-	return &financev1.BulkSheetValidationResult{
-		SheetName:    s.SheetName,
-		TotalRows:    safeIntToInt32(s.TotalRows),
-		ErrorCount:   safeIntToInt32(len(s.Errors)),
-		WarningCount: 0,
-		SampleErrors: sampleErrors,
+}
+
+// buildImportObjectKey returns the storage object key for a presigned import
+// upload. The uploaded file's extension is preserved (defaulting to .zip) so the
+// ETL worker can detect the container format (.xlsx / .zip / .csv) from the key.
+func buildImportObjectKey(kind financev1.ImportKind, fileName string) string {
+	ext := strings.ToLower(filepath.Ext(fileName))
+	if ext == "" {
+		ext = ".zip"
 	}
+	entity, err := importKindToEntity(kind)
+	if err != nil {
+		entity = "unknown"
+	}
+	return fmt.Sprintf("imports/%s/%s%s", entity, uuid.NewString(), ext)
 }

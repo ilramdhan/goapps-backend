@@ -71,7 +71,7 @@ func (h *ExecuteHandlerV2) runForTargets(ctx context.Context, cmd ExecuteCommand
 			skipped++
 			continue
 		}
-		_, err := h.calculator.HandleOneGroup(ctx, head.ID(), cmd.Period, cmd.CalculatedBy)
+		_, err := h.calculator.HandleOneGroup(ctx, head.ID(), cmd.Period, cmd.CalculatedBy, &cmd.JobID, cmd.TriggerReason)
 		if err != nil {
 			return processed, skipped, fmt.Errorf("calc head %s: %w", head.Code(), err)
 		}

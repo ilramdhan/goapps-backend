@@ -383,6 +383,60 @@ func local_request_CostDataImportService_ExportBulkProductRouting_0(ctx context.
 	return msg, metadata, err
 }
 
+func request_CostDataImportService_GetImportUploadURL_0(ctx context.Context, marshaler runtime.Marshaler, client CostDataImportServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetImportUploadURLRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.GetImportUploadURL(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostDataImportService_GetImportUploadURL_0(ctx context.Context, marshaler runtime.Marshaler, server CostDataImportServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetImportUploadURLRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.GetImportUploadURL(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_CostDataImportService_StartCostingImport_0(ctx context.Context, marshaler runtime.Marshaler, client CostDataImportServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq StartCostingImportRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.StartCostingImport(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostDataImportService_StartCostingImport_0(ctx context.Context, marshaler runtime.Marshaler, server CostDataImportServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq StartCostingImportRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.StartCostingImport(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 // RegisterCostDataImportServiceHandlerServer registers the http handlers for service CostDataImportService to "mux".
 // UnaryRPC     :call CostDataImportServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -629,6 +683,46 @@ func RegisterCostDataImportServiceHandlerServer(ctx context.Context, mux *runtim
 		}
 		forward_CostDataImportService_ExportBulkProductRouting_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_CostDataImportService_GetImportUploadURL_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostDataImportService/GetImportUploadURL", runtime.WithHTTPPathPattern("/api/v1/finance/costing/import/upload-url"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostDataImportService_GetImportUploadURL_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostDataImportService_GetImportUploadURL_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_CostDataImportService_StartCostingImport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostDataImportService/StartCostingImport", runtime.WithHTTPPathPattern("/api/v1/finance/costing/import/start"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostDataImportService_StartCostingImport_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostDataImportService_StartCostingImport_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 
 	return nil
 }
@@ -873,6 +967,40 @@ func RegisterCostDataImportServiceHandlerClient(ctx context.Context, mux *runtim
 		}
 		forward_CostDataImportService_ExportBulkProductRouting_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_CostDataImportService_GetImportUploadURL_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostDataImportService/GetImportUploadURL", runtime.WithHTTPPathPattern("/api/v1/finance/costing/import/upload-url"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostDataImportService_GetImportUploadURL_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostDataImportService_GetImportUploadURL_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_CostDataImportService_StartCostingImport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostDataImportService/StartCostingImport", runtime.WithHTTPPathPattern("/api/v1/finance/costing/import/start"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostDataImportService_StartCostingImport_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostDataImportService_StartCostingImport_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	return nil
 }
 
@@ -889,6 +1017,8 @@ var (
 	pattern_CostDataImportService_ImportBulkParamsOnly_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"api", "v1", "finance", "costing", "import", "bulk_params_only"}, ""))
 	pattern_CostDataImportService_ValidateBulkProductRoutingFile_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"api", "v1", "finance", "costing", "validate", "bulk_product_routing"}, ""))
 	pattern_CostDataImportService_ExportBulkProductRouting_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"api", "v1", "finance", "costing", "export", "bulk_product_routing"}, ""))
+	pattern_CostDataImportService_GetImportUploadURL_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"api", "v1", "finance", "costing", "import", "upload-url"}, ""))
+	pattern_CostDataImportService_StartCostingImport_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"api", "v1", "finance", "costing", "import", "start"}, ""))
 )
 
 var (
@@ -904,4 +1034,6 @@ var (
 	forward_CostDataImportService_ImportBulkParamsOnly_0                 = runtime.ForwardResponseMessage
 	forward_CostDataImportService_ValidateBulkProductRoutingFile_0       = runtime.ForwardResponseMessage
 	forward_CostDataImportService_ExportBulkProductRouting_0             = runtime.ForwardResponseMessage
+	forward_CostDataImportService_GetImportUploadURL_0                   = runtime.ForwardResponseMessage
+	forward_CostDataImportService_StartCostingImport_0                   = runtime.ForwardResponseMessage
 )

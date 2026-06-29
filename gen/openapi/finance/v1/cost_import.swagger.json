@@ -365,6 +365,74 @@
         ]
       }
     },
+    "/api/v1/finance/costing/import/start": {
+      "post": {
+        "summary": "StartCostingImport starts an async ETL import job for a previously uploaded\nobject (referenced by object_key).",
+        "operationId": "CostDataImportService_StartCostingImport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartCostingImportResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "StartCostingImportRequest starts an async ETL import job for an already\nuploaded object (identified by object_key from GetImportUploadURL).",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1StartCostingImportRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
+    "/api/v1/finance/costing/import/upload-url": {
+      "post": {
+        "summary": "GetImportUploadURL returns a presigned PUT URL for direct browser upload of\nan import file to object storage.",
+        "operationId": "CostDataImportService_GetImportUploadURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetImportUploadURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "GetImportUploadURLRequest asks for a presigned PUT URL to upload an import\nfile directly to object storage (bypassing the BFF and gRPC message path).",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetImportUploadURLRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostDataImportService"
+        ]
+      }
+    },
     "/api/v1/finance/costing/validate/bulk_product_routing": {
       "post": {
         "operationId": "CostDataImportService_ValidateBulkProductRoutingFile",
@@ -641,6 +709,37 @@
         }
       }
     },
+    "v1GetImportUploadURLRequest": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/v1ImportKind"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      },
+      "description": "GetImportUploadURLRequest asks for a presigned PUT URL to upload an import\nfile directly to object storage (bypassing the BFF and gRPC message path)."
+    },
+    "v1GetImportUploadURLResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "uploadUrl": {
+          "type": "string"
+        },
+        "objectKey": {
+          "type": "string"
+        },
+        "expiresInSeconds": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "GetImportUploadURLResponse returns the presigned PUT URL plus the object key\nto pass back to StartCostingImport once the upload completes."
+    },
     "v1ImportBulkParamsOnlyRequest": {
       "type": "object",
       "properties": {
@@ -754,6 +853,16 @@
         }
       }
     },
+    "v1ImportKind": {
+      "type": "string",
+      "enum": [
+        "IMPORT_KIND_UNSPECIFIED",
+        "IMPORT_KIND_PRODUCT_ROUTING",
+        "IMPORT_KIND_PARAMS_ONLY"
+      ],
+      "default": "IMPORT_KIND_UNSPECIFIED",
+      "description": "ImportKind identifies which dataset a presigned upload / import job carries.\n\n - IMPORT_KIND_UNSPECIFIED: Default — invalid, must be set by the caller.\n - IMPORT_KIND_PRODUCT_ROUTING: Product master + routing dataset (xlsx or zip CSV).\n - IMPORT_KIND_PARAMS_ONLY: Params-only dataset (zip of CSV files)."
+    },
     "v1ImportRowError": {
       "type": "object",
       "properties": {
@@ -828,6 +937,40 @@
         }
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1StartCostingImportRequest": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/v1ImportKind"
+        },
+        "objectKey": {
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "duplicateAction": {
+          "type": "string"
+        }
+      },
+      "description": "StartCostingImportRequest starts an async ETL import job for an already\nuploaded object (identified by object_key from GetImportUploadURL)."
+    },
+    "v1StartCostingImportResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "description": "StartCostingImportResponse returns the created async job ID and its status."
     },
     "v1ValidateBulkProductRoutingFileRequest": {
       "type": "object",

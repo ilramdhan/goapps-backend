@@ -139,6 +139,9 @@ func upsertCost(ctx context.Context, tx *sql.Tx, c *rmcost.Cost) error {
 }
 
 func insertHistory(ctx context.Context, tx *sql.Tx, h rmcost.History) error {
+	// Use NOW() directly for calculated_at to avoid any timezone/pointer encoding
+	// issues with time.Time across different cost paths (new vs existing).
+	// Dereference *uuid.UUID pointers to concrete values for reliable pgx encoding.
 	query := `
 		INSERT INTO aud_rm_cost_history (
 			history_id, rm_cost_id, job_id, period, rm_code, rm_type, group_head_id,
@@ -149,17 +152,29 @@ func insertHistory(ctx context.Context, tx *sql.Tx, h rmcost.History) error {
 			cost_val, cost_mark, cost_sim,
 			flag_valuation_used, flag_marketing_used, flag_simulation_used,
 			source_item_count, trigger_reason, calculated_at, calculated_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,NOW(),$30)
 	`
+	var jobID any
+	if h.JobID != nil {
+		jobID = h.JobID.String()
+	}
+	var groupHeadID any
+	if h.GroupHeadID != nil {
+		groupHeadID = h.GroupHeadID.String()
+	}
+	var rmCostID any
+	if h.RMCostID != nil {
+		rmCostID = h.RMCostID.String()
+	}
 	_, err := tx.ExecContext(ctx, query,
-		h.ID, h.RMCostID, h.JobID, h.Period, h.RMCode, h.RMType.String(), h.GroupHeadID,
+		h.ID.String(), rmCostID, jobID, h.Period, h.RMCode, h.RMType.String(), groupHeadID,
 		h.Rates.Cons, h.Rates.Stores, h.Rates.Dept, h.Rates.PO1, h.Rates.PO2, h.Rates.PO3,
 		h.CostPercentage, h.CostPerKg,
 		h.FlagValuation.String(), h.FlagMarketing.String(), h.FlagSimulation.String(),
 		h.InitValValuation, h.InitValMarketing, h.InitValSimulation,
 		h.CostValuation, h.CostMarketing, h.CostSimulation,
 		h.FlagValuationUsed.String(), h.FlagMarketingUsed.String(), h.FlagSimulationUsed.String(),
-		h.SourceItemCount, string(h.TriggerReason), h.CalculatedAt, h.CalculatedBy,
+		h.SourceItemCount, string(h.TriggerReason), h.CalculatedBy,
 	)
 	if err != nil {
 		return fmt.Errorf("insert rm_cost history: %w", err)

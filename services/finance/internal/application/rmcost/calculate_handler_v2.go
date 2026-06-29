@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -50,10 +51,14 @@ func NewCalculateHandlerV2(
 
 // HandleOneGroup runs the V2 engine for a single group head and period.
 // Returns the upserted Cost row. Detail snapshots are persisted via UpsertAll.
+// jobID and reason are attached to the history record; pass nil/TriggerManualUI
+// for direct (non-worker) invocations.
 func (h *CalculateHandlerV2) HandleOneGroup(
 	ctx context.Context,
 	headID uuid.UUID,
 	period, calculatedBy string,
+	jobID *uuid.UUID,
+	reason rmcost.HistoryTriggerReason,
 ) (*rmcost.Cost, error) {
 	if err := h.validateInputs(period, calculatedBy); err != nil {
 		return nil, err
@@ -82,11 +87,12 @@ func (h *CalculateHandlerV2) HandleOneGroup(
 
 	uomCode := h.resolveGroupUOM(ctx, period, details, itemCodes)
 
+	calcTime := time.Now()
 	cost, err := h.buildOrApplyCost(existing, head, period, uomCode, totals, proj, hv2, costVal, costMkt, costSim, calculatedBy)
 	if err != nil {
 		return nil, err
 	}
-	hist := buildHistoryV2(cost, head, totals, len(outs), nil, rmcost.TriggerManualUI, calculatedBy)
+	hist := buildHistoryV2(cost, head, totals, len(outs), jobID, reason, calculatedBy, calcTime)
 	if err := h.costRepo.Upsert(ctx, cost, hist); err != nil {
 		return nil, fmt.Errorf("upsert cost: %w", err)
 	}
@@ -379,6 +385,7 @@ func buildHistoryV2(
 	jobID *uuid.UUID,
 	reason rmcost.HistoryTriggerReason,
 	calculatedBy string,
+	calculatedAt time.Time,
 ) rmcost.History {
 	costID := cost.ID()
 	headID := head.ID()
@@ -407,7 +414,7 @@ func buildHistoryV2(
 		FlagSimulationUsed: cost.FlagSimulationUsed(),
 		SourceItemCount:    sourceCount,
 		TriggerReason:      reason,
-		CalculatedAt:       cost.CreatedAt(),
+		CalculatedAt:       calculatedAt,
 		CalculatedBy:       calculatedBy,
 	}
 }

@@ -31,6 +31,8 @@ const (
 	CostDataImportService_ImportBulkParamsOnly_FullMethodName                 = "/finance.v1.CostDataImportService/ImportBulkParamsOnly"
 	CostDataImportService_ValidateBulkProductRoutingFile_FullMethodName       = "/finance.v1.CostDataImportService/ValidateBulkProductRoutingFile"
 	CostDataImportService_ExportBulkProductRouting_FullMethodName             = "/finance.v1.CostDataImportService/ExportBulkProductRouting"
+	CostDataImportService_GetImportUploadURL_FullMethodName                   = "/finance.v1.CostDataImportService/GetImportUploadURL"
+	CostDataImportService_StartCostingImport_FullMethodName                   = "/finance.v1.CostDataImportService/StartCostingImport"
 )
 
 // CostDataImportServiceClient is the client API for CostDataImportService service.
@@ -51,6 +53,12 @@ type CostDataImportServiceClient interface {
 	ImportBulkParamsOnly(ctx context.Context, in *ImportBulkParamsOnlyRequest, opts ...grpc.CallOption) (*ImportBulkParamsOnlyResponse, error)
 	ValidateBulkProductRoutingFile(ctx context.Context, in *ValidateBulkProductRoutingFileRequest, opts ...grpc.CallOption) (*ValidateBulkProductRoutingFileResponse, error)
 	ExportBulkProductRouting(ctx context.Context, in *ExportBulkProductRoutingRequest, opts ...grpc.CallOption) (*ExportBulkProductRoutingResponse, error)
+	// GetImportUploadURL returns a presigned PUT URL for direct browser upload of
+	// an import file to object storage.
+	GetImportUploadURL(ctx context.Context, in *GetImportUploadURLRequest, opts ...grpc.CallOption) (*GetImportUploadURLResponse, error)
+	// StartCostingImport starts an async ETL import job for a previously uploaded
+	// object (referenced by object_key).
+	StartCostingImport(ctx context.Context, in *StartCostingImportRequest, opts ...grpc.CallOption) (*StartCostingImportResponse, error)
 }
 
 type costDataImportServiceClient struct {
@@ -181,6 +189,26 @@ func (c *costDataImportServiceClient) ExportBulkProductRouting(ctx context.Conte
 	return out, nil
 }
 
+func (c *costDataImportServiceClient) GetImportUploadURL(ctx context.Context, in *GetImportUploadURLRequest, opts ...grpc.CallOption) (*GetImportUploadURLResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetImportUploadURLResponse)
+	err := c.cc.Invoke(ctx, CostDataImportService_GetImportUploadURL_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costDataImportServiceClient) StartCostingImport(ctx context.Context, in *StartCostingImportRequest, opts ...grpc.CallOption) (*StartCostingImportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartCostingImportResponse)
+	err := c.cc.Invoke(ctx, CostDataImportService_StartCostingImport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostDataImportServiceServer is the server API for CostDataImportService service.
 // All implementations must embed UnimplementedCostDataImportServiceServer
 // for forward compatibility.
@@ -199,6 +227,12 @@ type CostDataImportServiceServer interface {
 	ImportBulkParamsOnly(context.Context, *ImportBulkParamsOnlyRequest) (*ImportBulkParamsOnlyResponse, error)
 	ValidateBulkProductRoutingFile(context.Context, *ValidateBulkProductRoutingFileRequest) (*ValidateBulkProductRoutingFileResponse, error)
 	ExportBulkProductRouting(context.Context, *ExportBulkProductRoutingRequest) (*ExportBulkProductRoutingResponse, error)
+	// GetImportUploadURL returns a presigned PUT URL for direct browser upload of
+	// an import file to object storage.
+	GetImportUploadURL(context.Context, *GetImportUploadURLRequest) (*GetImportUploadURLResponse, error)
+	// StartCostingImport starts an async ETL import job for a previously uploaded
+	// object (referenced by object_key).
+	StartCostingImport(context.Context, *StartCostingImportRequest) (*StartCostingImportResponse, error)
 	mustEmbedUnimplementedCostDataImportServiceServer()
 }
 
@@ -244,6 +278,12 @@ func (UnimplementedCostDataImportServiceServer) ValidateBulkProductRoutingFile(c
 }
 func (UnimplementedCostDataImportServiceServer) ExportBulkProductRouting(context.Context, *ExportBulkProductRoutingRequest) (*ExportBulkProductRoutingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportBulkProductRouting not implemented")
+}
+func (UnimplementedCostDataImportServiceServer) GetImportUploadURL(context.Context, *GetImportUploadURLRequest) (*GetImportUploadURLResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetImportUploadURL not implemented")
+}
+func (UnimplementedCostDataImportServiceServer) StartCostingImport(context.Context, *StartCostingImportRequest) (*StartCostingImportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartCostingImport not implemented")
 }
 func (UnimplementedCostDataImportServiceServer) mustEmbedUnimplementedCostDataImportServiceServer() {}
 func (UnimplementedCostDataImportServiceServer) testEmbeddedByValue()                               {}
@@ -482,6 +522,42 @@ func _CostDataImportService_ExportBulkProductRouting_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostDataImportService_GetImportUploadURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetImportUploadURLRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostDataImportServiceServer).GetImportUploadURL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostDataImportService_GetImportUploadURL_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostDataImportServiceServer).GetImportUploadURL(ctx, req.(*GetImportUploadURLRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostDataImportService_StartCostingImport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartCostingImportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostDataImportServiceServer).StartCostingImport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostDataImportService_StartCostingImport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostDataImportServiceServer).StartCostingImport(ctx, req.(*StartCostingImportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostDataImportService_ServiceDesc is the grpc.ServiceDesc for CostDataImportService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -536,6 +612,14 @@ var CostDataImportService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExportBulkProductRouting",
 			Handler:    _CostDataImportService_ExportBulkProductRouting_Handler,
+		},
+		{
+			MethodName: "GetImportUploadURL",
+			Handler:    _CostDataImportService_GetImportUploadURL_Handler,
+		},
+		{
+			MethodName: "StartCostingImport",
+			Handler:    _CostDataImportService_StartCostingImport_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -113,7 +114,7 @@ func TestV2_EndToEnd_ExcelFixture(t *testing.T) {
 
 	// --- Run V2 calc ---
 	calcV2 := NewCalculateHandlerV2(groupRepo, costRepo, costDetailRepo, syncRepo, syncRepo)
-	cost, err := calcV2.HandleOneGroup(ctx, headID, period, "tester")
+	cost, err := calcV2.HandleOneGroup(ctx, headID, period, "tester", nil, rmcostdomain.TriggerManualUI)
 	require.NoError(t, err)
 	require.NotNil(t, cost)
 
@@ -192,6 +193,92 @@ func TestV2_EndToEnd_ExcelFixture(t *testing.T) {
 	requireFloatNear(t, "parent fl_rate (MAX)", derefP(res.Cost.V2Rates().FL), 17.24965, eps)
 	// valuation_flag still SL → cost_val unchanged.
 	requireFloatNear(t, "cost_val still SL", derefP(res.Cost.CostValuation()), 14.9017997983609, eps)
+}
+
+// TestV2_RecalcExisting_HistoryNotBackdated is a regression test for the bug
+// where recalculating an EXISTING period wrote audit-history rows stamped with
+// the cost row's original created_at (via buildHistoryV2 using cost.CreatedAt()),
+// so the new history entry was backdated and never surfaced as the newest.
+//
+// Repro: create a cost, force its created_at far into the past, recalc, then
+// assert the latest history row's calculated_at is "now" — not the past date.
+func TestV2_RecalcExisting_HistoryNotBackdated(t *testing.T) {
+	if os.Getenv("INTEGRATION_TEST") != "true" {
+		t.Skip("set INTEGRATION_TEST=true to run")
+	}
+
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "postgres://finance:finance123@localhost:5434/finance_db?sslmode=disable"
+	}
+	rawDB, err := sql.Open("pgx", dsn)
+	require.NoError(t, err)
+	defer rawDB.Close()
+	db := postgres.NewDBFromSQL(rawDB)
+
+	ctx := context.Background()
+	headID := uuid.New()
+	period := "209901" // isolated future period to avoid clobbering real data
+
+	const histItem = "DYE9999099" // unique item to avoid "already in other active group"
+	cleanupTestRun(t, ctx, rawDB, headID, period)
+	t.Cleanup(func() {
+		cleanupTestRun(t, context.Background(), rawDB, headID, period)
+		_, _ = rawDB.ExecContext(context.Background(),
+			`DELETE FROM cst_item_cons_stk_po WHERE period = $1 AND item_code = $2`, period, histItem)
+	})
+
+	insertSourceFeed(t, ctx, rawDB, period, histItem, "CGC",
+		1391.41, 100, 2566.1, 184.425, 3000, 150)
+
+	groupRepo := postgres.NewRMGroupRepository(db)
+	costRepo := postgres.NewRMCostRepository(db)
+	costDetailRepo := postgres.NewRMCostDetailRepository(db)
+	syncRepo := postgres.NewSyncDataRepository(db)
+
+	code, err := rmgroupdomain.NewCode("E2E V2 TEST")
+	require.NoError(t, err)
+	head, err := rmgroupdomain.NewHead(code, "E2E V2 Test Group", "", 5, 0.89, "tester")
+	require.NoError(t, err)
+	overrideHeadID(t, head, headID)
+	require.NoError(t, groupRepo.CreateHead(ctx, head))
+
+	itemCode, err := rmgroupdomain.NewItemCode(histItem)
+	require.NoError(t, err)
+	d1, err := rmgroupdomain.NewDetail(headID, itemCode, "tester")
+	require.NoError(t, err)
+	overrideDetailGrade(t, d1, "CGC")
+	require.NoError(t, groupRepo.AddDetail(ctx, d1))
+
+	calcV2 := NewCalculateHandlerV2(groupRepo, costRepo, costDetailRepo, syncRepo, syncRepo)
+
+	// First calc: creates the cost row (INSERT path).
+	cost, err := calcV2.HandleOneGroup(ctx, headID, period, "tester", nil, rmcostdomain.TriggerManualUI)
+	require.NoError(t, err)
+	require.NotNil(t, cost)
+
+	// Simulate a long-lived existing row: force created_at far into the past.
+	_, err = rawDB.ExecContext(ctx,
+		`UPDATE cst_rm_cost SET created_at = '2020-01-01 00:00:00+00' WHERE rm_cost_id = $1`, cost.ID())
+	require.NoError(t, err)
+
+	// Capture DB clock just before the recalc.
+	var beforeRecalc time.Time
+	require.NoError(t, rawDB.QueryRowContext(ctx, `SELECT now()`).Scan(&beforeRecalc))
+
+	// Second calc: recalculates the EXISTING row (UPDATE path).
+	_, err = calcV2.HandleOneGroup(ctx, headID, period, "tester", nil, rmcostdomain.TriggerManualUI)
+	require.NoError(t, err)
+
+	// The latest history row must be stamped ~now, NOT backdated to created_at (2020).
+	var latest time.Time
+	require.NoError(t, rawDB.QueryRowContext(ctx,
+		`SELECT MAX(calculated_at) FROM aud_rm_cost_history WHERE rm_cost_id = $1`, cost.ID()).Scan(&latest))
+	require.Falsef(t, latest.Before(beforeRecalc),
+		"recalc history was backdated: latest=%s before recalc-time=%s (regression: buildHistoryV2 used cost.CreatedAt())",
+		latest, beforeRecalc)
+	require.Truef(t, latest.Year() >= 2026,
+		"recalc history calculated_at backdated to %s", latest)
 }
 
 // =============================================================================

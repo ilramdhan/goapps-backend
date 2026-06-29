@@ -304,7 +304,7 @@ func (r *JobRepository) HasActiveJob(ctx context.Context, jobType job.Type, peri
 func (r *JobRepository) GetNextSequence(ctx context.Context, jobType job.Type, period string) (int, error) {
 	query := `
 		SELECT COALESCE(MAX(
-			CAST(SPLIT_PART(job_code, '-', 3) AS INT)
+			CAST(NULLIF(SPLIT_PART(job_code, '-', 3), '') AS INT)
 		), 0) + 1
 		FROM job_execution
 		WHERE job_type = $1 AND ($2 = '' OR period = $2)

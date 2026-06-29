@@ -28,6 +28,13 @@ const unknownMasterValuePrefix = "unknown_master_value:"
 // suppressed from the per-sheet error tabs.
 const missProductPrefix = "miss_product:"
 
+// SheetError records a single row-level parse or validation error.
+type SheetError struct {
+	RowNumber int32
+	Field     string
+	Message   string
+}
+
 // SheetResult summarizes processing outcomes for one Excel sheet.
 type SheetResult struct {
 	SheetName string

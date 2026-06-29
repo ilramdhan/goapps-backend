@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costbulkimport"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costimportetl"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductapplicableparam"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
@@ -129,20 +130,15 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	cpmImportHandler := costproductmaster.NewAsyncImportHandler(cpmRepo, cptRepo, costImportJobRepo)
 	cappImportHandler := costproductapplicableparam.NewAsyncImportHandler(cappRepo, costImportJobRepo)
 	cppImportHandler := costproductparameter.NewAsyncImportHandler(cppRepo, costImportJobRepo)
-	bulkImportHandler := costbulkimport.NewBulkImportHandler(
-		costImportJobRepo, cpmRepo, cppRepo, costRouteRepo, cptRepo, rmGroupRepo, lookupMasterRepo, storageSvc, log.Logger,
-	)
 	bulkExportHandler := costbulkimport.NewExportHandler(
 		cpmRepo, cppRepo, cptRepo, costRouteRepo, costImportJobRepo, storageSvc, log.Logger,
 	)
-	paramOnlyImportHandler := costbulkimport.NewParamOnlyImportHandler(
-		costImportJobRepo, cpmRepo, cppRepo, lookupMasterRepo, storageSvc, log.Logger,
-	)
+	stagingRepo := postgres.NewCostImportStagingRepository(db)
+	etlImportHandler := costimportetl.NewHandler(costImportJobRepo, stagingRepo, storageSvc, lookupMasterRepo, log.Logger)
 	costingImportHandler := workerinternal.NewCostingImportHandler(
 		costImportJobRepo, storageSvc,
 		cpmImportHandler, cappImportHandler, cppImportHandler,
-		bulkImportHandler, bulkExportHandler,
-		paramOnlyImportHandler,
+		etlImportHandler, bulkExportHandler,
 		iamNotif, log.Logger,
 	)
 

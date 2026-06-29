@@ -38,6 +38,13 @@ type Service interface {
 	PutObject(ctx context.Context, key string, reader io.Reader, size int64, contentType string) error
 	// GetObject downloads an object by key. The caller must close the returned ReadCloser.
 	GetObject(ctx context.Context, key string) (io.ReadCloser, int64, error)
+	// GetObjectStream returns a streaming reader for the object at key without
+	// buffering the whole payload, letting callers stream-parse large files.
+	// The caller must close the returned ReadCloser.
+	GetObjectStream(ctx context.Context, key string) (io.ReadCloser, error)
+	// PresignPutURL returns a presigned HTTP PUT URL valid for `expiry`, used by
+	// the browser to upload a file directly to MinIO without it transiting the BFF.
+	PresignPutURL(ctx context.Context, key string, expiry time.Duration) (string, error)
 	// PresignedGetURL returns a signed download URL valid for `validity`.
 	PresignedGetURL(ctx context.Context, key string, validity time.Duration, downloadName string) (string, error)
 	// PresignedGetURLWithDisposition returns a signed URL with the explicit
@@ -153,6 +160,28 @@ func (m *MinIOClient) GetObject(ctx context.Context, key string) (io.ReadCloser,
 		return nil, 0, fmt.Errorf("stat object %s: %w", key, err)
 	}
 	return obj, stat.Size, nil
+}
+
+// GetObjectStream implements Service. Returns the object at key as a streaming
+// reader from the upload (internal) endpoint, avoiding a Stat round-trip so the
+// worker can stream-parse without buffering the whole file. The caller is
+// responsible for closing the returned ReadCloser.
+func (m *MinIOClient) GetObjectStream(ctx context.Context, key string) (io.ReadCloser, error) {
+	obj, err := m.upload.GetObject(ctx, m.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("get object stream %s: %w", key, err)
+	}
+	return obj, nil
+}
+
+// PresignPutURL implements Service. Signed against the public endpoint so the
+// browser-supplied Host header matches what was signed.
+func (m *MinIOClient) PresignPutURL(ctx context.Context, key string, expiry time.Duration) (string, error) {
+	u, err := m.presign.PresignedPutObject(ctx, m.bucket, key, expiry)
+	if err != nil {
+		return "", fmt.Errorf("presign put %s: %w", key, err)
+	}
+	return u.String(), nil
 }
 
 // PresignedGetURL implements Service. Signed against the public endpoint so
