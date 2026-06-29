@@ -292,6 +292,28 @@ func preflightRMRow(rowNum int32, row map[string]string, inSeqs map[string]struc
 	return nil
 }
 
+// preValidatePreview is the validate-endpoint variant of preValidateAll.
+// It skips cross-product routing validation (node_product_legacy_id and
+// rm_product_legacy_id checks) because:
+//   1. These checks require all referenced products to be present in the file,
+//      which is impossible for chunked imports where products span multiple files.
+//   2. The full cross-product validation runs during the actual import, which
+//      produces a downloadable error report with every violation.
+//
+// The preview still validates: required headers, product type codes, param codes,
+// RM group codes, and the structural integrity of the routing sheets.
+func preValidatePreview(f *excelize.File, maps *ImportMaps) []SheetResult {
+	s1, inProducts := preflightProductMaster(f, maps)
+	s2 := preflightParamSheet(f, maps, inProducts, "product_parameters", []string{"legacy_oracle_sys_id", "param_code", "data_type"})
+	s3 := preflightParamSheet(f, maps, inProducts, "product_applicable_params", []string{"legacy_oracle_sys_id", "param_code", "is_required"})
+	s4, inHeads := preflightRouteHead(f, inProducts)
+	// Pass nil for inProducts in route_sequences and route_rms to skip
+	// cross-product reference validation (node_product_legacy_id / rm_product_legacy_id).
+	s5, inSeqs := preflightRouteSeq(f, inHeads, nil)
+	s6 := preflightRouteRM(f, inSeqs, nil, maps)
+	return []SheetResult{s1, s2, s3, s4, s5, s6}
+}
+
 // mergeProductSets returns a new set containing all keys from both a and b.
 // Used to combine file-level inProducts with DB-level DbProductSet so that
 // intermediate products from other chunks (already in the database) are not

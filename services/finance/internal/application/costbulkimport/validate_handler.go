@@ -86,7 +86,7 @@ func (h *ValidateHandler) Validate(ctx context.Context, fileContent []byte) (*Va
 				_ = closeErr
 			}
 		}()
-		ch <- asyncResult{sheets: preValidateAll(f, maps)}
+		ch <- asyncResult{sheets: preValidatePreview(f, maps)}
 	}()
 
 	select {
