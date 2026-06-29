@@ -44,7 +44,7 @@ func NewServer(cfg *config.ServerConfig, db *postgres.DB, jwtCfg *config.JWTConf
 		AuthInterceptor(jwtCfg, blacklist, permsReader), // 6. JWT authentication + blacklist + permissions
 		PermissionInterceptor(),                         // 7. RBAC permission check
 		LoggingInterceptor(),                            // 8. Log request
-		TimeoutInterceptor(30*time.Second),              // 9. Enforce timeout
+		TimeoutInterceptor(60*time.Second),              // 9. Enforce timeout
 	)
 
 	// Server options
