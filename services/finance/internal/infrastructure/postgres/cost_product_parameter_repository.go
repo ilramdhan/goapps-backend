@@ -62,7 +62,7 @@ func (r *CostProductParameterRepository) ListForProduct(ctx context.Context, pro
 	if requiredOnly {
 		query += " AND a.capp_is_required = TRUE"
 	}
-	query += " ORDER BY COALESCE(p.display_group, ''), COALESCE(a.capp_display_order, p.display_order), p.param_code"
+	query += " ORDER BY COALESCE(a.capp_display_order, p.display_order), p.param_code"
 
 	rows, err := r.db.QueryContext(ctx, query, productSysID)
 	if err != nil {
@@ -295,7 +295,7 @@ WHERE a.capp_product_sys_id = $1
   AND p.is_period_dependent = FALSE
   AND p.param_category <> 'CALCULATED'   -- engine-filled, not user-filled
   AND c.cpp_value_id IS NULL
-ORDER BY COALESCE(p.display_group, ''), COALESCE(a.capp_display_order, p.display_order), p.param_code
+ORDER BY COALESCE(a.capp_display_order, p.display_order), p.param_code
 `
 	rows, err := r.db.QueryContext(ctx, q, productSysID)
 	if err != nil {
@@ -445,7 +445,7 @@ WHERE p.deleted_at IS NULL
       SELECT 1 FROM cost_product_applicable_param a
       WHERE a.capp_product_sys_id = $1 AND a.capp_param_id = p.id
   )
-ORDER BY COALESCE(p.display_group, ''), p.display_order, p.param_code
+ORDER BY p.display_order, p.param_code
 `
 	rows, err := r.db.QueryContext(ctx, q, productSysID)
 	if err != nil {

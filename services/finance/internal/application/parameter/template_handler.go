@@ -106,7 +106,12 @@ func (h *TemplateHandler) Handle() (result *TemplateResult, err error) {
 }
 
 func writeTemplateHeaders(f *excelize.File, sheetName string) error {
-	headers := []string{"Code", "Name", "Short Name", "Data Type", "Category", "UOM Code", "Default Value", "Min Value", "Max Value"}
+	headers := []string{
+		"Code", "Name", "Short Name", "Data Type", "Category",
+		"UOM Code", "Default Value", "Min Value", "Max Value",
+		"Owner Department", "Is Required For Costing", "Is Period Dependent",
+		"Lookup Master Code", "Display Order", "Display Group",
+	}
 	for col, header := range headers {
 		cell, cellErr := excelize.CoordinatesToCellName(col+1, 1)
 		if cellErr != nil {
@@ -125,18 +130,22 @@ func writeTemplateHeaders(f *excelize.File, sheetName string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create header style: %w", err)
 	}
-	if err := f.SetCellStyle(sheetName, "A1", "I1", headerStyle); err != nil {
+	if err := f.SetCellStyle(sheetName, "A1", "O1", headerStyle); err != nil {
 		return fmt.Errorf("failed to set header style: %w", err)
 	}
 	return nil
 }
 
 func writeSampleData(writer *templateExcelWriter) {
+	// Columns: Code, Name, Short Name, Data Type, Category, UOM Code,
+	//          Default Value, Min Value, Max Value,
+	//          Owner Department, Is Required For Costing, Is Period Dependent,
+	//          Lookup Master Code, Display Order, Display Group
 	sampleData := [][]string{
-		{"SPEED", "Speed", "Spd", "NUMBER", "INPUT", "RPM", "100", "0", "9999"},
-		{"DENIER", "Denier", "Den", "NUMBER", "INPUT", "", "75", "10", "300"},
-		{"ELEC_RATE", "Electricity Rate", "Elec", "NUMBER", "RATE", "KWH", "0.5", "0", "100"},
-		{"IS_PREMIUM", "Is Premium", "", "BOOLEAN", "CALCULATED", "", "false", "", ""},
+		{"SPEED", "Speed", "Spd", "NUMBER", "INPUT", "RPM", "100", "0", "9999", "", "false", "false", "", "1", "Machine"},
+		{"DENIER", "Denier", "Den", "NUMBER", "INPUT", "", "75", "10", "300", "", "false", "false", "", "2", "Yarn Specification"},
+		{"ELEC_RATE", "Electricity Rate", "Elec", "NUMBER", "RATE", "KWH", "0.5", "0", "100", "", "false", "false", "", "3", "Fixed Cost"},
+		{"IS_PREMIUM", "Is Premium", "", "BOOLEAN", "CALCULATED", "", "false", "", "", "", "false", "false", "", "4", ""},
 	}
 
 	for i, row := range sampleData {
@@ -153,15 +162,21 @@ func writeSampleData(writer *templateExcelWriter) {
 }
 
 func writeColumnWidths(writer *templateExcelWriter) {
-	writer.setColWidth("A", "A", 15)
-	writer.setColWidth("B", "B", 25)
-	writer.setColWidth("C", "C", 15)
-	writer.setColWidth("D", "D", 12)
-	writer.setColWidth("E", "E", 15)
-	writer.setColWidth("F", "F", 12)
-	writer.setColWidth("G", "G", 15)
-	writer.setColWidth("H", "H", 12)
-	writer.setColWidth("I", "I", 12)
+	writer.setColWidth("A", "A", 18) // Code
+	writer.setColWidth("B", "B", 35) // Name
+	writer.setColWidth("C", "C", 20) // Short Name
+	writer.setColWidth("D", "D", 12) // Data Type
+	writer.setColWidth("E", "E", 16) // Category
+	writer.setColWidth("F", "F", 12) // UOM Code
+	writer.setColWidth("G", "G", 14) // Default Value
+	writer.setColWidth("H", "H", 10) // Min Value
+	writer.setColWidth("I", "I", 10) // Max Value
+	writer.setColWidth("J", "J", 18) // Owner Department
+	writer.setColWidth("K", "K", 24) // Is Required For Costing
+	writer.setColWidth("L", "L", 20) // Is Period Dependent
+	writer.setColWidth("M", "M", 20) // Lookup Master Code
+	writer.setColWidth("N", "N", 14) // Display Order
+	writer.setColWidth("O", "O", 22) // Display Group
 }
 
 func writeInstructionsSheet(f *excelize.File) {
@@ -182,10 +197,17 @@ func writeInstructionsSheet(f *excelize.File) {
 	notesWriter.setCellValue("A9", "7. Default Value: Optional default value (decimal for NUMBER, text for TEXT, true/false for BOOLEAN)")
 	notesWriter.setCellValue("A10", "8. Min Value: Optional minimum (decimal)")
 	notesWriter.setCellValue("A11", "9. Max Value: Optional maximum (decimal)")
-	notesWriter.setCellValue("A13", "Notes:")
-	notesWriter.setCellValue("A14", "- Delete sample data rows before importing")
-	notesWriter.setCellValue("A15", "- Save file as .xlsx format")
-	notesWriter.setCellValue("A16", "- UOM Code must exist in the UOM master data")
+	notesWriter.setCellValue("A12", "10. Owner Department: Optional department code")
+	notesWriter.setCellValue("A13", "11. Is Required For Costing: true/false (default false)")
+	notesWriter.setCellValue("A14", "12. Is Period Dependent: true/false (default false)")
+	notesWriter.setCellValue("A15", "13. Lookup Master Code: Optional master lookup code")
+	notesWriter.setCellValue("A16", "14. Display Order: Integer — controls sort order within the breakdown view")
+	notesWriter.setCellValue("A17", "15. Display Group: Optional group label (e.g. 'Machine', 'Packing') — groups params in the breakdown view")
+	notesWriter.setCellValue("A19", "Notes:")
+	notesWriter.setCellValue("A20", "- Delete sample data rows before importing")
+	notesWriter.setCellValue("A21", "- Save file as .xlsx format")
+	notesWriter.setCellValue("A22", "- UOM Code must exist in the UOM master data")
+	notesWriter.setCellValue("A23", "- Use duplicate_action=update to update existing params without recreating them")
 
 	if notesWriter.hasErrors() {
 		log.Warn().Err(notesWriter.error()).Msg("Some Instructions sheet operations failed")
