@@ -472,6 +472,8 @@ type permissionRow struct {
 	CreatedBy   string
 	UpdatedAt   *time.Time
 	UpdatedBy   *string
+	MenuID      *uuid.UUID
+	MenuTitle   sql.NullString
 }
 
 func (r *permissionRow) toDomain() *role.Permission {
@@ -485,5 +487,6 @@ func (r *permissionRow) toDomain() *role.Permission {
 	return role.ReconstructPermission(
 		r.ID, r.Code, r.Name, r.Description.String,
 		r.ServiceName, r.ModuleName, r.ActionType, r.IsActive, audit,
+		r.MenuID, r.MenuTitle.String,
 	)
 }

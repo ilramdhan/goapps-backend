@@ -4,6 +4,8 @@ package permission
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/role"
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 )
@@ -17,6 +19,7 @@ type CreateCommand struct {
 	ModuleName  string
 	ActionType  string
 	CreatedBy   string
+	MenuID      *uuid.UUID
 }
 
 // CreateHandler handles the CreatePermission command.
@@ -41,7 +44,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*role.Pe
 	}
 
 	// 2. Create domain entity
-	entity, err := role.NewPermission(cmd.Code, cmd.Name, cmd.Description, cmd.ServiceName, cmd.ModuleName, cmd.ActionType, cmd.CreatedBy)
+	entity, err := role.NewPermission(cmd.Code, cmd.Name, cmd.Description, cmd.ServiceName, cmd.ModuleName, cmd.ActionType, cmd.CreatedBy, cmd.MenuID)
 	if err != nil {
 		return nil, err
 	}

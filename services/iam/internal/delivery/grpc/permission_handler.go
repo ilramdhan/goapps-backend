@@ -4,6 +4,8 @@ package grpc
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	permapp "github.com/mutugading/goapps-backend/services/iam/internal/application/permission"
@@ -43,6 +45,15 @@ func (h *PermissionHandler) CreatePermission(ctx context.Context, req *iamv1.Cre
 
 	userID := getUserFromCtx(ctx)
 
+	var menuID *uuid.UUID
+	if rawMenuID := req.GetMenuId(); rawMenuID != "" {
+		parsed, parseErr := uuid.Parse(rawMenuID)
+		if parseErr != nil {
+			return &iamv1.CreatePermissionResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
+		}
+		menuID = &parsed
+	}
+
 	entity, err := h.createHandler.Handle(ctx, permapp.CreateCommand{
 		Code:        req.GetPermissionCode(),
 		Name:        req.GetPermissionName(),
@@ -51,6 +62,7 @@ func (h *PermissionHandler) CreatePermission(ctx context.Context, req *iamv1.Cre
 		ModuleName:  req.GetModuleName(),
 		ActionType:  req.GetActionType(),
 		CreatedBy:   userID,
+		MenuID:      menuID,
 	})
 	if err != nil {
 		return &iamv1.CreatePermissionResponse{Base: domainErrorToBaseResponse(err)}, nil
@@ -93,11 +105,21 @@ func (h *PermissionHandler) UpdatePermission(ctx context.Context, req *iamv1.Upd
 
 	userID := getUserFromCtx(ctx)
 
+	var menuID *uuid.UUID
+	if rawMenuID := req.GetMenuId(); rawMenuID != "" {
+		parsed, parseErr := uuid.Parse(rawMenuID)
+		if parseErr != nil {
+			return &iamv1.UpdatePermissionResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
+		}
+		menuID = &parsed
+	}
+
 	entity, err := h.updateHandler.Handle(ctx, permapp.UpdateCommand{
 		PermissionID: req.GetPermissionId(),
 		Name:         req.PermissionName,
 		Description:  req.Description,
 		IsActive:     req.IsActive,
+		MenuID:       menuID,
 		UpdatedBy:    userID,
 	})
 	if err != nil {
@@ -157,6 +179,7 @@ func (h *PermissionHandler) ListPermissions(ctx context.Context, req *iamv1.List
 		ServiceName: req.GetServiceName(),
 		ModuleName:  req.GetModuleName(),
 		ActionType:  req.GetActionType(),
+		MenuID:      req.GetMenuId(),
 		SortBy:      req.GetSortBy(),
 		SortOrder:   req.GetSortOrder(),
 	})

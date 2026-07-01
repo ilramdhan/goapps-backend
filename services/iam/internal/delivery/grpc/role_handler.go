@@ -314,6 +314,11 @@ func permissionToProto(p *role.Permission) *iamv1.Permission {
 // permissionToDetailProto converts a domain Permission to a proto PermissionDetail message.
 // PermissionDetail includes additional fields like Description, IsActive, and Audit.
 func permissionToDetailProto(p *role.Permission) *iamv1.PermissionDetail {
+	menuID := ""
+	if p.MenuID() != nil {
+		menuID = p.MenuID().String()
+	}
+
 	return &iamv1.PermissionDetail{
 		PermissionId:   p.ID().String(),
 		PermissionCode: p.Code(),
@@ -324,6 +329,8 @@ func permissionToDetailProto(p *role.Permission) *iamv1.PermissionDetail {
 		ActionType:     p.ActionType(),
 		IsActive:       p.IsActive(),
 		RoleCount:      p.RoleCount(),
+		MenuId:         menuID,
+		MenuTitle:      p.MenuTitle(),
 		Audit:          toAuditProto(p.Audit()),
 	}
 }

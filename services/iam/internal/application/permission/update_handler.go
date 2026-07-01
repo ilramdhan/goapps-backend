@@ -16,6 +16,7 @@ type UpdateCommand struct {
 	Name         *string
 	Description  *string
 	IsActive     *bool
+	MenuID       *uuid.UUID
 	UpdatedBy    string
 }
 
@@ -44,7 +45,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*role.Pe
 	}
 
 	// 3. Update domain entity
-	if err := entity.Update(cmd.Name, cmd.Description, cmd.IsActive, cmd.UpdatedBy); err != nil {
+	if err := entity.Update(cmd.Name, cmd.Description, cmd.IsActive, cmd.MenuID, cmd.UpdatedBy); err != nil {
 		return nil, err
 	}
 

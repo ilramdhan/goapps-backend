@@ -573,7 +573,7 @@ func scanPermissionFromRows(rows *sql.Rows) (*role.Permission, error) {
 		UpdatedBy: nullStringToPtr(updatedBy),
 	}
 
-	return role.ReconstructPermission(id, code, name, "", serviceName, moduleName, actionType, isActive, audit), nil
+	return role.ReconstructPermission(id, code, name, "", serviceName, moduleName, actionType, isActive, audit, nil, ""), nil
 }
 
 func buildMenuTree(allMenus []*menu.Menu) []*menu.WithChildren {

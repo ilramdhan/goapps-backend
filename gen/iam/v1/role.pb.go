@@ -1354,6 +1354,8 @@ type PermissionDetail struct {
 	IsActive       bool                   `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	RoleCount      int32                  `protobuf:"varint,9,opt,name=role_count,json=roleCount,proto3" json:"role_count,omitempty"` // Number of roles with this permission
 	Audit          *v1.AuditInfo          `protobuf:"bytes,10,opt,name=audit,proto3" json:"audit,omitempty"`
+	MenuId         string                 `protobuf:"bytes,11,opt,name=menu_id,json=menuId,proto3" json:"menu_id,omitempty"`          // Owning page/menu (empty = global/ungrouped)
+	MenuTitle      string                 `protobuf:"bytes,12,opt,name=menu_title,json=menuTitle,proto3" json:"menu_title,omitempty"` // Read-only, joined from mst_menu for display
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1458,6 +1460,20 @@ func (x *PermissionDetail) GetAudit() *v1.AuditInfo {
 	return nil
 }
 
+func (x *PermissionDetail) GetMenuId() string {
+	if x != nil {
+		return x.MenuId
+	}
+	return ""
+}
+
+func (x *PermissionDetail) GetMenuTitle() string {
+	if x != nil {
+		return x.MenuTitle
+	}
+	return ""
+}
+
 type CreatePermissionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Permission code format: {service}.{module}.{entity}.{action}
@@ -1468,7 +1484,9 @@ type CreatePermissionRequest struct {
 	ServiceName    string `protobuf:"bytes,4,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
 	ModuleName     string `protobuf:"bytes,5,opt,name=module_name,json=moduleName,proto3" json:"module_name,omitempty"`
 	// Action type: view, create, update, delete, export, import
-	ActionType    string `protobuf:"bytes,6,opt,name=action_type,json=actionType,proto3" json:"action_type,omitempty"`
+	ActionType string `protobuf:"bytes,6,opt,name=action_type,json=actionType,proto3" json:"action_type,omitempty"`
+	// Owning page/menu UUID. Empty = global/ungrouped permission.
+	MenuId        string `protobuf:"bytes,7,opt,name=menu_id,json=menuId,proto3" json:"menu_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1541,6 +1559,13 @@ func (x *CreatePermissionRequest) GetModuleName() string {
 func (x *CreatePermissionRequest) GetActionType() string {
 	if x != nil {
 		return x.ActionType
+	}
+	return ""
+}
+
+func (x *CreatePermissionRequest) GetMenuId() string {
+	if x != nil {
+		return x.MenuId
 	}
 	return ""
 }
@@ -1699,6 +1724,7 @@ type UpdatePermissionRequest struct {
 	PermissionName *string                `protobuf:"bytes,2,opt,name=permission_name,json=permissionName,proto3,oneof" json:"permission_name,omitempty"`
 	Description    *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	IsActive       *bool                  `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	MenuId         *string                `protobuf:"bytes,5,opt,name=menu_id,json=menuId,proto3,oneof" json:"menu_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1759,6 +1785,13 @@ func (x *UpdatePermissionRequest) GetIsActive() bool {
 		return *x.IsActive
 	}
 	return false
+}
+
+func (x *UpdatePermissionRequest) GetMenuId() string {
+	if x != nil && x.MenuId != nil {
+		return *x.MenuId
+	}
+	return ""
 }
 
 type UpdatePermissionResponse struct {
@@ -1912,9 +1945,11 @@ type ListPermissionsRequest struct {
 	// Filter by module
 	ModuleName string `protobuf:"bytes,6,opt,name=module_name,json=moduleName,proto3" json:"module_name,omitempty"`
 	// Filter by action type
-	ActionType    string `protobuf:"bytes,7,opt,name=action_type,json=actionType,proto3" json:"action_type,omitempty"`
-	SortBy        string `protobuf:"bytes,8,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	SortOrder     string `protobuf:"bytes,9,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	ActionType string `protobuf:"bytes,7,opt,name=action_type,json=actionType,proto3" json:"action_type,omitempty"`
+	SortBy     string `protobuf:"bytes,8,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortOrder  string `protobuf:"bytes,9,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	// Filter by menu_id (owning page/menu)
+	MenuId        string `protobuf:"bytes,10,opt,name=menu_id,json=menuId,proto3" json:"menu_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2008,6 +2043,13 @@ func (x *ListPermissionsRequest) GetSortBy() string {
 func (x *ListPermissionsRequest) GetSortOrder() string {
 	if x != nil {
 		return x.SortOrder
+	}
+	return ""
+}
+
+func (x *ListPermissionsRequest) GetMenuId() string {
+	if x != nil {
+		return x.MenuId
 	}
 	return ""
 }
@@ -2748,7 +2790,7 @@ const file_iam_v1_role_proto_rawDesc = "" +
 	"\arole_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06roleId\"q\n" +
 	"\x1aGetRolePermissionsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x03(\v2\x12.iam.v1.PermissionR\x04data\"\xf8\x02\n" +
+	"\x04data\x18\x02 \x03(\v2\x12.iam.v1.PermissionR\x04data\"\xb0\x03\n" +
 	"\x10PermissionDetail\x12#\n" +
 	"\rpermission_id\x18\x01 \x01(\tR\fpermissionId\x12'\n" +
 	"\x0fpermission_code\x18\x02 \x01(\tR\x0epermissionCode\x12'\n" +
@@ -2763,16 +2805,21 @@ const file_iam_v1_role_proto_rawDesc = "" +
 	"\n" +
 	"role_count\x18\t \x01(\x05R\troleCount\x12*\n" +
 	"\x05audit\x18\n" +
-	" \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\x97\x03\n" +
+	" \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12\x17\n" +
+	"\amenu_id\x18\v \x01(\tR\x06menuId\x12\x1d\n" +
+	"\n" +
+	"menu_title\x18\f \x01(\tR\tmenuTitle\"\xbf\x03\n" +
 	"\x17CreatePermissionRequest\x12l\n" +
 	"\x0fpermission_code\x18\x01 \x01(\tBC\xbaH@r>\x10\x03\x18d28^[a-z][a-z0-9]*\\.[a-z][a-z0-9]*\\.[a-z][a-z0-9]*\\.[a-z]+$R\x0epermissionCode\x122\n" +
-	"\x0fpermission_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\x0epermissionName\x12*\n" +
-	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\vdescription\x12,\n" +
+	"\x0fpermission_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\x0epermissionName\x12,\n" +
+	"\vdescription\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xf4\x03R\vdescription\x12,\n" +
 	"\fservice_name\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\vserviceName\x12*\n" +
 	"\vmodule_name\x18\x05 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\n" +
 	"moduleName\x12T\n" +
 	"\vaction_type\x18\x06 \x01(\tB3\xbaH0r.R\x04viewR\x06createR\x06updateR\x06deleteR\x06exportR\x06importR\n" +
-	"actionType\"u\n" +
+	"actionType\x12$\n" +
+	"\amenu_id\x18\a \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\x06menuId\"u\n" +
 	"\x18CreatePermissionResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x04data\x18\x02 \x01(\v2\x18.iam.v1.PermissionDetailR\x04data\"E\n" +
@@ -2780,23 +2827,26 @@ const file_iam_v1_role_proto_rawDesc = "" +
 	"\rpermission_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\fpermissionId\"r\n" +
 	"\x15GetPermissionResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
-	"\x04data\x18\x02 \x01(\v2\x18.iam.v1.PermissionDetailR\x04data\"\x84\x02\n" +
+	"\x04data\x18\x02 \x01(\v2\x18.iam.v1.PermissionDetailR\x04data\"\xb8\x02\n" +
 	"\x17UpdatePermissionRequest\x12-\n" +
 	"\rpermission_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\fpermissionId\x125\n" +
 	"\x0fpermission_name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dH\x00R\x0epermissionName\x88\x01\x01\x12/\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03H\x01R\vdescription\x88\x01\x01\x12 \n" +
-	"\tis_active\x18\x04 \x01(\bH\x02R\bisActive\x88\x01\x01B\x12\n" +
+	"\tis_active\x18\x04 \x01(\bH\x02R\bisActive\x88\x01\x01\x12&\n" +
+	"\amenu_id\x18\x05 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x03R\x06menuId\x88\x01\x01B\x12\n" +
 	"\x10_permission_nameB\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
-	"_is_active\"u\n" +
+	"_is_activeB\n" +
+	"\n" +
+	"\b_menu_id\"u\n" +
 	"\x18UpdatePermissionResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x04data\x18\x02 \x01(\v2\x18.iam.v1.PermissionDetailR\x04data\"H\n" +
 	"\x17DeletePermissionRequest\x12-\n" +
 	"\rpermission_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\fpermissionId\"G\n" +
 	"\x18DeletePermissionResponse\x12+\n" +
-	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xe2\x03\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xfb\x03\n" +
 	"\x16ListPermissionsRequest\x12\x1b\n" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\x12\x1f\n" +
@@ -2810,7 +2860,9 @@ const file_iam_v1_role_proto_rawDesc = "" +
 	"\asort_by\x18\b \x01(\tB-\xbaH*r(R\x00R\x04codeR\x04nameR\fservice_nameR\n" +
 	"created_atR\x06sortBy\x121\n" +
 	"\n" +
-	"sort_order\x18\t \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\"\xb3\x01\n" +
+	"sort_order\x18\t \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\x12\x17\n" +
+	"\amenu_id\x18\n" +
+	" \x01(\tR\x06menuId\"\xb3\x01\n" +
 	"\x17ListPermissionsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x04data\x18\x02 \x03(\v2\x18.iam.v1.PermissionDetailR\x04data\x12=\n" +

@@ -40,6 +40,7 @@ type UserHandler struct {
 	validationHelper           *ValidationHelper
 	storageService             storage.Service
 	userRepo                   user.Repository
+	userPermissionRepo         role.UserPermissionRepository
 	mappingRepo                companymapping.Repository
 }
 
@@ -71,6 +72,7 @@ func NewUserHandler(
 		validationHelper:           validationHelper,
 		storageService:             storageSvc,
 		userRepo:                   userRepo,
+		userPermissionRepo:         userPermissionRepo,
 		mappingRepo:                mappingRepo,
 	}
 }
@@ -435,15 +437,26 @@ func (h *UserHandler) GetUserRolesAndPermissions(ctx context.Context, req *iamv1
 		}
 	}
 
-	// Map direct permissions to proto.
-	protoPermissions := make([]*iamv1.Permission, len(result.Permissions))
+	// result.Permissions is the EFFECTIVE union (direct + role-inherited) — used for
+	// AllPermissionCodes. DirectPermissions must be the TRUE direct grants only
+	// (user_permissions rows), so the UI can distinguish removable direct grants from
+	// read-only role-inherited ones.
 	allPermCodes := make([]string, 0, len(result.Permissions))
-	for i, p := range result.Permissions {
-		protoPermissions[i] = &iamv1.Permission{
-			PermissionId:   p.ID().String(),
-			PermissionCode: p.Code(),
-		}
+	for _, p := range result.Permissions {
 		allPermCodes = append(allPermCodes, p.Code())
+	}
+
+	protoDirect := []*iamv1.Permission{}
+	if userID, parseErr := uuid.Parse(req.GetUserId()); parseErr == nil {
+		if directPerms, dErr := h.userPermissionRepo.GetUserDirectPermissions(ctx, userID); dErr == nil {
+			protoDirect = make([]*iamv1.Permission, len(directPerms))
+			for i, p := range directPerms {
+				protoDirect[i] = &iamv1.Permission{
+					PermissionId:   p.ID().String(),
+					PermissionCode: p.Code(),
+				}
+			}
+		}
 	}
 
 	return &iamv1.GetUserRolesAndPermissionsResponse{
@@ -451,7 +464,7 @@ func (h *UserHandler) GetUserRolesAndPermissions(ctx context.Context, req *iamv1
 		Data: &iamv1.UserAccessInfo{
 			UserId:             req.GetUserId(),
 			Roles:              protoRoles,
-			DirectPermissions:  protoPermissions,
+			DirectPermissions:  protoDirect,
 			AllPermissionCodes: allPermCodes,
 		},
 	}, nil

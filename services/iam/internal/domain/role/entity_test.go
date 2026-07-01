@@ -252,11 +252,27 @@ func TestNewPermission(t *testing.T) {
 			actionType: "read",
 			wantErr:    role.ErrInvalidActionType,
 		},
+		{
+			name:        "empty description",
+			code:        "finance.accounting.journal.view",
+			permName:    "View Journal",
+			description: "",
+			actionType:  "view",
+			wantErr:     role.ErrEmptyDescription,
+		},
+		{
+			name:        "whitespace-only description",
+			code:        "finance.accounting.journal.view",
+			permName:    "View Journal",
+			description: "   ",
+			actionType:  "view",
+			wantErr:     role.ErrEmptyDescription,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := role.NewPermission(tc.code, tc.permName, tc.description, tc.serviceName, tc.moduleName, tc.actionType, tc.createdBy)
+			p, err := role.NewPermission(tc.code, tc.permName, tc.description, tc.serviceName, tc.moduleName, tc.actionType, tc.createdBy, nil)
 
 			if tc.wantErr != nil {
 				require.Error(t, err)
@@ -285,44 +301,44 @@ func TestNewPermission(t *testing.T) {
 
 func TestPermission_Update(t *testing.T) {
 	t.Run("update name", func(t *testing.T) {
-		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system")
+		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system", nil)
 		require.NoError(t, err)
 
 		newName := "View Journals"
-		err = p.Update(&newName, nil, nil, "editor")
+		err = p.Update(&newName, nil, nil, nil, "editor")
 
 		require.NoError(t, err)
 		assert.Equal(t, "View Journals", p.Name())
 	})
 
 	t.Run("update description", func(t *testing.T) {
-		p, err := role.NewPermission("finance.accounting.journal.view", "View", "old", "finance", "accounting", "view", "system")
+		p, err := role.NewPermission("finance.accounting.journal.view", "View", "old", "finance", "accounting", "view", "system", nil)
 		require.NoError(t, err)
 
 		newDesc := "new desc"
-		err = p.Update(nil, &newDesc, nil, "editor")
+		err = p.Update(nil, &newDesc, nil, nil, "editor")
 
 		require.NoError(t, err)
 		assert.Equal(t, "new desc", p.Description())
 	})
 
 	t.Run("update isActive", func(t *testing.T) {
-		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system")
+		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system", nil)
 		require.NoError(t, err)
 
 		inactive := false
-		err = p.Update(nil, nil, &inactive, "editor")
+		err = p.Update(nil, nil, &inactive, nil, "editor")
 
 		require.NoError(t, err)
 		assert.False(t, p.IsActive())
 	})
 
 	t.Run("error - empty name", func(t *testing.T) {
-		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system")
+		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system", nil)
 		require.NoError(t, err)
 
 		emptyName := ""
-		err = p.Update(&emptyName, nil, nil, "editor")
+		err = p.Update(&emptyName, nil, nil, nil, "editor")
 
 		assert.ErrorIs(t, err, shared.ErrEmptyName)
 	})
@@ -361,7 +377,7 @@ func TestReconstructPermission(t *testing.T) {
 		CreatedBy: "system",
 	}
 
-	p := role.ReconstructPermission(id, "finance.accounting.journal.view", "View Journal", "desc", "finance", "accounting", "view", true, audit)
+	p := role.ReconstructPermission(id, "finance.accounting.journal.view", "View Journal", "desc", "finance", "accounting", "view", true, audit, nil, "")
 
 	assert.Equal(t, id, p.ID())
 	assert.Equal(t, "finance.accounting.journal.view", p.Code())

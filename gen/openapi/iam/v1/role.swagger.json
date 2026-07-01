@@ -102,6 +102,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "menuId",
+            "description": "Filter by menu_id (owning page/menu)",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -790,6 +797,9 @@
         },
         "isActive": {
           "type": "boolean"
+        },
+        "menuId": {
+          "type": "string"
         }
       }
     },
@@ -945,6 +955,10 @@
         "actionType": {
           "type": "string",
           "title": "Action type: view, create, update, delete, export, import"
+        },
+        "menuId": {
+          "type": "string",
+          "description": "Owning page/menu UUID. Empty = global/ungrouped permission."
         }
       }
     },
@@ -1367,6 +1381,14 @@
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo"
+        },
+        "menuId": {
+          "type": "string",
+          "title": "Owning page/menu (empty = global/ungrouped)"
+        },
+        "menuTitle": {
+          "type": "string",
+          "title": "Read-only, joined from mst_menu for display"
         }
       }
     },

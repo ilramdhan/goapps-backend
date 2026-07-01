@@ -4,6 +4,7 @@ package role
 import (
 	"errors"
 	"regexp"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -15,6 +16,7 @@ var (
 	ErrInvalidRoleCodeFormat       = errors.New("role code must start with a letter and contain only uppercase letters, numbers, and underscores")
 	ErrInvalidPermissionCodeFormat = errors.New("permission code must follow format: service.module.entity.action")
 	ErrInvalidActionType           = errors.New("action type must be one of: view, create, update, delete, export, import")
+	ErrEmptyDescription            = errors.New("permission description must not be empty")
 	ErrSystemRoleDelete            = errors.New("system roles cannot be deleted")
 	ErrSystemRoleModify            = errors.New("system role code cannot be modified")
 )
@@ -159,11 +161,14 @@ type Permission struct {
 	actionType  string
 	isActive    bool
 	roleCount   int32
+	menuID      *uuid.UUID
+	menuTitle   string
 	audit       shared.AuditInfo
 }
 
 // NewPermission creates a new Permission entity.
-func NewPermission(code, name, description, serviceName, moduleName, actionType, createdBy string) (*Permission, error) {
+// menuID may be nil for permissions that are not scoped to a specific menu page.
+func NewPermission(code, name, description, serviceName, moduleName, actionType, createdBy string, menuID *uuid.UUID) (*Permission, error) {
 	if code == "" {
 		return nil, shared.ErrEmptyCode
 	}
@@ -176,6 +181,9 @@ func NewPermission(code, name, description, serviceName, moduleName, actionType,
 	if !validActionTypes[actionType] {
 		return nil, ErrInvalidActionType
 	}
+	if strings.TrimSpace(description) == "" {
+		return nil, ErrEmptyDescription
+	}
 
 	return &Permission{
 		id:          uuid.New(),
@@ -186,12 +194,13 @@ func NewPermission(code, name, description, serviceName, moduleName, actionType,
 		moduleName:  moduleName,
 		actionType:  actionType,
 		isActive:    true,
+		menuID:      menuID,
 		audit:       shared.NewAuditInfo(createdBy),
 	}, nil
 }
 
 // ReconstructPermission reconstructs a Permission from persistence.
-func ReconstructPermission(id uuid.UUID, code, name, description, serviceName, moduleName, actionType string, isActive bool, audit shared.AuditInfo) *Permission {
+func ReconstructPermission(id uuid.UUID, code, name, description, serviceName, moduleName, actionType string, isActive bool, audit shared.AuditInfo, menuID *uuid.UUID, menuTitle string) *Permission {
 	return &Permission{
 		id:          id,
 		code:        code,
@@ -201,6 +210,8 @@ func ReconstructPermission(id uuid.UUID, code, name, description, serviceName, m
 		moduleName:  moduleName,
 		actionType:  actionType,
 		isActive:    isActive,
+		menuID:      menuID,
+		menuTitle:   menuTitle,
 		audit:       audit,
 	}
 }
@@ -235,11 +246,17 @@ func (p *Permission) RoleCount() int32 { return p.roleCount }
 // SetRoleCount sets the role count (populated by list queries).
 func (p *Permission) SetRoleCount(count int32) { p.roleCount = count }
 
+// MenuID returns the menu this permission is scoped to, or nil for global permissions.
+func (p *Permission) MenuID() *uuid.UUID { return p.menuID }
+
+// MenuTitle returns the title of the associated menu, populated by join queries.
+func (p *Permission) MenuTitle() string { return p.menuTitle }
+
 // Audit returns the audit information.
 func (p *Permission) Audit() shared.AuditInfo { return p.audit }
 
 // Update updates mutable permission fields.
-func (p *Permission) Update(name, description *string, isActive *bool, updatedBy string) error {
+func (p *Permission) Update(name, description *string, isActive *bool, menuID *uuid.UUID, updatedBy string) error {
 	if name != nil {
 		if *name == "" {
 			return shared.ErrEmptyName
@@ -247,10 +264,16 @@ func (p *Permission) Update(name, description *string, isActive *bool, updatedBy
 		p.name = *name
 	}
 	if description != nil {
+		if strings.TrimSpace(*description) == "" {
+			return ErrEmptyDescription
+		}
 		p.description = *description
 	}
 	if isActive != nil {
 		p.isActive = *isActive
+	}
+	if menuID != nil {
+		p.menuID = menuID
 	}
 	p.audit.Update(updatedBy)
 	return nil

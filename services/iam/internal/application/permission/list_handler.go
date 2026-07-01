@@ -17,6 +17,7 @@ type ListQuery struct {
 	ServiceName string
 	ModuleName  string
 	ActionType  string
+	MenuID      string
 	SortBy      string
 	SortOrder   string
 }
@@ -51,6 +52,7 @@ func (h *ListHandler) Handle(ctx context.Context, query ListQuery) (*ListResult,
 		ServiceName: query.ServiceName,
 		ModuleName:  query.ModuleName,
 		ActionType:  query.ActionType,
+		MenuID:      query.MenuID,
 		SortBy:      query.SortBy,
 		SortOrder:   query.SortOrder,
 	}
