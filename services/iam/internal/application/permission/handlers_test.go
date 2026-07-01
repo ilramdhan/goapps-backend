@@ -79,6 +79,14 @@ func (m *MockPermissionRepository) GetByService(ctx context.Context, serviceName
 	return args.Get(0).([]*domainrole.ServicePermissions), args.Error(1)
 }
 
+func (m *MockPermissionRepository) ListByMenu(ctx context.Context, menuID uuid.UUID) ([]*domainrole.Permission, error) {
+	args := m.Called(ctx, menuID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*domainrole.Permission), args.Error(1)
+}
+
 // =============================================================================
 // CreateHandler
 // =============================================================================
@@ -175,7 +183,7 @@ func TestGetHandler(t *testing.T) {
 			CreatedAt: time.Now(),
 			CreatedBy: "system",
 		}
-		expected := domainrole.ReconstructPermission(id, "iam.user.user.view", "View Users", "desc", "iam", "user", "view", true, audit)
+		expected := domainrole.ReconstructPermission(id, "iam.user.user.view", "View Users", "desc", "iam", "user", "view", true, audit, nil, "")
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
 
@@ -231,7 +239,7 @@ func TestUpdateHandler(t *testing.T) {
 			CreatedAt: time.Now(),
 			CreatedBy: "system",
 		}
-		existing := domainrole.ReconstructPermission(id, "iam.user.user.view", "View Users", "desc", "iam", "user", "view", true, audit)
+		existing := domainrole.ReconstructPermission(id, "iam.user.user.view", "View Users", "desc", "iam", "user", "view", true, audit, nil, "")
 
 		mockRepo.On("GetByID", ctx, id).Return(existing, nil)
 		mockRepo.On("Update", ctx, mock.AnythingOfType("*role.Permission")).Return(nil)
@@ -286,7 +294,7 @@ func TestDeleteHandler(t *testing.T) {
 			CreatedAt: time.Now(),
 			CreatedBy: "system",
 		}
-		existing := domainrole.ReconstructPermission(id, "iam.user.user.view", "View Users", "desc", "iam", "user", "view", true, audit)
+		existing := domainrole.ReconstructPermission(id, "iam.user.user.view", "View Users", "desc", "iam", "user", "view", true, audit, nil, "")
 
 		mockRepo.On("GetByID", ctx, id).Return(existing, nil)
 		mockRepo.On("Delete", ctx, id, "admin").Return(nil)
@@ -338,8 +346,8 @@ func TestListHandler(t *testing.T) {
 			CreatedAt: time.Now(),
 			CreatedBy: "system",
 		}
-		perm1 := domainrole.ReconstructPermission(uuid.New(), "iam.user.user.view", "View Users", "desc", "iam", "user", "view", true, audit)
-		perm2 := domainrole.ReconstructPermission(uuid.New(), "iam.user.user.create", "Create Users", "desc", "iam", "user", "create", true, audit)
+		perm1 := domainrole.ReconstructPermission(uuid.New(), "iam.user.user.view", "View Users", "desc", "iam", "user", "view", true, audit, nil, "")
+		perm2 := domainrole.ReconstructPermission(uuid.New(), "iam.user.user.create", "Create Users", "desc", "iam", "user", "create", true, audit, nil, "")
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("role.PermissionListParams")).Return(
 			[]*domainrole.Permission{perm1, perm2},

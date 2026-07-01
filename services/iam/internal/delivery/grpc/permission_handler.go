@@ -4,6 +4,8 @@ package grpc
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	permapp "github.com/mutugading/goapps-backend/services/iam/internal/application/permission"
@@ -43,6 +45,15 @@ func (h *PermissionHandler) CreatePermission(ctx context.Context, req *iamv1.Cre
 
 	userID := getUserFromCtx(ctx)
 
+	var menuID *uuid.UUID
+	if rawMenuID := req.GetMenuId(); rawMenuID != "" {
+		parsed, parseErr := uuid.Parse(rawMenuID)
+		if parseErr != nil {
+			return &iamv1.CreatePermissionResponse{Base: ErrorResponse("400", "invalid menu_id format")}, nil //nolint:nilerr // error returned in response body
+		}
+		menuID = &parsed
+	}
+
 	entity, err := h.createHandler.Handle(ctx, permapp.CreateCommand{
 		Code:        req.GetPermissionCode(),
 		Name:        req.GetPermissionName(),
@@ -51,6 +62,7 @@ func (h *PermissionHandler) CreatePermission(ctx context.Context, req *iamv1.Cre
 		ModuleName:  req.GetModuleName(),
 		ActionType:  req.GetActionType(),
 		CreatedBy:   userID,
+		MenuID:      menuID,
 	})
 	if err != nil {
 		return &iamv1.CreatePermissionResponse{Base: domainErrorToBaseResponse(err)}, nil

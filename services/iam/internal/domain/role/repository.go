@@ -39,6 +39,9 @@ type PermissionRepository interface {
 
 	// Grouped by service/module
 	GetByService(ctx context.Context, serviceName string, includeInactive bool) ([]*ServicePermissions, error)
+
+	// ListByMenu returns all active permissions associated with a specific menu page.
+	ListByMenu(ctx context.Context, menuID uuid.UUID) ([]*Permission, error)
 }
 
 // UserRoleRepository handles user-role assignments.

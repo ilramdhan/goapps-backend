@@ -256,7 +256,7 @@ func TestNewPermission(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := role.NewPermission(tc.code, tc.permName, tc.description, tc.serviceName, tc.moduleName, tc.actionType, tc.createdBy)
+			p, err := role.NewPermission(tc.code, tc.permName, tc.description, tc.serviceName, tc.moduleName, tc.actionType, tc.createdBy, nil)
 
 			if tc.wantErr != nil {
 				require.Error(t, err)
@@ -285,7 +285,7 @@ func TestNewPermission(t *testing.T) {
 
 func TestPermission_Update(t *testing.T) {
 	t.Run("update name", func(t *testing.T) {
-		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system")
+		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system", nil)
 		require.NoError(t, err)
 
 		newName := "View Journals"
@@ -296,7 +296,7 @@ func TestPermission_Update(t *testing.T) {
 	})
 
 	t.Run("update description", func(t *testing.T) {
-		p, err := role.NewPermission("finance.accounting.journal.view", "View", "old", "finance", "accounting", "view", "system")
+		p, err := role.NewPermission("finance.accounting.journal.view", "View", "old", "finance", "accounting", "view", "system", nil)
 		require.NoError(t, err)
 
 		newDesc := "new desc"
@@ -307,7 +307,7 @@ func TestPermission_Update(t *testing.T) {
 	})
 
 	t.Run("update isActive", func(t *testing.T) {
-		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system")
+		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system", nil)
 		require.NoError(t, err)
 
 		inactive := false
@@ -318,7 +318,7 @@ func TestPermission_Update(t *testing.T) {
 	})
 
 	t.Run("error - empty name", func(t *testing.T) {
-		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system")
+		p, err := role.NewPermission("finance.accounting.journal.view", "View", "desc", "finance", "accounting", "view", "system", nil)
 		require.NoError(t, err)
 
 		emptyName := ""
@@ -361,7 +361,7 @@ func TestReconstructPermission(t *testing.T) {
 		CreatedBy: "system",
 	}
 
-	p := role.ReconstructPermission(id, "finance.accounting.journal.view", "View Journal", "desc", "finance", "accounting", "view", true, audit)
+	p := role.ReconstructPermission(id, "finance.accounting.journal.view", "View Journal", "desc", "finance", "accounting", "view", true, audit, nil, "")
 
 	assert.Equal(t, id, p.ID())
 	assert.Equal(t, "finance.accounting.journal.view", p.Code())

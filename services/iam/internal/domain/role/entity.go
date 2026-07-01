@@ -159,11 +159,14 @@ type Permission struct {
 	actionType  string
 	isActive    bool
 	roleCount   int32
+	menuID      *uuid.UUID
+	menuTitle   string
 	audit       shared.AuditInfo
 }
 
 // NewPermission creates a new Permission entity.
-func NewPermission(code, name, description, serviceName, moduleName, actionType, createdBy string) (*Permission, error) {
+// menuID may be nil for permissions that are not scoped to a specific menu page.
+func NewPermission(code, name, description, serviceName, moduleName, actionType, createdBy string, menuID *uuid.UUID) (*Permission, error) {
 	if code == "" {
 		return nil, shared.ErrEmptyCode
 	}
@@ -186,12 +189,13 @@ func NewPermission(code, name, description, serviceName, moduleName, actionType,
 		moduleName:  moduleName,
 		actionType:  actionType,
 		isActive:    true,
+		menuID:      menuID,
 		audit:       shared.NewAuditInfo(createdBy),
 	}, nil
 }
 
 // ReconstructPermission reconstructs a Permission from persistence.
-func ReconstructPermission(id uuid.UUID, code, name, description, serviceName, moduleName, actionType string, isActive bool, audit shared.AuditInfo) *Permission {
+func ReconstructPermission(id uuid.UUID, code, name, description, serviceName, moduleName, actionType string, isActive bool, audit shared.AuditInfo, menuID *uuid.UUID, menuTitle string) *Permission {
 	return &Permission{
 		id:          id,
 		code:        code,
@@ -201,6 +205,8 @@ func ReconstructPermission(id uuid.UUID, code, name, description, serviceName, m
 		moduleName:  moduleName,
 		actionType:  actionType,
 		isActive:    isActive,
+		menuID:      menuID,
+		menuTitle:   menuTitle,
 		audit:       audit,
 	}
 }
@@ -234,6 +240,12 @@ func (p *Permission) RoleCount() int32 { return p.roleCount }
 
 // SetRoleCount sets the role count (populated by list queries).
 func (p *Permission) SetRoleCount(count int32) { p.roleCount = count }
+
+// MenuID returns the menu this permission is scoped to, or nil for global permissions.
+func (p *Permission) MenuID() *uuid.UUID { return p.menuID }
+
+// MenuTitle returns the title of the associated menu, populated by join queries.
+func (p *Permission) MenuTitle() string { return p.menuTitle }
 
 // Audit returns the audit information.
 func (p *Permission) Audit() shared.AuditInfo { return p.audit }

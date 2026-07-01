@@ -16,6 +16,17 @@ import (
 	"github.com/mutugading/goapps-backend/services/iam/internal/domain/shared"
 )
 
+// permissionSelectCols is the canonical SELECT column list with LEFT JOIN on mst_menu.
+// All query methods that return a permissionRow must select these columns in this order.
+const permissionSelectCols = `
+	p.permission_id, p.permission_code, p.permission_name, p.description,
+	p.service_name, p.module_name, p.action_type, p.is_active,
+	p.created_at, p.created_by, p.updated_at, p.updated_by,
+	p.menu_id, m.menu_title`
+
+// permissionJoin is the LEFT JOIN fragment added after the FROM clause.
+const permissionJoin = "LEFT JOIN mst_menu m ON m.menu_id = p.menu_id"
+
 // PermissionRepository implements role.PermissionRepository interface.
 type PermissionRepository struct {
 	db *DB
@@ -26,20 +37,32 @@ func NewPermissionRepository(db *DB) *PermissionRepository {
 	return &PermissionRepository{db: db}
 }
 
+// scanPermRow scans the 14 permission columns (including menu_id / menu_title) into a permissionRow.
+func scanPermRow(scanner interface {
+	Scan(dest ...interface{}) error
+}, row *permissionRow) error {
+	return scanner.Scan(
+		&row.ID, &row.Code, &row.Name, &row.Description,
+		&row.ServiceName, &row.ModuleName, &row.ActionType, &row.IsActive,
+		&row.CreatedAt, &row.CreatedBy, &row.UpdatedAt, &row.UpdatedBy,
+		&row.MenuID, &row.MenuTitle,
+	)
+}
+
 // Create creates a new permission.
 func (r *PermissionRepository) Create(ctx context.Context, perm *role.Permission) error {
 	query := `
 		INSERT INTO mst_permission (
 			permission_id, permission_code, permission_name, description,
 			service_name, module_name, action_type, is_active,
-			created_at, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			created_at, created_by, menu_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
 		perm.ID(), perm.Code(), perm.Name(), perm.Description(),
 		perm.ServiceName(), perm.ModuleName(), perm.ActionType(), perm.IsActive(),
-		perm.Audit().CreatedAt, perm.Audit().CreatedBy,
+		perm.Audit().CreatedAt, perm.Audit().CreatedBy, perm.MenuID(),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert permission: %w", err)
@@ -50,21 +73,15 @@ func (r *PermissionRepository) Create(ctx context.Context, perm *role.Permission
 
 // GetByID retrieves a permission by ID.
 func (r *PermissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*role.Permission, error) {
-	query := `
-		SELECT permission_id, permission_code, permission_name, description,
-			service_name, module_name, action_type, is_active,
-			created_at, created_by, updated_at, updated_by
-		FROM mst_permission
-		WHERE permission_id = $1
-	`
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM mst_permission p
+		%s
+		WHERE p.permission_id = $1
+	`, permissionSelectCols, permissionJoin)
 
 	var row permissionRow
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&row.ID, &row.Code, &row.Name, &row.Description,
-		&row.ServiceName, &row.ModuleName, &row.ActionType, &row.IsActive,
-		&row.CreatedAt, &row.CreatedBy, &row.UpdatedAt, &row.UpdatedBy,
-	)
-	if err != nil {
+	if err := scanPermRow(r.db.QueryRowContext(ctx, query, id), &row); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, shared.ErrNotFound
 		}
@@ -76,21 +93,15 @@ func (r *PermissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*role
 
 // GetByCode retrieves a permission by code.
 func (r *PermissionRepository) GetByCode(ctx context.Context, code string) (*role.Permission, error) {
-	query := `
-		SELECT permission_id, permission_code, permission_name, description,
-			service_name, module_name, action_type, is_active,
-			created_at, created_by, updated_at, updated_by
-		FROM mst_permission
-		WHERE permission_code = $1
-	`
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM mst_permission p
+		%s
+		WHERE p.permission_code = $1
+	`, permissionSelectCols, permissionJoin)
 
 	var row permissionRow
-	err := r.db.QueryRowContext(ctx, query, code).Scan(
-		&row.ID, &row.Code, &row.Name, &row.Description,
-		&row.ServiceName, &row.ModuleName, &row.ActionType, &row.IsActive,
-		&row.CreatedAt, &row.CreatedBy, &row.UpdatedAt, &row.UpdatedBy,
-	)
-	if err != nil {
+	if err := scanPermRow(r.db.QueryRowContext(ctx, query, code), &row); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, shared.ErrNotFound
 		}
@@ -159,31 +170,31 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 	argPos := 1
 
 	if params.Search != "" {
-		conditions = append(conditions, fmt.Sprintf("(permission_code ILIKE $%d OR permission_name ILIKE $%d)", argPos, argPos))
+		conditions = append(conditions, fmt.Sprintf("(p.permission_code ILIKE $%d OR p.permission_name ILIKE $%d)", argPos, argPos))
 		args = append(args, "%"+params.Search+"%")
 		argPos++
 	}
 
 	if params.IsActive != nil {
-		conditions = append(conditions, fmt.Sprintf("is_active = $%d", argPos))
+		conditions = append(conditions, fmt.Sprintf("p.is_active = $%d", argPos))
 		args = append(args, *params.IsActive)
 		argPos++
 	}
 
 	if params.ServiceName != "" {
-		conditions = append(conditions, fmt.Sprintf("service_name = $%d", argPos))
+		conditions = append(conditions, fmt.Sprintf("p.service_name = $%d", argPos))
 		args = append(args, params.ServiceName)
 		argPos++
 	}
 
 	if params.ModuleName != "" {
-		conditions = append(conditions, fmt.Sprintf("module_name = $%d", argPos))
+		conditions = append(conditions, fmt.Sprintf("p.module_name = $%d", argPos))
 		args = append(args, params.ModuleName)
 		argPos++
 	}
 
 	if params.ActionType != "" {
-		conditions = append(conditions, fmt.Sprintf("action_type = $%d", argPos))
+		conditions = append(conditions, fmt.Sprintf("p.action_type = $%d", argPos))
 		args = append(args, params.ActionType)
 		argPos++
 	}
@@ -194,7 +205,7 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 	}
 
 	// Count total
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM mst_permission WHERE %s", whereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM mst_permission p WHERE %s", whereClause)
 	var total int64
 	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("failed to count permissions: %w", err)
@@ -202,16 +213,16 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 
 	// Build query
 	sortColumnMap := map[string]string{
-		"code":       "permission_code",
-		"name":       "permission_name",
-		"service":    "service_name",
-		"module":     "module_name",
-		"action":     "action_type",
-		"status":     "is_active",
-		"created_at": "created_at",
+		"code":       "p.permission_code",
+		"name":       "p.permission_name",
+		"service":    "p.service_name",
+		"module":     "p.module_name",
+		"action":     "p.action_type",
+		"status":     "p.is_active",
+		"created_at": "p.created_at",
 	}
 
-	sortBy := "permission_code"
+	sortBy := "p.permission_code"
 	if params.SortBy != "" {
 		if mapped, ok := sortColumnMap[params.SortBy]; ok {
 			sortBy = mapped
@@ -226,15 +237,14 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 
 	offset := (params.Page - 1) * params.PageSize
 	query := fmt.Sprintf(`
-		SELECT p.permission_id, p.permission_code, p.permission_name, p.description,
-			p.service_name, p.module_name, p.action_type, p.is_active,
-			p.created_at, p.created_by, p.updated_at, p.updated_by,
+		SELECT %s,
 			COALESCE((SELECT COUNT(*) FROM role_permissions rp WHERE rp.permission_id = p.permission_id), 0) AS role_count
 		FROM mst_permission p
+		%s
 		WHERE %s
-		ORDER BY %s %s
+		ORDER BY m.sort_order NULLS LAST, %s %s
 		LIMIT $%d OFFSET $%d
-	`, whereClause, sortBy, sortOrder, argPos, argPos+1)
+	`, permissionSelectCols, permissionJoin, whereClause, sortBy, sortOrder, argPos, argPos+1)
 
 	args = append(args, params.PageSize, offset)
 
@@ -243,8 +253,8 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 		return nil, 0, fmt.Errorf("failed to list permissions: %w", err)
 	}
 	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Warn().Err(err).Msg("failed to close rows in permission list")
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("failed to close rows in permission list")
 		}
 	}()
 
@@ -256,6 +266,7 @@ func (r *PermissionRepository) List(ctx context.Context, params role.PermissionL
 			&row.ID, &row.Code, &row.Name, &row.Description,
 			&row.ServiceName, &row.ModuleName, &row.ActionType, &row.IsActive,
 			&row.CreatedAt, &row.CreatedBy, &row.UpdatedAt, &row.UpdatedBy,
+			&row.MenuID, &row.MenuTitle,
 			&roleCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan permission: %w", err)
@@ -287,13 +298,13 @@ func (r *PermissionRepository) BatchCreate(ctx context.Context, permissions []*r
 				INSERT INTO mst_permission (
 					permission_id, permission_code, permission_name, description,
 					service_name, module_name, action_type, is_active,
-					created_at, created_by
-				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+					created_at, created_by, menu_id
+				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			`
 			_, err := tx.ExecContext(ctx, query,
 				perm.ID(), perm.Code(), perm.Name(), perm.Description(),
 				perm.ServiceName(), perm.ModuleName(), perm.ActionType(), perm.IsActive(),
-				perm.Audit().CreatedAt, perm.Audit().CreatedBy,
+				perm.Audit().CreatedAt, perm.Audit().CreatedBy, perm.MenuID(),
 			)
 			if err != nil {
 				return fmt.Errorf("failed to insert permission %s: %w", perm.Code(), err)
@@ -307,7 +318,7 @@ func (r *PermissionRepository) BatchCreate(ctx context.Context, permissions []*r
 
 // GetByService retrieves permissions grouped by service and module.
 func (r *PermissionRepository) GetByService(ctx context.Context, serviceName string, includeInactive bool) ([]*role.ServicePermissions, error) {
-	activeFilter := "AND is_active = true"
+	activeFilter := "AND p.is_active = true"
 	if includeInactive {
 		activeFilter = ""
 	}
@@ -317,24 +328,22 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 
 	if serviceName != "" {
 		query = fmt.Sprintf(`
-			SELECT permission_id, permission_code, permission_name, description,
-				service_name, module_name, action_type, is_active,
-				created_at, created_by, updated_at, updated_by
-			FROM mst_permission
-			WHERE service_name = $1 %s
-			ORDER BY service_name, module_name, action_type
-		`, activeFilter)
+			SELECT %s
+			FROM mst_permission p
+			%s
+			WHERE p.service_name = $1 %s
+			ORDER BY m.sort_order NULLS LAST, p.action_type
+		`, permissionSelectCols, permissionJoin, activeFilter)
 		args = append(args, serviceName)
 	} else {
-		// Return ALL services when serviceName is empty
+		// Return ALL services when serviceName is empty.
 		query = fmt.Sprintf(`
-			SELECT permission_id, permission_code, permission_name, description,
-				service_name, module_name, action_type, is_active,
-				created_at, created_by, updated_at, updated_by
-			FROM mst_permission
+			SELECT %s
+			FROM mst_permission p
+			%s
 			WHERE TRUE %s
-			ORDER BY service_name, module_name, action_type
-		`, activeFilter)
+			ORDER BY m.sort_order NULLS LAST, p.action_type
+		`, permissionSelectCols, permissionJoin, activeFilter)
 	}
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -342,12 +351,12 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 		return nil, fmt.Errorf("failed to get permissions by service: %w", err)
 	}
 	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Warn().Err(err).Msg("failed to close rows in permission modules")
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("failed to close rows in permission modules")
 		}
 	}()
 
-	// Group by service_name -> module_name -> permissions
+	// Group by service_name -> module_name -> permissions.
 	type serviceData struct {
 		moduleMap   map[string][]*role.Permission
 		moduleOrder []string
@@ -357,11 +366,7 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 
 	for rows.Next() {
 		var row permissionRow
-		if err := rows.Scan(
-			&row.ID, &row.Code, &row.Name, &row.Description,
-			&row.ServiceName, &row.ModuleName, &row.ActionType, &row.IsActive,
-			&row.CreatedAt, &row.CreatedBy, &row.UpdatedAt, &row.UpdatedBy,
-		); err != nil {
+		if err := scanPermRow(rows, &row); err != nil {
 			return nil, fmt.Errorf("failed to scan permission: %w", err)
 		}
 
@@ -381,7 +386,7 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 		sd.moduleMap[row.ModuleName] = append(sd.moduleMap[row.ModuleName], row.toDomain())
 	}
 
-	// Build result
+	// Build result.
 	result := make([]*role.ServicePermissions, 0, len(serviceOrder))
 	for _, svcName := range serviceOrder {
 		sd := serviceMap[svcName]
@@ -399,4 +404,36 @@ func (r *PermissionRepository) GetByService(ctx context.Context, serviceName str
 	}
 
 	return result, nil
+}
+
+// ListByMenu returns all active permissions associated with the given menu page.
+func (r *PermissionRepository) ListByMenu(ctx context.Context, menuID uuid.UUID) ([]*role.Permission, error) {
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM mst_permission p
+		%s
+		WHERE p.menu_id = $1 AND p.is_active = true
+		ORDER BY m.sort_order NULLS LAST, p.action_type
+	`, permissionSelectCols, permissionJoin)
+
+	rows, err := r.db.QueryContext(ctx, query, menuID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list permissions by menu: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Warn().Err(closeErr).Msg("failed to close rows in permission list by menu")
+		}
+	}()
+
+	var permissions []*role.Permission
+	for rows.Next() {
+		var row permissionRow
+		if err := scanPermRow(rows, &row); err != nil {
+			return nil, fmt.Errorf("failed to scan permission: %w", err)
+		}
+		permissions = append(permissions, row.toDomain())
+	}
+
+	return permissions, nil
 }
