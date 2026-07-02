@@ -219,14 +219,15 @@ func (h *CostProductMasterHandler) ListCostProductMasters(ctx context.Context, r
 	}
 	page, pageSize := paginationFromProto(req.Pagination)
 	res, err := h.listHandler.Handle(ctx, app.ListQuery{
-		Search:        req.GetSearch(),
-		ProductTypeID: req.GetProductTypeId(),
-		ShadeCode:     req.GetShadeCode(),
-		ActiveFilter:  req.GetActiveFilter(),
-		Page:          int(page),
-		PageSize:      int(pageSize),
-		SortBy:        req.GetSortBy(),
-		SortOrder:     req.GetSortOrder(),
+		Search:         req.GetSearch(),
+		ProductTypeID:  req.GetProductTypeId(),
+		ProductTypeIDs: req.GetProductTypeIds(),
+		ShadeCode:      req.GetShadeCode(),
+		ActiveFilter:   req.GetActiveFilter(),
+		Page:           int(page),
+		PageSize:       int(pageSize),
+		SortBy:         req.GetSortBy(),
+		SortOrder:      req.GetSortOrder(),
 	})
 	if err != nil {
 		return &financev1.ListCostProductMastersResponse{Base: productMasterErrToBase(err)}, nil

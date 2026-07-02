@@ -927,16 +927,17 @@ func (x *DeactivateCostProductMasterResponse) GetBase() *v1.BaseResponse {
 }
 
 type ListCostProductMastersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Search        string                 `protobuf:"bytes,1,opt,name=search,proto3" json:"search,omitempty"` // matches product_code OR product_name OR erp_item_code
-	ProductTypeId int32                  `protobuf:"varint,2,opt,name=product_type_id,json=productTypeId,proto3" json:"product_type_id,omitempty"`
-	ShadeCode     string                 `protobuf:"bytes,3,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
-	ActiveFilter  string                 `protobuf:"bytes,4,opt,name=active_filter,json=activeFilter,proto3" json:"active_filter,omitempty"`
-	Pagination    *v1.PaginationRequest  `protobuf:"bytes,5,opt,name=pagination,proto3" json:"pagination,omitempty"`
-	SortBy        string                 `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	SortOrder     string                 `protobuf:"bytes,7,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Search         string                 `protobuf:"bytes,1,opt,name=search,proto3" json:"search,omitempty"` // matches product_code OR product_name OR erp_item_code OR oracle sys id (flex_02)
+	ProductTypeId  int32                  `protobuf:"varint,2,opt,name=product_type_id,json=productTypeId,proto3" json:"product_type_id,omitempty"`
+	ShadeCode      string                 `protobuf:"bytes,3,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
+	ActiveFilter   string                 `protobuf:"bytes,4,opt,name=active_filter,json=activeFilter,proto3" json:"active_filter,omitempty"`
+	Pagination     *v1.PaginationRequest  `protobuf:"bytes,5,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	SortBy         string                 `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortOrder      string                 `protobuf:"bytes,7,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	ProductTypeIds []int32                `protobuf:"varint,8,rep,packed,name=product_type_ids,json=productTypeIds,proto3" json:"product_type_ids,omitempty"` // additional type filter, unioned with product_type_id
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListCostProductMastersRequest) Reset() {
@@ -1016,6 +1017,13 @@ func (x *ListCostProductMastersRequest) GetSortOrder() string {
 		return x.SortOrder
 	}
 	return ""
+}
+
+func (x *ListCostProductMastersRequest) GetProductTypeIds() []int32 {
+	if x != nil {
+		return x.ProductTypeIds
+	}
+	return nil
 }
 
 type ListCostProductMastersResponse struct {
@@ -1488,7 +1496,7 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\"DeactivateCostProductMasterRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\fproductSysId\"R\n" +
 	"#DeactivateCostProductMasterResponse\x12+\n" +
-	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\x91\x03\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xab\x04\n" +
 	"\x1dListCostProductMastersRequest\x12 \n" +
 	"\x06search\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x06search\x12&\n" +
 	"\x0fproduct_type_id\x18\x02 \x01(\x05R\rproductTypeId\x12&\n" +
@@ -1497,11 +1505,16 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\ractive_filter\x18\x04 \x01(\tB\x1e\xbaH\x1br\x19R\x00R\x03allR\x06activeR\binactiveR\factiveFilter\x12<\n" +
 	"\n" +
 	"pagination\x18\x05 \x01(\v2\x1c.common.v1.PaginationRequestR\n" +
-	"pagination\x12H\n" +
-	"\asort_by\x18\x06 \x01(\tB/\xbaH,r*R\x00R\fproduct_codeR\fproduct_nameR\n" +
-	"created_atR\x06sortBy\x121\n" +
+	"pagination\x12\xb7\x01\n" +
+	"\asort_by\x18\x06 \x01(\tB\x9d\x01\xbaH\x99\x01r\x96\x01R\x00R\fproduct_codeR\fproduct_nameR\n" +
+	"created_atR\n" +
+	"updated_atR\x11product_type_codeR\n" +
+	"shade_codeR\n" +
+	"grade_codeR\roracle_sys_idR\x10erp_compound_keyR\n" +
+	"type_labelR\x06statusR\x06sortBy\x121\n" +
 	"\n" +
-	"sort_order\x18\a \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\"\xbf\x01\n" +
+	"sort_order\x18\a \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\x12(\n" +
+	"\x10product_type_ids\x18\b \x03(\x05R\x0eproductTypeIds\"\xbf\x01\n" +
 	"\x1eListCostProductMastersResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
 	"\x04data\x18\x02 \x03(\v2\x1d.finance.v1.CostProductMasterR\x04data\x12=\n" +

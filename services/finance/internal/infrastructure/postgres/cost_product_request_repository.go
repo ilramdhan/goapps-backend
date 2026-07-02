@@ -254,7 +254,7 @@ func (r *CostProductRequestRepository) List(ctx context.Context, f costproductre
 		sortCol = `cpr_request_no`
 	case "updated_at":
 		sortCol = `cpr_updated_at`
-	case "status":
+	case sortKeyStatus:
 		sortCol = `cpr_status`
 	}
 	dir := sortDESC

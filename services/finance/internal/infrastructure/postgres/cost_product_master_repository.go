@@ -118,19 +118,92 @@ func (r *CostProductMasterRepository) Update(ctx context.Context, p *costproduct
 	return nil
 }
 
+// cpmSortColumn maps an API sort key to its ORDER BY expression. Every value
+// comes from this fixed map only — never from user input — so the returned
+// expression is safe to interpolate into the query.
+func cpmSortColumn(sortBy string) string {
+	switch sortBy {
+	case "product_name":
+		return "cpm_product_name"
+	case sortKeyCreatedAt:
+		return "cpm_created_at"
+	case "updated_at":
+		return "cpm_updated_at"
+	case "product_type_code":
+		return "(SELECT cpt_type_code FROM cost_product_type WHERE cpt_type_id = cpm_product_type_id)"
+	case "shade_code":
+		return "cpm_shade_code"
+	case "grade_code":
+		return "cpm_grade_code"
+	case "oracle_sys_id":
+		return "cpm_flex_02"
+	case "erp_compound_key":
+		return "cpm_flex_01"
+	case "type_label":
+		return "cpm_flex_03"
+	case sortKeyStatus:
+		return "cpm_is_active"
+	default:
+		return cpmSortColProductCode
+	}
+}
+
+const cpmSortColProductCode = "cpm_product_code"
+
+// cpmOrderBy builds the ORDER BY body for the given sort key + direction,
+// appending a stable secondary ordering on product_code whenever the primary
+// sort column is not product_code itself.
+func cpmOrderBy(sortBy, sortOrder string) string {
+	col := cpmSortColumn(sortBy)
+	dir := sortASC
+	if strings.EqualFold(sortOrder, "desc") {
+		dir = sortDESC
+	}
+	orderBy := col + " " + dir
+	if col != cpmSortColProductCode {
+		orderBy += ", " + cpmSortColProductCode + " " + sortASC
+	}
+	return orderBy
+}
+
+// cpmEffectiveTypeIDs returns the deduplicated union of the legacy single
+// ProductTypeID (when > 0) and the ProductTypeIDs slice (ignoring non-positive
+// entries), as int64 for driver-friendly array binding.
+func cpmEffectiveTypeIDs(f costproductmaster.Filter) []int64 {
+	ids := make([]int64, 0, len(f.ProductTypeIDs)+1)
+	seen := make(map[int32]bool, len(f.ProductTypeIDs)+1)
+	if f.ProductTypeID > 0 {
+		seen[f.ProductTypeID] = true
+		ids = append(ids, int64(f.ProductTypeID))
+	}
+	for _, id := range f.ProductTypeIDs {
+		if id > 0 && !seen[id] {
+			seen[id] = true
+			ids = append(ids, int64(id))
+		}
+	}
+	return ids
+}
+
 // List returns a filtered paginated list.
-func (r *CostProductMasterRepository) List(ctx context.Context, f costproductmaster.Filter) ([]*costproductmaster.CostProductMaster, int64, error) { //nolint:gocognit,gocyclo // filter + sort + pagination builder
+func (r *CostProductMasterRepository) List(ctx context.Context, f costproductmaster.Filter) ([]*costproductmaster.CostProductMaster, int64, error) { //nolint:gocognit // filter + sort + pagination builder
 	where := "FROM cost_product_master WHERE 1=1"
 	args := []any{}
 	idx := 1
 	if f.Search != "" {
-		where += fmt.Sprintf(` AND (LOWER(cpm_product_code) LIKE LOWER($%d) OR LOWER(cpm_product_name) LIKE LOWER($%d) OR LOWER(COALESCE(cpm_erp_item_code,'')) LIKE LOWER($%d))`, idx, idx, idx)
+		where += fmt.Sprintf(` AND (LOWER(cpm_product_code) LIKE LOWER($%d) OR LOWER(cpm_product_name) LIKE LOWER($%d) OR LOWER(COALESCE(cpm_erp_item_code,'')) LIKE LOWER($%d) OR LOWER(COALESCE(cpm_flex_02,'')) LIKE LOWER($%d))`, idx, idx, idx, idx)
 		args = append(args, "%"+f.Search+"%")
 		idx++
 	}
-	if f.ProductTypeID > 0 {
+	typeIDs := cpmEffectiveTypeIDs(f)
+	switch {
+	case len(typeIDs) == 1:
 		where += fmt.Sprintf(` AND cpm_product_type_id=$%d`, idx)
-		args = append(args, f.ProductTypeID)
+		args = append(args, typeIDs[0])
+		idx++
+	case len(typeIDs) > 1:
+		where += fmt.Sprintf(` AND cpm_product_type_id = ANY($%d)`, idx)
+		args = append(args, pq.Array(typeIDs))
 		idx++
 	}
 	if f.ShadeCode != "" {
@@ -150,19 +223,6 @@ func (r *CostProductMasterRepository) List(ctx context.Context, f costproductmas
 		return nil, 0, fmt.Errorf("count cost_product_master: %w", err)
 	}
 
-	sortCol := `cpm_product_code`
-	switch f.SortBy {
-	case "product_name":
-		sortCol = `cpm_product_name`
-	case sortKeyCreatedAt:
-		sortCol = `cpm_created_at`
-	case "updated_at":
-		sortCol = `cpm_updated_at`
-	}
-	dir := sortASC
-	if strings.EqualFold(f.SortOrder, "desc") {
-		dir = sortDESC
-	}
 	page := max(f.Page, 1)
 	pageSize := f.PageSize
 	if pageSize < 1 {
@@ -171,7 +231,7 @@ func (r *CostProductMasterRepository) List(ctx context.Context, f costproductmas
 	pageSize = min(pageSize, 200)
 	offset := (page - 1) * pageSize
 
-	q := `SELECT ` + cpmColumns + ` ` + where + fmt.Sprintf(` ORDER BY %s %s LIMIT $%d OFFSET $%d`, sortCol, dir, idx, idx+1)
+	q := `SELECT ` + cpmColumns + ` ` + where + fmt.Sprintf(` ORDER BY %s LIMIT $%d OFFSET $%d`, cpmOrderBy(f.SortBy, f.SortOrder), idx, idx+1)
 	args = append(args, pageSize, offset)
 
 	rows, err := r.db.QueryContext(ctx, q, args...)

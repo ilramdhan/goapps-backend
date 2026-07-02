@@ -25,6 +25,7 @@ const (
 	filterActive     = "active"
 	filterInactive   = "inactive"
 	sortKeyCreatedAt = "created_at"
+	sortKeyStatus    = "status"
 	whereNotDeleted  = "WHERE deleted_at IS NULL"
 )
 

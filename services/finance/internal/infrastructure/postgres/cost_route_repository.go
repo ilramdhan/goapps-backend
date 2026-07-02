@@ -588,7 +588,7 @@ func (r *CostRouteRepository) ListHeads(ctx context.Context, f costroute.Filter)
 	switch f.SortBy {
 	case "product_code":
 		orderBy = "p.cpm_product_code"
-	case "status":
+	case sortKeyStatus:
 		orderBy = "h.crh_routing_status"
 	case sortKeyCreatedAt, "":
 		orderBy = "h.crh_created_at"

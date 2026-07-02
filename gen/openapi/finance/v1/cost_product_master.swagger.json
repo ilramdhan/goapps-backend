@@ -36,7 +36,7 @@
         "parameters": [
           {
             "name": "search",
-            "description": "matches product_code OR product_name OR erp_item_code",
+            "description": "matches product_code OR product_name OR erp_item_code OR oracle sys id (flex_02)",
             "in": "query",
             "required": false,
             "type": "string"
@@ -87,6 +87,18 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "productTypeIds",
+            "description": "additional type filter, unioned with product_type_id",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "collectionFormat": "multi"
           }
         ],
         "tags": [

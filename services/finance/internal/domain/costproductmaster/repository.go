@@ -26,14 +26,15 @@ type ProductUpsertResult struct {
 
 // Filter for List query.
 type Filter struct {
-	Search        string // matches product_code OR product_name OR erp_item_code
-	ProductTypeID int32  // 0 = no filter
-	ShadeCode     string
-	ActiveFilter  string // "all" | "active" | "inactive" | ""
-	Page          int
-	PageSize      int
-	SortBy        string
-	SortOrder     string
+	Search         string  // matches product_code OR product_name OR erp_item_code OR oracle sys id (flex_02)
+	ProductTypeID  int32   // 0 = no filter (legacy single-type filter)
+	ProductTypeIDs []int32 // additional type filter, unioned with ProductTypeID; empty = no filter
+	ShadeCode      string
+	ActiveFilter   string // "all" | "active" | "inactive" | ""
+	Page           int
+	PageSize       int
+	SortBy         string
+	SortOrder      string
 }
 
 // Repository persists CostProductMaster aggregates.

@@ -157,14 +157,15 @@ func (h *DeactivateHandler) Handle(ctx context.Context, cmd DeactivateCommand) (
 
 // ListQuery input.
 type ListQuery struct {
-	Search        string
-	ProductTypeID int32
-	ShadeCode     string
-	ActiveFilter  string
-	Page          int
-	PageSize      int
-	SortBy        string
-	SortOrder     string
+	Search         string
+	ProductTypeID  int32
+	ProductTypeIDs []int32
+	ShadeCode      string
+	ActiveFilter   string
+	Page           int
+	PageSize       int
+	SortBy         string
+	SortOrder      string
 }
 
 // ListResult is the list query result.
