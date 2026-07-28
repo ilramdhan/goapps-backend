@@ -47,9 +47,32 @@ type PermissionsReader interface {
 	GetUserPermissions(ctx context.Context, userID string) ([]string, error)
 }
 
-// serviceSecretValid reports whether the internal x-service-secret header
-// matches the configured secret. An empty configured secret skips the check
-// (trusts cluster network isolation).
+// internalLookupMethods are the read-only CostMasterLookupService RPCs invoked
+// service-to-service by PPC (financeclient). They carry no user JWT; they are
+// authenticated by the shared internal secret and are safe to expose to trusted
+// callers because they never mutate finance state.
+var internalLookupMethods = map[string]struct{}{
+	"/finance.v1.CostMasterLookupService/GetCostProductMasterForPPC":     {},
+	"/finance.v1.CostMasterLookupService/BatchGetCostProductMaster":      {},
+	"/finance.v1.CostMasterLookupService/ListCostProductMasterForPPC":    {},
+	"/finance.v1.CostMasterLookupService/GetProductRouteForPPC":          {},
+	"/finance.v1.CostMasterLookupService/ListProductGradesForPPC":        {},
+	"/finance.v1.CostMasterLookupService/ListProductParametersForPPC":    {},
+	"/finance.v1.CostMasterLookupService/BatchGetProductParameterValues": {},
+	// ResolveCostProductMasterByErpCode links PPC sales-order staging rows to
+	// finance products by ERP item/shade code. Read-only, same trust boundary.
+	"/finance.v1.CostMasterLookupService/ResolveCostProductMasterByErpCode": {},
+	// MachineService.ListMachines is the machine master projection PPC's
+	// machine-sync worker reads (finance mst_machine → PPC machine, merged with
+	// Oracle TXTMACH). Read-only; safe to expose to the trusted PPC service.
+	"/finance.v1.MachineService/ListMachines": {},
+}
+
+// serviceSecretValid reports whether the request carries a matching internal
+// service secret. The secret may arrive in either the x-service-secret header
+// (finance-cost-worker precedent) or the x-internal-token header (PPC
+// financeclient — the header name it already sends). An empty configured secret
+// skips the check (trusts cluster network isolation).
 func serviceSecretValid(ctx context.Context, svcSecret string) bool {
 	if svcSecret == "" {
 		return true
@@ -58,8 +81,13 @@ func serviceSecretValid(ctx context.Context, svcSecret string) bool {
 	if !ok {
 		return false
 	}
-	vals := md.Get("x-service-secret")
-	return len(vals) == 1 && vals[0] == svcSecret
+	for _, header := range []string{"x-service-secret", "x-internal-token"} {
+		vals := md.Get(header)
+		if len(vals) == 1 && vals[0] == svcSecret {
+			return true
+		}
+	}
+	return false
 }
 
 // withServiceIdentity injects a synthetic SUPER_ADMIN identity for trusted
@@ -98,6 +126,18 @@ func AuthInterceptor(cfg *config.JWTConfig, blacklist TokenBlacklistChecker, per
 		if info.FullMethod == "/finance.v1.CostCalcService/ProcessChunkInternal" {
 			if !serviceSecretValid(ctx, svcSecret) {
 				return nil, status.Error(codes.Unauthenticated, "ProcessChunkInternal: missing or invalid x-service-secret")
+			}
+			return handler(withServiceIdentity(ctx), req)
+		}
+
+		// CostMasterLookupService RPCs are read-only master projections consumed
+		// by the PPC service over the internal network. They carry no user JWT;
+		// a valid internal service secret (x-service-secret OR x-internal-token)
+		// grants a synthetic SUPER_ADMIN identity so the permission interceptor's
+		// bypass applies. This does NOT relax auth for any user-facing RPC.
+		if _, ok := internalLookupMethods[info.FullMethod]; ok {
+			if !serviceSecretValid(ctx, svcSecret) {
+				return nil, status.Error(codes.Unauthenticated, "lookup: missing or invalid internal service secret")
 			}
 			return handler(withServiceIdentity(ctx), req)
 		}

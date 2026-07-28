@@ -333,6 +333,8 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costErpRepo := postgres.NewCostErpRepository(db)
 	costProductMasterRepo := postgres.NewCostProductMasterRepository(db)
 	costRouteRepo := postgres.NewCostRouteRepository(db)
+	// Read-only master projections consumed by PPC (CostMasterLookupService).
+	costMasterLookupRepo := postgres.NewCostMasterLookupRepository(db)
 	// Canonical Phase A (PRD §7.1) repositories.
 	costRequestTypeRepo := postgres.NewCostRequestTypeRepository(db)
 	costPaperTubeTypeRepo := postgres.NewCostPaperTubeTypeRepository(db)
@@ -383,6 +385,10 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	)
 
 	costRouteHandler, err := grpcdelivery.NewCostRouteHandler(costRouteRepo, costProductRequestRepo)
+	if err != nil {
+		return err
+	}
+	costMasterLookupHandler, err := grpcdelivery.NewCostMasterLookupHandler(costMasterLookupRepo)
 	if err != nil {
 		return err
 	}
@@ -681,6 +687,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		machineHandler, interminglingHandler, productGradeHandler, lookupMasterHandler, yarnLookupFillHandler,
 		oracleSyncHandler, rmGroupHandler, rmCostHandler,
 		costProductTypeHandler, costRmTypeHandler, costErpHandler, costProductMasterHandler, costRouteHandler,
+		costMasterLookupHandler,
 		costRequestTypeHandler, costPaperTubeTypeHandler, costProductRequestHandler,
 		costRequestCommentHandler, costAttachmentHandler,
 		costRoutingRuleHandler, costAuditLogHandler, costNotificationHandler,
@@ -814,6 +821,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	costErpHandler *grpcdelivery.CostErpHandler,
 	costProductMasterHandler *grpcdelivery.CostProductMasterHandler,
 	costRouteHandler *grpcdelivery.CostRouteHandler,
+	costMasterLookupHandler *grpcdelivery.CostMasterLookupHandler,
 	costRequestTypeHandler *grpcdelivery.CostRequestTypeHandler,
 	costPaperTubeTypeHandler *grpcdelivery.CostPaperTubeTypeHandler,
 	costProductRequestHandler *grpcdelivery.CostProductRequestHandler,
@@ -870,6 +878,8 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterCostErpLookupServiceServer(grpcServer.GRPCServer(), costErpHandler)
 	financev1.RegisterCostProductMasterServiceServer(grpcServer.GRPCServer(), costProductMasterHandler)
 	financev1.RegisterCostRouteServiceServer(grpcServer.GRPCServer(), costRouteHandler)
+	// Read-only master lookups consumed by the PPC service.
+	financev1.RegisterCostMasterLookupServiceServer(grpcServer.GRPCServer(), costMasterLookupHandler)
 	// Canonical Phase A services (PRD §7.1).
 	financev1.RegisterCostRequestTypeServiceServer(grpcServer.GRPCServer(), costRequestTypeHandler)
 	financev1.RegisterCostPaperTubeTypeServiceServer(grpcServer.GRPCServer(), costPaperTubeTypeHandler)

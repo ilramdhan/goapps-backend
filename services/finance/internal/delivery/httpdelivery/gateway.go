@@ -139,6 +139,9 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 	if err := financev1.RegisterCostRouteServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register CostRoute gateway: %w", err)
 	}
+	if err := financev1.RegisterCostMasterLookupServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostMasterLookup gateway: %w", err)
+	}
 	// Canonical Phase A gateway registrations (PRD §7.1).
 	if err := financev1.RegisterCostRequestTypeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register CostRequestType gateway: %w", err)
