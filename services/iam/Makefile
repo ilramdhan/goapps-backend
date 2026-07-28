@@ -123,7 +123,7 @@ tidy:
 	go mod tidy
 
 clean:
-	rm -rf bin coverage coverage.out
+	rm -rf bin coverage coverage.out tmp
 	@echo "Cleaned build artifacts"
 
 # =============================================================================
