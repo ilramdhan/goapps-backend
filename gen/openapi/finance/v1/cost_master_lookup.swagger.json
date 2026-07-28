@@ -1,0 +1,928 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_master_lookup.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostMasterLookupService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/cost-product-masters/resolve-by-erp-code": {
+      "post": {
+        "summary": "ResolveCostProductMasterByErpCode resolves (erp_item_code, shade_code)\npairs to product projections, reporting ambiguity explicitly.",
+        "operationId": "CostMasterLookupService_ResolveCostProductMasterByErpCode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResolveCostProductMasterByErpCodeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ResolveCostProductMasterByErpCode resolves ERP item/shade code pairs to CPM\nproducts. Used by PPC to link Orion sales-order staging rows to finance\nproduct masters (the two services own separate databases, so no SQL join is\navailable).",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ResolveCostProductMasterByErpCodeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostMasterLookupService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup/grades": {
+      "get": {
+        "summary": "ListProductGradesForPPC lists product-grade projections for pickers.",
+        "operationId": "CostMasterLookupService_ListProductGradesForPPC",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProductGradesForPPCResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Empty = all; otherwise filter by active/inactive.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostMasterLookupService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup/product-parameters": {
+      "get": {
+        "summary": "ListProductParametersForPPC lists mst_parameter definitions (by display_group).",
+        "operationId": "CostMasterLookupService_ListProductParametersForPPC",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProductParametersForPPCResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "displayGroup",
+            "description": "Filter by display_group (e.g. \"Machine\"). Empty = all groups.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Empty = all; otherwise filter by active/inactive.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostMasterLookupService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup/product-parameters/values/batch": {
+      "post": {
+        "summary": "BatchGetProductParameterValues returns per-product typed param values.",
+        "operationId": "CostMasterLookupService_BatchGetProductParameterValues",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BatchGetProductParameterValuesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BatchGetProductParameterValues returns cost_product_parameter values for a\nset of products (optionally narrowed to specific params). Used by PPC to\nresolve the product layer of the WO parameter chain.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BatchGetProductParameterValuesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostMasterLookupService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup/products": {
+      "get": {
+        "summary": "ListCostProductMasterForPPC lists product projections for pickers.",
+        "operationId": "CostMasterLookupService_ListCostProductMasterForPPC",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCostProductMasterForPPCResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "productTypeId",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "shadeCode",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Empty = all; otherwise filter by active/inactive.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostMasterLookupService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup/products/batch": {
+      "post": {
+        "summary": "BatchGetCostProductMaster resolves many product sys ids at once.",
+        "operationId": "CostMasterLookupService_BatchGetCostProductMaster",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BatchGetCostProductMasterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BatchGetCostProductMaster resolves many product sys ids at once (used at\nwrite time to validate + denormalize soft references).",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BatchGetCostProductMasterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostMasterLookupService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup/products/{productSysId}": {
+      "get": {
+        "summary": "GetCostProductMasterForPPC returns one product projection by sys id.",
+        "operationId": "CostMasterLookupService_GetCostProductMasterForPPC",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCostProductMasterForPPCResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostMasterLookupService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup/routes/{productSysId}": {
+      "get": {
+        "summary": "GetProductRouteForPPC returns the released route projection for a product.",
+        "operationId": "CostMasterLookupService_GetProductRouteForPPC",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetProductRouteForPPCResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostMasterLookupService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1BatchGetCostProductMasterRequest": {
+      "type": "object",
+      "properties": {
+        "productSysIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          }
+        }
+      },
+      "description": "BatchGetCostProductMaster resolves many product sys ids at once (used at\nwrite time to validate + denormalize soft references)."
+    },
+    "v1BatchGetCostProductMasterResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostMasterProduct"
+          }
+        }
+      }
+    },
+    "v1BatchGetProductParameterValuesRequest": {
+      "type": "object",
+      "properties": {
+        "productSysIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          }
+        },
+        "paramIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional param filter (UUIDs). Empty = all params for the products."
+        }
+      },
+      "description": "BatchGetProductParameterValues returns cost_product_parameter values for a\nset of products (optionally narrowed to specific params). Used by PPC to\nresolve the product layer of the WO parameter chain."
+    },
+    "v1BatchGetProductParameterValuesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostMasterProductParameterValue"
+          }
+        }
+      }
+    },
+    "v1CostMasterGrade": {
+      "type": "object",
+      "properties": {
+        "pgId": {
+          "type": "string"
+        },
+        "pgCode": {
+          "type": "string"
+        },
+        "pgName": {
+          "type": "string"
+        },
+        "pgGradeLabel": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "description": "CostMasterGrade is a lightweight product-grade projection."
+    },
+    "v1CostMasterProduct": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "productTypeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "productTypeCode": {
+          "type": "string"
+        },
+        "productTypeName": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        },
+        "shadeCode": {
+          "type": "string"
+        },
+        "shadeName": {
+          "type": "string"
+        },
+        "gradeCode": {
+          "type": "string"
+        },
+        "erpItemCode": {
+          "type": "string"
+        },
+        "erpGradeCode1": {
+          "type": "string"
+        },
+        "erpGradeCode2": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "productDenier": {
+          "type": "string",
+          "description": "Denier — EMPTY for now (Gap G-005: no denier on cost_product_master)."
+        }
+      },
+      "description": "CostMasterProduct is the lightweight product projection returned to PPC.\nValues mirror cost_product_master; decimals are transported as strings."
+    },
+    "v1CostMasterProductParameterDef": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string",
+          "title": "UUID"
+        },
+        "paramCode": {
+          "type": "string"
+        },
+        "paramName": {
+          "type": "string"
+        },
+        "paramShortName": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string",
+          "title": "NUMBER / TEXT / BOOLEAN"
+        },
+        "paramCategory": {
+          "type": "string",
+          "title": "INPUT / RATE / CALCULATED / MASTER_LOOKUP"
+        },
+        "displayGroup": {
+          "type": "string",
+          "description": "Spec / Machine / Grade / Packing / Cost / ..."
+        },
+        "lookupMasterCode": {
+          "type": "string",
+          "title": "enum combobox source (e.g. YARN_TYPE)"
+        },
+        "uomId": {
+          "type": "string",
+          "title": "UUID; empty if none"
+        },
+        "uomCode": {
+          "type": "string",
+          "title": "resolved from mst_uom join"
+        },
+        "defaultValue": {
+          "type": "string",
+          "title": "decimal-as-string (fallback layer 4)"
+        },
+        "minValue": {
+          "type": "string",
+          "title": "decimal-as-string"
+        },
+        "maxValue": {
+          "type": "string",
+          "title": "decimal-as-string"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "isRequiredForCosting": {
+          "type": "boolean"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "description": "CostMasterProductParameterDef is an mst_parameter definition projected for\nPPC. display_group selects the WO parameter set (e.g. \"Machine\")."
+    },
+    "v1CostMasterProductParameterValue": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paramId": {
+          "type": "string",
+          "title": "UUID"
+        },
+        "paramCode": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string",
+          "title": "NUMBER / TEXT / BOOLEAN"
+        },
+        "valueNumeric": {
+          "type": "string",
+          "title": "decimal-as-string"
+        },
+        "valueText": {
+          "type": "string"
+        },
+        "valueFlag": {
+          "type": "boolean"
+        }
+      },
+      "description": "CostMasterProductParameterValue is one cost_product_parameter row (a per-\nproduct typed value). Exactly one of value_numeric/value_text/value_flag is\nmeaningful per the referenced param's data_type."
+    },
+    "v1CostMasterRoute": {
+      "type": "object",
+      "properties": {
+        "headId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "routingStatus": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostMasterRouteStage"
+          }
+        }
+      },
+      "description": "CostMasterRoute is the released route projection for a product."
+    },
+    "v1CostMasterRouteRm": {
+      "type": "object",
+      "properties": {
+        "rmId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "seqId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmType": {
+          "type": "string",
+          "title": "PRODUCT / ITEM / GROUP"
+        },
+        "rmProductSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmItemCode": {
+          "type": "string"
+        },
+        "rmGroupCode": {
+          "type": "string"
+        },
+        "routeRmRatio": {
+          "type": "string",
+          "title": "decimal-as-string"
+        },
+        "subType": {
+          "type": "string"
+        }
+      },
+      "description": "CostMasterRouteRm is a lightweight RM edge projection for a route stage."
+    },
+    "v1CostMasterRouteStage": {
+      "type": "object",
+      "properties": {
+        "seqId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "routeSeq": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "routeName": {
+          "type": "string"
+        },
+        "routeItemCode": {
+          "type": "string"
+        },
+        "routeShadeCode": {
+          "type": "string"
+        },
+        "rms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostMasterRouteRm"
+          }
+        },
+        "stageProductSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "The product this stage produces (cost_route_seq.crs_product_sys_id).\nRequired to walk a flattened multi-level route: it is what ties a stage's\nRM edges to the downstream product they feed."
+        }
+      },
+      "description": "CostMasterRouteStage is a lightweight route stage projection."
+    },
+    "v1ErpCodePair": {
+      "type": "object",
+      "properties": {
+        "erpItemCode": {
+          "type": "string"
+        },
+        "shadeCode": {
+          "type": "string"
+        }
+      },
+      "description": "ErpCodePair is one (erp_item_code, shade_code) lookup key. Matching is\ntrimmed + case-insensitive on both components; shade_code may be empty."
+    },
+    "v1ErpCodeResolution": {
+      "type": "object",
+      "properties": {
+        "pair": {
+          "$ref": "#/definitions/v1ErpCodePair"
+        },
+        "matchCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "0 = no match, 1 = unique match, \u003e=2 = ambiguous."
+        },
+        "product": {
+          "$ref": "#/definitions/v1CostMasterProduct",
+          "description": "Populated only when match_count == 1."
+        }
+      },
+      "description": "ErpCodeResolution is the outcome for one requested pair."
+    },
+    "v1GetCostProductMasterForPPCResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostMasterProduct"
+        }
+      }
+    },
+    "v1GetProductRouteForPPCResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1CostMasterRoute"
+        }
+      }
+    },
+    "v1ListCostProductMasterForPPCResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostMasterProduct"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListProductGradesForPPCResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostMasterGrade"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListProductParametersForPPCResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostMasterProductParameterDef"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1ResolveCostProductMasterByErpCodeRequest": {
+      "type": "object",
+      "properties": {
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpCodePair"
+          }
+        }
+      },
+      "description": "ResolveCostProductMasterByErpCode resolves ERP item/shade code pairs to CPM\nproducts. Used by PPC to link Orion sales-order staging rows to finance\nproduct masters (the two services own separate databases, so no SQL join is\navailable)."
+    },
+    "v1ResolveCostProductMasterByErpCodeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "resolutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpCodeResolution"
+          }
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}
