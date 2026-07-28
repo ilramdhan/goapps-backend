@@ -1,0 +1,74 @@
+# PPC (Production Planning & Control) Service Configuration
+
+app:
+  name: ppc-service
+  version: "1.0.0"
+  env: development  # development, staging, production
+
+server:
+  grpc_port: 50053
+  http_port: 8082
+  grpc_timeout: 60s
+
+database:
+  host: localhost
+  port: 5436
+  user: ppc
+  password: ppc123
+  name: ppc_db
+  ssl_mode: disable
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+
+jwt:
+  access_token_secret: "dev-access-secret-change-in-production"
+  issuer: "goapps-iam"
+  # Shared secret for service-to-service auth. Override via PPC_JWT_SERVICE_SECRET env in prod.
+  service_secret: ""
+
+cors:
+  allowed_origins:
+    - "http://localhost:3000"
+  max_age: 300
+
+oracle:
+  host: localhost
+  port: 1521
+  service: ORCLPDB1
+  user: ""        # Override via ORACLE_USER env var
+  password: ""    # Override via ORACLE_PASSWORD env var
+  max_open_conns: 5
+  conn_max_lifetime: 10m
+
+etl:
+  interval_minutes: 15          # TXT production ETL cadence
+  so_interval_minutes: 30       # Sales-order staging ETL cadence
+  watermark_buffer_minutes: 5   # Safety buffer subtracted from max-seen watermark
+
+machine_sync:
+  interval: 24h                 # Machine sync cadence (finance + Oracle → ppc.machine)
+
+approval:
+  auto_approve_hours: 24        # Dual-approval auto-approve window
+
+tracing:
+  enabled: true
+  service_name: ppc-service
+  endpoint: localhost:4317
+  insecure: true
+
+logger:
+  level: debug   # debug, info, warn, error
+  format: console  # console, json
+  pretty_json: false
+
+finance_client:
+  host: localhost
+  port: 50051          # Override via FINANCE_GRPC_HOST / FINANCE_GRPC_PORT env
+  internal_service_token: "dev-service-secret-change-in-production"  # Override via PPC_INTERNAL_TOKEN — MUST match finance's jwt.service_secret (finance accepts x-service-secret OR x-internal-token)
+
+iam_client:
+  host: localhost
+  port: 50052          # Override via IAM_GRPC_HOST / IAM_GRPC_PORT env
+  internal_service_token: "dev-internal-token-2026"  # Override via PPC_INTERNAL_TOKEN — must match IAM's security.internal_service_token

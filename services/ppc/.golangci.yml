@@ -1,0 +1,93 @@
+# golangci-lint v2.3.0 configuration
+# https://golangci-lint.run/
+
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/mutugading/goapps-backend
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - dupl
+    - errname
+    - errorlint
+    - exhaustive
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - gosec
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - noctx
+    - prealloc
+    - predeclared
+    - revive
+    - unconvert
+    - unparam
+    - whitespace
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    gocyclo:
+      min-complexity: 15
+    gocognit:
+      min-complexity: 20
+    dupl:
+      threshold: 300
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gosec:
+      excludes:
+        - G104
+    misspell:
+      locale: US
+      ignore-rules:
+        - colourant
+        - colour
+        # "cancelled" is the deliberate British-spelled persisted value used by
+        # the cost job status (CANCELLED) and closed_substatus ('cancelled') —
+        # baked into DB CHECK constraints + proto enums, not a typo to fix.
+        - cancelled
+    nestif:
+      min-complexity: 4
+    exhaustive:
+      default-signifies-exhaustive: true
+  exclusions:
+    paths:
+      - gen/
+      - ".*_test\\.go$"
+    rules:
+      - path: _test\.go
+        linters:
+          - dupl
+          - gosec
+          - goconst
+          - gocognit
+
+output:
+  formats:
+    text:
+      path: stdout
