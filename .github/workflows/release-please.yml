@@ -17,6 +17,7 @@ jobs:
       finance--tag_name: ${{ steps.release.outputs['services/finance--tag_name'] }}
       iam--tag_name: ${{ steps.release.outputs['services/iam--tag_name'] }}
       hr--tag_name: ${{ steps.release.outputs['services/hr--tag_name'] }}
+      ppc--tag_name: ${{ steps.release.outputs['services/ppc--tag_name'] }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -130,3 +131,38 @@ jobs:
           tags: |
             ghcr.io/mutugading/hr-service:${{ steps.version.outputs.version }}
             ghcr.io/mutugading/hr-service:latest
+
+  build-ppc:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.ppc--tag_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          # Extract clean version from tag (e.g., "ppc-service/v0.1.0" -> "v0.1.0")
+          TAG="${{ needs.release-please.outputs.ppc--tag_name }}"
+          VERSION=$(echo "$TAG" | sed 's|.*/||')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Clean version: $VERSION"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ppc-service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/ppc/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/mutugading/ppc-service:${{ steps.version.outputs.version }}
+            ghcr.io/mutugading/ppc-service:latest
