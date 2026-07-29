@@ -55,6 +55,14 @@ func TestPlanningFlow_DemandToApprovedWO_Integration(t *testing.T) {
 	lotNo := seedLot(ctx, t, db, suffix)
 	groupID := machineGroupID(ctx, t, db, machineID)
 
+	// Deadlines are relative to now, so Month MUST be derived from each deadline
+	// rather than hardcoded: without MonthOverride the domain rejects any month
+	// that disagrees with its deadline (ErrMonthMismatch). A frozen "2026-09"
+	// here silently expires once now+30d rolls out of that month. The mismatch
+	// rule itself is covered by domain/planitem/timeline_test.go, not here.
+	demandDeadline := time.Now().Add(30 * 24 * time.Hour)
+	planDeadline := time.Now().Add(25 * 24 * time.Hour)
+
 	// Layer 1 — demand → confirm.
 	demandSvc := demandapp.NewService(postgres.NewDemandRepository(db), nil, nil)
 	dmd, err := demandSvc.Create(ctx, demandapp.CreateCommand{
@@ -63,9 +71,9 @@ func TestPlanningFlow_DemandToApprovedWO_Integration(t *testing.T) {
 		Source:          demanddomain.SourceManual,
 		CpmProductSysID: 999999,
 		QtyOriginal:     1000,
-		Deadline:        time.Now().Add(30 * 24 * time.Hour),
+		Deadline:        demandDeadline,
 		GradeReq:        demanddomain.GradeReqNone,
-		Month:           "2026-09",
+		Month:           demandDeadline.Format("2006-01"),
 		CreatedBy:       1,
 	})
 	require.NoError(t, err)
@@ -82,9 +90,9 @@ func TestPlanningFlow_DemandToApprovedWO_Integration(t *testing.T) {
 		Type:            planitemdomain.TypeFGDelivery,
 		DemandID:        &demandID,
 		QtyTarget:       1000,
-		Deadline:        time.Now().Add(25 * 24 * time.Hour),
+		Deadline:        planDeadline,
 		MachineGroupID:  groupID,
-		Month:           "2026-09",
+		Month:           planDeadline.Format("2006-01"),
 		CreatedBy:       1,
 	})
 	require.NoError(t, err)

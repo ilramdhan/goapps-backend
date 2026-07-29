@@ -14,6 +14,10 @@
         "services/hr": {
             "component": "hr-service",
             "changelog-path": "CHANGELOG.md"
+        },
+        "services/ppc": {
+            "component": "ppc-service",
+            "changelog-path": "CHANGELOG.md"
         }
     },
     "bump-minor-pre-major": true,

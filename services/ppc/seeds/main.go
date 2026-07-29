@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -324,7 +325,28 @@ func main() {
 	seedProductPPCConfig(ctx, db, cfg)
 	seedLookups(ctx, db)
 	seedShifts(ctx, db)
-	seedWorkflowDemo(ctx, db, cfg)
+
+	// The machine sync is master/reference data, not a demo fixture: it upserts the
+	// real TXT/SPG/TWT machines from finance + Oracle. It therefore sits OUTSIDE the
+	// demo gate below and runs in every environment. It also runs BEFORE the demo
+	// block because the demo chain resolves a machine and a machine group from the
+	// rows this sync populates.
+	syncMachinesForSeed(ctx, db, cfg)
+
+	// The workflow demo (and the demo lot it seeds) are development-only fixtures:
+	// they inject real business records — a confirmed demand, a plan item, a work
+	// order and a lot_master row — so they must never run against a staging or
+	// production database. Gated with the same condition IAM's seeder uses. The
+	// seed Job supplies APP_ENV from the namespace via fieldRef, so an empty value
+	// means a local run and is treated as development. The master/reference
+	// seeders above stay ungated: they must run in every environment.
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv == "development" || appEnv == "" {
+		seedWorkflowDemo(ctx, db, cfg)
+	} else {
+		log.Info().Str("app_env", appEnv).
+			Msg("Skipping workflow demo seed: demo fixtures run in development only")
+	}
 }
 
 func seedLookups(ctx context.Context, db *sql.DB) {
@@ -370,18 +392,15 @@ type demoChainInput struct {
 	crhVersion   int32
 }
 
-// seedWorkflowDemo runs the machine sync (finance + Oracle) then seeds ONE
-// realistic end-to-end workflow chain so a user can click through the full flow.
-// It is idempotent: the demand sentinel contract number guards re-runs, and every
-// supporting row uses ON CONFLICT / existence checks. Finance/Oracle being
-// unreachable degrades gracefully — the machine sync still runs and the chain is
+// seedWorkflowDemo seeds ONE realistic end-to-end workflow chain so a user can
+// click through the full flow. It expects the machine sync to have already run
+// (main calls syncMachinesForSeed first) because the chain resolves a machine and
+// a machine group from the machine table. It is idempotent: the demand sentinel
+// contract number guards re-runs, and every supporting row uses ON CONFLICT /
+// existence checks. Finance being unreachable degrades gracefully — the chain is
 // skipped rather than crashing the seeder.
 func seedWorkflowDemo(ctx context.Context, db *sql.DB, cfg *config.Config) {
 	log.Info().Msg("Seeding end-to-end workflow demo")
-
-	// Populate the machine table from finance (+ Oracle when reachable). This runs
-	// on every seed and is upsert-idempotent.
-	syncMachinesForSeed(ctx, db, cfg)
 
 	if workflowDemoExists(ctx, db) {
 		fmt.Printf("\nworkflow demo already seeded (contract %s), skipping chain\n", demoContractNo)

@@ -7,7 +7,18 @@
 
 ## 1. Overview
 
-Go gRPC microservice monorepo using **Clean Architecture / DDD**. Contains two services (Finance and IAM) that share generated protobuf code from `goapps-shared-proto`.
+Go gRPC microservice monorepo using **Clean Architecture / DDD**. Each directory under `services/` is an independent Go module sharing generated protobuf code from `goapps-shared-proto`:
+
+| `services/` | What |
+|---|---|
+| `finance` | Finance / costing gRPC service (reference implementation) |
+| `iam` | Identity, access management, notifications, chat |
+| `ppc` | Production Planning & Control (own `ppc_db`, gRPC 50053 / HTTP 8082) |
+| `finance-cost-orchestrator` | Calc-engine DAG planner + wave dispatcher (singleton) |
+| `finance-cost-worker` | RabbitMQ → gRPC bridge for the calc engine (HPA-scaled) |
+| `shared` | Shared packages (`excel`, `workflow`, …) imported by the services above |
+
+Each service needs its own `.github/workflows/<service>.yml`, or no image is ever built for it. Note `release-please-config.json` and `.release-please-manifest.json` also list a `services/hr` component with a `build-hr` job in `release-please.yml`, but **no `services/hr/` directory exists on disk** — phantom entry, unresolved.
 
 | | |
 |---|---|
