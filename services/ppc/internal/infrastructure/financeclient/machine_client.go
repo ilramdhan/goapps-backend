@@ -85,6 +85,9 @@ func (c *MachineClient) ListAllMachines(ctx context.Context) ([]*financev1.Machi
 		if err != nil {
 			return nil, fmt.Errorf("list machines page %d: %w", page, err)
 		}
+		if baseErr := checkBase(resp.GetBase(), fmt.Sprintf("list machines page %d", page)); baseErr != nil {
+			return nil, baseErr
+		}
 
 		data := resp.GetData()
 		all = append(all, data...)
