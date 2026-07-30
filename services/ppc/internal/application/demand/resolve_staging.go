@@ -81,6 +81,17 @@ func (s *Service) resolveBatch(ctx context.Context, pairs []demanddomain.Staging
 		}
 		return 0, err
 	}
+	// Finance answers one resolution per requested pair. Getting none back for a
+	// non-empty request means the pass did no work at all, which is a symptom of
+	// the resolver being wrong rather than of the master being incomplete — an
+	// unmatched pair comes back as NOT_FOUND, not as a missing entry. Saying so
+	// out loud keeps a silent finance-side refusal from reading as "no matches".
+	if len(resolutions) == 0 {
+		log.Warn().
+			Int("pairs", len(pairs)).
+			Msg("staging product resolution: finance returned no resolutions for a non-empty request, leaving rows unresolved")
+		return 0, nil
+	}
 	for _, r := range resolutions {
 		countResolution(result, r.MatchStatus())
 	}
