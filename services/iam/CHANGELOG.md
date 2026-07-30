@@ -1,5 +1,63 @@
 # Changelog
 
+## [0.16.0](https://github.com/mutugading/goapps-backend/compare/iam-service/v0.15.1...iam-service/v0.16.0) (2026-07-30)
+
+
+### Features
+
+* **cost-erp:** add ERP item CRUD — domain, repository, gRPC handler, migrations ([25671e2](https://github.com/mutugading/goapps-backend/commit/25671e2ac2104988a6f0fae334a8171bb5f4b362))
+* **email:** reduce social icon display size from 36px to 30px ([8d6131d](https://github.com/mutugading/goapps-backend/commit/8d6131daf85659b56812cf1a7377121730950221))
+* **email:** replace pill buttons with hosted PNG social icons in footer ([a5e70f2](https://github.com/mutugading/goapps-backend/commit/a5e70f2c32684af2125193be628d45dc6f5f9d7b))
+* **finance:** audit emit on product master/param mutations; calc schedule menu ([a241f9e](https://github.com/mutugading/goapps-backend/commit/a241f9e20fda2a6a2382fe696cd797b4b3b2af71))
+* **finance:** param value override with audit trail; lock enforces fill approval; confirm requires locked route ([8d50622](https://github.com/mutugading/goapps-backend/commit/8d50622660a76b886221ba0ebf12605e505cd605))
+* **finance:** product request classification + workflow revamp (backend) ([3ce2f1a](https://github.com/mutugading/goapps-backend/commit/3ce2f1a57127a3601bbf12352505c1f9aa00064b))
+* **iam:** add CheckPassword method, VerifyPassword gRPC handler, migration 000055 ([ce31daf](https://github.com/mutugading/goapps-backend/commit/ce31daf443c65d47353ccd1f6c6364ea78a2f65d))
+* **iam:** add menu_id column to mst_permission ([f26f704](https://github.com/mutugading/goapps-backend/commit/f26f7043af43903dc29b9f213b48078152597105))
+* **iam:** add offline email notifications for chat messages ([23751c6](https://github.com/mutugading/goapps-backend/commit/23751c6a2d9a992adc41a2206dd0b9b4677b51fd))
+* **iam:** add real-time chat system + AI chatbot backend ([8bf0415](https://github.com/mutugading/goapps-backend/commit/8bf041587d1577f46a09238f9850082ebffe44ac))
+* **iam:** backfill permission menu_id from RBAC audit (275 mapped, 4 global) ([7c64a0a](https://github.com/mutugading/goapps-backend/commit/7c64a0a56391d01e71e0a7fe91d45b6fe9a9400f))
+* **iam:** chat clear-history and file/image attachments ([842f051](https://github.com/mutugading/goapps-backend/commit/842f0518e64648bec2dec201fc013813f217f655))
+* **iam:** permission repository persists menu_id, joins menu_title, ListByMenu ([792cc77](https://github.com/mutugading/goapps-backend/commit/792cc77f981db54cb9ae7cd92d54d70304e05140))
+* **iam:** read CHAT_MASTER_KEY from Viper config (persistent across restarts) ([12dd521](https://github.com/mutugading/goapps-backend/commit/12dd5215bf29ab94a389627cd19c3d9973e0ac9c))
+* **iam:** Redis Streams + user info resolver for production-grade chat ([85bfe0d](https://github.com/mutugading/goapps-backend/commit/85bfe0d674b06d3de0ad63a6e59813691e060731))
+* **iam:** require permission description; thread menu_id through update + list filter ([3c65162](https://github.com/mutugading/goapps-backend/commit/3c65162b3ec37805d58ad9957a82517622737d25))
+* **iam:** seed company mappings, employee levels and groups from legacy data ([75df047](https://github.com/mutugading/goapps-backend/commit/75df047338916f8a70973b15e622ed2be9906862))
+* **iam:** seed company mappings, employee levels and groups from legacy data ([fc0624b](https://github.com/mutugading/goapps-backend/commit/fc0624bf07a3a53786fe8b3198e33a3a8a1f9f80))
+* **iam:** seed MB batch costing roles, permissions and menus ([1845cc7](https://github.com/mutugading/goapps-backend/commit/1845cc702435f181895f6c6ff67fdab0611967dd))
+* **iam:** seed PPC roles, permissions and menus ([180ec99](https://github.com/mutugading/goapps-backend/commit/180ec99a8f3f78bcf25cd3f4b61a39bb33ab2794))
+* **iam:** seed Yarn Master menus and 24 permissions (migration 000057) ([f9a9333](https://github.com/mutugading/goapps-backend/commit/f9a9333fc917e6fc4bd34f1c049389f6c43204f7))
+* **iam:** sender name in broadcasts + email with sender context ([a2f2081](https://github.com/mutugading/goapps-backend/commit/a2f20817aa08c0530168f88fcc257959cf8d2d56))
+* Implement End-to-End Master Batch (MB) Costing Suite & Workflow ([14caf6f](https://github.com/mutugading/goapps-backend/commit/14caf6f8392425bdadd858450ba98eb32a8faf24))
+* **ppc:** add the Production Planning & Control service ([b8be505](https://github.com/mutugading/goapps-backend/commit/b8be5053c61fa8e4d77e714d1a7b6c81f1fe4053))
+
+
+### Bug Fixes
+
+* **bulk-export:** correct download filename and add import-jobs menu seed ([b9fe944](https://github.com/mutugading/goapps-backend/commit/b9fe944d38016e34454c8127f4be3cd6c69c97f2))
+* **iam:** align route-unlock permission migration with current mst_permission schema ([85f8482](https://github.com/mutugading/goapps-backend/commit/85f8482699c93b3f478bc084446e0ace9e74c980))
+* **iam:** dispatch email to offline chat recipients via EmailDispatcher ([84e62d5](https://github.com/mutugading/goapps-backend/commit/84e62d508cc5a3c147ed184dfe87b41ba6cecc3c))
+* **iam:** fix migration 000076 menu hierarchy and permission schema ([b8cdaae](https://github.com/mutugading/goapps-backend/commit/b8cdaaec36662e17871213eb0469f957eeb5f06f))
+* **iam:** GetPermissionsByService returns role_count per permission ([11f3646](https://github.com/mutugading/goapps-backend/commit/11f364682f22e4ecbb03ac0c4ef7d77d55fa0ae9))
+* **iam:** GetUserRolesAndPermissions returns true direct grants separately ([fe7e28a](https://github.com/mutugading/goapps-backend/commit/fe7e28a9af813c565db6861bc47394a9a50f8363))
+* **iam:** graceful handling of master key mismatch + log unhandled errors ([54e778f](https://github.com/mutugading/goapps-backend/commit/54e778f491bc3839d9c9f19810a9190907182c53))
+* **iam:** hide cleared history from conversation preview and unread count ([10a8785](https://github.com/mutugading/goapps-backend/commit/10a878564b3a5210c3be7885d990b1b1e7a4dc79))
+* **iam:** populate SenderName in ListMessages response ([5030784](https://github.com/mutugading/goapps-backend/commit/5030784825cab4f258e2c8284a0650ae77bf7464))
+* **iam:** populate StreamChatEvents proto payload from broadcaster events ([b3928cc](https://github.com/mutugading/goapps-backend/commit/b3928cca433174e8b9dd136dda8a84b84499251f))
+* **iam:** read receipts + lastMessage/unreadCount + edit history + email CTA ([3cd8b02](https://github.com/mutugading/goapps-backend/commit/3cd8b020c9a8811e120394e4fd52520735e89c07))
+* **iam:** register ChatService + PresenceService in permission interceptor ([9d3ae52](https://github.com/mutugading/goapps-backend/commit/9d3ae524908b9573bb7df8f424dcbe7214076e90))
+* **iam:** resolve golangci-lint v2.3.0 findings in chat package ([c49da07](https://github.com/mutugading/goapps-backend/commit/c49da07002e2861a5033fb91940dec9a8d848146))
+* **import:** Async Cost Data Import Engine, CPM Extensions & Email Assets ([780cb08](https://github.com/mutugading/goapps-backend/commit/780cb08c30cb387f0922eda609cbd288f13c4d8a))
+* **lint:** resolve golangci-lint v2 failures in finance and IAM services ([33aa588](https://github.com/mutugading/goapps-backend/commit/33aa5885e6fb89d3cc72ef61c6e187853cd27db7))
+* **lint:** resolve golangci-lint v2 issues across finance and iam ([393ee82](https://github.com/mutugading/goapps-backend/commit/393ee82c221a0ed06e01726d4a2ffb18d4238e55))
+* **notifications:** Multi-replica SSE via Redis Pub/Sub & Email Client Compatibility ([#120](https://github.com/mutugading/goapps-backend/issues/120)) ([ad4c9e4](https://github.com/mutugading/goapps-backend/commit/ad4c9e43323501e8b023fa619d04b75212bae410))
+* Product Request Workflow Revamp, Parameter Approval Visibility, and Route Graph Enhancements ([3f2bb19](https://github.com/mutugading/goapps-backend/commit/3f2bb19348a9d6669a7e5b260b77162b9661658c))
+* Route Lock Enforcement, Param Override Audit Trail, and IAM Password Verification ([d526e9d](https://github.com/mutugading/goapps-backend/commit/d526e9d8bdfa95e6562786d47450f1e768e52885))
+
+
+### Reverts
+
+* **cost-erp:** remove ERP item CRUD from backend; add legacy flex fields to product master pipeline ([cc4b4bf](https://github.com/mutugading/goapps-backend/commit/cc4b4bfd333b8c8a58d9918641d02d12868f6406))
+
 ## [0.15.1](https://github.com/mutugading/goapps-backend/compare/iam-service/v0.15.0...iam-service/v0.15.1) (2026-06-12)
 
 
