@@ -32,6 +32,7 @@ func TestCollectorsRegistered(t *testing.T) {
 	WorkerActiveChunks.WithLabelValues("test-worker").Set(0)
 	JobQueueDepth.Set(0)
 	DBPoolInUse.WithLabelValues("finance").Set(0)
+	DBPoolMaxOpen.WithLabelValues("finance").Set(0)
 	EvalCacheEntries.Set(0)
 	EvalCacheHitRatio.Set(0)
 	RecordEvalCacheHit()
@@ -60,6 +61,7 @@ func TestCollectorsRegistered(t *testing.T) {
 		"finance_cost_worker_active_chunks",
 		"finance_cost_job_queue_depth",
 		"finance_cost_db_pool_in_use",
+		"finance_cost_db_pool_max_open",
 		"finance_cost_evalcache_entries",
 		"finance_cost_evalcache_hit_ratio",
 	}
@@ -72,7 +74,7 @@ func TestCollectorsRegistered(t *testing.T) {
 	if len(missing) > 0 {
 		t.Fatalf("missing collectors: %s", strings.Join(missing, ", "))
 	}
-	if len(want) < 15 {
-		t.Fatalf("expected at least 15 finance_cost_* series, taxonomy: %d", len(want))
+	if len(want) < 16 {
+		t.Fatalf("expected at least 16 finance_cost_* series, taxonomy: %d", len(want))
 	}
 }
