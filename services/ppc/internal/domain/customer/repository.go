@@ -29,6 +29,17 @@ type Repository interface {
 	// ResolveCodes maps normalized customer codes to customer ids. Codes with no
 	// match are simply absent from the result — the caller decides what that means.
 	ResolveCodes(ctx context.Context, codes []string) (map[string]int64, error)
+
+	// ResolveIDs maps customer ids to their code and name, for display
+	// decoration of rows that store only the id. Ids with no match are absent.
+	ResolveIDs(ctx context.Context, ids []int64) (map[int64]Label, error)
+}
+
+// Label is the human-readable identity of a customer, used to decorate rows
+// that carry only a customer id.
+type Label struct {
+	Code string
+	Name string
 }
 
 // UpsertOutcome reports what a sync upsert did to one row.

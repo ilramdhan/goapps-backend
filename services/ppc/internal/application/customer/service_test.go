@@ -113,6 +113,20 @@ func (r *fakeRepo) ResolveCodes(_ context.Context, codes []string) (map[string]i
 	return out, r.err
 }
 
+func (r *fakeRepo) ResolveIDs(_ context.Context, ids []int64) (map[int64]customerdomain.Label, error) {
+	out := map[int64]customerdomain.Label{}
+	wanted := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		wanted[id] = struct{}{}
+	}
+	for _, c := range r.byCode {
+		if _, ok := wanted[c.ID()]; ok {
+			out[c.ID()] = customerdomain.Label{Code: c.Code(), Name: c.Name()}
+		}
+	}
+	return out, r.err
+}
+
 // fakeSource replays scripted Oracle rows.
 type fakeSource struct {
 	rows []customerdomain.Sourced

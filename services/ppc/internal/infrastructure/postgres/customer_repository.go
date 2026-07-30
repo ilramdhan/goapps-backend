@@ -301,6 +301,58 @@ func (r *CustomerRepository) ResolveCodes(ctx context.Context, codes []string) (
 	return result, nil
 }
 
+// ResolveIDs maps customer ids to their code and name in one round trip, for
+// display decoration. Unmatched ids are absent from the map rather than
+// reported as an error — a demand may reference a customer that has since gone.
+func (r *CustomerRepository) ResolveIDs(ctx context.Context, ids []int64) (map[int64]customer.Label, error) {
+	result := make(map[int64]customer.Label, len(ids))
+	distinct := make([]int64, 0, len(ids))
+	seen := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		distinct = append(distinct, id)
+	}
+	if len(distinct) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, len(distinct))
+	args := make([]interface{}, len(distinct))
+	for i, id := range distinct {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := `SELECT customer_id, customer_code, customer_name FROM customer
+		WHERE customer_id IN (` + strings.Join(placeholders, ", ") + `)`
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve customer ids: %w", err)
+	}
+	defer closeRows(rows)
+
+	for rows.Next() {
+		var (
+			id    int64
+			label customer.Label
+		)
+		if err := rows.Scan(&id, &label.Code, &label.Name); err != nil {
+			return nil, fmt.Errorf("failed to scan customer label: %w", err)
+		}
+		result[id] = label
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating customer label rows: %w", err)
+	}
+	return result, nil
+}
+
 func (r *CustomerRepository) query(ctx context.Context, query string, args ...interface{}) ([]*customer.Customer, error) {
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {

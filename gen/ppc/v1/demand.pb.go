@@ -796,7 +796,14 @@ type Demand struct {
 	// from sales_order_staging via sos_ref. Empty for a manually-created demand.
 	// It is the only human-readable identity an unlinked demand has, so the UI
 	// can name the row instead of rendering a placeholder dash.
-	OrionItemCode string        `protobuf:"bytes,32,opt,name=orion_item_code,json=orionItemCode,proto3" json:"orion_item_code,omitempty"`
+	OrionItemCode string `protobuf:"bytes,32,opt,name=orion_item_code,json=orionItemCode,proto3" json:"orion_item_code,omitempty"`
+	// Customer code/name resolved from the PPC customer master via customer_id.
+	// Denormalized for UI the same way product_code/product_name are: the demand
+	// list and detail must name the customer without a second round trip, and an
+	// id alone is never shown to a planner. Empty when customer_id is unset or
+	// the master row has since gone.
+	CustomerCode  string        `protobuf:"bytes,33,opt,name=customer_code,json=customerCode,proto3" json:"customer_code,omitempty"`
+	CustomerName  string        `protobuf:"bytes,34,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
 	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1045,6 +1052,20 @@ func (x *Demand) GetProductLinkReason() string {
 func (x *Demand) GetOrionItemCode() string {
 	if x != nil {
 		return x.OrionItemCode
+	}
+	return ""
+}
+
+func (x *Demand) GetCustomerCode() string {
+	if x != nil {
+		return x.CustomerCode
+	}
+	return ""
+}
+
+func (x *Demand) GetCustomerName() string {
+	if x != nil {
+		return x.CustomerName
 	}
 	return ""
 }
@@ -2633,7 +2654,7 @@ const file_ppc_v1_demand_proto_rawDesc = "" +
 	"\x12cpm_product_sys_id\x18\x02 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x0fcpmProductSysId\"w\n" +
 	"\x19SetStagingProductResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
-	"\x04data\x18\x02 \x01(\v2\x19.ppc.v1.SalesOrderStagingR\x04data\"\xb2\t\n" +
+	"\x04data\x18\x02 \x01(\v2\x19.ppc.v1.SalesOrderStagingR\x04data\"\xfc\t\n" +
 	"\x06Demand\x12\x1b\n" +
 	"\tdemand_id\x18\x01 \x01(\x03R\bdemandId\x12&\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x12.ppc.v1.DemandTypeR\x04type\x120\n" +
@@ -2672,7 +2693,9 @@ const file_ppc_v1_demand_proto_rawDesc = "" +
 	"\n" +
 	"shade_name\x18\x1e \x01(\tR\tshadeName\x12.\n" +
 	"\x13product_link_reason\x18\x1f \x01(\tR\x11productLinkReason\x12&\n" +
-	"\x0forion_item_code\x18  \x01(\tR\rorionItemCode\x12*\n" +
+	"\x0forion_item_code\x18  \x01(\tR\rorionItemCode\x12#\n" +
+	"\rcustomer_code\x18! \x01(\tR\fcustomerCode\x12#\n" +
+	"\rcustomer_name\x18\" \x01(\tR\fcustomerName\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xac\b\n" +
 	"\x13CreateDemandRequest\x120\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x12.ppc.v1.DemandTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x04type\x120\n" +

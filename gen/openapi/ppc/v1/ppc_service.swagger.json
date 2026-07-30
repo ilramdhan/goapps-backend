@@ -7654,6 +7654,13 @@
           "type": "string",
           "description": "Orion item code of the staging row this demand was pulled from, joined\nfrom sales_order_staging via sos_ref. Empty for a manually-created demand.\nIt is the only human-readable identity an unlinked demand has, so the UI\ncan name the row instead of rendering a placeholder dash."
         },
+        "customerCode": {
+          "type": "string",
+          "description": "Customer code/name resolved from the PPC customer master via customer_id.\nDenormalized for UI the same way product_code/product_name are: the demand\nlist and detail must name the customer without a second round trip, and an\nid alone is never shown to a planner. Empty when customer_id is unset or\nthe master row has since gone."
+        },
+        "customerName": {
+          "type": "string"
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo"
         }

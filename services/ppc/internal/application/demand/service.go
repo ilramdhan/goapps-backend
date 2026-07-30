@@ -7,6 +7,7 @@ import (
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/ppc/internal/application/notification"
+	customerdomain "github.com/mutugading/goapps-backend/services/ppc/internal/domain/customer"
 	demanddomain "github.com/mutugading/goapps-backend/services/ppc/internal/domain/demand"
 	"github.com/mutugading/goapps-backend/services/ppc/pkg/safeconv"
 )
@@ -81,6 +82,47 @@ func (s *Service) LookupOrionItemCodes(ctx context.Context, items []*demanddomai
 // then carry no customer).
 type CustomerResolver interface {
 	ResolveCodes(ctx context.Context, codes []string) (map[string]int64, error)
+	// ResolveIDs maps customer ids back to code/name, for display decoration of
+	// demands that store only the id.
+	ResolveIDs(ctx context.Context, ids []int64) (map[int64]customerdomain.Label, error)
+}
+
+// LookupCustomers resolves the customer code/name behind each given demand,
+// keyed by demand id. Demands with no customer are absent from the map.
+//
+// Like the product and Orion-code lookups this is display decoration, so it
+// degrades rather than fails: no resolver or a lookup error yields an empty map
+// and the caller renders the demand without a customer name.
+func (s *Service) LookupCustomers(ctx context.Context, items []*demanddomain.Demand) map[int64]customerdomain.Label {
+	byDemand := make(map[int64]customerdomain.Label, len(items))
+	if s.customers == nil {
+		return byDemand
+	}
+	ids := make([]int64, 0, len(items))
+	customerToDemand := make(map[int64][]int64, len(items))
+	for _, e := range items {
+		cid := e.CustomerID()
+		if cid == nil || *cid == 0 {
+			continue
+		}
+		if _, seen := customerToDemand[*cid]; !seen {
+			ids = append(ids, *cid)
+		}
+		customerToDemand[*cid] = append(customerToDemand[*cid], e.ID())
+	}
+	if len(ids) == 0 {
+		return byDemand
+	}
+	labels, err := s.customers.ResolveIDs(ctx, ids)
+	if err != nil {
+		return byDemand
+	}
+	for customerID, label := range labels {
+		for _, demandID := range customerToDemand[customerID] {
+			byDemand[demandID] = label
+		}
+	}
+	return byDemand
 }
 
 // Service bundles demand usecases over the demand repository.

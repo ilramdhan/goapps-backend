@@ -153,3 +153,9 @@ func (s *Service) SyncFromOracle(ctx context.Context) (SyncResult, error) {
 func (s *Service) ResolveCodes(ctx context.Context, codes []string) (map[string]int64, error) {
 	return s.repo.ResolveCodes(ctx, codes)
 }
+
+// ResolveIDs maps customer ids to code/name. Used to decorate demands, which
+// store only the id, with the customer identity the UI actually shows.
+func (s *Service) ResolveIDs(ctx context.Context, ids []int64) (map[int64]customerdomain.Label, error) {
+	return s.repo.ResolveIDs(ctx, ids)
+}
