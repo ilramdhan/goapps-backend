@@ -9,6 +9,7 @@ import (
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	ppcv1 "github.com/mutugading/goapps-backend/gen/ppc/v1"
 	demandapp "github.com/mutugading/goapps-backend/services/ppc/internal/application/demand"
+	customerdomain "github.com/mutugading/goapps-backend/services/ppc/internal/domain/customer"
 	demanddomain "github.com/mutugading/goapps-backend/services/ppc/internal/domain/demand"
 	"github.com/mutugading/goapps-backend/services/ppc/pkg/safeconv"
 )
@@ -364,11 +365,10 @@ func demandSysIDs(items []*demanddomain.Demand) []int64 {
 // code/name for the whole page in one batched finance call. ppc_db and
 // finance_db are separate databases, so this cannot be a join.
 func (h *demandHandler) decorateDemands(ctx context.Context, items []*demanddomain.Demand) []*ppcv1.Demand {
-	products := h.svc.LookupProducts(ctx, demandSysIDs(items))
-	orionCodes := h.svc.LookupOrionItemCodes(ctx, items)
+	labels := h.lookupDemandLabels(ctx, items)
 	data := make([]*ppcv1.Demand, len(items))
 	for i, e := range items {
-		data[i] = demandToProto(e, products, orionCodes)
+		data[i] = demandToProto(e, labels)
 	}
 	return data
 }
@@ -376,15 +376,28 @@ func (h *demandHandler) decorateDemands(ctx context.Context, items []*demanddoma
 // decorateDemand maps a single demand to proto with its product labels.
 func (h *demandHandler) decorateDemand(ctx context.Context, e *demanddomain.Demand) *ppcv1.Demand {
 	items := []*demanddomain.Demand{e}
-	products := h.svc.LookupProducts(ctx, demandSysIDs(items))
-	return demandToProto(e, products, h.svc.LookupOrionItemCodes(ctx, items))
+	return demandToProto(e, h.lookupDemandLabels(ctx, items))
 }
 
-func demandToProto(
-	e *demanddomain.Demand,
-	products map[int64]*financev1.CostMasterProduct,
-	orionCodes map[int64]string,
-) *ppcv1.Demand {
+// demandLabels holds the display decoration resolved for one page of demands:
+// the finance product master, the Orion item code behind the staging row, and
+// the PPC customer master identity. All three are batched per page and all
+// three degrade to empty rather than failing the read.
+type demandLabels struct {
+	products   map[int64]*financev1.CostMasterProduct // keyed by cpm product sys id
+	orionCodes map[int64]string                       // keyed by demand id
+	customers  map[int64]customerdomain.Label         // keyed by demand id
+}
+
+func (h *demandHandler) lookupDemandLabels(ctx context.Context, items []*demanddomain.Demand) demandLabels {
+	return demandLabels{
+		products:   h.svc.LookupProducts(ctx, demandSysIDs(items)),
+		orionCodes: h.svc.LookupOrionItemCodes(ctx, items),
+		customers:  h.svc.LookupCustomers(ctx, items),
+	}
+}
+
+func demandToProto(e *demanddomain.Demand, labels demandLabels) *ppcv1.Demand {
 	proto := &ppcv1.Demand{
 		DemandId:          e.ID(),
 		Type:              stringToDemandType(e.Type()),
@@ -408,7 +421,7 @@ func demandToProto(
 		ShadeCode:         e.ShadeCode(),
 		ShadeName:         e.ShadeName(),
 		ProductLinkReason: e.ProductLinkReason(),
-		OrionItemCode:     orionCodes[e.ID()],
+		OrionItemCode:     labels.orionCodes[e.ID()],
 		Audit:             &commonv1.AuditInfo{CreatedBy: formatInt64(e.CreatedBy()), CreatedAt: e.CreatedAt().Format(time.RFC3339)},
 	}
 	if e.CustomerID() != nil {
@@ -429,9 +442,13 @@ func demandToProto(
 	if e.ConfirmedAt() != nil {
 		proto.ConfirmedAt = e.ConfirmedAt().Format(time.RFC3339)
 	}
-	if p, ok := products[e.CpmProductSysID()]; ok {
+	if p, ok := labels.products[e.CpmProductSysID()]; ok {
 		proto.ProductCode = p.GetProductCode()
 		proto.ProductName = p.GetProductName()
+	}
+	if c, ok := labels.customers[e.ID()]; ok {
+		proto.CustomerCode = c.Code
+		proto.CustomerName = c.Name
 	}
 	return proto
 }
