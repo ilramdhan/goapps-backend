@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/mutugading/goapps-backend/compare/ppc-service/v0.2.0...ppc-service/v0.3.0) (2026-07-30)
+
+
+### Features
+
+* **ppc:** decorate demands with resolved customer code/name ([e69716b](https://github.com/mutugading/goapps-backend/commit/e69716b31093298efed40278ae15bd5a0457d981))
+* **ppc:** Decorate Demands with Resolved Customer Details & Refactor Labels ([04d4cd2](https://github.com/mutugading/goapps-backend/commit/04d4cd2fa0061a4d30ff86cba56e15bd49064f24))
+
 ## [0.2.0](https://github.com/mutugading/goapps-backend/compare/ppc-service/v0.1.0...ppc-service/v0.2.0) (2026-07-30)
 
 
