@@ -99,7 +99,9 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				metrics.DBPoolInUse.WithLabelValues("finance").Set(float64(db.Stats().InUse))
+				stats := db.Stats()
+				metrics.DBPoolInUse.WithLabelValues("finance").Set(float64(stats.InUse))
+				metrics.DBPoolMaxOpen.WithLabelValues("finance").Set(float64(stats.MaxOpenConnections))
 			}
 		}
 	}()

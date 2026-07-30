@@ -34,7 +34,8 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance-cost-orchestrator/internal/orchestrator"
 )
 
-// scrapeDBPool periodically writes db.Stats().InUse into the gauge.
+// scrapeDBPool periodically writes the in-use connection count and the
+// configured pool capacity into their gauges.
 func scrapeDBPool(ctx context.Context, db *sql.DB, service string) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
@@ -43,7 +44,9 @@ func scrapeDBPool(ctx context.Context, db *sql.DB, service string) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			metrics.DBPoolInUse.WithLabelValues(service).Set(float64(db.Stats().InUse))
+			stats := db.Stats()
+			metrics.DBPoolInUse.WithLabelValues(service).Set(float64(stats.InUse))
+			metrics.DBPoolMaxOpen.WithLabelValues(service).Set(float64(stats.MaxOpenConnections))
 		}
 	}
 }

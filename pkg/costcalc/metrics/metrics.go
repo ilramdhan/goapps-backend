@@ -144,11 +144,23 @@ var (
 	})
 
 	// DBPoolInUse reports database connections currently in use, labelled by
-	// service (finance / orchestrator / worker).
+	// service (finance / orchestrator / worker). This is an absolute count, not
+	// a ratio — divide by DBPoolMaxOpen to get utilization.
 	DBPoolInUse = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "finance_cost_db_pool_in_use",
 			Help: "Database connections currently in use.",
+		},
+		[]string{"service"},
+	)
+
+	// DBPoolMaxOpen reports the configured pool capacity, labelled by service.
+	// It is the denominator for pool-utilization alerting, so the alert rule
+	// stays correct when max_open_conns is retuned per service or environment.
+	DBPoolMaxOpen = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "finance_cost_db_pool_max_open",
+			Help: "Configured maximum open database connections.",
 		},
 		[]string{"service"},
 	)
