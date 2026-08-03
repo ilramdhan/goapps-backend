@@ -46,14 +46,31 @@ type DatabaseConfig struct {
 	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
 	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
+	// BinaryParameters makes lib/pq send Parse+Bind+Describe+Execute+Sync as ONE
+	// packet with an unnamed statement, instead of a separate Parse round trip
+	// followed by a later Bind. This is REQUIRED when connecting through
+	// PgBouncer in transaction pooling mode: there, the pooler may hand the
+	// server connection to another client in between the Parse and the Bind, so
+	// the unnamed statement "" that gets bound belongs to a different query.
+	// Symptoms of running without it are cross-wired parameters:
+	//   pq: unnamed prepared statement does not exist (26000)
+	//   pq: bind message supplies 4 parameters, but prepared statement "" requires 2 (08P01)
+	//   pq: invalid input syntax for type bigint: "DISPATCHED" (22P02)
+	// Defaults to true; set DATABASE_BINARY_PARAMETERS=false only when talking
+	// straight to PostgreSQL and you specifically want the extended protocol.
+	BinaryParameters bool `mapstructure:"binary_parameters"`
 }
 
 // ConnectionString returns the PostgreSQL connection string.
 func (c *DatabaseConfig) ConnectionString() string {
-	return fmt.Sprintf(
+	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.Name, c.SSLMode,
 	)
+	if c.BinaryParameters {
+		dsn += " binary_parameters=yes"
+	}
+	return dsn
 }
 
 // RabbitMQConfig holds RabbitMQ connection configuration.
@@ -65,11 +82,11 @@ type RabbitMQConfig struct {
 
 // OrchestratorConfig holds orchestrator-specific tuning knobs.
 type OrchestratorConfig struct {
-	ChunkSize         int           `mapstructure:"chunk_size"`
-	MaxChunkSize      int           `mapstructure:"max_chunk_size"`
-	CronSchedule      string        `mapstructure:"cron_schedule"`
-	CronTimezone      string        `mapstructure:"cron_timezone"`
-	StuckChunkTimeout time.Duration `mapstructure:"stuck_chunk_timeout"`
+	ChunkSize          int           `mapstructure:"chunk_size"`
+	MaxChunkSize       int           `mapstructure:"max_chunk_size"`
+	CronSchedule       string        `mapstructure:"cron_schedule"`
+	CronTimezone       string        `mapstructure:"cron_timezone"`
+	StuckChunkTimeout  time.Duration `mapstructure:"stuck_chunk_timeout"`
 	StuckSweepInterval time.Duration `mapstructure:"stuck_sweep_interval"`
 }
 
@@ -137,6 +154,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.max_idle_conns", 3)
 	v.SetDefault("database.conn_max_lifetime", 30*time.Minute)
 	v.SetDefault("database.conn_max_idle_time", 10*time.Minute)
+	// Required for PgBouncer transaction pooling — see DatabaseConfig.BinaryParameters.
+	v.SetDefault("database.binary_parameters", true)
 
 	v.SetDefault("rabbitmq.url", "amqp://guest:guest@localhost:5672/")
 	v.SetDefault("rabbitmq.prefetch_count", 1)
@@ -170,6 +189,8 @@ func bindEnvVars(v *viper.Viper) {
 		{"database.user", "DATABASE_USER"},
 		{"database.password", "DATABASE_PASSWORD"},
 		{"database.name", "DATABASE_NAME"},
+		{"database.ssl_mode", "DATABASE_SSLMODE"},
+		{"database.binary_parameters", "DATABASE_BINARY_PARAMETERS"},
 		{"rabbitmq.url", "RABBITMQ_URL"},
 		{"app.env", "APP_ENV"},
 		{"logger.level", "LOG_LEVEL"},
