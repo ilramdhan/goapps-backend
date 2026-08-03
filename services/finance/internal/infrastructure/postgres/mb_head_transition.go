@@ -63,6 +63,45 @@ func (r *MBHeadRepository) updateEntryStatusTx(ctx context.Context, tx *sql.Tx, 
 	return nil
 }
 
+// RefreezeCostParams updates the frozen mbh_param_* columns on mst_mb_head and re-runs the CPP
+// (cost_product_parameter) freeze from the entity's current in-memory param getters. Unlike
+// Validate, this does not change entry_status, does not bump the version, does not create a
+// workflow-log row, and does not attempt auto-gen — it assumes the cost product already exists.
+// Safe to run against already-VALIDATED heads whose frozen values were incorrect (e.g. after
+// ENG-MB-01's fix for the throughput/no_of_process default bug).
+func (r *MBHeadRepository) RefreezeCostParams(ctx context.Context, id uuid.UUID, entity *mbhead.Entity, params *mbhead.ParamSnapshot) error {
+	if entity.CostProductID() == 0 {
+		return fmt.Errorf("refreeze %s: cost product not yet generated", entity.MBCosting())
+	}
+	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
+		// Update mst_mb_head frozen param columns in-place — no version bump, no status change.
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE mst_mb_head SET
+			    mbh_param_waste              = NULLIF($2, '')::numeric,
+			    mbh_param_quality_loss       = NULLIF($3, '')::numeric,
+			    mbh_param_efficiency         = NULLIF($4, '')::numeric,
+			    mbh_param_dev_expense        = NULLIF($5, '')::numeric,
+			    mbh_param_packing            = NULLIF($6, '')::numeric,
+			    mbh_param_mb_prod_per_day    = NULLIF($7, '')::numeric,
+			    mbh_param_throughput_per_hour = $8,
+			    mbh_param_no_of_process       = $9,
+			    updated_at = NOW()
+			WHERE mbh_id = $1 AND deleted_at IS NULL
+		`, id,
+			params.Waste, params.QualityLoss, params.Efficiency, params.DevExpense,
+			params.Packing, params.MBProdPerDay, params.ThroughputPerHour, params.NoOfProcess,
+		); err != nil {
+			return fmt.Errorf("refreeze: update mst_mb_head: %w", err)
+		}
+
+		// Re-run the CPP freeze (upsert — idempotent per ON CONFLICT ... DO UPDATE).
+		if err := mbFreezeCostParams(ctx, tx, entity.CostProductID(), entity, ""); err != nil {
+			return fmt.Errorf("refreeze: freeze CPP: %w", err)
+		}
+		return nil
+	})
+}
+
 func (r *MBHeadRepository) insertWorkflowLogTx(ctx context.Context, tx *sql.Tx, id uuid.UUID, fromState, toState, actorUserID, reason string, version int32) error {
 	const q = `
 		INSERT INTO mst_mb_workflow_log

@@ -88,6 +88,11 @@ func (m *MockRepository) TransitionWithAutoGen(ctx context.Context, id uuid.UUID
 	return args.Error(0)
 }
 
+func (m *MockRepository) RefreezeCostParams(ctx context.Context, id uuid.UUID, entity *mbheaddomain.Entity, params *mbheaddomain.ParamSnapshot) error {
+	args := m.Called(ctx, id, entity, params)
+	return args.Error(0)
+}
+
 func TestCreateHandler_Handle(t *testing.T) {
 	t.Run("success - creates new MB Head", func(t *testing.T) {
 		mockRepo := new(MockRepository)

@@ -57,6 +57,7 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd ValidateCommand) (*mbh
 	if err != nil {
 		return nil, err
 	}
+	applyHeadParamOverrides(params, entity)
 
 	fromState := entity.EntryStatus()
 	entity.FreezeParams(
@@ -72,6 +73,37 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd ValidateCommand) (*mbh
 	}
 
 	return entity, nil
+}
+
+// applyHeadParamOverrides lets the head's own per-product values win over the
+// mst_mb_param master defaults resolved by resolveParamSnapshot.
+//
+// Throughput and number-of-process genuinely vary per MB (legacy throughput
+// 20/34/40/55, no_of_process 1/2/3), and mb_prod_per_day can too. They are set
+// on mst_mb_head, but freeze used to read only the param-master picklist
+// defaults ('B'=40, 'D'=2) — so every MB froze the same values, MB_NET_PROD
+// came out 40*0.94*16=601.6 across the board and conversion cost was flat.
+// Worse, updateEntryStatusTx writes the snapshot back onto mst_mb_head, so the
+// wrong defaults overwrote the correct per-head values on every Validate.
+//
+// The master default remains the fallback for a head that has no value of its
+// own: freezing an empty string would make the NULLIF-to-numeric cast in
+// updateEntryStatusTx store NULL, and would break the mst_mb_param_option
+// numeric lookup during cost auto-gen.
+//
+// Waste / QualityLoss / Efficiency / DevExpense / Packing stay on the master
+// defaults — legacy shows those are uniform. Extend this function the same way
+// if any of them start varying per head.
+func applyHeadParamOverrides(params *mbhead.ParamSnapshot, entity *mbhead.Entity) {
+	if tp := entity.ParamThroughputPerHour(); tp != "" {
+		params.ThroughputPerHour = tp
+	}
+	if np := entity.ParamNoOfProcess(); np != "" {
+		params.NoOfProcess = np
+	}
+	if pd := entity.ParamMBProdPerDay(); pd != nil && *pd != "" {
+		params.MBProdPerDay = pd
+	}
 }
 
 func (h *ValidateHandler) resolveParamSnapshot(ctx context.Context) (*mbhead.ParamSnapshot, error) {
