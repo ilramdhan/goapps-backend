@@ -88,7 +88,7 @@ func (c *Coordinator) handleJobTriggered(ctx context.Context, d amqp.Delivery) e
 	}
 	if err := c.planAndDispatch(ctx, ev.JobID); err != nil {
 		log.Error().Err(err).Int64("job_id", ev.JobID).Msg("plan and dispatch failed")
-		if updErr := c.jobRepo.UpdateStatus(ctx, ev.JobID, statusFailed); updErr != nil {
+		if updErr := c.jobRepo.MarkFailed(ctx, ev.JobID, err.Error()); updErr != nil {
 			log.Warn().Err(updErr).Int64("job_id", ev.JobID).Msg("mark job FAILED")
 		}
 		c.emitJobTerminal(ctx, ev.JobID, statusFailed)
@@ -251,15 +251,37 @@ func (c *Coordinator) handleChunkCompleted(ctx context.Context, d amqp.Delivery)
 		return d.Nack(false, false)
 	}
 	if err := c.advanceAfterChunk(ctx, ev); err != nil {
-		log.Error().Err(err).Int64("job_id", ev.JobID).Int64("chunk_id", ev.ChunkID).Msg("advance after chunk failed; requeuing")
+		log.Error().Err(err).Int64("job_id", ev.JobID).Int64("chunk_id", ev.ChunkID).Msg("advance after chunk failed")
+		if d.Redelivered {
+			// Already requeued once — the error is persistent (not a transient DB
+			// hiccup), so send it to the DLQ instead of an infinite requeue loop.
+			// Without this guard, the same event would Nack→requeue→redeliver→fail
+			// repeatedly, burning CPU and flooding the logs.
+			log.Error().Int64("job_id", ev.JobID).Int64("chunk_id", ev.ChunkID).
+				Msg("chunk_completed redelivered; nacking to DLQ")
+			return d.Nack(false, false)
+		}
 		return d.Nack(false, true)
 	}
 	return d.Ack(false)
 }
 
 func (c *Coordinator) advanceAfterChunk(ctx context.Context, ev ChunkCompletedEvent) error {
-	if err := c.jobRepo.IncrementProgress(ctx, ev.JobID, ev.SuccessCount, ev.FailedCount, ev.BlockedCount); err != nil {
-		return fmt.Errorf("increment progress: %w", err)
+	// Idempotency: only the first event for a given chunk may move the job's
+	// counters. Duplicates (requeue, sweeper racing a late worker, worker
+	// republish) still fall through to the wave/finalize logic below — they must,
+	// because the duplicate may be the delivery that observes the wave complete.
+	counted, claimErr := c.chunkRepo.ClaimProgressCount(ctx, ev.ChunkID)
+	if claimErr != nil {
+		return fmt.Errorf("claim progress count: %w", claimErr)
+	}
+	if counted {
+		if err := c.jobRepo.IncrementProgress(ctx, ev.JobID, ev.SuccessCount, ev.FailedCount, ev.BlockedCount); err != nil {
+			return fmt.Errorf("increment progress: %w", err)
+		}
+	} else {
+		log.Info().Int64("chunk_id", ev.ChunkID).Int64("job_id", ev.JobID).
+			Msg("duplicate chunk completion; progress already counted")
 	}
 	total, completed, err := c.chunkRepo.CountByJobWave(ctx, ev.JobID, ev.WaveNo)
 	if err != nil {

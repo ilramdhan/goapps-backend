@@ -116,6 +116,20 @@ func (r *JobRepo) UpdateStatus(ctx context.Context, id int64, status string) err
 	return nil
 }
 
+// MarkFailed sets cj_status = FAILED and writes the error message into
+// cj_error_summary so operators can see WHY a job failed without digging
+// through pod logs. Previously UpdateStatus was called directly, which
+// left the column NULL.
+func (r *JobRepo) MarkFailed(ctx context.Context, id int64, errMsg string) error {
+	if _, e := r.db.ExecContext(ctx,
+		`UPDATE cal_job SET cj_status = $1, cj_error_summary = LEFT($2, 2048) WHERE cj_job_id = $3`,
+		statusFailed, errMsg, id,
+	); e != nil {
+		return fmt.Errorf("mark job failed: %w", e)
+	}
+	return nil
+}
+
 // UpdateTotals writes totals + chunks + waves once planning resolves them.
 func (r *JobRepo) UpdateTotals(ctx context.Context, id int64, products, chunks, waves int) error {
 	if _, err := r.db.ExecContext(ctx,
@@ -127,7 +141,12 @@ func (r *JobRepo) UpdateTotals(ctx context.Context, id int64, products, chunks, 
 	return nil
 }
 
-// IncrementProgress is called once per chunk_completed event.
+// IncrementProgress is called once per chunk_completed event. Callers must
+// first win the atomic claim via ChunkRepo.ClaimProgressCount, otherwise
+// duplicate delivery (requeue, sweeper + late worker) would double-count the
+// same chunk's products. Chunk status is not a usable guard here: both the
+// worker and the sweeper set the terminal status before publishing, so the
+// chunk is already terminal by the time this event arrives.
 func (r *JobRepo) IncrementProgress(ctx context.Context, id int64, succ, fail, blocked int) error {
 	if _, err := r.db.ExecContext(ctx, `
 		UPDATE cal_job SET
@@ -295,6 +314,37 @@ func (r *ChunkRepo) CountByJobWave(ctx context.Context, jobID int64, wave int) (
 	return
 }
 
+// ClaimProgressCount atomically claims the right to fold this chunk's counts
+// into its job's totals, returning true for the caller that won the claim and
+// false for every subsequent duplicate.
+//
+// A ChunkCompletedEvent can arrive more than once for the same chunk — a
+// requeue after a transient DB error, the sweeper's synthetic completion racing
+// the worker's real one, or the worker republishing on duplicate delivery. Each
+// duplicate used to re-run IncrementProgress, which is why production job 39
+// logged 48 processed chunks against 43 total.
+//
+// Chunk status cannot be the guard: the worker (MarkCompleted) and the sweeper
+// (MarkChunkFailed) both set the terminal status BEFORE publishing, so the
+// chunk is already terminal on the happy path. The UPDATE ... WHERE NOT flag
+// below reads and sets in one statement, so two concurrent consumers cannot
+// both win.
+func (r *ChunkRepo) ClaimProgressCount(ctx context.Context, chunkID int64) (bool, error) {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE cal_job_chunk
+		   SET cjc_progress_counted = TRUE
+		 WHERE cjc_chunk_id = $1 AND cjc_progress_counted = FALSE
+	`, chunkID)
+	if err != nil {
+		return false, fmt.Errorf("claim progress count for chunk %d: %w", chunkID, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("claim progress count rows for chunk %d: %w", chunkID, err)
+	}
+	return n > 0, nil
+}
+
 // StuckChunkRow is a minimal struct returned by FindStuckChunks.
 type StuckChunkRow struct {
 	ChunkID      int64
@@ -303,18 +353,24 @@ type StuckChunkRow struct {
 	ProductCount int
 }
 
-// FindStuckChunks returns DISPATCHED chunks whose dispatched_at is older than
-// the given threshold. These chunks likely died (worker OOM / crash) without
-// publishing a ChunkCompletedEvent.
+// FindStuckChunks returns chunks whose dispatched_at (or started_at for
+// PROCESSING) is older than the given threshold. These chunks likely died
+// (worker OOM / crash / node eviction) without publishing a ChunkCompletedEvent.
+//
+// Two statuses are covered:
+//   - DISPATCHED: the coordinator sent the chunk to the worker queue, but the
+//     worker never picked it up (or crashed before MarkProcessing).
+//   - PROCESSING: the worker marked it as started but crashed before completing.
 func (r *ChunkRepo) FindStuckChunks(ctx context.Context, olderThan time.Duration) ([]*StuckChunkRow, error) {
 	const q = `
 		SELECT cjc_chunk_id, cjc_job_id, cjc_wave_no, cjc_product_count
 		FROM cal_job_chunk
-		WHERE cjc_status = $1
-		  AND cjc_dispatched_at < now() - $2::interval
-		ORDER BY cjc_dispatched_at ASC
+		WHERE cjc_status = ANY($1)
+		  AND COALESCE(cjc_started_at, cjc_dispatched_at) < now() - $2::interval
+		ORDER BY COALESCE(cjc_started_at, cjc_dispatched_at) ASC
 	`
-	rows, err := r.db.QueryContext(ctx, q, statusDispatched, fmt.Sprintf("%d seconds", int(olderThan.Seconds())))
+	statuses := []string{statusDispatched, statusProcessing}
+	rows, err := r.db.QueryContext(ctx, q, pq.Array(statuses), fmt.Sprintf("%d seconds", int(olderThan.Seconds())))
 	if err != nil {
 		return nil, fmt.Errorf("find stuck chunks: %w", err)
 	}
@@ -337,14 +393,16 @@ func (r *ChunkRepo) FindStuckChunks(ctx context.Context, olderThan time.Duration
 	return out, nil
 }
 
-// MarkChunkFailed transitions a single chunk to FAILED with an error message.
+// MarkChunkFailed transitions a single stuck chunk (DISPATCHED or PROCESSING)
+// to FAILED with an error message. Guarded by current status so it doesn't
+// accidentally overwrite a chunk that already completed successfully.
 func (r *ChunkRepo) MarkChunkFailed(ctx context.Context, chunkID int64, errMsg string) error {
 	const q = `
 		UPDATE cal_job_chunk
 		SET cjc_status = $1, cjc_completed_at = now(), cjc_error_message = $2
-		WHERE cjc_chunk_id = $3 AND cjc_status = $4
+		WHERE cjc_chunk_id = $3 AND cjc_status IN ($4, $5)
 	`
-	if _, err := r.db.ExecContext(ctx, q, statusFailed, errMsg, chunkID, statusDispatched); err != nil {
+	if _, err := r.db.ExecContext(ctx, q, statusFailed, errMsg, chunkID, statusDispatched, statusProcessing); err != nil {
 		return fmt.Errorf("mark chunk %d failed: %w", chunkID, err)
 	}
 	return nil
