@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
+	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 )
 
@@ -106,6 +107,38 @@ func (c *Client) outgoingContext(ctx context.Context) (context.Context, context.
 	return callCtx, cancel
 }
 
+// notFoundStatusCode is the BaseResponse status code finance uses for "the
+// thing you asked about does not exist". For some lookups that is a normal
+// outcome rather than a failure, so callers may choose to tolerate it.
+const notFoundStatusCode = "404"
+
+// checkBase converts finance's BaseResponse envelope into a Go error.
+//
+// Finance answers application-level refusals — a rejected internal service
+// token, a request that failed validation, an internal fault — with a gRPC OK
+// status and an unsuccessful BaseResponse. A client that reads only the payload
+// therefore cannot tell a refusal from an empty result, and silently behaves as
+// though finance had nothing to say. That is exactly how a service-token
+// mismatch stayed invisible in staging and production while every
+// sales-order-staging row remained UNRESOLVED.
+//
+// A nil Base is treated as success: not every response carries one, and the
+// absence of an envelope is not evidence of refusal.
+func checkBase(base *commonv1.BaseResponse, op string) error {
+	if base == nil || base.GetIsSuccess() {
+		return nil
+	}
+	return fmt.Errorf("%w: %s: %s (status %s)",
+		ErrFinanceRefused, op, base.GetMessage(), base.GetStatusCode())
+}
+
+// baseIsNotFound reports whether an unsuccessful Base merely says "no such
+// thing". Lookups for which absence is a normal answer use this to tolerate a
+// 404 while still failing on every other refusal.
+func baseIsNotFound(base *commonv1.BaseResponse) bool {
+	return base != nil && !base.GetIsSuccess() && base.GetStatusCode() == notFoundStatusCode
+}
+
 // GetProduct resolves one product projection by sys id, serving from the
 // short-TTL cache when warm. Returns ErrDegraded when the client is disabled.
 func (c *Client) GetProduct(ctx context.Context, sysID int64) (*financev1.CostMasterProduct, error) {
@@ -122,6 +155,13 @@ func (c *Client) GetProduct(ctx context.Context, sysID int64) (*financev1.CostMa
 	resp, err := c.cc.GetCostProductMasterForPPC(callCtx, &financev1.GetCostProductMasterForPPCRequest{ProductSysId: sysID})
 	if err != nil {
 		return nil, fmt.Errorf("get cost product master %d: %w", sysID, err)
+	}
+	// A 404 here means the product genuinely does not exist, which callers
+	// already express as ErrProductNotFound below; anything else is a refusal.
+	if !baseIsNotFound(resp.GetBase()) {
+		if baseErr := checkBase(resp.GetBase(), fmt.Sprintf("get cost product master %d", sysID)); baseErr != nil {
+			return nil, baseErr
+		}
 	}
 	if resp.GetData() == nil {
 		return nil, fmt.Errorf("%w: sys id %d", ErrProductNotFound, sysID)
@@ -157,6 +197,9 @@ func (c *Client) BatchGetProducts(ctx context.Context, sysIDs []int64) ([]*finan
 	if err != nil {
 		return nil, fmt.Errorf("batch get cost product master: %w", err)
 	}
+	if baseErr := checkBase(resp.GetBase(), "batch get cost product master"); baseErr != nil {
+		return nil, baseErr
+	}
 	for _, p := range resp.GetData() {
 		c.cachePut(p)
 		result = append(result, p)
@@ -176,6 +219,9 @@ func (c *Client) ListProducts(ctx context.Context, req *financev1.ListCostProduc
 	if err != nil {
 		return nil, fmt.Errorf("list cost product master: %w", err)
 	}
+	if baseErr := checkBase(resp.GetBase(), "list cost product master"); baseErr != nil {
+		return nil, baseErr
+	}
 	return resp, nil
 }
 
@@ -191,6 +237,14 @@ func (c *Client) GetProductRoute(ctx context.Context, sysID int64) (*financev1.G
 	if err != nil {
 		return nil, fmt.Errorf("get product route %d: %w", sysID, err)
 	}
+	// Finance answers "no released route for product" with a 404, and callers
+	// treat a route-less product as a normal outcome — so a 404 passes through
+	// with nil data. Every other refusal is a real failure.
+	if !baseIsNotFound(resp.GetBase()) {
+		if baseErr := checkBase(resp.GetBase(), fmt.Sprintf("get product route %d", sysID)); baseErr != nil {
+			return nil, baseErr
+		}
+	}
 	return resp, nil
 }
 
@@ -205,6 +259,9 @@ func (c *Client) ListGrades(ctx context.Context, req *financev1.ListProductGrade
 	resp, err := c.cc.ListProductGradesForPPC(callCtx, req)
 	if err != nil {
 		return nil, fmt.Errorf("list product grades: %w", err)
+	}
+	if baseErr := checkBase(resp.GetBase(), "list product grades"); baseErr != nil {
+		return nil, baseErr
 	}
 	return resp, nil
 }
@@ -266,6 +323,9 @@ func (c *Client) ListProductParameters(ctx context.Context, displayGroup string)
 		if err != nil {
 			return nil, fmt.Errorf("list product parameters (group=%q): %w", displayGroup, err)
 		}
+		if baseErr := checkBase(resp.GetBase(), fmt.Sprintf("list product parameters (group=%q, page=%d)", displayGroup, page)); baseErr != nil {
+			return nil, baseErr
+		}
 		for _, d := range resp.GetData() {
 			defs = append(defs, parameterDefFromProto(d))
 		}
@@ -293,6 +353,9 @@ func (c *Client) BatchGetProductParameterValues(ctx context.Context, productSysI
 	})
 	if err != nil {
 		return nil, fmt.Errorf("batch get product parameter values: %w", err)
+	}
+	if baseErr := checkBase(resp.GetBase(), "batch get product parameter values"); baseErr != nil {
+		return nil, baseErr
 	}
 	values := make([]ParameterValue, 0, len(resp.GetData()))
 	for _, v := range resp.GetData() {
@@ -435,6 +498,9 @@ func (c *Client) resolveErpChunk(ctx context.Context, pairs []ErpCodePair) ([]Er
 	resp, err := c.cc.ResolveCostProductMasterByErpCode(callCtx, &financev1.ResolveCostProductMasterByErpCodeRequest{Pairs: reqPairs})
 	if err != nil {
 		return nil, fmt.Errorf("resolve cost product master by erp code: %w", err)
+	}
+	if baseErr := checkBase(resp.GetBase(), "resolve cost product master by erp code"); baseErr != nil {
+		return nil, baseErr
 	}
 	resolutions := resp.GetResolutions()
 	out := make([]ErpCodeResolution, 0, len(resolutions))

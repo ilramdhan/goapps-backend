@@ -32,6 +32,30 @@ func (l *MachineAreaLookup) MachineArea(ctx context.Context, machineID int64) (s
 	return m.Area().String(), nil
 }
 
+// MachineNoLookup adapts the machine repository to the WO MachineNameLookup
+// port, so a lot-generation failure can name the machine by its number rather
+// than by an id the planner has never seen.
+type MachineNoLookup struct {
+	repo *MachineRepository
+}
+
+// NewMachineNoLookup builds a machine-number lookup over the machine repository.
+func NewMachineNoLookup(repo *MachineRepository) *MachineNoLookup {
+	return &MachineNoLookup{repo: repo}
+}
+
+// MachineNo returns the machine number of a machine, or "" when not found.
+func (l *MachineNoLookup) MachineNo(ctx context.Context, machineID int64) (string, error) {
+	m, err := l.repo.GetByID(ctx, machineID)
+	if err != nil {
+		if errors.Is(err, machinedomain.ErrNotFound) {
+			return "", nil
+		}
+		return "", err
+	}
+	return m.No(), nil
+}
+
 // LotExistsLookup adapts the lot repository to the WO LotLookup port.
 type LotExistsLookup struct {
 	repo *LotRepository

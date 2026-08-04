@@ -46,6 +46,14 @@ func (s *stubLotSpecs) LotSpec(context.Context, int64) (string, string, error) {
 	return s.item, s.shade, nil
 }
 
+// stubMachineNames resolves every machine to one fixed machine number, so a
+// failure message can be asserted to name the machine rather than its id.
+type stubMachineNames struct{ no string }
+
+func (s *stubMachineNames) MachineNo(context.Context, int64) (string, error) {
+	return s.no, nil
+}
+
 // stubParamDefs feeds the resolver a single STD_WEIGHT definition whose default
 // supplies the standard full bobbin weight.
 type stubParamDefs struct{ stdWeight string }
@@ -235,9 +243,39 @@ func TestCreate_BlankLot_NoStdWeight_Rejected(t *testing.T) {
 	svc := lotSvcDeps(repo, lots, &stubLotSpecs{item: testItemCode, shade: testShadeCode}, "", prov)
 
 	_, err := svc.Create(context.Background(), createCmd(""))
+	// The wrapper still matches, so existing call sites that only care that
+	// generation failed keep working…
 	require.ErrorIs(t, err, workorderdomain.ErrLotSpecUnavailable)
+	// …but the specific cause is what makes the message actionable.
+	require.ErrorIs(t, err, workorderdomain.ErrLotStdWeightUnavailable)
+	assert.NotErrorIs(t, err, workorderdomain.ErrLotItemShadeUnavailable,
+		"a missing weight must not also read as a missing item/shade code")
+	assert.Contains(t, err.Error(), "STD_WEIGHT")
+	assert.Contains(t, err.Error(), testItemCode, "the message must name the product by code")
 	assert.Zero(t, prov.calls, "no lot may be registered against invented weights")
 	assert.Empty(t, repo.orders)
+}
+
+// The machine matters for STD_WEIGHT because the parameter resolves through the
+// product+machine layer first, so the planner needs to know which machine's row
+// to open. It is named by machine number — never by id.
+func TestCreate_BlankLot_NoStdWeight_NamesMachineByNumber(t *testing.T) {
+	repo := newMemRepo()
+	lots := &stubLots{known: map[string]bool{}}
+	prov := newStubLotProv(repo, lots)
+	svc := workorderapp.NewService(repo, workorderapp.Deps{
+		Lots:         lots,
+		MachineNames: &stubMachineNames{no: "AC3"},
+		PlanItems:    &stubPlanItems{productSysID: 900},
+		Resolver:     workorderdomain.NewResolver(&stubParamDefs{}, nil, nil, nil),
+		LotSpecs:     &stubLotSpecs{item: testItemCode, shade: testShadeCode},
+		LotProv:      prov,
+	})
+
+	_, err := svc.Create(context.Background(), createCmd(""))
+	require.ErrorIs(t, err, workorderdomain.ErrLotStdWeightUnavailable)
+	assert.Contains(t, err.Error(), "AC3")
+	assert.NotContains(t, err.Error(), "machine 2", "a raw machine id must never reach the planner")
 }
 
 func TestCreate_BlankLot_NoItemShade_Rejected(t *testing.T) {
@@ -249,7 +287,71 @@ func TestCreate_BlankLot_NoItemShade_Rejected(t *testing.T) {
 
 	_, err := svc.Create(context.Background(), createCmd(""))
 	require.ErrorIs(t, err, workorderdomain.ErrLotSpecUnavailable)
+	require.ErrorIs(t, err, workorderdomain.ErrLotItemShadeUnavailable)
+	assert.NotErrorIs(t, err, workorderdomain.ErrLotStdWeightUnavailable,
+		"a missing item/shade code must not also read as a missing weight")
+	assert.Contains(t, err.Error(), "item code")
 	assert.Zero(t, prov.calls)
+}
+
+// A plan item with no finance product fails before either lookup is possible,
+// and must say so rather than blaming the product's codes or its weight.
+func TestCreate_BlankLot_NoProduct_Rejected(t *testing.T) {
+	repo := newMemRepo()
+	lots := &stubLots{known: map[string]bool{}}
+	prov := newStubLotProv(repo, lots)
+	svc := workorderapp.NewService(repo, workorderapp.Deps{
+		Lots:      lots,
+		PlanItems: &stubPlanItems{productSysID: 0},
+		Resolver:  workorderdomain.NewResolver(&stubParamDefs{stdWeight: "5"}, nil, nil, nil),
+		LotSpecs:  &stubLotSpecs{item: testItemCode, shade: testShadeCode},
+		LotProv:   prov,
+	})
+
+	_, err := svc.Create(context.Background(), createCmd(""))
+	require.ErrorIs(t, err, workorderdomain.ErrLotSpecUnavailable)
+	require.ErrorIs(t, err, workorderdomain.ErrLotProductUnavailable)
+	assert.Zero(t, prov.calls)
+}
+
+// The three causes must be mutually distinguishable — the whole point of
+// splitting them. A planner reading one message must not be left choosing
+// between three masters to open.
+func TestLotSpecCauses_AreMutuallyDistinct(t *testing.T) {
+	causes := []error{
+		workorderdomain.NewLotItemShadeError(testItemCode),
+		workorderdomain.NewLotStdWeightError(testItemCode, "AC3"),
+		workorderdomain.NewLotProductError(),
+	}
+	sentinels := []error{
+		workorderdomain.ErrLotItemShadeUnavailable,
+		workorderdomain.ErrLotStdWeightUnavailable,
+		workorderdomain.ErrLotProductUnavailable,
+	}
+	for i, err := range causes {
+		// Every cause is still recognizable as "a lot could not be generated".
+		require.ErrorIs(t, err, workorderdomain.ErrLotSpecUnavailable)
+		for j, s := range sentinels {
+			if i == j {
+				assert.ErrorIs(t, err, s)
+				continue
+			}
+			assert.NotErrorIs(t, err, s)
+		}
+		// Every message points at a page the planner can actually open.
+		assert.NotEmpty(t, err.Error())
+	}
+}
+
+// ErrLotNotFound is the manual-lot counterpart: it must say the lot is not
+// registered and offer the route to register it (S-4.4), not merely "not found".
+func TestErrLotNotFound_NamesTheRegisterRoute(t *testing.T) {
+	msg := workorderdomain.ErrLotNotFound.Error()
+	assert.Contains(t, msg, "not registered")
+	assert.Contains(t, msg, "Lots", "the message must name the page that registers a lot")
+	// The gRPC layer classifies by substring; "invalid" keeps this a 400 rather
+	// than a 404, which is what a client-supplied bad lot is.
+	assert.Contains(t, msg, "invalid")
 }
 
 func TestCreate_BlankLot_NoProvisioner_Rejected(t *testing.T) {

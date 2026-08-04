@@ -41,6 +41,11 @@ type ChunkRepository interface {
 	UpdateStatus(ctx context.Context, id int64, status ChunkStatus, workerID string) error
 	UpdateResult(ctx context.Context, id int64, status ChunkStatus, succ, fail, durationMs int, errMsg string) error
 	IncrementRetry(ctx context.Context, id int64) (int, error)
+	// MarkQueuedAsSkipped marks all QUEUED (undispatched) chunks of a job as
+	// SKIPPED, used when canceling a job mid-flight. This prevents the
+	// orchestrator from dispatching waves for a cancelled job and leaves a
+	// clear audit trail (the chunk row is SKIPPED, not vanished or FAILED).
+	MarkQueuedAsSkipped(ctx context.Context, jobID int64) (affected int64, err error)
 }
 
 // JobProductRepository persists JobProduct aggregates.

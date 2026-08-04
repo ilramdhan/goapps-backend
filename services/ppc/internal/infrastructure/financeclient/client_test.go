@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
+	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 )
 
@@ -84,7 +85,7 @@ func (s *stubLookupClient) BatchGetCostProductMaster(_ context.Context, in *fina
 	for _, id := range in.GetProductSysIds() {
 		wanted[id] = true
 	}
-	resp := &financev1.BatchGetCostProductMasterResponse{}
+	resp := &financev1.BatchGetCostProductMasterResponse{Base: s.batchResp.GetBase()}
 	for _, p := range s.batchResp.GetData() {
 		if wanted[p.GetProductSysId()] {
 			resp.Data = append(resp.Data, p)
@@ -263,6 +264,96 @@ func TestResolveProductsByErpCode_PropagatesRPCError(t *testing.T) {
 	_, err := c.ResolveProductsByErpCode(context.Background(), []ErpCodePair{{ErpItemCode: "X"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "boom")
+}
+
+// Finance reports application-level refusals (a rejected internal service
+// token, a validation failure) in BaseResponse with a nil-error gRPC status.
+// Reading only the payload turns such a refusal into "success, zero matches",
+// which once let a token mismatch sit unnoticed in staging and production while
+// every staging row stayed UNRESOLVED. The refusal must surface as an error.
+func TestResolveProductsByErpCode_FailsOnUnsuccessfulBase(t *testing.T) {
+	stub := &stubLookupClient{resolveResp: &financev1.ResolveCostProductMasterByErpCodeResponse{
+		Base: &commonv1.BaseResponse{
+			IsSuccess:  false,
+			Message:    "unauthenticated: invalid service token",
+			StatusCode: "401",
+		},
+	}}
+	c := newTestClient(stub)
+
+	_, err := c.ResolveProductsByErpCode(context.Background(), []ErpCodePair{{ErpItemCode: "X"}})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrFinanceRefused)
+	assert.Contains(t, err.Error(), "invalid service token")
+}
+
+// A successful Base must not be mistaken for a refusal.
+func TestResolveProductsByErpCode_AcceptsSuccessfulBase(t *testing.T) {
+	stub := &stubLookupClient{resolveResp: &financev1.ResolveCostProductMasterByErpCodeResponse{
+		Base: &commonv1.BaseResponse{IsSuccess: true, StatusCode: "200"},
+		Resolutions: []*financev1.ErpCodeResolution{
+			{Pair: &financev1.ErpCodePair{ErpItemCode: "X"}, MatchCount: 0},
+		},
+	}}
+	c := newTestClient(stub)
+
+	got, err := c.ResolveProductsByErpCode(context.Background(), []ErpCodePair{{ErpItemCode: "X"}})
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, int32(0), got[0].MatchCount)
+}
+
+// Every lookup RPC shares the same BaseResponse contract, so none of them may
+// read the payload without first checking the envelope.
+func TestLookupRPCs_FailOnUnsuccessfulBase(t *testing.T) {
+	refused := &commonv1.BaseResponse{IsSuccess: false, Message: "unauthenticated", StatusCode: "401"}
+
+	tests := []struct {
+		name string
+		stub *stubLookupClient
+		call func(*Client) error
+	}{
+		{
+			name: "GetProduct",
+			stub: &stubLookupClient{getResp: &financev1.GetCostProductMasterForPPCResponse{Base: refused}},
+			call: func(c *Client) error {
+				_, err := c.GetProduct(context.Background(), 1)
+				return err
+			},
+		},
+		{
+			name: "BatchGetProducts",
+			stub: &stubLookupClient{batchResp: &financev1.BatchGetCostProductMasterResponse{Base: refused}},
+			call: func(c *Client) error {
+				_, err := c.BatchGetProducts(context.Background(), []int64{1})
+				return err
+			},
+		},
+		{
+			name: "ListProductParameters",
+			stub: &stubLookupClient{listParamPages: []*financev1.ListProductParametersForPPCResponse{{Base: refused}}},
+			call: func(c *Client) error {
+				_, err := c.ListProductParameters(context.Background(), "")
+				return err
+			},
+		},
+		{
+			name: "BatchGetProductParameterValues",
+			stub: &stubLookupClient{paramValuesResp: &financev1.BatchGetProductParameterValuesResponse{Base: refused}},
+			call: func(c *Client) error {
+				_, err := c.BatchGetProductParameterValues(context.Background(), []int64{1}, nil)
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.call(newTestClient(tt.stub))
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrFinanceRefused)
+		})
+	}
 }
 
 func TestListProductParameters_MapsAndFiltersGroup(t *testing.T) {

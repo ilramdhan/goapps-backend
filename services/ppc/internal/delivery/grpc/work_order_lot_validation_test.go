@@ -9,6 +9,7 @@ import (
 
 	ppcv1 "github.com/mutugading/goapps-backend/gen/ppc/v1"
 	workorderapp "github.com/mutugading/goapps-backend/services/ppc/internal/application/workorder"
+	workorderdomain "github.com/mutugading/goapps-backend/services/ppc/internal/domain/workorder"
 )
 
 // A blank lot_no on CreateWorkOrder means "mint one". The buf.validate rule
@@ -90,6 +91,62 @@ func TestCreateWorkOrder_BlankLotForwardedAsEmptyCommand(t *testing.T) {
 
 	assert.Empty(t, cmd.LotNo, "a blank proto lot must stay blank in the create command")
 	assert.Equal(t, "SPG", cmd.AreaCode)
+}
+
+// Each lot failure must reach the planner as its own message. domainErrorToBaseResponse
+// classifies by substring, so this pins both the status code and the fact that the
+// three causes do not collapse into one indistinguishable string at the wire boundary.
+func TestLotErrors_MapToDistinctClientMessages(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		wantCode   string
+		wantSubstr []string
+		notSubstr  []string
+	}{
+		{
+			name:       "missing item/shade names the product master",
+			err:        workorderdomain.NewLotItemShadeError("POY0000451"),
+			wantCode:   "400",
+			wantSubstr: []string{"POY0000451", "ERP item code", "product master"},
+			notSubstr:  []string{"STD_WEIGHT"},
+		},
+		{
+			name:       "missing std weight names the product, the machine and the parameter page",
+			err:        workorderdomain.NewLotStdWeightError("TTY0000028", "AC3"),
+			wantCode:   "400",
+			wantSubstr: []string{"TTY0000028", "AC3", "STD_WEIGHT", "Product Machine Parameters"},
+			notSubstr:  []string{"ERP item code"},
+		},
+		{
+			name:       "unlinked plan item says so",
+			err:        workorderdomain.NewLotProductError(),
+			wantCode:   "400",
+			wantSubstr: []string{"not linked to a product"},
+			notSubstr:  []string{"STD_WEIGHT", "ERP item code"},
+		},
+		{
+			name:       "manual lot absent from lot master offers the register route",
+			err:        workorderdomain.ErrLotNotFound,
+			wantCode:   "400",
+			wantSubstr: []string{"not registered in lot master", "Lots"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := domainErrorToBaseResponse(tt.err)
+			require.False(t, base.GetIsSuccess())
+			assert.Equal(t, tt.wantCode, base.GetStatusCode())
+			for _, want := range tt.wantSubstr {
+				assert.Contains(t, base.GetMessage(), want)
+			}
+			for _, unwanted := range tt.notSubstr {
+				assert.NotContains(t, base.GetMessage(), unwanted)
+			}
+			// Standing project rule: no message may expose a raw id.
+			assert.NotRegexp(t, `\bid\s+\d+`, base.GetMessage())
+		})
+	}
 }
 
 // validCreateWorkOrderRequest returns a request that satisfies every rule on

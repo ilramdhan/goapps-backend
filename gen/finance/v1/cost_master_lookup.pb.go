@@ -744,8 +744,18 @@ type CostMasterRouteRm struct {
 	RmGroupCode    string                 `protobuf:"bytes,6,opt,name=rm_group_code,json=rmGroupCode,proto3" json:"rm_group_code,omitempty"`
 	RouteRmRatio   string                 `protobuf:"bytes,7,opt,name=route_rm_ratio,json=routeRmRatio,proto3" json:"route_rm_ratio,omitempty"` // decimal-as-string
 	SubType        string                 `protobuf:"bytes,8,opt,name=sub_type,json=subType,proto3" json:"sub_type,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Resolved human-readable identity of the RM edge, so consumers never have to
+	// render a raw id. Both are derived server-side by rm_type:
+	//
+	//	PRODUCT -> cost_product_master (product_code / product_name)
+	//	ITEM    -> cost_erp_item       (item_code / item_name)
+	//	GROUP   -> cst_rm_group_head   (group_code / group_name)
+	//
+	// Empty when the referenced master row is missing.
+	RmCode        string `protobuf:"bytes,9,opt,name=rm_code,json=rmCode,proto3" json:"rm_code,omitempty"`
+	RmName        string `protobuf:"bytes,10,opt,name=rm_name,json=rmName,proto3" json:"rm_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CostMasterRouteRm) Reset() {
@@ -830,6 +840,20 @@ func (x *CostMasterRouteRm) GetRouteRmRatio() string {
 func (x *CostMasterRouteRm) GetSubType() string {
 	if x != nil {
 		return x.SubType
+	}
+	return ""
+}
+
+func (x *CostMasterRouteRm) GetRmCode() string {
+	if x != nil {
+		return x.RmCode
+	}
+	return ""
+}
+
+func (x *CostMasterRouteRm) GetRmName() string {
+	if x != nil {
+		return x.RmName
 	}
 	return ""
 }
@@ -1899,7 +1923,7 @@ const file_finance_v1_cost_master_lookup_proto_rawDesc = "" +
 	"\x04data\x18\x02 \x03(\v2\x1d.finance.v1.CostMasterProductR\x04data\x12=\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\x8a\x02\n" +
+	"pagination\"\xbc\x02\n" +
 	"\x11CostMasterRouteRm\x12\x13\n" +
 	"\x05rm_id\x18\x01 \x01(\x03R\x04rmId\x12\x15\n" +
 	"\x06seq_id\x18\x02 \x01(\x03R\x05seqId\x12\x17\n" +
@@ -1909,7 +1933,10 @@ const file_finance_v1_cost_master_lookup_proto_rawDesc = "" +
 	"rmItemCode\x12\"\n" +
 	"\rrm_group_code\x18\x06 \x01(\tR\vrmGroupCode\x12$\n" +
 	"\x0eroute_rm_ratio\x18\a \x01(\tR\frouteRmRatio\x12\x19\n" +
-	"\bsub_type\x18\b \x01(\tR\asubType\"\xbe\x02\n" +
+	"\bsub_type\x18\b \x01(\tR\asubType\x12\x17\n" +
+	"\arm_code\x18\t \x01(\tR\x06rmCode\x12\x17\n" +
+	"\arm_name\x18\n" +
+	" \x01(\tR\x06rmName\"\xbe\x02\n" +
 	"\x14CostMasterRouteStage\x12\x15\n" +
 	"\x06seq_id\x18\x01 \x01(\x03R\x05seqId\x12\x1f\n" +
 	"\vroute_level\x18\x02 \x01(\x05R\n" +

@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	ppcv1 "github.com/mutugading/goapps-backend/gen/ppc/v1"
+	planitemdomain "github.com/mutugading/goapps-backend/services/ppc/internal/domain/planitem"
 )
 
 // planningDateLayout is the ISO-8601 date layout used across planning boundaries.
@@ -366,6 +367,34 @@ func stringToPlanItemStatus(s string) ppcv1.PlanItemStatus {
 		return ppcv1.PlanItemStatus_PLAN_ITEM_STATUS_CANCELLED
 	default:
 		return ppcv1.PlanItemStatus_PLAN_ITEM_STATUS_UNSPECIFIED
+	}
+}
+
+func planCarryActionToString(a ppcv1.PlanCarryAction) string {
+	switch a {
+	case ppcv1.PlanCarryAction_PLAN_CARRY_ACTION_CARRY_AS_IS:
+		return planitemdomain.CarryActionAsIs
+	case ppcv1.PlanCarryAction_PLAN_CARRY_ACTION_PARTIAL_CARRY:
+		return planitemdomain.CarryActionPartial
+	case ppcv1.PlanCarryAction_PLAN_CARRY_ACTION_CANCEL:
+		return planitemdomain.CarryActionCancel
+	case ppcv1.PlanCarryAction_PLAN_CARRY_ACTION_UNSPECIFIED:
+		return ""
+	default:
+		return ""
+	}
+}
+
+func stringToPlanCarryAction(s string) ppcv1.PlanCarryAction {
+	switch s {
+	case planitemdomain.CarryActionAsIs:
+		return ppcv1.PlanCarryAction_PLAN_CARRY_ACTION_CARRY_AS_IS
+	case planitemdomain.CarryActionPartial:
+		return ppcv1.PlanCarryAction_PLAN_CARRY_ACTION_PARTIAL_CARRY
+	case planitemdomain.CarryActionCancel:
+		return ppcv1.PlanCarryAction_PLAN_CARRY_ACTION_CANCEL
+	default:
+		return ppcv1.PlanCarryAction_PLAN_CARRY_ACTION_UNSPECIFIED
 	}
 }
 

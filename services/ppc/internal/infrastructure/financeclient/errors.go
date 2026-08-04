@@ -22,4 +22,13 @@ var (
 
 	// ErrProductInactive is returned when a product resolves but is inactive.
 	ErrProductInactive = errors.New("invalid cpm_product_sys_id: product is inactive")
+
+	// ErrFinanceRefused is returned when finance answers with a gRPC OK status
+	// but an unsuccessful BaseResponse — its convention for application-level
+	// refusals such as a rejected internal service token or a failed request
+	// validation. Reading only the payload would render such a refusal
+	// indistinguishable from an empty result, which is how a service-token
+	// mismatch once stayed invisible in staging and production while every
+	// sales-order-staging row silently remained UNRESOLVED.
+	ErrFinanceRefused = errors.New("finance refused the request")
 )

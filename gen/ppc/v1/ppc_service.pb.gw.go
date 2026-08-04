@@ -2733,6 +2733,166 @@ func local_request_PPCService_GetGanttView_0(ctx context.Context, marshaler runt
 	return msg, metadata, err
 }
 
+var filter_PPCService_ListPlanCarryForwardCandidates_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_PPCService_ListPlanCarryForwardCandidates_0(ctx context.Context, marshaler runtime.Marshaler, client PPCServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListPlanCarryForwardCandidatesRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PPCService_ListPlanCarryForwardCandidates_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.ListPlanCarryForwardCandidates(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_PPCService_ListPlanCarryForwardCandidates_0(ctx context.Context, marshaler runtime.Marshaler, server PPCServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListPlanCarryForwardCandidatesRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PPCService_ListPlanCarryForwardCandidates_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.ListPlanCarryForwardCandidates(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_PPCService_ProcessPlanCarryForward_0(ctx context.Context, marshaler runtime.Marshaler, client PPCServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ProcessPlanCarryForwardRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["source_plan_item_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "source_plan_item_id")
+	}
+	protoReq.SourcePlanItemId, err = runtime.Int64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "source_plan_item_id", err)
+	}
+	msg, err := client.ProcessPlanCarryForward(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_PPCService_ProcessPlanCarryForward_0(ctx context.Context, marshaler runtime.Marshaler, server PPCServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ProcessPlanCarryForwardRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["source_plan_item_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "source_plan_item_id")
+	}
+	protoReq.SourcePlanItemId, err = runtime.Int64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "source_plan_item_id", err)
+	}
+	msg, err := server.ProcessPlanCarryForward(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_PPCService_ListWorkOrderCarryForwardCandidates_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_PPCService_ListWorkOrderCarryForwardCandidates_0(ctx context.Context, marshaler runtime.Marshaler, client PPCServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListWorkOrderCarryForwardCandidatesRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PPCService_ListWorkOrderCarryForwardCandidates_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.ListWorkOrderCarryForwardCandidates(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_PPCService_ListWorkOrderCarryForwardCandidates_0(ctx context.Context, marshaler runtime.Marshaler, server PPCServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListWorkOrderCarryForwardCandidatesRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_PPCService_ListWorkOrderCarryForwardCandidates_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.ListWorkOrderCarryForwardCandidates(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_PPCService_ProcessWorkOrderCarryForward_0(ctx context.Context, marshaler runtime.Marshaler, client PPCServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ProcessWorkOrderCarryForwardRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["source_wo_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "source_wo_id")
+	}
+	protoReq.SourceWoId, err = runtime.Int64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "source_wo_id", err)
+	}
+	msg, err := client.ProcessWorkOrderCarryForward(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_PPCService_ProcessWorkOrderCarryForward_0(ctx context.Context, marshaler runtime.Marshaler, server PPCServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ProcessWorkOrderCarryForwardRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["source_wo_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "source_wo_id")
+	}
+	protoReq.SourceWoId, err = runtime.Int64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "source_wo_id", err)
+	}
+	msg, err := server.ProcessWorkOrderCarryForward(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 func request_PPCService_CreateWorkOrder_0(ctx context.Context, marshaler runtime.Marshaler, client PPCServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq CreateWorkOrderRequest
@@ -6275,6 +6435,86 @@ func RegisterPPCServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux,
 		}
 		forward_PPCService_GetGanttView_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_PPCService_ListPlanCarryForwardCandidates_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ppc.v1.PPCService/ListPlanCarryForwardCandidates", runtime.WithHTTPPathPattern("/api/v1/ppc/plan-items/carry-forward-candidates"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_PPCService_ListPlanCarryForwardCandidates_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_PPCService_ListPlanCarryForwardCandidates_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_PPCService_ProcessPlanCarryForward_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ppc.v1.PPCService/ProcessPlanCarryForward", runtime.WithHTTPPathPattern("/api/v1/ppc/plan-items/{source_plan_item_id}/carry-forward"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_PPCService_ProcessPlanCarryForward_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_PPCService_ProcessPlanCarryForward_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_PPCService_ListWorkOrderCarryForwardCandidates_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ppc.v1.PPCService/ListWorkOrderCarryForwardCandidates", runtime.WithHTTPPathPattern("/api/v1/ppc/work-orders/carry-forward-candidates"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_PPCService_ListWorkOrderCarryForwardCandidates_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_PPCService_ListWorkOrderCarryForwardCandidates_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_PPCService_ProcessWorkOrderCarryForward_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ppc.v1.PPCService/ProcessWorkOrderCarryForward", runtime.WithHTTPPathPattern("/api/v1/ppc/work-orders/{source_wo_id}/carry-forward"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_PPCService_ProcessWorkOrderCarryForward_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_PPCService_ProcessWorkOrderCarryForward_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_PPCService_CreateWorkOrder_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -8653,6 +8893,74 @@ func RegisterPPCServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux,
 		}
 		forward_PPCService_GetGanttView_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_PPCService_ListPlanCarryForwardCandidates_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/ppc.v1.PPCService/ListPlanCarryForwardCandidates", runtime.WithHTTPPathPattern("/api/v1/ppc/plan-items/carry-forward-candidates"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_PPCService_ListPlanCarryForwardCandidates_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_PPCService_ListPlanCarryForwardCandidates_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_PPCService_ProcessPlanCarryForward_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/ppc.v1.PPCService/ProcessPlanCarryForward", runtime.WithHTTPPathPattern("/api/v1/ppc/plan-items/{source_plan_item_id}/carry-forward"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_PPCService_ProcessPlanCarryForward_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_PPCService_ProcessPlanCarryForward_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_PPCService_ListWorkOrderCarryForwardCandidates_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/ppc.v1.PPCService/ListWorkOrderCarryForwardCandidates", runtime.WithHTTPPathPattern("/api/v1/ppc/work-orders/carry-forward-candidates"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_PPCService_ListWorkOrderCarryForwardCandidates_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_PPCService_ListWorkOrderCarryForwardCandidates_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_PPCService_ProcessWorkOrderCarryForward_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/ppc.v1.PPCService/ProcessWorkOrderCarryForward", runtime.WithHTTPPathPattern("/api/v1/ppc/work-orders/{source_wo_id}/carry-forward"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_PPCService_ProcessWorkOrderCarryForward_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_PPCService_ProcessWorkOrderCarryForward_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_PPCService_CreateWorkOrder_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -9575,263 +9883,271 @@ func RegisterPPCServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux,
 }
 
 var (
-	pattern_PPCService_CreateMachineGroup_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-groups"}, ""))
-	pattern_PPCService_GetMachineGroup_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-groups", "group_id"}, ""))
-	pattern_PPCService_UpdateMachineGroup_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-groups", "group_id"}, ""))
-	pattern_PPCService_DeleteMachineGroup_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-groups", "group_id"}, ""))
-	pattern_PPCService_ListMachineGroups_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-groups"}, ""))
-	pattern_PPCService_CreateMachine_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machines"}, ""))
-	pattern_PPCService_GetMachine_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machines", "machine_id"}, ""))
-	pattern_PPCService_UpdateMachine_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machines", "machine_id"}, ""))
-	pattern_PPCService_ListMachines_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machines"}, ""))
-	pattern_PPCService_SyncMachines_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "machines", "sync"}, ""))
-	pattern_PPCService_CreateCustomer_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "customers"}, ""))
-	pattern_PPCService_GetCustomer_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "customers", "customer_id"}, ""))
-	pattern_PPCService_UpdateCustomer_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "customers", "customer_id"}, ""))
-	pattern_PPCService_ListCustomers_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "customers"}, ""))
-	pattern_PPCService_SyncCustomers_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "customers", "sync"}, ""))
-	pattern_PPCService_ExportCustomers_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "customers", "export"}, ""))
-	pattern_PPCService_ImportCustomers_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "customers", "import"}, ""))
-	pattern_PPCService_DownloadCustomerTemplate_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "customers", "template"}, ""))
-	pattern_PPCService_CreateLotMaster_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "lots"}, ""))
-	pattern_PPCService_GetLotMaster_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lots", "lot_no"}, ""))
-	pattern_PPCService_UpdateLotMaster_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lots", "lot_no"}, ""))
-	pattern_PPCService_DeleteLotMaster_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lots", "lot_no"}, ""))
-	pattern_PPCService_ListLotMasters_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "lots"}, ""))
-	pattern_PPCService_SyncLots_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "lots", "sync"}, ""))
-	pattern_PPCService_CreateProductPPCConfig_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "product-configs"}, ""))
-	pattern_PPCService_GetProductPPCConfig_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "product-configs", "config_id"}, ""))
-	pattern_PPCService_UpdateProductPPCConfig_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "product-configs", "config_id"}, ""))
-	pattern_PPCService_DeleteProductPPCConfig_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "product-configs", "config_id"}, ""))
-	pattern_PPCService_ListProductPPCConfigs_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "product-configs"}, ""))
-	pattern_PPCService_CreateProductMachineCapacity_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-capacities"}, ""))
-	pattern_PPCService_GetProductMachineCapacity_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-capacities", "capacity_id"}, ""))
-	pattern_PPCService_UpdateProductMachineCapacity_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-capacities", "capacity_id"}, ""))
-	pattern_PPCService_DeleteProductMachineCapacity_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-capacities", "capacity_id"}, ""))
-	pattern_PPCService_ListProductMachineCapacities_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-capacities"}, ""))
-	pattern_PPCService_CreateProductMachineParameter_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-parameters"}, ""))
-	pattern_PPCService_GetProductMachineParameter_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-parameters", "pmp_id"}, ""))
-	pattern_PPCService_UpdateProductMachineParameter_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-parameters", "pmp_id"}, ""))
-	pattern_PPCService_DeleteProductMachineParameter_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-parameters", "pmp_id"}, ""))
-	pattern_PPCService_ListProductMachineParameters_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-parameters"}, ""))
-	pattern_PPCService_CreateOverrunThresholdConfig_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "overrun-thresholds"}, ""))
-	pattern_PPCService_GetOverrunThresholdConfig_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "overrun-thresholds", "threshold_id"}, ""))
-	pattern_PPCService_UpdateOverrunThresholdConfig_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "overrun-thresholds", "threshold_id"}, ""))
-	pattern_PPCService_DeleteOverrunThresholdConfig_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "overrun-thresholds", "threshold_id"}, ""))
-	pattern_PPCService_ListOverrunThresholdConfigs_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "overrun-thresholds"}, ""))
-	pattern_PPCService_CreateDowntimeReasonMaster_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "downtime-reasons"}, ""))
-	pattern_PPCService_GetDowntimeReasonMaster_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "downtime-reasons", "reason_id"}, ""))
-	pattern_PPCService_UpdateDowntimeReasonMaster_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "downtime-reasons", "reason_id"}, ""))
-	pattern_PPCService_DeleteDowntimeReasonMaster_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "downtime-reasons", "reason_id"}, ""))
-	pattern_PPCService_ListDowntimeReasonMasters_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "downtime-reasons"}, ""))
-	pattern_PPCService_CreateWasteCategoryMaster_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "waste-categories"}, ""))
-	pattern_PPCService_GetWasteCategoryMaster_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "waste-categories", "category_id"}, ""))
-	pattern_PPCService_UpdateWasteCategoryMaster_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "waste-categories", "category_id"}, ""))
-	pattern_PPCService_DeleteWasteCategoryMaster_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "waste-categories", "category_id"}, ""))
-	pattern_PPCService_ListWasteCategoryMasters_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "waste-categories"}, ""))
-	pattern_PPCService_ListSalesOrderStaging_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "sales-order-staging"}, ""))
-	pattern_PPCService_ListSalesOrderStagingIds_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "sales-order-staging", "ids"}, ""))
-	pattern_PPCService_SetStagingProduct_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "sales-order-staging", "sos_id", "product"}, ""))
-	pattern_PPCService_CreateDemand_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "demands"}, ""))
-	pattern_PPCService_GetDemand_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "demands", "demand_id"}, ""))
-	pattern_PPCService_UpdateDemand_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "demands", "demand_id"}, ""))
-	pattern_PPCService_MapDemandProduct_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "demands", "demand_id", "map-product"}, ""))
-	pattern_PPCService_DeleteDemand_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "demands", "demand_id"}, ""))
-	pattern_PPCService_ListDemands_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "demands"}, ""))
-	pattern_PPCService_ConfirmDemand_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "demands", "demand_id", "confirm"}, ""))
-	pattern_PPCService_PullFromOrion_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "demands", "pull-from-orion"}, ""))
-	pattern_PPCService_ListCarryForwardCandidates_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "demands", "carry-forward-candidates"}, ""))
-	pattern_PPCService_ProcessCarryForward_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "demands", "source_demand_id", "carry-forward"}, ""))
-	pattern_PPCService_ApproveMTSDemand_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "demands", "demand_id", "approve-mts"}, ""))
-	pattern_PPCService_CreatePlanItem_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "plan-items"}, ""))
-	pattern_PPCService_GetPlanItem_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "plan-items", "plan_item_id"}, ""))
-	pattern_PPCService_UpdatePlanItem_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "plan-items", "plan_item_id"}, ""))
-	pattern_PPCService_DeletePlanItem_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "plan-items", "plan_item_id"}, ""))
-	pattern_PPCService_ListPlanItems_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "plan-items"}, ""))
-	pattern_PPCService_GetGanttView_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "plan-items", "gantt"}, ""))
-	pattern_PPCService_CreateWorkOrder_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "work-orders"}, ""))
-	pattern_PPCService_GetWorkOrder_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "work-orders", "wo_id"}, ""))
-	pattern_PPCService_UpdateWorkOrder_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "work-orders", "wo_id"}, ""))
-	pattern_PPCService_DeleteWorkOrder_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "work-orders", "wo_id"}, ""))
-	pattern_PPCService_ListWorkOrders_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "work-orders"}, ""))
-	pattern_PPCService_ListMergeCandidates_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "work-orders", "merge-candidates"}, ""))
-	pattern_PPCService_ResolveWOParameters_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "work-orders", "resolve-parameters"}, ""))
-	pattern_PPCService_SaveWOParameters_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "parameters"}, ""))
-	pattern_PPCService_SaveWORmAllocations_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "rm-allocations"}, ""))
-	pattern_PPCService_PopulateWORmFromRoute_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 2, 6}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "rm-allocations", "populate-from-route"}, ""))
-	pattern_PPCService_SaveWOExecution_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "executions"}, ""))
-	pattern_PPCService_ListWOExecutions_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "executions"}, ""))
-	pattern_PPCService_SubmitWO_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "submit"}, ""))
-	pattern_PPCService_ApproveWOParameter_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "approve-parameter"}, ""))
-	pattern_PPCService_ApproveWO_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "approve"}, ""))
-	pattern_PPCService_RejectWO_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "reject"}, ""))
-	pattern_PPCService_CreateWOReference_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "source_wo_id", "reference"}, ""))
-	pattern_PPCService_GetWOProductionActual_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "production-actual"}, ""))
-	pattern_PPCService_AdjustWOActual_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 2, 6}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "production-actual", "adjust"}, ""))
-	pattern_PPCService_SuggestWOActual_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 2, 6}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "production-actual", "suggest"}, ""))
-	pattern_PPCService_SubmitShiftEntry_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shift-entries"}, ""))
-	pattern_PPCService_SubmitAreaShiftLog_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "area-shift-logs"}, ""))
-	pattern_PPCService_ListMachineShiftLogs_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shift-entries"}, ""))
-	pattern_PPCService_RecalcEfficiency_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "efficiency-snapshots", "recalc"}, ""))
-	pattern_PPCService_ListEfficiencySnapshots_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "efficiency-snapshots"}, ""))
-	pattern_PPCService_CreateShiftLogNote_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shift-log-notes"}, ""))
-	pattern_PPCService_GetShiftLogNote_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shift-log-notes", "note_id"}, ""))
-	pattern_PPCService_UpdateShiftLogNote_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shift-log-notes", "note_id"}, ""))
-	pattern_PPCService_DeleteShiftLogNote_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shift-log-notes", "note_id"}, ""))
-	pattern_PPCService_ListShiftLogNotes_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shift-log-notes"}, ""))
-	pattern_PPCService_GetMorningReview_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "dashboard", "morning-review"}, ""))
-	pattern_PPCService_GetBalanceForSale_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "dashboard", "balance-for-sale"}, ""))
-	pattern_PPCService_GetDailyPerformance_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "dashboard", "daily-performance"}, ""))
-	pattern_PPCService_GetChangeoverEvent_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "changeover-events", "event_id"}, ""))
-	pattern_PPCService_ListChangeoverEvents_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "changeover-events"}, ""))
-	pattern_PPCService_DetectChangeover_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "changeover-events", "detect"}, ""))
-	pattern_PPCService_CreateChangeoverEvent_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "changeover-events"}, ""))
-	pattern_PPCService_StartChangeover_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "changeover-events", "event_id", "start"}, ""))
-	pattern_PPCService_UpdateChangeoverActual_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "changeover-events", "event_id", "actual"}, ""))
-	pattern_PPCService_ListWOGradeActuals_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "grade-actuals"}, ""))
-	pattern_PPCService_CreateCommonLot_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "common-lots"}, ""))
-	pattern_PPCService_GetCommonLot_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "common-lots", "common_lot_id"}, ""))
-	pattern_PPCService_ListCommonLots_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "common-lots"}, ""))
-	pattern_PPCService_ExportDailyPerformance_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"api", "v1", "ppc", "dashboard", "daily-performance", "export"}, ""))
-	pattern_PPCService_CreatePpcLookup_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "lookups"}, ""))
-	pattern_PPCService_GetPpcLookup_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lookups", "lookup_id"}, ""))
-	pattern_PPCService_UpdatePpcLookup_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lookups", "lookup_id"}, ""))
-	pattern_PPCService_DeletePpcLookup_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lookups", "lookup_id"}, ""))
-	pattern_PPCService_ListPpcLookups_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "lookups"}, ""))
-	pattern_PPCService_CreatePpcShift_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shifts"}, ""))
-	pattern_PPCService_GetPpcShift_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shifts", "shift_id"}, ""))
-	pattern_PPCService_UpdatePpcShift_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shifts", "shift_id"}, ""))
-	pattern_PPCService_DeletePpcShift_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shifts", "shift_id"}, ""))
-	pattern_PPCService_ListPpcShifts_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shifts"}, ""))
+	pattern_PPCService_CreateMachineGroup_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-groups"}, ""))
+	pattern_PPCService_GetMachineGroup_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-groups", "group_id"}, ""))
+	pattern_PPCService_UpdateMachineGroup_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-groups", "group_id"}, ""))
+	pattern_PPCService_DeleteMachineGroup_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-groups", "group_id"}, ""))
+	pattern_PPCService_ListMachineGroups_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-groups"}, ""))
+	pattern_PPCService_CreateMachine_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machines"}, ""))
+	pattern_PPCService_GetMachine_0                          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machines", "machine_id"}, ""))
+	pattern_PPCService_UpdateMachine_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machines", "machine_id"}, ""))
+	pattern_PPCService_ListMachines_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machines"}, ""))
+	pattern_PPCService_SyncMachines_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "machines", "sync"}, ""))
+	pattern_PPCService_CreateCustomer_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "customers"}, ""))
+	pattern_PPCService_GetCustomer_0                         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "customers", "customer_id"}, ""))
+	pattern_PPCService_UpdateCustomer_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "customers", "customer_id"}, ""))
+	pattern_PPCService_ListCustomers_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "customers"}, ""))
+	pattern_PPCService_SyncCustomers_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "customers", "sync"}, ""))
+	pattern_PPCService_ExportCustomers_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "customers", "export"}, ""))
+	pattern_PPCService_ImportCustomers_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "customers", "import"}, ""))
+	pattern_PPCService_DownloadCustomerTemplate_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "customers", "template"}, ""))
+	pattern_PPCService_CreateLotMaster_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "lots"}, ""))
+	pattern_PPCService_GetLotMaster_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lots", "lot_no"}, ""))
+	pattern_PPCService_UpdateLotMaster_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lots", "lot_no"}, ""))
+	pattern_PPCService_DeleteLotMaster_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lots", "lot_no"}, ""))
+	pattern_PPCService_ListLotMasters_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "lots"}, ""))
+	pattern_PPCService_SyncLots_0                            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "lots", "sync"}, ""))
+	pattern_PPCService_CreateProductPPCConfig_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "product-configs"}, ""))
+	pattern_PPCService_GetProductPPCConfig_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "product-configs", "config_id"}, ""))
+	pattern_PPCService_UpdateProductPPCConfig_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "product-configs", "config_id"}, ""))
+	pattern_PPCService_DeleteProductPPCConfig_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "product-configs", "config_id"}, ""))
+	pattern_PPCService_ListProductPPCConfigs_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "product-configs"}, ""))
+	pattern_PPCService_CreateProductMachineCapacity_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-capacities"}, ""))
+	pattern_PPCService_GetProductMachineCapacity_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-capacities", "capacity_id"}, ""))
+	pattern_PPCService_UpdateProductMachineCapacity_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-capacities", "capacity_id"}, ""))
+	pattern_PPCService_DeleteProductMachineCapacity_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-capacities", "capacity_id"}, ""))
+	pattern_PPCService_ListProductMachineCapacities_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-capacities"}, ""))
+	pattern_PPCService_CreateProductMachineParameter_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-parameters"}, ""))
+	pattern_PPCService_GetProductMachineParameter_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-parameters", "pmp_id"}, ""))
+	pattern_PPCService_UpdateProductMachineParameter_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-parameters", "pmp_id"}, ""))
+	pattern_PPCService_DeleteProductMachineParameter_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "machine-parameters", "pmp_id"}, ""))
+	pattern_PPCService_ListProductMachineParameters_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "machine-parameters"}, ""))
+	pattern_PPCService_CreateOverrunThresholdConfig_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "overrun-thresholds"}, ""))
+	pattern_PPCService_GetOverrunThresholdConfig_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "overrun-thresholds", "threshold_id"}, ""))
+	pattern_PPCService_UpdateOverrunThresholdConfig_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "overrun-thresholds", "threshold_id"}, ""))
+	pattern_PPCService_DeleteOverrunThresholdConfig_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "overrun-thresholds", "threshold_id"}, ""))
+	pattern_PPCService_ListOverrunThresholdConfigs_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "overrun-thresholds"}, ""))
+	pattern_PPCService_CreateDowntimeReasonMaster_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "downtime-reasons"}, ""))
+	pattern_PPCService_GetDowntimeReasonMaster_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "downtime-reasons", "reason_id"}, ""))
+	pattern_PPCService_UpdateDowntimeReasonMaster_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "downtime-reasons", "reason_id"}, ""))
+	pattern_PPCService_DeleteDowntimeReasonMaster_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "downtime-reasons", "reason_id"}, ""))
+	pattern_PPCService_ListDowntimeReasonMasters_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "downtime-reasons"}, ""))
+	pattern_PPCService_CreateWasteCategoryMaster_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "waste-categories"}, ""))
+	pattern_PPCService_GetWasteCategoryMaster_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "waste-categories", "category_id"}, ""))
+	pattern_PPCService_UpdateWasteCategoryMaster_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "waste-categories", "category_id"}, ""))
+	pattern_PPCService_DeleteWasteCategoryMaster_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "waste-categories", "category_id"}, ""))
+	pattern_PPCService_ListWasteCategoryMasters_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "waste-categories"}, ""))
+	pattern_PPCService_ListSalesOrderStaging_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "sales-order-staging"}, ""))
+	pattern_PPCService_ListSalesOrderStagingIds_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "sales-order-staging", "ids"}, ""))
+	pattern_PPCService_SetStagingProduct_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "sales-order-staging", "sos_id", "product"}, ""))
+	pattern_PPCService_CreateDemand_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "demands"}, ""))
+	pattern_PPCService_GetDemand_0                           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "demands", "demand_id"}, ""))
+	pattern_PPCService_UpdateDemand_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "demands", "demand_id"}, ""))
+	pattern_PPCService_MapDemandProduct_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "demands", "demand_id", "map-product"}, ""))
+	pattern_PPCService_DeleteDemand_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "demands", "demand_id"}, ""))
+	pattern_PPCService_ListDemands_0                         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "demands"}, ""))
+	pattern_PPCService_ConfirmDemand_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "demands", "demand_id", "confirm"}, ""))
+	pattern_PPCService_PullFromOrion_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "demands", "pull-from-orion"}, ""))
+	pattern_PPCService_ListCarryForwardCandidates_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "demands", "carry-forward-candidates"}, ""))
+	pattern_PPCService_ProcessCarryForward_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "demands", "source_demand_id", "carry-forward"}, ""))
+	pattern_PPCService_ApproveMTSDemand_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "demands", "demand_id", "approve-mts"}, ""))
+	pattern_PPCService_CreatePlanItem_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "plan-items"}, ""))
+	pattern_PPCService_GetPlanItem_0                         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "plan-items", "plan_item_id"}, ""))
+	pattern_PPCService_UpdatePlanItem_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "plan-items", "plan_item_id"}, ""))
+	pattern_PPCService_DeletePlanItem_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "plan-items", "plan_item_id"}, ""))
+	pattern_PPCService_ListPlanItems_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "plan-items"}, ""))
+	pattern_PPCService_GetGanttView_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "plan-items", "gantt"}, ""))
+	pattern_PPCService_ListPlanCarryForwardCandidates_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "plan-items", "carry-forward-candidates"}, ""))
+	pattern_PPCService_ProcessPlanCarryForward_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "plan-items", "source_plan_item_id", "carry-forward"}, ""))
+	pattern_PPCService_ListWorkOrderCarryForwardCandidates_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "work-orders", "carry-forward-candidates"}, ""))
+	pattern_PPCService_ProcessWorkOrderCarryForward_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "source_wo_id", "carry-forward"}, ""))
+	pattern_PPCService_CreateWorkOrder_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "work-orders"}, ""))
+	pattern_PPCService_GetWorkOrder_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "work-orders", "wo_id"}, ""))
+	pattern_PPCService_UpdateWorkOrder_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "work-orders", "wo_id"}, ""))
+	pattern_PPCService_DeleteWorkOrder_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "work-orders", "wo_id"}, ""))
+	pattern_PPCService_ListWorkOrders_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "work-orders"}, ""))
+	pattern_PPCService_ListMergeCandidates_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "work-orders", "merge-candidates"}, ""))
+	pattern_PPCService_ResolveWOParameters_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "work-orders", "resolve-parameters"}, ""))
+	pattern_PPCService_SaveWOParameters_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "parameters"}, ""))
+	pattern_PPCService_SaveWORmAllocations_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "rm-allocations"}, ""))
+	pattern_PPCService_PopulateWORmFromRoute_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 2, 6}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "rm-allocations", "populate-from-route"}, ""))
+	pattern_PPCService_SaveWOExecution_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "executions"}, ""))
+	pattern_PPCService_ListWOExecutions_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "executions"}, ""))
+	pattern_PPCService_SubmitWO_0                            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "submit"}, ""))
+	pattern_PPCService_ApproveWOParameter_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "approve-parameter"}, ""))
+	pattern_PPCService_ApproveWO_0                           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "approve"}, ""))
+	pattern_PPCService_RejectWO_0                            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "reject"}, ""))
+	pattern_PPCService_CreateWOReference_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "source_wo_id", "reference"}, ""))
+	pattern_PPCService_GetWOProductionActual_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "production-actual"}, ""))
+	pattern_PPCService_AdjustWOActual_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 2, 6}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "production-actual", "adjust"}, ""))
+	pattern_PPCService_SuggestWOActual_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 2, 6}, []string{"api", "v1", "ppc", "work-orders", "wo_id", "production-actual", "suggest"}, ""))
+	pattern_PPCService_SubmitShiftEntry_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shift-entries"}, ""))
+	pattern_PPCService_SubmitAreaShiftLog_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "area-shift-logs"}, ""))
+	pattern_PPCService_ListMachineShiftLogs_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shift-entries"}, ""))
+	pattern_PPCService_RecalcEfficiency_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "efficiency-snapshots", "recalc"}, ""))
+	pattern_PPCService_ListEfficiencySnapshots_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "efficiency-snapshots"}, ""))
+	pattern_PPCService_CreateShiftLogNote_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shift-log-notes"}, ""))
+	pattern_PPCService_GetShiftLogNote_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shift-log-notes", "note_id"}, ""))
+	pattern_PPCService_UpdateShiftLogNote_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shift-log-notes", "note_id"}, ""))
+	pattern_PPCService_DeleteShiftLogNote_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shift-log-notes", "note_id"}, ""))
+	pattern_PPCService_ListShiftLogNotes_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shift-log-notes"}, ""))
+	pattern_PPCService_GetMorningReview_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "dashboard", "morning-review"}, ""))
+	pattern_PPCService_GetBalanceForSale_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "dashboard", "balance-for-sale"}, ""))
+	pattern_PPCService_GetDailyPerformance_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "dashboard", "daily-performance"}, ""))
+	pattern_PPCService_GetChangeoverEvent_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "changeover-events", "event_id"}, ""))
+	pattern_PPCService_ListChangeoverEvents_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "changeover-events"}, ""))
+	pattern_PPCService_DetectChangeover_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "ppc", "changeover-events", "detect"}, ""))
+	pattern_PPCService_CreateChangeoverEvent_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "changeover-events"}, ""))
+	pattern_PPCService_StartChangeover_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "changeover-events", "event_id", "start"}, ""))
+	pattern_PPCService_UpdateChangeoverActual_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "ppc", "changeover-events", "event_id", "actual"}, ""))
+	pattern_PPCService_ListWOGradeActuals_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "grade-actuals"}, ""))
+	pattern_PPCService_CreateCommonLot_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "common-lots"}, ""))
+	pattern_PPCService_GetCommonLot_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "common-lots", "common_lot_id"}, ""))
+	pattern_PPCService_ListCommonLots_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "common-lots"}, ""))
+	pattern_PPCService_ExportDailyPerformance_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"api", "v1", "ppc", "dashboard", "daily-performance", "export"}, ""))
+	pattern_PPCService_CreatePpcLookup_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "lookups"}, ""))
+	pattern_PPCService_GetPpcLookup_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lookups", "lookup_id"}, ""))
+	pattern_PPCService_UpdatePpcLookup_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lookups", "lookup_id"}, ""))
+	pattern_PPCService_DeletePpcLookup_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "lookups", "lookup_id"}, ""))
+	pattern_PPCService_ListPpcLookups_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "lookups"}, ""))
+	pattern_PPCService_CreatePpcShift_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shifts"}, ""))
+	pattern_PPCService_GetPpcShift_0                         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shifts", "shift_id"}, ""))
+	pattern_PPCService_UpdatePpcShift_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shifts", "shift_id"}, ""))
+	pattern_PPCService_DeletePpcShift_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "ppc", "shifts", "shift_id"}, ""))
+	pattern_PPCService_ListPpcShifts_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "ppc", "shifts"}, ""))
 )
 
 var (
-	forward_PPCService_CreateMachineGroup_0            = runtime.ForwardResponseMessage
-	forward_PPCService_GetMachineGroup_0               = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateMachineGroup_0            = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteMachineGroup_0            = runtime.ForwardResponseMessage
-	forward_PPCService_ListMachineGroups_0             = runtime.ForwardResponseMessage
-	forward_PPCService_CreateMachine_0                 = runtime.ForwardResponseMessage
-	forward_PPCService_GetMachine_0                    = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateMachine_0                 = runtime.ForwardResponseMessage
-	forward_PPCService_ListMachines_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_SyncMachines_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_CreateCustomer_0                = runtime.ForwardResponseMessage
-	forward_PPCService_GetCustomer_0                   = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateCustomer_0                = runtime.ForwardResponseMessage
-	forward_PPCService_ListCustomers_0                 = runtime.ForwardResponseMessage
-	forward_PPCService_SyncCustomers_0                 = runtime.ForwardResponseMessage
-	forward_PPCService_ExportCustomers_0               = runtime.ForwardResponseMessage
-	forward_PPCService_ImportCustomers_0               = runtime.ForwardResponseMessage
-	forward_PPCService_DownloadCustomerTemplate_0      = runtime.ForwardResponseMessage
-	forward_PPCService_CreateLotMaster_0               = runtime.ForwardResponseMessage
-	forward_PPCService_GetLotMaster_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateLotMaster_0               = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteLotMaster_0               = runtime.ForwardResponseMessage
-	forward_PPCService_ListLotMasters_0                = runtime.ForwardResponseMessage
-	forward_PPCService_SyncLots_0                      = runtime.ForwardResponseMessage
-	forward_PPCService_CreateProductPPCConfig_0        = runtime.ForwardResponseMessage
-	forward_PPCService_GetProductPPCConfig_0           = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateProductPPCConfig_0        = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteProductPPCConfig_0        = runtime.ForwardResponseMessage
-	forward_PPCService_ListProductPPCConfigs_0         = runtime.ForwardResponseMessage
-	forward_PPCService_CreateProductMachineCapacity_0  = runtime.ForwardResponseMessage
-	forward_PPCService_GetProductMachineCapacity_0     = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateProductMachineCapacity_0  = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteProductMachineCapacity_0  = runtime.ForwardResponseMessage
-	forward_PPCService_ListProductMachineCapacities_0  = runtime.ForwardResponseMessage
-	forward_PPCService_CreateProductMachineParameter_0 = runtime.ForwardResponseMessage
-	forward_PPCService_GetProductMachineParameter_0    = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateProductMachineParameter_0 = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteProductMachineParameter_0 = runtime.ForwardResponseMessage
-	forward_PPCService_ListProductMachineParameters_0  = runtime.ForwardResponseMessage
-	forward_PPCService_CreateOverrunThresholdConfig_0  = runtime.ForwardResponseMessage
-	forward_PPCService_GetOverrunThresholdConfig_0     = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateOverrunThresholdConfig_0  = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteOverrunThresholdConfig_0  = runtime.ForwardResponseMessage
-	forward_PPCService_ListOverrunThresholdConfigs_0   = runtime.ForwardResponseMessage
-	forward_PPCService_CreateDowntimeReasonMaster_0    = runtime.ForwardResponseMessage
-	forward_PPCService_GetDowntimeReasonMaster_0       = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateDowntimeReasonMaster_0    = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteDowntimeReasonMaster_0    = runtime.ForwardResponseMessage
-	forward_PPCService_ListDowntimeReasonMasters_0     = runtime.ForwardResponseMessage
-	forward_PPCService_CreateWasteCategoryMaster_0     = runtime.ForwardResponseMessage
-	forward_PPCService_GetWasteCategoryMaster_0        = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateWasteCategoryMaster_0     = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteWasteCategoryMaster_0     = runtime.ForwardResponseMessage
-	forward_PPCService_ListWasteCategoryMasters_0      = runtime.ForwardResponseMessage
-	forward_PPCService_ListSalesOrderStaging_0         = runtime.ForwardResponseMessage
-	forward_PPCService_ListSalesOrderStagingIds_0      = runtime.ForwardResponseMessage
-	forward_PPCService_SetStagingProduct_0             = runtime.ForwardResponseMessage
-	forward_PPCService_CreateDemand_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_GetDemand_0                     = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateDemand_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_MapDemandProduct_0              = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteDemand_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_ListDemands_0                   = runtime.ForwardResponseMessage
-	forward_PPCService_ConfirmDemand_0                 = runtime.ForwardResponseMessage
-	forward_PPCService_PullFromOrion_0                 = runtime.ForwardResponseMessage
-	forward_PPCService_ListCarryForwardCandidates_0    = runtime.ForwardResponseMessage
-	forward_PPCService_ProcessCarryForward_0           = runtime.ForwardResponseMessage
-	forward_PPCService_ApproveMTSDemand_0              = runtime.ForwardResponseMessage
-	forward_PPCService_CreatePlanItem_0                = runtime.ForwardResponseMessage
-	forward_PPCService_GetPlanItem_0                   = runtime.ForwardResponseMessage
-	forward_PPCService_UpdatePlanItem_0                = runtime.ForwardResponseMessage
-	forward_PPCService_DeletePlanItem_0                = runtime.ForwardResponseMessage
-	forward_PPCService_ListPlanItems_0                 = runtime.ForwardResponseMessage
-	forward_PPCService_GetGanttView_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_CreateWorkOrder_0               = runtime.ForwardResponseMessage
-	forward_PPCService_GetWorkOrder_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateWorkOrder_0               = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteWorkOrder_0               = runtime.ForwardResponseMessage
-	forward_PPCService_ListWorkOrders_0                = runtime.ForwardResponseMessage
-	forward_PPCService_ListMergeCandidates_0           = runtime.ForwardResponseMessage
-	forward_PPCService_ResolveWOParameters_0           = runtime.ForwardResponseMessage
-	forward_PPCService_SaveWOParameters_0              = runtime.ForwardResponseMessage
-	forward_PPCService_SaveWORmAllocations_0           = runtime.ForwardResponseMessage
-	forward_PPCService_PopulateWORmFromRoute_0         = runtime.ForwardResponseMessage
-	forward_PPCService_SaveWOExecution_0               = runtime.ForwardResponseMessage
-	forward_PPCService_ListWOExecutions_0              = runtime.ForwardResponseMessage
-	forward_PPCService_SubmitWO_0                      = runtime.ForwardResponseMessage
-	forward_PPCService_ApproveWOParameter_0            = runtime.ForwardResponseMessage
-	forward_PPCService_ApproveWO_0                     = runtime.ForwardResponseMessage
-	forward_PPCService_RejectWO_0                      = runtime.ForwardResponseMessage
-	forward_PPCService_CreateWOReference_0             = runtime.ForwardResponseMessage
-	forward_PPCService_GetWOProductionActual_0         = runtime.ForwardResponseMessage
-	forward_PPCService_AdjustWOActual_0                = runtime.ForwardResponseMessage
-	forward_PPCService_SuggestWOActual_0               = runtime.ForwardResponseMessage
-	forward_PPCService_SubmitShiftEntry_0              = runtime.ForwardResponseMessage
-	forward_PPCService_SubmitAreaShiftLog_0            = runtime.ForwardResponseMessage
-	forward_PPCService_ListMachineShiftLogs_0          = runtime.ForwardResponseMessage
-	forward_PPCService_RecalcEfficiency_0              = runtime.ForwardResponseMessage
-	forward_PPCService_ListEfficiencySnapshots_0       = runtime.ForwardResponseMessage
-	forward_PPCService_CreateShiftLogNote_0            = runtime.ForwardResponseMessage
-	forward_PPCService_GetShiftLogNote_0               = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateShiftLogNote_0            = runtime.ForwardResponseMessage
-	forward_PPCService_DeleteShiftLogNote_0            = runtime.ForwardResponseMessage
-	forward_PPCService_ListShiftLogNotes_0             = runtime.ForwardResponseMessage
-	forward_PPCService_GetMorningReview_0              = runtime.ForwardResponseMessage
-	forward_PPCService_GetBalanceForSale_0             = runtime.ForwardResponseMessage
-	forward_PPCService_GetDailyPerformance_0           = runtime.ForwardResponseMessage
-	forward_PPCService_GetChangeoverEvent_0            = runtime.ForwardResponseMessage
-	forward_PPCService_ListChangeoverEvents_0          = runtime.ForwardResponseMessage
-	forward_PPCService_DetectChangeover_0              = runtime.ForwardResponseMessage
-	forward_PPCService_CreateChangeoverEvent_0         = runtime.ForwardResponseMessage
-	forward_PPCService_StartChangeover_0               = runtime.ForwardResponseMessage
-	forward_PPCService_UpdateChangeoverActual_0        = runtime.ForwardResponseMessage
-	forward_PPCService_ListWOGradeActuals_0            = runtime.ForwardResponseMessage
-	forward_PPCService_CreateCommonLot_0               = runtime.ForwardResponseMessage
-	forward_PPCService_GetCommonLot_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_ListCommonLots_0                = runtime.ForwardResponseMessage
-	forward_PPCService_ExportDailyPerformance_0        = runtime.ForwardResponseMessage
-	forward_PPCService_CreatePpcLookup_0               = runtime.ForwardResponseMessage
-	forward_PPCService_GetPpcLookup_0                  = runtime.ForwardResponseMessage
-	forward_PPCService_UpdatePpcLookup_0               = runtime.ForwardResponseMessage
-	forward_PPCService_DeletePpcLookup_0               = runtime.ForwardResponseMessage
-	forward_PPCService_ListPpcLookups_0                = runtime.ForwardResponseMessage
-	forward_PPCService_CreatePpcShift_0                = runtime.ForwardResponseMessage
-	forward_PPCService_GetPpcShift_0                   = runtime.ForwardResponseMessage
-	forward_PPCService_UpdatePpcShift_0                = runtime.ForwardResponseMessage
-	forward_PPCService_DeletePpcShift_0                = runtime.ForwardResponseMessage
-	forward_PPCService_ListPpcShifts_0                 = runtime.ForwardResponseMessage
+	forward_PPCService_CreateMachineGroup_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_GetMachineGroup_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateMachineGroup_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteMachineGroup_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_ListMachineGroups_0                   = runtime.ForwardResponseMessage
+	forward_PPCService_CreateMachine_0                       = runtime.ForwardResponseMessage
+	forward_PPCService_GetMachine_0                          = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateMachine_0                       = runtime.ForwardResponseMessage
+	forward_PPCService_ListMachines_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_SyncMachines_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_CreateCustomer_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_GetCustomer_0                         = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateCustomer_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_ListCustomers_0                       = runtime.ForwardResponseMessage
+	forward_PPCService_SyncCustomers_0                       = runtime.ForwardResponseMessage
+	forward_PPCService_ExportCustomers_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_ImportCustomers_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_DownloadCustomerTemplate_0            = runtime.ForwardResponseMessage
+	forward_PPCService_CreateLotMaster_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_GetLotMaster_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateLotMaster_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteLotMaster_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_ListLotMasters_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_SyncLots_0                            = runtime.ForwardResponseMessage
+	forward_PPCService_CreateProductPPCConfig_0              = runtime.ForwardResponseMessage
+	forward_PPCService_GetProductPPCConfig_0                 = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateProductPPCConfig_0              = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteProductPPCConfig_0              = runtime.ForwardResponseMessage
+	forward_PPCService_ListProductPPCConfigs_0               = runtime.ForwardResponseMessage
+	forward_PPCService_CreateProductMachineCapacity_0        = runtime.ForwardResponseMessage
+	forward_PPCService_GetProductMachineCapacity_0           = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateProductMachineCapacity_0        = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteProductMachineCapacity_0        = runtime.ForwardResponseMessage
+	forward_PPCService_ListProductMachineCapacities_0        = runtime.ForwardResponseMessage
+	forward_PPCService_CreateProductMachineParameter_0       = runtime.ForwardResponseMessage
+	forward_PPCService_GetProductMachineParameter_0          = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateProductMachineParameter_0       = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteProductMachineParameter_0       = runtime.ForwardResponseMessage
+	forward_PPCService_ListProductMachineParameters_0        = runtime.ForwardResponseMessage
+	forward_PPCService_CreateOverrunThresholdConfig_0        = runtime.ForwardResponseMessage
+	forward_PPCService_GetOverrunThresholdConfig_0           = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateOverrunThresholdConfig_0        = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteOverrunThresholdConfig_0        = runtime.ForwardResponseMessage
+	forward_PPCService_ListOverrunThresholdConfigs_0         = runtime.ForwardResponseMessage
+	forward_PPCService_CreateDowntimeReasonMaster_0          = runtime.ForwardResponseMessage
+	forward_PPCService_GetDowntimeReasonMaster_0             = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateDowntimeReasonMaster_0          = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteDowntimeReasonMaster_0          = runtime.ForwardResponseMessage
+	forward_PPCService_ListDowntimeReasonMasters_0           = runtime.ForwardResponseMessage
+	forward_PPCService_CreateWasteCategoryMaster_0           = runtime.ForwardResponseMessage
+	forward_PPCService_GetWasteCategoryMaster_0              = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateWasteCategoryMaster_0           = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteWasteCategoryMaster_0           = runtime.ForwardResponseMessage
+	forward_PPCService_ListWasteCategoryMasters_0            = runtime.ForwardResponseMessage
+	forward_PPCService_ListSalesOrderStaging_0               = runtime.ForwardResponseMessage
+	forward_PPCService_ListSalesOrderStagingIds_0            = runtime.ForwardResponseMessage
+	forward_PPCService_SetStagingProduct_0                   = runtime.ForwardResponseMessage
+	forward_PPCService_CreateDemand_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_GetDemand_0                           = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateDemand_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_MapDemandProduct_0                    = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteDemand_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_ListDemands_0                         = runtime.ForwardResponseMessage
+	forward_PPCService_ConfirmDemand_0                       = runtime.ForwardResponseMessage
+	forward_PPCService_PullFromOrion_0                       = runtime.ForwardResponseMessage
+	forward_PPCService_ListCarryForwardCandidates_0          = runtime.ForwardResponseMessage
+	forward_PPCService_ProcessCarryForward_0                 = runtime.ForwardResponseMessage
+	forward_PPCService_ApproveMTSDemand_0                    = runtime.ForwardResponseMessage
+	forward_PPCService_CreatePlanItem_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_GetPlanItem_0                         = runtime.ForwardResponseMessage
+	forward_PPCService_UpdatePlanItem_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_DeletePlanItem_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_ListPlanItems_0                       = runtime.ForwardResponseMessage
+	forward_PPCService_GetGanttView_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_ListPlanCarryForwardCandidates_0      = runtime.ForwardResponseMessage
+	forward_PPCService_ProcessPlanCarryForward_0             = runtime.ForwardResponseMessage
+	forward_PPCService_ListWorkOrderCarryForwardCandidates_0 = runtime.ForwardResponseMessage
+	forward_PPCService_ProcessWorkOrderCarryForward_0        = runtime.ForwardResponseMessage
+	forward_PPCService_CreateWorkOrder_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_GetWorkOrder_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateWorkOrder_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteWorkOrder_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_ListWorkOrders_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_ListMergeCandidates_0                 = runtime.ForwardResponseMessage
+	forward_PPCService_ResolveWOParameters_0                 = runtime.ForwardResponseMessage
+	forward_PPCService_SaveWOParameters_0                    = runtime.ForwardResponseMessage
+	forward_PPCService_SaveWORmAllocations_0                 = runtime.ForwardResponseMessage
+	forward_PPCService_PopulateWORmFromRoute_0               = runtime.ForwardResponseMessage
+	forward_PPCService_SaveWOExecution_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_ListWOExecutions_0                    = runtime.ForwardResponseMessage
+	forward_PPCService_SubmitWO_0                            = runtime.ForwardResponseMessage
+	forward_PPCService_ApproveWOParameter_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_ApproveWO_0                           = runtime.ForwardResponseMessage
+	forward_PPCService_RejectWO_0                            = runtime.ForwardResponseMessage
+	forward_PPCService_CreateWOReference_0                   = runtime.ForwardResponseMessage
+	forward_PPCService_GetWOProductionActual_0               = runtime.ForwardResponseMessage
+	forward_PPCService_AdjustWOActual_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_SuggestWOActual_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_SubmitShiftEntry_0                    = runtime.ForwardResponseMessage
+	forward_PPCService_SubmitAreaShiftLog_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_ListMachineShiftLogs_0                = runtime.ForwardResponseMessage
+	forward_PPCService_RecalcEfficiency_0                    = runtime.ForwardResponseMessage
+	forward_PPCService_ListEfficiencySnapshots_0             = runtime.ForwardResponseMessage
+	forward_PPCService_CreateShiftLogNote_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_GetShiftLogNote_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateShiftLogNote_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_DeleteShiftLogNote_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_ListShiftLogNotes_0                   = runtime.ForwardResponseMessage
+	forward_PPCService_GetMorningReview_0                    = runtime.ForwardResponseMessage
+	forward_PPCService_GetBalanceForSale_0                   = runtime.ForwardResponseMessage
+	forward_PPCService_GetDailyPerformance_0                 = runtime.ForwardResponseMessage
+	forward_PPCService_GetChangeoverEvent_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_ListChangeoverEvents_0                = runtime.ForwardResponseMessage
+	forward_PPCService_DetectChangeover_0                    = runtime.ForwardResponseMessage
+	forward_PPCService_CreateChangeoverEvent_0               = runtime.ForwardResponseMessage
+	forward_PPCService_StartChangeover_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_UpdateChangeoverActual_0              = runtime.ForwardResponseMessage
+	forward_PPCService_ListWOGradeActuals_0                  = runtime.ForwardResponseMessage
+	forward_PPCService_CreateCommonLot_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_GetCommonLot_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_ListCommonLots_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_ExportDailyPerformance_0              = runtime.ForwardResponseMessage
+	forward_PPCService_CreatePpcLookup_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_GetPpcLookup_0                        = runtime.ForwardResponseMessage
+	forward_PPCService_UpdatePpcLookup_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_DeletePpcLookup_0                     = runtime.ForwardResponseMessage
+	forward_PPCService_ListPpcLookups_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_CreatePpcShift_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_GetPpcShift_0                         = runtime.ForwardResponseMessage
+	forward_PPCService_UpdatePpcShift_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_DeletePpcShift_0                      = runtime.ForwardResponseMessage
+	forward_PPCService_ListPpcShifts_0                       = runtime.ForwardResponseMessage
 )

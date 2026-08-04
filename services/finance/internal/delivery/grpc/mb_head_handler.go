@@ -28,6 +28,7 @@ type MBHeadHandler struct {
 	validateHandler  *appmbhead.ValidateHandler
 	unApproveHandler *appmbhead.UnApproveHandler
 	revokeHandler    *appmbhead.RevokeHandler
+	refreezeHandler  *appmbhead.RefreezeHandler
 	exportHandler    *appmbhead.ExportHandler
 	importHandler    *appmbhead.ImportHandler
 	templateHandler  *appmbhead.TemplateHandler
@@ -51,6 +52,7 @@ func NewMBHeadHandler(repo mbhead.Repository, paramRepo mbparam.Repository) (*MB
 		validateHandler:  appmbhead.NewValidateHandler(repo, paramRepo),
 		unApproveHandler: appmbhead.NewUnApproveHandler(repo),
 		revokeHandler:    appmbhead.NewRevokeHandler(repo),
+		refreezeHandler:  appmbhead.NewRefreezeHandler(repo, paramRepo),
 		exportHandler:    appmbhead.NewExportHandler(repo),
 		importHandler:    appmbhead.NewImportHandler(repo),
 		templateHandler:  appmbhead.NewTemplateHandler(),

@@ -27,6 +27,21 @@ func (r *WorkOrderRepository) ReplaceParameters(ctx context.Context, woID int64,
 	})
 }
 
+// insertParametersTx writes a WO's parameter rows inside an existing
+// transaction. The create path uses this rather than ReplaceParameters so the
+// parameters land in the same transaction as the WO header: a WO that commits
+// without its parameters is unusable to the PC operator, and there is nothing
+// in the UI that would tell them the rows are simply missing.
+func insertParametersTx(ctx context.Context, tx *sql.Tx, woID int64, params []*workorder.Parameter) error {
+	for _, p := range params {
+		p.WOID = woID
+		if err := insertParameterTx(ctx, tx, woID, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func insertParameterTx(ctx context.Context, tx *sql.Tx, woID int64, p *workorder.Parameter) error {
 	query := `
 		INSERT INTO wo_parameter (

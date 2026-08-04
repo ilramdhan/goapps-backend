@@ -82,13 +82,13 @@ func (h *CalculateHandlerV2) HandleOneGroup(
 	hv2 := headerInputsV2FromHead(head, simRate)
 	proj := ComputeMarketingProjections(totals, hv2)
 	costSim := ComputeSimulation(simRate, hv2)
-	costVal := SelectValuation(totals, hv2.ValuationFlag)
-	costMkt := SelectMarketing(proj, hv2.MarketingFlag)
+	costVal, valUsed := SelectValuationWithFlag(totals, hv2.ValuationFlag)
+	costMkt, mktUsed := SelectMarketingWithFlag(proj, hv2.MarketingFlag)
 
 	uomCode := h.resolveGroupUOM(ctx, period, details, itemCodes)
 
 	calcTime := time.Now()
-	cost, err := h.buildOrApplyCost(existing, head, period, uomCode, totals, proj, hv2, costVal, costMkt, costSim, calculatedBy)
+	cost, err := h.buildOrApplyCost(existing, head, period, uomCode, totals, proj, hv2, costVal, costMkt, costSim, valUsed, mktUsed, calculatedBy)
 	if err != nil {
 		return nil, err
 	}
@@ -209,20 +209,27 @@ func (h *CalculateHandlerV2) buildOrApplyCost(
 	proj MarketingProjections,
 	hv2 HeaderInputsV2,
 	costVal, costMkt, costSim float64,
+	valUsed, mktUsed string,
 	calculatedBy string,
 ) (*rmcost.Cost, error) {
 	// Build a V1-Computed shim with the V2 cost values so existing schema fields
 	// (cost_val/cost_mark/cost_sim, flag_*_used) stay populated for back-compat.
+	// FlagValuationUsed now carries the V2 engine's resolved cascade flag
+	// (CL/SL/FL/AUTO→resolved), not the V1 enum (CONS/STORES/…) that was
+	// written before ENG-RM-01/P3. Both flag_valuation_used and
+	// valuation_flag_v2 are independently correct — they serve different
+	// consumers (V1 back-compat vs V2 detail).
 	v1Computed := rmcost.Computed{
-		Rates:              rmcost.StageRates{}, // V1 stages unused in V2 path
-		CostValuation:      costVal,
-		CostMarketing:      costMkt,
-		CostSimulation:     costSim,
-		FlagValuation:      rmcost.Stage(head.FlagValuation()),
-		FlagMarketing:      rmcost.Stage(head.FlagMarketing()),
-		FlagSimulation:     rmcost.Stage(head.FlagSimulation()),
-		FlagValuationUsed:  rmcost.Stage(head.FlagValuation()),
-		FlagMarketingUsed:  rmcost.Stage(head.FlagMarketing()),
+		Rates:          rmcost.StageRates{}, // V1 stages unused in V2 path
+		CostValuation:  costVal,
+		CostMarketing:  costMkt,
+		CostSimulation: costSim,
+		FlagValuation:  rmcost.Stage(head.FlagValuation()),
+		FlagMarketing:  rmcost.Stage(head.FlagMarketing()),
+		FlagSimulation: rmcost.Stage(head.FlagSimulation()),
+		// flag_valuation_used column — the flag the V2 cascade actually applied.
+		FlagValuationUsed:  rmcost.Stage(valUsed),
+		FlagMarketingUsed:  rmcost.Stage(mktUsed),
 		FlagSimulationUsed: rmcost.Stage(head.FlagSimulation()),
 	}
 

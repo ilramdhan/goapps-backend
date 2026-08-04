@@ -109,10 +109,14 @@ func (s *RouteRmSource) RouteRmComponents(ctx context.Context, productSysID int6
 		shade := stage.GetRouteShadeCode()
 		for _, rm := range stage.GetRms() {
 			out = append(out, workorder.RouteRmComponent{
-				CrmRmID:   rm.GetRmId(),
-				RmType:    rm.GetRmType(),
-				ShadeCode: shade,
-				Ratio:     parseRatio(rm.GetRouteRmRatio()),
+				CrmRmID:        rm.GetRmId(),
+				RmType:         rm.GetRmType(),
+				ShadeCode:      shade,
+				Ratio:          parseRatio(rm.GetRouteRmRatio()),
+				RmCode:         rm.GetRmCode(),
+				RmName:         rm.GetRmName(),
+				RouteStageName: stage.GetRouteName(),
+				RouteLevel:     stage.GetRouteLevel(),
 			})
 		}
 	}

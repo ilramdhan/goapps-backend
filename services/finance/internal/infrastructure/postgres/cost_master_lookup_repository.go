@@ -115,6 +115,10 @@ type LookupRouteRm struct {
 	RmGroupCode    string
 	RouteRmRatio   string
 	SubType        string
+	// Resolved presentation labels (see loadRouteRms) — empty when the master
+	// row the edge points at is missing.
+	RmCode string
+	RmName string
 }
 
 const lookupProductCols = `
@@ -358,12 +362,36 @@ func (r *CostMasterLookupRepository) loadRouteStages(ctx context.Context, headID
 }
 
 func (r *CostMasterLookupRepository) loadRouteRms(ctx context.Context, headID int64) ([]LookupRouteRm, error) {
+	// rm_code / rm_name are resolved here rather than by the caller: the master
+	// row to join depends on crm_rm_type, and consumers (PPC) live in a separate
+	// database with no way to make that join themselves. LEFT JOINs so a route
+	// edge pointing at a deleted master still yields the edge with blank labels
+	// instead of vanishing from the route.
 	const q = `
 		SELECT crm.crm_rm_id, crm.crm_seq_id, COALESCE(crm.crm_rm_type,''),
 		       COALESCE(crm.crm_rm_product_sys_id,0), COALESCE(crm.crm_rm_item_code,''),
-		       COALESCE(crm.crm_rm_group_code,''), crm.crm_route_rm_ratio, COALESCE(crm.crm_sub_type,'')
+		       COALESCE(crm.crm_rm_group_code,''), crm.crm_route_rm_ratio, COALESCE(crm.crm_sub_type,''),
+		       CASE crm.crm_rm_type
+		           WHEN 'PRODUCT' THEN COALESCE(cpm.cpm_product_code,'')
+		           WHEN 'ITEM'    THEN COALESCE(crm.crm_rm_item_code,'')
+		           WHEN 'GROUP'   THEN COALESCE(crm.crm_rm_group_code,'')
+		           ELSE ''
+		       END AS rm_code,
+		       CASE crm.crm_rm_type
+		           WHEN 'PRODUCT' THEN COALESCE(cpm.cpm_product_name,'')
+		           WHEN 'ITEM'    THEN COALESCE(cei.cei_item_name,'')
+		           WHEN 'GROUP'   THEN COALESCE(rgh.group_name,'')
+		           ELSE ''
+		       END AS rm_name
 		FROM cost_route_rm crm
 		JOIN cost_route_seq crs ON crs.crs_seq_id = crm.crm_seq_id
+		LEFT JOIN cost_product_master cpm
+		       ON crm.crm_rm_type = 'PRODUCT' AND cpm.cpm_product_sys_id = crm.crm_rm_product_sys_id
+		LEFT JOIN cost_erp_item cei
+		       ON crm.crm_rm_type = 'ITEM' AND cei.cei_item_code = crm.crm_rm_item_code
+		LEFT JOIN cst_rm_group_head rgh
+		       ON crm.crm_rm_type = 'GROUP' AND rgh.group_code = crm.crm_rm_group_code
+		      AND rgh.deleted_at IS NULL
 		WHERE crs.crs_head_id = $1 AND crs.crs_deleted_at IS NULL
 		ORDER BY crm.crm_seq_id, crm.crm_rm_id`
 	rows, err := r.db.QueryContext(ctx, q, headID)
@@ -378,6 +406,7 @@ func (r *CostMasterLookupRepository) loadRouteRms(ctx context.Context, headID in
 		if scanErr := rows.Scan(
 			&rm.RmID, &rm.SeqID, &rm.RmType, &rm.RmProductSysID,
 			&rm.RmItemCode, &rm.RmGroupCode, &ratio, &rm.SubType,
+			&rm.RmCode, &rm.RmName,
 		); scanErr != nil {
 			return nil, fmt.Errorf("scan route rm: %w", scanErr)
 		}

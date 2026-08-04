@@ -106,6 +106,16 @@ type RmAllocation struct {
 	ShadeCode    string
 	QtyAllocated float64
 	Notes        string
+
+	// Presentation-only labels resolved from the product's released route. Never
+	// persisted (wo_rm_allocation stores only CrmRmID); decorated at read time so
+	// no consumer has to render CrmRmID to a user. Empty when the route is
+	// unavailable or the edge is no longer part of it.
+	RmCode         string
+	RmName         string
+	RouteStageName string
+	RouteLevel     int32
+	RouteRmRatio   float64
 }
 
 // NewParams carries the inputs for constructing a new WorkOrder header.

@@ -1,6 +1,9 @@
 package workorder
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Domain errors for work-order operations.
 var (
@@ -48,16 +51,38 @@ var (
 	// ErrMachineAreaMismatch is returned when the machine area does not match
 	// the WO area code.
 	ErrMachineAreaMismatch = errors.New("invalid machine: area does not match work order area")
-	// ErrLotNotFound is returned when the WO lot is not in lot_master.
-	ErrLotNotFound = errors.New("invalid lot: not found in lot master")
+	// ErrLotNotFound is returned when the WO lot is not in lot_master. The
+	// message names the register route because an unknown lot is far more often
+	// a typo than a genuinely new lot, and a silently-created one would carry no
+	// standard weights for the ETL to price bobbins against.
+	//
+	// WIRE BEHAVIOR CHANGED DELIBERATELY: the previous text contained the words
+	// "not found", which made domainErrorToBaseResponse classify it 404. This one
+	// does not, so it classifies 400. That is the correct code -- the work order
+	// is the resource being created and the lot is a rejected *field value* on
+	// it, which is a validation failure rather than a missing resource. The 404
+	// was an artifact of substring matching on the word "found", never a
+	// decision. The 400 is pinned by TestLotErrors_MapToDistinctClientMessages so
+	// it cannot drift back silently.
+	ErrLotNotFound = errors.New("invalid lot: this " + CausePhraseLotNotRegistered +
+		" — register it under Production Plan > Masters > Lots, or leave the lot blank to have one generated")
 	// ErrLotSpecUnavailable is returned when a lot cannot be generated because
-	// the product's item/shade codes or standard bobbin weights are unknown.
-	// Registering a lot without them would leave the ETL unable to convert
-	// bobbin counts into kilograms, so the work order is rejected instead.
-	ErrLotSpecUnavailable = errors.New("cannot generate lot: product item/shade codes or standard bobbin weights are unavailable — register the lot in lot master first and enter it manually")
+	// one of its required inputs is unknown. Registering a lot without them
+	// would leave the ETL unable to convert bobbin counts into kilograms, so the
+	// work order is rejected instead.
+	//
+	// It is the WRAPPER for the specific causes below, never returned on its own
+	// from the generate path. Call sites that only care that generation failed
+	// keep working through errors.Is; call sites that want to tell the planner
+	// what to fix read the specific cause.
+	ErrLotSpecUnavailable = errors.New("cannot generate lot")
 	// ErrLotGenerationUnavailable is returned when lot generation is requested
-	// but no lot provisioner is configured.
-	ErrLotGenerationUnavailable = errors.New("cannot generate lot: lot number generation is not available — enter a lot number registered in lot master")
+	// but no lot provisioner is configured. Unlike the three causes in
+	// lot_errors.go this is a deployment problem, not missing master data — but
+	// the planner's workaround is still a master action (enter an existing lot),
+	// so it carries a cause phrase and points at lot master like the rest.
+	ErrLotGenerationUnavailable = errors.New("cannot generate lot: " + CausePhraseGenerationUnavailable +
+		" — enter a lot number registered in lot master")
 	// ErrEmptyReason is returned when a required reason (reject/adjust) is empty.
 	ErrEmptyReason = errors.New("reason cannot be empty")
 	// ErrNotEditable is returned when a header edit targets a non-DRAFT WO
@@ -67,4 +92,45 @@ var (
 	ErrActualNotFound = errors.New("work order production actual not found")
 	// ErrNotDeletable is returned when deleting a non-DRAFT work order is attempted.
 	ErrNotDeletable = errors.New("cannot delete work order: only DRAFT work orders can be deleted")
+
+	// ── Carry-forward ────────────────────────────────────────────────────────
+
+	// ErrWONotEligibleForCarry is returned when a WO's status makes it
+	// permanently ineligible for carry-forward.
+	ErrWONotEligibleForCarry = errors.New("this work order cannot be carried forward")
+	// ErrAlreadyCarriedIntoMonth is returned when the source WO has already
+	// been carried into the requested target month.
+	ErrAlreadyCarriedIntoMonth = errors.New("this work order has already been carried into the target month")
+	// ErrNothingToCarry is returned when a WO has no remaining qty to carry.
+	ErrNothingToCarry = errors.New("nothing to carry: qty target already covered by production actual")
+	// ErrCarryQtyExceedsRemaining is returned when the requested carry qty
+	// exceeds what is left to produce.
+	ErrCarryQtyExceedsRemaining = errors.New("carry quantity exceeds the remaining quantity")
+	// ErrCarryTargetNotLater is returned when the target month is not strictly
+	// later than the source WO's own month. A WO has no month column — the month
+	// is TO_CHAR(wo_deadline,'YYYY-MM') — so a same-month carry produces a second
+	// WO the candidate list then offers as a fresh candidate, and a backwards
+	// carry moves work into a month whose production has already been reported.
+	ErrCarryTargetNotLater = errors.New(
+		"invalid target month: it must be later than the work order's own month")
+	// ErrInvalidTargetMonth is returned when the target month is not YYYY-MM.
+	ErrInvalidTargetMonth = errors.New("invalid target month: expected the form YYYY-MM")
 )
+
+// CarryIneligibleError wraps a WO that is permanently blocked from carry-forward
+// with a reason, so the gRPC handler can surface it without collapsing all
+// ineligibility conditions into one sentinel.
+type CarryIneligibleError struct {
+	WOID   int64
+	Reason string
+}
+
+// Error implements error.
+func (e CarryIneligibleError) Error() string {
+	return fmt.Sprintf("work order %d cannot be carried forward: %s", e.WOID, e.Reason)
+}
+
+// NewCarryIneligibleError builds a CarryIneligibleError.
+func NewCarryIneligibleError(woID int64, reason string) error {
+	return CarryIneligibleError{WOID: woID, Reason: reason}
+}

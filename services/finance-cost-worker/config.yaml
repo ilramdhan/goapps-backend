@@ -18,6 +18,9 @@ database:
   max_idle_conns: 2
   conn_max_lifetime: 15m
   conn_max_idle_time: 5m
+  # Must stay true whenever the connection goes through PgBouncer in
+  # transaction pooling mode (all K8s environments). See DatabaseConfig.
+  binary_parameters: true
 
 rabbitmq:
   url: amqp://guest:guest@localhost:5672/

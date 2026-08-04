@@ -317,19 +317,28 @@ func (x *WOExecution) GetInputAt() string {
 // (replaces the legacy POY/chips 1/2/3 fixed slots). rm_type=PRODUCT forms
 // automatic lot genealogy between products.
 type WORmAllocation struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WraId         int64                  `protobuf:"varint,1,opt,name=wra_id,json=wraId,proto3" json:"wra_id,omitempty"`
-	WoId          int64                  `protobuf:"varint,2,opt,name=wo_id,json=woId,proto3" json:"wo_id,omitempty"`
-	CrmRmId       int64                  `protobuf:"varint,3,opt,name=crm_rm_id,json=crmRmId,proto3" json:"crm_rm_id,omitempty"`                       // FK cost_route_rm (route RM component)
-	RmType        string                 `protobuf:"bytes,4,opt,name=rm_type,json=rmType,proto3" json:"rm_type,omitempty"`                             // PRODUCT / ITEM / GROUP (from crm_rm_type)
-	LotNo         string                 `protobuf:"bytes,5,opt,name=lot_no,json=lotNo,proto3" json:"lot_no,omitempty"`                                // actual lot chosen
-	RmSource      RMSource               `protobuf:"varint,6,opt,name=rm_source,json=rmSource,proto3,enum=ppc.v1.RMSource" json:"rm_source,omitempty"` // STORE / CAPTIVE / MIXED
-	FreshBox      string                 `protobuf:"bytes,7,opt,name=fresh_box,json=freshBox,proto3" json:"fresh_box,omitempty"`                       // Fresh / Box
-	ShadeCode     string                 `protobuf:"bytes,8,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
-	QtyAllocated  string                 `protobuf:"bytes,9,opt,name=qty_allocated,json=qtyAllocated,proto3" json:"qty_allocated,omitempty"` // decimal-as-string
-	Notes         string                 `protobuf:"bytes,10,opt,name=notes,proto3" json:"notes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	WraId        int64                  `protobuf:"varint,1,opt,name=wra_id,json=wraId,proto3" json:"wra_id,omitempty"`
+	WoId         int64                  `protobuf:"varint,2,opt,name=wo_id,json=woId,proto3" json:"wo_id,omitempty"`
+	CrmRmId      int64                  `protobuf:"varint,3,opt,name=crm_rm_id,json=crmRmId,proto3" json:"crm_rm_id,omitempty"`                       // FK cost_route_rm (route RM component)
+	RmType       string                 `protobuf:"bytes,4,opt,name=rm_type,json=rmType,proto3" json:"rm_type,omitempty"`                             // PRODUCT / ITEM / GROUP (from crm_rm_type)
+	LotNo        string                 `protobuf:"bytes,5,opt,name=lot_no,json=lotNo,proto3" json:"lot_no,omitempty"`                                // actual lot chosen
+	RmSource     RMSource               `protobuf:"varint,6,opt,name=rm_source,json=rmSource,proto3,enum=ppc.v1.RMSource" json:"rm_source,omitempty"` // STORE / CAPTIVE / MIXED
+	FreshBox     string                 `protobuf:"bytes,7,opt,name=fresh_box,json=freshBox,proto3" json:"fresh_box,omitempty"`                       // Fresh / Box
+	ShadeCode    string                 `protobuf:"bytes,8,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
+	QtyAllocated string                 `protobuf:"bytes,9,opt,name=qty_allocated,json=qtyAllocated,proto3" json:"qty_allocated,omitempty"` // decimal-as-string
+	Notes        string                 `protobuf:"bytes,10,opt,name=notes,proto3" json:"notes,omitempty"`
+	// Presentation-only decoration resolved from the product's released route
+	// (finance CostMasterRouteRm). crm_rm_id stays the wire identity; these exist
+	// so no consumer ever has to render that raw id to a user. Empty when the
+	// route is unavailable or the edge is no longer part of it.
+	RmCode         string `protobuf:"bytes,11,opt,name=rm_code,json=rmCode,proto3" json:"rm_code,omitempty"`                           // item / group / product code of the RM edge
+	RmName         string `protobuf:"bytes,12,opt,name=rm_name,json=rmName,proto3" json:"rm_name,omitempty"`                           // display name of the RM edge
+	RouteStageName string `protobuf:"bytes,13,opt,name=route_stage_name,json=routeStageName,proto3" json:"route_stage_name,omitempty"` // owning route stage (attribution)
+	RouteLevel     int32  `protobuf:"varint,14,opt,name=route_level,json=routeLevel,proto3" json:"route_level,omitempty"`              // owning route stage level
+	RouteRmRatio   string `protobuf:"bytes,15,opt,name=route_rm_ratio,json=routeRmRatio,proto3" json:"route_rm_ratio,omitempty"`       // decimal-as-string, ratio the qty suggestion came from
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *WORmAllocation) Reset() {
@@ -428,6 +437,41 @@ func (x *WORmAllocation) GetQtyAllocated() string {
 func (x *WORmAllocation) GetNotes() string {
 	if x != nil {
 		return x.Notes
+	}
+	return ""
+}
+
+func (x *WORmAllocation) GetRmCode() string {
+	if x != nil {
+		return x.RmCode
+	}
+	return ""
+}
+
+func (x *WORmAllocation) GetRmName() string {
+	if x != nil {
+		return x.RmName
+	}
+	return ""
+}
+
+func (x *WORmAllocation) GetRouteStageName() string {
+	if x != nil {
+		return x.RouteStageName
+	}
+	return ""
+}
+
+func (x *WORmAllocation) GetRouteLevel() int32 {
+	if x != nil {
+		return x.RouteLevel
+	}
+	return 0
+}
+
+func (x *WORmAllocation) GetRouteRmRatio() string {
+	if x != nil {
+		return x.RouteRmRatio
 	}
 	return ""
 }
@@ -4008,6 +4052,344 @@ func (x *ListMergeCandidatesResponse) GetData() []*PlanItem {
 	return nil
 }
 
+// WorkOrderCarryCandidate is one WO that may be carried into a new month,
+// decorated with everything the planner needs to decide without seeing an id.
+type WorkOrderCarryCandidate struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Wo    *WorkOrder             `protobuf:"bytes,1,opt,name=wo,proto3" json:"wo,omitempty"`
+	// Qty not yet produced: QtyTarget − SUM(production actual, actual first then
+	// bobbin per row). Non-positive means fully produced — ineligible with reason.
+	RemainingQty string `protobuf:"bytes,2,opt,name=remaining_qty,json=remainingQty,proto3" json:"remaining_qty,omitempty"`
+	// Human label for the machine this WO runs on.
+	MachineLabel string `protobuf:"bytes,3,opt,name=machine_label,json=machineLabel,proto3" json:"machine_label,omitempty"`
+	// Human label for the product this WO produces.
+	ProductLabel string `protobuf:"bytes,4,opt,name=product_label,json=productLabel,proto3" json:"product_label,omitempty"`
+	// Ineligibility reason, empty when the WO is eligible to carry.
+	IneligibilityReason string `protobuf:"bytes,5,opt,name=ineligibility_reason,json=ineligibilityReason,proto3" json:"ineligibility_reason,omitempty"`
+	// True when a WO in the target month already names this one as its carry
+	// source — a second run over the same source shows it as done.
+	AlreadyCarried bool `protobuf:"varint,6,opt,name=already_carried,json=alreadyCarried,proto3" json:"already_carried,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WorkOrderCarryCandidate) Reset() {
+	*x = WorkOrderCarryCandidate{}
+	mi := &file_ppc_v1_work_order_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkOrderCarryCandidate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkOrderCarryCandidate) ProtoMessage() {}
+
+func (x *WorkOrderCarryCandidate) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_work_order_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkOrderCarryCandidate.ProtoReflect.Descriptor instead.
+func (*WorkOrderCarryCandidate) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_work_order_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *WorkOrderCarryCandidate) GetWo() *WorkOrder {
+	if x != nil {
+		return x.Wo
+	}
+	return nil
+}
+
+func (x *WorkOrderCarryCandidate) GetRemainingQty() string {
+	if x != nil {
+		return x.RemainingQty
+	}
+	return ""
+}
+
+func (x *WorkOrderCarryCandidate) GetMachineLabel() string {
+	if x != nil {
+		return x.MachineLabel
+	}
+	return ""
+}
+
+func (x *WorkOrderCarryCandidate) GetProductLabel() string {
+	if x != nil {
+		return x.ProductLabel
+	}
+	return ""
+}
+
+func (x *WorkOrderCarryCandidate) GetIneligibilityReason() string {
+	if x != nil {
+		return x.IneligibilityReason
+	}
+	return ""
+}
+
+func (x *WorkOrderCarryCandidate) GetAlreadyCarried() bool {
+	if x != nil {
+		return x.AlreadyCarried
+	}
+	return false
+}
+
+// Which WOs can be carried into a target month out of a source month.
+type ListWorkOrderCarryForwardCandidatesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourceMonth   string                 `protobuf:"bytes,1,opt,name=source_month,json=sourceMonth,proto3" json:"source_month,omitempty"`
+	TargetMonth   string                 `protobuf:"bytes,2,opt,name=target_month,json=targetMonth,proto3" json:"target_month,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWorkOrderCarryForwardCandidatesRequest) Reset() {
+	*x = ListWorkOrderCarryForwardCandidatesRequest{}
+	mi := &file_ppc_v1_work_order_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWorkOrderCarryForwardCandidatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWorkOrderCarryForwardCandidatesRequest) ProtoMessage() {}
+
+func (x *ListWorkOrderCarryForwardCandidatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_work_order_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWorkOrderCarryForwardCandidatesRequest.ProtoReflect.Descriptor instead.
+func (*ListWorkOrderCarryForwardCandidatesRequest) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_work_order_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *ListWorkOrderCarryForwardCandidatesRequest) GetSourceMonth() string {
+	if x != nil {
+		return x.SourceMonth
+	}
+	return ""
+}
+
+func (x *ListWorkOrderCarryForwardCandidatesRequest) GetTargetMonth() string {
+	if x != nil {
+		return x.TargetMonth
+	}
+	return ""
+}
+
+type ListWorkOrderCarryForwardCandidatesResponse struct {
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	Base          *v1.BaseResponse           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Data          []*WorkOrderCarryCandidate `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWorkOrderCarryForwardCandidatesResponse) Reset() {
+	*x = ListWorkOrderCarryForwardCandidatesResponse{}
+	mi := &file_ppc_v1_work_order_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWorkOrderCarryForwardCandidatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWorkOrderCarryForwardCandidatesResponse) ProtoMessage() {}
+
+func (x *ListWorkOrderCarryForwardCandidatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_work_order_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWorkOrderCarryForwardCandidatesResponse.ProtoReflect.Descriptor instead.
+func (*ListWorkOrderCarryForwardCandidatesResponse) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_work_order_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *ListWorkOrderCarryForwardCandidatesResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ListWorkOrderCarryForwardCandidatesResponse) GetData() []*WorkOrderCarryCandidate {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// One WO carry action. The action vocabulary is narrower than demand carry
+// because WOs are production instructions, not quantity balances: a carried WO
+// is always a continuation, and rejecting it to close-reroute is a manual
+// planner decision on the source WO's own detail page.
+type ProcessWorkOrderCarryForwardRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	SourceWoId  int64                  `protobuf:"varint,1,opt,name=source_wo_id,json=sourceWoId,proto3" json:"source_wo_id,omitempty"`
+	TargetMonth string                 `protobuf:"bytes,2,opt,name=target_month,json=targetMonth,proto3" json:"target_month,omitempty"`
+	// Lot number for the continuation. Blank means auto-generate via the
+	// lot-provisioning path, exactly like creating a WO from scratch. An explicit
+	// value must already exist in lot_master (validateLot).
+	//
+	// Bound matches work_order.wo_lot_no VARCHAR(30), as every other lot_no field
+	// in this file does. At 50 a 31..50-char lot cleared validation and then failed
+	// at INSERT as a raw driver error, which reaches the planner as a 500 instead
+	// of a field-level complaint. Generated lots are 10 chars, so nothing real is
+	// excluded by the tighter bound.
+	LotNo string `protobuf:"bytes,3,opt,name=lot_no,json=lotNo,proto3" json:"lot_no,omitempty"`
+	// Qty to carry. When unset or zero, the whole remaining qty is carried.
+	//
+	// The pattern admits the empty string: full-remainder is the ordinary case and
+	// the BFF sends "" for it. The previous rule had no empty alternative, so the
+	// documented unset path was unreachable through the RPC — every carry that
+	// left the qty blank was refused at the validation boundary before the handler
+	// (which already checks `req.CarryQty != ""`) could apply the default.
+	CarryQty      string `protobuf:"bytes,4,opt,name=carry_qty,json=carryQty,proto3" json:"carry_qty,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProcessWorkOrderCarryForwardRequest) Reset() {
+	*x = ProcessWorkOrderCarryForwardRequest{}
+	mi := &file_ppc_v1_work_order_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProcessWorkOrderCarryForwardRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProcessWorkOrderCarryForwardRequest) ProtoMessage() {}
+
+func (x *ProcessWorkOrderCarryForwardRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_work_order_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProcessWorkOrderCarryForwardRequest.ProtoReflect.Descriptor instead.
+func (*ProcessWorkOrderCarryForwardRequest) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_work_order_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *ProcessWorkOrderCarryForwardRequest) GetSourceWoId() int64 {
+	if x != nil {
+		return x.SourceWoId
+	}
+	return 0
+}
+
+func (x *ProcessWorkOrderCarryForwardRequest) GetTargetMonth() string {
+	if x != nil {
+		return x.TargetMonth
+	}
+	return ""
+}
+
+func (x *ProcessWorkOrderCarryForwardRequest) GetLotNo() string {
+	if x != nil {
+		return x.LotNo
+	}
+	return ""
+}
+
+func (x *ProcessWorkOrderCarryForwardRequest) GetCarryQty() string {
+	if x != nil {
+		return x.CarryQty
+	}
+	return ""
+}
+
+type ProcessWorkOrderCarryForwardResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Data          *WorkOrder             `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProcessWorkOrderCarryForwardResponse) Reset() {
+	*x = ProcessWorkOrderCarryForwardResponse{}
+	mi := &file_ppc_v1_work_order_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProcessWorkOrderCarryForwardResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProcessWorkOrderCarryForwardResponse) ProtoMessage() {}
+
+func (x *ProcessWorkOrderCarryForwardResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_work_order_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProcessWorkOrderCarryForwardResponse.ProtoReflect.Descriptor instead.
+func (*ProcessWorkOrderCarryForwardResponse) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_work_order_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ProcessWorkOrderCarryForwardResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ProcessWorkOrderCarryForwardResponse) GetData() *WorkOrder {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 var File_ppc_v1_work_order_proto protoreflect.FileDescriptor
 
 const file_ppc_v1_work_order_proto_rawDesc = "" +
@@ -4048,7 +4430,7 @@ const file_ppc_v1_work_order_proto_rawDesc = "" +
 	"value_flag\x18\t \x01(\bR\tvalueFlag\x12\x19\n" +
 	"\binput_by\x18\n" +
 	" \x01(\x03R\ainputBy\x12\x19\n" +
-	"\binput_at\x18\v \x01(\tR\ainputAt\"\xae\x02\n" +
+	"\binput_at\x18\v \x01(\tR\ainputAt\"\xd1\x03\n" +
 	"\x0eWORmAllocation\x12\x15\n" +
 	"\x06wra_id\x18\x01 \x01(\x03R\x05wraId\x12\x13\n" +
 	"\x05wo_id\x18\x02 \x01(\x03R\x04woId\x12\x1a\n" +
@@ -4061,7 +4443,13 @@ const file_ppc_v1_work_order_proto_rawDesc = "" +
 	"shade_code\x18\b \x01(\tR\tshadeCode\x12#\n" +
 	"\rqty_allocated\x18\t \x01(\tR\fqtyAllocated\x12\x14\n" +
 	"\x05notes\x18\n" +
-	" \x01(\tR\x05notes\"\xb0\n" +
+	" \x01(\tR\x05notes\x12\x17\n" +
+	"\arm_code\x18\v \x01(\tR\x06rmCode\x12\x17\n" +
+	"\arm_name\x18\f \x01(\tR\x06rmName\x12(\n" +
+	"\x10route_stage_name\x18\r \x01(\tR\x0erouteStageName\x12\x1f\n" +
+	"\vroute_level\x18\x0e \x01(\x05R\n" +
+	"routeLevel\x12$\n" +
+	"\x0eroute_rm_ratio\x18\x0f \x01(\tR\frouteRmRatio\"\xb0\n" +
 	"\n" +
 	"\x12WOProductionActual\x12\x1b\n" +
 	"\tactual_id\x18\x01 \x01(\x03R\bactualId\x12\x13\n" +
@@ -4430,7 +4818,29 @@ const file_ppc_v1_work_order_proto_rawDesc = "" +
 	"windowDays\"p\n" +
 	"\x1bListMergeCandidatesResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12$\n" +
-	"\x04data\x18\x02 \x03(\v2\x10.ppc.v1.PlanItemR\x04dataB\x8c\x01\n" +
+	"\x04data\x18\x02 \x03(\v2\x10.ppc.v1.PlanItemR\x04data\"\x87\x02\n" +
+	"\x17WorkOrderCarryCandidate\x12!\n" +
+	"\x02wo\x18\x01 \x01(\v2\x11.ppc.v1.WorkOrderR\x02wo\x12#\n" +
+	"\rremaining_qty\x18\x02 \x01(\tR\fremainingQty\x12#\n" +
+	"\rmachine_label\x18\x03 \x01(\tR\fmachineLabel\x12#\n" +
+	"\rproduct_label\x18\x04 \x01(\tR\fproductLabel\x121\n" +
+	"\x14ineligibility_reason\x18\x05 \x01(\tR\x13ineligibilityReason\x12'\n" +
+	"\x0falready_carried\x18\x06 \x01(\bR\x0ealreadyCarried\"\xb0\x01\n" +
+	"*ListWorkOrderCarryForwardCandidatesRequest\x12@\n" +
+	"\fsource_month\x18\x01 \x01(\tB\x1d\xbaH\x1ar\x182\x13^[0-9]{4}-[0-9]{2}$\x98\x01\aR\vsourceMonth\x12@\n" +
+	"\ftarget_month\x18\x02 \x01(\tB\x1d\xbaH\x1ar\x182\x13^[0-9]{4}-[0-9]{2}$\x98\x01\aR\vtargetMonth\"\x8f\x01\n" +
+	"+ListWorkOrderCarryForwardCandidatesResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x123\n" +
+	"\x04data\x18\x02 \x03(\v2\x1f.ppc.v1.WorkOrderCarryCandidateR\x04data\"\xf0\x01\n" +
+	"#ProcessWorkOrderCarryForwardRequest\x12)\n" +
+	"\fsource_wo_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\n" +
+	"sourceWoId\x12@\n" +
+	"\ftarget_month\x18\x02 \x01(\tB\x1d\xbaH\x1ar\x182\x13^[0-9]{4}-[0-9]{2}$\x98\x01\aR\vtargetMonth\x12\x1e\n" +
+	"\x06lot_no\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18\x1eR\x05lotNo\x12<\n" +
+	"\tcarry_qty\x18\x04 \x01(\tB\x1f\xbaH\x1cr\x1a\x18\x142\x16^([0-9]+(\\.[0-9]+)?)?$R\bcarryQty\"z\n" +
+	"$ProcessWorkOrderCarryForwardResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12%\n" +
+	"\x04data\x18\x02 \x01(\v2\x11.ppc.v1.WorkOrderR\x04dataB\x8c\x01\n" +
 	"\n" +
 	"com.ppc.v1B\x0eWorkOrderProtoP\x01Z5github.com/mutugading/goapps-backend/gen/ppc/v1;ppcv1\xa2\x02\x03PXX\xaa\x02\x06Ppc.V1\xca\x02\x06Ppc\\V1\xe2\x02\x12Ppc\\V1\\GPBMetadata\xea\x02\aPpc::V1b\x06proto3"
 
@@ -4446,143 +4856,153 @@ func file_ppc_v1_work_order_proto_rawDescGZIP() []byte {
 	return file_ppc_v1_work_order_proto_rawDescData
 }
 
-var file_ppc_v1_work_order_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
+var file_ppc_v1_work_order_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
 var file_ppc_v1_work_order_proto_goTypes = []any{
-	(*WOParameter)(nil),                   // 0: ppc.v1.WOParameter
-	(*WOExecution)(nil),                   // 1: ppc.v1.WOExecution
-	(*WORmAllocation)(nil),                // 2: ppc.v1.WORmAllocation
-	(*WOProductionActual)(nil),            // 3: ppc.v1.WOProductionActual
-	(*WorkOrder)(nil),                     // 4: ppc.v1.WorkOrder
-	(*WOPlanItemLink)(nil),                // 5: ppc.v1.WOPlanItemLink
-	(*CreateWorkOrderRequest)(nil),        // 6: ppc.v1.CreateWorkOrderRequest
-	(*CreateWorkOrderResponse)(nil),       // 7: ppc.v1.CreateWorkOrderResponse
-	(*GetWorkOrderRequest)(nil),           // 8: ppc.v1.GetWorkOrderRequest
-	(*GetWorkOrderResponse)(nil),          // 9: ppc.v1.GetWorkOrderResponse
-	(*UpdateWorkOrderRequest)(nil),        // 10: ppc.v1.UpdateWorkOrderRequest
-	(*UpdateWorkOrderResponse)(nil),       // 11: ppc.v1.UpdateWorkOrderResponse
-	(*DeleteWorkOrderRequest)(nil),        // 12: ppc.v1.DeleteWorkOrderRequest
-	(*DeleteWorkOrderResponse)(nil),       // 13: ppc.v1.DeleteWorkOrderResponse
-	(*ListWorkOrdersRequest)(nil),         // 14: ppc.v1.ListWorkOrdersRequest
-	(*ListWorkOrdersResponse)(nil),        // 15: ppc.v1.ListWorkOrdersResponse
-	(*WOParamValueInput)(nil),             // 16: ppc.v1.WOParamValueInput
-	(*SaveWOParametersRequest)(nil),       // 17: ppc.v1.SaveWOParametersRequest
-	(*SaveWOParametersResponse)(nil),      // 18: ppc.v1.SaveWOParametersResponse
-	(*ResolvedParam)(nil),                 // 19: ppc.v1.ResolvedParam
-	(*ResolveWOParametersRequest)(nil),    // 20: ppc.v1.ResolveWOParametersRequest
-	(*ResolveWOParametersResponse)(nil),   // 21: ppc.v1.ResolveWOParametersResponse
-	(*SaveWOExecutionRequest)(nil),        // 22: ppc.v1.SaveWOExecutionRequest
-	(*SaveWOExecutionResponse)(nil),       // 23: ppc.v1.SaveWOExecutionResponse
-	(*ListWOExecutionsRequest)(nil),       // 24: ppc.v1.ListWOExecutionsRequest
-	(*ListWOExecutionsResponse)(nil),      // 25: ppc.v1.ListWOExecutionsResponse
-	(*WORmAllocationInput)(nil),           // 26: ppc.v1.WORmAllocationInput
-	(*SaveWORmAllocationsRequest)(nil),    // 27: ppc.v1.SaveWORmAllocationsRequest
-	(*SaveWORmAllocationsResponse)(nil),   // 28: ppc.v1.SaveWORmAllocationsResponse
-	(*PopulateWORmFromRouteRequest)(nil),  // 29: ppc.v1.PopulateWORmFromRouteRequest
-	(*PopulateWORmFromRouteResponse)(nil), // 30: ppc.v1.PopulateWORmFromRouteResponse
-	(*SubmitWORequest)(nil),               // 31: ppc.v1.SubmitWORequest
-	(*SubmitWOResponse)(nil),              // 32: ppc.v1.SubmitWOResponse
-	(*ApproveWOParameterRequest)(nil),     // 33: ppc.v1.ApproveWOParameterRequest
-	(*ApproveWOParameterResponse)(nil),    // 34: ppc.v1.ApproveWOParameterResponse
-	(*ApproveWORequest)(nil),              // 35: ppc.v1.ApproveWORequest
-	(*ApproveWOResponse)(nil),             // 36: ppc.v1.ApproveWOResponse
-	(*RejectWORequest)(nil),               // 37: ppc.v1.RejectWORequest
-	(*RejectWOResponse)(nil),              // 38: ppc.v1.RejectWOResponse
-	(*CreateWOReferenceRequest)(nil),      // 39: ppc.v1.CreateWOReferenceRequest
-	(*CreateWOReferenceResponse)(nil),     // 40: ppc.v1.CreateWOReferenceResponse
-	(*GetWOProductionActualRequest)(nil),  // 41: ppc.v1.GetWOProductionActualRequest
-	(*GetWOProductionActualResponse)(nil), // 42: ppc.v1.GetWOProductionActualResponse
-	(*AdjustWOActualRequest)(nil),         // 43: ppc.v1.AdjustWOActualRequest
-	(*AdjustWOActualResponse)(nil),        // 44: ppc.v1.AdjustWOActualResponse
-	(*SuggestWOActualRequest)(nil),        // 45: ppc.v1.SuggestWOActualRequest
-	(*SuggestWOActualResponse)(nil),       // 46: ppc.v1.SuggestWOActualResponse
-	(*ListMergeCandidatesRequest)(nil),    // 47: ppc.v1.ListMergeCandidatesRequest
-	(*ListMergeCandidatesResponse)(nil),   // 48: ppc.v1.ListMergeCandidatesResponse
-	(RMSource)(0),                         // 49: ppc.v1.RMSource
-	(AreaCode)(0),                         // 50: ppc.v1.AreaCode
-	(QtyAxisSource)(0),                    // 51: ppc.v1.QtyAxisSource
-	(WORefType)(0),                        // 52: ppc.v1.WORefType
-	(ProdCategory)(0),                     // 53: ppc.v1.ProdCategory
-	(*structpb.Struct)(nil),               // 54: google.protobuf.Struct
-	(WOStatus)(0),                         // 55: ppc.v1.WOStatus
-	(*v1.AuditInfo)(nil),                  // 56: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),               // 57: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),         // 58: common.v1.PaginationResponse
-	(ParamResolutionSource)(0),            // 59: ppc.v1.ParamResolutionSource
-	(QtySource)(0),                        // 60: ppc.v1.QtySource
-	(*PlanItem)(nil),                      // 61: ppc.v1.PlanItem
+	(*WOParameter)(nil),                                 // 0: ppc.v1.WOParameter
+	(*WOExecution)(nil),                                 // 1: ppc.v1.WOExecution
+	(*WORmAllocation)(nil),                              // 2: ppc.v1.WORmAllocation
+	(*WOProductionActual)(nil),                          // 3: ppc.v1.WOProductionActual
+	(*WorkOrder)(nil),                                   // 4: ppc.v1.WorkOrder
+	(*WOPlanItemLink)(nil),                              // 5: ppc.v1.WOPlanItemLink
+	(*CreateWorkOrderRequest)(nil),                      // 6: ppc.v1.CreateWorkOrderRequest
+	(*CreateWorkOrderResponse)(nil),                     // 7: ppc.v1.CreateWorkOrderResponse
+	(*GetWorkOrderRequest)(nil),                         // 8: ppc.v1.GetWorkOrderRequest
+	(*GetWorkOrderResponse)(nil),                        // 9: ppc.v1.GetWorkOrderResponse
+	(*UpdateWorkOrderRequest)(nil),                      // 10: ppc.v1.UpdateWorkOrderRequest
+	(*UpdateWorkOrderResponse)(nil),                     // 11: ppc.v1.UpdateWorkOrderResponse
+	(*DeleteWorkOrderRequest)(nil),                      // 12: ppc.v1.DeleteWorkOrderRequest
+	(*DeleteWorkOrderResponse)(nil),                     // 13: ppc.v1.DeleteWorkOrderResponse
+	(*ListWorkOrdersRequest)(nil),                       // 14: ppc.v1.ListWorkOrdersRequest
+	(*ListWorkOrdersResponse)(nil),                      // 15: ppc.v1.ListWorkOrdersResponse
+	(*WOParamValueInput)(nil),                           // 16: ppc.v1.WOParamValueInput
+	(*SaveWOParametersRequest)(nil),                     // 17: ppc.v1.SaveWOParametersRequest
+	(*SaveWOParametersResponse)(nil),                    // 18: ppc.v1.SaveWOParametersResponse
+	(*ResolvedParam)(nil),                               // 19: ppc.v1.ResolvedParam
+	(*ResolveWOParametersRequest)(nil),                  // 20: ppc.v1.ResolveWOParametersRequest
+	(*ResolveWOParametersResponse)(nil),                 // 21: ppc.v1.ResolveWOParametersResponse
+	(*SaveWOExecutionRequest)(nil),                      // 22: ppc.v1.SaveWOExecutionRequest
+	(*SaveWOExecutionResponse)(nil),                     // 23: ppc.v1.SaveWOExecutionResponse
+	(*ListWOExecutionsRequest)(nil),                     // 24: ppc.v1.ListWOExecutionsRequest
+	(*ListWOExecutionsResponse)(nil),                    // 25: ppc.v1.ListWOExecutionsResponse
+	(*WORmAllocationInput)(nil),                         // 26: ppc.v1.WORmAllocationInput
+	(*SaveWORmAllocationsRequest)(nil),                  // 27: ppc.v1.SaveWORmAllocationsRequest
+	(*SaveWORmAllocationsResponse)(nil),                 // 28: ppc.v1.SaveWORmAllocationsResponse
+	(*PopulateWORmFromRouteRequest)(nil),                // 29: ppc.v1.PopulateWORmFromRouteRequest
+	(*PopulateWORmFromRouteResponse)(nil),               // 30: ppc.v1.PopulateWORmFromRouteResponse
+	(*SubmitWORequest)(nil),                             // 31: ppc.v1.SubmitWORequest
+	(*SubmitWOResponse)(nil),                            // 32: ppc.v1.SubmitWOResponse
+	(*ApproveWOParameterRequest)(nil),                   // 33: ppc.v1.ApproveWOParameterRequest
+	(*ApproveWOParameterResponse)(nil),                  // 34: ppc.v1.ApproveWOParameterResponse
+	(*ApproveWORequest)(nil),                            // 35: ppc.v1.ApproveWORequest
+	(*ApproveWOResponse)(nil),                           // 36: ppc.v1.ApproveWOResponse
+	(*RejectWORequest)(nil),                             // 37: ppc.v1.RejectWORequest
+	(*RejectWOResponse)(nil),                            // 38: ppc.v1.RejectWOResponse
+	(*CreateWOReferenceRequest)(nil),                    // 39: ppc.v1.CreateWOReferenceRequest
+	(*CreateWOReferenceResponse)(nil),                   // 40: ppc.v1.CreateWOReferenceResponse
+	(*GetWOProductionActualRequest)(nil),                // 41: ppc.v1.GetWOProductionActualRequest
+	(*GetWOProductionActualResponse)(nil),               // 42: ppc.v1.GetWOProductionActualResponse
+	(*AdjustWOActualRequest)(nil),                       // 43: ppc.v1.AdjustWOActualRequest
+	(*AdjustWOActualResponse)(nil),                      // 44: ppc.v1.AdjustWOActualResponse
+	(*SuggestWOActualRequest)(nil),                      // 45: ppc.v1.SuggestWOActualRequest
+	(*SuggestWOActualResponse)(nil),                     // 46: ppc.v1.SuggestWOActualResponse
+	(*ListMergeCandidatesRequest)(nil),                  // 47: ppc.v1.ListMergeCandidatesRequest
+	(*ListMergeCandidatesResponse)(nil),                 // 48: ppc.v1.ListMergeCandidatesResponse
+	(*WorkOrderCarryCandidate)(nil),                     // 49: ppc.v1.WorkOrderCarryCandidate
+	(*ListWorkOrderCarryForwardCandidatesRequest)(nil),  // 50: ppc.v1.ListWorkOrderCarryForwardCandidatesRequest
+	(*ListWorkOrderCarryForwardCandidatesResponse)(nil), // 51: ppc.v1.ListWorkOrderCarryForwardCandidatesResponse
+	(*ProcessWorkOrderCarryForwardRequest)(nil),         // 52: ppc.v1.ProcessWorkOrderCarryForwardRequest
+	(*ProcessWorkOrderCarryForwardResponse)(nil),        // 53: ppc.v1.ProcessWorkOrderCarryForwardResponse
+	(RMSource)(0),                                       // 54: ppc.v1.RMSource
+	(AreaCode)(0),                                       // 55: ppc.v1.AreaCode
+	(QtyAxisSource)(0),                                  // 56: ppc.v1.QtyAxisSource
+	(WORefType)(0),                                      // 57: ppc.v1.WORefType
+	(ProdCategory)(0),                                   // 58: ppc.v1.ProdCategory
+	(*structpb.Struct)(nil),                             // 59: google.protobuf.Struct
+	(WOStatus)(0),                                       // 60: ppc.v1.WOStatus
+	(*v1.AuditInfo)(nil),                                // 61: common.v1.AuditInfo
+	(*v1.BaseResponse)(nil),                             // 62: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),                       // 63: common.v1.PaginationResponse
+	(ParamResolutionSource)(0),                          // 64: ppc.v1.ParamResolutionSource
+	(QtySource)(0),                                      // 65: ppc.v1.QtySource
+	(*PlanItem)(nil),                                    // 66: ppc.v1.PlanItem
 }
 var file_ppc_v1_work_order_proto_depIdxs = []int32{
-	49, // 0: ppc.v1.WORmAllocation.rm_source:type_name -> ppc.v1.RMSource
-	50, // 1: ppc.v1.WOProductionActual.area:type_name -> ppc.v1.AreaCode
-	51, // 2: ppc.v1.WOProductionActual.qty_source:type_name -> ppc.v1.QtyAxisSource
-	50, // 3: ppc.v1.WorkOrder.area:type_name -> ppc.v1.AreaCode
-	52, // 4: ppc.v1.WorkOrder.ref_type:type_name -> ppc.v1.WORefType
-	53, // 5: ppc.v1.WorkOrder.prod_category:type_name -> ppc.v1.ProdCategory
-	54, // 6: ppc.v1.WorkOrder.spec_snapshot:type_name -> google.protobuf.Struct
-	54, // 7: ppc.v1.WorkOrder.packing_snapshot:type_name -> google.protobuf.Struct
-	55, // 8: ppc.v1.WorkOrder.status:type_name -> ppc.v1.WOStatus
+	54, // 0: ppc.v1.WORmAllocation.rm_source:type_name -> ppc.v1.RMSource
+	55, // 1: ppc.v1.WOProductionActual.area:type_name -> ppc.v1.AreaCode
+	56, // 2: ppc.v1.WOProductionActual.qty_source:type_name -> ppc.v1.QtyAxisSource
+	55, // 3: ppc.v1.WorkOrder.area:type_name -> ppc.v1.AreaCode
+	57, // 4: ppc.v1.WorkOrder.ref_type:type_name -> ppc.v1.WORefType
+	58, // 5: ppc.v1.WorkOrder.prod_category:type_name -> ppc.v1.ProdCategory
+	59, // 6: ppc.v1.WorkOrder.spec_snapshot:type_name -> google.protobuf.Struct
+	59, // 7: ppc.v1.WorkOrder.packing_snapshot:type_name -> google.protobuf.Struct
+	60, // 8: ppc.v1.WorkOrder.status:type_name -> ppc.v1.WOStatus
 	0,  // 9: ppc.v1.WorkOrder.parameters:type_name -> ppc.v1.WOParameter
 	2,  // 10: ppc.v1.WorkOrder.rm_allocations:type_name -> ppc.v1.WORmAllocation
 	3,  // 11: ppc.v1.WorkOrder.production_actuals:type_name -> ppc.v1.WOProductionActual
 	5,  // 12: ppc.v1.WorkOrder.linked_plan_items:type_name -> ppc.v1.WOPlanItemLink
-	56, // 13: ppc.v1.WorkOrder.audit:type_name -> common.v1.AuditInfo
-	50, // 14: ppc.v1.CreateWorkOrderRequest.area:type_name -> ppc.v1.AreaCode
-	53, // 15: ppc.v1.CreateWorkOrderRequest.prod_category:type_name -> ppc.v1.ProdCategory
-	57, // 16: ppc.v1.CreateWorkOrderResponse.base:type_name -> common.v1.BaseResponse
+	61, // 13: ppc.v1.WorkOrder.audit:type_name -> common.v1.AuditInfo
+	55, // 14: ppc.v1.CreateWorkOrderRequest.area:type_name -> ppc.v1.AreaCode
+	58, // 15: ppc.v1.CreateWorkOrderRequest.prod_category:type_name -> ppc.v1.ProdCategory
+	62, // 16: ppc.v1.CreateWorkOrderResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 17: ppc.v1.CreateWorkOrderResponse.data:type_name -> ppc.v1.WorkOrder
-	57, // 18: ppc.v1.GetWorkOrderResponse.base:type_name -> common.v1.BaseResponse
+	62, // 18: ppc.v1.GetWorkOrderResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 19: ppc.v1.GetWorkOrderResponse.data:type_name -> ppc.v1.WorkOrder
-	53, // 20: ppc.v1.UpdateWorkOrderRequest.prod_category:type_name -> ppc.v1.ProdCategory
-	57, // 21: ppc.v1.UpdateWorkOrderResponse.base:type_name -> common.v1.BaseResponse
+	58, // 20: ppc.v1.UpdateWorkOrderRequest.prod_category:type_name -> ppc.v1.ProdCategory
+	62, // 21: ppc.v1.UpdateWorkOrderResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 22: ppc.v1.UpdateWorkOrderResponse.data:type_name -> ppc.v1.WorkOrder
-	57, // 23: ppc.v1.DeleteWorkOrderResponse.base:type_name -> common.v1.BaseResponse
-	50, // 24: ppc.v1.ListWorkOrdersRequest.area:type_name -> ppc.v1.AreaCode
-	55, // 25: ppc.v1.ListWorkOrdersRequest.status:type_name -> ppc.v1.WOStatus
-	57, // 26: ppc.v1.ListWorkOrdersResponse.base:type_name -> common.v1.BaseResponse
+	62, // 23: ppc.v1.DeleteWorkOrderResponse.base:type_name -> common.v1.BaseResponse
+	55, // 24: ppc.v1.ListWorkOrdersRequest.area:type_name -> ppc.v1.AreaCode
+	60, // 25: ppc.v1.ListWorkOrdersRequest.status:type_name -> ppc.v1.WOStatus
+	62, // 26: ppc.v1.ListWorkOrdersResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 27: ppc.v1.ListWorkOrdersResponse.data:type_name -> ppc.v1.WorkOrder
-	58, // 28: ppc.v1.ListWorkOrdersResponse.pagination:type_name -> common.v1.PaginationResponse
+	63, // 28: ppc.v1.ListWorkOrdersResponse.pagination:type_name -> common.v1.PaginationResponse
 	16, // 29: ppc.v1.SaveWOParametersRequest.ppc_values:type_name -> ppc.v1.WOParamValueInput
-	57, // 30: ppc.v1.SaveWOParametersResponse.base:type_name -> common.v1.BaseResponse
+	62, // 30: ppc.v1.SaveWOParametersResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 31: ppc.v1.SaveWOParametersResponse.data:type_name -> ppc.v1.WorkOrder
-	59, // 32: ppc.v1.ResolvedParam.source:type_name -> ppc.v1.ParamResolutionSource
-	57, // 33: ppc.v1.ResolveWOParametersResponse.base:type_name -> common.v1.BaseResponse
+	64, // 32: ppc.v1.ResolvedParam.source:type_name -> ppc.v1.ParamResolutionSource
+	62, // 33: ppc.v1.ResolveWOParametersResponse.base:type_name -> common.v1.BaseResponse
 	19, // 34: ppc.v1.ResolveWOParametersResponse.data:type_name -> ppc.v1.ResolvedParam
-	57, // 35: ppc.v1.SaveWOExecutionResponse.base:type_name -> common.v1.BaseResponse
+	62, // 35: ppc.v1.SaveWOExecutionResponse.base:type_name -> common.v1.BaseResponse
 	1,  // 36: ppc.v1.SaveWOExecutionResponse.data:type_name -> ppc.v1.WOExecution
-	57, // 37: ppc.v1.ListWOExecutionsResponse.base:type_name -> common.v1.BaseResponse
+	62, // 37: ppc.v1.ListWOExecutionsResponse.base:type_name -> common.v1.BaseResponse
 	1,  // 38: ppc.v1.ListWOExecutionsResponse.data:type_name -> ppc.v1.WOExecution
-	49, // 39: ppc.v1.WORmAllocationInput.rm_source:type_name -> ppc.v1.RMSource
+	54, // 39: ppc.v1.WORmAllocationInput.rm_source:type_name -> ppc.v1.RMSource
 	26, // 40: ppc.v1.SaveWORmAllocationsRequest.allocations:type_name -> ppc.v1.WORmAllocationInput
-	57, // 41: ppc.v1.SaveWORmAllocationsResponse.base:type_name -> common.v1.BaseResponse
+	62, // 41: ppc.v1.SaveWORmAllocationsResponse.base:type_name -> common.v1.BaseResponse
 	2,  // 42: ppc.v1.SaveWORmAllocationsResponse.data:type_name -> ppc.v1.WORmAllocation
-	57, // 43: ppc.v1.PopulateWORmFromRouteResponse.base:type_name -> common.v1.BaseResponse
+	62, // 43: ppc.v1.PopulateWORmFromRouteResponse.base:type_name -> common.v1.BaseResponse
 	2,  // 44: ppc.v1.PopulateWORmFromRouteResponse.data:type_name -> ppc.v1.WORmAllocation
 	16, // 45: ppc.v1.SubmitWORequest.ppc_values:type_name -> ppc.v1.WOParamValueInput
-	57, // 46: ppc.v1.SubmitWOResponse.base:type_name -> common.v1.BaseResponse
+	62, // 46: ppc.v1.SubmitWOResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 47: ppc.v1.SubmitWOResponse.data:type_name -> ppc.v1.WorkOrder
 	16, // 48: ppc.v1.ApproveWOParameterRequest.pc_values:type_name -> ppc.v1.WOParamValueInput
-	57, // 49: ppc.v1.ApproveWOParameterResponse.base:type_name -> common.v1.BaseResponse
+	62, // 49: ppc.v1.ApproveWOParameterResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 50: ppc.v1.ApproveWOParameterResponse.data:type_name -> ppc.v1.WorkOrder
-	57, // 51: ppc.v1.ApproveWOResponse.base:type_name -> common.v1.BaseResponse
+	62, // 51: ppc.v1.ApproveWOResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 52: ppc.v1.ApproveWOResponse.data:type_name -> ppc.v1.WorkOrder
-	57, // 53: ppc.v1.RejectWOResponse.base:type_name -> common.v1.BaseResponse
+	62, // 53: ppc.v1.RejectWOResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 54: ppc.v1.RejectWOResponse.data:type_name -> ppc.v1.WorkOrder
-	52, // 55: ppc.v1.CreateWOReferenceRequest.ref_type:type_name -> ppc.v1.WORefType
-	57, // 56: ppc.v1.CreateWOReferenceResponse.base:type_name -> common.v1.BaseResponse
+	57, // 55: ppc.v1.CreateWOReferenceRequest.ref_type:type_name -> ppc.v1.WORefType
+	62, // 56: ppc.v1.CreateWOReferenceResponse.base:type_name -> common.v1.BaseResponse
 	4,  // 57: ppc.v1.CreateWOReferenceResponse.data:type_name -> ppc.v1.WorkOrder
-	57, // 58: ppc.v1.GetWOProductionActualResponse.base:type_name -> common.v1.BaseResponse
+	62, // 58: ppc.v1.GetWOProductionActualResponse.base:type_name -> common.v1.BaseResponse
 	3,  // 59: ppc.v1.GetWOProductionActualResponse.data:type_name -> ppc.v1.WOProductionActual
-	57, // 60: ppc.v1.AdjustWOActualResponse.base:type_name -> common.v1.BaseResponse
+	62, // 60: ppc.v1.AdjustWOActualResponse.base:type_name -> common.v1.BaseResponse
 	3,  // 61: ppc.v1.AdjustWOActualResponse.data:type_name -> ppc.v1.WOProductionActual
-	57, // 62: ppc.v1.SuggestWOActualResponse.base:type_name -> common.v1.BaseResponse
-	60, // 63: ppc.v1.SuggestWOActualResponse.qty_source:type_name -> ppc.v1.QtySource
-	57, // 64: ppc.v1.ListMergeCandidatesResponse.base:type_name -> common.v1.BaseResponse
-	61, // 65: ppc.v1.ListMergeCandidatesResponse.data:type_name -> ppc.v1.PlanItem
-	66, // [66:66] is the sub-list for method output_type
-	66, // [66:66] is the sub-list for method input_type
-	66, // [66:66] is the sub-list for extension type_name
-	66, // [66:66] is the sub-list for extension extendee
-	0,  // [0:66] is the sub-list for field type_name
+	62, // 62: ppc.v1.SuggestWOActualResponse.base:type_name -> common.v1.BaseResponse
+	65, // 63: ppc.v1.SuggestWOActualResponse.qty_source:type_name -> ppc.v1.QtySource
+	62, // 64: ppc.v1.ListMergeCandidatesResponse.base:type_name -> common.v1.BaseResponse
+	66, // 65: ppc.v1.ListMergeCandidatesResponse.data:type_name -> ppc.v1.PlanItem
+	4,  // 66: ppc.v1.WorkOrderCarryCandidate.wo:type_name -> ppc.v1.WorkOrder
+	62, // 67: ppc.v1.ListWorkOrderCarryForwardCandidatesResponse.base:type_name -> common.v1.BaseResponse
+	49, // 68: ppc.v1.ListWorkOrderCarryForwardCandidatesResponse.data:type_name -> ppc.v1.WorkOrderCarryCandidate
+	62, // 69: ppc.v1.ProcessWorkOrderCarryForwardResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 70: ppc.v1.ProcessWorkOrderCarryForwardResponse.data:type_name -> ppc.v1.WorkOrder
+	71, // [71:71] is the sub-list for method output_type
+	71, // [71:71] is the sub-list for method input_type
+	71, // [71:71] is the sub-list for extension type_name
+	71, // [71:71] is the sub-list for extension extendee
+	0,  // [0:71] is the sub-list for field type_name
 }
 
 func init() { file_ppc_v1_work_order_proto_init() }
@@ -4606,7 +5026,7 @@ func file_ppc_v1_work_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ppc_v1_work_order_proto_rawDesc), len(file_ppc_v1_work_order_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   49,
+			NumMessages:   54,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

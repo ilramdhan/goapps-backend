@@ -224,6 +224,77 @@ func TestComputeProduct_MissingUpstream(t *testing.T) {
 	require.ErrorIs(t, err, costcalcdom.ErrMissingUpstreamCost)
 }
 
+// TestComputeProduct_YarnVB1Loss_FixedFormula checks the ENG-YARN-01 formula fix.
+// Before the fix: VB1_LOSS = CHANGE_OVER_QLTY_LOSS / VOLUME_BUCKET_1_QTY (kg/MT)
+// which gave kg-per-MT instead of USD/kg, inflating final cost ~2×.
+// After the fix: (CHANGE_OVER_QLTY_LOSS * RM_LANDED_COST) / (VOLUME_BUCKET_1_QTY * 1000)
+// = (kg × USD/kg) / (MT × 1000 kg/MT) = USD/kg — a per-kg cost.
+func TestComputeProduct_YarnVB1Loss_FixedFormula(t *testing.T) {
+	// Simplify to just verify the new expression computes and the chain produces
+	// a final cost equal to VB1_DEL_COST when it's the deepest terminal.
+	// Use small round values: 10 kg lost, $2/kg, 0.5 MT batch.
+	// New VB1_LOSS = (10 * 2) / (0.5 * 1000) = 20 / 500 = 0.04 USD/kg
+	// Old VB1_LOSS = 10 / 0.5 = 20 (kg-per-MT, wrong unit)
+	in := ComputeInput{
+		ProductSysID: 1,
+		Route:        buildOneStageRoute(1, costroute.RmTypeItem, "CHIP", 1.0),
+		CAPP: map[string]float64{
+			"CHANGE_OVER_QLTY_LOSS":      10,
+			"VOLUME_BUCKET_1_QTY":        0.5,
+			"RM_LANDED_COST":             2,
+			"RM_NORMS":                   1,
+			"ONLY_CONV_DEL_PACK_EXCL_MB": 0.5,
+			"DELIVERY_COST_BEFORE_QLOSS": 2.5,
+			"QLTY_LOSS_DELIVERY_COST":    0.1,
+		},
+		Formulas: []Formula{
+			// F_YARN_RM_LANDED: pass-through RM_RATE → RM_LANDED_COST (already in CAPP, skipped)
+			// F_YARN_DEL_PRE_QL: RM_NORMS * RM_LANDED_COST + ONLY_CONV_DEL_PACK_EXCL_MB
+			{
+				FormulaCode:     "F_YARN_DEL_PRE_QL",
+				Expression:      "RM_NORMS * RM_LANDED_COST + ONLY_CONV_DEL_PACK_EXCL_MB",
+				ResultParamCode: "DELIVERY_COST_BEFORE_QLOSS",
+				InputParamCodes: []string{"RM_NORMS", "RM_LANDED_COST", "ONLY_CONV_DEL_PACK_EXCL_MB"},
+			},
+			// F_YARN_DEL_FINAL: DELIVERY_COST_BEFORE_QLOSS + QLTY_LOSS_DELIVERY_COST
+			{
+				FormulaCode:     "F_YARN_DEL_FINAL",
+				Expression:      "DELIVERY_COST_BEFORE_QLOSS + QLTY_LOSS_DELIVERY_COST",
+				ResultParamCode: "DELIVERY_COST_QLTY_LOSS",
+				InputParamCodes: []string{"DELIVERY_COST_BEFORE_QLOSS", "QLTY_LOSS_DELIVERY_COST"},
+			},
+			// F_YARN_VB1_LOSS: (CHANGE_OVER_QLTY_LOSS * RM_LANDED_COST) / (VOLUME_BUCKET_1_QTY * 1000)
+			{
+				FormulaCode:     "F_YARN_VB1_LOSS",
+				Expression:      "VOLUME_BUCKET_1_QTY > 0 ? (CHANGE_OVER_QLTY_LOSS * RM_LANDED_COST) / (VOLUME_BUCKET_1_QTY * 1000) : 0",
+				ResultParamCode: "VOLUME_BUCKET_1_LOSS",
+				InputParamCodes: []string{"CHANGE_OVER_QLTY_LOSS", "RM_LANDED_COST", "VOLUME_BUCKET_1_QTY"},
+			},
+			// F_YARN_VB1_DEL: DELIVERY_COST_QLTY_LOSS + VOLUME_BUCKET_1_LOSS
+			{
+				FormulaCode:     "F_YARN_VB1_DEL",
+				Expression:      "DELIVERY_COST_QLTY_LOSS + VOLUME_BUCKET_1_LOSS",
+				ResultParamCode: "VOLUME_BUCKET_1_DEL_COST",
+				InputParamCodes: []string{"DELIVERY_COST_QLTY_LOSS", "VOLUME_BUCKET_1_LOSS"},
+			},
+		},
+		RMCosts:   map[string]float64{"CHIP|": 2.0},
+		EvalCache: evaluator.NewCache(),
+	}
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+
+	// DEL_COST_PRE_QL = 1*2 + 0.5 = 2.5
+	// COST_DEL_FINAL   = 2.5 + 0.1 = 2.6
+	// VB1_LOSS         = (10*2) / (0.5*1000) = 20/500 = 0.04
+	// VB1_DEL_COST     = 2.6 + 0.04 = 2.64
+	// findTerminalFormula picks VB1_DEL_COST (deepest chain: 4 ancestors) over
+	// DELIVERY_COST_BEFORE_QLOSS (0 ancestors) and DELIVERY_COST_QLTY_LOSS (2).
+	assert.InDelta(t, 2.64, out.CostPerUnit, 0.001)
+	assert.InDelta(t, 2.0, out.TotalRMCost, 0.001)
+	assert.InDelta(t, 0.64, out.TotalConversion, 0.001)
+}
+
 func TestComputeProduct_DivByZero_ReturnsZeroCost(t *testing.T) {
 	// Division by zero produces NaN/Inf which the evaluator converts to 0.
 	// The product computes successfully with 0 cost rather than blocking.

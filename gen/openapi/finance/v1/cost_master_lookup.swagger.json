@@ -707,6 +707,13 @@
         },
         "subType": {
           "type": "string"
+        },
+        "rmCode": {
+          "type": "string",
+          "description": "Resolved human-readable identity of the RM edge, so consumers never have to\nrender a raw id. Both are derived server-side by rm_type:\n  PRODUCT -\u003e cost_product_master (product_code / product_name)\n  ITEM    -\u003e cost_erp_item       (item_code / item_name)\n  GROUP   -\u003e cst_rm_group_head   (group_code / group_name)\nEmpty when the referenced master row is missing."
+        },
+        "rmName": {
+          "type": "string"
         }
       },
       "description": "CostMasterRouteRm is a lightweight RM edge projection for a route stage."

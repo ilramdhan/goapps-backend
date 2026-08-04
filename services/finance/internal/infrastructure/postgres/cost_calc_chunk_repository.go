@@ -203,6 +203,23 @@ func (r *CostCalcChunkRepository) IncrementRetry(ctx context.Context, id int64) 
 	return n, nil
 }
 
+// MarkQueuedAsSkipped marks all QUEUED (undispatched) chunks of a job as SKIPPED.
+// Called by CancelJobHandler so chunks that were never picked up by workers are
+// explicitly terminated instead of being orphaned forever.
+func (r *CostCalcChunkRepository) MarkQueuedAsSkipped(ctx context.Context, jobID int64) (int64, error) {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE cal_job_chunk
+		    SET cjc_status = 'SKIPPED', cjc_completed_at = now(),
+		        cjc_error_message = 'job cancelled before dispatch'
+		  WHERE cjc_job_id = $1 AND cjc_status = 'QUEUED'`,
+		jobID)
+	if err != nil {
+		return 0, fmt.Errorf("mark queued as skipped: %w", err)
+	}
+	n, _ := result.RowsAffected() //nolint:errcheck // RowsAffected can only fail on a nil result, which ExecContext already guarded against
+	return n, nil
+}
+
 // scanChunk reads one chunk row, unmarshals the JSONB product ids, and hydrates.
 func scanChunk(s rowScanner) (*costcalc.Chunk, error) {
 	var (

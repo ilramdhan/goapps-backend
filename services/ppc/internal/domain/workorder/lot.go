@@ -50,15 +50,20 @@ type LotProvisionRequest struct {
 // Validate reports whether the request can produce a lot_master row. It mirrors
 // the lot aggregate's own invariants (non-empty codes, positive weights) so a
 // bad request fails before a sequence number is burned.
+//
+// This is the last-line guard. The service checks the same inputs earlier, where
+// it still knows the product and machine labels, and returns a message naming
+// them; by the time a request reaches here those labels are gone, so the errors
+// below are the unlabeled fallback rather than the expected path.
 func (r LotProvisionRequest) Validate() error {
 	if r.AreaCode == "" {
 		return ErrInvalidArea
 	}
 	if r.ItemCode == "" || r.ShadeCode == "" {
-		return ErrLotSpecUnavailable
+		return NewLotItemShadeError(r.ItemCode)
 	}
 	if r.StdWeightFull <= 0 || r.StdWeightUnfull <= 0 {
-		return ErrLotSpecUnavailable
+		return NewLotStdWeightError(r.ItemCode, "")
 	}
 	return nil
 }

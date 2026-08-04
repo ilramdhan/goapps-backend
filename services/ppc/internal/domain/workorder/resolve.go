@@ -82,9 +82,23 @@ type WORefValueSource interface {
 // (cost_route_rm), used to auto-materialize RM allocation suggestions.
 type RouteRmComponent struct {
 	CrmRmID   int64
-	RmType    string  // PRODUCT / ITEM / GROUP
-	ShadeCode string  // from the parent route stage
-	Ratio     float64 // route_rm_ratio (fraction of target qty)
+	RmType    string // PRODUCT / ITEM / GROUP
+	ShadeCode string // from the parent route stage
+	// route_rm_ratio: the input quantity of this RM per ONE unit of the stage's
+	// output — a per-unit coefficient, NOT a fraction/share of the target qty.
+	// Finance's cost engine multiplies it by the RM's unit cost to get that RM's
+	// contribution to one unit of output (costcalc/compute.go aggregateRMCost:
+	// `unit * rm.RouteRmRatio`). Ratios are only constrained to be positive; they
+	// routinely exceed 1 and do not sum to 1 across a stage. Total input qty for
+	// a work order is therefore ratio × wo.QtyTarget.
+	Ratio float64
+
+	// Presentation labels resolved by finance, so PPC never has to render
+	// CrmRmID to a user. Empty when finance is degraded or the master is gone.
+	RmCode         string
+	RmName         string
+	RouteStageName string // owning stage's route_name (attribution)
+	RouteLevel     int32  // owning stage's route_level
 }
 
 // RouteRmSource resolves the RM components of a product's released route.

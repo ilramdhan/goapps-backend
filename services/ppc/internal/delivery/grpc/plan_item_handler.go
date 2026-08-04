@@ -282,6 +282,10 @@ func planItemToProto(e *planitemdomain.PlanItem, products map[int64]*financev1.C
 	if e.PreferredMachineID() != nil {
 		proto.PreferredMachineId = *e.PreferredMachineID()
 	}
+	if e.CarryFromItemID() != nil {
+		proto.CarryFromItemId = *e.CarryFromItemID()
+	}
+	proto.CarryAction = stringToPlanCarryAction(e.CarryAction())
 	if p, ok := products[e.CpmProductSysID()]; ok {
 		proto.ProductCode = p.GetProductCode()
 		proto.ProductName = p.GetProductName()

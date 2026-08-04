@@ -212,39 +212,93 @@ func (s *Service) CreateWOReference(ctx context.Context, cmd CreateWOReferenceCo
 	if cmd.MachineID != nil {
 		machineID = *cmd.MachineID
 	}
-	entity, refWoID, err := s.buildReference(cmd, src, machineID)
-	if err != nil {
-		return nil, err
-	}
 	if err := s.validateMachineArea(ctx, machineID, src.AreaCode()); err != nil {
 		return nil, err
 	}
-	// A duplicate/continuation carries a fresh lot, so it needs the same
-	// lot_master check as an ordinary create — otherwise this path reopens the
-	// hole where a WO references a lot that has no standard weights.
-	if err := s.validateLot(ctx, cmd.LotNo); err != nil {
+	refWoID := continuationRef(cmd.RefType, src)
+	// Seeded before the write so the parameters share the new WO's transaction: a
+	// carry-forward that committed its header and lost its parameters would look
+	// like a valid WO the PC operator simply cannot run.
+	params, err := s.referenceParameters(ctx, src, machineID, refWoID)
+	if err != nil {
 		return nil, err
 	}
-	if err := s.repo.Create(ctx, entity); err != nil {
-		return nil, err
+	build := func(lotNo string) (*workorderdomain.WorkOrder, error) {
+		entity, err := s.buildReference(cmd, src, machineID, lotNo, refWoID)
+		if err != nil {
+			return nil, err
+		}
+		entity.AttachParameters(params)
+		return entity, nil
 	}
-	if err := s.seedReferenceParameters(ctx, entity, src, refWoID); err != nil {
+
+	entity, err := s.createReferenceWithLot(ctx, cmd, src, machineID, build)
+	if err != nil {
 		return nil, err
 	}
 	return s.repo.GetByID(ctx, entity.ID())
 }
 
-func (s *Service) buildReference(cmd CreateWOReferenceCommand, src *workorderdomain.WorkOrder, machineID int64) (*workorderdomain.WorkOrder, *int64, error) {
-	var refWoID *int64
+// createReferenceWithLot resolves the reference WO's lot the same way an
+// ordinary create does. A carry-forward never asks the planner for a lot — the
+// continuation is a fresh production run and needs its own — so a blank lot is
+// minted and registered in lot_master rather than rejected. A lot the planner
+// did type still has to exist, so this path cannot reopen the hole where a WO
+// points at a lot with no standard weights.
+func (s *Service) createReferenceWithLot(
+	ctx context.Context,
+	cmd CreateWOReferenceCommand,
+	src *workorderdomain.WorkOrder,
+	machineID int64,
+	build func(lotNo string) (*workorderdomain.WorkOrder, error),
+) (*workorderdomain.WorkOrder, error) {
+	if cmd.LotNo != "" {
+		if err := s.validateLot(ctx, cmd.LotNo); err != nil {
+			return nil, err
+		}
+		entity, err := build(cmd.LotNo)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.repo.Create(ctx, entity); err != nil {
+			return nil, err
+		}
+		return entity, nil
+	}
+
+	if s.lotProv == nil {
+		return nil, workorderdomain.ErrLotGenerationUnavailable
+	}
+	req, err := s.lotProvisionRequest(ctx, lotInputs{
+		AreaCode: src.AreaCode(), PlanItemID: src.PlanItemID(),
+		MachineID: machineID, CreatedBy: cmd.CreatedBy,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.lotProv.CreateWithGeneratedLot(ctx, req, build)
+}
+
+// continuationRef returns the source WO id a CONTINUATION hard-links, or nil
+// for a TEMPLATE duplicate, which deliberately carries no binding.
+func continuationRef(refType string, src *workorderdomain.WorkOrder) *int64 {
+	if refType != workorderdomain.RefTypeContinuation {
+		return nil
+	}
+	id := src.ID()
+	return &id
+}
+
+func (s *Service) buildReference(
+	cmd CreateWOReferenceCommand, src *workorderdomain.WorkOrder, machineID int64, lotNo string, refWoID *int64,
+) (*workorderdomain.WorkOrder, error) {
 	var demandID *int64
 	if cmd.RefType == workorderdomain.RefTypeContinuation {
-		id := src.ID()
-		refWoID = &id
 		demandID = src.DemandID()
 	}
 	entity, err := workorderdomain.New(workorderdomain.NewParams{
 		WoNo:             generateWoNo(src.AreaCode()),
-		LotNo:            cmd.LotNo,
+		LotNo:            lotNo,
 		AreaCode:         src.AreaCode(),
 		MachineID:        machineID,
 		CrhHeadID:        src.CrhHeadID(),
@@ -260,27 +314,31 @@ func (s *Service) buildReference(cmd CreateWOReferenceCommand, src *workorderdom
 		CreatedBy:        cmd.CreatedBy,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return entity, refWoID, nil
+	return entity, nil
 }
 
-// seedReferenceParameters copies the source WO's parameters as PPC values into
-// the new WO (CONTINUATION passes the ref for the resolver's top layer). Falls
-// back to a direct copy when the resolver is unavailable.
-func (s *Service) seedReferenceParameters(ctx context.Context, entity, src *workorderdomain.WorkOrder, refWoID *int64) error {
+// referenceParameters builds the parameters a reference WO starts from, as PPC
+// values (CONTINUATION passes the ref for the resolver's top layer). Falls back
+// to a direct copy of the source WO's parameters when the resolver is
+// unavailable. Read-only: the caller attaches the result to the new WO so both
+// are written together, and the repository stamps the WO id.
+func (s *Service) referenceParameters(
+	ctx context.Context, src *workorderdomain.WorkOrder, machineID int64, refWoID *int64,
+) ([]*workorderdomain.Parameter, error) {
 	if s.resolver != nil && s.planItems != nil {
-		return s.materializeParameters(ctx, entity, refWoID)
+		return s.resolveParameters(ctx, src.PlanItemID(), machineID, refWoID)
 	}
 	srcParams, err := s.repo.ListParameters(ctx, src.ID())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	copied := make([]*workorderdomain.Parameter, 0, len(srcParams))
 	for _, sp := range srcParams {
-		copied = append(copied, copyParamAsPPC(entity.ID(), sp))
+		copied = append(copied, copyParamAsPPC(0, sp))
 	}
-	return s.repo.ReplaceParameters(ctx, entity.ID(), copied)
+	return copied, nil
 }
 
 // SaveWORmAllocationsCommand carries RM allocation lines (from cost_route_rm).
@@ -303,7 +361,8 @@ type RmAllocationInput struct {
 
 // SaveWORmAllocations replaces a WO's RM allocation lines.
 func (s *Service) SaveWORmAllocations(ctx context.Context, cmd SaveWORmAllocationsCommand) ([]*workorderdomain.RmAllocation, error) {
-	if _, err := s.repo.GetByID(ctx, cmd.WOID); err != nil {
+	wo, err := s.repo.GetByID(ctx, cmd.WOID)
+	if err != nil {
 		return nil, err
 	}
 	allocs := make([]*workorderdomain.RmAllocation, 0, len(cmd.Allocations))
@@ -323,7 +382,16 @@ func (s *Service) SaveWORmAllocations(ctx context.Context, cmd SaveWORmAllocatio
 	if err := s.repo.ReplaceRmAllocations(ctx, cmd.WOID, allocs); err != nil {
 		return nil, err
 	}
-	return s.repo.ListRmAllocations(ctx, cmd.WOID)
+	saved, err := s.repo.ListRmAllocations(ctx, cmd.WOID)
+	if err != nil {
+		return nil, err
+	}
+	// The save response feeds straight back into the panel, so it needs the same
+	// labels the detail view gets — otherwise the table would fall back to ids
+	// until the next refetch. The entity fetched above already carries the plan
+	// item, so no second read is needed.
+	s.DecorateRmAllocations(ctx, wo.PlanItemID(), saved)
+	return saved, nil
 }
 
 // PopulateRmFromRouteCommand drives RM-BOM auto-population from a WO's route.
@@ -344,7 +412,11 @@ func (s *Service) PopulateRmFromRoute(ctx context.Context, cmd PopulateRmFromRou
 		return nil, err
 	}
 	if s.routeRms == nil || s.planItems == nil {
-		return s.repo.ListRmAllocations(ctx, cmd.WOID)
+		stored, listErr := s.repo.ListRmAllocations(ctx, cmd.WOID)
+		if listErr != nil {
+			return nil, listErr
+		}
+		return stored, nil
 	}
 	productSysID, err := s.planItems.ProductSysID(ctx, wo.PlanItemID())
 	if err != nil {
@@ -357,18 +429,39 @@ func (s *Service) PopulateRmFromRoute(ctx context.Context, cmd PopulateRmFromRou
 	suggestions := make([]*workorderdomain.RmAllocation, 0, len(comps))
 	for _, c := range comps {
 		suggestions = append(suggestions, &workorderdomain.RmAllocation{
-			WOID:         cmd.WOID,
-			CrmRmID:      c.CrmRmID,
-			RmType:       c.RmType,
-			ShadeCode:    c.ShadeCode,
-			QtyAllocated: c.Ratio * wo.QtyTarget(),
+			WOID:      cmd.WOID,
+			CrmRmID:   c.CrmRmID,
+			RmType:    c.RmType,
+			ShadeCode: c.ShadeCode,
+			// route_rm_ratio is the per-unit input quantity of this RM per unit
+			// of the stage's output — finance's cost engine multiplies it by the
+			// RM's unit cost to get that RM's contribution to one unit of output
+			// (costcalc/compute.go aggregateRMCost: `unit * rm.RouteRmRatio`).
+			// So scaling it by the WO's target qty yields the total input qty.
+			QtyAllocated:   c.Ratio * wo.QtyTarget(),
+			RmCode:         c.RmCode,
+			RmName:         c.RmName,
+			RouteStageName: c.RouteStageName,
+			RouteLevel:     c.RouteLevel,
+			RouteRmRatio:   c.Ratio,
 		})
 	}
 	if cmd.Replace {
 		if err := s.repo.ReplaceRmAllocations(ctx, cmd.WOID, suggestions); err != nil {
 			return nil, err
 		}
-		return s.repo.ListRmAllocations(ctx, cmd.WOID)
+		stored, listErr := s.repo.ListRmAllocations(ctx, cmd.WOID)
+		if listErr != nil {
+			return nil, listErr
+		}
+		// Re-read drops the derived labels (they are not persisted), so stamp
+		// them back on from the same components the suggestions came from.
+		idx := make(routeRmIndex, len(comps))
+		for _, c := range comps {
+			idx[c.CrmRmID] = c
+		}
+		decorateRmAllocations(stored, idx)
+		return stored, nil
 	}
 	return suggestions, nil
 }

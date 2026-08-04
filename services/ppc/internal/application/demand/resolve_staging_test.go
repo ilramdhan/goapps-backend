@@ -113,6 +113,9 @@ type fakeResolver struct {
 	err    error
 	calls  int
 	seen   []demanddomain.StagingPair
+	// empty makes the resolver answer a non-empty request with zero
+	// resolutions, the shape a silently-refused finance call used to produce.
+	empty bool
 }
 
 func (f *fakeResolver) ResolveByErpCode(_ context.Context, pairs []demanddomain.StagingPair) ([]demanddomain.ProductResolution, error) {
@@ -120,6 +123,9 @@ func (f *fakeResolver) ResolveByErpCode(_ context.Context, pairs []demanddomain.
 	f.seen = append(f.seen, pairs...)
 	if f.err != nil {
 		return nil, f.err
+	}
+	if f.empty {
+		return nil, nil
 	}
 	out := make([]demanddomain.ProductResolution, 0, len(pairs))
 	for _, p := range pairs {
@@ -195,6 +201,29 @@ func TestResolveStaging_DegradedFinanceSkipsWithoutError(t *testing.T) {
 	assert.True(t, res.Skipped)
 	assert.Zero(t, res.RowsUpdated)
 	assert.Empty(t, repo.applied)
+}
+
+// A resolver that answers a non-empty request with zero resolutions must not
+// be mistaken for a completed pass: nothing is written, no outcome is tallied,
+// and the rows stay UNRESOLVED for the next attempt. An unmatched pair comes
+// back as NOT_FOUND, so an empty answer means the call itself did no work.
+func TestResolveStaging_EmptyResolutionsWriteNothing(t *testing.T) {
+	repo := &resolveRepo{pairs: []demanddomain.StagingPair{
+		{ItemCode: "A", ShadeCode: "S1"},
+		{ItemCode: "B", ShadeCode: "S2"},
+	}}
+	resolver := &fakeResolver{empty: true}
+	svc := demandapp.NewService(repo, nil, nil).WithProductResolution(resolver, nil)
+
+	res, err := svc.ResolveStaging(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, res.Pairs)
+	assert.Zero(t, res.RowsUpdated)
+	assert.Zero(t, res.Auto)
+	assert.Zero(t, res.Ambiguous)
+	assert.Zero(t, res.NotFound, "an empty answer is not a not-found outcome")
+	assert.Empty(t, repo.applied, "nothing may be written from an empty answer")
 }
 
 func TestResolveStaging_ResolverErrorPropagates(t *testing.T) {

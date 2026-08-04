@@ -130,14 +130,16 @@ func run() error {
 	// Layer-3 WO service (shared by the gRPC handler + auto-approve worker).
 	// Notifier + snapshot builder are nil in Phase-1 (wired later).
 	woService := workorderapp.NewService(woRepo, workorderapp.Deps{
-		Machines:  postgres.NewMachineAreaLookup(machineRepo),
-		Lots:      postgres.NewLotExistsLookup(postgres.NewLotRepository(db)),
-		PlanItems: postgres.NewPlanItemProductLookup(db),
-		Resolver:  resolver,
-		RouteRms:  financeclient.NewRouteRmSource(lookupClient),
-		Merge:     postgres.NewMergeCandidateLookup(db),
-		LotSpecs:  financeclient.NewLotSpecSource(lookupClient),
-		LotProv:   postgres.NewLotProvisioner(db),
+		Machines:     postgres.NewMachineAreaLookup(machineRepo),
+		MachineNames: postgres.NewMachineNoLookup(machineRepo),
+		Lots:         postgres.NewLotExistsLookup(postgres.NewLotRepository(db)),
+		PlanItems:    postgres.NewPlanItemProductLookup(db),
+		Resolver:     resolver,
+		RouteRms:     financeclient.NewRouteRmSource(lookupClient),
+		Merge:        postgres.NewMergeCandidateLookup(db),
+		LotSpecs:     financeclient.NewLotSpecSource(lookupClient),
+		LotProv:      postgres.NewLotProvisioner(db),
+		WOCarryRepo:  postgres.NewWOCarryRepository(db),
 	})
 
 	// Dual-approval auto-approve worker (1-min ticker, AUTO_APPROVE_HOURS window).

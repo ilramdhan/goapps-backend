@@ -18,6 +18,11 @@ type memRepo struct {
 	seq   int64
 	items map[int64]*planitemdomain.PlanItem
 	logs  []planitemdomain.LogEntry
+	// coverage scripts CarryCoverage per plan item id; a missing entry means an
+	// item with no work orders and no existing carry.
+	coverage map[int64]planitemdomain.Coverage
+	// candidates is what ListCarryCandidates returns, verbatim.
+	candidates []*planitemdomain.CarryCandidate
 }
 
 func newMemRepo() *memRepo {
@@ -77,6 +82,8 @@ func assignID(e *planitemdomain.PlanItem, id int64) {
 		DurationSource:     e.DurationSource(),
 		ShadeCode:          e.ShadeCode(),
 		ShadeName:          e.ShadeName(),
+		CarryFromItemID:    e.CarryFromItemID(),
+		CarryAction:        e.CarryAction(),
 	})
 }
 
@@ -106,6 +113,14 @@ func (r *memRepo) Delete(_ context.Context, id int64) error {
 
 func (r *memRepo) ListForGantt(_ context.Context, _ planitemdomain.GanttFilter) ([]*planitemdomain.GanttRow, error) {
 	return nil, nil
+}
+
+func (r *memRepo) ListCarryCandidates(_ context.Context, _, _ string) ([]*planitemdomain.CarryCandidate, error) {
+	return r.candidates, nil
+}
+
+func (r *memRepo) CarryCoverage(_ context.Context, planItemID int64, _ string) (planitemdomain.Coverage, error) {
+	return r.coverage[planItemID], nil
 }
 
 // fixedCapacity yields a constant per-day capacity for every product/group.

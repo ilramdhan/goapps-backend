@@ -52,6 +52,14 @@ type Repository interface {
 	// mbh_cost_product_id/mbh_cost_generated_at/mbh_cost_generated_by onto mst_mb_head. All
 	// writes (transition + auto-gen) commit or roll back together.
 	TransitionWithAutoGen(ctx context.Context, id uuid.UUID, fromState, toState string, currentVersion int32, stateReason, actorUserID string, params *ParamSnapshot, entity *Entity) error
+
+	// RefreezeCostParams updates the frozen mbh_param_* columns on mst_mb_head and re-runs the
+	// CPP (cost_product_parameter) freeze from the entity's current in-memory param getters.
+	// Unlike Validate, this does not change entry_status, does not bump the version, does not
+	// create a workflow-log row, and does not attempt auto-gen — it assumes the cost product
+	// already exists. Safe to run against already-VALIDATED heads whose frozen values were
+	// incorrect (e.g. after ENG-MB-01's fix for the throughput/no_of_process default bug).
+	RefreezeCostParams(ctx context.Context, id uuid.UUID, entity *Entity, params *ParamSnapshot) error
 }
 
 // ParamSnapshot carries the 8 frozen recipe-parameter values for a VALIDATE transition. Nil
