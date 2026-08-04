@@ -42,6 +42,27 @@ var (
 	ErrDemandProductNotLinked = errors.New("invalid plan item: demand has no linked product yet; link the product to the demand first")
 	// ErrIllegalTransition is returned when a status transition is not allowed.
 	ErrIllegalTransition = errors.New("invalid plan item status transition")
+	// Carry-forward errors. The leading "invalid operation:" / "already exists"
+	// wording is load-bearing, not decoration: domainErrorToBaseResponse
+	// (delivery/grpc/master_shared.go) picks the HTTP status by substring, so a
+	// message phrased outside that vocabulary surfaces to the user as a 500.
+
+	// ErrInvalidCarryAction is returned when the carry-forward action is not allowed.
+	ErrInvalidCarryAction = errors.New("invalid plan carry-forward action")
+	// ErrNotCarryCandidate is returned when a plan item's status makes it
+	// ineligible for carry-forward.
+	ErrNotCarryCandidate = errors.New("invalid operation: only draft and confirmed plan items can be carried forward; an item already in progress is carried with its work orders instead")
+	// ErrNothingToCarry is returned when every unit of a plan item is already
+	// covered by work orders, leaving nothing to roll into the new month.
+	ErrNothingToCarry = errors.New("invalid operation: this plan item's whole quantity is already covered by a work order, so there is nothing left to carry")
+	// ErrAlreadyCarried is returned when the target month already holds a plan
+	// item carried from this source — carrying twice must not duplicate.
+	ErrAlreadyCarried = errors.New("a plan item carried from this one already exists in the target month")
+	// ErrCarryQtyExceedsUncovered is returned when a partial carry asks for more
+	// than the quantity not yet covered by work orders.
+	ErrCarryQtyExceedsUncovered = errors.New("invalid quantity: the carry quantity must be no greater than the quantity not yet covered by a work order")
+	// ErrSameMonth is returned when the target month equals the source item's month.
+	ErrSameMonth = errors.New("invalid target month: it must be a different month from the plan item's own")
 )
 
 // CascadeError reports a route walk that had to be abandoned, naming the

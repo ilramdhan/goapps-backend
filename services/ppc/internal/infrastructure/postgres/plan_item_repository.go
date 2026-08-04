@@ -26,7 +26,17 @@ const planItemColumns = `ppi_id, ppi_cpm_product_sys_id, ppi_type, ppi_demand_id
 	ppi_qty_target, ppi_deadline, ppi_rm_source, ppi_sequence, ppi_status, ppi_machine_group_id,
 	ppi_preferred_machine_id, ppi_month, ppi_notes, ppi_created_by, ppi_created_at, ppi_updated_at,
 	ppi_planned_start_date, ppi_planned_duration_days, ppi_duration_source,
-	ppi_shade_code, ppi_shade_name`
+	ppi_shade_code, ppi_shade_name, ppi_carry_from_item_id, ppi_carry_action`
+
+// planItemColumnsQualified is planItemColumns with every column prefixed by the
+// `ppi` table alias, for queries that join or correlate. Same column order, so
+// planItemDTO.dest() scans either one unchanged.
+const planItemColumnsQualified = `ppi.ppi_id, ppi.ppi_cpm_product_sys_id, ppi.ppi_type, ppi.ppi_demand_id,
+	ppi.ppi_parent_item_id, ppi.ppi_qty_target, ppi.ppi_deadline, ppi.ppi_rm_source, ppi.ppi_sequence,
+	ppi.ppi_status, ppi.ppi_machine_group_id, ppi.ppi_preferred_machine_id, ppi.ppi_month, ppi.ppi_notes,
+	ppi.ppi_created_by, ppi.ppi_created_at, ppi.ppi_updated_at, ppi.ppi_planned_start_date,
+	ppi.ppi_planned_duration_days, ppi.ppi_duration_source, ppi.ppi_shade_code, ppi.ppi_shade_name,
+	ppi.ppi_carry_from_item_id, ppi.ppi_carry_action`
 
 const planItemInsert = `
 	INSERT INTO production_plan_item (
@@ -34,12 +44,13 @@ const planItemInsert = `
 		ppi_deadline, ppi_rm_source, ppi_sequence, ppi_status, ppi_machine_group_id,
 		ppi_preferred_machine_id, ppi_month, ppi_notes, ppi_created_by, ppi_created_at, ppi_updated_at,
 		ppi_planned_start_date, ppi_planned_duration_days, ppi_duration_source,
-		ppi_shade_code, ppi_shade_name
+		ppi_shade_code, ppi_shade_name, ppi_carry_from_item_id, ppi_carry_action
 	) VALUES (
 		$1, $2, $3::BIGINT, $4::BIGINT, $5, $6, NULLIF($7, '')::VARCHAR, $8, $9, $10,
 		$11::BIGINT, $12, NULLIF($13, '')::TEXT, $14, $15, $16,
 		$17::DATE, $18::INT, $19,
-		NULLIF($20, '')::VARCHAR, NULLIF($21, '')::VARCHAR
+		NULLIF($20, '')::VARCHAR, NULLIF($21, '')::VARCHAR,
+		$22::BIGINT, NULLIF($23, '')::VARCHAR
 	) RETURNING ppi_id`
 
 // planItemInsertArgs flattens an entity into the planItemInsert placeholders.
@@ -50,6 +61,7 @@ func planItemInsertArgs(entity *planitem.PlanItem) []interface{} {
 		int64PtrArg(entity.PreferredMachineID()), entity.Month(), entity.Notes(), entity.CreatedBy(), entity.CreatedAt(), entity.UpdatedAt(),
 		timePtrArg(entity.PlannedStartDate()), int32PtrArg(entity.PlannedDurationDays()), entity.DurationSource(),
 		entity.ShadeCode(), entity.ShadeName(),
+		int64PtrArg(entity.CarryFromItemID()), entity.CarryAction(),
 	}
 }
 
@@ -232,7 +244,7 @@ const ganttColumns = `ppi.ppi_id, ppi.ppi_cpm_product_sys_id, ppi.ppi_type, ppi.
 	ppi.ppi_qty_target, ppi.ppi_deadline, ppi.ppi_rm_source, ppi.ppi_sequence, ppi.ppi_status, ppi.ppi_machine_group_id,
 	ppi.ppi_preferred_machine_id, ppi.ppi_month, ppi.ppi_notes, ppi.ppi_created_by, ppi.ppi_created_at, ppi.ppi_updated_at,
 	ppi.ppi_planned_start_date, ppi.ppi_planned_duration_days, ppi.ppi_duration_source,
-	ppi.ppi_shade_code, ppi.ppi_shade_name,
+	ppi.ppi_shade_code, ppi.ppi_shade_name, ppi.ppi_carry_from_item_id, ppi.ppi_carry_action,
 	COALESCE(mg.group_area, ''), COALESCE(m.machine_no, ''), COALESCE(wo.wo_id, 0), COALESCE(wo.wo_lot_no, ''),
 	EXISTS (SELECT 1 FROM changeover_event ce WHERE ce.ce_to_wo_id = wo.wo_id)`
 
@@ -352,6 +364,8 @@ type planItemDTO struct {
 	DurationSource     string
 	ShadeCode          sql.NullString
 	ShadeName          sql.NullString
+	CarryFromItemID    sql.NullInt64
+	CarryAction        sql.NullString
 }
 
 func (d *planItemDTO) dest() []interface{} {
@@ -360,7 +374,7 @@ func (d *planItemDTO) dest() []interface{} {
 		&d.QtyTarget, &d.Deadline, &d.RMSource, &d.Sequence, &d.Status, &d.MachineGroupID,
 		&d.PreferredMachineID, &d.Month, &d.Notes, &d.CreatedBy, &d.CreatedAt, &d.UpdatedAt,
 		&d.PlannedStartDate, &d.PlannedDuration, &d.DurationSource,
-		&d.ShadeCode, &d.ShadeName,
+		&d.ShadeCode, &d.ShadeName, &d.CarryFromItemID, &d.CarryAction,
 	}
 }
 
@@ -388,6 +402,8 @@ func (d *planItemDTO) toEntity() *planitem.PlanItem {
 		DurationSource:     d.DurationSource,
 		ShadeCode:          nullString(d.ShadeCode),
 		ShadeName:          nullString(d.ShadeName),
+		CarryFromItemID:    nullInt64Ptr(d.CarryFromItemID),
+		CarryAction:        nullString(d.CarryAction),
 	})
 }
 
@@ -415,5 +431,7 @@ func rehydratePlanItem(entity *planitem.PlanItem, id int64) {
 		DurationSource:     entity.DurationSource(),
 		ShadeCode:          entity.ShadeCode(),
 		ShadeName:          entity.ShadeName(),
+		CarryFromItemID:    entity.CarryFromItemID(),
+		CarryAction:        entity.CarryAction(),
 	})
 }

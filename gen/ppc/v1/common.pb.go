@@ -372,6 +372,65 @@ func (CarryAction) EnumDescriptor() ([]byte, []int) {
 	return file_ppc_v1_common_proto_rawDescGZIP(), []int{5}
 }
 
+// PlanCarryAction is the per-plan-item decision in the start-new-month
+// workflow. Deliberately NARROWER than CarryAction rather than a reuse of it:
+// the plan-item lifecycle (DRAFT/CONFIRMED/IN_PROGRESS/COMPLETED/CLOSED) has no
+// DEFERRED state, so CARRY_ACTION_DEFER has nothing to map onto, and SPLIT would
+// need per-child machine groups and timelines that a demand split never carries.
+// Stretching CarryAction to cover plan items would make two of its five values
+// silently unimplementable.
+type PlanCarryAction int32
+
+const (
+	PlanCarryAction_PLAN_CARRY_ACTION_UNSPECIFIED   PlanCarryAction = 0 // Default / none.
+	PlanCarryAction_PLAN_CARRY_ACTION_CARRY_AS_IS   PlanCarryAction = 1 // New plan item for the whole unplanned qty.
+	PlanCarryAction_PLAN_CARRY_ACTION_PARTIAL_CARRY PlanCarryAction = 2 // Carry part; the rest is not carried.
+	PlanCarryAction_PLAN_CARRY_ACTION_CANCEL        PlanCarryAction = 3 // Close the plan item without carrying it.
+)
+
+// Enum value maps for PlanCarryAction.
+var (
+	PlanCarryAction_name = map[int32]string{
+		0: "PLAN_CARRY_ACTION_UNSPECIFIED",
+		1: "PLAN_CARRY_ACTION_CARRY_AS_IS",
+		2: "PLAN_CARRY_ACTION_PARTIAL_CARRY",
+		3: "PLAN_CARRY_ACTION_CANCEL",
+	}
+	PlanCarryAction_value = map[string]int32{
+		"PLAN_CARRY_ACTION_UNSPECIFIED":   0,
+		"PLAN_CARRY_ACTION_CARRY_AS_IS":   1,
+		"PLAN_CARRY_ACTION_PARTIAL_CARRY": 2,
+		"PLAN_CARRY_ACTION_CANCEL":        3,
+	}
+)
+
+func (x PlanCarryAction) Enum() *PlanCarryAction {
+	p := new(PlanCarryAction)
+	*p = x
+	return p
+}
+
+func (x PlanCarryAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PlanCarryAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_ppc_v1_common_proto_enumTypes[6].Descriptor()
+}
+
+func (PlanCarryAction) Type() protoreflect.EnumType {
+	return &file_ppc_v1_common_proto_enumTypes[6]
+}
+
+func (x PlanCarryAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PlanCarryAction.Descriptor instead.
+func (PlanCarryAction) EnumDescriptor() ([]byte, []int) {
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{6}
+}
+
 // GradeReq expresses the grade requirement attached to a demand.
 type GradeReq int32
 
@@ -409,11 +468,11 @@ func (x GradeReq) String() string {
 }
 
 func (GradeReq) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[6].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[7].Descriptor()
 }
 
 func (GradeReq) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[6]
+	return &file_ppc_v1_common_proto_enumTypes[7]
 }
 
 func (x GradeReq) Number() protoreflect.EnumNumber {
@@ -422,7 +481,7 @@ func (x GradeReq) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use GradeReq.Descriptor instead.
 func (GradeReq) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{6}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{7}
 }
 
 // PlanItemType classifies a production plan item.
@@ -462,11 +521,11 @@ func (x PlanItemType) String() string {
 }
 
 func (PlanItemType) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[7].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[8].Descriptor()
 }
 
 func (PlanItemType) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[7]
+	return &file_ppc_v1_common_proto_enumTypes[8]
 }
 
 func (x PlanItemType) Number() protoreflect.EnumNumber {
@@ -475,7 +534,7 @@ func (x PlanItemType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PlanItemType.Descriptor instead.
 func (PlanItemType) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{7}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{8}
 }
 
 // PlanItemStatus is the lifecycle state of a plan item.
@@ -521,11 +580,11 @@ func (x PlanItemStatus) String() string {
 }
 
 func (PlanItemStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[8].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[9].Descriptor()
 }
 
 func (PlanItemStatus) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[8]
+	return &file_ppc_v1_common_proto_enumTypes[9]
 }
 
 func (x PlanItemStatus) Number() protoreflect.EnumNumber {
@@ -534,7 +593,7 @@ func (x PlanItemStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PlanItemStatus.Descriptor instead.
 func (PlanItemStatus) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{8}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{9}
 }
 
 // WOStatus is the work-order lifecycle state.
@@ -598,11 +657,11 @@ func (x WOStatus) String() string {
 }
 
 func (WOStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[9].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[10].Descriptor()
 }
 
 func (WOStatus) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[9]
+	return &file_ppc_v1_common_proto_enumTypes[10]
 }
 
 func (x WOStatus) Number() protoreflect.EnumNumber {
@@ -611,7 +670,7 @@ func (x WOStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WOStatus.Descriptor instead.
 func (WOStatus) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{9}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{10}
 }
 
 // WORefType is how a WO references a prior WO (v1.2 WO Reference).
@@ -648,11 +707,11 @@ func (x WORefType) String() string {
 }
 
 func (WORefType) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[10].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[11].Descriptor()
 }
 
 func (WORefType) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[10]
+	return &file_ppc_v1_common_proto_enumTypes[11]
 }
 
 func (x WORefType) Number() protoreflect.EnumNumber {
@@ -661,7 +720,7 @@ func (x WORefType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WORefType.Descriptor instead.
 func (WORefType) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{10}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{11}
 }
 
 // ProdCategory classifies a WO for Including/Excluding efficiency slicing.
@@ -707,11 +766,11 @@ func (x ProdCategory) String() string {
 }
 
 func (ProdCategory) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[11].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[12].Descriptor()
 }
 
 func (ProdCategory) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[11]
+	return &file_ppc_v1_common_proto_enumTypes[12]
 }
 
 func (x ProdCategory) Number() protoreflect.EnumNumber {
@@ -720,7 +779,7 @@ func (x ProdCategory) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProdCategory.Descriptor instead.
 func (ProdCategory) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{11}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{12}
 }
 
 // ShiftLogNoteType is the log-book note type (legacy PTMAL_ INSTRUKSI/ACTIVITY).
@@ -757,11 +816,11 @@ func (x ShiftLogNoteType) String() string {
 }
 
 func (ShiftLogNoteType) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[12].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[13].Descriptor()
 }
 
 func (ShiftLogNoteType) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[12]
+	return &file_ppc_v1_common_proto_enumTypes[13]
 }
 
 func (x ShiftLogNoteType) Number() protoreflect.EnumNumber {
@@ -770,7 +829,7 @@ func (x ShiftLogNoteType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ShiftLogNoteType.Descriptor instead.
 func (ShiftLogNoteType) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{12}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{13}
 }
 
 // QtyAxisSource records how wo_production_actual.qty_actual was derived on the
@@ -809,11 +868,11 @@ func (x QtyAxisSource) String() string {
 }
 
 func (QtyAxisSource) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[13].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[14].Descriptor()
 }
 
 func (QtyAxisSource) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[13]
+	return &file_ppc_v1_common_proto_enumTypes[14]
 }
 
 func (x QtyAxisSource) Number() protoreflect.EnumNumber {
@@ -822,7 +881,7 @@ func (x QtyAxisSource) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use QtyAxisSource.Descriptor instead.
 func (QtyAxisSource) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{13}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{14}
 }
 
 // RMSource is the raw-material sourcing mode.
@@ -862,11 +921,11 @@ func (x RMSource) String() string {
 }
 
 func (RMSource) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[14].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[15].Descriptor()
 }
 
 func (RMSource) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[14]
+	return &file_ppc_v1_common_proto_enumTypes[15]
 }
 
 func (x RMSource) Number() protoreflect.EnumNumber {
@@ -875,7 +934,7 @@ func (x RMSource) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RMSource.Descriptor instead.
 func (RMSource) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{14}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{15}
 }
 
 // QtySource records how wo_production_actual.calculated_qty_kg was derived.
@@ -929,11 +988,11 @@ func (x QtySource) String() string {
 }
 
 func (QtySource) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[15].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[16].Descriptor()
 }
 
 func (QtySource) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[15]
+	return &file_ppc_v1_common_proto_enumTypes[16]
 }
 
 func (x QtySource) Number() protoreflect.EnumNumber {
@@ -942,7 +1001,7 @@ func (x QtySource) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use QtySource.Descriptor instead.
 func (QtySource) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{15}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{16}
 }
 
 // ParamResolutionSource is which layer of the WO parameter chain a resolved
@@ -986,11 +1045,11 @@ func (x ParamResolutionSource) String() string {
 }
 
 func (ParamResolutionSource) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[16].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[17].Descriptor()
 }
 
 func (ParamResolutionSource) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[16]
+	return &file_ppc_v1_common_proto_enumTypes[17]
 }
 
 func (x ParamResolutionSource) Number() protoreflect.EnumNumber {
@@ -999,7 +1058,7 @@ func (x ParamResolutionSource) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ParamResolutionSource.Descriptor instead.
 func (ParamResolutionSource) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{16}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{17}
 }
 
 // ThresholdLevel is the scope of an over-production threshold config.
@@ -1045,11 +1104,11 @@ func (x ThresholdLevel) String() string {
 }
 
 func (ThresholdLevel) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[17].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[18].Descriptor()
 }
 
 func (ThresholdLevel) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[17]
+	return &file_ppc_v1_common_proto_enumTypes[18]
 }
 
 func (x ThresholdLevel) Number() protoreflect.EnumNumber {
@@ -1058,7 +1117,7 @@ func (x ThresholdLevel) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ThresholdLevel.Descriptor instead.
 func (ThresholdLevel) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{17}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{18}
 }
 
 // ThresholdUnit is the unit an over-production threshold is expressed in.
@@ -1095,11 +1154,11 @@ func (x ThresholdUnit) String() string {
 }
 
 func (ThresholdUnit) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[18].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[19].Descriptor()
 }
 
 func (ThresholdUnit) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[18]
+	return &file_ppc_v1_common_proto_enumTypes[19]
 }
 
 func (x ThresholdUnit) Number() protoreflect.EnumNumber {
@@ -1108,7 +1167,7 @@ func (x ThresholdUnit) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ThresholdUnit.Descriptor instead.
 func (ThresholdUnit) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{18}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{19}
 }
 
 // ActiveFilter is the standard active/inactive list filter for PPC masters.
@@ -1145,11 +1204,11 @@ func (x ActiveFilter) String() string {
 }
 
 func (ActiveFilter) Descriptor() protoreflect.EnumDescriptor {
-	return file_ppc_v1_common_proto_enumTypes[19].Descriptor()
+	return file_ppc_v1_common_proto_enumTypes[20].Descriptor()
 }
 
 func (ActiveFilter) Type() protoreflect.EnumType {
-	return &file_ppc_v1_common_proto_enumTypes[19]
+	return &file_ppc_v1_common_proto_enumTypes[20]
 }
 
 func (x ActiveFilter) Number() protoreflect.EnumNumber {
@@ -1158,7 +1217,7 @@ func (x ActiveFilter) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ActiveFilter.Descriptor instead.
 func (ActiveFilter) EnumDescriptor() ([]byte, []int) {
-	return file_ppc_v1_common_proto_rawDescGZIP(), []int{19}
+	return file_ppc_v1_common_proto_rawDescGZIP(), []int{20}
 }
 
 var File_ppc_v1_common_proto protoreflect.FileDescriptor
@@ -1208,7 +1267,12 @@ const file_ppc_v1_common_proto_rawDesc = "" +
 	"\x12CARRY_ACTION_SPLIT\x10\x02\x12\x16\n" +
 	"\x12CARRY_ACTION_DEFER\x10\x03\x12\x1e\n" +
 	"\x1aCARRY_ACTION_PARTIAL_CARRY\x10\x04\x12\x17\n" +
-	"\x13CARRY_ACTION_CANCEL\x10\x05*l\n" +
+	"\x13CARRY_ACTION_CANCEL\x10\x05*\x9a\x01\n" +
+	"\x0fPlanCarryAction\x12!\n" +
+	"\x1dPLAN_CARRY_ACTION_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dPLAN_CARRY_ACTION_CARRY_AS_IS\x10\x01\x12#\n" +
+	"\x1fPLAN_CARRY_ACTION_PARTIAL_CARRY\x10\x02\x12\x1c\n" +
+	"\x18PLAN_CARRY_ACTION_CANCEL\x10\x03*l\n" +
 	"\bGradeReq\x12\x19\n" +
 	"\x15GRADE_REQ_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11GRADE_REQ_AX_ONLY\x10\x01\x12\x1a\n" +
@@ -1309,7 +1373,7 @@ func file_ppc_v1_common_proto_rawDescGZIP() []byte {
 	return file_ppc_v1_common_proto_rawDescData
 }
 
-var file_ppc_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 20)
+var file_ppc_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 21)
 var file_ppc_v1_common_proto_goTypes = []any{
 	(AreaCode)(0),              // 0: ppc.v1.AreaCode
 	(DemandType)(0),            // 1: ppc.v1.DemandType
@@ -1317,20 +1381,21 @@ var file_ppc_v1_common_proto_goTypes = []any{
 	(DemandSource)(0),          // 3: ppc.v1.DemandSource
 	(DemandStatus)(0),          // 4: ppc.v1.DemandStatus
 	(CarryAction)(0),           // 5: ppc.v1.CarryAction
-	(GradeReq)(0),              // 6: ppc.v1.GradeReq
-	(PlanItemType)(0),          // 7: ppc.v1.PlanItemType
-	(PlanItemStatus)(0),        // 8: ppc.v1.PlanItemStatus
-	(WOStatus)(0),              // 9: ppc.v1.WOStatus
-	(WORefType)(0),             // 10: ppc.v1.WORefType
-	(ProdCategory)(0),          // 11: ppc.v1.ProdCategory
-	(ShiftLogNoteType)(0),      // 12: ppc.v1.ShiftLogNoteType
-	(QtyAxisSource)(0),         // 13: ppc.v1.QtyAxisSource
-	(RMSource)(0),              // 14: ppc.v1.RMSource
-	(QtySource)(0),             // 15: ppc.v1.QtySource
-	(ParamResolutionSource)(0), // 16: ppc.v1.ParamResolutionSource
-	(ThresholdLevel)(0),        // 17: ppc.v1.ThresholdLevel
-	(ThresholdUnit)(0),         // 18: ppc.v1.ThresholdUnit
-	(ActiveFilter)(0),          // 19: ppc.v1.ActiveFilter
+	(PlanCarryAction)(0),       // 6: ppc.v1.PlanCarryAction
+	(GradeReq)(0),              // 7: ppc.v1.GradeReq
+	(PlanItemType)(0),          // 8: ppc.v1.PlanItemType
+	(PlanItemStatus)(0),        // 9: ppc.v1.PlanItemStatus
+	(WOStatus)(0),              // 10: ppc.v1.WOStatus
+	(WORefType)(0),             // 11: ppc.v1.WORefType
+	(ProdCategory)(0),          // 12: ppc.v1.ProdCategory
+	(ShiftLogNoteType)(0),      // 13: ppc.v1.ShiftLogNoteType
+	(QtyAxisSource)(0),         // 14: ppc.v1.QtyAxisSource
+	(RMSource)(0),              // 15: ppc.v1.RMSource
+	(QtySource)(0),             // 16: ppc.v1.QtySource
+	(ParamResolutionSource)(0), // 17: ppc.v1.ParamResolutionSource
+	(ThresholdLevel)(0),        // 18: ppc.v1.ThresholdLevel
+	(ThresholdUnit)(0),         // 19: ppc.v1.ThresholdUnit
+	(ActiveFilter)(0),          // 20: ppc.v1.ActiveFilter
 }
 var file_ppc_v1_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -1350,7 +1415,7 @@ func file_ppc_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ppc_v1_common_proto_rawDesc), len(file_ppc_v1_common_proto_rawDesc)),
-			NumEnums:      20,
+			NumEnums:      21,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,

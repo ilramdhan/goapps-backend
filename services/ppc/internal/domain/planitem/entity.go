@@ -44,6 +44,11 @@ type PlanItem struct {
 	createdBy          int64
 	createdAt          time.Time
 	updatedAt          time.Time
+	// carryFromItemID names the plan item this one was carried forward from at
+	// month start. Nil for an ordinary item. A carry creates a new row rather
+	// than moving the source's month, so this is the only link back.
+	carryFromItemID *int64
+	carryAction     string
 	// pendingParentIndex is a transient, never-persisted back-reference used by
 	// the cascade: it names the position, within the batch being written, of the
 	// item that will become this one's parent. It exists because a chain must be
@@ -69,6 +74,10 @@ type NewParams struct {
 	Timeline           TimelineParams
 	Notes              string
 	CreatedBy          int64
+	// CarryFromItemID links a carried-forward item back to its source. Set only
+	// by the carry-forward usecase.
+	CarryFromItemID *int64
+	CarryAction     string
 	// PendingParentIndex names the batch-relative position of the parent for a
 	// cascade item constructed before its parent's ID exists. Nil for every
 	// ordinary item; index 0 is a legitimate value, hence the pointer.
@@ -129,6 +138,8 @@ func New(p NewParams) (*PlanItem, error) {
 		createdBy:          p.CreatedBy,
 		createdAt:          now,
 		updatedAt:          now,
+		carryFromItemID:    p.CarryFromItemID,
+		carryAction:        p.CarryAction,
 		pendingParentIndex: p.PendingParentIndex,
 	}, nil
 }
@@ -216,6 +227,8 @@ type ReconstructParams struct {
 	CreatedBy          int64
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	CarryFromItemID    *int64
+	CarryAction        string
 }
 
 // Reconstruct rebuilds a PlanItem from persistence (no validation).
@@ -243,6 +256,8 @@ func Reconstruct(p ReconstructParams) *PlanItem {
 		createdBy:          p.CreatedBy,
 		createdAt:          p.CreatedAt,
 		updatedAt:          p.UpdatedAt,
+		carryFromItemID:    p.CarryFromItemID,
+		carryAction:        p.CarryAction,
 	}
 }
 
@@ -338,6 +353,45 @@ func (p *PlanItem) CreatedAt() time.Time { return p.createdAt }
 
 // UpdatedAt returns the last-update timestamp.
 func (p *PlanItem) UpdatedAt() time.Time { return p.updatedAt }
+
+// CarryFromItemID returns the plan item this one was carried forward from, or
+// nil when it was not carried.
+func (p *PlanItem) CarryFromItemID() *int64 { return p.carryFromItemID }
+
+// CarryAction returns the carry-forward action that produced this item (empty
+// when it was not carried).
+func (p *PlanItem) CarryAction() string { return p.carryAction }
+
+// Close moves the plan item to CLOSED. Legal from every non-closed state
+// (state_machine.go), so it is the plan-item equivalent of canceling.
+func (p *PlanItem) Close() error {
+	if !canTransition(p.status, StatusClosed) {
+		return ErrIllegalTransition
+	}
+	p.status = StatusClosed
+	p.updatedAt = time.Now()
+	return nil
+}
+
+// IsCarryCandidate reports whether the plan item may be carried into a new
+// month on its own status alone. COMPLETED and CLOSED are terminal work:
+// nothing is left to plan. IN_PROGRESS is excluded because it means work orders
+// are already running against it — the unfinished part of that work belongs to
+// the work-order carry scope (S-2.3), and carrying both would plan the same
+// production twice.
+//
+// Whether any quantity is actually left to carry is a separate question the
+// application layer answers against wo_plan_item_link; status alone cannot.
+func (p *PlanItem) IsCarryCandidate() bool {
+	switch p.status {
+	case StatusDraft, StatusConfirmed:
+		return true
+	case StatusInProgress, StatusCompleted, StatusClosed:
+		return false
+	default:
+		return false
+	}
+}
 
 // FieldChange records a single field-level edit for the plan-change log.
 type FieldChange struct {

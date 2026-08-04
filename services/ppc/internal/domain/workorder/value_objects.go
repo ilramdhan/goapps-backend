@@ -16,6 +16,13 @@ const (
 	StatusCancelled  = "CANCELLED"
 )
 
+// VoidStatuses are the work-order states that consumed none of their plan
+// item's quantity. A cancelled or rejected WO never produced anything, so its
+// qty_contribution must not count as coverage against the plan item — otherwise
+// a rejected work order would permanently suppress the quantity it claimed from
+// ever being carried into a new month.
+var VoidStatuses = []string{StatusCancelled, StatusRejected}
+
 // Production category values (wo_prod_category).
 const (
 	ProdCategoryNormal   = "NORMAL"

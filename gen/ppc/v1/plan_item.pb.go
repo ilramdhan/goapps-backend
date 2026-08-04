@@ -48,8 +48,14 @@ type PlanItem struct {
 	DurationSource      string                 `protobuf:"bytes,20,opt,name=duration_source,json=durationSource,proto3" json:"duration_source,omitempty"`                   // DERIVED | MANUAL
 	// Shade (colour) of the route product at this level. Natural at upstream
 	// levels, which is what makes those items mergeable into one work order.
-	ShadeCode     string `protobuf:"bytes,21,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
-	ShadeName     string `protobuf:"bytes,22,opt,name=shade_name,json=shadeName,proto3" json:"shade_name,omitempty"`
+	ShadeCode string `protobuf:"bytes,21,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
+	ShadeName string `protobuf:"bytes,22,opt,name=shade_name,json=shadeName,proto3" json:"shade_name,omitempty"`
+	// Source plan item this one was carried forward from, 0 when it was not.
+	// A new row per carry (never a month reassignment) is what keeps the source
+	// month's plan an accurate record of what was committed there.
+	CarryFromItemId int64 `protobuf:"varint,23,opt,name=carry_from_item_id,json=carryFromItemId,proto3" json:"carry_from_item_id,omitempty"`
+	// The action that produced this item, when it came from a carry-forward.
+	CarryAction   PlanCarryAction `protobuf:"varint,24,opt,name=carry_action,json=carryAction,proto3,enum=ppc.v1.PlanCarryAction" json:"carry_action,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -238,6 +244,357 @@ func (x *PlanItem) GetShadeName() string {
 	return ""
 }
 
+func (x *PlanItem) GetCarryFromItemId() int64 {
+	if x != nil {
+		return x.CarryFromItemId
+	}
+	return 0
+}
+
+func (x *PlanItem) GetCarryAction() PlanCarryAction {
+	if x != nil {
+		return x.CarryAction
+	}
+	return PlanCarryAction_PLAN_CARRY_ACTION_UNSPECIFIED
+}
+
+// PlanCarryCandidate is one plan item eligible to be carried into a new month,
+// decorated with everything the planner needs to decide without seeing an id.
+type PlanCarryCandidate struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Item  *PlanItem              `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	// Qty on this item not yet committed to any work order:
+	// qty_target - SUM(wo_plan_item_link.qty_contribution). This is what
+	// CARRY_AS_IS carries, so a plan item already half-covered by a work order
+	// does not get carried twice.
+	QtyUncovered string `protobuf:"bytes,2,opt,name=qty_uncovered,json=qtyUncovered,proto3" json:"qty_uncovered,omitempty"`
+	// Qty already covered by work orders, for context alongside qty_uncovered.
+	QtyCovered string `protobuf:"bytes,3,opt,name=qty_covered,json=qtyCovered,proto3" json:"qty_covered,omitempty"`
+	// How many work orders reference this plan item. Non-zero means the work is
+	// already in flight and the work-order carry scope may also apply to it.
+	WorkOrderCount int32 `protobuf:"varint,4,opt,name=work_order_count,json=workOrderCount,proto3" json:"work_order_count,omitempty"`
+	// True when a plan item in the target month already names this one as its
+	// carry source — a second run shows it as done rather than duplicating it.
+	AlreadyCarried bool `protobuf:"varint,5,opt,name=already_carried,json=alreadyCarried,proto3" json:"already_carried,omitempty"`
+	// Human label of the demand this item serves, for traceability. Empty for a
+	// cascade INTERMEDIATE item, which serves a parent item rather than a demand.
+	DemandLabel   string `protobuf:"bytes,6,opt,name=demand_label,json=demandLabel,proto3" json:"demand_label,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlanCarryCandidate) Reset() {
+	*x = PlanCarryCandidate{}
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlanCarryCandidate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlanCarryCandidate) ProtoMessage() {}
+
+func (x *PlanCarryCandidate) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlanCarryCandidate.ProtoReflect.Descriptor instead.
+func (*PlanCarryCandidate) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *PlanCarryCandidate) GetItem() *PlanItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+func (x *PlanCarryCandidate) GetQtyUncovered() string {
+	if x != nil {
+		return x.QtyUncovered
+	}
+	return ""
+}
+
+func (x *PlanCarryCandidate) GetQtyCovered() string {
+	if x != nil {
+		return x.QtyCovered
+	}
+	return ""
+}
+
+func (x *PlanCarryCandidate) GetWorkOrderCount() int32 {
+	if x != nil {
+		return x.WorkOrderCount
+	}
+	return 0
+}
+
+func (x *PlanCarryCandidate) GetAlreadyCarried() bool {
+	if x != nil {
+		return x.AlreadyCarried
+	}
+	return false
+}
+
+func (x *PlanCarryCandidate) GetDemandLabel() string {
+	if x != nil {
+		return x.DemandLabel
+	}
+	return ""
+}
+
+type ListPlanCarryForwardCandidatesRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	SourceMonth string                 `protobuf:"bytes,1,opt,name=source_month,json=sourceMonth,proto3" json:"source_month,omitempty"`
+	// Target month the candidates are being carried into. Required: whether a
+	// candidate is `already_carried` can only be answered against a target.
+	TargetMonth   string `protobuf:"bytes,2,opt,name=target_month,json=targetMonth,proto3" json:"target_month,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPlanCarryForwardCandidatesRequest) Reset() {
+	*x = ListPlanCarryForwardCandidatesRequest{}
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPlanCarryForwardCandidatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPlanCarryForwardCandidatesRequest) ProtoMessage() {}
+
+func (x *ListPlanCarryForwardCandidatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPlanCarryForwardCandidatesRequest.ProtoReflect.Descriptor instead.
+func (*ListPlanCarryForwardCandidatesRequest) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ListPlanCarryForwardCandidatesRequest) GetSourceMonth() string {
+	if x != nil {
+		return x.SourceMonth
+	}
+	return ""
+}
+
+func (x *ListPlanCarryForwardCandidatesRequest) GetTargetMonth() string {
+	if x != nil {
+		return x.TargetMonth
+	}
+	return ""
+}
+
+type ListPlanCarryForwardCandidatesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	Data          []*PlanCarryCandidate  `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPlanCarryForwardCandidatesResponse) Reset() {
+	*x = ListPlanCarryForwardCandidatesResponse{}
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPlanCarryForwardCandidatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPlanCarryForwardCandidatesResponse) ProtoMessage() {}
+
+func (x *ListPlanCarryForwardCandidatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPlanCarryForwardCandidatesResponse.ProtoReflect.Descriptor instead.
+func (*ListPlanCarryForwardCandidatesResponse) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListPlanCarryForwardCandidatesResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ListPlanCarryForwardCandidatesResponse) GetData() []*PlanCarryCandidate {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type ProcessPlanCarryForwardRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	SourcePlanItemId int64                  `protobuf:"varint,1,opt,name=source_plan_item_id,json=sourcePlanItemId,proto3" json:"source_plan_item_id,omitempty"`
+	Action           PlanCarryAction        `protobuf:"varint,2,opt,name=action,proto3,enum=ppc.v1.PlanCarryAction" json:"action,omitempty"`
+	TargetMonth      string                 `protobuf:"bytes,3,opt,name=target_month,json=targetMonth,proto3" json:"target_month,omitempty"`
+	// New deadline for CARRY_AS_IS / PARTIAL_CARRY. Defaults to the source
+	// deadline when omitted.
+	NewDeadline *string `protobuf:"bytes,4,opt,name=new_deadline,json=newDeadline,proto3,oneof" json:"new_deadline,omitempty"`
+	// Carried qty for PARTIAL_CARRY. Must not exceed the candidate's
+	// qty_uncovered.
+	CarryQty      *string `protobuf:"bytes,5,opt,name=carry_qty,json=carryQty,proto3,oneof" json:"carry_qty,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProcessPlanCarryForwardRequest) Reset() {
+	*x = ProcessPlanCarryForwardRequest{}
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProcessPlanCarryForwardRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProcessPlanCarryForwardRequest) ProtoMessage() {}
+
+func (x *ProcessPlanCarryForwardRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProcessPlanCarryForwardRequest.ProtoReflect.Descriptor instead.
+func (*ProcessPlanCarryForwardRequest) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ProcessPlanCarryForwardRequest) GetSourcePlanItemId() int64 {
+	if x != nil {
+		return x.SourcePlanItemId
+	}
+	return 0
+}
+
+func (x *ProcessPlanCarryForwardRequest) GetAction() PlanCarryAction {
+	if x != nil {
+		return x.Action
+	}
+	return PlanCarryAction_PLAN_CARRY_ACTION_UNSPECIFIED
+}
+
+func (x *ProcessPlanCarryForwardRequest) GetTargetMonth() string {
+	if x != nil {
+		return x.TargetMonth
+	}
+	return ""
+}
+
+func (x *ProcessPlanCarryForwardRequest) GetNewDeadline() string {
+	if x != nil && x.NewDeadline != nil {
+		return *x.NewDeadline
+	}
+	return ""
+}
+
+func (x *ProcessPlanCarryForwardRequest) GetCarryQty() string {
+	if x != nil && x.CarryQty != nil {
+		return *x.CarryQty
+	}
+	return ""
+}
+
+type ProcessPlanCarryForwardResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Base  *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// The plan item created in the target month. Absent for CANCEL, which
+	// creates nothing.
+	Data          *PlanItem `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProcessPlanCarryForwardResponse) Reset() {
+	*x = ProcessPlanCarryForwardResponse{}
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProcessPlanCarryForwardResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProcessPlanCarryForwardResponse) ProtoMessage() {}
+
+func (x *ProcessPlanCarryForwardResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProcessPlanCarryForwardResponse.ProtoReflect.Descriptor instead.
+func (*ProcessPlanCarryForwardResponse) Descriptor() ([]byte, []int) {
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ProcessPlanCarryForwardResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ProcessPlanCarryForwardResponse) GetData() *PlanItem {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type CreatePlanItemRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	CpmProductSysId int64                  `protobuf:"varint,1,opt,name=cpm_product_sys_id,json=cpmProductSysId,proto3" json:"cpm_product_sys_id,omitempty"`
@@ -265,7 +622,7 @@ type CreatePlanItemRequest struct {
 
 func (x *CreatePlanItemRequest) Reset() {
 	*x = CreatePlanItemRequest{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[1]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -277,7 +634,7 @@ func (x *CreatePlanItemRequest) String() string {
 func (*CreatePlanItemRequest) ProtoMessage() {}
 
 func (x *CreatePlanItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[1]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -290,7 +647,7 @@ func (x *CreatePlanItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePlanItemRequest.ProtoReflect.Descriptor instead.
 func (*CreatePlanItemRequest) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{1}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreatePlanItemRequest) GetCpmProductSysId() int64 {
@@ -416,7 +773,7 @@ type CreatePlanItemResponse struct {
 
 func (x *CreatePlanItemResponse) Reset() {
 	*x = CreatePlanItemResponse{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[2]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -428,7 +785,7 @@ func (x *CreatePlanItemResponse) String() string {
 func (*CreatePlanItemResponse) ProtoMessage() {}
 
 func (x *CreatePlanItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[2]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -441,7 +798,7 @@ func (x *CreatePlanItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePlanItemResponse.ProtoReflect.Descriptor instead.
 func (*CreatePlanItemResponse) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{2}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreatePlanItemResponse) GetBase() *v1.BaseResponse {
@@ -489,7 +846,7 @@ type GetPlanItemRequest struct {
 
 func (x *GetPlanItemRequest) Reset() {
 	*x = GetPlanItemRequest{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[3]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -501,7 +858,7 @@ func (x *GetPlanItemRequest) String() string {
 func (*GetPlanItemRequest) ProtoMessage() {}
 
 func (x *GetPlanItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[3]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -514,7 +871,7 @@ func (x *GetPlanItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlanItemRequest.ProtoReflect.Descriptor instead.
 func (*GetPlanItemRequest) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{3}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetPlanItemRequest) GetPlanItemId() int64 {
@@ -534,7 +891,7 @@ type GetPlanItemResponse struct {
 
 func (x *GetPlanItemResponse) Reset() {
 	*x = GetPlanItemResponse{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[4]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -546,7 +903,7 @@ func (x *GetPlanItemResponse) String() string {
 func (*GetPlanItemResponse) ProtoMessage() {}
 
 func (x *GetPlanItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[4]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -559,7 +916,7 @@ func (x *GetPlanItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlanItemResponse.ProtoReflect.Descriptor instead.
 func (*GetPlanItemResponse) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{4}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetPlanItemResponse) GetBase() *v1.BaseResponse {
@@ -600,7 +957,7 @@ type UpdatePlanItemRequest struct {
 
 func (x *UpdatePlanItemRequest) Reset() {
 	*x = UpdatePlanItemRequest{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[5]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -612,7 +969,7 @@ func (x *UpdatePlanItemRequest) String() string {
 func (*UpdatePlanItemRequest) ProtoMessage() {}
 
 func (x *UpdatePlanItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[5]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -625,7 +982,7 @@ func (x *UpdatePlanItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePlanItemRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePlanItemRequest) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{5}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdatePlanItemRequest) GetPlanItemId() int64 {
@@ -722,7 +1079,7 @@ type UpdatePlanItemResponse struct {
 
 func (x *UpdatePlanItemResponse) Reset() {
 	*x = UpdatePlanItemResponse{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[6]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -734,7 +1091,7 @@ func (x *UpdatePlanItemResponse) String() string {
 func (*UpdatePlanItemResponse) ProtoMessage() {}
 
 func (x *UpdatePlanItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[6]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -747,7 +1104,7 @@ func (x *UpdatePlanItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePlanItemResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePlanItemResponse) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{6}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdatePlanItemResponse) GetBase() *v1.BaseResponse {
@@ -773,7 +1130,7 @@ type DeletePlanItemRequest struct {
 
 func (x *DeletePlanItemRequest) Reset() {
 	*x = DeletePlanItemRequest{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[7]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -785,7 +1142,7 @@ func (x *DeletePlanItemRequest) String() string {
 func (*DeletePlanItemRequest) ProtoMessage() {}
 
 func (x *DeletePlanItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[7]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -798,7 +1155,7 @@ func (x *DeletePlanItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePlanItemRequest.ProtoReflect.Descriptor instead.
 func (*DeletePlanItemRequest) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{7}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeletePlanItemRequest) GetPlanItemId() int64 {
@@ -817,7 +1174,7 @@ type DeletePlanItemResponse struct {
 
 func (x *DeletePlanItemResponse) Reset() {
 	*x = DeletePlanItemResponse{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[8]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -829,7 +1186,7 @@ func (x *DeletePlanItemResponse) String() string {
 func (*DeletePlanItemResponse) ProtoMessage() {}
 
 func (x *DeletePlanItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[8]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -842,7 +1199,7 @@ func (x *DeletePlanItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePlanItemResponse.ProtoReflect.Descriptor instead.
 func (*DeletePlanItemResponse) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{8}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeletePlanItemResponse) GetBase() *v1.BaseResponse {
@@ -870,7 +1227,7 @@ type ListPlanItemsRequest struct {
 
 func (x *ListPlanItemsRequest) Reset() {
 	*x = ListPlanItemsRequest{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[9]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -882,7 +1239,7 @@ func (x *ListPlanItemsRequest) String() string {
 func (*ListPlanItemsRequest) ProtoMessage() {}
 
 func (x *ListPlanItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[9]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -895,7 +1252,7 @@ func (x *ListPlanItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanItemsRequest.ProtoReflect.Descriptor instead.
 func (*ListPlanItemsRequest) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{9}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListPlanItemsRequest) GetPage() int32 {
@@ -979,7 +1336,7 @@ type ListPlanItemsResponse struct {
 
 func (x *ListPlanItemsResponse) Reset() {
 	*x = ListPlanItemsResponse{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[10]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -991,7 +1348,7 @@ func (x *ListPlanItemsResponse) String() string {
 func (*ListPlanItemsResponse) ProtoMessage() {}
 
 func (x *ListPlanItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[10]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1004,7 +1361,7 @@ func (x *ListPlanItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlanItemsResponse.ProtoReflect.Descriptor instead.
 func (*ListPlanItemsResponse) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{10}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListPlanItemsResponse) GetBase() *v1.BaseResponse {
@@ -1053,7 +1410,7 @@ type GanttBar struct {
 
 func (x *GanttBar) Reset() {
 	*x = GanttBar{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[11]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1065,7 +1422,7 @@ func (x *GanttBar) String() string {
 func (*GanttBar) ProtoMessage() {}
 
 func (x *GanttBar) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[11]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1078,7 +1435,7 @@ func (x *GanttBar) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GanttBar.ProtoReflect.Descriptor instead.
 func (*GanttBar) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{11}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GanttBar) GetPlanItemId() int64 {
@@ -1200,7 +1557,7 @@ type GetGanttViewRequest struct {
 
 func (x *GetGanttViewRequest) Reset() {
 	*x = GetGanttViewRequest{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[12]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1212,7 +1569,7 @@ func (x *GetGanttViewRequest) String() string {
 func (*GetGanttViewRequest) ProtoMessage() {}
 
 func (x *GetGanttViewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[12]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1225,7 +1582,7 @@ func (x *GetGanttViewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGanttViewRequest.ProtoReflect.Descriptor instead.
 func (*GetGanttViewRequest) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{12}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetGanttViewRequest) GetMonth() string {
@@ -1273,7 +1630,7 @@ type GetGanttViewResponse struct {
 
 func (x *GetGanttViewResponse) Reset() {
 	*x = GetGanttViewResponse{}
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[13]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1285,7 +1642,7 @@ func (x *GetGanttViewResponse) String() string {
 func (*GetGanttViewResponse) ProtoMessage() {}
 
 func (x *GetGanttViewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_ppc_v1_plan_item_proto_msgTypes[13]
+	mi := &file_ppc_v1_plan_item_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1298,7 +1655,7 @@ func (x *GetGanttViewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGanttViewResponse.ProtoReflect.Descriptor instead.
 func (*GetGanttViewResponse) Descriptor() ([]byte, []int) {
-	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{13}
+	return file_ppc_v1_plan_item_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetGanttViewResponse) GetBase() *v1.BaseResponse {
@@ -1319,7 +1676,7 @@ var File_ppc_v1_plan_item_proto protoreflect.FileDescriptor
 
 const file_ppc_v1_plan_item_proto_rawDesc = "" +
 	"\n" +
-	"\x16ppc/v1/plan_item.proto\x12\x06ppc.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x13ppc/v1/common.proto\"\xbf\x06\n" +
+	"\x16ppc/v1/plan_item.proto\x12\x06ppc.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x13ppc/v1/common.proto\"\xa8\a\n" +
 	"\bPlanItem\x12 \n" +
 	"\fplan_item_id\x18\x01 \x01(\x03R\n" +
 	"planItemId\x12+\n" +
@@ -1347,7 +1704,36 @@ const file_ppc_v1_plan_item_proto_rawDesc = "" +
 	"\n" +
 	"shade_code\x18\x15 \x01(\tR\tshadeCode\x12\x1d\n" +
 	"\n" +
-	"shade_name\x18\x16 \x01(\tR\tshadeName\"\xf5\x06\n" +
+	"shade_name\x18\x16 \x01(\tR\tshadeName\x12+\n" +
+	"\x12carry_from_item_id\x18\x17 \x01(\x03R\x0fcarryFromItemId\x12:\n" +
+	"\fcarry_action\x18\x18 \x01(\x0e2\x17.ppc.v1.PlanCarryActionR\vcarryAction\"\xf6\x01\n" +
+	"\x12PlanCarryCandidate\x12$\n" +
+	"\x04item\x18\x01 \x01(\v2\x10.ppc.v1.PlanItemR\x04item\x12#\n" +
+	"\rqty_uncovered\x18\x02 \x01(\tR\fqtyUncovered\x12\x1f\n" +
+	"\vqty_covered\x18\x03 \x01(\tR\n" +
+	"qtyCovered\x12(\n" +
+	"\x10work_order_count\x18\x04 \x01(\x05R\x0eworkOrderCount\x12'\n" +
+	"\x0falready_carried\x18\x05 \x01(\bR\x0ealreadyCarried\x12!\n" +
+	"\fdemand_label\x18\x06 \x01(\tR\vdemandLabel\"\xab\x01\n" +
+	"%ListPlanCarryForwardCandidatesRequest\x12@\n" +
+	"\fsource_month\x18\x01 \x01(\tB\x1d\xbaH\x1ar\x182\x13^[0-9]{4}-[0-9]{2}$\x98\x01\aR\vsourceMonth\x12@\n" +
+	"\ftarget_month\x18\x02 \x01(\tB\x1d\xbaH\x1ar\x182\x13^[0-9]{4}-[0-9]{2}$\x98\x01\aR\vtargetMonth\"\x85\x01\n" +
+	"&ListPlanCarryForwardCandidatesResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
+	"\x04data\x18\x02 \x03(\v2\x1a.ppc.v1.PlanCarryCandidateR\x04data\"\xd0\x02\n" +
+	"\x1eProcessPlanCarryForwardRequest\x126\n" +
+	"\x13source_plan_item_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x10sourcePlanItemId\x129\n" +
+	"\x06action\x18\x02 \x01(\x0e2\x17.ppc.v1.PlanCarryActionB\b\xbaH\x05\x82\x01\x02 \x00R\x06action\x12@\n" +
+	"\ftarget_month\x18\x03 \x01(\tB\x1d\xbaH\x1ar\x182\x13^[0-9]{4}-[0-9]{2}$\x98\x01\aR\vtargetMonth\x12/\n" +
+	"\fnew_deadline\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
+	"H\x00R\vnewDeadline\x88\x01\x01\x12)\n" +
+	"\tcarry_qty\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18\x14H\x01R\bcarryQty\x88\x01\x01B\x0f\n" +
+	"\r_new_deadlineB\f\n" +
+	"\n" +
+	"_carry_qty\"t\n" +
+	"\x1fProcessPlanCarryForwardResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12$\n" +
+	"\x04data\x18\x02 \x01(\v2\x10.ppc.v1.PlanItemR\x04data\"\xf5\x06\n" +
 	"\x15CreatePlanItemRequest\x124\n" +
 	"\x12cpm_product_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x0fcpmProductSysId\x122\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x14.ppc.v1.PlanItemTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x04type\x12)\n" +
@@ -1505,64 +1891,77 @@ func file_ppc_v1_plan_item_proto_rawDescGZIP() []byte {
 	return file_ppc_v1_plan_item_proto_rawDescData
 }
 
-var file_ppc_v1_plan_item_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_ppc_v1_plan_item_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_ppc_v1_plan_item_proto_goTypes = []any{
-	(*PlanItem)(nil),               // 0: ppc.v1.PlanItem
-	(*CreatePlanItemRequest)(nil),  // 1: ppc.v1.CreatePlanItemRequest
-	(*CreatePlanItemResponse)(nil), // 2: ppc.v1.CreatePlanItemResponse
-	(*GetPlanItemRequest)(nil),     // 3: ppc.v1.GetPlanItemRequest
-	(*GetPlanItemResponse)(nil),    // 4: ppc.v1.GetPlanItemResponse
-	(*UpdatePlanItemRequest)(nil),  // 5: ppc.v1.UpdatePlanItemRequest
-	(*UpdatePlanItemResponse)(nil), // 6: ppc.v1.UpdatePlanItemResponse
-	(*DeletePlanItemRequest)(nil),  // 7: ppc.v1.DeletePlanItemRequest
-	(*DeletePlanItemResponse)(nil), // 8: ppc.v1.DeletePlanItemResponse
-	(*ListPlanItemsRequest)(nil),   // 9: ppc.v1.ListPlanItemsRequest
-	(*ListPlanItemsResponse)(nil),  // 10: ppc.v1.ListPlanItemsResponse
-	(*GanttBar)(nil),               // 11: ppc.v1.GanttBar
-	(*GetGanttViewRequest)(nil),    // 12: ppc.v1.GetGanttViewRequest
-	(*GetGanttViewResponse)(nil),   // 13: ppc.v1.GetGanttViewResponse
-	(PlanItemType)(0),              // 14: ppc.v1.PlanItemType
-	(RMSource)(0),                  // 15: ppc.v1.RMSource
-	(PlanItemStatus)(0),            // 16: ppc.v1.PlanItemStatus
-	(*v1.AuditInfo)(nil),           // 17: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),        // 18: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),  // 19: common.v1.PaginationResponse
-	(AreaCode)(0),                  // 20: ppc.v1.AreaCode
+	(*PlanItem)(nil),                               // 0: ppc.v1.PlanItem
+	(*PlanCarryCandidate)(nil),                     // 1: ppc.v1.PlanCarryCandidate
+	(*ListPlanCarryForwardCandidatesRequest)(nil),  // 2: ppc.v1.ListPlanCarryForwardCandidatesRequest
+	(*ListPlanCarryForwardCandidatesResponse)(nil), // 3: ppc.v1.ListPlanCarryForwardCandidatesResponse
+	(*ProcessPlanCarryForwardRequest)(nil),         // 4: ppc.v1.ProcessPlanCarryForwardRequest
+	(*ProcessPlanCarryForwardResponse)(nil),        // 5: ppc.v1.ProcessPlanCarryForwardResponse
+	(*CreatePlanItemRequest)(nil),                  // 6: ppc.v1.CreatePlanItemRequest
+	(*CreatePlanItemResponse)(nil),                 // 7: ppc.v1.CreatePlanItemResponse
+	(*GetPlanItemRequest)(nil),                     // 8: ppc.v1.GetPlanItemRequest
+	(*GetPlanItemResponse)(nil),                    // 9: ppc.v1.GetPlanItemResponse
+	(*UpdatePlanItemRequest)(nil),                  // 10: ppc.v1.UpdatePlanItemRequest
+	(*UpdatePlanItemResponse)(nil),                 // 11: ppc.v1.UpdatePlanItemResponse
+	(*DeletePlanItemRequest)(nil),                  // 12: ppc.v1.DeletePlanItemRequest
+	(*DeletePlanItemResponse)(nil),                 // 13: ppc.v1.DeletePlanItemResponse
+	(*ListPlanItemsRequest)(nil),                   // 14: ppc.v1.ListPlanItemsRequest
+	(*ListPlanItemsResponse)(nil),                  // 15: ppc.v1.ListPlanItemsResponse
+	(*GanttBar)(nil),                               // 16: ppc.v1.GanttBar
+	(*GetGanttViewRequest)(nil),                    // 17: ppc.v1.GetGanttViewRequest
+	(*GetGanttViewResponse)(nil),                   // 18: ppc.v1.GetGanttViewResponse
+	(PlanItemType)(0),                              // 19: ppc.v1.PlanItemType
+	(RMSource)(0),                                  // 20: ppc.v1.RMSource
+	(PlanItemStatus)(0),                            // 21: ppc.v1.PlanItemStatus
+	(*v1.AuditInfo)(nil),                           // 22: common.v1.AuditInfo
+	(PlanCarryAction)(0),                           // 23: ppc.v1.PlanCarryAction
+	(*v1.BaseResponse)(nil),                        // 24: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),                  // 25: common.v1.PaginationResponse
+	(AreaCode)(0),                                  // 26: ppc.v1.AreaCode
 }
 var file_ppc_v1_plan_item_proto_depIdxs = []int32{
-	14, // 0: ppc.v1.PlanItem.type:type_name -> ppc.v1.PlanItemType
-	15, // 1: ppc.v1.PlanItem.rm_source:type_name -> ppc.v1.RMSource
-	16, // 2: ppc.v1.PlanItem.status:type_name -> ppc.v1.PlanItemStatus
-	17, // 3: ppc.v1.PlanItem.audit:type_name -> common.v1.AuditInfo
-	14, // 4: ppc.v1.CreatePlanItemRequest.type:type_name -> ppc.v1.PlanItemType
-	15, // 5: ppc.v1.CreatePlanItemRequest.rm_source:type_name -> ppc.v1.RMSource
-	18, // 6: ppc.v1.CreatePlanItemResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 7: ppc.v1.CreatePlanItemResponse.data:type_name -> ppc.v1.PlanItem
-	0,  // 8: ppc.v1.CreatePlanItemResponse.child_data:type_name -> ppc.v1.PlanItem
-	0,  // 9: ppc.v1.CreatePlanItemResponse.children:type_name -> ppc.v1.PlanItem
-	18, // 10: ppc.v1.GetPlanItemResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 11: ppc.v1.GetPlanItemResponse.data:type_name -> ppc.v1.PlanItem
-	15, // 12: ppc.v1.UpdatePlanItemRequest.rm_source:type_name -> ppc.v1.RMSource
-	16, // 13: ppc.v1.UpdatePlanItemRequest.status:type_name -> ppc.v1.PlanItemStatus
-	18, // 14: ppc.v1.UpdatePlanItemResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 15: ppc.v1.UpdatePlanItemResponse.data:type_name -> ppc.v1.PlanItem
-	18, // 16: ppc.v1.DeletePlanItemResponse.base:type_name -> common.v1.BaseResponse
-	14, // 17: ppc.v1.ListPlanItemsRequest.type:type_name -> ppc.v1.PlanItemType
-	16, // 18: ppc.v1.ListPlanItemsRequest.status:type_name -> ppc.v1.PlanItemStatus
-	18, // 19: ppc.v1.ListPlanItemsResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 20: ppc.v1.ListPlanItemsResponse.data:type_name -> ppc.v1.PlanItem
-	19, // 21: ppc.v1.ListPlanItemsResponse.pagination:type_name -> common.v1.PaginationResponse
-	20, // 22: ppc.v1.GanttBar.area:type_name -> ppc.v1.AreaCode
-	14, // 23: ppc.v1.GanttBar.type:type_name -> ppc.v1.PlanItemType
-	16, // 24: ppc.v1.GanttBar.status:type_name -> ppc.v1.PlanItemStatus
-	20, // 25: ppc.v1.GetGanttViewRequest.area:type_name -> ppc.v1.AreaCode
-	18, // 26: ppc.v1.GetGanttViewResponse.base:type_name -> common.v1.BaseResponse
-	11, // 27: ppc.v1.GetGanttViewResponse.data:type_name -> ppc.v1.GanttBar
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	19, // 0: ppc.v1.PlanItem.type:type_name -> ppc.v1.PlanItemType
+	20, // 1: ppc.v1.PlanItem.rm_source:type_name -> ppc.v1.RMSource
+	21, // 2: ppc.v1.PlanItem.status:type_name -> ppc.v1.PlanItemStatus
+	22, // 3: ppc.v1.PlanItem.audit:type_name -> common.v1.AuditInfo
+	23, // 4: ppc.v1.PlanItem.carry_action:type_name -> ppc.v1.PlanCarryAction
+	0,  // 5: ppc.v1.PlanCarryCandidate.item:type_name -> ppc.v1.PlanItem
+	24, // 6: ppc.v1.ListPlanCarryForwardCandidatesResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 7: ppc.v1.ListPlanCarryForwardCandidatesResponse.data:type_name -> ppc.v1.PlanCarryCandidate
+	23, // 8: ppc.v1.ProcessPlanCarryForwardRequest.action:type_name -> ppc.v1.PlanCarryAction
+	24, // 9: ppc.v1.ProcessPlanCarryForwardResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 10: ppc.v1.ProcessPlanCarryForwardResponse.data:type_name -> ppc.v1.PlanItem
+	19, // 11: ppc.v1.CreatePlanItemRequest.type:type_name -> ppc.v1.PlanItemType
+	20, // 12: ppc.v1.CreatePlanItemRequest.rm_source:type_name -> ppc.v1.RMSource
+	24, // 13: ppc.v1.CreatePlanItemResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 14: ppc.v1.CreatePlanItemResponse.data:type_name -> ppc.v1.PlanItem
+	0,  // 15: ppc.v1.CreatePlanItemResponse.child_data:type_name -> ppc.v1.PlanItem
+	0,  // 16: ppc.v1.CreatePlanItemResponse.children:type_name -> ppc.v1.PlanItem
+	24, // 17: ppc.v1.GetPlanItemResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 18: ppc.v1.GetPlanItemResponse.data:type_name -> ppc.v1.PlanItem
+	20, // 19: ppc.v1.UpdatePlanItemRequest.rm_source:type_name -> ppc.v1.RMSource
+	21, // 20: ppc.v1.UpdatePlanItemRequest.status:type_name -> ppc.v1.PlanItemStatus
+	24, // 21: ppc.v1.UpdatePlanItemResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 22: ppc.v1.UpdatePlanItemResponse.data:type_name -> ppc.v1.PlanItem
+	24, // 23: ppc.v1.DeletePlanItemResponse.base:type_name -> common.v1.BaseResponse
+	19, // 24: ppc.v1.ListPlanItemsRequest.type:type_name -> ppc.v1.PlanItemType
+	21, // 25: ppc.v1.ListPlanItemsRequest.status:type_name -> ppc.v1.PlanItemStatus
+	24, // 26: ppc.v1.ListPlanItemsResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 27: ppc.v1.ListPlanItemsResponse.data:type_name -> ppc.v1.PlanItem
+	25, // 28: ppc.v1.ListPlanItemsResponse.pagination:type_name -> common.v1.PaginationResponse
+	26, // 29: ppc.v1.GanttBar.area:type_name -> ppc.v1.AreaCode
+	19, // 30: ppc.v1.GanttBar.type:type_name -> ppc.v1.PlanItemType
+	21, // 31: ppc.v1.GanttBar.status:type_name -> ppc.v1.PlanItemStatus
+	26, // 32: ppc.v1.GetGanttViewRequest.area:type_name -> ppc.v1.AreaCode
+	24, // 33: ppc.v1.GetGanttViewResponse.base:type_name -> common.v1.BaseResponse
+	16, // 34: ppc.v1.GetGanttViewResponse.data:type_name -> ppc.v1.GanttBar
+	35, // [35:35] is the sub-list for method output_type
+	35, // [35:35] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_ppc_v1_plan_item_proto_init() }
@@ -1571,17 +1970,18 @@ func file_ppc_v1_plan_item_proto_init() {
 		return
 	}
 	file_ppc_v1_common_proto_init()
-	file_ppc_v1_plan_item_proto_msgTypes[1].OneofWrappers = []any{}
-	file_ppc_v1_plan_item_proto_msgTypes[5].OneofWrappers = []any{}
-	file_ppc_v1_plan_item_proto_msgTypes[9].OneofWrappers = []any{}
-	file_ppc_v1_plan_item_proto_msgTypes[12].OneofWrappers = []any{}
+	file_ppc_v1_plan_item_proto_msgTypes[4].OneofWrappers = []any{}
+	file_ppc_v1_plan_item_proto_msgTypes[6].OneofWrappers = []any{}
+	file_ppc_v1_plan_item_proto_msgTypes[10].OneofWrappers = []any{}
+	file_ppc_v1_plan_item_proto_msgTypes[14].OneofWrappers = []any{}
+	file_ppc_v1_plan_item_proto_msgTypes[17].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ppc_v1_plan_item_proto_rawDesc), len(file_ppc_v1_plan_item_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

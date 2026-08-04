@@ -24,6 +24,27 @@ const (
 	StatusClosed     = "CLOSED"
 )
 
+// Carry-forward action values (ppi_carry_action). Deliberately narrower than
+// the demand's five: the plan-item lifecycle has no DEFERRED state to flip to,
+// and a SPLIT would need per-child machine groups and timelines that the demand
+// split never carries. Two creating actions plus a closing one is the whole
+// vocabulary that maps onto this aggregate.
+const (
+	CarryActionAsIs    = "CARRY_AS_IS"
+	CarryActionPartial = "PARTIAL_CARRY"
+	CarryActionCancel  = "CANCEL"
+)
+
+// IsValidCarryAction reports whether a is an allowed plan carry-forward action.
+func IsValidCarryAction(a string) bool {
+	switch a {
+	case CarryActionAsIs, CarryActionPartial, CarryActionCancel:
+		return true
+	default:
+		return false
+	}
+}
+
 // Duration source values (ppi_duration_source). DERIVED rows are recomputed
 // from qty/capacity on every quantity edit; MANUAL rows carry a planner
 // override and are never recomputed.
