@@ -31,17 +31,19 @@ const woColumns = `wo_id, wo_no, wo_lot_no, wo_area, wo_machine_id, wo_crh_head_
 
 // Create persists a new WO header and assigns its generated ID.
 //
-// The header and its plan-item links go in together: a WO whose links were
-// lost would silently look like an un-merged single-item order.
+// The header, its plan-item links and any parameters attached to the entity go
+// in together: a WO whose links were lost would silently look like an un-merged
+// single-item order, and one whose parameters were lost gives the PC operator an
+// empty sheet with nothing to say why.
 func (r *WorkOrderRepository) Create(ctx context.Context, entity *workorder.WorkOrder) error {
 	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
 		return insertWorkOrderTx(ctx, tx, entity)
 	})
 }
 
-// insertWorkOrderTx inserts a WO header plus its plan-item links inside an
-// existing transaction. The lot provisioner reuses it so that minting a lot
-// number, registering the lot, and creating the WO all commit or roll back
+// insertWorkOrderTx inserts a WO header plus its plan-item links and parameters
+// inside an existing transaction. The lot provisioner reuses it so that minting
+// a lot number, registering the lot, and creating the WO all commit or roll back
 // together.
 func insertWorkOrderTx(ctx context.Context, tx *sql.Tx, entity *workorder.WorkOrder) error {
 	specJSON, err := marshalSnapshot(entity.SpecSnapshot())
@@ -78,7 +80,10 @@ func insertWorkOrderTx(ctx context.Context, tx *sql.Tx, entity *workorder.WorkOr
 		return fmt.Errorf("failed to create work order: %w", err)
 	}
 	entity.SetID(id)
-	return replacePlanItemLinksTx(ctx, tx, id, entity.PlanItemLinks())
+	if err := replacePlanItemLinksTx(ctx, tx, id, entity.PlanItemLinks()); err != nil {
+		return err
+	}
+	return insertParametersTx(ctx, tx, id, entity.Parameters())
 }
 
 // replacePlanItemLinksTx rewrites the wo_plan_item_link rows of one WO inside

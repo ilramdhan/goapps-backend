@@ -19,6 +19,16 @@ type MachineLookup interface {
 	MachineArea(ctx context.Context, machineID int64) (string, error)
 }
 
+// MachineNameLookup resolves a machine's human-readable number, used to name the
+// machine in a lot-generation failure. Ids are never shown to a planner, so a
+// message that must identify a machine needs this. Optional: nil simply omits
+// the machine from the message.
+type MachineNameLookup interface {
+	// MachineNo returns the machine number (e.g. "AC3") of a machine, or ("",
+	// nil) when the machine does not exist.
+	MachineNo(ctx context.Context, machineID int64) (string, error)
+}
+
 // LotLookup asserts a lot exists in lot_master.
 type LotLookup interface {
 	// LotExists reports whether a lot number exists in lot_master.
@@ -63,48 +73,51 @@ type SnapshotBuilder interface {
 // Service bundles WO usecases over the WO repository plus validation/resolution
 // ports. All ports except the repository are nil-safe.
 type Service struct {
-	repo      workorderdomain.Repository
-	machines  MachineLookup
-	lots      LotLookup
-	planItems PlanItemLookup
-	resolver  *workorderdomain.Resolver
-	snapshots SnapshotBuilder
-	routeRms  RouteRmSource
-	merge     MergeCandidateSource
-	notifier  notification.Notifier
-	lotSpecs  LotSpecSource
-	lotProv   LotProvisioner
+	repo         workorderdomain.Repository
+	machines     MachineLookup
+	machineNames MachineNameLookup
+	lots         LotLookup
+	planItems    PlanItemLookup
+	resolver     *workorderdomain.Resolver
+	snapshots    SnapshotBuilder
+	routeRms     RouteRmSource
+	merge        MergeCandidateSource
+	notifier     notification.Notifier
+	lotSpecs     LotSpecSource
+	lotProv      LotProvisioner
 }
 
 // Deps carries the (nil-safe) collaborators for the WO service.
 type Deps struct {
-	Machines  MachineLookup
-	Lots      LotLookup
-	PlanItems PlanItemLookup
-	Resolver  *workorderdomain.Resolver
-	Snapshots SnapshotBuilder
-	RouteRms  RouteRmSource
-	Merge     MergeCandidateSource
-	Notifier  notification.Notifier
-	LotSpecs  LotSpecSource
-	LotProv   LotProvisioner
+	Machines     MachineLookup
+	MachineNames MachineNameLookup
+	Lots         LotLookup
+	PlanItems    PlanItemLookup
+	Resolver     *workorderdomain.Resolver
+	Snapshots    SnapshotBuilder
+	RouteRms     RouteRmSource
+	Merge        MergeCandidateSource
+	Notifier     notification.Notifier
+	LotSpecs     LotSpecSource
+	LotProv      LotProvisioner
 }
 
 // NewService builds a WO application service. All deps except the repository are
 // nil-safe (nil disables the corresponding validation/resolution/notify).
 func NewService(repo workorderdomain.Repository, deps Deps) *Service {
 	return &Service{
-		repo:      repo,
-		machines:  deps.Machines,
-		lots:      deps.Lots,
-		planItems: deps.PlanItems,
-		resolver:  deps.Resolver,
-		snapshots: deps.Snapshots,
-		routeRms:  deps.RouteRms,
-		merge:     deps.Merge,
-		notifier:  deps.Notifier,
-		lotSpecs:  deps.LotSpecs,
-		lotProv:   deps.LotProv,
+		repo:         repo,
+		machines:     deps.Machines,
+		machineNames: deps.MachineNames,
+		lots:         deps.Lots,
+		planItems:    deps.PlanItems,
+		resolver:     deps.Resolver,
+		snapshots:    deps.Snapshots,
+		routeRms:     deps.RouteRms,
+		merge:        deps.Merge,
+		notifier:     deps.Notifier,
+		lotSpecs:     deps.LotSpecs,
+		lotProv:      deps.LotProv,
 	}
 }
 
@@ -147,8 +160,15 @@ func (s *Service) Create(ctx context.Context, cmd CreateCommand) (*workorderdoma
 	if err != nil {
 		return nil, err
 	}
+	// Resolved before the WO is written so the parameters can be persisted in the
+	// WO's own transaction. Resolution reaches finance, and no DB transaction
+	// should be held open across a remote call.
+	params, err := s.resolveParameters(ctx, cmd.PlanItemID, cmd.MachineID, nil)
+	if err != nil {
+		return nil, err
+	}
 	build := func(lotNo string) (*workorderdomain.WorkOrder, error) {
-		return workorderdomain.New(workorderdomain.NewParams{
+		entity, err := workorderdomain.New(workorderdomain.NewParams{
 			WoNo:                generateWoNo(cmd.AreaCode),
 			LotNo:               lotNo,
 			AreaCode:            cmd.AreaCode,
@@ -165,13 +185,15 @@ func (s *Service) Create(ctx context.Context, cmd CreateCommand) (*workorderdoma
 			CreatedBy:           cmd.CreatedBy,
 			PlanItemLinks:       links,
 		})
+		if err != nil {
+			return nil, err
+		}
+		entity.AttachParameters(params)
+		return entity, nil
 	}
 
 	entity, err := s.createWithLot(ctx, cmd, build)
 	if err != nil {
-		return nil, err
-	}
-	if err := s.materializeParameters(ctx, entity, nil); err != nil {
 		return nil, err
 	}
 	return s.repo.GetByID(ctx, entity.ID())
@@ -200,11 +222,24 @@ func (s *Service) createWithLot(
 	if s.lotProv == nil {
 		return nil, workorderdomain.ErrLotGenerationUnavailable
 	}
-	req, err := s.lotProvisionRequest(ctx, cmd)
+	req, err := s.lotProvisionRequest(ctx, lotInputs{
+		AreaCode: cmd.AreaCode, PlanItemID: cmd.PlanItemID,
+		MachineID: cmd.MachineID, CreatedBy: cmd.CreatedBy,
+	})
 	if err != nil {
 		return nil, err
 	}
 	return s.lotProv.CreateWithGeneratedLot(ctx, req, build)
+}
+
+// lotInputs is the slice of a WO that determines its lot. Both the ordinary
+// create path and the continuation path supply it — a continuation reads the
+// values off its source WO rather than a CreateCommand.
+type lotInputs struct {
+	AreaCode   string
+	PlanItemID int64
+	MachineID  int64
+	CreatedBy  int64
 }
 
 // lotProvisionRequest assembles the lot_master row a generated lot needs: the
@@ -215,30 +250,45 @@ func (s *Service) createWithLot(
 // STD_WEIGHT parameter. When any of them is missing the WO is rejected rather
 // than registered against invented weights, which would silently mis-price
 // every bobbin the ETL later attributes to it.
-func (s *Service) lotProvisionRequest(ctx context.Context, cmd CreateCommand) (workorderdomain.LotProvisionRequest, error) {
+// Each failure below names the one input that is actually missing, plus the
+// product (by item code, never by id) and — where the input is machine-specific
+// — the machine number, so the planner knows which master to open. See
+// domain/workorder/lot_errors.go.
+func (s *Service) lotProvisionRequest(ctx context.Context, in lotInputs) (workorderdomain.LotProvisionRequest, error) {
 	req := workorderdomain.LotProvisionRequest{
-		AreaCode:  cmd.AreaCode,
+		AreaCode:  in.AreaCode,
 		Year:      time.Now().Year(),
 		Notes:     workorderdomain.GeneratedLotNote,
-		CreatedBy: strconv.FormatInt(cmd.CreatedBy, 10),
+		CreatedBy: strconv.FormatInt(in.CreatedBy, 10),
 	}
 	if s.planItems == nil || s.lotSpecs == nil {
-		return req, workorderdomain.ErrLotSpecUnavailable
+		return req, workorderdomain.NewLotProductError()
 	}
-	productSysID, err := s.planItems.ProductSysID(ctx, cmd.PlanItemID)
+	productSysID, err := s.planItems.ProductSysID(ctx, in.PlanItemID)
 	if err != nil {
 		return req, err
+	}
+	if productSysID == 0 {
+		return req, workorderdomain.NewLotProductError()
 	}
 	itemCode, shadeCode, err := s.lotSpecs.LotSpec(ctx, productSysID)
 	if err != nil {
 		return req, err
 	}
+	if itemCode == "" || shadeCode == "" {
+		// itemCode doubles as the label: when it is present but the shade is
+		// not, naming it tells the planner exactly which product row to open.
+		return req, workorderdomain.NewLotItemShadeError(itemCode)
+	}
 	req.ItemCode = itemCode
 	req.ShadeCode = shadeCode
 
-	stdFull, err := s.resolveStdWeight(ctx, productSysID, cmd.MachineID)
+	stdFull, err := s.resolveStdWeight(ctx, productSysID, in.MachineID)
 	if err != nil {
 		return req, err
+	}
+	if stdFull <= 0 {
+		return req, workorderdomain.NewLotStdWeightError(itemCode, s.machineLabel(ctx, in.MachineID))
 	}
 	req.StdWeightFull = stdFull
 	req.StdWeightUnfull = stdFull * workorderdomain.LotUnfullWeightRatio
@@ -250,11 +300,12 @@ func (s *Service) lotProvisionRequest(ctx context.Context, cmd CreateCommand) (w
 }
 
 // resolveStdWeight reads the STD_WEIGHT well-known parameter for a product on a
-// machine. Zero (or an unavailable resolver) means the caller cannot register a
-// lot.
+// machine. It returns 0 (not an error) when the parameter is absent or
+// non-positive, leaving the caller to raise the labeled failure -- the caller
+// is the only place that still knows which product and machine to name.
 func (s *Service) resolveStdWeight(ctx context.Context, productSysID, machineID int64) (float64, error) {
 	if s.resolver == nil {
-		return 0, workorderdomain.ErrLotSpecUnavailable
+		return 0, nil
 	}
 	resolved, err := s.resolver.Resolve(ctx, workorderdomain.ResolveRequest{
 		ProductSysID: productSysID,
@@ -268,37 +319,54 @@ func (s *Service) resolveStdWeight(ctx context.Context, productSysID, machineID 
 			return *rp.Num, nil
 		}
 	}
-	return 0, workorderdomain.ErrLotSpecUnavailable
+	return 0, nil
 }
 
-// materializeParameters resolves the Machine-group params for the WO's product +
-// machine and persists them as PPC values (PC defaults to PPC). Skipped when the
-// resolver or plan-item lookup is unavailable.
-func (s *Service) materializeParameters(ctx context.Context, entity *workorderdomain.WorkOrder, refWoID *int64) error {
-	if s.resolver == nil || s.planItems == nil {
-		return nil
+// machineLabel resolves a machine's human-readable number for an error message.
+// It is best-effort: a failed lookup yields "", which the error renders as a
+// message without the machine clause rather than failing the failure.
+func (s *Service) machineLabel(ctx context.Context, machineID int64) string {
+	if s.machineNames == nil {
+		return ""
 	}
-	productSysID, err := s.planItems.ProductSysID(ctx, entity.PlanItemID())
+	no, err := s.machineNames.MachineNo(ctx, machineID)
 	if err != nil {
-		return err
+		return ""
+	}
+	return no
+}
+
+// resolveParameters resolves the Machine-group params for a product + machine as
+// PPC values (PC defaults to PPC). It only reads: the caller attaches the result
+// to the WO so both are written in one transaction. Returns nil when the resolver
+// or plan-item lookup is unavailable.
+//
+// The WO id is not known yet, so the parameters carry no WOID — the repository
+// stamps it when it writes them, since it is the only place the id exists.
+func (s *Service) resolveParameters(
+	ctx context.Context, planItemID, machineID int64, refWoID *int64,
+) ([]*workorderdomain.Parameter, error) {
+	if s.resolver == nil || s.planItems == nil {
+		return nil, nil
+	}
+	productSysID, err := s.planItems.ProductSysID(ctx, planItemID)
+	if err != nil {
+		return nil, err
 	}
 	resolved, err := s.resolver.Resolve(ctx, workorderdomain.ResolveRequest{
 		ProductSysID: productSysID,
-		MachineID:    entity.MachineID(),
+		MachineID:    machineID,
 		RefWoID:      refWoID,
 		DisplayGroup: displayGroupMachine,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	params := make([]*workorderdomain.Parameter, 0, len(resolved))
 	for _, rp := range resolved {
-		params = append(params, resolvedToPPCParameter(entity.ID(), rp))
+		params = append(params, resolvedToPPCParameter(0, rp))
 	}
-	if err := s.repo.ReplaceParameters(ctx, entity.ID(), params); err != nil {
-		return err
-	}
-	return nil
+	return params, nil
 }
 
 // validateLot asserts a lot exists in lot_master. A lot the planner typed is

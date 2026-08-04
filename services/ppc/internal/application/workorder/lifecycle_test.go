@@ -21,6 +21,9 @@ type memRepo struct {
 	params     map[int64][]*workorderdomain.Parameter
 	allocs     map[int64][]*workorderdomain.RmAllocation
 	adjustCall int
+	// createErr makes the WO write fail, standing in for a constraint violation
+	// or a dropped connection, so tests can assert nothing is left behind.
+	createErr error
 }
 
 func newMemRepo() *memRepo {
@@ -31,10 +34,22 @@ func newMemRepo() *memRepo {
 	}
 }
 
+// Create mirrors the Postgres repository: the header and the parameters attached
+// to the entity are written as one unit, and either both land or neither does.
+// A double that persisted only the header would let an atomicity regression pass.
 func (r *memRepo) Create(_ context.Context, e *workorderdomain.WorkOrder) error {
+	if r.createErr != nil {
+		return r.createErr
+	}
 	r.seq++
 	e.SetID(r.seq)
 	r.orders[r.seq] = e
+	if ps := e.Parameters(); len(ps) > 0 {
+		for _, p := range ps {
+			p.WOID = r.seq
+		}
+		r.params[r.seq] = ps
+	}
 	return nil
 }
 

@@ -48,16 +48,38 @@ var (
 	// ErrMachineAreaMismatch is returned when the machine area does not match
 	// the WO area code.
 	ErrMachineAreaMismatch = errors.New("invalid machine: area does not match work order area")
-	// ErrLotNotFound is returned when the WO lot is not in lot_master.
-	ErrLotNotFound = errors.New("invalid lot: not found in lot master")
+	// ErrLotNotFound is returned when the WO lot is not in lot_master. The
+	// message names the register route because an unknown lot is far more often
+	// a typo than a genuinely new lot, and a silently-created one would carry no
+	// standard weights for the ETL to price bobbins against.
+	//
+	// WIRE BEHAVIOR CHANGED DELIBERATELY: the previous text contained the words
+	// "not found", which made domainErrorToBaseResponse classify it 404. This one
+	// does not, so it classifies 400. That is the correct code -- the work order
+	// is the resource being created and the lot is a rejected *field value* on
+	// it, which is a validation failure rather than a missing resource. The 404
+	// was an artifact of substring matching on the word "found", never a
+	// decision. The 400 is pinned by TestLotErrors_MapToDistinctClientMessages so
+	// it cannot drift back silently.
+	ErrLotNotFound = errors.New("invalid lot: this " + CausePhraseLotNotRegistered +
+		" — register it under Production Plan > Masters > Lots, or leave the lot blank to have one generated")
 	// ErrLotSpecUnavailable is returned when a lot cannot be generated because
-	// the product's item/shade codes or standard bobbin weights are unknown.
-	// Registering a lot without them would leave the ETL unable to convert
-	// bobbin counts into kilograms, so the work order is rejected instead.
-	ErrLotSpecUnavailable = errors.New("cannot generate lot: product item/shade codes or standard bobbin weights are unavailable — register the lot in lot master first and enter it manually")
+	// one of its required inputs is unknown. Registering a lot without them
+	// would leave the ETL unable to convert bobbin counts into kilograms, so the
+	// work order is rejected instead.
+	//
+	// It is the WRAPPER for the specific causes below, never returned on its own
+	// from the generate path. Call sites that only care that generation failed
+	// keep working through errors.Is; call sites that want to tell the planner
+	// what to fix read the specific cause.
+	ErrLotSpecUnavailable = errors.New("cannot generate lot")
 	// ErrLotGenerationUnavailable is returned when lot generation is requested
-	// but no lot provisioner is configured.
-	ErrLotGenerationUnavailable = errors.New("cannot generate lot: lot number generation is not available — enter a lot number registered in lot master")
+	// but no lot provisioner is configured. Unlike the three causes in
+	// lot_errors.go this is a deployment problem, not missing master data — but
+	// the planner's workaround is still a master action (enter an existing lot),
+	// so it carries a cause phrase and points at lot master like the rest.
+	ErrLotGenerationUnavailable = errors.New("cannot generate lot: " + CausePhraseGenerationUnavailable +
+		" — enter a lot number registered in lot master")
 	// ErrEmptyReason is returned when a required reason (reject/adjust) is empty.
 	ErrEmptyReason = errors.New("reason cannot be empty")
 	// ErrNotEditable is returned when a header edit targets a non-DRAFT WO
