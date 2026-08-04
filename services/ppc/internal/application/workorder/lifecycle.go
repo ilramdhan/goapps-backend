@@ -361,7 +361,8 @@ type RmAllocationInput struct {
 
 // SaveWORmAllocations replaces a WO's RM allocation lines.
 func (s *Service) SaveWORmAllocations(ctx context.Context, cmd SaveWORmAllocationsCommand) ([]*workorderdomain.RmAllocation, error) {
-	if _, err := s.repo.GetByID(ctx, cmd.WOID); err != nil {
+	wo, err := s.repo.GetByID(ctx, cmd.WOID)
+	if err != nil {
 		return nil, err
 	}
 	allocs := make([]*workorderdomain.RmAllocation, 0, len(cmd.Allocations))
@@ -381,7 +382,16 @@ func (s *Service) SaveWORmAllocations(ctx context.Context, cmd SaveWORmAllocatio
 	if err := s.repo.ReplaceRmAllocations(ctx, cmd.WOID, allocs); err != nil {
 		return nil, err
 	}
-	return s.repo.ListRmAllocations(ctx, cmd.WOID)
+	saved, err := s.repo.ListRmAllocations(ctx, cmd.WOID)
+	if err != nil {
+		return nil, err
+	}
+	// The save response feeds straight back into the panel, so it needs the same
+	// labels the detail view gets — otherwise the table would fall back to ids
+	// until the next refetch. The entity fetched above already carries the plan
+	// item, so no second read is needed.
+	s.DecorateRmAllocations(ctx, wo.PlanItemID(), saved)
+	return saved, nil
 }
 
 // PopulateRmFromRouteCommand drives RM-BOM auto-population from a WO's route.
@@ -402,7 +412,11 @@ func (s *Service) PopulateRmFromRoute(ctx context.Context, cmd PopulateRmFromRou
 		return nil, err
 	}
 	if s.routeRms == nil || s.planItems == nil {
-		return s.repo.ListRmAllocations(ctx, cmd.WOID)
+		stored, listErr := s.repo.ListRmAllocations(ctx, cmd.WOID)
+		if listErr != nil {
+			return nil, listErr
+		}
+		return stored, nil
 	}
 	productSysID, err := s.planItems.ProductSysID(ctx, wo.PlanItemID())
 	if err != nil {
@@ -415,18 +429,39 @@ func (s *Service) PopulateRmFromRoute(ctx context.Context, cmd PopulateRmFromRou
 	suggestions := make([]*workorderdomain.RmAllocation, 0, len(comps))
 	for _, c := range comps {
 		suggestions = append(suggestions, &workorderdomain.RmAllocation{
-			WOID:         cmd.WOID,
-			CrmRmID:      c.CrmRmID,
-			RmType:       c.RmType,
-			ShadeCode:    c.ShadeCode,
-			QtyAllocated: c.Ratio * wo.QtyTarget(),
+			WOID:      cmd.WOID,
+			CrmRmID:   c.CrmRmID,
+			RmType:    c.RmType,
+			ShadeCode: c.ShadeCode,
+			// route_rm_ratio is the per-unit input quantity of this RM per unit
+			// of the stage's output — finance's cost engine multiplies it by the
+			// RM's unit cost to get that RM's contribution to one unit of output
+			// (costcalc/compute.go aggregateRMCost: `unit * rm.RouteRmRatio`).
+			// So scaling it by the WO's target qty yields the total input qty.
+			QtyAllocated:   c.Ratio * wo.QtyTarget(),
+			RmCode:         c.RmCode,
+			RmName:         c.RmName,
+			RouteStageName: c.RouteStageName,
+			RouteLevel:     c.RouteLevel,
+			RouteRmRatio:   c.Ratio,
 		})
 	}
 	if cmd.Replace {
 		if err := s.repo.ReplaceRmAllocations(ctx, cmd.WOID, suggestions); err != nil {
 			return nil, err
 		}
-		return s.repo.ListRmAllocations(ctx, cmd.WOID)
+		stored, listErr := s.repo.ListRmAllocations(ctx, cmd.WOID)
+		if listErr != nil {
+			return nil, listErr
+		}
+		// Re-read drops the derived labels (they are not persisted), so stamp
+		// them back on from the same components the suggestions came from.
+		idx := make(routeRmIndex, len(comps))
+		for _, c := range comps {
+			idx[c.CrmRmID] = c
+		}
+		decorateRmAllocations(stored, idx)
+		return stored, nil
 	}
 	return suggestions, nil
 }

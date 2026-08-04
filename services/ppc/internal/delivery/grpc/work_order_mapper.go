@@ -127,6 +127,12 @@ func rmAllocationToProto(a *workorderdomain.RmAllocation) *ppcv1.WORmAllocation 
 		ShadeCode:    a.ShadeCode,
 		QtyAllocated: formatDecimal(a.QtyAllocated),
 		Notes:        a.Notes,
+
+		RmCode:         a.RmCode,
+		RmName:         a.RmName,
+		RouteStageName: a.RouteStageName,
+		RouteLevel:     a.RouteLevel,
+		RouteRmRatio:   formatDecimal(a.RouteRmRatio),
 	}
 }
 

@@ -414,6 +414,9 @@ func (s *Service) Get(ctx context.Context, id int64) (*workorderdomain.WorkOrder
 	if err != nil {
 		return nil, nil, err
 	}
+	// Stored allocations carry only crm_rm_id; decorate them so the detail view
+	// can name each RM instead of printing that id. Best-effort by design.
+	s.DecorateRmAllocations(ctx, entity.PlanItemID(), entity.RmAllocations())
 	return entity, actuals, nil
 }
 
