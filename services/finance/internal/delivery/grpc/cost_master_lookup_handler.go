@@ -286,6 +286,8 @@ func lookupRouteToProto(head *postgres.LookupRouteHead, stages []postgres.Lookup
 			RmGroupCode:    rm.RmGroupCode,
 			RouteRmRatio:   rm.RouteRmRatio,
 			SubType:        rm.SubType,
+			RmCode:         rm.RmCode,
+			RmName:         rm.RmName,
 		})
 	}
 	stageProtos := make([]*financev1.CostMasterRouteStage, 0, len(stages))
