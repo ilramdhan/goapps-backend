@@ -3411,6 +3411,44 @@
         ]
       }
     },
+    "/api/v1/ppc/plan-items/carry-forward-candidates": {
+      "get": {
+        "summary": "ListPlanCarryForwardCandidates lists plan items eligible for carry-forward.",
+        "operationId": "PPCService_ListPlanCarryForwardCandidates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListPlanCarryForwardCandidatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sourceMonth",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetMonth",
+            "description": "Target month the candidates are being carried into. Required: whether a\ncandidate is `already_carried` can only be answered against a target.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PPCService"
+        ]
+      }
+    },
     "/api/v1/ppc/plan-items/gantt": {
       "get": {
         "summary": "GetGanttView returns scheduled bars for the plan timeline.",
@@ -3568,6 +3606,46 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/PPCServiceUpdatePlanItemBody"
+            }
+          }
+        ],
+        "tags": [
+          "PPCService"
+        ]
+      }
+    },
+    "/api/v1/ppc/plan-items/{sourcePlanItemId}/carry-forward": {
+      "post": {
+        "summary": "ProcessPlanCarryForward executes a per-plan-item carry-forward action.",
+        "operationId": "PPCService_ProcessPlanCarryForward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ProcessPlanCarryForwardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sourcePlanItemId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PPCServiceProcessPlanCarryForwardBody"
             }
           }
         ],
@@ -4827,6 +4905,43 @@
         ]
       }
     },
+    "/api/v1/ppc/work-orders/carry-forward-candidates": {
+      "get": {
+        "summary": "── Work Order Carry-forward (month start) ──────────────────────────────────\nListWorkOrderCarryForwardCandidates lists WOs eligible to carry into a new\nmonth. Ineligible WOs are included with their reason, never silently filtered.",
+        "operationId": "PPCService_ListWorkOrderCarryForwardCandidates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWorkOrderCarryForwardCandidatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sourceMonth",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetMonth",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PPCService"
+        ]
+      }
+    },
     "/api/v1/ppc/work-orders/merge-candidates": {
       "get": {
         "summary": "ListMergeCandidates lists plan items mergeable into one WO with an anchor.",
@@ -4893,6 +5008,46 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1ResolveWOParametersRequest"
+            }
+          }
+        ],
+        "tags": [
+          "PPCService"
+        ]
+      }
+    },
+    "/api/v1/ppc/work-orders/{sourceWoId}/carry-forward": {
+      "post": {
+        "summary": "ProcessWorkOrderCarryForward carries one WO into a new month as a CONTINUATION.",
+        "operationId": "PPCService_ProcessWorkOrderCarryForward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ProcessWorkOrderCarryForwardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sourceWoId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PPCServiceProcessWorkOrderCarryForwardBody"
             }
           }
         ],
@@ -5659,6 +5814,42 @@
           "description": "Split children for SPLIT (sum of qty must be \u003c= source remaining)."
         }
       }
+    },
+    "PPCServiceProcessPlanCarryForwardBody": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/definitions/v1PlanCarryAction"
+        },
+        "targetMonth": {
+          "type": "string"
+        },
+        "newDeadline": {
+          "type": "string",
+          "description": "New deadline for CARRY_AS_IS / PARTIAL_CARRY. Defaults to the source\ndeadline when omitted."
+        },
+        "carryQty": {
+          "type": "string",
+          "description": "Carried qty for PARTIAL_CARRY. Must not exceed the candidate's\nqty_uncovered."
+        }
+      }
+    },
+    "PPCServiceProcessWorkOrderCarryForwardBody": {
+      "type": "object",
+      "properties": {
+        "targetMonth": {
+          "type": "string"
+        },
+        "lotNo": {
+          "type": "string",
+          "description": "Lot number for the continuation. Blank means auto-generate via the\nlot-provisioning path, exactly like creating a WO from scratch. An explicit\nvalue must already exist in lot_master (validateLot).\n\nBound matches work_order.wo_lot_no VARCHAR(30), as every other lot_no field\nin this file does. At 50 a 31..50-char lot cleared validation and then failed\nat INSERT as a raw driver error, which reaches the planner as a 500 instead\nof a field-level complaint. Generated lots are 10 chars, so nothing real is\nexcluded by the tighter bound."
+        },
+        "carryQty": {
+          "type": "string",
+          "description": "Qty to carry. When unset or zero, the whole remaining qty is carried.\n\nThe pattern admits the empty string: full-remainder is the ordinary case and\nthe BFF sends \"\" for it. The previous rule had no empty alternative, so the\ndocumented unset path was unreachable through the RPC — every carry that\nleft the qty blank was refused at the validation boundary before the handler\n(which already checks `req.CarryQty != \"\"`) could apply the default."
+        }
+      },
+      "description": "One WO carry action. The action vocabulary is narrower than demand carry\nbecause WOs are production instructions, not quantity balances: a carried WO\nis always a continuation, and rejecting it to close-reroute is a manual\nplanner decision on the source WO's own detail page."
     },
     "PPCServiceRejectWOBody": {
       "type": "object",
@@ -8631,6 +8822,21 @@
         }
       }
     },
+    "v1ListPlanCarryForwardCandidatesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanCarryCandidate"
+          }
+        }
+      }
+    },
     "v1ListPlanItemsResponse": {
       "type": "object",
       "properties": {
@@ -8849,6 +9055,21 @@
         },
         "pagination": {
           "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListWorkOrderCarryForwardCandidatesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkOrderCarryCandidate"
+          }
         }
       }
     },
@@ -9315,6 +9536,47 @@
       "default": "PARAM_RESOLUTION_SOURCE_UNSPECIFIED",
       "description": "ParamResolutionSource is which layer of the WO parameter chain a resolved\nvalue came from (v1.2): WO-ref -\u003e product+machine -\u003e product -\u003e default.\n\n - PARAM_RESOLUTION_SOURCE_UNSPECIFIED: No value resolved.\n - PARAM_RESOLUTION_SOURCE_WO_REF: From referenced / last-running WO (layer 1).\n - PARAM_RESOLUTION_SOURCE_PRODUCT_MACHINE: From product_machine_parameter (layer 2).\n - PARAM_RESOLUTION_SOURCE_PRODUCT: From cost_product_parameter (layer 3).\n - PARAM_RESOLUTION_SOURCE_DEFAULT: From mst_parameter.default_value (layer 4)."
     },
+    "v1PlanCarryAction": {
+      "type": "string",
+      "enum": [
+        "PLAN_CARRY_ACTION_UNSPECIFIED",
+        "PLAN_CARRY_ACTION_CARRY_AS_IS",
+        "PLAN_CARRY_ACTION_PARTIAL_CARRY",
+        "PLAN_CARRY_ACTION_CANCEL"
+      ],
+      "default": "PLAN_CARRY_ACTION_UNSPECIFIED",
+      "description": "PlanCarryAction is the per-plan-item decision in the start-new-month\nworkflow. Deliberately NARROWER than CarryAction rather than a reuse of it:\nthe plan-item lifecycle (DRAFT/CONFIRMED/IN_PROGRESS/COMPLETED/CLOSED) has no\nDEFERRED state, so CARRY_ACTION_DEFER has nothing to map onto, and SPLIT would\nneed per-child machine groups and timelines that a demand split never carries.\nStretching CarryAction to cover plan items would make two of its five values\nsilently unimplementable.\n\n - PLAN_CARRY_ACTION_UNSPECIFIED: Default / none.\n - PLAN_CARRY_ACTION_CARRY_AS_IS: New plan item for the whole unplanned qty.\n - PLAN_CARRY_ACTION_PARTIAL_CARRY: Carry part; the rest is not carried.\n - PLAN_CARRY_ACTION_CANCEL: Close the plan item without carrying it."
+    },
+    "v1PlanCarryCandidate": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1PlanItem"
+        },
+        "qtyUncovered": {
+          "type": "string",
+          "description": "Qty on this item not yet committed to any work order:\nqty_target - SUM(wo_plan_item_link.qty_contribution). This is what\nCARRY_AS_IS carries, so a plan item already half-covered by a work order\ndoes not get carried twice."
+        },
+        "qtyCovered": {
+          "type": "string",
+          "description": "Qty already covered by work orders, for context alongside qty_uncovered."
+        },
+        "workOrderCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "How many work orders reference this plan item. Non-zero means the work is\nalready in flight and the work-order carry scope may also apply to it."
+        },
+        "alreadyCarried": {
+          "type": "boolean",
+          "description": "True when a plan item in the target month already names this one as its\ncarry source — a second run shows it as done rather than duplicating it."
+        },
+        "demandLabel": {
+          "type": "string",
+          "description": "Human label of the demand this item serves, for traceability. Empty for a\ncascade INTERMEDIATE item, which serves a parent item rather than a demand."
+        }
+      },
+      "description": "PlanCarryCandidate is one plan item eligible to be carried into a new month,\ndecorated with everything the planner needs to decide without seeing an id."
+    },
     "v1PlanItem": {
       "type": "object",
       "properties": {
@@ -9403,6 +9665,15 @@
         },
         "shadeName": {
           "type": "string"
+        },
+        "carryFromItemId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Source plan item this one was carried forward from, 0 when it was not.\nA new row per carry (never a month reassignment) is what keeps the source\nmonth's plan an accurate record of what was committed there."
+        },
+        "carryAction": {
+          "$ref": "#/definitions/v1PlanCarryAction",
+          "description": "The action that produced this item, when it came from a carry-forward."
         }
       },
       "description": "PlanItem is one Layer-2 planning row."
@@ -9522,6 +9793,29 @@
             "$ref": "#/definitions/v1Demand"
           },
           "title": "resulting new demand(s)"
+        }
+      }
+    },
+    "v1ProcessPlanCarryForwardResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1PlanItem",
+          "description": "The plan item created in the target month. Absent for CANCEL, which\ncreates nothing."
+        }
+      }
+    },
+    "v1ProcessWorkOrderCarryForwardResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1WorkOrder"
         }
       }
     },
@@ -10952,6 +11246,27 @@
         },
         "notes": {
           "type": "string"
+        },
+        "rmCode": {
+          "type": "string",
+          "description": "Presentation-only decoration resolved from the product's released route\n(finance CostMasterRouteRm). crm_rm_id stays the wire identity; these exist\nso no consumer ever has to render that raw id to a user. Empty when the\nroute is unavailable or the edge is no longer part of it.\n\nitem / group / product code of the RM edge"
+        },
+        "rmName": {
+          "type": "string",
+          "title": "display name of the RM edge"
+        },
+        "routeStageName": {
+          "type": "string",
+          "title": "owning route stage (attribution)"
+        },
+        "routeLevel": {
+          "type": "integer",
+          "format": "int32",
+          "title": "owning route stage level"
+        },
+        "routeRmRatio": {
+          "type": "string",
+          "title": "decimal-as-string, ratio the qty suggestion came from"
         }
       },
       "description": "WORmAllocation is one RM component from the route (cost_route_rm), N per WO\n(replaces the legacy POY/chips 1/2/3 fixed slots). rm_type=PRODUCT forms\nautomatic lot genealogy between products."
@@ -11222,6 +11537,35 @@
         }
       },
       "description": "WorkOrder is the Layer-3 aggregate root (v1.2)."
+    },
+    "v1WorkOrderCarryCandidate": {
+      "type": "object",
+      "properties": {
+        "wo": {
+          "$ref": "#/definitions/v1WorkOrder"
+        },
+        "remainingQty": {
+          "type": "string",
+          "description": "Qty not yet produced: QtyTarget − SUM(production actual, actual first then\nbobbin per row). Non-positive means fully produced — ineligible with reason."
+        },
+        "machineLabel": {
+          "type": "string",
+          "description": "Human label for the machine this WO runs on."
+        },
+        "productLabel": {
+          "type": "string",
+          "description": "Human label for the product this WO produces."
+        },
+        "ineligibilityReason": {
+          "type": "string",
+          "description": "Ineligibility reason, empty when the WO is eligible to carry."
+        },
+        "alreadyCarried": {
+          "type": "boolean",
+          "description": "True when a WO in the target month already names this one as its carry\nsource — a second run over the same source shows it as done."
+        }
+      },
+      "description": "WorkOrderCarryCandidate is one WO that may be carried into a new month,\ndecorated with everything the planner needs to decide without seeing an id."
     }
   }
 }

@@ -139,6 +139,7 @@ func run() error {
 		Merge:        postgres.NewMergeCandidateLookup(db),
 		LotSpecs:     financeclient.NewLotSpecSource(lookupClient),
 		LotProv:      postgres.NewLotProvisioner(db),
+		WOCarryRepo:  postgres.NewWOCarryRepository(db),
 	})
 
 	// Dual-approval auto-approve worker (1-min ticker, AUTO_APPROVE_HOURS window).

@@ -19,134 +19,138 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PPCService_CreateMachineGroup_FullMethodName            = "/ppc.v1.PPCService/CreateMachineGroup"
-	PPCService_GetMachineGroup_FullMethodName               = "/ppc.v1.PPCService/GetMachineGroup"
-	PPCService_UpdateMachineGroup_FullMethodName            = "/ppc.v1.PPCService/UpdateMachineGroup"
-	PPCService_DeleteMachineGroup_FullMethodName            = "/ppc.v1.PPCService/DeleteMachineGroup"
-	PPCService_ListMachineGroups_FullMethodName             = "/ppc.v1.PPCService/ListMachineGroups"
-	PPCService_CreateMachine_FullMethodName                 = "/ppc.v1.PPCService/CreateMachine"
-	PPCService_GetMachine_FullMethodName                    = "/ppc.v1.PPCService/GetMachine"
-	PPCService_UpdateMachine_FullMethodName                 = "/ppc.v1.PPCService/UpdateMachine"
-	PPCService_ListMachines_FullMethodName                  = "/ppc.v1.PPCService/ListMachines"
-	PPCService_SyncMachines_FullMethodName                  = "/ppc.v1.PPCService/SyncMachines"
-	PPCService_CreateCustomer_FullMethodName                = "/ppc.v1.PPCService/CreateCustomer"
-	PPCService_GetCustomer_FullMethodName                   = "/ppc.v1.PPCService/GetCustomer"
-	PPCService_UpdateCustomer_FullMethodName                = "/ppc.v1.PPCService/UpdateCustomer"
-	PPCService_ListCustomers_FullMethodName                 = "/ppc.v1.PPCService/ListCustomers"
-	PPCService_SyncCustomers_FullMethodName                 = "/ppc.v1.PPCService/SyncCustomers"
-	PPCService_ExportCustomers_FullMethodName               = "/ppc.v1.PPCService/ExportCustomers"
-	PPCService_ImportCustomers_FullMethodName               = "/ppc.v1.PPCService/ImportCustomers"
-	PPCService_DownloadCustomerTemplate_FullMethodName      = "/ppc.v1.PPCService/DownloadCustomerTemplate"
-	PPCService_CreateLotMaster_FullMethodName               = "/ppc.v1.PPCService/CreateLotMaster"
-	PPCService_GetLotMaster_FullMethodName                  = "/ppc.v1.PPCService/GetLotMaster"
-	PPCService_UpdateLotMaster_FullMethodName               = "/ppc.v1.PPCService/UpdateLotMaster"
-	PPCService_DeleteLotMaster_FullMethodName               = "/ppc.v1.PPCService/DeleteLotMaster"
-	PPCService_ListLotMasters_FullMethodName                = "/ppc.v1.PPCService/ListLotMasters"
-	PPCService_SyncLots_FullMethodName                      = "/ppc.v1.PPCService/SyncLots"
-	PPCService_CreateProductPPCConfig_FullMethodName        = "/ppc.v1.PPCService/CreateProductPPCConfig"
-	PPCService_GetProductPPCConfig_FullMethodName           = "/ppc.v1.PPCService/GetProductPPCConfig"
-	PPCService_UpdateProductPPCConfig_FullMethodName        = "/ppc.v1.PPCService/UpdateProductPPCConfig"
-	PPCService_DeleteProductPPCConfig_FullMethodName        = "/ppc.v1.PPCService/DeleteProductPPCConfig"
-	PPCService_ListProductPPCConfigs_FullMethodName         = "/ppc.v1.PPCService/ListProductPPCConfigs"
-	PPCService_CreateProductMachineCapacity_FullMethodName  = "/ppc.v1.PPCService/CreateProductMachineCapacity"
-	PPCService_GetProductMachineCapacity_FullMethodName     = "/ppc.v1.PPCService/GetProductMachineCapacity"
-	PPCService_UpdateProductMachineCapacity_FullMethodName  = "/ppc.v1.PPCService/UpdateProductMachineCapacity"
-	PPCService_DeleteProductMachineCapacity_FullMethodName  = "/ppc.v1.PPCService/DeleteProductMachineCapacity"
-	PPCService_ListProductMachineCapacities_FullMethodName  = "/ppc.v1.PPCService/ListProductMachineCapacities"
-	PPCService_CreateProductMachineParameter_FullMethodName = "/ppc.v1.PPCService/CreateProductMachineParameter"
-	PPCService_GetProductMachineParameter_FullMethodName    = "/ppc.v1.PPCService/GetProductMachineParameter"
-	PPCService_UpdateProductMachineParameter_FullMethodName = "/ppc.v1.PPCService/UpdateProductMachineParameter"
-	PPCService_DeleteProductMachineParameter_FullMethodName = "/ppc.v1.PPCService/DeleteProductMachineParameter"
-	PPCService_ListProductMachineParameters_FullMethodName  = "/ppc.v1.PPCService/ListProductMachineParameters"
-	PPCService_CreateOverrunThresholdConfig_FullMethodName  = "/ppc.v1.PPCService/CreateOverrunThresholdConfig"
-	PPCService_GetOverrunThresholdConfig_FullMethodName     = "/ppc.v1.PPCService/GetOverrunThresholdConfig"
-	PPCService_UpdateOverrunThresholdConfig_FullMethodName  = "/ppc.v1.PPCService/UpdateOverrunThresholdConfig"
-	PPCService_DeleteOverrunThresholdConfig_FullMethodName  = "/ppc.v1.PPCService/DeleteOverrunThresholdConfig"
-	PPCService_ListOverrunThresholdConfigs_FullMethodName   = "/ppc.v1.PPCService/ListOverrunThresholdConfigs"
-	PPCService_CreateDowntimeReasonMaster_FullMethodName    = "/ppc.v1.PPCService/CreateDowntimeReasonMaster"
-	PPCService_GetDowntimeReasonMaster_FullMethodName       = "/ppc.v1.PPCService/GetDowntimeReasonMaster"
-	PPCService_UpdateDowntimeReasonMaster_FullMethodName    = "/ppc.v1.PPCService/UpdateDowntimeReasonMaster"
-	PPCService_DeleteDowntimeReasonMaster_FullMethodName    = "/ppc.v1.PPCService/DeleteDowntimeReasonMaster"
-	PPCService_ListDowntimeReasonMasters_FullMethodName     = "/ppc.v1.PPCService/ListDowntimeReasonMasters"
-	PPCService_CreateWasteCategoryMaster_FullMethodName     = "/ppc.v1.PPCService/CreateWasteCategoryMaster"
-	PPCService_GetWasteCategoryMaster_FullMethodName        = "/ppc.v1.PPCService/GetWasteCategoryMaster"
-	PPCService_UpdateWasteCategoryMaster_FullMethodName     = "/ppc.v1.PPCService/UpdateWasteCategoryMaster"
-	PPCService_DeleteWasteCategoryMaster_FullMethodName     = "/ppc.v1.PPCService/DeleteWasteCategoryMaster"
-	PPCService_ListWasteCategoryMasters_FullMethodName      = "/ppc.v1.PPCService/ListWasteCategoryMasters"
-	PPCService_ListSalesOrderStaging_FullMethodName         = "/ppc.v1.PPCService/ListSalesOrderStaging"
-	PPCService_ListSalesOrderStagingIds_FullMethodName      = "/ppc.v1.PPCService/ListSalesOrderStagingIds"
-	PPCService_SetStagingProduct_FullMethodName             = "/ppc.v1.PPCService/SetStagingProduct"
-	PPCService_CreateDemand_FullMethodName                  = "/ppc.v1.PPCService/CreateDemand"
-	PPCService_GetDemand_FullMethodName                     = "/ppc.v1.PPCService/GetDemand"
-	PPCService_UpdateDemand_FullMethodName                  = "/ppc.v1.PPCService/UpdateDemand"
-	PPCService_MapDemandProduct_FullMethodName              = "/ppc.v1.PPCService/MapDemandProduct"
-	PPCService_DeleteDemand_FullMethodName                  = "/ppc.v1.PPCService/DeleteDemand"
-	PPCService_ListDemands_FullMethodName                   = "/ppc.v1.PPCService/ListDemands"
-	PPCService_ConfirmDemand_FullMethodName                 = "/ppc.v1.PPCService/ConfirmDemand"
-	PPCService_PullFromOrion_FullMethodName                 = "/ppc.v1.PPCService/PullFromOrion"
-	PPCService_ListCarryForwardCandidates_FullMethodName    = "/ppc.v1.PPCService/ListCarryForwardCandidates"
-	PPCService_ProcessCarryForward_FullMethodName           = "/ppc.v1.PPCService/ProcessCarryForward"
-	PPCService_ApproveMTSDemand_FullMethodName              = "/ppc.v1.PPCService/ApproveMTSDemand"
-	PPCService_CreatePlanItem_FullMethodName                = "/ppc.v1.PPCService/CreatePlanItem"
-	PPCService_GetPlanItem_FullMethodName                   = "/ppc.v1.PPCService/GetPlanItem"
-	PPCService_UpdatePlanItem_FullMethodName                = "/ppc.v1.PPCService/UpdatePlanItem"
-	PPCService_DeletePlanItem_FullMethodName                = "/ppc.v1.PPCService/DeletePlanItem"
-	PPCService_ListPlanItems_FullMethodName                 = "/ppc.v1.PPCService/ListPlanItems"
-	PPCService_GetGanttView_FullMethodName                  = "/ppc.v1.PPCService/GetGanttView"
-	PPCService_CreateWorkOrder_FullMethodName               = "/ppc.v1.PPCService/CreateWorkOrder"
-	PPCService_GetWorkOrder_FullMethodName                  = "/ppc.v1.PPCService/GetWorkOrder"
-	PPCService_UpdateWorkOrder_FullMethodName               = "/ppc.v1.PPCService/UpdateWorkOrder"
-	PPCService_DeleteWorkOrder_FullMethodName               = "/ppc.v1.PPCService/DeleteWorkOrder"
-	PPCService_ListWorkOrders_FullMethodName                = "/ppc.v1.PPCService/ListWorkOrders"
-	PPCService_ListMergeCandidates_FullMethodName           = "/ppc.v1.PPCService/ListMergeCandidates"
-	PPCService_ResolveWOParameters_FullMethodName           = "/ppc.v1.PPCService/ResolveWOParameters"
-	PPCService_SaveWOParameters_FullMethodName              = "/ppc.v1.PPCService/SaveWOParameters"
-	PPCService_SaveWORmAllocations_FullMethodName           = "/ppc.v1.PPCService/SaveWORmAllocations"
-	PPCService_PopulateWORmFromRoute_FullMethodName         = "/ppc.v1.PPCService/PopulateWORmFromRoute"
-	PPCService_SaveWOExecution_FullMethodName               = "/ppc.v1.PPCService/SaveWOExecution"
-	PPCService_ListWOExecutions_FullMethodName              = "/ppc.v1.PPCService/ListWOExecutions"
-	PPCService_SubmitWO_FullMethodName                      = "/ppc.v1.PPCService/SubmitWO"
-	PPCService_ApproveWOParameter_FullMethodName            = "/ppc.v1.PPCService/ApproveWOParameter"
-	PPCService_ApproveWO_FullMethodName                     = "/ppc.v1.PPCService/ApproveWO"
-	PPCService_RejectWO_FullMethodName                      = "/ppc.v1.PPCService/RejectWO"
-	PPCService_CreateWOReference_FullMethodName             = "/ppc.v1.PPCService/CreateWOReference"
-	PPCService_GetWOProductionActual_FullMethodName         = "/ppc.v1.PPCService/GetWOProductionActual"
-	PPCService_AdjustWOActual_FullMethodName                = "/ppc.v1.PPCService/AdjustWOActual"
-	PPCService_SuggestWOActual_FullMethodName               = "/ppc.v1.PPCService/SuggestWOActual"
-	PPCService_SubmitShiftEntry_FullMethodName              = "/ppc.v1.PPCService/SubmitShiftEntry"
-	PPCService_SubmitAreaShiftLog_FullMethodName            = "/ppc.v1.PPCService/SubmitAreaShiftLog"
-	PPCService_ListMachineShiftLogs_FullMethodName          = "/ppc.v1.PPCService/ListMachineShiftLogs"
-	PPCService_RecalcEfficiency_FullMethodName              = "/ppc.v1.PPCService/RecalcEfficiency"
-	PPCService_ListEfficiencySnapshots_FullMethodName       = "/ppc.v1.PPCService/ListEfficiencySnapshots"
-	PPCService_CreateShiftLogNote_FullMethodName            = "/ppc.v1.PPCService/CreateShiftLogNote"
-	PPCService_GetShiftLogNote_FullMethodName               = "/ppc.v1.PPCService/GetShiftLogNote"
-	PPCService_UpdateShiftLogNote_FullMethodName            = "/ppc.v1.PPCService/UpdateShiftLogNote"
-	PPCService_DeleteShiftLogNote_FullMethodName            = "/ppc.v1.PPCService/DeleteShiftLogNote"
-	PPCService_ListShiftLogNotes_FullMethodName             = "/ppc.v1.PPCService/ListShiftLogNotes"
-	PPCService_GetMorningReview_FullMethodName              = "/ppc.v1.PPCService/GetMorningReview"
-	PPCService_GetBalanceForSale_FullMethodName             = "/ppc.v1.PPCService/GetBalanceForSale"
-	PPCService_GetDailyPerformance_FullMethodName           = "/ppc.v1.PPCService/GetDailyPerformance"
-	PPCService_GetChangeoverEvent_FullMethodName            = "/ppc.v1.PPCService/GetChangeoverEvent"
-	PPCService_ListChangeoverEvents_FullMethodName          = "/ppc.v1.PPCService/ListChangeoverEvents"
-	PPCService_DetectChangeover_FullMethodName              = "/ppc.v1.PPCService/DetectChangeover"
-	PPCService_CreateChangeoverEvent_FullMethodName         = "/ppc.v1.PPCService/CreateChangeoverEvent"
-	PPCService_StartChangeover_FullMethodName               = "/ppc.v1.PPCService/StartChangeover"
-	PPCService_UpdateChangeoverActual_FullMethodName        = "/ppc.v1.PPCService/UpdateChangeoverActual"
-	PPCService_ListWOGradeActuals_FullMethodName            = "/ppc.v1.PPCService/ListWOGradeActuals"
-	PPCService_CreateCommonLot_FullMethodName               = "/ppc.v1.PPCService/CreateCommonLot"
-	PPCService_GetCommonLot_FullMethodName                  = "/ppc.v1.PPCService/GetCommonLot"
-	PPCService_ListCommonLots_FullMethodName                = "/ppc.v1.PPCService/ListCommonLots"
-	PPCService_ExportDailyPerformance_FullMethodName        = "/ppc.v1.PPCService/ExportDailyPerformance"
-	PPCService_CreatePpcLookup_FullMethodName               = "/ppc.v1.PPCService/CreatePpcLookup"
-	PPCService_GetPpcLookup_FullMethodName                  = "/ppc.v1.PPCService/GetPpcLookup"
-	PPCService_UpdatePpcLookup_FullMethodName               = "/ppc.v1.PPCService/UpdatePpcLookup"
-	PPCService_DeletePpcLookup_FullMethodName               = "/ppc.v1.PPCService/DeletePpcLookup"
-	PPCService_ListPpcLookups_FullMethodName                = "/ppc.v1.PPCService/ListPpcLookups"
-	PPCService_CreatePpcShift_FullMethodName                = "/ppc.v1.PPCService/CreatePpcShift"
-	PPCService_GetPpcShift_FullMethodName                   = "/ppc.v1.PPCService/GetPpcShift"
-	PPCService_UpdatePpcShift_FullMethodName                = "/ppc.v1.PPCService/UpdatePpcShift"
-	PPCService_DeletePpcShift_FullMethodName                = "/ppc.v1.PPCService/DeletePpcShift"
-	PPCService_ListPpcShifts_FullMethodName                 = "/ppc.v1.PPCService/ListPpcShifts"
+	PPCService_CreateMachineGroup_FullMethodName                  = "/ppc.v1.PPCService/CreateMachineGroup"
+	PPCService_GetMachineGroup_FullMethodName                     = "/ppc.v1.PPCService/GetMachineGroup"
+	PPCService_UpdateMachineGroup_FullMethodName                  = "/ppc.v1.PPCService/UpdateMachineGroup"
+	PPCService_DeleteMachineGroup_FullMethodName                  = "/ppc.v1.PPCService/DeleteMachineGroup"
+	PPCService_ListMachineGroups_FullMethodName                   = "/ppc.v1.PPCService/ListMachineGroups"
+	PPCService_CreateMachine_FullMethodName                       = "/ppc.v1.PPCService/CreateMachine"
+	PPCService_GetMachine_FullMethodName                          = "/ppc.v1.PPCService/GetMachine"
+	PPCService_UpdateMachine_FullMethodName                       = "/ppc.v1.PPCService/UpdateMachine"
+	PPCService_ListMachines_FullMethodName                        = "/ppc.v1.PPCService/ListMachines"
+	PPCService_SyncMachines_FullMethodName                        = "/ppc.v1.PPCService/SyncMachines"
+	PPCService_CreateCustomer_FullMethodName                      = "/ppc.v1.PPCService/CreateCustomer"
+	PPCService_GetCustomer_FullMethodName                         = "/ppc.v1.PPCService/GetCustomer"
+	PPCService_UpdateCustomer_FullMethodName                      = "/ppc.v1.PPCService/UpdateCustomer"
+	PPCService_ListCustomers_FullMethodName                       = "/ppc.v1.PPCService/ListCustomers"
+	PPCService_SyncCustomers_FullMethodName                       = "/ppc.v1.PPCService/SyncCustomers"
+	PPCService_ExportCustomers_FullMethodName                     = "/ppc.v1.PPCService/ExportCustomers"
+	PPCService_ImportCustomers_FullMethodName                     = "/ppc.v1.PPCService/ImportCustomers"
+	PPCService_DownloadCustomerTemplate_FullMethodName            = "/ppc.v1.PPCService/DownloadCustomerTemplate"
+	PPCService_CreateLotMaster_FullMethodName                     = "/ppc.v1.PPCService/CreateLotMaster"
+	PPCService_GetLotMaster_FullMethodName                        = "/ppc.v1.PPCService/GetLotMaster"
+	PPCService_UpdateLotMaster_FullMethodName                     = "/ppc.v1.PPCService/UpdateLotMaster"
+	PPCService_DeleteLotMaster_FullMethodName                     = "/ppc.v1.PPCService/DeleteLotMaster"
+	PPCService_ListLotMasters_FullMethodName                      = "/ppc.v1.PPCService/ListLotMasters"
+	PPCService_SyncLots_FullMethodName                            = "/ppc.v1.PPCService/SyncLots"
+	PPCService_CreateProductPPCConfig_FullMethodName              = "/ppc.v1.PPCService/CreateProductPPCConfig"
+	PPCService_GetProductPPCConfig_FullMethodName                 = "/ppc.v1.PPCService/GetProductPPCConfig"
+	PPCService_UpdateProductPPCConfig_FullMethodName              = "/ppc.v1.PPCService/UpdateProductPPCConfig"
+	PPCService_DeleteProductPPCConfig_FullMethodName              = "/ppc.v1.PPCService/DeleteProductPPCConfig"
+	PPCService_ListProductPPCConfigs_FullMethodName               = "/ppc.v1.PPCService/ListProductPPCConfigs"
+	PPCService_CreateProductMachineCapacity_FullMethodName        = "/ppc.v1.PPCService/CreateProductMachineCapacity"
+	PPCService_GetProductMachineCapacity_FullMethodName           = "/ppc.v1.PPCService/GetProductMachineCapacity"
+	PPCService_UpdateProductMachineCapacity_FullMethodName        = "/ppc.v1.PPCService/UpdateProductMachineCapacity"
+	PPCService_DeleteProductMachineCapacity_FullMethodName        = "/ppc.v1.PPCService/DeleteProductMachineCapacity"
+	PPCService_ListProductMachineCapacities_FullMethodName        = "/ppc.v1.PPCService/ListProductMachineCapacities"
+	PPCService_CreateProductMachineParameter_FullMethodName       = "/ppc.v1.PPCService/CreateProductMachineParameter"
+	PPCService_GetProductMachineParameter_FullMethodName          = "/ppc.v1.PPCService/GetProductMachineParameter"
+	PPCService_UpdateProductMachineParameter_FullMethodName       = "/ppc.v1.PPCService/UpdateProductMachineParameter"
+	PPCService_DeleteProductMachineParameter_FullMethodName       = "/ppc.v1.PPCService/DeleteProductMachineParameter"
+	PPCService_ListProductMachineParameters_FullMethodName        = "/ppc.v1.PPCService/ListProductMachineParameters"
+	PPCService_CreateOverrunThresholdConfig_FullMethodName        = "/ppc.v1.PPCService/CreateOverrunThresholdConfig"
+	PPCService_GetOverrunThresholdConfig_FullMethodName           = "/ppc.v1.PPCService/GetOverrunThresholdConfig"
+	PPCService_UpdateOverrunThresholdConfig_FullMethodName        = "/ppc.v1.PPCService/UpdateOverrunThresholdConfig"
+	PPCService_DeleteOverrunThresholdConfig_FullMethodName        = "/ppc.v1.PPCService/DeleteOverrunThresholdConfig"
+	PPCService_ListOverrunThresholdConfigs_FullMethodName         = "/ppc.v1.PPCService/ListOverrunThresholdConfigs"
+	PPCService_CreateDowntimeReasonMaster_FullMethodName          = "/ppc.v1.PPCService/CreateDowntimeReasonMaster"
+	PPCService_GetDowntimeReasonMaster_FullMethodName             = "/ppc.v1.PPCService/GetDowntimeReasonMaster"
+	PPCService_UpdateDowntimeReasonMaster_FullMethodName          = "/ppc.v1.PPCService/UpdateDowntimeReasonMaster"
+	PPCService_DeleteDowntimeReasonMaster_FullMethodName          = "/ppc.v1.PPCService/DeleteDowntimeReasonMaster"
+	PPCService_ListDowntimeReasonMasters_FullMethodName           = "/ppc.v1.PPCService/ListDowntimeReasonMasters"
+	PPCService_CreateWasteCategoryMaster_FullMethodName           = "/ppc.v1.PPCService/CreateWasteCategoryMaster"
+	PPCService_GetWasteCategoryMaster_FullMethodName              = "/ppc.v1.PPCService/GetWasteCategoryMaster"
+	PPCService_UpdateWasteCategoryMaster_FullMethodName           = "/ppc.v1.PPCService/UpdateWasteCategoryMaster"
+	PPCService_DeleteWasteCategoryMaster_FullMethodName           = "/ppc.v1.PPCService/DeleteWasteCategoryMaster"
+	PPCService_ListWasteCategoryMasters_FullMethodName            = "/ppc.v1.PPCService/ListWasteCategoryMasters"
+	PPCService_ListSalesOrderStaging_FullMethodName               = "/ppc.v1.PPCService/ListSalesOrderStaging"
+	PPCService_ListSalesOrderStagingIds_FullMethodName            = "/ppc.v1.PPCService/ListSalesOrderStagingIds"
+	PPCService_SetStagingProduct_FullMethodName                   = "/ppc.v1.PPCService/SetStagingProduct"
+	PPCService_CreateDemand_FullMethodName                        = "/ppc.v1.PPCService/CreateDemand"
+	PPCService_GetDemand_FullMethodName                           = "/ppc.v1.PPCService/GetDemand"
+	PPCService_UpdateDemand_FullMethodName                        = "/ppc.v1.PPCService/UpdateDemand"
+	PPCService_MapDemandProduct_FullMethodName                    = "/ppc.v1.PPCService/MapDemandProduct"
+	PPCService_DeleteDemand_FullMethodName                        = "/ppc.v1.PPCService/DeleteDemand"
+	PPCService_ListDemands_FullMethodName                         = "/ppc.v1.PPCService/ListDemands"
+	PPCService_ConfirmDemand_FullMethodName                       = "/ppc.v1.PPCService/ConfirmDemand"
+	PPCService_PullFromOrion_FullMethodName                       = "/ppc.v1.PPCService/PullFromOrion"
+	PPCService_ListCarryForwardCandidates_FullMethodName          = "/ppc.v1.PPCService/ListCarryForwardCandidates"
+	PPCService_ProcessCarryForward_FullMethodName                 = "/ppc.v1.PPCService/ProcessCarryForward"
+	PPCService_ApproveMTSDemand_FullMethodName                    = "/ppc.v1.PPCService/ApproveMTSDemand"
+	PPCService_CreatePlanItem_FullMethodName                      = "/ppc.v1.PPCService/CreatePlanItem"
+	PPCService_GetPlanItem_FullMethodName                         = "/ppc.v1.PPCService/GetPlanItem"
+	PPCService_UpdatePlanItem_FullMethodName                      = "/ppc.v1.PPCService/UpdatePlanItem"
+	PPCService_DeletePlanItem_FullMethodName                      = "/ppc.v1.PPCService/DeletePlanItem"
+	PPCService_ListPlanItems_FullMethodName                       = "/ppc.v1.PPCService/ListPlanItems"
+	PPCService_GetGanttView_FullMethodName                        = "/ppc.v1.PPCService/GetGanttView"
+	PPCService_ListPlanCarryForwardCandidates_FullMethodName      = "/ppc.v1.PPCService/ListPlanCarryForwardCandidates"
+	PPCService_ProcessPlanCarryForward_FullMethodName             = "/ppc.v1.PPCService/ProcessPlanCarryForward"
+	PPCService_ListWorkOrderCarryForwardCandidates_FullMethodName = "/ppc.v1.PPCService/ListWorkOrderCarryForwardCandidates"
+	PPCService_ProcessWorkOrderCarryForward_FullMethodName        = "/ppc.v1.PPCService/ProcessWorkOrderCarryForward"
+	PPCService_CreateWorkOrder_FullMethodName                     = "/ppc.v1.PPCService/CreateWorkOrder"
+	PPCService_GetWorkOrder_FullMethodName                        = "/ppc.v1.PPCService/GetWorkOrder"
+	PPCService_UpdateWorkOrder_FullMethodName                     = "/ppc.v1.PPCService/UpdateWorkOrder"
+	PPCService_DeleteWorkOrder_FullMethodName                     = "/ppc.v1.PPCService/DeleteWorkOrder"
+	PPCService_ListWorkOrders_FullMethodName                      = "/ppc.v1.PPCService/ListWorkOrders"
+	PPCService_ListMergeCandidates_FullMethodName                 = "/ppc.v1.PPCService/ListMergeCandidates"
+	PPCService_ResolveWOParameters_FullMethodName                 = "/ppc.v1.PPCService/ResolveWOParameters"
+	PPCService_SaveWOParameters_FullMethodName                    = "/ppc.v1.PPCService/SaveWOParameters"
+	PPCService_SaveWORmAllocations_FullMethodName                 = "/ppc.v1.PPCService/SaveWORmAllocations"
+	PPCService_PopulateWORmFromRoute_FullMethodName               = "/ppc.v1.PPCService/PopulateWORmFromRoute"
+	PPCService_SaveWOExecution_FullMethodName                     = "/ppc.v1.PPCService/SaveWOExecution"
+	PPCService_ListWOExecutions_FullMethodName                    = "/ppc.v1.PPCService/ListWOExecutions"
+	PPCService_SubmitWO_FullMethodName                            = "/ppc.v1.PPCService/SubmitWO"
+	PPCService_ApproveWOParameter_FullMethodName                  = "/ppc.v1.PPCService/ApproveWOParameter"
+	PPCService_ApproveWO_FullMethodName                           = "/ppc.v1.PPCService/ApproveWO"
+	PPCService_RejectWO_FullMethodName                            = "/ppc.v1.PPCService/RejectWO"
+	PPCService_CreateWOReference_FullMethodName                   = "/ppc.v1.PPCService/CreateWOReference"
+	PPCService_GetWOProductionActual_FullMethodName               = "/ppc.v1.PPCService/GetWOProductionActual"
+	PPCService_AdjustWOActual_FullMethodName                      = "/ppc.v1.PPCService/AdjustWOActual"
+	PPCService_SuggestWOActual_FullMethodName                     = "/ppc.v1.PPCService/SuggestWOActual"
+	PPCService_SubmitShiftEntry_FullMethodName                    = "/ppc.v1.PPCService/SubmitShiftEntry"
+	PPCService_SubmitAreaShiftLog_FullMethodName                  = "/ppc.v1.PPCService/SubmitAreaShiftLog"
+	PPCService_ListMachineShiftLogs_FullMethodName                = "/ppc.v1.PPCService/ListMachineShiftLogs"
+	PPCService_RecalcEfficiency_FullMethodName                    = "/ppc.v1.PPCService/RecalcEfficiency"
+	PPCService_ListEfficiencySnapshots_FullMethodName             = "/ppc.v1.PPCService/ListEfficiencySnapshots"
+	PPCService_CreateShiftLogNote_FullMethodName                  = "/ppc.v1.PPCService/CreateShiftLogNote"
+	PPCService_GetShiftLogNote_FullMethodName                     = "/ppc.v1.PPCService/GetShiftLogNote"
+	PPCService_UpdateShiftLogNote_FullMethodName                  = "/ppc.v1.PPCService/UpdateShiftLogNote"
+	PPCService_DeleteShiftLogNote_FullMethodName                  = "/ppc.v1.PPCService/DeleteShiftLogNote"
+	PPCService_ListShiftLogNotes_FullMethodName                   = "/ppc.v1.PPCService/ListShiftLogNotes"
+	PPCService_GetMorningReview_FullMethodName                    = "/ppc.v1.PPCService/GetMorningReview"
+	PPCService_GetBalanceForSale_FullMethodName                   = "/ppc.v1.PPCService/GetBalanceForSale"
+	PPCService_GetDailyPerformance_FullMethodName                 = "/ppc.v1.PPCService/GetDailyPerformance"
+	PPCService_GetChangeoverEvent_FullMethodName                  = "/ppc.v1.PPCService/GetChangeoverEvent"
+	PPCService_ListChangeoverEvents_FullMethodName                = "/ppc.v1.PPCService/ListChangeoverEvents"
+	PPCService_DetectChangeover_FullMethodName                    = "/ppc.v1.PPCService/DetectChangeover"
+	PPCService_CreateChangeoverEvent_FullMethodName               = "/ppc.v1.PPCService/CreateChangeoverEvent"
+	PPCService_StartChangeover_FullMethodName                     = "/ppc.v1.PPCService/StartChangeover"
+	PPCService_UpdateChangeoverActual_FullMethodName              = "/ppc.v1.PPCService/UpdateChangeoverActual"
+	PPCService_ListWOGradeActuals_FullMethodName                  = "/ppc.v1.PPCService/ListWOGradeActuals"
+	PPCService_CreateCommonLot_FullMethodName                     = "/ppc.v1.PPCService/CreateCommonLot"
+	PPCService_GetCommonLot_FullMethodName                        = "/ppc.v1.PPCService/GetCommonLot"
+	PPCService_ListCommonLots_FullMethodName                      = "/ppc.v1.PPCService/ListCommonLots"
+	PPCService_ExportDailyPerformance_FullMethodName              = "/ppc.v1.PPCService/ExportDailyPerformance"
+	PPCService_CreatePpcLookup_FullMethodName                     = "/ppc.v1.PPCService/CreatePpcLookup"
+	PPCService_GetPpcLookup_FullMethodName                        = "/ppc.v1.PPCService/GetPpcLookup"
+	PPCService_UpdatePpcLookup_FullMethodName                     = "/ppc.v1.PPCService/UpdatePpcLookup"
+	PPCService_DeletePpcLookup_FullMethodName                     = "/ppc.v1.PPCService/DeletePpcLookup"
+	PPCService_ListPpcLookups_FullMethodName                      = "/ppc.v1.PPCService/ListPpcLookups"
+	PPCService_CreatePpcShift_FullMethodName                      = "/ppc.v1.PPCService/CreatePpcShift"
+	PPCService_GetPpcShift_FullMethodName                         = "/ppc.v1.PPCService/GetPpcShift"
+	PPCService_UpdatePpcShift_FullMethodName                      = "/ppc.v1.PPCService/UpdatePpcShift"
+	PPCService_DeletePpcShift_FullMethodName                      = "/ppc.v1.PPCService/DeletePpcShift"
+	PPCService_ListPpcShifts_FullMethodName                       = "/ppc.v1.PPCService/ListPpcShifts"
 )
 
 // PPCServiceClient is the client API for PPCService service.
@@ -315,6 +319,16 @@ type PPCServiceClient interface {
 	ListPlanItems(ctx context.Context, in *ListPlanItemsRequest, opts ...grpc.CallOption) (*ListPlanItemsResponse, error)
 	// GetGanttView returns scheduled bars for the plan timeline.
 	GetGanttView(ctx context.Context, in *GetGanttViewRequest, opts ...grpc.CallOption) (*GetGanttViewResponse, error)
+	// ListPlanCarryForwardCandidates lists plan items eligible for carry-forward.
+	ListPlanCarryForwardCandidates(ctx context.Context, in *ListPlanCarryForwardCandidatesRequest, opts ...grpc.CallOption) (*ListPlanCarryForwardCandidatesResponse, error)
+	// ProcessPlanCarryForward executes a per-plan-item carry-forward action.
+	ProcessPlanCarryForward(ctx context.Context, in *ProcessPlanCarryForwardRequest, opts ...grpc.CallOption) (*ProcessPlanCarryForwardResponse, error)
+	// ── Work Order Carry-forward (month start) ──────────────────────────────────
+	// ListWorkOrderCarryForwardCandidates lists WOs eligible to carry into a new
+	// month. Ineligible WOs are included with their reason, never silently filtered.
+	ListWorkOrderCarryForwardCandidates(ctx context.Context, in *ListWorkOrderCarryForwardCandidatesRequest, opts ...grpc.CallOption) (*ListWorkOrderCarryForwardCandidatesResponse, error)
+	// ProcessWorkOrderCarryForward carries one WO into a new month as a CONTINUATION.
+	ProcessWorkOrderCarryForward(ctx context.Context, in *ProcessWorkOrderCarryForwardRequest, opts ...grpc.CallOption) (*ProcessWorkOrderCarryForwardResponse, error)
 	// ── Layer 3: Work Order ────────────────────────────────────────────────────
 	// CreateWorkOrder creates a work order.
 	CreateWorkOrder(ctx context.Context, in *CreateWorkOrderRequest, opts ...grpc.CallOption) (*CreateWorkOrderResponse, error)
@@ -1183,6 +1197,46 @@ func (c *pPCServiceClient) GetGanttView(ctx context.Context, in *GetGanttViewReq
 	return out, nil
 }
 
+func (c *pPCServiceClient) ListPlanCarryForwardCandidates(ctx context.Context, in *ListPlanCarryForwardCandidatesRequest, opts ...grpc.CallOption) (*ListPlanCarryForwardCandidatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPlanCarryForwardCandidatesResponse)
+	err := c.cc.Invoke(ctx, PPCService_ListPlanCarryForwardCandidates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *pPCServiceClient) ProcessPlanCarryForward(ctx context.Context, in *ProcessPlanCarryForwardRequest, opts ...grpc.CallOption) (*ProcessPlanCarryForwardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProcessPlanCarryForwardResponse)
+	err := c.cc.Invoke(ctx, PPCService_ProcessPlanCarryForward_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *pPCServiceClient) ListWorkOrderCarryForwardCandidates(ctx context.Context, in *ListWorkOrderCarryForwardCandidatesRequest, opts ...grpc.CallOption) (*ListWorkOrderCarryForwardCandidatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWorkOrderCarryForwardCandidatesResponse)
+	err := c.cc.Invoke(ctx, PPCService_ListWorkOrderCarryForwardCandidates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *pPCServiceClient) ProcessWorkOrderCarryForward(ctx context.Context, in *ProcessWorkOrderCarryForwardRequest, opts ...grpc.CallOption) (*ProcessWorkOrderCarryForwardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProcessWorkOrderCarryForwardResponse)
+	err := c.cc.Invoke(ctx, PPCService_ProcessWorkOrderCarryForward_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *pPCServiceClient) CreateWorkOrder(ctx context.Context, in *CreateWorkOrderRequest, opts ...grpc.CallOption) (*CreateWorkOrderResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateWorkOrderResponse)
@@ -1889,6 +1943,16 @@ type PPCServiceServer interface {
 	ListPlanItems(context.Context, *ListPlanItemsRequest) (*ListPlanItemsResponse, error)
 	// GetGanttView returns scheduled bars for the plan timeline.
 	GetGanttView(context.Context, *GetGanttViewRequest) (*GetGanttViewResponse, error)
+	// ListPlanCarryForwardCandidates lists plan items eligible for carry-forward.
+	ListPlanCarryForwardCandidates(context.Context, *ListPlanCarryForwardCandidatesRequest) (*ListPlanCarryForwardCandidatesResponse, error)
+	// ProcessPlanCarryForward executes a per-plan-item carry-forward action.
+	ProcessPlanCarryForward(context.Context, *ProcessPlanCarryForwardRequest) (*ProcessPlanCarryForwardResponse, error)
+	// ── Work Order Carry-forward (month start) ──────────────────────────────────
+	// ListWorkOrderCarryForwardCandidates lists WOs eligible to carry into a new
+	// month. Ineligible WOs are included with their reason, never silently filtered.
+	ListWorkOrderCarryForwardCandidates(context.Context, *ListWorkOrderCarryForwardCandidatesRequest) (*ListWorkOrderCarryForwardCandidatesResponse, error)
+	// ProcessWorkOrderCarryForward carries one WO into a new month as a CONTINUATION.
+	ProcessWorkOrderCarryForward(context.Context, *ProcessWorkOrderCarryForwardRequest) (*ProcessWorkOrderCarryForwardResponse, error)
 	// ── Layer 3: Work Order ────────────────────────────────────────────────────
 	// CreateWorkOrder creates a work order.
 	CreateWorkOrder(context.Context, *CreateWorkOrderRequest) (*CreateWorkOrderResponse, error)
@@ -2238,6 +2302,18 @@ func (UnimplementedPPCServiceServer) ListPlanItems(context.Context, *ListPlanIte
 }
 func (UnimplementedPPCServiceServer) GetGanttView(context.Context, *GetGanttViewRequest) (*GetGanttViewResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetGanttView not implemented")
+}
+func (UnimplementedPPCServiceServer) ListPlanCarryForwardCandidates(context.Context, *ListPlanCarryForwardCandidatesRequest) (*ListPlanCarryForwardCandidatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPlanCarryForwardCandidates not implemented")
+}
+func (UnimplementedPPCServiceServer) ProcessPlanCarryForward(context.Context, *ProcessPlanCarryForwardRequest) (*ProcessPlanCarryForwardResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ProcessPlanCarryForward not implemented")
+}
+func (UnimplementedPPCServiceServer) ListWorkOrderCarryForwardCandidates(context.Context, *ListWorkOrderCarryForwardCandidatesRequest) (*ListWorkOrderCarryForwardCandidatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListWorkOrderCarryForwardCandidates not implemented")
+}
+func (UnimplementedPPCServiceServer) ProcessWorkOrderCarryForward(context.Context, *ProcessWorkOrderCarryForwardRequest) (*ProcessWorkOrderCarryForwardResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ProcessWorkOrderCarryForward not implemented")
 }
 func (UnimplementedPPCServiceServer) CreateWorkOrder(context.Context, *CreateWorkOrderRequest) (*CreateWorkOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateWorkOrder not implemented")
@@ -3754,6 +3830,78 @@ func _PPCService_GetGanttView_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PPCService_ListPlanCarryForwardCandidates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPlanCarryForwardCandidatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PPCServiceServer).ListPlanCarryForwardCandidates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PPCService_ListPlanCarryForwardCandidates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PPCServiceServer).ListPlanCarryForwardCandidates(ctx, req.(*ListPlanCarryForwardCandidatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PPCService_ProcessPlanCarryForward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessPlanCarryForwardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PPCServiceServer).ProcessPlanCarryForward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PPCService_ProcessPlanCarryForward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PPCServiceServer).ProcessPlanCarryForward(ctx, req.(*ProcessPlanCarryForwardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PPCService_ListWorkOrderCarryForwardCandidates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWorkOrderCarryForwardCandidatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PPCServiceServer).ListWorkOrderCarryForwardCandidates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PPCService_ListWorkOrderCarryForwardCandidates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PPCServiceServer).ListWorkOrderCarryForwardCandidates(ctx, req.(*ListWorkOrderCarryForwardCandidatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PPCService_ProcessWorkOrderCarryForward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessWorkOrderCarryForwardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PPCServiceServer).ProcessWorkOrderCarryForward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PPCService_ProcessWorkOrderCarryForward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PPCServiceServer).ProcessWorkOrderCarryForward(ctx, req.(*ProcessWorkOrderCarryForwardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _PPCService_CreateWorkOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateWorkOrderRequest)
 	if err := dec(in); err != nil {
@@ -5028,6 +5176,22 @@ var PPCService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetGanttView",
 			Handler:    _PPCService_GetGanttView_Handler,
+		},
+		{
+			MethodName: "ListPlanCarryForwardCandidates",
+			Handler:    _PPCService_ListPlanCarryForwardCandidates_Handler,
+		},
+		{
+			MethodName: "ProcessPlanCarryForward",
+			Handler:    _PPCService_ProcessPlanCarryForward_Handler,
+		},
+		{
+			MethodName: "ListWorkOrderCarryForwardCandidates",
+			Handler:    _PPCService_ListWorkOrderCarryForwardCandidates_Handler,
+		},
+		{
+			MethodName: "ProcessWorkOrderCarryForward",
+			Handler:    _PPCService_ProcessWorkOrderCarryForward_Handler,
 		},
 		{
 			MethodName: "CreateWorkOrder",

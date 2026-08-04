@@ -85,6 +85,7 @@ type Service struct {
 	notifier     notification.Notifier
 	lotSpecs     LotSpecSource
 	lotProv      LotProvisioner
+	woCarryRepo  workorderdomain.CarryCandidateRepository
 }
 
 // Deps carries the (nil-safe) collaborators for the WO service.
@@ -100,6 +101,7 @@ type Deps struct {
 	Notifier     notification.Notifier
 	LotSpecs     LotSpecSource
 	LotProv      LotProvisioner
+	WOCarryRepo  workorderdomain.CarryCandidateRepository
 }
 
 // NewService builds a WO application service. All deps except the repository are
@@ -118,6 +120,7 @@ func NewService(repo workorderdomain.Repository, deps Deps) *Service {
 		notifier:     deps.Notifier,
 		lotSpecs:     deps.LotSpecs,
 		lotProv:      deps.LotProv,
+		woCarryRepo:  deps.WOCarryRepo,
 	}
 }
 

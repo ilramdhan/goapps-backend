@@ -25,7 +25,7 @@ var File_ppc_v1_ppc_service_proto protoreflect.FileDescriptor
 
 const file_ppc_v1_ppc_service_proto_rawDesc = "" +
 	"\n" +
-	"\x18ppc/v1/ppc_service.proto\x12\x06ppc.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17ppc/v1/changeover.proto\x1a\x15ppc/v1/customer.proto\x1a\x1eppc/v1/daily_performance.proto\x1a\x16ppc/v1/dashboard.proto\x1a\x13ppc/v1/demand.proto\x1a\x13ppc/v1/master.proto\x1a\x14ppc/v1/packing.proto\x1a\x16ppc/v1/plan_item.proto\x1a\x17ppc/v1/work_order.proto2\x9b\x8a\x01\n" +
+	"\x18ppc/v1/ppc_service.proto\x12\x06ppc.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17ppc/v1/changeover.proto\x1a\x15ppc/v1/customer.proto\x1a\x1eppc/v1/daily_performance.proto\x1a\x16ppc/v1/dashboard.proto\x1a\x13ppc/v1/demand.proto\x1a\x13ppc/v1/master.proto\x1a\x14ppc/v1/packing.proto\x1a\x16ppc/v1/plan_item.proto\x1a\x17ppc/v1/work_order.proto2\x92\x90\x01\n" +
 	"\n" +
 	"PPCService\x12\x82\x01\n" +
 	"\x12CreateMachineGroup\x12!.ppc.v1.CreateMachineGroupRequest\x1a\".ppc.v1.CreateMachineGroupResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/ppc/machine-groups\x12\x81\x01\n" +
@@ -102,7 +102,11 @@ const file_ppc_v1_ppc_service_proto_rawDesc = "" +
 	"\x0eUpdatePlanItem\x12\x1d.ppc.v1.UpdatePlanItemRequest\x1a\x1e.ppc.v1.UpdatePlanItemResponse\"0\x82\xd3\xe4\x93\x02*:\x01*\x1a%/api/v1/ppc/plan-items/{plan_item_id}\x12~\n" +
 	"\x0eDeletePlanItem\x12\x1d.ppc.v1.DeletePlanItemRequest\x1a\x1e.ppc.v1.DeletePlanItemResponse\"-\x82\xd3\xe4\x93\x02'*%/api/v1/ppc/plan-items/{plan_item_id}\x12l\n" +
 	"\rListPlanItems\x12\x1c.ppc.v1.ListPlanItemsRequest\x1a\x1d.ppc.v1.ListPlanItemsResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/ppc/plan-items\x12o\n" +
-	"\fGetGanttView\x12\x1b.ppc.v1.GetGanttViewRequest\x1a\x1c.ppc.v1.GetGanttViewResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v1/ppc/plan-items/gantt\x12v\n" +
+	"\fGetGanttView\x12\x1b.ppc.v1.GetGanttViewRequest\x1a\x1c.ppc.v1.GetGanttViewResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v1/ppc/plan-items/gantt\x12\xb8\x01\n" +
+	"\x1eListPlanCarryForwardCandidates\x12-.ppc.v1.ListPlanCarryForwardCandidatesRequest\x1a..ppc.v1.ListPlanCarryForwardCandidatesResponse\"7\x82\xd3\xe4\x93\x021\x12//api/v1/ppc/plan-items/carry-forward-candidates\x12\xb1\x01\n" +
+	"\x17ProcessPlanCarryForward\x12&.ppc.v1.ProcessPlanCarryForwardRequest\x1a'.ppc.v1.ProcessPlanCarryForwardResponse\"E\x82\xd3\xe4\x93\x02?:\x01*\":/api/v1/ppc/plan-items/{source_plan_item_id}/carry-forward\x12\xc8\x01\n" +
+	"#ListWorkOrderCarryForwardCandidates\x122.ppc.v1.ListWorkOrderCarryForwardCandidatesRequest\x1a3.ppc.v1.ListWorkOrderCarryForwardCandidatesResponse\"8\x82\xd3\xe4\x93\x022\x120/api/v1/ppc/work-orders/carry-forward-candidates\x12\xba\x01\n" +
+	"\x1cProcessWorkOrderCarryForward\x12+.ppc.v1.ProcessWorkOrderCarryForwardRequest\x1a,.ppc.v1.ProcessWorkOrderCarryForwardResponse\"?\x82\xd3\xe4\x93\x029:\x01*\"4/api/v1/ppc/work-orders/{source_wo_id}/carry-forward\x12v\n" +
 	"\x0fCreateWorkOrder\x12\x1e.ppc.v1.CreateWorkOrderRequest\x1a\x1f.ppc.v1.CreateWorkOrderResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/ppc/work-orders\x12r\n" +
 	"\fGetWorkOrder\x12\x1b.ppc.v1.GetWorkOrderRequest\x1a\x1c.ppc.v1.GetWorkOrderResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/ppc/work-orders/{wo_id}\x12~\n" +
 	"\x0fUpdateWorkOrder\x12\x1e.ppc.v1.UpdateWorkOrderRequest\x1a\x1f.ppc.v1.UpdateWorkOrderResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\x1a\x1f/api/v1/ppc/work-orders/{wo_id}\x12{\n" +
@@ -161,262 +165,270 @@ const file_ppc_v1_ppc_service_proto_rawDesc = "" +
 	"com.ppc.v1B\x0fPpcServiceProtoP\x01Z5github.com/mutugading/goapps-backend/gen/ppc/v1;ppcv1\xa2\x02\x03PXX\xaa\x02\x06Ppc.V1\xca\x02\x06Ppc\\V1\xe2\x02\x12Ppc\\V1\\GPBMetadata\xea\x02\aPpc::V1b\x06proto3"
 
 var file_ppc_v1_ppc_service_proto_goTypes = []any{
-	(*CreateMachineGroupRequest)(nil),             // 0: ppc.v1.CreateMachineGroupRequest
-	(*GetMachineGroupRequest)(nil),                // 1: ppc.v1.GetMachineGroupRequest
-	(*UpdateMachineGroupRequest)(nil),             // 2: ppc.v1.UpdateMachineGroupRequest
-	(*DeleteMachineGroupRequest)(nil),             // 3: ppc.v1.DeleteMachineGroupRequest
-	(*ListMachineGroupsRequest)(nil),              // 4: ppc.v1.ListMachineGroupsRequest
-	(*CreateMachineRequest)(nil),                  // 5: ppc.v1.CreateMachineRequest
-	(*GetMachineRequest)(nil),                     // 6: ppc.v1.GetMachineRequest
-	(*UpdateMachineRequest)(nil),                  // 7: ppc.v1.UpdateMachineRequest
-	(*ListMachinesRequest)(nil),                   // 8: ppc.v1.ListMachinesRequest
-	(*SyncMachinesRequest)(nil),                   // 9: ppc.v1.SyncMachinesRequest
-	(*CreateCustomerRequest)(nil),                 // 10: ppc.v1.CreateCustomerRequest
-	(*GetCustomerRequest)(nil),                    // 11: ppc.v1.GetCustomerRequest
-	(*UpdateCustomerRequest)(nil),                 // 12: ppc.v1.UpdateCustomerRequest
-	(*ListCustomersRequest)(nil),                  // 13: ppc.v1.ListCustomersRequest
-	(*SyncCustomersRequest)(nil),                  // 14: ppc.v1.SyncCustomersRequest
-	(*ExportCustomersRequest)(nil),                // 15: ppc.v1.ExportCustomersRequest
-	(*ImportCustomersRequest)(nil),                // 16: ppc.v1.ImportCustomersRequest
-	(*DownloadCustomerTemplateRequest)(nil),       // 17: ppc.v1.DownloadCustomerTemplateRequest
-	(*CreateLotMasterRequest)(nil),                // 18: ppc.v1.CreateLotMasterRequest
-	(*GetLotMasterRequest)(nil),                   // 19: ppc.v1.GetLotMasterRequest
-	(*UpdateLotMasterRequest)(nil),                // 20: ppc.v1.UpdateLotMasterRequest
-	(*DeleteLotMasterRequest)(nil),                // 21: ppc.v1.DeleteLotMasterRequest
-	(*ListLotMastersRequest)(nil),                 // 22: ppc.v1.ListLotMastersRequest
-	(*SyncLotsRequest)(nil),                       // 23: ppc.v1.SyncLotsRequest
-	(*CreateProductPPCConfigRequest)(nil),         // 24: ppc.v1.CreateProductPPCConfigRequest
-	(*GetProductPPCConfigRequest)(nil),            // 25: ppc.v1.GetProductPPCConfigRequest
-	(*UpdateProductPPCConfigRequest)(nil),         // 26: ppc.v1.UpdateProductPPCConfigRequest
-	(*DeleteProductPPCConfigRequest)(nil),         // 27: ppc.v1.DeleteProductPPCConfigRequest
-	(*ListProductPPCConfigsRequest)(nil),          // 28: ppc.v1.ListProductPPCConfigsRequest
-	(*CreateProductMachineCapacityRequest)(nil),   // 29: ppc.v1.CreateProductMachineCapacityRequest
-	(*GetProductMachineCapacityRequest)(nil),      // 30: ppc.v1.GetProductMachineCapacityRequest
-	(*UpdateProductMachineCapacityRequest)(nil),   // 31: ppc.v1.UpdateProductMachineCapacityRequest
-	(*DeleteProductMachineCapacityRequest)(nil),   // 32: ppc.v1.DeleteProductMachineCapacityRequest
-	(*ListProductMachineCapacitiesRequest)(nil),   // 33: ppc.v1.ListProductMachineCapacitiesRequest
-	(*CreateProductMachineParameterRequest)(nil),  // 34: ppc.v1.CreateProductMachineParameterRequest
-	(*GetProductMachineParameterRequest)(nil),     // 35: ppc.v1.GetProductMachineParameterRequest
-	(*UpdateProductMachineParameterRequest)(nil),  // 36: ppc.v1.UpdateProductMachineParameterRequest
-	(*DeleteProductMachineParameterRequest)(nil),  // 37: ppc.v1.DeleteProductMachineParameterRequest
-	(*ListProductMachineParametersRequest)(nil),   // 38: ppc.v1.ListProductMachineParametersRequest
-	(*CreateOverrunThresholdConfigRequest)(nil),   // 39: ppc.v1.CreateOverrunThresholdConfigRequest
-	(*GetOverrunThresholdConfigRequest)(nil),      // 40: ppc.v1.GetOverrunThresholdConfigRequest
-	(*UpdateOverrunThresholdConfigRequest)(nil),   // 41: ppc.v1.UpdateOverrunThresholdConfigRequest
-	(*DeleteOverrunThresholdConfigRequest)(nil),   // 42: ppc.v1.DeleteOverrunThresholdConfigRequest
-	(*ListOverrunThresholdConfigsRequest)(nil),    // 43: ppc.v1.ListOverrunThresholdConfigsRequest
-	(*CreateDowntimeReasonMasterRequest)(nil),     // 44: ppc.v1.CreateDowntimeReasonMasterRequest
-	(*GetDowntimeReasonMasterRequest)(nil),        // 45: ppc.v1.GetDowntimeReasonMasterRequest
-	(*UpdateDowntimeReasonMasterRequest)(nil),     // 46: ppc.v1.UpdateDowntimeReasonMasterRequest
-	(*DeleteDowntimeReasonMasterRequest)(nil),     // 47: ppc.v1.DeleteDowntimeReasonMasterRequest
-	(*ListDowntimeReasonMastersRequest)(nil),      // 48: ppc.v1.ListDowntimeReasonMastersRequest
-	(*CreateWasteCategoryMasterRequest)(nil),      // 49: ppc.v1.CreateWasteCategoryMasterRequest
-	(*GetWasteCategoryMasterRequest)(nil),         // 50: ppc.v1.GetWasteCategoryMasterRequest
-	(*UpdateWasteCategoryMasterRequest)(nil),      // 51: ppc.v1.UpdateWasteCategoryMasterRequest
-	(*DeleteWasteCategoryMasterRequest)(nil),      // 52: ppc.v1.DeleteWasteCategoryMasterRequest
-	(*ListWasteCategoryMastersRequest)(nil),       // 53: ppc.v1.ListWasteCategoryMastersRequest
-	(*ListSalesOrderStagingRequest)(nil),          // 54: ppc.v1.ListSalesOrderStagingRequest
-	(*ListSalesOrderStagingIdsRequest)(nil),       // 55: ppc.v1.ListSalesOrderStagingIdsRequest
-	(*SetStagingProductRequest)(nil),              // 56: ppc.v1.SetStagingProductRequest
-	(*CreateDemandRequest)(nil),                   // 57: ppc.v1.CreateDemandRequest
-	(*GetDemandRequest)(nil),                      // 58: ppc.v1.GetDemandRequest
-	(*UpdateDemandRequest)(nil),                   // 59: ppc.v1.UpdateDemandRequest
-	(*MapDemandProductRequest)(nil),               // 60: ppc.v1.MapDemandProductRequest
-	(*DeleteDemandRequest)(nil),                   // 61: ppc.v1.DeleteDemandRequest
-	(*ListDemandsRequest)(nil),                    // 62: ppc.v1.ListDemandsRequest
-	(*ConfirmDemandRequest)(nil),                  // 63: ppc.v1.ConfirmDemandRequest
-	(*PullFromOrionRequest)(nil),                  // 64: ppc.v1.PullFromOrionRequest
-	(*ListCarryForwardCandidatesRequest)(nil),     // 65: ppc.v1.ListCarryForwardCandidatesRequest
-	(*ProcessCarryForwardRequest)(nil),            // 66: ppc.v1.ProcessCarryForwardRequest
-	(*ApproveMTSDemandRequest)(nil),               // 67: ppc.v1.ApproveMTSDemandRequest
-	(*CreatePlanItemRequest)(nil),                 // 68: ppc.v1.CreatePlanItemRequest
-	(*GetPlanItemRequest)(nil),                    // 69: ppc.v1.GetPlanItemRequest
-	(*UpdatePlanItemRequest)(nil),                 // 70: ppc.v1.UpdatePlanItemRequest
-	(*DeletePlanItemRequest)(nil),                 // 71: ppc.v1.DeletePlanItemRequest
-	(*ListPlanItemsRequest)(nil),                  // 72: ppc.v1.ListPlanItemsRequest
-	(*GetGanttViewRequest)(nil),                   // 73: ppc.v1.GetGanttViewRequest
-	(*CreateWorkOrderRequest)(nil),                // 74: ppc.v1.CreateWorkOrderRequest
-	(*GetWorkOrderRequest)(nil),                   // 75: ppc.v1.GetWorkOrderRequest
-	(*UpdateWorkOrderRequest)(nil),                // 76: ppc.v1.UpdateWorkOrderRequest
-	(*DeleteWorkOrderRequest)(nil),                // 77: ppc.v1.DeleteWorkOrderRequest
-	(*ListWorkOrdersRequest)(nil),                 // 78: ppc.v1.ListWorkOrdersRequest
-	(*ListMergeCandidatesRequest)(nil),            // 79: ppc.v1.ListMergeCandidatesRequest
-	(*ResolveWOParametersRequest)(nil),            // 80: ppc.v1.ResolveWOParametersRequest
-	(*SaveWOParametersRequest)(nil),               // 81: ppc.v1.SaveWOParametersRequest
-	(*SaveWORmAllocationsRequest)(nil),            // 82: ppc.v1.SaveWORmAllocationsRequest
-	(*PopulateWORmFromRouteRequest)(nil),          // 83: ppc.v1.PopulateWORmFromRouteRequest
-	(*SaveWOExecutionRequest)(nil),                // 84: ppc.v1.SaveWOExecutionRequest
-	(*ListWOExecutionsRequest)(nil),               // 85: ppc.v1.ListWOExecutionsRequest
-	(*SubmitWORequest)(nil),                       // 86: ppc.v1.SubmitWORequest
-	(*ApproveWOParameterRequest)(nil),             // 87: ppc.v1.ApproveWOParameterRequest
-	(*ApproveWORequest)(nil),                      // 88: ppc.v1.ApproveWORequest
-	(*RejectWORequest)(nil),                       // 89: ppc.v1.RejectWORequest
-	(*CreateWOReferenceRequest)(nil),              // 90: ppc.v1.CreateWOReferenceRequest
-	(*GetWOProductionActualRequest)(nil),          // 91: ppc.v1.GetWOProductionActualRequest
-	(*AdjustWOActualRequest)(nil),                 // 92: ppc.v1.AdjustWOActualRequest
-	(*SuggestWOActualRequest)(nil),                // 93: ppc.v1.SuggestWOActualRequest
-	(*SubmitShiftEntryRequest)(nil),               // 94: ppc.v1.SubmitShiftEntryRequest
-	(*SubmitAreaShiftLogRequest)(nil),             // 95: ppc.v1.SubmitAreaShiftLogRequest
-	(*ListMachineShiftLogsRequest)(nil),           // 96: ppc.v1.ListMachineShiftLogsRequest
-	(*RecalcEfficiencyRequest)(nil),               // 97: ppc.v1.RecalcEfficiencyRequest
-	(*ListEfficiencySnapshotsRequest)(nil),        // 98: ppc.v1.ListEfficiencySnapshotsRequest
-	(*CreateShiftLogNoteRequest)(nil),             // 99: ppc.v1.CreateShiftLogNoteRequest
-	(*GetShiftLogNoteRequest)(nil),                // 100: ppc.v1.GetShiftLogNoteRequest
-	(*UpdateShiftLogNoteRequest)(nil),             // 101: ppc.v1.UpdateShiftLogNoteRequest
-	(*DeleteShiftLogNoteRequest)(nil),             // 102: ppc.v1.DeleteShiftLogNoteRequest
-	(*ListShiftLogNotesRequest)(nil),              // 103: ppc.v1.ListShiftLogNotesRequest
-	(*GetMorningReviewRequest)(nil),               // 104: ppc.v1.GetMorningReviewRequest
-	(*GetBalanceForSaleRequest)(nil),              // 105: ppc.v1.GetBalanceForSaleRequest
-	(*GetDailyPerformanceRequest)(nil),            // 106: ppc.v1.GetDailyPerformanceRequest
-	(*GetChangeoverEventRequest)(nil),             // 107: ppc.v1.GetChangeoverEventRequest
-	(*ListChangeoverEventsRequest)(nil),           // 108: ppc.v1.ListChangeoverEventsRequest
-	(*DetectChangeoverRequest)(nil),               // 109: ppc.v1.DetectChangeoverRequest
-	(*CreateChangeoverEventRequest)(nil),          // 110: ppc.v1.CreateChangeoverEventRequest
-	(*StartChangeoverRequest)(nil),                // 111: ppc.v1.StartChangeoverRequest
-	(*UpdateChangeoverActualRequest)(nil),         // 112: ppc.v1.UpdateChangeoverActualRequest
-	(*ListWOGradeActualsRequest)(nil),             // 113: ppc.v1.ListWOGradeActualsRequest
-	(*CreateCommonLotRequest)(nil),                // 114: ppc.v1.CreateCommonLotRequest
-	(*GetCommonLotRequest)(nil),                   // 115: ppc.v1.GetCommonLotRequest
-	(*ListCommonLotsRequest)(nil),                 // 116: ppc.v1.ListCommonLotsRequest
-	(*ExportDailyPerformanceRequest)(nil),         // 117: ppc.v1.ExportDailyPerformanceRequest
-	(*CreatePpcLookupRequest)(nil),                // 118: ppc.v1.CreatePpcLookupRequest
-	(*GetPpcLookupRequest)(nil),                   // 119: ppc.v1.GetPpcLookupRequest
-	(*UpdatePpcLookupRequest)(nil),                // 120: ppc.v1.UpdatePpcLookupRequest
-	(*DeletePpcLookupRequest)(nil),                // 121: ppc.v1.DeletePpcLookupRequest
-	(*ListPpcLookupsRequest)(nil),                 // 122: ppc.v1.ListPpcLookupsRequest
-	(*CreatePpcShiftRequest)(nil),                 // 123: ppc.v1.CreatePpcShiftRequest
-	(*GetPpcShiftRequest)(nil),                    // 124: ppc.v1.GetPpcShiftRequest
-	(*UpdatePpcShiftRequest)(nil),                 // 125: ppc.v1.UpdatePpcShiftRequest
-	(*DeletePpcShiftRequest)(nil),                 // 126: ppc.v1.DeletePpcShiftRequest
-	(*ListPpcShiftsRequest)(nil),                  // 127: ppc.v1.ListPpcShiftsRequest
-	(*CreateMachineGroupResponse)(nil),            // 128: ppc.v1.CreateMachineGroupResponse
-	(*GetMachineGroupResponse)(nil),               // 129: ppc.v1.GetMachineGroupResponse
-	(*UpdateMachineGroupResponse)(nil),            // 130: ppc.v1.UpdateMachineGroupResponse
-	(*DeleteMachineGroupResponse)(nil),            // 131: ppc.v1.DeleteMachineGroupResponse
-	(*ListMachineGroupsResponse)(nil),             // 132: ppc.v1.ListMachineGroupsResponse
-	(*CreateMachineResponse)(nil),                 // 133: ppc.v1.CreateMachineResponse
-	(*GetMachineResponse)(nil),                    // 134: ppc.v1.GetMachineResponse
-	(*UpdateMachineResponse)(nil),                 // 135: ppc.v1.UpdateMachineResponse
-	(*ListMachinesResponse)(nil),                  // 136: ppc.v1.ListMachinesResponse
-	(*SyncMachinesResponse)(nil),                  // 137: ppc.v1.SyncMachinesResponse
-	(*CreateCustomerResponse)(nil),                // 138: ppc.v1.CreateCustomerResponse
-	(*GetCustomerResponse)(nil),                   // 139: ppc.v1.GetCustomerResponse
-	(*UpdateCustomerResponse)(nil),                // 140: ppc.v1.UpdateCustomerResponse
-	(*ListCustomersResponse)(nil),                 // 141: ppc.v1.ListCustomersResponse
-	(*SyncCustomersResponse)(nil),                 // 142: ppc.v1.SyncCustomersResponse
-	(*ExportCustomersResponse)(nil),               // 143: ppc.v1.ExportCustomersResponse
-	(*ImportCustomersResponse)(nil),               // 144: ppc.v1.ImportCustomersResponse
-	(*DownloadCustomerTemplateResponse)(nil),      // 145: ppc.v1.DownloadCustomerTemplateResponse
-	(*CreateLotMasterResponse)(nil),               // 146: ppc.v1.CreateLotMasterResponse
-	(*GetLotMasterResponse)(nil),                  // 147: ppc.v1.GetLotMasterResponse
-	(*UpdateLotMasterResponse)(nil),               // 148: ppc.v1.UpdateLotMasterResponse
-	(*DeleteLotMasterResponse)(nil),               // 149: ppc.v1.DeleteLotMasterResponse
-	(*ListLotMastersResponse)(nil),                // 150: ppc.v1.ListLotMastersResponse
-	(*SyncLotsResponse)(nil),                      // 151: ppc.v1.SyncLotsResponse
-	(*CreateProductPPCConfigResponse)(nil),        // 152: ppc.v1.CreateProductPPCConfigResponse
-	(*GetProductPPCConfigResponse)(nil),           // 153: ppc.v1.GetProductPPCConfigResponse
-	(*UpdateProductPPCConfigResponse)(nil),        // 154: ppc.v1.UpdateProductPPCConfigResponse
-	(*DeleteProductPPCConfigResponse)(nil),        // 155: ppc.v1.DeleteProductPPCConfigResponse
-	(*ListProductPPCConfigsResponse)(nil),         // 156: ppc.v1.ListProductPPCConfigsResponse
-	(*CreateProductMachineCapacityResponse)(nil),  // 157: ppc.v1.CreateProductMachineCapacityResponse
-	(*GetProductMachineCapacityResponse)(nil),     // 158: ppc.v1.GetProductMachineCapacityResponse
-	(*UpdateProductMachineCapacityResponse)(nil),  // 159: ppc.v1.UpdateProductMachineCapacityResponse
-	(*DeleteProductMachineCapacityResponse)(nil),  // 160: ppc.v1.DeleteProductMachineCapacityResponse
-	(*ListProductMachineCapacitiesResponse)(nil),  // 161: ppc.v1.ListProductMachineCapacitiesResponse
-	(*CreateProductMachineParameterResponse)(nil), // 162: ppc.v1.CreateProductMachineParameterResponse
-	(*GetProductMachineParameterResponse)(nil),    // 163: ppc.v1.GetProductMachineParameterResponse
-	(*UpdateProductMachineParameterResponse)(nil), // 164: ppc.v1.UpdateProductMachineParameterResponse
-	(*DeleteProductMachineParameterResponse)(nil), // 165: ppc.v1.DeleteProductMachineParameterResponse
-	(*ListProductMachineParametersResponse)(nil),  // 166: ppc.v1.ListProductMachineParametersResponse
-	(*CreateOverrunThresholdConfigResponse)(nil),  // 167: ppc.v1.CreateOverrunThresholdConfigResponse
-	(*GetOverrunThresholdConfigResponse)(nil),     // 168: ppc.v1.GetOverrunThresholdConfigResponse
-	(*UpdateOverrunThresholdConfigResponse)(nil),  // 169: ppc.v1.UpdateOverrunThresholdConfigResponse
-	(*DeleteOverrunThresholdConfigResponse)(nil),  // 170: ppc.v1.DeleteOverrunThresholdConfigResponse
-	(*ListOverrunThresholdConfigsResponse)(nil),   // 171: ppc.v1.ListOverrunThresholdConfigsResponse
-	(*CreateDowntimeReasonMasterResponse)(nil),    // 172: ppc.v1.CreateDowntimeReasonMasterResponse
-	(*GetDowntimeReasonMasterResponse)(nil),       // 173: ppc.v1.GetDowntimeReasonMasterResponse
-	(*UpdateDowntimeReasonMasterResponse)(nil),    // 174: ppc.v1.UpdateDowntimeReasonMasterResponse
-	(*DeleteDowntimeReasonMasterResponse)(nil),    // 175: ppc.v1.DeleteDowntimeReasonMasterResponse
-	(*ListDowntimeReasonMastersResponse)(nil),     // 176: ppc.v1.ListDowntimeReasonMastersResponse
-	(*CreateWasteCategoryMasterResponse)(nil),     // 177: ppc.v1.CreateWasteCategoryMasterResponse
-	(*GetWasteCategoryMasterResponse)(nil),        // 178: ppc.v1.GetWasteCategoryMasterResponse
-	(*UpdateWasteCategoryMasterResponse)(nil),     // 179: ppc.v1.UpdateWasteCategoryMasterResponse
-	(*DeleteWasteCategoryMasterResponse)(nil),     // 180: ppc.v1.DeleteWasteCategoryMasterResponse
-	(*ListWasteCategoryMastersResponse)(nil),      // 181: ppc.v1.ListWasteCategoryMastersResponse
-	(*ListSalesOrderStagingResponse)(nil),         // 182: ppc.v1.ListSalesOrderStagingResponse
-	(*ListSalesOrderStagingIdsResponse)(nil),      // 183: ppc.v1.ListSalesOrderStagingIdsResponse
-	(*SetStagingProductResponse)(nil),             // 184: ppc.v1.SetStagingProductResponse
-	(*CreateDemandResponse)(nil),                  // 185: ppc.v1.CreateDemandResponse
-	(*GetDemandResponse)(nil),                     // 186: ppc.v1.GetDemandResponse
-	(*UpdateDemandResponse)(nil),                  // 187: ppc.v1.UpdateDemandResponse
-	(*MapDemandProductResponse)(nil),              // 188: ppc.v1.MapDemandProductResponse
-	(*DeleteDemandResponse)(nil),                  // 189: ppc.v1.DeleteDemandResponse
-	(*ListDemandsResponse)(nil),                   // 190: ppc.v1.ListDemandsResponse
-	(*ConfirmDemandResponse)(nil),                 // 191: ppc.v1.ConfirmDemandResponse
-	(*PullFromOrionResponse)(nil),                 // 192: ppc.v1.PullFromOrionResponse
-	(*ListCarryForwardCandidatesResponse)(nil),    // 193: ppc.v1.ListCarryForwardCandidatesResponse
-	(*ProcessCarryForwardResponse)(nil),           // 194: ppc.v1.ProcessCarryForwardResponse
-	(*ApproveMTSDemandResponse)(nil),              // 195: ppc.v1.ApproveMTSDemandResponse
-	(*CreatePlanItemResponse)(nil),                // 196: ppc.v1.CreatePlanItemResponse
-	(*GetPlanItemResponse)(nil),                   // 197: ppc.v1.GetPlanItemResponse
-	(*UpdatePlanItemResponse)(nil),                // 198: ppc.v1.UpdatePlanItemResponse
-	(*DeletePlanItemResponse)(nil),                // 199: ppc.v1.DeletePlanItemResponse
-	(*ListPlanItemsResponse)(nil),                 // 200: ppc.v1.ListPlanItemsResponse
-	(*GetGanttViewResponse)(nil),                  // 201: ppc.v1.GetGanttViewResponse
-	(*CreateWorkOrderResponse)(nil),               // 202: ppc.v1.CreateWorkOrderResponse
-	(*GetWorkOrderResponse)(nil),                  // 203: ppc.v1.GetWorkOrderResponse
-	(*UpdateWorkOrderResponse)(nil),               // 204: ppc.v1.UpdateWorkOrderResponse
-	(*DeleteWorkOrderResponse)(nil),               // 205: ppc.v1.DeleteWorkOrderResponse
-	(*ListWorkOrdersResponse)(nil),                // 206: ppc.v1.ListWorkOrdersResponse
-	(*ListMergeCandidatesResponse)(nil),           // 207: ppc.v1.ListMergeCandidatesResponse
-	(*ResolveWOParametersResponse)(nil),           // 208: ppc.v1.ResolveWOParametersResponse
-	(*SaveWOParametersResponse)(nil),              // 209: ppc.v1.SaveWOParametersResponse
-	(*SaveWORmAllocationsResponse)(nil),           // 210: ppc.v1.SaveWORmAllocationsResponse
-	(*PopulateWORmFromRouteResponse)(nil),         // 211: ppc.v1.PopulateWORmFromRouteResponse
-	(*SaveWOExecutionResponse)(nil),               // 212: ppc.v1.SaveWOExecutionResponse
-	(*ListWOExecutionsResponse)(nil),              // 213: ppc.v1.ListWOExecutionsResponse
-	(*SubmitWOResponse)(nil),                      // 214: ppc.v1.SubmitWOResponse
-	(*ApproveWOParameterResponse)(nil),            // 215: ppc.v1.ApproveWOParameterResponse
-	(*ApproveWOResponse)(nil),                     // 216: ppc.v1.ApproveWOResponse
-	(*RejectWOResponse)(nil),                      // 217: ppc.v1.RejectWOResponse
-	(*CreateWOReferenceResponse)(nil),             // 218: ppc.v1.CreateWOReferenceResponse
-	(*GetWOProductionActualResponse)(nil),         // 219: ppc.v1.GetWOProductionActualResponse
-	(*AdjustWOActualResponse)(nil),                // 220: ppc.v1.AdjustWOActualResponse
-	(*SuggestWOActualResponse)(nil),               // 221: ppc.v1.SuggestWOActualResponse
-	(*SubmitShiftEntryResponse)(nil),              // 222: ppc.v1.SubmitShiftEntryResponse
-	(*SubmitAreaShiftLogResponse)(nil),            // 223: ppc.v1.SubmitAreaShiftLogResponse
-	(*ListMachineShiftLogsResponse)(nil),          // 224: ppc.v1.ListMachineShiftLogsResponse
-	(*RecalcEfficiencyResponse)(nil),              // 225: ppc.v1.RecalcEfficiencyResponse
-	(*ListEfficiencySnapshotsResponse)(nil),       // 226: ppc.v1.ListEfficiencySnapshotsResponse
-	(*CreateShiftLogNoteResponse)(nil),            // 227: ppc.v1.CreateShiftLogNoteResponse
-	(*GetShiftLogNoteResponse)(nil),               // 228: ppc.v1.GetShiftLogNoteResponse
-	(*UpdateShiftLogNoteResponse)(nil),            // 229: ppc.v1.UpdateShiftLogNoteResponse
-	(*DeleteShiftLogNoteResponse)(nil),            // 230: ppc.v1.DeleteShiftLogNoteResponse
-	(*ListShiftLogNotesResponse)(nil),             // 231: ppc.v1.ListShiftLogNotesResponse
-	(*GetMorningReviewResponse)(nil),              // 232: ppc.v1.GetMorningReviewResponse
-	(*GetBalanceForSaleResponse)(nil),             // 233: ppc.v1.GetBalanceForSaleResponse
-	(*GetDailyPerformanceResponse)(nil),           // 234: ppc.v1.GetDailyPerformanceResponse
-	(*GetChangeoverEventResponse)(nil),            // 235: ppc.v1.GetChangeoverEventResponse
-	(*ListChangeoverEventsResponse)(nil),          // 236: ppc.v1.ListChangeoverEventsResponse
-	(*DetectChangeoverResponse)(nil),              // 237: ppc.v1.DetectChangeoverResponse
-	(*CreateChangeoverEventResponse)(nil),         // 238: ppc.v1.CreateChangeoverEventResponse
-	(*StartChangeoverResponse)(nil),               // 239: ppc.v1.StartChangeoverResponse
-	(*UpdateChangeoverActualResponse)(nil),        // 240: ppc.v1.UpdateChangeoverActualResponse
-	(*ListWOGradeActualsResponse)(nil),            // 241: ppc.v1.ListWOGradeActualsResponse
-	(*CreateCommonLotResponse)(nil),               // 242: ppc.v1.CreateCommonLotResponse
-	(*GetCommonLotResponse)(nil),                  // 243: ppc.v1.GetCommonLotResponse
-	(*ListCommonLotsResponse)(nil),                // 244: ppc.v1.ListCommonLotsResponse
-	(*ExportDailyPerformanceResponse)(nil),        // 245: ppc.v1.ExportDailyPerformanceResponse
-	(*CreatePpcLookupResponse)(nil),               // 246: ppc.v1.CreatePpcLookupResponse
-	(*GetPpcLookupResponse)(nil),                  // 247: ppc.v1.GetPpcLookupResponse
-	(*UpdatePpcLookupResponse)(nil),               // 248: ppc.v1.UpdatePpcLookupResponse
-	(*DeletePpcLookupResponse)(nil),               // 249: ppc.v1.DeletePpcLookupResponse
-	(*ListPpcLookupsResponse)(nil),                // 250: ppc.v1.ListPpcLookupsResponse
-	(*CreatePpcShiftResponse)(nil),                // 251: ppc.v1.CreatePpcShiftResponse
-	(*GetPpcShiftResponse)(nil),                   // 252: ppc.v1.GetPpcShiftResponse
-	(*UpdatePpcShiftResponse)(nil),                // 253: ppc.v1.UpdatePpcShiftResponse
-	(*DeletePpcShiftResponse)(nil),                // 254: ppc.v1.DeletePpcShiftResponse
-	(*ListPpcShiftsResponse)(nil),                 // 255: ppc.v1.ListPpcShiftsResponse
+	(*CreateMachineGroupRequest)(nil),                   // 0: ppc.v1.CreateMachineGroupRequest
+	(*GetMachineGroupRequest)(nil),                      // 1: ppc.v1.GetMachineGroupRequest
+	(*UpdateMachineGroupRequest)(nil),                   // 2: ppc.v1.UpdateMachineGroupRequest
+	(*DeleteMachineGroupRequest)(nil),                   // 3: ppc.v1.DeleteMachineGroupRequest
+	(*ListMachineGroupsRequest)(nil),                    // 4: ppc.v1.ListMachineGroupsRequest
+	(*CreateMachineRequest)(nil),                        // 5: ppc.v1.CreateMachineRequest
+	(*GetMachineRequest)(nil),                           // 6: ppc.v1.GetMachineRequest
+	(*UpdateMachineRequest)(nil),                        // 7: ppc.v1.UpdateMachineRequest
+	(*ListMachinesRequest)(nil),                         // 8: ppc.v1.ListMachinesRequest
+	(*SyncMachinesRequest)(nil),                         // 9: ppc.v1.SyncMachinesRequest
+	(*CreateCustomerRequest)(nil),                       // 10: ppc.v1.CreateCustomerRequest
+	(*GetCustomerRequest)(nil),                          // 11: ppc.v1.GetCustomerRequest
+	(*UpdateCustomerRequest)(nil),                       // 12: ppc.v1.UpdateCustomerRequest
+	(*ListCustomersRequest)(nil),                        // 13: ppc.v1.ListCustomersRequest
+	(*SyncCustomersRequest)(nil),                        // 14: ppc.v1.SyncCustomersRequest
+	(*ExportCustomersRequest)(nil),                      // 15: ppc.v1.ExportCustomersRequest
+	(*ImportCustomersRequest)(nil),                      // 16: ppc.v1.ImportCustomersRequest
+	(*DownloadCustomerTemplateRequest)(nil),             // 17: ppc.v1.DownloadCustomerTemplateRequest
+	(*CreateLotMasterRequest)(nil),                      // 18: ppc.v1.CreateLotMasterRequest
+	(*GetLotMasterRequest)(nil),                         // 19: ppc.v1.GetLotMasterRequest
+	(*UpdateLotMasterRequest)(nil),                      // 20: ppc.v1.UpdateLotMasterRequest
+	(*DeleteLotMasterRequest)(nil),                      // 21: ppc.v1.DeleteLotMasterRequest
+	(*ListLotMastersRequest)(nil),                       // 22: ppc.v1.ListLotMastersRequest
+	(*SyncLotsRequest)(nil),                             // 23: ppc.v1.SyncLotsRequest
+	(*CreateProductPPCConfigRequest)(nil),               // 24: ppc.v1.CreateProductPPCConfigRequest
+	(*GetProductPPCConfigRequest)(nil),                  // 25: ppc.v1.GetProductPPCConfigRequest
+	(*UpdateProductPPCConfigRequest)(nil),               // 26: ppc.v1.UpdateProductPPCConfigRequest
+	(*DeleteProductPPCConfigRequest)(nil),               // 27: ppc.v1.DeleteProductPPCConfigRequest
+	(*ListProductPPCConfigsRequest)(nil),                // 28: ppc.v1.ListProductPPCConfigsRequest
+	(*CreateProductMachineCapacityRequest)(nil),         // 29: ppc.v1.CreateProductMachineCapacityRequest
+	(*GetProductMachineCapacityRequest)(nil),            // 30: ppc.v1.GetProductMachineCapacityRequest
+	(*UpdateProductMachineCapacityRequest)(nil),         // 31: ppc.v1.UpdateProductMachineCapacityRequest
+	(*DeleteProductMachineCapacityRequest)(nil),         // 32: ppc.v1.DeleteProductMachineCapacityRequest
+	(*ListProductMachineCapacitiesRequest)(nil),         // 33: ppc.v1.ListProductMachineCapacitiesRequest
+	(*CreateProductMachineParameterRequest)(nil),        // 34: ppc.v1.CreateProductMachineParameterRequest
+	(*GetProductMachineParameterRequest)(nil),           // 35: ppc.v1.GetProductMachineParameterRequest
+	(*UpdateProductMachineParameterRequest)(nil),        // 36: ppc.v1.UpdateProductMachineParameterRequest
+	(*DeleteProductMachineParameterRequest)(nil),        // 37: ppc.v1.DeleteProductMachineParameterRequest
+	(*ListProductMachineParametersRequest)(nil),         // 38: ppc.v1.ListProductMachineParametersRequest
+	(*CreateOverrunThresholdConfigRequest)(nil),         // 39: ppc.v1.CreateOverrunThresholdConfigRequest
+	(*GetOverrunThresholdConfigRequest)(nil),            // 40: ppc.v1.GetOverrunThresholdConfigRequest
+	(*UpdateOverrunThresholdConfigRequest)(nil),         // 41: ppc.v1.UpdateOverrunThresholdConfigRequest
+	(*DeleteOverrunThresholdConfigRequest)(nil),         // 42: ppc.v1.DeleteOverrunThresholdConfigRequest
+	(*ListOverrunThresholdConfigsRequest)(nil),          // 43: ppc.v1.ListOverrunThresholdConfigsRequest
+	(*CreateDowntimeReasonMasterRequest)(nil),           // 44: ppc.v1.CreateDowntimeReasonMasterRequest
+	(*GetDowntimeReasonMasterRequest)(nil),              // 45: ppc.v1.GetDowntimeReasonMasterRequest
+	(*UpdateDowntimeReasonMasterRequest)(nil),           // 46: ppc.v1.UpdateDowntimeReasonMasterRequest
+	(*DeleteDowntimeReasonMasterRequest)(nil),           // 47: ppc.v1.DeleteDowntimeReasonMasterRequest
+	(*ListDowntimeReasonMastersRequest)(nil),            // 48: ppc.v1.ListDowntimeReasonMastersRequest
+	(*CreateWasteCategoryMasterRequest)(nil),            // 49: ppc.v1.CreateWasteCategoryMasterRequest
+	(*GetWasteCategoryMasterRequest)(nil),               // 50: ppc.v1.GetWasteCategoryMasterRequest
+	(*UpdateWasteCategoryMasterRequest)(nil),            // 51: ppc.v1.UpdateWasteCategoryMasterRequest
+	(*DeleteWasteCategoryMasterRequest)(nil),            // 52: ppc.v1.DeleteWasteCategoryMasterRequest
+	(*ListWasteCategoryMastersRequest)(nil),             // 53: ppc.v1.ListWasteCategoryMastersRequest
+	(*ListSalesOrderStagingRequest)(nil),                // 54: ppc.v1.ListSalesOrderStagingRequest
+	(*ListSalesOrderStagingIdsRequest)(nil),             // 55: ppc.v1.ListSalesOrderStagingIdsRequest
+	(*SetStagingProductRequest)(nil),                    // 56: ppc.v1.SetStagingProductRequest
+	(*CreateDemandRequest)(nil),                         // 57: ppc.v1.CreateDemandRequest
+	(*GetDemandRequest)(nil),                            // 58: ppc.v1.GetDemandRequest
+	(*UpdateDemandRequest)(nil),                         // 59: ppc.v1.UpdateDemandRequest
+	(*MapDemandProductRequest)(nil),                     // 60: ppc.v1.MapDemandProductRequest
+	(*DeleteDemandRequest)(nil),                         // 61: ppc.v1.DeleteDemandRequest
+	(*ListDemandsRequest)(nil),                          // 62: ppc.v1.ListDemandsRequest
+	(*ConfirmDemandRequest)(nil),                        // 63: ppc.v1.ConfirmDemandRequest
+	(*PullFromOrionRequest)(nil),                        // 64: ppc.v1.PullFromOrionRequest
+	(*ListCarryForwardCandidatesRequest)(nil),           // 65: ppc.v1.ListCarryForwardCandidatesRequest
+	(*ProcessCarryForwardRequest)(nil),                  // 66: ppc.v1.ProcessCarryForwardRequest
+	(*ApproveMTSDemandRequest)(nil),                     // 67: ppc.v1.ApproveMTSDemandRequest
+	(*CreatePlanItemRequest)(nil),                       // 68: ppc.v1.CreatePlanItemRequest
+	(*GetPlanItemRequest)(nil),                          // 69: ppc.v1.GetPlanItemRequest
+	(*UpdatePlanItemRequest)(nil),                       // 70: ppc.v1.UpdatePlanItemRequest
+	(*DeletePlanItemRequest)(nil),                       // 71: ppc.v1.DeletePlanItemRequest
+	(*ListPlanItemsRequest)(nil),                        // 72: ppc.v1.ListPlanItemsRequest
+	(*GetGanttViewRequest)(nil),                         // 73: ppc.v1.GetGanttViewRequest
+	(*ListPlanCarryForwardCandidatesRequest)(nil),       // 74: ppc.v1.ListPlanCarryForwardCandidatesRequest
+	(*ProcessPlanCarryForwardRequest)(nil),              // 75: ppc.v1.ProcessPlanCarryForwardRequest
+	(*ListWorkOrderCarryForwardCandidatesRequest)(nil),  // 76: ppc.v1.ListWorkOrderCarryForwardCandidatesRequest
+	(*ProcessWorkOrderCarryForwardRequest)(nil),         // 77: ppc.v1.ProcessWorkOrderCarryForwardRequest
+	(*CreateWorkOrderRequest)(nil),                      // 78: ppc.v1.CreateWorkOrderRequest
+	(*GetWorkOrderRequest)(nil),                         // 79: ppc.v1.GetWorkOrderRequest
+	(*UpdateWorkOrderRequest)(nil),                      // 80: ppc.v1.UpdateWorkOrderRequest
+	(*DeleteWorkOrderRequest)(nil),                      // 81: ppc.v1.DeleteWorkOrderRequest
+	(*ListWorkOrdersRequest)(nil),                       // 82: ppc.v1.ListWorkOrdersRequest
+	(*ListMergeCandidatesRequest)(nil),                  // 83: ppc.v1.ListMergeCandidatesRequest
+	(*ResolveWOParametersRequest)(nil),                  // 84: ppc.v1.ResolveWOParametersRequest
+	(*SaveWOParametersRequest)(nil),                     // 85: ppc.v1.SaveWOParametersRequest
+	(*SaveWORmAllocationsRequest)(nil),                  // 86: ppc.v1.SaveWORmAllocationsRequest
+	(*PopulateWORmFromRouteRequest)(nil),                // 87: ppc.v1.PopulateWORmFromRouteRequest
+	(*SaveWOExecutionRequest)(nil),                      // 88: ppc.v1.SaveWOExecutionRequest
+	(*ListWOExecutionsRequest)(nil),                     // 89: ppc.v1.ListWOExecutionsRequest
+	(*SubmitWORequest)(nil),                             // 90: ppc.v1.SubmitWORequest
+	(*ApproveWOParameterRequest)(nil),                   // 91: ppc.v1.ApproveWOParameterRequest
+	(*ApproveWORequest)(nil),                            // 92: ppc.v1.ApproveWORequest
+	(*RejectWORequest)(nil),                             // 93: ppc.v1.RejectWORequest
+	(*CreateWOReferenceRequest)(nil),                    // 94: ppc.v1.CreateWOReferenceRequest
+	(*GetWOProductionActualRequest)(nil),                // 95: ppc.v1.GetWOProductionActualRequest
+	(*AdjustWOActualRequest)(nil),                       // 96: ppc.v1.AdjustWOActualRequest
+	(*SuggestWOActualRequest)(nil),                      // 97: ppc.v1.SuggestWOActualRequest
+	(*SubmitShiftEntryRequest)(nil),                     // 98: ppc.v1.SubmitShiftEntryRequest
+	(*SubmitAreaShiftLogRequest)(nil),                   // 99: ppc.v1.SubmitAreaShiftLogRequest
+	(*ListMachineShiftLogsRequest)(nil),                 // 100: ppc.v1.ListMachineShiftLogsRequest
+	(*RecalcEfficiencyRequest)(nil),                     // 101: ppc.v1.RecalcEfficiencyRequest
+	(*ListEfficiencySnapshotsRequest)(nil),              // 102: ppc.v1.ListEfficiencySnapshotsRequest
+	(*CreateShiftLogNoteRequest)(nil),                   // 103: ppc.v1.CreateShiftLogNoteRequest
+	(*GetShiftLogNoteRequest)(nil),                      // 104: ppc.v1.GetShiftLogNoteRequest
+	(*UpdateShiftLogNoteRequest)(nil),                   // 105: ppc.v1.UpdateShiftLogNoteRequest
+	(*DeleteShiftLogNoteRequest)(nil),                   // 106: ppc.v1.DeleteShiftLogNoteRequest
+	(*ListShiftLogNotesRequest)(nil),                    // 107: ppc.v1.ListShiftLogNotesRequest
+	(*GetMorningReviewRequest)(nil),                     // 108: ppc.v1.GetMorningReviewRequest
+	(*GetBalanceForSaleRequest)(nil),                    // 109: ppc.v1.GetBalanceForSaleRequest
+	(*GetDailyPerformanceRequest)(nil),                  // 110: ppc.v1.GetDailyPerformanceRequest
+	(*GetChangeoverEventRequest)(nil),                   // 111: ppc.v1.GetChangeoverEventRequest
+	(*ListChangeoverEventsRequest)(nil),                 // 112: ppc.v1.ListChangeoverEventsRequest
+	(*DetectChangeoverRequest)(nil),                     // 113: ppc.v1.DetectChangeoverRequest
+	(*CreateChangeoverEventRequest)(nil),                // 114: ppc.v1.CreateChangeoverEventRequest
+	(*StartChangeoverRequest)(nil),                      // 115: ppc.v1.StartChangeoverRequest
+	(*UpdateChangeoverActualRequest)(nil),               // 116: ppc.v1.UpdateChangeoverActualRequest
+	(*ListWOGradeActualsRequest)(nil),                   // 117: ppc.v1.ListWOGradeActualsRequest
+	(*CreateCommonLotRequest)(nil),                      // 118: ppc.v1.CreateCommonLotRequest
+	(*GetCommonLotRequest)(nil),                         // 119: ppc.v1.GetCommonLotRequest
+	(*ListCommonLotsRequest)(nil),                       // 120: ppc.v1.ListCommonLotsRequest
+	(*ExportDailyPerformanceRequest)(nil),               // 121: ppc.v1.ExportDailyPerformanceRequest
+	(*CreatePpcLookupRequest)(nil),                      // 122: ppc.v1.CreatePpcLookupRequest
+	(*GetPpcLookupRequest)(nil),                         // 123: ppc.v1.GetPpcLookupRequest
+	(*UpdatePpcLookupRequest)(nil),                      // 124: ppc.v1.UpdatePpcLookupRequest
+	(*DeletePpcLookupRequest)(nil),                      // 125: ppc.v1.DeletePpcLookupRequest
+	(*ListPpcLookupsRequest)(nil),                       // 126: ppc.v1.ListPpcLookupsRequest
+	(*CreatePpcShiftRequest)(nil),                       // 127: ppc.v1.CreatePpcShiftRequest
+	(*GetPpcShiftRequest)(nil),                          // 128: ppc.v1.GetPpcShiftRequest
+	(*UpdatePpcShiftRequest)(nil),                       // 129: ppc.v1.UpdatePpcShiftRequest
+	(*DeletePpcShiftRequest)(nil),                       // 130: ppc.v1.DeletePpcShiftRequest
+	(*ListPpcShiftsRequest)(nil),                        // 131: ppc.v1.ListPpcShiftsRequest
+	(*CreateMachineGroupResponse)(nil),                  // 132: ppc.v1.CreateMachineGroupResponse
+	(*GetMachineGroupResponse)(nil),                     // 133: ppc.v1.GetMachineGroupResponse
+	(*UpdateMachineGroupResponse)(nil),                  // 134: ppc.v1.UpdateMachineGroupResponse
+	(*DeleteMachineGroupResponse)(nil),                  // 135: ppc.v1.DeleteMachineGroupResponse
+	(*ListMachineGroupsResponse)(nil),                   // 136: ppc.v1.ListMachineGroupsResponse
+	(*CreateMachineResponse)(nil),                       // 137: ppc.v1.CreateMachineResponse
+	(*GetMachineResponse)(nil),                          // 138: ppc.v1.GetMachineResponse
+	(*UpdateMachineResponse)(nil),                       // 139: ppc.v1.UpdateMachineResponse
+	(*ListMachinesResponse)(nil),                        // 140: ppc.v1.ListMachinesResponse
+	(*SyncMachinesResponse)(nil),                        // 141: ppc.v1.SyncMachinesResponse
+	(*CreateCustomerResponse)(nil),                      // 142: ppc.v1.CreateCustomerResponse
+	(*GetCustomerResponse)(nil),                         // 143: ppc.v1.GetCustomerResponse
+	(*UpdateCustomerResponse)(nil),                      // 144: ppc.v1.UpdateCustomerResponse
+	(*ListCustomersResponse)(nil),                       // 145: ppc.v1.ListCustomersResponse
+	(*SyncCustomersResponse)(nil),                       // 146: ppc.v1.SyncCustomersResponse
+	(*ExportCustomersResponse)(nil),                     // 147: ppc.v1.ExportCustomersResponse
+	(*ImportCustomersResponse)(nil),                     // 148: ppc.v1.ImportCustomersResponse
+	(*DownloadCustomerTemplateResponse)(nil),            // 149: ppc.v1.DownloadCustomerTemplateResponse
+	(*CreateLotMasterResponse)(nil),                     // 150: ppc.v1.CreateLotMasterResponse
+	(*GetLotMasterResponse)(nil),                        // 151: ppc.v1.GetLotMasterResponse
+	(*UpdateLotMasterResponse)(nil),                     // 152: ppc.v1.UpdateLotMasterResponse
+	(*DeleteLotMasterResponse)(nil),                     // 153: ppc.v1.DeleteLotMasterResponse
+	(*ListLotMastersResponse)(nil),                      // 154: ppc.v1.ListLotMastersResponse
+	(*SyncLotsResponse)(nil),                            // 155: ppc.v1.SyncLotsResponse
+	(*CreateProductPPCConfigResponse)(nil),              // 156: ppc.v1.CreateProductPPCConfigResponse
+	(*GetProductPPCConfigResponse)(nil),                 // 157: ppc.v1.GetProductPPCConfigResponse
+	(*UpdateProductPPCConfigResponse)(nil),              // 158: ppc.v1.UpdateProductPPCConfigResponse
+	(*DeleteProductPPCConfigResponse)(nil),              // 159: ppc.v1.DeleteProductPPCConfigResponse
+	(*ListProductPPCConfigsResponse)(nil),               // 160: ppc.v1.ListProductPPCConfigsResponse
+	(*CreateProductMachineCapacityResponse)(nil),        // 161: ppc.v1.CreateProductMachineCapacityResponse
+	(*GetProductMachineCapacityResponse)(nil),           // 162: ppc.v1.GetProductMachineCapacityResponse
+	(*UpdateProductMachineCapacityResponse)(nil),        // 163: ppc.v1.UpdateProductMachineCapacityResponse
+	(*DeleteProductMachineCapacityResponse)(nil),        // 164: ppc.v1.DeleteProductMachineCapacityResponse
+	(*ListProductMachineCapacitiesResponse)(nil),        // 165: ppc.v1.ListProductMachineCapacitiesResponse
+	(*CreateProductMachineParameterResponse)(nil),       // 166: ppc.v1.CreateProductMachineParameterResponse
+	(*GetProductMachineParameterResponse)(nil),          // 167: ppc.v1.GetProductMachineParameterResponse
+	(*UpdateProductMachineParameterResponse)(nil),       // 168: ppc.v1.UpdateProductMachineParameterResponse
+	(*DeleteProductMachineParameterResponse)(nil),       // 169: ppc.v1.DeleteProductMachineParameterResponse
+	(*ListProductMachineParametersResponse)(nil),        // 170: ppc.v1.ListProductMachineParametersResponse
+	(*CreateOverrunThresholdConfigResponse)(nil),        // 171: ppc.v1.CreateOverrunThresholdConfigResponse
+	(*GetOverrunThresholdConfigResponse)(nil),           // 172: ppc.v1.GetOverrunThresholdConfigResponse
+	(*UpdateOverrunThresholdConfigResponse)(nil),        // 173: ppc.v1.UpdateOverrunThresholdConfigResponse
+	(*DeleteOverrunThresholdConfigResponse)(nil),        // 174: ppc.v1.DeleteOverrunThresholdConfigResponse
+	(*ListOverrunThresholdConfigsResponse)(nil),         // 175: ppc.v1.ListOverrunThresholdConfigsResponse
+	(*CreateDowntimeReasonMasterResponse)(nil),          // 176: ppc.v1.CreateDowntimeReasonMasterResponse
+	(*GetDowntimeReasonMasterResponse)(nil),             // 177: ppc.v1.GetDowntimeReasonMasterResponse
+	(*UpdateDowntimeReasonMasterResponse)(nil),          // 178: ppc.v1.UpdateDowntimeReasonMasterResponse
+	(*DeleteDowntimeReasonMasterResponse)(nil),          // 179: ppc.v1.DeleteDowntimeReasonMasterResponse
+	(*ListDowntimeReasonMastersResponse)(nil),           // 180: ppc.v1.ListDowntimeReasonMastersResponse
+	(*CreateWasteCategoryMasterResponse)(nil),           // 181: ppc.v1.CreateWasteCategoryMasterResponse
+	(*GetWasteCategoryMasterResponse)(nil),              // 182: ppc.v1.GetWasteCategoryMasterResponse
+	(*UpdateWasteCategoryMasterResponse)(nil),           // 183: ppc.v1.UpdateWasteCategoryMasterResponse
+	(*DeleteWasteCategoryMasterResponse)(nil),           // 184: ppc.v1.DeleteWasteCategoryMasterResponse
+	(*ListWasteCategoryMastersResponse)(nil),            // 185: ppc.v1.ListWasteCategoryMastersResponse
+	(*ListSalesOrderStagingResponse)(nil),               // 186: ppc.v1.ListSalesOrderStagingResponse
+	(*ListSalesOrderStagingIdsResponse)(nil),            // 187: ppc.v1.ListSalesOrderStagingIdsResponse
+	(*SetStagingProductResponse)(nil),                   // 188: ppc.v1.SetStagingProductResponse
+	(*CreateDemandResponse)(nil),                        // 189: ppc.v1.CreateDemandResponse
+	(*GetDemandResponse)(nil),                           // 190: ppc.v1.GetDemandResponse
+	(*UpdateDemandResponse)(nil),                        // 191: ppc.v1.UpdateDemandResponse
+	(*MapDemandProductResponse)(nil),                    // 192: ppc.v1.MapDemandProductResponse
+	(*DeleteDemandResponse)(nil),                        // 193: ppc.v1.DeleteDemandResponse
+	(*ListDemandsResponse)(nil),                         // 194: ppc.v1.ListDemandsResponse
+	(*ConfirmDemandResponse)(nil),                       // 195: ppc.v1.ConfirmDemandResponse
+	(*PullFromOrionResponse)(nil),                       // 196: ppc.v1.PullFromOrionResponse
+	(*ListCarryForwardCandidatesResponse)(nil),          // 197: ppc.v1.ListCarryForwardCandidatesResponse
+	(*ProcessCarryForwardResponse)(nil),                 // 198: ppc.v1.ProcessCarryForwardResponse
+	(*ApproveMTSDemandResponse)(nil),                    // 199: ppc.v1.ApproveMTSDemandResponse
+	(*CreatePlanItemResponse)(nil),                      // 200: ppc.v1.CreatePlanItemResponse
+	(*GetPlanItemResponse)(nil),                         // 201: ppc.v1.GetPlanItemResponse
+	(*UpdatePlanItemResponse)(nil),                      // 202: ppc.v1.UpdatePlanItemResponse
+	(*DeletePlanItemResponse)(nil),                      // 203: ppc.v1.DeletePlanItemResponse
+	(*ListPlanItemsResponse)(nil),                       // 204: ppc.v1.ListPlanItemsResponse
+	(*GetGanttViewResponse)(nil),                        // 205: ppc.v1.GetGanttViewResponse
+	(*ListPlanCarryForwardCandidatesResponse)(nil),      // 206: ppc.v1.ListPlanCarryForwardCandidatesResponse
+	(*ProcessPlanCarryForwardResponse)(nil),             // 207: ppc.v1.ProcessPlanCarryForwardResponse
+	(*ListWorkOrderCarryForwardCandidatesResponse)(nil), // 208: ppc.v1.ListWorkOrderCarryForwardCandidatesResponse
+	(*ProcessWorkOrderCarryForwardResponse)(nil),        // 209: ppc.v1.ProcessWorkOrderCarryForwardResponse
+	(*CreateWorkOrderResponse)(nil),                     // 210: ppc.v1.CreateWorkOrderResponse
+	(*GetWorkOrderResponse)(nil),                        // 211: ppc.v1.GetWorkOrderResponse
+	(*UpdateWorkOrderResponse)(nil),                     // 212: ppc.v1.UpdateWorkOrderResponse
+	(*DeleteWorkOrderResponse)(nil),                     // 213: ppc.v1.DeleteWorkOrderResponse
+	(*ListWorkOrdersResponse)(nil),                      // 214: ppc.v1.ListWorkOrdersResponse
+	(*ListMergeCandidatesResponse)(nil),                 // 215: ppc.v1.ListMergeCandidatesResponse
+	(*ResolveWOParametersResponse)(nil),                 // 216: ppc.v1.ResolveWOParametersResponse
+	(*SaveWOParametersResponse)(nil),                    // 217: ppc.v1.SaveWOParametersResponse
+	(*SaveWORmAllocationsResponse)(nil),                 // 218: ppc.v1.SaveWORmAllocationsResponse
+	(*PopulateWORmFromRouteResponse)(nil),               // 219: ppc.v1.PopulateWORmFromRouteResponse
+	(*SaveWOExecutionResponse)(nil),                     // 220: ppc.v1.SaveWOExecutionResponse
+	(*ListWOExecutionsResponse)(nil),                    // 221: ppc.v1.ListWOExecutionsResponse
+	(*SubmitWOResponse)(nil),                            // 222: ppc.v1.SubmitWOResponse
+	(*ApproveWOParameterResponse)(nil),                  // 223: ppc.v1.ApproveWOParameterResponse
+	(*ApproveWOResponse)(nil),                           // 224: ppc.v1.ApproveWOResponse
+	(*RejectWOResponse)(nil),                            // 225: ppc.v1.RejectWOResponse
+	(*CreateWOReferenceResponse)(nil),                   // 226: ppc.v1.CreateWOReferenceResponse
+	(*GetWOProductionActualResponse)(nil),               // 227: ppc.v1.GetWOProductionActualResponse
+	(*AdjustWOActualResponse)(nil),                      // 228: ppc.v1.AdjustWOActualResponse
+	(*SuggestWOActualResponse)(nil),                     // 229: ppc.v1.SuggestWOActualResponse
+	(*SubmitShiftEntryResponse)(nil),                    // 230: ppc.v1.SubmitShiftEntryResponse
+	(*SubmitAreaShiftLogResponse)(nil),                  // 231: ppc.v1.SubmitAreaShiftLogResponse
+	(*ListMachineShiftLogsResponse)(nil),                // 232: ppc.v1.ListMachineShiftLogsResponse
+	(*RecalcEfficiencyResponse)(nil),                    // 233: ppc.v1.RecalcEfficiencyResponse
+	(*ListEfficiencySnapshotsResponse)(nil),             // 234: ppc.v1.ListEfficiencySnapshotsResponse
+	(*CreateShiftLogNoteResponse)(nil),                  // 235: ppc.v1.CreateShiftLogNoteResponse
+	(*GetShiftLogNoteResponse)(nil),                     // 236: ppc.v1.GetShiftLogNoteResponse
+	(*UpdateShiftLogNoteResponse)(nil),                  // 237: ppc.v1.UpdateShiftLogNoteResponse
+	(*DeleteShiftLogNoteResponse)(nil),                  // 238: ppc.v1.DeleteShiftLogNoteResponse
+	(*ListShiftLogNotesResponse)(nil),                   // 239: ppc.v1.ListShiftLogNotesResponse
+	(*GetMorningReviewResponse)(nil),                    // 240: ppc.v1.GetMorningReviewResponse
+	(*GetBalanceForSaleResponse)(nil),                   // 241: ppc.v1.GetBalanceForSaleResponse
+	(*GetDailyPerformanceResponse)(nil),                 // 242: ppc.v1.GetDailyPerformanceResponse
+	(*GetChangeoverEventResponse)(nil),                  // 243: ppc.v1.GetChangeoverEventResponse
+	(*ListChangeoverEventsResponse)(nil),                // 244: ppc.v1.ListChangeoverEventsResponse
+	(*DetectChangeoverResponse)(nil),                    // 245: ppc.v1.DetectChangeoverResponse
+	(*CreateChangeoverEventResponse)(nil),               // 246: ppc.v1.CreateChangeoverEventResponse
+	(*StartChangeoverResponse)(nil),                     // 247: ppc.v1.StartChangeoverResponse
+	(*UpdateChangeoverActualResponse)(nil),              // 248: ppc.v1.UpdateChangeoverActualResponse
+	(*ListWOGradeActualsResponse)(nil),                  // 249: ppc.v1.ListWOGradeActualsResponse
+	(*CreateCommonLotResponse)(nil),                     // 250: ppc.v1.CreateCommonLotResponse
+	(*GetCommonLotResponse)(nil),                        // 251: ppc.v1.GetCommonLotResponse
+	(*ListCommonLotsResponse)(nil),                      // 252: ppc.v1.ListCommonLotsResponse
+	(*ExportDailyPerformanceResponse)(nil),              // 253: ppc.v1.ExportDailyPerformanceResponse
+	(*CreatePpcLookupResponse)(nil),                     // 254: ppc.v1.CreatePpcLookupResponse
+	(*GetPpcLookupResponse)(nil),                        // 255: ppc.v1.GetPpcLookupResponse
+	(*UpdatePpcLookupResponse)(nil),                     // 256: ppc.v1.UpdatePpcLookupResponse
+	(*DeletePpcLookupResponse)(nil),                     // 257: ppc.v1.DeletePpcLookupResponse
+	(*ListPpcLookupsResponse)(nil),                      // 258: ppc.v1.ListPpcLookupsResponse
+	(*CreatePpcShiftResponse)(nil),                      // 259: ppc.v1.CreatePpcShiftResponse
+	(*GetPpcShiftResponse)(nil),                         // 260: ppc.v1.GetPpcShiftResponse
+	(*UpdatePpcShiftResponse)(nil),                      // 261: ppc.v1.UpdatePpcShiftResponse
+	(*DeletePpcShiftResponse)(nil),                      // 262: ppc.v1.DeletePpcShiftResponse
+	(*ListPpcShiftsResponse)(nil),                       // 263: ppc.v1.ListPpcShiftsResponse
 }
 var file_ppc_v1_ppc_service_proto_depIdxs = []int32{
 	0,   // 0: ppc.v1.PPCService.CreateMachineGroup:input_type -> ppc.v1.CreateMachineGroupRequest
@@ -493,190 +505,198 @@ var file_ppc_v1_ppc_service_proto_depIdxs = []int32{
 	71,  // 71: ppc.v1.PPCService.DeletePlanItem:input_type -> ppc.v1.DeletePlanItemRequest
 	72,  // 72: ppc.v1.PPCService.ListPlanItems:input_type -> ppc.v1.ListPlanItemsRequest
 	73,  // 73: ppc.v1.PPCService.GetGanttView:input_type -> ppc.v1.GetGanttViewRequest
-	74,  // 74: ppc.v1.PPCService.CreateWorkOrder:input_type -> ppc.v1.CreateWorkOrderRequest
-	75,  // 75: ppc.v1.PPCService.GetWorkOrder:input_type -> ppc.v1.GetWorkOrderRequest
-	76,  // 76: ppc.v1.PPCService.UpdateWorkOrder:input_type -> ppc.v1.UpdateWorkOrderRequest
-	77,  // 77: ppc.v1.PPCService.DeleteWorkOrder:input_type -> ppc.v1.DeleteWorkOrderRequest
-	78,  // 78: ppc.v1.PPCService.ListWorkOrders:input_type -> ppc.v1.ListWorkOrdersRequest
-	79,  // 79: ppc.v1.PPCService.ListMergeCandidates:input_type -> ppc.v1.ListMergeCandidatesRequest
-	80,  // 80: ppc.v1.PPCService.ResolveWOParameters:input_type -> ppc.v1.ResolveWOParametersRequest
-	81,  // 81: ppc.v1.PPCService.SaveWOParameters:input_type -> ppc.v1.SaveWOParametersRequest
-	82,  // 82: ppc.v1.PPCService.SaveWORmAllocations:input_type -> ppc.v1.SaveWORmAllocationsRequest
-	83,  // 83: ppc.v1.PPCService.PopulateWORmFromRoute:input_type -> ppc.v1.PopulateWORmFromRouteRequest
-	84,  // 84: ppc.v1.PPCService.SaveWOExecution:input_type -> ppc.v1.SaveWOExecutionRequest
-	85,  // 85: ppc.v1.PPCService.ListWOExecutions:input_type -> ppc.v1.ListWOExecutionsRequest
-	86,  // 86: ppc.v1.PPCService.SubmitWO:input_type -> ppc.v1.SubmitWORequest
-	87,  // 87: ppc.v1.PPCService.ApproveWOParameter:input_type -> ppc.v1.ApproveWOParameterRequest
-	88,  // 88: ppc.v1.PPCService.ApproveWO:input_type -> ppc.v1.ApproveWORequest
-	89,  // 89: ppc.v1.PPCService.RejectWO:input_type -> ppc.v1.RejectWORequest
-	90,  // 90: ppc.v1.PPCService.CreateWOReference:input_type -> ppc.v1.CreateWOReferenceRequest
-	91,  // 91: ppc.v1.PPCService.GetWOProductionActual:input_type -> ppc.v1.GetWOProductionActualRequest
-	92,  // 92: ppc.v1.PPCService.AdjustWOActual:input_type -> ppc.v1.AdjustWOActualRequest
-	93,  // 93: ppc.v1.PPCService.SuggestWOActual:input_type -> ppc.v1.SuggestWOActualRequest
-	94,  // 94: ppc.v1.PPCService.SubmitShiftEntry:input_type -> ppc.v1.SubmitShiftEntryRequest
-	95,  // 95: ppc.v1.PPCService.SubmitAreaShiftLog:input_type -> ppc.v1.SubmitAreaShiftLogRequest
-	96,  // 96: ppc.v1.PPCService.ListMachineShiftLogs:input_type -> ppc.v1.ListMachineShiftLogsRequest
-	97,  // 97: ppc.v1.PPCService.RecalcEfficiency:input_type -> ppc.v1.RecalcEfficiencyRequest
-	98,  // 98: ppc.v1.PPCService.ListEfficiencySnapshots:input_type -> ppc.v1.ListEfficiencySnapshotsRequest
-	99,  // 99: ppc.v1.PPCService.CreateShiftLogNote:input_type -> ppc.v1.CreateShiftLogNoteRequest
-	100, // 100: ppc.v1.PPCService.GetShiftLogNote:input_type -> ppc.v1.GetShiftLogNoteRequest
-	101, // 101: ppc.v1.PPCService.UpdateShiftLogNote:input_type -> ppc.v1.UpdateShiftLogNoteRequest
-	102, // 102: ppc.v1.PPCService.DeleteShiftLogNote:input_type -> ppc.v1.DeleteShiftLogNoteRequest
-	103, // 103: ppc.v1.PPCService.ListShiftLogNotes:input_type -> ppc.v1.ListShiftLogNotesRequest
-	104, // 104: ppc.v1.PPCService.GetMorningReview:input_type -> ppc.v1.GetMorningReviewRequest
-	105, // 105: ppc.v1.PPCService.GetBalanceForSale:input_type -> ppc.v1.GetBalanceForSaleRequest
-	106, // 106: ppc.v1.PPCService.GetDailyPerformance:input_type -> ppc.v1.GetDailyPerformanceRequest
-	107, // 107: ppc.v1.PPCService.GetChangeoverEvent:input_type -> ppc.v1.GetChangeoverEventRequest
-	108, // 108: ppc.v1.PPCService.ListChangeoverEvents:input_type -> ppc.v1.ListChangeoverEventsRequest
-	109, // 109: ppc.v1.PPCService.DetectChangeover:input_type -> ppc.v1.DetectChangeoverRequest
-	110, // 110: ppc.v1.PPCService.CreateChangeoverEvent:input_type -> ppc.v1.CreateChangeoverEventRequest
-	111, // 111: ppc.v1.PPCService.StartChangeover:input_type -> ppc.v1.StartChangeoverRequest
-	112, // 112: ppc.v1.PPCService.UpdateChangeoverActual:input_type -> ppc.v1.UpdateChangeoverActualRequest
-	113, // 113: ppc.v1.PPCService.ListWOGradeActuals:input_type -> ppc.v1.ListWOGradeActualsRequest
-	114, // 114: ppc.v1.PPCService.CreateCommonLot:input_type -> ppc.v1.CreateCommonLotRequest
-	115, // 115: ppc.v1.PPCService.GetCommonLot:input_type -> ppc.v1.GetCommonLotRequest
-	116, // 116: ppc.v1.PPCService.ListCommonLots:input_type -> ppc.v1.ListCommonLotsRequest
-	117, // 117: ppc.v1.PPCService.ExportDailyPerformance:input_type -> ppc.v1.ExportDailyPerformanceRequest
-	118, // 118: ppc.v1.PPCService.CreatePpcLookup:input_type -> ppc.v1.CreatePpcLookupRequest
-	119, // 119: ppc.v1.PPCService.GetPpcLookup:input_type -> ppc.v1.GetPpcLookupRequest
-	120, // 120: ppc.v1.PPCService.UpdatePpcLookup:input_type -> ppc.v1.UpdatePpcLookupRequest
-	121, // 121: ppc.v1.PPCService.DeletePpcLookup:input_type -> ppc.v1.DeletePpcLookupRequest
-	122, // 122: ppc.v1.PPCService.ListPpcLookups:input_type -> ppc.v1.ListPpcLookupsRequest
-	123, // 123: ppc.v1.PPCService.CreatePpcShift:input_type -> ppc.v1.CreatePpcShiftRequest
-	124, // 124: ppc.v1.PPCService.GetPpcShift:input_type -> ppc.v1.GetPpcShiftRequest
-	125, // 125: ppc.v1.PPCService.UpdatePpcShift:input_type -> ppc.v1.UpdatePpcShiftRequest
-	126, // 126: ppc.v1.PPCService.DeletePpcShift:input_type -> ppc.v1.DeletePpcShiftRequest
-	127, // 127: ppc.v1.PPCService.ListPpcShifts:input_type -> ppc.v1.ListPpcShiftsRequest
-	128, // 128: ppc.v1.PPCService.CreateMachineGroup:output_type -> ppc.v1.CreateMachineGroupResponse
-	129, // 129: ppc.v1.PPCService.GetMachineGroup:output_type -> ppc.v1.GetMachineGroupResponse
-	130, // 130: ppc.v1.PPCService.UpdateMachineGroup:output_type -> ppc.v1.UpdateMachineGroupResponse
-	131, // 131: ppc.v1.PPCService.DeleteMachineGroup:output_type -> ppc.v1.DeleteMachineGroupResponse
-	132, // 132: ppc.v1.PPCService.ListMachineGroups:output_type -> ppc.v1.ListMachineGroupsResponse
-	133, // 133: ppc.v1.PPCService.CreateMachine:output_type -> ppc.v1.CreateMachineResponse
-	134, // 134: ppc.v1.PPCService.GetMachine:output_type -> ppc.v1.GetMachineResponse
-	135, // 135: ppc.v1.PPCService.UpdateMachine:output_type -> ppc.v1.UpdateMachineResponse
-	136, // 136: ppc.v1.PPCService.ListMachines:output_type -> ppc.v1.ListMachinesResponse
-	137, // 137: ppc.v1.PPCService.SyncMachines:output_type -> ppc.v1.SyncMachinesResponse
-	138, // 138: ppc.v1.PPCService.CreateCustomer:output_type -> ppc.v1.CreateCustomerResponse
-	139, // 139: ppc.v1.PPCService.GetCustomer:output_type -> ppc.v1.GetCustomerResponse
-	140, // 140: ppc.v1.PPCService.UpdateCustomer:output_type -> ppc.v1.UpdateCustomerResponse
-	141, // 141: ppc.v1.PPCService.ListCustomers:output_type -> ppc.v1.ListCustomersResponse
-	142, // 142: ppc.v1.PPCService.SyncCustomers:output_type -> ppc.v1.SyncCustomersResponse
-	143, // 143: ppc.v1.PPCService.ExportCustomers:output_type -> ppc.v1.ExportCustomersResponse
-	144, // 144: ppc.v1.PPCService.ImportCustomers:output_type -> ppc.v1.ImportCustomersResponse
-	145, // 145: ppc.v1.PPCService.DownloadCustomerTemplate:output_type -> ppc.v1.DownloadCustomerTemplateResponse
-	146, // 146: ppc.v1.PPCService.CreateLotMaster:output_type -> ppc.v1.CreateLotMasterResponse
-	147, // 147: ppc.v1.PPCService.GetLotMaster:output_type -> ppc.v1.GetLotMasterResponse
-	148, // 148: ppc.v1.PPCService.UpdateLotMaster:output_type -> ppc.v1.UpdateLotMasterResponse
-	149, // 149: ppc.v1.PPCService.DeleteLotMaster:output_type -> ppc.v1.DeleteLotMasterResponse
-	150, // 150: ppc.v1.PPCService.ListLotMasters:output_type -> ppc.v1.ListLotMastersResponse
-	151, // 151: ppc.v1.PPCService.SyncLots:output_type -> ppc.v1.SyncLotsResponse
-	152, // 152: ppc.v1.PPCService.CreateProductPPCConfig:output_type -> ppc.v1.CreateProductPPCConfigResponse
-	153, // 153: ppc.v1.PPCService.GetProductPPCConfig:output_type -> ppc.v1.GetProductPPCConfigResponse
-	154, // 154: ppc.v1.PPCService.UpdateProductPPCConfig:output_type -> ppc.v1.UpdateProductPPCConfigResponse
-	155, // 155: ppc.v1.PPCService.DeleteProductPPCConfig:output_type -> ppc.v1.DeleteProductPPCConfigResponse
-	156, // 156: ppc.v1.PPCService.ListProductPPCConfigs:output_type -> ppc.v1.ListProductPPCConfigsResponse
-	157, // 157: ppc.v1.PPCService.CreateProductMachineCapacity:output_type -> ppc.v1.CreateProductMachineCapacityResponse
-	158, // 158: ppc.v1.PPCService.GetProductMachineCapacity:output_type -> ppc.v1.GetProductMachineCapacityResponse
-	159, // 159: ppc.v1.PPCService.UpdateProductMachineCapacity:output_type -> ppc.v1.UpdateProductMachineCapacityResponse
-	160, // 160: ppc.v1.PPCService.DeleteProductMachineCapacity:output_type -> ppc.v1.DeleteProductMachineCapacityResponse
-	161, // 161: ppc.v1.PPCService.ListProductMachineCapacities:output_type -> ppc.v1.ListProductMachineCapacitiesResponse
-	162, // 162: ppc.v1.PPCService.CreateProductMachineParameter:output_type -> ppc.v1.CreateProductMachineParameterResponse
-	163, // 163: ppc.v1.PPCService.GetProductMachineParameter:output_type -> ppc.v1.GetProductMachineParameterResponse
-	164, // 164: ppc.v1.PPCService.UpdateProductMachineParameter:output_type -> ppc.v1.UpdateProductMachineParameterResponse
-	165, // 165: ppc.v1.PPCService.DeleteProductMachineParameter:output_type -> ppc.v1.DeleteProductMachineParameterResponse
-	166, // 166: ppc.v1.PPCService.ListProductMachineParameters:output_type -> ppc.v1.ListProductMachineParametersResponse
-	167, // 167: ppc.v1.PPCService.CreateOverrunThresholdConfig:output_type -> ppc.v1.CreateOverrunThresholdConfigResponse
-	168, // 168: ppc.v1.PPCService.GetOverrunThresholdConfig:output_type -> ppc.v1.GetOverrunThresholdConfigResponse
-	169, // 169: ppc.v1.PPCService.UpdateOverrunThresholdConfig:output_type -> ppc.v1.UpdateOverrunThresholdConfigResponse
-	170, // 170: ppc.v1.PPCService.DeleteOverrunThresholdConfig:output_type -> ppc.v1.DeleteOverrunThresholdConfigResponse
-	171, // 171: ppc.v1.PPCService.ListOverrunThresholdConfigs:output_type -> ppc.v1.ListOverrunThresholdConfigsResponse
-	172, // 172: ppc.v1.PPCService.CreateDowntimeReasonMaster:output_type -> ppc.v1.CreateDowntimeReasonMasterResponse
-	173, // 173: ppc.v1.PPCService.GetDowntimeReasonMaster:output_type -> ppc.v1.GetDowntimeReasonMasterResponse
-	174, // 174: ppc.v1.PPCService.UpdateDowntimeReasonMaster:output_type -> ppc.v1.UpdateDowntimeReasonMasterResponse
-	175, // 175: ppc.v1.PPCService.DeleteDowntimeReasonMaster:output_type -> ppc.v1.DeleteDowntimeReasonMasterResponse
-	176, // 176: ppc.v1.PPCService.ListDowntimeReasonMasters:output_type -> ppc.v1.ListDowntimeReasonMastersResponse
-	177, // 177: ppc.v1.PPCService.CreateWasteCategoryMaster:output_type -> ppc.v1.CreateWasteCategoryMasterResponse
-	178, // 178: ppc.v1.PPCService.GetWasteCategoryMaster:output_type -> ppc.v1.GetWasteCategoryMasterResponse
-	179, // 179: ppc.v1.PPCService.UpdateWasteCategoryMaster:output_type -> ppc.v1.UpdateWasteCategoryMasterResponse
-	180, // 180: ppc.v1.PPCService.DeleteWasteCategoryMaster:output_type -> ppc.v1.DeleteWasteCategoryMasterResponse
-	181, // 181: ppc.v1.PPCService.ListWasteCategoryMasters:output_type -> ppc.v1.ListWasteCategoryMastersResponse
-	182, // 182: ppc.v1.PPCService.ListSalesOrderStaging:output_type -> ppc.v1.ListSalesOrderStagingResponse
-	183, // 183: ppc.v1.PPCService.ListSalesOrderStagingIds:output_type -> ppc.v1.ListSalesOrderStagingIdsResponse
-	184, // 184: ppc.v1.PPCService.SetStagingProduct:output_type -> ppc.v1.SetStagingProductResponse
-	185, // 185: ppc.v1.PPCService.CreateDemand:output_type -> ppc.v1.CreateDemandResponse
-	186, // 186: ppc.v1.PPCService.GetDemand:output_type -> ppc.v1.GetDemandResponse
-	187, // 187: ppc.v1.PPCService.UpdateDemand:output_type -> ppc.v1.UpdateDemandResponse
-	188, // 188: ppc.v1.PPCService.MapDemandProduct:output_type -> ppc.v1.MapDemandProductResponse
-	189, // 189: ppc.v1.PPCService.DeleteDemand:output_type -> ppc.v1.DeleteDemandResponse
-	190, // 190: ppc.v1.PPCService.ListDemands:output_type -> ppc.v1.ListDemandsResponse
-	191, // 191: ppc.v1.PPCService.ConfirmDemand:output_type -> ppc.v1.ConfirmDemandResponse
-	192, // 192: ppc.v1.PPCService.PullFromOrion:output_type -> ppc.v1.PullFromOrionResponse
-	193, // 193: ppc.v1.PPCService.ListCarryForwardCandidates:output_type -> ppc.v1.ListCarryForwardCandidatesResponse
-	194, // 194: ppc.v1.PPCService.ProcessCarryForward:output_type -> ppc.v1.ProcessCarryForwardResponse
-	195, // 195: ppc.v1.PPCService.ApproveMTSDemand:output_type -> ppc.v1.ApproveMTSDemandResponse
-	196, // 196: ppc.v1.PPCService.CreatePlanItem:output_type -> ppc.v1.CreatePlanItemResponse
-	197, // 197: ppc.v1.PPCService.GetPlanItem:output_type -> ppc.v1.GetPlanItemResponse
-	198, // 198: ppc.v1.PPCService.UpdatePlanItem:output_type -> ppc.v1.UpdatePlanItemResponse
-	199, // 199: ppc.v1.PPCService.DeletePlanItem:output_type -> ppc.v1.DeletePlanItemResponse
-	200, // 200: ppc.v1.PPCService.ListPlanItems:output_type -> ppc.v1.ListPlanItemsResponse
-	201, // 201: ppc.v1.PPCService.GetGanttView:output_type -> ppc.v1.GetGanttViewResponse
-	202, // 202: ppc.v1.PPCService.CreateWorkOrder:output_type -> ppc.v1.CreateWorkOrderResponse
-	203, // 203: ppc.v1.PPCService.GetWorkOrder:output_type -> ppc.v1.GetWorkOrderResponse
-	204, // 204: ppc.v1.PPCService.UpdateWorkOrder:output_type -> ppc.v1.UpdateWorkOrderResponse
-	205, // 205: ppc.v1.PPCService.DeleteWorkOrder:output_type -> ppc.v1.DeleteWorkOrderResponse
-	206, // 206: ppc.v1.PPCService.ListWorkOrders:output_type -> ppc.v1.ListWorkOrdersResponse
-	207, // 207: ppc.v1.PPCService.ListMergeCandidates:output_type -> ppc.v1.ListMergeCandidatesResponse
-	208, // 208: ppc.v1.PPCService.ResolveWOParameters:output_type -> ppc.v1.ResolveWOParametersResponse
-	209, // 209: ppc.v1.PPCService.SaveWOParameters:output_type -> ppc.v1.SaveWOParametersResponse
-	210, // 210: ppc.v1.PPCService.SaveWORmAllocations:output_type -> ppc.v1.SaveWORmAllocationsResponse
-	211, // 211: ppc.v1.PPCService.PopulateWORmFromRoute:output_type -> ppc.v1.PopulateWORmFromRouteResponse
-	212, // 212: ppc.v1.PPCService.SaveWOExecution:output_type -> ppc.v1.SaveWOExecutionResponse
-	213, // 213: ppc.v1.PPCService.ListWOExecutions:output_type -> ppc.v1.ListWOExecutionsResponse
-	214, // 214: ppc.v1.PPCService.SubmitWO:output_type -> ppc.v1.SubmitWOResponse
-	215, // 215: ppc.v1.PPCService.ApproveWOParameter:output_type -> ppc.v1.ApproveWOParameterResponse
-	216, // 216: ppc.v1.PPCService.ApproveWO:output_type -> ppc.v1.ApproveWOResponse
-	217, // 217: ppc.v1.PPCService.RejectWO:output_type -> ppc.v1.RejectWOResponse
-	218, // 218: ppc.v1.PPCService.CreateWOReference:output_type -> ppc.v1.CreateWOReferenceResponse
-	219, // 219: ppc.v1.PPCService.GetWOProductionActual:output_type -> ppc.v1.GetWOProductionActualResponse
-	220, // 220: ppc.v1.PPCService.AdjustWOActual:output_type -> ppc.v1.AdjustWOActualResponse
-	221, // 221: ppc.v1.PPCService.SuggestWOActual:output_type -> ppc.v1.SuggestWOActualResponse
-	222, // 222: ppc.v1.PPCService.SubmitShiftEntry:output_type -> ppc.v1.SubmitShiftEntryResponse
-	223, // 223: ppc.v1.PPCService.SubmitAreaShiftLog:output_type -> ppc.v1.SubmitAreaShiftLogResponse
-	224, // 224: ppc.v1.PPCService.ListMachineShiftLogs:output_type -> ppc.v1.ListMachineShiftLogsResponse
-	225, // 225: ppc.v1.PPCService.RecalcEfficiency:output_type -> ppc.v1.RecalcEfficiencyResponse
-	226, // 226: ppc.v1.PPCService.ListEfficiencySnapshots:output_type -> ppc.v1.ListEfficiencySnapshotsResponse
-	227, // 227: ppc.v1.PPCService.CreateShiftLogNote:output_type -> ppc.v1.CreateShiftLogNoteResponse
-	228, // 228: ppc.v1.PPCService.GetShiftLogNote:output_type -> ppc.v1.GetShiftLogNoteResponse
-	229, // 229: ppc.v1.PPCService.UpdateShiftLogNote:output_type -> ppc.v1.UpdateShiftLogNoteResponse
-	230, // 230: ppc.v1.PPCService.DeleteShiftLogNote:output_type -> ppc.v1.DeleteShiftLogNoteResponse
-	231, // 231: ppc.v1.PPCService.ListShiftLogNotes:output_type -> ppc.v1.ListShiftLogNotesResponse
-	232, // 232: ppc.v1.PPCService.GetMorningReview:output_type -> ppc.v1.GetMorningReviewResponse
-	233, // 233: ppc.v1.PPCService.GetBalanceForSale:output_type -> ppc.v1.GetBalanceForSaleResponse
-	234, // 234: ppc.v1.PPCService.GetDailyPerformance:output_type -> ppc.v1.GetDailyPerformanceResponse
-	235, // 235: ppc.v1.PPCService.GetChangeoverEvent:output_type -> ppc.v1.GetChangeoverEventResponse
-	236, // 236: ppc.v1.PPCService.ListChangeoverEvents:output_type -> ppc.v1.ListChangeoverEventsResponse
-	237, // 237: ppc.v1.PPCService.DetectChangeover:output_type -> ppc.v1.DetectChangeoverResponse
-	238, // 238: ppc.v1.PPCService.CreateChangeoverEvent:output_type -> ppc.v1.CreateChangeoverEventResponse
-	239, // 239: ppc.v1.PPCService.StartChangeover:output_type -> ppc.v1.StartChangeoverResponse
-	240, // 240: ppc.v1.PPCService.UpdateChangeoverActual:output_type -> ppc.v1.UpdateChangeoverActualResponse
-	241, // 241: ppc.v1.PPCService.ListWOGradeActuals:output_type -> ppc.v1.ListWOGradeActualsResponse
-	242, // 242: ppc.v1.PPCService.CreateCommonLot:output_type -> ppc.v1.CreateCommonLotResponse
-	243, // 243: ppc.v1.PPCService.GetCommonLot:output_type -> ppc.v1.GetCommonLotResponse
-	244, // 244: ppc.v1.PPCService.ListCommonLots:output_type -> ppc.v1.ListCommonLotsResponse
-	245, // 245: ppc.v1.PPCService.ExportDailyPerformance:output_type -> ppc.v1.ExportDailyPerformanceResponse
-	246, // 246: ppc.v1.PPCService.CreatePpcLookup:output_type -> ppc.v1.CreatePpcLookupResponse
-	247, // 247: ppc.v1.PPCService.GetPpcLookup:output_type -> ppc.v1.GetPpcLookupResponse
-	248, // 248: ppc.v1.PPCService.UpdatePpcLookup:output_type -> ppc.v1.UpdatePpcLookupResponse
-	249, // 249: ppc.v1.PPCService.DeletePpcLookup:output_type -> ppc.v1.DeletePpcLookupResponse
-	250, // 250: ppc.v1.PPCService.ListPpcLookups:output_type -> ppc.v1.ListPpcLookupsResponse
-	251, // 251: ppc.v1.PPCService.CreatePpcShift:output_type -> ppc.v1.CreatePpcShiftResponse
-	252, // 252: ppc.v1.PPCService.GetPpcShift:output_type -> ppc.v1.GetPpcShiftResponse
-	253, // 253: ppc.v1.PPCService.UpdatePpcShift:output_type -> ppc.v1.UpdatePpcShiftResponse
-	254, // 254: ppc.v1.PPCService.DeletePpcShift:output_type -> ppc.v1.DeletePpcShiftResponse
-	255, // 255: ppc.v1.PPCService.ListPpcShifts:output_type -> ppc.v1.ListPpcShiftsResponse
-	128, // [128:256] is the sub-list for method output_type
-	0,   // [0:128] is the sub-list for method input_type
+	74,  // 74: ppc.v1.PPCService.ListPlanCarryForwardCandidates:input_type -> ppc.v1.ListPlanCarryForwardCandidatesRequest
+	75,  // 75: ppc.v1.PPCService.ProcessPlanCarryForward:input_type -> ppc.v1.ProcessPlanCarryForwardRequest
+	76,  // 76: ppc.v1.PPCService.ListWorkOrderCarryForwardCandidates:input_type -> ppc.v1.ListWorkOrderCarryForwardCandidatesRequest
+	77,  // 77: ppc.v1.PPCService.ProcessWorkOrderCarryForward:input_type -> ppc.v1.ProcessWorkOrderCarryForwardRequest
+	78,  // 78: ppc.v1.PPCService.CreateWorkOrder:input_type -> ppc.v1.CreateWorkOrderRequest
+	79,  // 79: ppc.v1.PPCService.GetWorkOrder:input_type -> ppc.v1.GetWorkOrderRequest
+	80,  // 80: ppc.v1.PPCService.UpdateWorkOrder:input_type -> ppc.v1.UpdateWorkOrderRequest
+	81,  // 81: ppc.v1.PPCService.DeleteWorkOrder:input_type -> ppc.v1.DeleteWorkOrderRequest
+	82,  // 82: ppc.v1.PPCService.ListWorkOrders:input_type -> ppc.v1.ListWorkOrdersRequest
+	83,  // 83: ppc.v1.PPCService.ListMergeCandidates:input_type -> ppc.v1.ListMergeCandidatesRequest
+	84,  // 84: ppc.v1.PPCService.ResolveWOParameters:input_type -> ppc.v1.ResolveWOParametersRequest
+	85,  // 85: ppc.v1.PPCService.SaveWOParameters:input_type -> ppc.v1.SaveWOParametersRequest
+	86,  // 86: ppc.v1.PPCService.SaveWORmAllocations:input_type -> ppc.v1.SaveWORmAllocationsRequest
+	87,  // 87: ppc.v1.PPCService.PopulateWORmFromRoute:input_type -> ppc.v1.PopulateWORmFromRouteRequest
+	88,  // 88: ppc.v1.PPCService.SaveWOExecution:input_type -> ppc.v1.SaveWOExecutionRequest
+	89,  // 89: ppc.v1.PPCService.ListWOExecutions:input_type -> ppc.v1.ListWOExecutionsRequest
+	90,  // 90: ppc.v1.PPCService.SubmitWO:input_type -> ppc.v1.SubmitWORequest
+	91,  // 91: ppc.v1.PPCService.ApproveWOParameter:input_type -> ppc.v1.ApproveWOParameterRequest
+	92,  // 92: ppc.v1.PPCService.ApproveWO:input_type -> ppc.v1.ApproveWORequest
+	93,  // 93: ppc.v1.PPCService.RejectWO:input_type -> ppc.v1.RejectWORequest
+	94,  // 94: ppc.v1.PPCService.CreateWOReference:input_type -> ppc.v1.CreateWOReferenceRequest
+	95,  // 95: ppc.v1.PPCService.GetWOProductionActual:input_type -> ppc.v1.GetWOProductionActualRequest
+	96,  // 96: ppc.v1.PPCService.AdjustWOActual:input_type -> ppc.v1.AdjustWOActualRequest
+	97,  // 97: ppc.v1.PPCService.SuggestWOActual:input_type -> ppc.v1.SuggestWOActualRequest
+	98,  // 98: ppc.v1.PPCService.SubmitShiftEntry:input_type -> ppc.v1.SubmitShiftEntryRequest
+	99,  // 99: ppc.v1.PPCService.SubmitAreaShiftLog:input_type -> ppc.v1.SubmitAreaShiftLogRequest
+	100, // 100: ppc.v1.PPCService.ListMachineShiftLogs:input_type -> ppc.v1.ListMachineShiftLogsRequest
+	101, // 101: ppc.v1.PPCService.RecalcEfficiency:input_type -> ppc.v1.RecalcEfficiencyRequest
+	102, // 102: ppc.v1.PPCService.ListEfficiencySnapshots:input_type -> ppc.v1.ListEfficiencySnapshotsRequest
+	103, // 103: ppc.v1.PPCService.CreateShiftLogNote:input_type -> ppc.v1.CreateShiftLogNoteRequest
+	104, // 104: ppc.v1.PPCService.GetShiftLogNote:input_type -> ppc.v1.GetShiftLogNoteRequest
+	105, // 105: ppc.v1.PPCService.UpdateShiftLogNote:input_type -> ppc.v1.UpdateShiftLogNoteRequest
+	106, // 106: ppc.v1.PPCService.DeleteShiftLogNote:input_type -> ppc.v1.DeleteShiftLogNoteRequest
+	107, // 107: ppc.v1.PPCService.ListShiftLogNotes:input_type -> ppc.v1.ListShiftLogNotesRequest
+	108, // 108: ppc.v1.PPCService.GetMorningReview:input_type -> ppc.v1.GetMorningReviewRequest
+	109, // 109: ppc.v1.PPCService.GetBalanceForSale:input_type -> ppc.v1.GetBalanceForSaleRequest
+	110, // 110: ppc.v1.PPCService.GetDailyPerformance:input_type -> ppc.v1.GetDailyPerformanceRequest
+	111, // 111: ppc.v1.PPCService.GetChangeoverEvent:input_type -> ppc.v1.GetChangeoverEventRequest
+	112, // 112: ppc.v1.PPCService.ListChangeoverEvents:input_type -> ppc.v1.ListChangeoverEventsRequest
+	113, // 113: ppc.v1.PPCService.DetectChangeover:input_type -> ppc.v1.DetectChangeoverRequest
+	114, // 114: ppc.v1.PPCService.CreateChangeoverEvent:input_type -> ppc.v1.CreateChangeoverEventRequest
+	115, // 115: ppc.v1.PPCService.StartChangeover:input_type -> ppc.v1.StartChangeoverRequest
+	116, // 116: ppc.v1.PPCService.UpdateChangeoverActual:input_type -> ppc.v1.UpdateChangeoverActualRequest
+	117, // 117: ppc.v1.PPCService.ListWOGradeActuals:input_type -> ppc.v1.ListWOGradeActualsRequest
+	118, // 118: ppc.v1.PPCService.CreateCommonLot:input_type -> ppc.v1.CreateCommonLotRequest
+	119, // 119: ppc.v1.PPCService.GetCommonLot:input_type -> ppc.v1.GetCommonLotRequest
+	120, // 120: ppc.v1.PPCService.ListCommonLots:input_type -> ppc.v1.ListCommonLotsRequest
+	121, // 121: ppc.v1.PPCService.ExportDailyPerformance:input_type -> ppc.v1.ExportDailyPerformanceRequest
+	122, // 122: ppc.v1.PPCService.CreatePpcLookup:input_type -> ppc.v1.CreatePpcLookupRequest
+	123, // 123: ppc.v1.PPCService.GetPpcLookup:input_type -> ppc.v1.GetPpcLookupRequest
+	124, // 124: ppc.v1.PPCService.UpdatePpcLookup:input_type -> ppc.v1.UpdatePpcLookupRequest
+	125, // 125: ppc.v1.PPCService.DeletePpcLookup:input_type -> ppc.v1.DeletePpcLookupRequest
+	126, // 126: ppc.v1.PPCService.ListPpcLookups:input_type -> ppc.v1.ListPpcLookupsRequest
+	127, // 127: ppc.v1.PPCService.CreatePpcShift:input_type -> ppc.v1.CreatePpcShiftRequest
+	128, // 128: ppc.v1.PPCService.GetPpcShift:input_type -> ppc.v1.GetPpcShiftRequest
+	129, // 129: ppc.v1.PPCService.UpdatePpcShift:input_type -> ppc.v1.UpdatePpcShiftRequest
+	130, // 130: ppc.v1.PPCService.DeletePpcShift:input_type -> ppc.v1.DeletePpcShiftRequest
+	131, // 131: ppc.v1.PPCService.ListPpcShifts:input_type -> ppc.v1.ListPpcShiftsRequest
+	132, // 132: ppc.v1.PPCService.CreateMachineGroup:output_type -> ppc.v1.CreateMachineGroupResponse
+	133, // 133: ppc.v1.PPCService.GetMachineGroup:output_type -> ppc.v1.GetMachineGroupResponse
+	134, // 134: ppc.v1.PPCService.UpdateMachineGroup:output_type -> ppc.v1.UpdateMachineGroupResponse
+	135, // 135: ppc.v1.PPCService.DeleteMachineGroup:output_type -> ppc.v1.DeleteMachineGroupResponse
+	136, // 136: ppc.v1.PPCService.ListMachineGroups:output_type -> ppc.v1.ListMachineGroupsResponse
+	137, // 137: ppc.v1.PPCService.CreateMachine:output_type -> ppc.v1.CreateMachineResponse
+	138, // 138: ppc.v1.PPCService.GetMachine:output_type -> ppc.v1.GetMachineResponse
+	139, // 139: ppc.v1.PPCService.UpdateMachine:output_type -> ppc.v1.UpdateMachineResponse
+	140, // 140: ppc.v1.PPCService.ListMachines:output_type -> ppc.v1.ListMachinesResponse
+	141, // 141: ppc.v1.PPCService.SyncMachines:output_type -> ppc.v1.SyncMachinesResponse
+	142, // 142: ppc.v1.PPCService.CreateCustomer:output_type -> ppc.v1.CreateCustomerResponse
+	143, // 143: ppc.v1.PPCService.GetCustomer:output_type -> ppc.v1.GetCustomerResponse
+	144, // 144: ppc.v1.PPCService.UpdateCustomer:output_type -> ppc.v1.UpdateCustomerResponse
+	145, // 145: ppc.v1.PPCService.ListCustomers:output_type -> ppc.v1.ListCustomersResponse
+	146, // 146: ppc.v1.PPCService.SyncCustomers:output_type -> ppc.v1.SyncCustomersResponse
+	147, // 147: ppc.v1.PPCService.ExportCustomers:output_type -> ppc.v1.ExportCustomersResponse
+	148, // 148: ppc.v1.PPCService.ImportCustomers:output_type -> ppc.v1.ImportCustomersResponse
+	149, // 149: ppc.v1.PPCService.DownloadCustomerTemplate:output_type -> ppc.v1.DownloadCustomerTemplateResponse
+	150, // 150: ppc.v1.PPCService.CreateLotMaster:output_type -> ppc.v1.CreateLotMasterResponse
+	151, // 151: ppc.v1.PPCService.GetLotMaster:output_type -> ppc.v1.GetLotMasterResponse
+	152, // 152: ppc.v1.PPCService.UpdateLotMaster:output_type -> ppc.v1.UpdateLotMasterResponse
+	153, // 153: ppc.v1.PPCService.DeleteLotMaster:output_type -> ppc.v1.DeleteLotMasterResponse
+	154, // 154: ppc.v1.PPCService.ListLotMasters:output_type -> ppc.v1.ListLotMastersResponse
+	155, // 155: ppc.v1.PPCService.SyncLots:output_type -> ppc.v1.SyncLotsResponse
+	156, // 156: ppc.v1.PPCService.CreateProductPPCConfig:output_type -> ppc.v1.CreateProductPPCConfigResponse
+	157, // 157: ppc.v1.PPCService.GetProductPPCConfig:output_type -> ppc.v1.GetProductPPCConfigResponse
+	158, // 158: ppc.v1.PPCService.UpdateProductPPCConfig:output_type -> ppc.v1.UpdateProductPPCConfigResponse
+	159, // 159: ppc.v1.PPCService.DeleteProductPPCConfig:output_type -> ppc.v1.DeleteProductPPCConfigResponse
+	160, // 160: ppc.v1.PPCService.ListProductPPCConfigs:output_type -> ppc.v1.ListProductPPCConfigsResponse
+	161, // 161: ppc.v1.PPCService.CreateProductMachineCapacity:output_type -> ppc.v1.CreateProductMachineCapacityResponse
+	162, // 162: ppc.v1.PPCService.GetProductMachineCapacity:output_type -> ppc.v1.GetProductMachineCapacityResponse
+	163, // 163: ppc.v1.PPCService.UpdateProductMachineCapacity:output_type -> ppc.v1.UpdateProductMachineCapacityResponse
+	164, // 164: ppc.v1.PPCService.DeleteProductMachineCapacity:output_type -> ppc.v1.DeleteProductMachineCapacityResponse
+	165, // 165: ppc.v1.PPCService.ListProductMachineCapacities:output_type -> ppc.v1.ListProductMachineCapacitiesResponse
+	166, // 166: ppc.v1.PPCService.CreateProductMachineParameter:output_type -> ppc.v1.CreateProductMachineParameterResponse
+	167, // 167: ppc.v1.PPCService.GetProductMachineParameter:output_type -> ppc.v1.GetProductMachineParameterResponse
+	168, // 168: ppc.v1.PPCService.UpdateProductMachineParameter:output_type -> ppc.v1.UpdateProductMachineParameterResponse
+	169, // 169: ppc.v1.PPCService.DeleteProductMachineParameter:output_type -> ppc.v1.DeleteProductMachineParameterResponse
+	170, // 170: ppc.v1.PPCService.ListProductMachineParameters:output_type -> ppc.v1.ListProductMachineParametersResponse
+	171, // 171: ppc.v1.PPCService.CreateOverrunThresholdConfig:output_type -> ppc.v1.CreateOverrunThresholdConfigResponse
+	172, // 172: ppc.v1.PPCService.GetOverrunThresholdConfig:output_type -> ppc.v1.GetOverrunThresholdConfigResponse
+	173, // 173: ppc.v1.PPCService.UpdateOverrunThresholdConfig:output_type -> ppc.v1.UpdateOverrunThresholdConfigResponse
+	174, // 174: ppc.v1.PPCService.DeleteOverrunThresholdConfig:output_type -> ppc.v1.DeleteOverrunThresholdConfigResponse
+	175, // 175: ppc.v1.PPCService.ListOverrunThresholdConfigs:output_type -> ppc.v1.ListOverrunThresholdConfigsResponse
+	176, // 176: ppc.v1.PPCService.CreateDowntimeReasonMaster:output_type -> ppc.v1.CreateDowntimeReasonMasterResponse
+	177, // 177: ppc.v1.PPCService.GetDowntimeReasonMaster:output_type -> ppc.v1.GetDowntimeReasonMasterResponse
+	178, // 178: ppc.v1.PPCService.UpdateDowntimeReasonMaster:output_type -> ppc.v1.UpdateDowntimeReasonMasterResponse
+	179, // 179: ppc.v1.PPCService.DeleteDowntimeReasonMaster:output_type -> ppc.v1.DeleteDowntimeReasonMasterResponse
+	180, // 180: ppc.v1.PPCService.ListDowntimeReasonMasters:output_type -> ppc.v1.ListDowntimeReasonMastersResponse
+	181, // 181: ppc.v1.PPCService.CreateWasteCategoryMaster:output_type -> ppc.v1.CreateWasteCategoryMasterResponse
+	182, // 182: ppc.v1.PPCService.GetWasteCategoryMaster:output_type -> ppc.v1.GetWasteCategoryMasterResponse
+	183, // 183: ppc.v1.PPCService.UpdateWasteCategoryMaster:output_type -> ppc.v1.UpdateWasteCategoryMasterResponse
+	184, // 184: ppc.v1.PPCService.DeleteWasteCategoryMaster:output_type -> ppc.v1.DeleteWasteCategoryMasterResponse
+	185, // 185: ppc.v1.PPCService.ListWasteCategoryMasters:output_type -> ppc.v1.ListWasteCategoryMastersResponse
+	186, // 186: ppc.v1.PPCService.ListSalesOrderStaging:output_type -> ppc.v1.ListSalesOrderStagingResponse
+	187, // 187: ppc.v1.PPCService.ListSalesOrderStagingIds:output_type -> ppc.v1.ListSalesOrderStagingIdsResponse
+	188, // 188: ppc.v1.PPCService.SetStagingProduct:output_type -> ppc.v1.SetStagingProductResponse
+	189, // 189: ppc.v1.PPCService.CreateDemand:output_type -> ppc.v1.CreateDemandResponse
+	190, // 190: ppc.v1.PPCService.GetDemand:output_type -> ppc.v1.GetDemandResponse
+	191, // 191: ppc.v1.PPCService.UpdateDemand:output_type -> ppc.v1.UpdateDemandResponse
+	192, // 192: ppc.v1.PPCService.MapDemandProduct:output_type -> ppc.v1.MapDemandProductResponse
+	193, // 193: ppc.v1.PPCService.DeleteDemand:output_type -> ppc.v1.DeleteDemandResponse
+	194, // 194: ppc.v1.PPCService.ListDemands:output_type -> ppc.v1.ListDemandsResponse
+	195, // 195: ppc.v1.PPCService.ConfirmDemand:output_type -> ppc.v1.ConfirmDemandResponse
+	196, // 196: ppc.v1.PPCService.PullFromOrion:output_type -> ppc.v1.PullFromOrionResponse
+	197, // 197: ppc.v1.PPCService.ListCarryForwardCandidates:output_type -> ppc.v1.ListCarryForwardCandidatesResponse
+	198, // 198: ppc.v1.PPCService.ProcessCarryForward:output_type -> ppc.v1.ProcessCarryForwardResponse
+	199, // 199: ppc.v1.PPCService.ApproveMTSDemand:output_type -> ppc.v1.ApproveMTSDemandResponse
+	200, // 200: ppc.v1.PPCService.CreatePlanItem:output_type -> ppc.v1.CreatePlanItemResponse
+	201, // 201: ppc.v1.PPCService.GetPlanItem:output_type -> ppc.v1.GetPlanItemResponse
+	202, // 202: ppc.v1.PPCService.UpdatePlanItem:output_type -> ppc.v1.UpdatePlanItemResponse
+	203, // 203: ppc.v1.PPCService.DeletePlanItem:output_type -> ppc.v1.DeletePlanItemResponse
+	204, // 204: ppc.v1.PPCService.ListPlanItems:output_type -> ppc.v1.ListPlanItemsResponse
+	205, // 205: ppc.v1.PPCService.GetGanttView:output_type -> ppc.v1.GetGanttViewResponse
+	206, // 206: ppc.v1.PPCService.ListPlanCarryForwardCandidates:output_type -> ppc.v1.ListPlanCarryForwardCandidatesResponse
+	207, // 207: ppc.v1.PPCService.ProcessPlanCarryForward:output_type -> ppc.v1.ProcessPlanCarryForwardResponse
+	208, // 208: ppc.v1.PPCService.ListWorkOrderCarryForwardCandidates:output_type -> ppc.v1.ListWorkOrderCarryForwardCandidatesResponse
+	209, // 209: ppc.v1.PPCService.ProcessWorkOrderCarryForward:output_type -> ppc.v1.ProcessWorkOrderCarryForwardResponse
+	210, // 210: ppc.v1.PPCService.CreateWorkOrder:output_type -> ppc.v1.CreateWorkOrderResponse
+	211, // 211: ppc.v1.PPCService.GetWorkOrder:output_type -> ppc.v1.GetWorkOrderResponse
+	212, // 212: ppc.v1.PPCService.UpdateWorkOrder:output_type -> ppc.v1.UpdateWorkOrderResponse
+	213, // 213: ppc.v1.PPCService.DeleteWorkOrder:output_type -> ppc.v1.DeleteWorkOrderResponse
+	214, // 214: ppc.v1.PPCService.ListWorkOrders:output_type -> ppc.v1.ListWorkOrdersResponse
+	215, // 215: ppc.v1.PPCService.ListMergeCandidates:output_type -> ppc.v1.ListMergeCandidatesResponse
+	216, // 216: ppc.v1.PPCService.ResolveWOParameters:output_type -> ppc.v1.ResolveWOParametersResponse
+	217, // 217: ppc.v1.PPCService.SaveWOParameters:output_type -> ppc.v1.SaveWOParametersResponse
+	218, // 218: ppc.v1.PPCService.SaveWORmAllocations:output_type -> ppc.v1.SaveWORmAllocationsResponse
+	219, // 219: ppc.v1.PPCService.PopulateWORmFromRoute:output_type -> ppc.v1.PopulateWORmFromRouteResponse
+	220, // 220: ppc.v1.PPCService.SaveWOExecution:output_type -> ppc.v1.SaveWOExecutionResponse
+	221, // 221: ppc.v1.PPCService.ListWOExecutions:output_type -> ppc.v1.ListWOExecutionsResponse
+	222, // 222: ppc.v1.PPCService.SubmitWO:output_type -> ppc.v1.SubmitWOResponse
+	223, // 223: ppc.v1.PPCService.ApproveWOParameter:output_type -> ppc.v1.ApproveWOParameterResponse
+	224, // 224: ppc.v1.PPCService.ApproveWO:output_type -> ppc.v1.ApproveWOResponse
+	225, // 225: ppc.v1.PPCService.RejectWO:output_type -> ppc.v1.RejectWOResponse
+	226, // 226: ppc.v1.PPCService.CreateWOReference:output_type -> ppc.v1.CreateWOReferenceResponse
+	227, // 227: ppc.v1.PPCService.GetWOProductionActual:output_type -> ppc.v1.GetWOProductionActualResponse
+	228, // 228: ppc.v1.PPCService.AdjustWOActual:output_type -> ppc.v1.AdjustWOActualResponse
+	229, // 229: ppc.v1.PPCService.SuggestWOActual:output_type -> ppc.v1.SuggestWOActualResponse
+	230, // 230: ppc.v1.PPCService.SubmitShiftEntry:output_type -> ppc.v1.SubmitShiftEntryResponse
+	231, // 231: ppc.v1.PPCService.SubmitAreaShiftLog:output_type -> ppc.v1.SubmitAreaShiftLogResponse
+	232, // 232: ppc.v1.PPCService.ListMachineShiftLogs:output_type -> ppc.v1.ListMachineShiftLogsResponse
+	233, // 233: ppc.v1.PPCService.RecalcEfficiency:output_type -> ppc.v1.RecalcEfficiencyResponse
+	234, // 234: ppc.v1.PPCService.ListEfficiencySnapshots:output_type -> ppc.v1.ListEfficiencySnapshotsResponse
+	235, // 235: ppc.v1.PPCService.CreateShiftLogNote:output_type -> ppc.v1.CreateShiftLogNoteResponse
+	236, // 236: ppc.v1.PPCService.GetShiftLogNote:output_type -> ppc.v1.GetShiftLogNoteResponse
+	237, // 237: ppc.v1.PPCService.UpdateShiftLogNote:output_type -> ppc.v1.UpdateShiftLogNoteResponse
+	238, // 238: ppc.v1.PPCService.DeleteShiftLogNote:output_type -> ppc.v1.DeleteShiftLogNoteResponse
+	239, // 239: ppc.v1.PPCService.ListShiftLogNotes:output_type -> ppc.v1.ListShiftLogNotesResponse
+	240, // 240: ppc.v1.PPCService.GetMorningReview:output_type -> ppc.v1.GetMorningReviewResponse
+	241, // 241: ppc.v1.PPCService.GetBalanceForSale:output_type -> ppc.v1.GetBalanceForSaleResponse
+	242, // 242: ppc.v1.PPCService.GetDailyPerformance:output_type -> ppc.v1.GetDailyPerformanceResponse
+	243, // 243: ppc.v1.PPCService.GetChangeoverEvent:output_type -> ppc.v1.GetChangeoverEventResponse
+	244, // 244: ppc.v1.PPCService.ListChangeoverEvents:output_type -> ppc.v1.ListChangeoverEventsResponse
+	245, // 245: ppc.v1.PPCService.DetectChangeover:output_type -> ppc.v1.DetectChangeoverResponse
+	246, // 246: ppc.v1.PPCService.CreateChangeoverEvent:output_type -> ppc.v1.CreateChangeoverEventResponse
+	247, // 247: ppc.v1.PPCService.StartChangeover:output_type -> ppc.v1.StartChangeoverResponse
+	248, // 248: ppc.v1.PPCService.UpdateChangeoverActual:output_type -> ppc.v1.UpdateChangeoverActualResponse
+	249, // 249: ppc.v1.PPCService.ListWOGradeActuals:output_type -> ppc.v1.ListWOGradeActualsResponse
+	250, // 250: ppc.v1.PPCService.CreateCommonLot:output_type -> ppc.v1.CreateCommonLotResponse
+	251, // 251: ppc.v1.PPCService.GetCommonLot:output_type -> ppc.v1.GetCommonLotResponse
+	252, // 252: ppc.v1.PPCService.ListCommonLots:output_type -> ppc.v1.ListCommonLotsResponse
+	253, // 253: ppc.v1.PPCService.ExportDailyPerformance:output_type -> ppc.v1.ExportDailyPerformanceResponse
+	254, // 254: ppc.v1.PPCService.CreatePpcLookup:output_type -> ppc.v1.CreatePpcLookupResponse
+	255, // 255: ppc.v1.PPCService.GetPpcLookup:output_type -> ppc.v1.GetPpcLookupResponse
+	256, // 256: ppc.v1.PPCService.UpdatePpcLookup:output_type -> ppc.v1.UpdatePpcLookupResponse
+	257, // 257: ppc.v1.PPCService.DeletePpcLookup:output_type -> ppc.v1.DeletePpcLookupResponse
+	258, // 258: ppc.v1.PPCService.ListPpcLookups:output_type -> ppc.v1.ListPpcLookupsResponse
+	259, // 259: ppc.v1.PPCService.CreatePpcShift:output_type -> ppc.v1.CreatePpcShiftResponse
+	260, // 260: ppc.v1.PPCService.GetPpcShift:output_type -> ppc.v1.GetPpcShiftResponse
+	261, // 261: ppc.v1.PPCService.UpdatePpcShift:output_type -> ppc.v1.UpdatePpcShiftResponse
+	262, // 262: ppc.v1.PPCService.DeletePpcShift:output_type -> ppc.v1.DeletePpcShiftResponse
+	263, // 263: ppc.v1.PPCService.ListPpcShifts:output_type -> ppc.v1.ListPpcShiftsResponse
+	132, // [132:264] is the sub-list for method output_type
+	0,   // [0:132] is the sub-list for method input_type
 	0,   // [0:0] is the sub-list for extension type_name
 	0,   // [0:0] is the sub-list for extension extendee
 	0,   // [0:0] is the sub-list for field type_name

@@ -1,6 +1,9 @@
 package workorder
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Domain errors for work-order operations.
 var (
@@ -89,4 +92,45 @@ var (
 	ErrActualNotFound = errors.New("work order production actual not found")
 	// ErrNotDeletable is returned when deleting a non-DRAFT work order is attempted.
 	ErrNotDeletable = errors.New("cannot delete work order: only DRAFT work orders can be deleted")
+
+	// ── Carry-forward ────────────────────────────────────────────────────────
+
+	// ErrWONotEligibleForCarry is returned when a WO's status makes it
+	// permanently ineligible for carry-forward.
+	ErrWONotEligibleForCarry = errors.New("this work order cannot be carried forward")
+	// ErrAlreadyCarriedIntoMonth is returned when the source WO has already
+	// been carried into the requested target month.
+	ErrAlreadyCarriedIntoMonth = errors.New("this work order has already been carried into the target month")
+	// ErrNothingToCarry is returned when a WO has no remaining qty to carry.
+	ErrNothingToCarry = errors.New("nothing to carry: qty target already covered by production actual")
+	// ErrCarryQtyExceedsRemaining is returned when the requested carry qty
+	// exceeds what is left to produce.
+	ErrCarryQtyExceedsRemaining = errors.New("carry quantity exceeds the remaining quantity")
+	// ErrCarryTargetNotLater is returned when the target month is not strictly
+	// later than the source WO's own month. A WO has no month column — the month
+	// is TO_CHAR(wo_deadline,'YYYY-MM') — so a same-month carry produces a second
+	// WO the candidate list then offers as a fresh candidate, and a backwards
+	// carry moves work into a month whose production has already been reported.
+	ErrCarryTargetNotLater = errors.New(
+		"invalid target month: it must be later than the work order's own month")
+	// ErrInvalidTargetMonth is returned when the target month is not YYYY-MM.
+	ErrInvalidTargetMonth = errors.New("invalid target month: expected the form YYYY-MM")
 )
+
+// CarryIneligibleError wraps a WO that is permanently blocked from carry-forward
+// with a reason, so the gRPC handler can surface it without collapsing all
+// ineligibility conditions into one sentinel.
+type CarryIneligibleError struct {
+	WOID   int64
+	Reason string
+}
+
+// Error implements error.
+func (e CarryIneligibleError) Error() string {
+	return fmt.Sprintf("work order %d cannot be carried forward: %s", e.WOID, e.Reason)
+}
+
+// NewCarryIneligibleError builds a CarryIneligibleError.
+func NewCarryIneligibleError(woID int64, reason string) error {
+	return CarryIneligibleError{WOID: woID, Reason: reason}
+}
