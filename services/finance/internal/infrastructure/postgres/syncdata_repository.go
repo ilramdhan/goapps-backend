@@ -44,14 +44,14 @@ func (r *SyncDataRepository) UpsertItemConsStockPO(
 		end := min(i+batchSize, len(items))
 		batch := items[i:end]
 
-		affected, err := r.upsertBatch(ctx, batch, syncedByJob, now)
+		inserted, updated, err := r.upsertBatch(ctx, batch, syncedByJob, now)
 		if err != nil {
 			return nil, fmt.Errorf("upsert batch %d-%d: %w", i, end, err)
 		}
-		result.Inserted += affected
+		result.Inserted += inserted
+		result.Updated += updated
 	}
 
-	result.Updated = result.TotalRows - result.Inserted
 	return result, nil
 }
 
@@ -60,9 +60,9 @@ func (r *SyncDataRepository) upsertBatch(
 	items []*syncdata.ItemConsStockPO,
 	syncedByJob uuid.UUID,
 	syncedAt time.Time,
-) (int, error) {
+) (inserted int, updated int, err error) {
 	if len(items) == 0 {
-		return 0, nil
+		return 0, 0, nil
 	}
 
 	// Build batch INSERT with ON CONFLICT DO UPDATE.
@@ -139,19 +139,35 @@ func (r *SyncDataRepository) upsertBatch(
 		last_po_dt3 = EXCLUDED.last_po_dt3,
 		synced_at = EXCLUDED.synced_at,
 		synced_by_job = EXCLUDED.synced_by_job
+		RETURNING (xmax = 0) AS is_insert
 	`)
 
-	res, err := r.db.ExecContext(ctx, sb.String(), args...)
+	rows, err := r.db.QueryContext(ctx, sb.String(), args...)
 	if err != nil {
-		return 0, fmt.Errorf("execute upsert: %w", err)
+		return 0, 0, fmt.Errorf("execute upsert: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			_ = closeErr
+		}
+	}()
+
+	for rows.Next() {
+		var isInsert bool
+		if scanErr := rows.Scan(&isInsert); scanErr != nil {
+			return 0, 0, fmt.Errorf("scan upsert result: %w", scanErr)
+		}
+		if isInsert {
+			inserted++
+		} else {
+			updated++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, 0, fmt.Errorf("iterate upsert results: %w", err)
 	}
 
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("rows affected: %w", err)
-	}
-
-	return int(affected), nil //nolint:gosec // RowsAffected is bounded by batch size
+	return inserted, updated, nil
 }
 
 // ListItemConsStockPO retrieves a paginated list of synced records.
