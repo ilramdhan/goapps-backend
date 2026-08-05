@@ -180,13 +180,18 @@ func (h *SyncHandler) publishCostChain(ctx context.Context, period, createdBy st
 
 func (h *SyncHandler) executeProcedure(ctx context.Context, jobID uuid.UUID, period string) error {
 	logEntry := job.NewExecutionLog(jobID, stepProcedure, job.LogStarted,
-		fmt.Sprintf("Executing %s.%s (auto-period from SYSDATE, requested: %s)", OracleSchema, OracleProcedure, period), nil)
+		fmt.Sprintf("Executing %s.%s(p_period => '%s')", OracleSchema, OracleProcedure, period), nil)
 	if err := h.jobRepo.AddLog(ctx, logEntry); err != nil {
 		h.logger.Warn().Err(err).Msg("Failed to add procedure log")
 	}
 
 	start := time.Now()
-	err := h.oracleRepo.ExecuteProcedure(ctx, OracleSchema, OracleProcedure)
+	// Procedure now accepts p_period IN VARCHAR2 DEFAULT NULL ('YYYYMM'). We
+	// pass the period ResolvePeriod() already computed so the Go-side job
+	// period and the Oracle-side refreshed period can never diverge — the
+	// procedure's own NULL/auto-period job-mode logic (day 1-5 => previous
+	// month, day 6+ => current month) is left as a fallback for other callers.
+	err := h.oracleRepo.ExecuteProcedureWithParam(ctx, OracleSchema, OracleProcedure, period)
 	duration := time.Since(start)
 
 	if err != nil {
