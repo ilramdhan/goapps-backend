@@ -20,7 +20,6 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	RMCostService_TriggerRMCostCalculation_FullMethodName = "/finance.v1.RMCostService/TriggerRMCostCalculation"
-	RMCostService_CalculateRMCost_FullMethodName          = "/finance.v1.RMCostService/CalculateRMCost"
 	RMCostService_GetRMCost_FullMethodName                = "/finance.v1.RMCostService/GetRMCost"
 	RMCostService_ListRMCosts_FullMethodName              = "/finance.v1.RMCostService/ListRMCosts"
 	RMCostService_ListRMCostHistory_FullMethodName        = "/finance.v1.RMCostService/ListRMCostHistory"
@@ -42,8 +41,6 @@ const (
 type RMCostServiceClient interface {
 	// TriggerRMCostCalculation enqueues an async recalculation job.
 	TriggerRMCostCalculation(ctx context.Context, in *TriggerRMCostCalculationRequest, opts ...grpc.CallOption) (*TriggerRMCostCalculationResponse, error)
-	// CalculateRMCost runs a recalculation synchronously (admin-only).
-	CalculateRMCost(ctx context.Context, in *CalculateRMCostRequest, opts ...grpc.CallOption) (*CalculateRMCostResponse, error)
 	// GetRMCost fetches a single cost row by (period, rm_code).
 	GetRMCost(ctx context.Context, in *GetRMCostRequest, opts ...grpc.CallOption) (*GetRMCostResponse, error)
 	// ListRMCosts lists cost rows with filter + pagination.
@@ -91,16 +88,6 @@ func (c *rMCostServiceClient) TriggerRMCostCalculation(ctx context.Context, in *
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TriggerRMCostCalculationResponse)
 	err := c.cc.Invoke(ctx, RMCostService_TriggerRMCostCalculation_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rMCostServiceClient) CalculateRMCost(ctx context.Context, in *CalculateRMCostRequest, opts ...grpc.CallOption) (*CalculateRMCostResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CalculateRMCostResponse)
-	err := c.cc.Invoke(ctx, RMCostService_CalculateRMCost_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -216,8 +203,6 @@ func (c *rMCostServiceClient) UpdateCostDetailFixRate(ctx context.Context, in *U
 type RMCostServiceServer interface {
 	// TriggerRMCostCalculation enqueues an async recalculation job.
 	TriggerRMCostCalculation(context.Context, *TriggerRMCostCalculationRequest) (*TriggerRMCostCalculationResponse, error)
-	// CalculateRMCost runs a recalculation synchronously (admin-only).
-	CalculateRMCost(context.Context, *CalculateRMCostRequest) (*CalculateRMCostResponse, error)
 	// GetRMCost fetches a single cost row by (period, rm_code).
 	GetRMCost(context.Context, *GetRMCostRequest) (*GetRMCostResponse, error)
 	// ListRMCosts lists cost rows with filter + pagination.
@@ -263,9 +248,6 @@ type UnimplementedRMCostServiceServer struct{}
 
 func (UnimplementedRMCostServiceServer) TriggerRMCostCalculation(context.Context, *TriggerRMCostCalculationRequest) (*TriggerRMCostCalculationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TriggerRMCostCalculation not implemented")
-}
-func (UnimplementedRMCostServiceServer) CalculateRMCost(context.Context, *CalculateRMCostRequest) (*CalculateRMCostResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CalculateRMCost not implemented")
 }
 func (UnimplementedRMCostServiceServer) GetRMCost(context.Context, *GetRMCostRequest) (*GetRMCostResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRMCost not implemented")
@@ -332,24 +314,6 @@ func _RMCostService_TriggerRMCostCalculation_Handler(srv interface{}, ctx contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RMCostServiceServer).TriggerRMCostCalculation(ctx, req.(*TriggerRMCostCalculationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RMCostService_CalculateRMCost_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CalculateRMCostRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RMCostServiceServer).CalculateRMCost(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RMCostService_CalculateRMCost_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RMCostServiceServer).CalculateRMCost(ctx, req.(*CalculateRMCostRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -544,10 +508,6 @@ var RMCostService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TriggerRMCostCalculation",
 			Handler:    _RMCostService_TriggerRMCostCalculation_Handler,
-		},
-		{
-			MethodName: "CalculateRMCost",
-			Handler:    _RMCostService_CalculateRMCost_Handler,
 		},
 		{
 			MethodName: "GetRMCost",

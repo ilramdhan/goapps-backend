@@ -105,40 +105,6 @@
         ]
       }
     },
-    "/api/v1/finance/rm-costs/calculate": {
-      "post": {
-        "summary": "CalculateRMCost runs a recalculation synchronously (admin-only).",
-        "operationId": "RMCostService_CalculateRMCost",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CalculateRMCostResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "description": "CalculateRMCost runs a calculation synchronously and returns the produced rows.\nIntended for admin/troubleshooting use — production traffic should go through\nTriggerRMCostCalculation.",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CalculateRMCostRequest"
-            }
-          }
-        ],
-        "tags": [
-          "RMCostService"
-        ]
-      }
-    },
     "/api/v1/finance/rm-costs/details/{costDetailId}/fix-rate": {
       "put": {
         "summary": "V2: UpdateCostDetailFixRate sets fix_rate on one detail row, recomputes\nits fix-stage chain, recomputes parent cost row's fl_rate (=MAX) and\ncost_val if valuation_flag is AUTO/FL.",
@@ -679,48 +645,6 @@
         }
       },
       "description": "BaseResponse is the standard response wrapper for all API responses."
-    },
-    "v1CalculateRMCostRequest": {
-      "type": "object",
-      "properties": {
-        "period": {
-          "type": "string",
-          "description": "Period (YYYYMM)."
-        },
-        "groupHeadId": {
-          "type": "string",
-          "description": "Optional single-group scope."
-        },
-        "triggerReason": {
-          "$ref": "#/definitions/v1RMCostTriggerReason",
-          "description": "Why this calc was run."
-        }
-      },
-      "description": "CalculateRMCost runs a calculation synchronously and returns the produced rows.\nIntended for admin/troubleshooting use — production traffic should go through\nTriggerRMCostCalculation."
-    },
-    "v1CalculateRMCostResponse": {
-      "type": "object",
-      "properties": {
-        "base": {
-          "$ref": "#/definitions/v1BaseResponse",
-          "description": "Standard response envelope."
-        },
-        "processed": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Number of group heads processed."
-        },
-        "skipped": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Number of group heads skipped (no active details / no source rows)."
-        },
-        "period": {
-          "type": "string",
-          "description": "Period that was calculated (echoes request)."
-        }
-      },
-      "description": "Calculate response."
     },
     "v1ExportDownloadInfo": {
       "type": "object",
