@@ -1,7 +1,6 @@
 // Package rmcost — V2 calculation handler. Runs the V2 per-detail engine,
 // snapshots intermediates to cst_rm_cost_detail, and persists V2 columns on
-// cst_rm_cost. The V1 handler (calculate_handler.go) is left untouched for
-// the gRPC paths that still call it; the worker can switch to V2 incrementally.
+// cst_rm_cost. V2 is the sole production RM cost calculation path.
 package rmcost
 
 import (
