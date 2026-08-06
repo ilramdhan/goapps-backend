@@ -291,7 +291,6 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	rmCostTrigger := apprmcost.NewTriggerHandler(jobRepo, rmCostPublisher)
-	rmCostCalculate := apprmcost.NewCalculateHandler(rmGroupRepo, rmCostRepo, syncDataRepo)
 	rmCostGet := apprmcost.NewGetHandler(rmCostRepo)
 	rmCostList := apprmcost.NewListHandler(rmCostRepo)
 	rmCostHistory := apprmcost.NewHistoryHandler(rmCostRepo)
@@ -322,7 +321,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	editFixRateHandler := apprmcost.NewEditFixRateHandler(rmCostRepo, rmCostDetailRepo, rmCostInputsRepo)
 
 	rmCostHandler, err := grpcdelivery.NewRMCostHandler(
-		rmCostTrigger, rmCostCalculate, rmCostGet, rmCostList, rmCostHistory, rmCostPeriods, rmCostExport, rmCostRequestExport, rmCostExportURL,
+		rmCostTrigger, rmCostGet, rmCostList, rmCostHistory, rmCostPeriods, rmCostExport, rmCostRequestExport, rmCostExportURL,
 		rmCostDetailRepo, editInputsHandler, editFixRateHandler,
 	)
 	if err != nil {
