@@ -40,6 +40,12 @@ type ProductLoader interface {
 	LoadProducts(ctx context.Context, ids []int64) (map[int64]*costproductmaster.CostProductMaster, error)
 	LoadRoutesByProducts(ctx context.Context, productSysIDs []int64) (map[int64]*costroute.Graph, error)
 	LoadCAPP(ctx context.Context, productSysIDs []int64) (map[int64]map[string]float64, error)
+	// LoadCAPPText returns the per-product map of paramCode → text value for
+	// params stored in cpp_value_text. The calc engine never sees these — the
+	// evaluator scope is float-only, so text params are dropped by scopeSnapshot
+	// and can never reach cpc_param_snapshot. The cost sheet export reads them
+	// here instead, straight from current master data.
+	LoadCAPPText(ctx context.Context, productSysIDs []int64) (map[int64]map[string]string, error)
 	LoadFormulas(ctx context.Context, productSysIDs []int64) (map[int64][]Formula, error)
 	LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]float64, error)
 	LoadUpstreamCosts(ctx context.Context, productSysIDs []int64, period, calcType string) (map[int64]float64, error)
@@ -439,6 +445,69 @@ func (l *productLoader) LoadCAPP(ctx context.Context, productSysIDs []int64) (ma
 }
 
 // =============================================================================
+// LoadCAPPText
+// =============================================================================
+
+// LoadCAPPText returns the per-product map of paramCode → text value for every
+// applicable parameter whose value lives in cpp_value_text (machine names, pack
+// codes, loss types, flags like "NA").
+//
+// These deliberately bypass the calc engine rather than riding cpc_param_snapshot:
+// the evaluator scope is map[string]any narrowed to float64 by scopeSnapshot, so
+// a text value is dropped before it is ever persisted. Reading master data
+// directly also means the cost sheet picks up text corrections without a recalc.
+// The tradeoff is that these columns show *current* names rather than the names
+// as of calculation time — acceptable for labels, and it is the only option
+// short of a new snapshot column plus a full re-run.
+func (l *productLoader) LoadCAPPText(ctx context.Context, productSysIDs []int64) (map[int64]map[string]string, error) {
+	defer observeLoad(loaderKindCAPP, time.Now())
+	out := map[int64]map[string]string{}
+	if len(productSysIDs) == 0 {
+		return out, nil
+	}
+	const q = `
+		SELECT capp.capp_product_sys_id, mp.param_code, cpp.cpp_value_text
+		FROM cost_product_applicable_param capp
+		JOIN mst_parameter mp ON mp.id = capp.capp_param_id
+		JOIN cost_product_parameter cpp
+		     ON cpp.cpp_product_sys_id = capp.capp_product_sys_id
+		    AND cpp.cpp_param_id = capp.capp_param_id
+		WHERE capp.capp_product_sys_id = ANY($1)
+		  AND cpp.cpp_value_text IS NOT NULL
+		  AND cpp.cpp_value_text <> ''
+		  AND mp.deleted_at IS NULL`
+	rows, err := l.db.QueryContext(ctx, q, pq.Array(productSysIDs))
+	if err != nil {
+		return nil, fmt.Errorf("load CAPP text values: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	for rows.Next() {
+		var (
+			productSysID int64
+			paramCode    string
+			val          string
+		)
+		if err := rows.Scan(&productSysID, &paramCode, &val); err != nil {
+			return nil, fmt.Errorf("scan CAPP text row: %w", err)
+		}
+		inner, ok := out[productSysID]
+		if !ok {
+			inner = map[string]string{}
+			out[productSysID] = inner
+		}
+		inner[paramCode] = val
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate CAPP text rows: %w", err)
+	}
+	return out, nil
+}
+
+// =============================================================================
 // LoadFormulas
 // =============================================================================
 
@@ -787,9 +856,31 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 // LoadUpstreamCosts
 // =============================================================================
 
-// LoadUpstreamCosts returns the per-unit cost for upstream products that were
+// LoadUpstreamCosts returns the captive cost of upstream products that were
 // already calculated in prior waves of the same job. Rows in SUPERSEDED status
 // are excluded.
+//
+// The value returned is CAPTIVE_COST_QLTY_LOSS (cost sheet row 61), NOT
+// cpc_cost_per_unit. When a downstream stage references an upstream product as a
+// PRODUCT-type RM, the upstream's captive cost becomes the downstream's RM_RATE
+// (row 6) and RM_LANDED_COST (row 7) — visible in the export template, where
+// row 61 of column k is byte-identical to row 6 of column k+1 across every
+// adjacent pair of route stages.
+//
+// This is what the Oracle DSL in F_YARN_RM_RATE (migration 000408) already
+// specifies: `upstream_product(rm_product_legacy_id).COST_CAP_FINAL`, where
+// COST_CAP_FINAL is the pre-000406 alias of CAPTIVE_COST_QLTY_LOSS.
+//
+// cpc_cost_per_unit is the wrong source: it is whatever resolveFinalCost's
+// terminal-formula heuristic settled on, which for most yarn products is
+// DELIVERY_COST_QLTY_LOSS (row 62) — delivery cost, one step past the captive
+// hand-off. On 202604/ACTUAL it matched delivery for 3,133 rows, captive for
+// only 573, and neither for 5,921.
+//
+// COALESCE to 0 rather than skipping NULL rows: a NULL cpc_captive_cost means
+// the upstream was calculated before T3.1 fixed the snapshot keys. Returning 0
+// keeps the map entry present so resolveRMUnitCost reports a zero cost instead
+// of the misleading ErrMissingUpstreamCost ("not calculated yet").
 func (l *productLoader) LoadUpstreamCosts(ctx context.Context, productSysIDs []int64, period, calcType string) (map[int64]float64, error) {
 	defer observeLoad(loaderKindUpstream, time.Now())
 	out := map[int64]float64{}
@@ -800,7 +891,7 @@ func (l *productLoader) LoadUpstreamCosts(ctx context.Context, productSysIDs []i
 		return nil, errors.New("LoadUpstreamCosts: period and calcType are required")
 	}
 	const q = `
-		SELECT cpc_product_sys_id, cpc_cost_per_unit
+		SELECT cpc_product_sys_id, COALESCE(cpc_captive_cost, 0)
 		FROM cst_product_cost
 		WHERE cpc_product_sys_id = ANY($1)
 		  AND cpc_period = $2

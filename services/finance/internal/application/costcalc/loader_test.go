@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"testing"
 	"time"
@@ -77,17 +78,18 @@ func TestTopoSortFormulas_Empty(t *testing.T) {
 
 type LoaderSuite struct {
 	suite.Suite
-	ctx        context.Context
-	db         *sql.DB
-	loader     ProductLoader
-	productIDs []int64 // 3 products
-	upstreamID int64   // additional product used as an upstream reference
-	headIDs    []int64 // route heads, 1 per product
-	formulaIDs []string
-	paramIDs   map[string]string // paramCode → uuid
-	period     string
-	calcType   string
-	actor      string
+	ctx         context.Context
+	db          *sql.DB
+	loader      ProductLoader
+	productIDs  []int64 // 3 products
+	upstreamID  int64   // additional product used as an upstream reference
+	upstreamNil int64   // upstream whose cpc_captive_cost is NULL (pre-T3.1 data)
+	headIDs     []int64 // route heads, 1 per product
+	formulaIDs  []string
+	paramIDs    map[string]string // paramCode → uuid
+	period      string
+	calcType    string
+	actor       string
 	// fixture tagging for cleanup
 	codePrefix string
 }
@@ -135,7 +137,7 @@ func (s *LoaderSuite) TearDownSuite() {
 	}
 	_, _ = s.db.ExecContext(s.ctx,
 		`DELETE FROM cst_product_cost WHERE cpc_product_sys_id = ANY($1)`,
-		int64ToArray(append(s.productIDs, s.upstreamID)))
+		int64ToArray(append(s.productIDs, s.upstreamID, s.upstreamNil)))
 	_, _ = s.db.ExecContext(s.ctx,
 		`DELETE FROM cst_rm_cost WHERE period = $1`, s.period)
 	_, _ = s.db.ExecContext(s.ctx,
@@ -143,7 +145,7 @@ func (s *LoaderSuite) TearDownSuite() {
 		int64ToArray(s.headIDs))
 	_, _ = s.db.ExecContext(s.ctx,
 		`DELETE FROM cost_product_master WHERE cpm_product_sys_id = ANY($1)`,
-		int64ToArray(append(s.productIDs, s.upstreamID)))
+		int64ToArray(append(s.productIDs, s.upstreamID, s.upstreamNil)))
 	_ = s.db.Close()
 }
 
@@ -174,6 +176,7 @@ func (s *LoaderSuite) seedProducts() {
 	}
 	s.productIDs = []int64{insert("-A"), insert("-B"), insert("-C")}
 	s.upstreamID = insert("-UP")
+	s.upstreamNil = insert("-UPNIL")
 }
 
 func (s *LoaderSuite) seedRoutes() {
@@ -220,12 +223,18 @@ func (s *LoaderSuite) seedParameters() {
 
 func (s *LoaderSuite) seedCAPPAndCPP() {
 	// Make L_RAW_RATE applicable + value-set for product A and B; product C has it applicable but no value.
+	//
+	// The formula result params (L_RM_COST / L_PROD_COST) also need CAPP rows:
+	// loadPerProductFormulas joins mst_formula ON result_param_id = capp_param_id,
+	// so a formula whose result param is not checklisted for a product never loads.
 	rawRateID := s.paramIDs["L_RAW_RATE"]
 	for i, pid := range s.productIDs {
-		_, err := s.db.ExecContext(s.ctx, `
-			INSERT INTO cost_product_applicable_param (capp_product_sys_id, capp_param_id, capp_is_required, capp_created_by)
-			VALUES ($1, $2, FALSE, $3)`, pid, rawRateID, s.actor)
-		require.NoError(s.T(), err)
+		for _, code := range []string{"L_RAW_RATE", "L_RM_COST", "L_PROD_COST"} {
+			_, err := s.db.ExecContext(s.ctx, `
+				INSERT INTO cost_product_applicable_param (capp_product_sys_id, capp_param_id, capp_is_required, capp_created_by)
+				VALUES ($1, $2, FALSE, $3)`, pid, s.paramIDs[code], s.actor)
+			require.NoError(s.T(), err)
+		}
 		if i < 2 {
 			_, err := s.db.ExecContext(s.ctx, `
 				INSERT INTO cost_product_parameter (cpp_product_sys_id, cpp_param_id, cpp_value_numeric, cpp_filled_by, cpp_created_by)
@@ -290,10 +299,24 @@ func (s *LoaderSuite) seedRMCosts() {
 func (s *LoaderSuite) seedUpstreamCost() {
 	// One CALCULATED row + one SUPERSEDED row for the upstream product. Only the
 	// non-SUPERSEDED row must be returned.
+	//
+	// cpc_captive_cost (42.42) and cpc_cost_per_unit (99.99) deliberately differ:
+	// LoadUpstreamCosts must return the captive cost (cost-sheet row 61), which is
+	// what the next route stage consumes as RM_RATE. A test where both columns
+	// carried the same value would pass even with the pre-fix query.
 	_, err := s.db.ExecContext(s.ctx, `
-		INSERT INTO cst_product_cost (cpc_product_sys_id, cpc_period, cpc_calculation_type, cpc_route_head_id, cpc_cost_per_unit, cpc_status, cpc_calculated_by)
-		VALUES ($1, $2, $3, $4, $5, 'CALCULATED', $6)`,
-		s.upstreamID, s.period, s.calcType, s.headIDs[0], 42.42, s.actor)
+		INSERT INTO cst_product_cost (cpc_product_sys_id, cpc_period, cpc_calculation_type, cpc_route_head_id, cpc_cost_per_unit, cpc_captive_cost, cpc_status, cpc_calculated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, 'CALCULATED', $7)`,
+		s.upstreamID, s.period, s.calcType, s.headIDs[0], 99.99, 42.42, s.actor)
+	require.NoError(s.T(), err)
+
+	// Pre-T3.1 shape: captive cost never written. The loader must still return an
+	// entry (value 0) so resolveRMUnitCost reports a zero cost rather than the
+	// misleading "not calculated yet" error.
+	_, err = s.db.ExecContext(s.ctx, `
+		INSERT INTO cst_product_cost (cpc_product_sys_id, cpc_period, cpc_calculation_type, cpc_route_head_id, cpc_cost_per_unit, cpc_captive_cost, cpc_status, cpc_calculated_by)
+		VALUES ($1, $2, $3, $4, $5, NULL, 'CALCULATED', $6)`,
+		s.upstreamNil, s.period, s.calcType, s.headIDs[0], 77.77, s.actor)
 	require.NoError(s.T(), err)
 	_, err = s.db.ExecContext(s.ctx, `
 		INSERT INTO cst_product_cost (cpc_product_sys_id, cpc_period, cpc_calculation_type, cpc_route_head_id, cpc_cost_per_unit, cpc_status, cpc_calculated_by, cpc_version)
@@ -388,6 +411,25 @@ func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_RespectStatus() {
 	require.NoError(s.T(), err)
 	require.Len(s.T(), got, 1)
 	require.InDelta(s.T(), 42.42, got[s.upstreamID], 0.01)
+}
+
+// The captive→RM cascade contract: cost-sheet row 61 (CAPTIVE_COST_QLTY_LOSS) of
+// stage k becomes row 6 (RM_RATE) of stage k+1. Reading cpc_cost_per_unit instead
+// silently substitutes whatever resolveFinalCost's terminal-formula heuristic
+// picked — usually the delivery cost, one step past the hand-off.
+func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_ReturnsCaptiveNotCostPerUnit() {
+	got, err := s.loader.LoadUpstreamCosts(s.ctx, []int64{s.upstreamID}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	require.InDelta(s.T(), 42.42, got[s.upstreamID], 0.01, "must return cpc_captive_cost")
+	require.Greater(s.T(), math.Abs(99.99-got[s.upstreamID]), 0.01, "must not return cpc_cost_per_unit")
+}
+
+func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_NullCaptiveYieldsZeroNotMissing() {
+	got, err := s.loader.LoadUpstreamCosts(s.ctx, []int64{s.upstreamNil}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	v, has := got[s.upstreamNil]
+	require.True(s.T(), has, "key must be present so the RM resolves to 0 instead of ErrMissingUpstreamCost")
+	require.InDelta(s.T(), 0.0, v, 0.0001)
 }
 
 // ---------- helpers ----------
