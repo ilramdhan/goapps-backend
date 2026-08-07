@@ -19,19 +19,28 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CostCalcService_TriggerCalcJob_FullMethodName       = "/finance.v1.CostCalcService/TriggerCalcJob"
-	CostCalcService_GetCalcJob_FullMethodName           = "/finance.v1.CostCalcService/GetCalcJob"
-	CostCalcService_ListCalcJobs_FullMethodName         = "/finance.v1.CostCalcService/ListCalcJobs"
-	CostCalcService_ListCalcJobChunks_FullMethodName    = "/finance.v1.CostCalcService/ListCalcJobChunks"
-	CostCalcService_ListCalcJobProducts_FullMethodName  = "/finance.v1.CostCalcService/ListCalcJobProducts"
-	CostCalcService_CancelCalcJob_FullMethodName        = "/finance.v1.CostCalcService/CancelCalcJob"
-	CostCalcService_GetCostResult_FullMethodName        = "/finance.v1.CostCalcService/GetCostResult"
-	CostCalcService_ListCostResults_FullMethodName      = "/finance.v1.CostCalcService/ListCostResults"
-	CostCalcService_GetCostBreakdown_FullMethodName     = "/finance.v1.CostCalcService/GetCostBreakdown"
-	CostCalcService_ListCostHistory_FullMethodName      = "/finance.v1.CostCalcService/ListCostHistory"
-	CostCalcService_VerifyCostResult_FullMethodName     = "/finance.v1.CostCalcService/VerifyCostResult"
-	CostCalcService_ApproveCostResult_FullMethodName    = "/finance.v1.CostCalcService/ApproveCostResult"
-	CostCalcService_ProcessChunkInternal_FullMethodName = "/finance.v1.CostCalcService/ProcessChunkInternal"
+	CostCalcService_TriggerCalcJob_FullMethodName                     = "/finance.v1.CostCalcService/TriggerCalcJob"
+	CostCalcService_GetCalcJob_FullMethodName                         = "/finance.v1.CostCalcService/GetCalcJob"
+	CostCalcService_ListCalcJobs_FullMethodName                       = "/finance.v1.CostCalcService/ListCalcJobs"
+	CostCalcService_ListCalcJobChunks_FullMethodName                  = "/finance.v1.CostCalcService/ListCalcJobChunks"
+	CostCalcService_ListCalcJobProducts_FullMethodName                = "/finance.v1.CostCalcService/ListCalcJobProducts"
+	CostCalcService_CancelCalcJob_FullMethodName                      = "/finance.v1.CostCalcService/CancelCalcJob"
+	CostCalcService_GetCostResult_FullMethodName                      = "/finance.v1.CostCalcService/GetCostResult"
+	CostCalcService_ListCostResults_FullMethodName                    = "/finance.v1.CostCalcService/ListCostResults"
+	CostCalcService_ListCostResultPeriods_FullMethodName              = "/finance.v1.CostCalcService/ListCostResultPeriods"
+	CostCalcService_GetCostBreakdown_FullMethodName                   = "/finance.v1.CostCalcService/GetCostBreakdown"
+	CostCalcService_ListCostHistory_FullMethodName                    = "/finance.v1.CostCalcService/ListCostHistory"
+	CostCalcService_VerifyCostResult_FullMethodName                   = "/finance.v1.CostCalcService/VerifyCostResult"
+	CostCalcService_ApproveCostResult_FullMethodName                  = "/finance.v1.CostCalcService/ApproveCostResult"
+	CostCalcService_GetRouteCostSheet_FullMethodName                  = "/finance.v1.CostCalcService/GetRouteCostSheet"
+	CostCalcService_RequestProductCostSheetExport_FullMethodName      = "/finance.v1.CostCalcService/RequestProductCostSheetExport"
+	CostCalcService_GetProductCostSheetDownloadURL_FullMethodName     = "/finance.v1.CostCalcService/GetProductCostSheetDownloadURL"
+	CostCalcService_ListCostSheetExportBatchChildren_FullMethodName   = "/finance.v1.CostCalcService/ListCostSheetExportBatchChildren"
+	CostCalcService_GetProductCostSheetExportJobStatus_FullMethodName = "/finance.v1.CostCalcService/GetProductCostSheetExportJobStatus"
+	CostCalcService_ProcessChunkInternal_FullMethodName               = "/finance.v1.CostCalcService/ProcessChunkInternal"
+	CostCalcService_GetBatchChildDownloadUrl_FullMethodName           = "/finance.v1.CostCalcService/GetBatchChildDownloadUrl"
+	CostCalcService_DownloadExportBatchZip_FullMethodName             = "/finance.v1.CostCalcService/DownloadExportBatchZip"
+	CostCalcService_ListExportJobs_FullMethodName                     = "/finance.v1.CostCalcService/ListExportJobs"
 )
 
 // CostCalcServiceClient is the client API for CostCalcService service.
@@ -65,6 +74,9 @@ type CostCalcServiceClient interface {
 	// ListCostResults lists active cost results across products for a period.
 	// Required permission: finance.cost.result.view.
 	ListCostResults(ctx context.Context, in *ListCostResultsRequest, opts ...grpc.CallOption) (*ListCostResultsResponse, error)
+	// ListCostResultPeriods returns distinct periods with cost results (newest first).
+	// Required permission: finance.cost.result.view.
+	ListCostResultPeriods(ctx context.Context, in *ListCostResultPeriodsRequest, opts ...grpc.CallOption) (*ListCostResultPeriodsResponse, error)
 	// GetCostBreakdown returns by-level + rm-details + formula-trace for a cost.
 	// Required permission: finance.cost.result.view.
 	GetCostBreakdown(ctx context.Context, in *GetCostBreakdownRequest, opts ...grpc.CallOption) (*GetCostBreakdownResponse, error)
@@ -81,7 +93,29 @@ type CostCalcServiceClient interface {
 	// Invoked by finance-cost-worker after consuming a chunk message from RMQ.
 	// NOT exposed via REST gateway; intended for service-to-service traffic only.
 	// Required permission: finance.cost.caljob.trigger.
+	// GetRouteCostSheet returns every route stage's param snapshot for one
+	// product in one round-trip (backs the product cost sheet export).
+	GetRouteCostSheet(ctx context.Context, in *GetRouteCostSheetRequest, opts ...grpc.CallOption) (*GetRouteCostSheetResponse, error)
+	// RequestProductCostSheetExport queues an async A4 xlsx export job.
+	RequestProductCostSheetExport(ctx context.Context, in *RequestProductCostSheetExportRequest, opts ...grpc.CallOption) (*RequestProductCostSheetExportResponse, error)
+	// GetProductCostSheetDownloadURL presigns the finished export artifact.
+	GetProductCostSheetDownloadURL(ctx context.Context, in *GetProductCostSheetDownloadURLRequest, opts ...grpc.CallOption) (*GetProductCostSheetDownloadURLResponse, error)
+	// ListCostSheetExportBatchChildren enumerates a batch-tracking parent
+	// job's child export jobs, each with its download URL once ready.
+	ListCostSheetExportBatchChildren(ctx context.Context, in *ListCostSheetExportBatchChildrenRequest, opts ...grpc.CallOption) (*ListCostSheetExportBatchChildrenResponse, error)
+	// GetProductCostSheetExportJobStatus polls a standalone or batch-parent
+	// export job's live status/progress while it is still in flight.
+	GetProductCostSheetExportJobStatus(ctx context.Context, in *GetProductCostSheetExportJobStatusRequest, opts ...grpc.CallOption) (*GetProductCostSheetExportJobStatusResponse, error)
 	ProcessChunkInternal(ctx context.Context, in *ProcessChunkInternalRequest, opts ...grpc.CallOption) (*ProcessChunkInternalResponse, error)
+	// GetBatchChildDownloadUrl freshly presigns one child job's artifact
+	// within a batch fan-out.
+	GetBatchChildDownloadUrl(ctx context.Context, in *GetBatchChildDownloadUrlRequest, opts ...grpc.CallOption) (*GetBatchChildDownloadUrlResponse, error)
+	// DownloadExportBatchZip streams a zip of every completed child file in a
+	// batch as one download.
+	DownloadExportBatchZip(ctx context.Context, in *DownloadExportBatchZipRequest, opts ...grpc.CallOption) (*DownloadExportBatchZipResponse, error)
+	// ListExportJobs lists recent cost-sheet export jobs (batch parents and
+	// standalone jobs) for a "recent exports" UI.
+	ListExportJobs(ctx context.Context, in *ListExportJobsRequest, opts ...grpc.CallOption) (*ListExportJobsResponse, error)
 }
 
 type costCalcServiceClient struct {
@@ -172,6 +206,16 @@ func (c *costCalcServiceClient) ListCostResults(ctx context.Context, in *ListCos
 	return out, nil
 }
 
+func (c *costCalcServiceClient) ListCostResultPeriods(ctx context.Context, in *ListCostResultPeriodsRequest, opts ...grpc.CallOption) (*ListCostResultPeriodsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCostResultPeriodsResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_ListCostResultPeriods_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *costCalcServiceClient) GetCostBreakdown(ctx context.Context, in *GetCostBreakdownRequest, opts ...grpc.CallOption) (*GetCostBreakdownResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCostBreakdownResponse)
@@ -212,10 +256,90 @@ func (c *costCalcServiceClient) ApproveCostResult(ctx context.Context, in *Appro
 	return out, nil
 }
 
+func (c *costCalcServiceClient) GetRouteCostSheet(ctx context.Context, in *GetRouteCostSheetRequest, opts ...grpc.CallOption) (*GetRouteCostSheetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRouteCostSheetResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_GetRouteCostSheet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costCalcServiceClient) RequestProductCostSheetExport(ctx context.Context, in *RequestProductCostSheetExportRequest, opts ...grpc.CallOption) (*RequestProductCostSheetExportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestProductCostSheetExportResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_RequestProductCostSheetExport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costCalcServiceClient) GetProductCostSheetDownloadURL(ctx context.Context, in *GetProductCostSheetDownloadURLRequest, opts ...grpc.CallOption) (*GetProductCostSheetDownloadURLResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProductCostSheetDownloadURLResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_GetProductCostSheetDownloadURL_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costCalcServiceClient) ListCostSheetExportBatchChildren(ctx context.Context, in *ListCostSheetExportBatchChildrenRequest, opts ...grpc.CallOption) (*ListCostSheetExportBatchChildrenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCostSheetExportBatchChildrenResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_ListCostSheetExportBatchChildren_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costCalcServiceClient) GetProductCostSheetExportJobStatus(ctx context.Context, in *GetProductCostSheetExportJobStatusRequest, opts ...grpc.CallOption) (*GetProductCostSheetExportJobStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProductCostSheetExportJobStatusResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_GetProductCostSheetExportJobStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *costCalcServiceClient) ProcessChunkInternal(ctx context.Context, in *ProcessChunkInternalRequest, opts ...grpc.CallOption) (*ProcessChunkInternalResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ProcessChunkInternalResponse)
 	err := c.cc.Invoke(ctx, CostCalcService_ProcessChunkInternal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costCalcServiceClient) GetBatchChildDownloadUrl(ctx context.Context, in *GetBatchChildDownloadUrlRequest, opts ...grpc.CallOption) (*GetBatchChildDownloadUrlResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetBatchChildDownloadUrlResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_GetBatchChildDownloadUrl_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costCalcServiceClient) DownloadExportBatchZip(ctx context.Context, in *DownloadExportBatchZipRequest, opts ...grpc.CallOption) (*DownloadExportBatchZipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DownloadExportBatchZipResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_DownloadExportBatchZip_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costCalcServiceClient) ListExportJobs(ctx context.Context, in *ListExportJobsRequest, opts ...grpc.CallOption) (*ListExportJobsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListExportJobsResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_ListExportJobs_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -253,6 +377,9 @@ type CostCalcServiceServer interface {
 	// ListCostResults lists active cost results across products for a period.
 	// Required permission: finance.cost.result.view.
 	ListCostResults(context.Context, *ListCostResultsRequest) (*ListCostResultsResponse, error)
+	// ListCostResultPeriods returns distinct periods with cost results (newest first).
+	// Required permission: finance.cost.result.view.
+	ListCostResultPeriods(context.Context, *ListCostResultPeriodsRequest) (*ListCostResultPeriodsResponse, error)
 	// GetCostBreakdown returns by-level + rm-details + formula-trace for a cost.
 	// Required permission: finance.cost.result.view.
 	GetCostBreakdown(context.Context, *GetCostBreakdownRequest) (*GetCostBreakdownResponse, error)
@@ -269,7 +396,29 @@ type CostCalcServiceServer interface {
 	// Invoked by finance-cost-worker after consuming a chunk message from RMQ.
 	// NOT exposed via REST gateway; intended for service-to-service traffic only.
 	// Required permission: finance.cost.caljob.trigger.
+	// GetRouteCostSheet returns every route stage's param snapshot for one
+	// product in one round-trip (backs the product cost sheet export).
+	GetRouteCostSheet(context.Context, *GetRouteCostSheetRequest) (*GetRouteCostSheetResponse, error)
+	// RequestProductCostSheetExport queues an async A4 xlsx export job.
+	RequestProductCostSheetExport(context.Context, *RequestProductCostSheetExportRequest) (*RequestProductCostSheetExportResponse, error)
+	// GetProductCostSheetDownloadURL presigns the finished export artifact.
+	GetProductCostSheetDownloadURL(context.Context, *GetProductCostSheetDownloadURLRequest) (*GetProductCostSheetDownloadURLResponse, error)
+	// ListCostSheetExportBatchChildren enumerates a batch-tracking parent
+	// job's child export jobs, each with its download URL once ready.
+	ListCostSheetExportBatchChildren(context.Context, *ListCostSheetExportBatchChildrenRequest) (*ListCostSheetExportBatchChildrenResponse, error)
+	// GetProductCostSheetExportJobStatus polls a standalone or batch-parent
+	// export job's live status/progress while it is still in flight.
+	GetProductCostSheetExportJobStatus(context.Context, *GetProductCostSheetExportJobStatusRequest) (*GetProductCostSheetExportJobStatusResponse, error)
 	ProcessChunkInternal(context.Context, *ProcessChunkInternalRequest) (*ProcessChunkInternalResponse, error)
+	// GetBatchChildDownloadUrl freshly presigns one child job's artifact
+	// within a batch fan-out.
+	GetBatchChildDownloadUrl(context.Context, *GetBatchChildDownloadUrlRequest) (*GetBatchChildDownloadUrlResponse, error)
+	// DownloadExportBatchZip streams a zip of every completed child file in a
+	// batch as one download.
+	DownloadExportBatchZip(context.Context, *DownloadExportBatchZipRequest) (*DownloadExportBatchZipResponse, error)
+	// ListExportJobs lists recent cost-sheet export jobs (batch parents and
+	// standalone jobs) for a "recent exports" UI.
+	ListExportJobs(context.Context, *ListExportJobsRequest) (*ListExportJobsResponse, error)
 	mustEmbedUnimplementedCostCalcServiceServer()
 }
 
@@ -304,6 +453,9 @@ func (UnimplementedCostCalcServiceServer) GetCostResult(context.Context, *GetCos
 func (UnimplementedCostCalcServiceServer) ListCostResults(context.Context, *ListCostResultsRequest) (*ListCostResultsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCostResults not implemented")
 }
+func (UnimplementedCostCalcServiceServer) ListCostResultPeriods(context.Context, *ListCostResultPeriodsRequest) (*ListCostResultPeriodsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCostResultPeriods not implemented")
+}
 func (UnimplementedCostCalcServiceServer) GetCostBreakdown(context.Context, *GetCostBreakdownRequest) (*GetCostBreakdownResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCostBreakdown not implemented")
 }
@@ -316,8 +468,32 @@ func (UnimplementedCostCalcServiceServer) VerifyCostResult(context.Context, *Ver
 func (UnimplementedCostCalcServiceServer) ApproveCostResult(context.Context, *ApproveCostResultRequest) (*ApproveCostResultResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveCostResult not implemented")
 }
+func (UnimplementedCostCalcServiceServer) GetRouteCostSheet(context.Context, *GetRouteCostSheetRequest) (*GetRouteCostSheetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRouteCostSheet not implemented")
+}
+func (UnimplementedCostCalcServiceServer) RequestProductCostSheetExport(context.Context, *RequestProductCostSheetExportRequest) (*RequestProductCostSheetExportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RequestProductCostSheetExport not implemented")
+}
+func (UnimplementedCostCalcServiceServer) GetProductCostSheetDownloadURL(context.Context, *GetProductCostSheetDownloadURLRequest) (*GetProductCostSheetDownloadURLResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetProductCostSheetDownloadURL not implemented")
+}
+func (UnimplementedCostCalcServiceServer) ListCostSheetExportBatchChildren(context.Context, *ListCostSheetExportBatchChildrenRequest) (*ListCostSheetExportBatchChildrenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCostSheetExportBatchChildren not implemented")
+}
+func (UnimplementedCostCalcServiceServer) GetProductCostSheetExportJobStatus(context.Context, *GetProductCostSheetExportJobStatusRequest) (*GetProductCostSheetExportJobStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetProductCostSheetExportJobStatus not implemented")
+}
 func (UnimplementedCostCalcServiceServer) ProcessChunkInternal(context.Context, *ProcessChunkInternalRequest) (*ProcessChunkInternalResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ProcessChunkInternal not implemented")
+}
+func (UnimplementedCostCalcServiceServer) GetBatchChildDownloadUrl(context.Context, *GetBatchChildDownloadUrlRequest) (*GetBatchChildDownloadUrlResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBatchChildDownloadUrl not implemented")
+}
+func (UnimplementedCostCalcServiceServer) DownloadExportBatchZip(context.Context, *DownloadExportBatchZipRequest) (*DownloadExportBatchZipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DownloadExportBatchZip not implemented")
+}
+func (UnimplementedCostCalcServiceServer) ListExportJobs(context.Context, *ListExportJobsRequest) (*ListExportJobsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListExportJobs not implemented")
 }
 func (UnimplementedCostCalcServiceServer) mustEmbedUnimplementedCostCalcServiceServer() {}
 func (UnimplementedCostCalcServiceServer) testEmbeddedByValue()                         {}
@@ -484,6 +660,24 @@ func _CostCalcService_ListCostResults_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostCalcService_ListCostResultPeriods_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCostResultPeriodsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).ListCostResultPeriods(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_ListCostResultPeriods_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).ListCostResultPeriods(ctx, req.(*ListCostResultPeriodsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CostCalcService_GetCostBreakdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetCostBreakdownRequest)
 	if err := dec(in); err != nil {
@@ -556,6 +750,96 @@ func _CostCalcService_ApproveCostResult_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostCalcService_GetRouteCostSheet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRouteCostSheetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).GetRouteCostSheet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_GetRouteCostSheet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).GetRouteCostSheet(ctx, req.(*GetRouteCostSheetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostCalcService_RequestProductCostSheetExport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestProductCostSheetExportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).RequestProductCostSheetExport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_RequestProductCostSheetExport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).RequestProductCostSheetExport(ctx, req.(*RequestProductCostSheetExportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostCalcService_GetProductCostSheetDownloadURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProductCostSheetDownloadURLRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).GetProductCostSheetDownloadURL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_GetProductCostSheetDownloadURL_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).GetProductCostSheetDownloadURL(ctx, req.(*GetProductCostSheetDownloadURLRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostCalcService_ListCostSheetExportBatchChildren_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCostSheetExportBatchChildrenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).ListCostSheetExportBatchChildren(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_ListCostSheetExportBatchChildren_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).ListCostSheetExportBatchChildren(ctx, req.(*ListCostSheetExportBatchChildrenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostCalcService_GetProductCostSheetExportJobStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProductCostSheetExportJobStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).GetProductCostSheetExportJobStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_GetProductCostSheetExportJobStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).GetProductCostSheetExportJobStatus(ctx, req.(*GetProductCostSheetExportJobStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CostCalcService_ProcessChunkInternal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ProcessChunkInternalRequest)
 	if err := dec(in); err != nil {
@@ -570,6 +854,60 @@ func _CostCalcService_ProcessChunkInternal_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CostCalcServiceServer).ProcessChunkInternal(ctx, req.(*ProcessChunkInternalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostCalcService_GetBatchChildDownloadUrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBatchChildDownloadUrlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).GetBatchChildDownloadUrl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_GetBatchChildDownloadUrl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).GetBatchChildDownloadUrl(ctx, req.(*GetBatchChildDownloadUrlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostCalcService_DownloadExportBatchZip_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadExportBatchZipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).DownloadExportBatchZip(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_DownloadExportBatchZip_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).DownloadExportBatchZip(ctx, req.(*DownloadExportBatchZipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostCalcService_ListExportJobs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListExportJobsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).ListExportJobs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_ListExportJobs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).ListExportJobs(ctx, req.(*ListExportJobsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -614,6 +952,10 @@ var CostCalcService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CostCalcService_ListCostResults_Handler,
 		},
 		{
+			MethodName: "ListCostResultPeriods",
+			Handler:    _CostCalcService_ListCostResultPeriods_Handler,
+		},
+		{
 			MethodName: "GetCostBreakdown",
 			Handler:    _CostCalcService_GetCostBreakdown_Handler,
 		},
@@ -630,8 +972,40 @@ var CostCalcService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CostCalcService_ApproveCostResult_Handler,
 		},
 		{
+			MethodName: "GetRouteCostSheet",
+			Handler:    _CostCalcService_GetRouteCostSheet_Handler,
+		},
+		{
+			MethodName: "RequestProductCostSheetExport",
+			Handler:    _CostCalcService_RequestProductCostSheetExport_Handler,
+		},
+		{
+			MethodName: "GetProductCostSheetDownloadURL",
+			Handler:    _CostCalcService_GetProductCostSheetDownloadURL_Handler,
+		},
+		{
+			MethodName: "ListCostSheetExportBatchChildren",
+			Handler:    _CostCalcService_ListCostSheetExportBatchChildren_Handler,
+		},
+		{
+			MethodName: "GetProductCostSheetExportJobStatus",
+			Handler:    _CostCalcService_GetProductCostSheetExportJobStatus_Handler,
+		},
+		{
 			MethodName: "ProcessChunkInternal",
 			Handler:    _CostCalcService_ProcessChunkInternal_Handler,
+		},
+		{
+			MethodName: "GetBatchChildDownloadUrl",
+			Handler:    _CostCalcService_GetBatchChildDownloadUrl_Handler,
+		},
+		{
+			MethodName: "DownloadExportBatchZip",
+			Handler:    _CostCalcService_DownloadExportBatchZip_Handler,
+		},
+		{
+			MethodName: "ListExportJobs",
+			Handler:    _CostCalcService_ListExportJobs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

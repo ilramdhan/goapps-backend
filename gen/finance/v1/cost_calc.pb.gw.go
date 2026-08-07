@@ -397,6 +397,27 @@ func local_request_CostCalcService_ListCostResults_0(ctx context.Context, marsha
 	return msg, metadata, err
 }
 
+func request_CostCalcService_ListCostResultPeriods_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListCostResultPeriodsRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.ListCostResultPeriods(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_ListCostResultPeriods_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListCostResultPeriodsRequest
+		metadata runtime.ServerMetadata
+	)
+	msg, err := server.ListCostResultPeriods(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 func request_CostCalcService_GetCostBreakdown_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq GetCostBreakdownRequest
@@ -615,6 +636,354 @@ func local_request_CostCalcService_ApproveCostResult_0(ctx context.Context, mars
 	return msg, metadata, err
 }
 
+func request_CostCalcService_GetRouteCostSheet_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetRouteCostSheetRequest
+		metadata runtime.ServerMetadata
+		e        int32
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["product_sys_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "product_sys_id")
+	}
+	protoReq.ProductSysId, err = runtime.Int64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "product_sys_id", err)
+	}
+	val, ok = pathParams["period"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "period")
+	}
+	protoReq.Period, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "period", err)
+	}
+	val, ok = pathParams["calculation_type"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "calculation_type")
+	}
+	e, err = runtime.Enum(val, CalculationType_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "calculation_type", err)
+	}
+	protoReq.CalculationType = CalculationType(e)
+	msg, err := client.GetRouteCostSheet(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_GetRouteCostSheet_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetRouteCostSheetRequest
+		metadata runtime.ServerMetadata
+		e        int32
+		err      error
+	)
+	val, ok := pathParams["product_sys_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "product_sys_id")
+	}
+	protoReq.ProductSysId, err = runtime.Int64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "product_sys_id", err)
+	}
+	val, ok = pathParams["period"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "period")
+	}
+	protoReq.Period, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "period", err)
+	}
+	val, ok = pathParams["calculation_type"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "calculation_type")
+	}
+	e, err = runtime.Enum(val, CalculationType_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "calculation_type", err)
+	}
+	protoReq.CalculationType = CalculationType(e)
+	msg, err := server.GetRouteCostSheet(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_CostCalcService_RequestProductCostSheetExport_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq RequestProductCostSheetExportRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.RequestProductCostSheetExport(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_RequestProductCostSheetExport_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq RequestProductCostSheetExportRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.RequestProductCostSheetExport(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_CostCalcService_GetProductCostSheetDownloadURL_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetProductCostSheetDownloadURLRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "job_id")
+	}
+	protoReq.JobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "job_id", err)
+	}
+	msg, err := client.GetProductCostSheetDownloadURL(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_GetProductCostSheetDownloadURL_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetProductCostSheetDownloadURLRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "job_id")
+	}
+	protoReq.JobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "job_id", err)
+	}
+	msg, err := server.GetProductCostSheetDownloadURL(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_CostCalcService_ListCostSheetExportBatchChildren_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListCostSheetExportBatchChildrenRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["parent_job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "parent_job_id")
+	}
+	protoReq.ParentJobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "parent_job_id", err)
+	}
+	msg, err := client.ListCostSheetExportBatchChildren(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_ListCostSheetExportBatchChildren_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListCostSheetExportBatchChildrenRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["parent_job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "parent_job_id")
+	}
+	protoReq.ParentJobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "parent_job_id", err)
+	}
+	msg, err := server.ListCostSheetExportBatchChildren(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_CostCalcService_GetProductCostSheetExportJobStatus_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetProductCostSheetExportJobStatusRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "job_id")
+	}
+	protoReq.JobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "job_id", err)
+	}
+	msg, err := client.GetProductCostSheetExportJobStatus(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_GetProductCostSheetExportJobStatus_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetProductCostSheetExportJobStatusRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "job_id")
+	}
+	protoReq.JobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "job_id", err)
+	}
+	msg, err := server.GetProductCostSheetExportJobStatus(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_CostCalcService_GetBatchChildDownloadUrl_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetBatchChildDownloadUrlRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["parent_job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "parent_job_id")
+	}
+	protoReq.ParentJobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "parent_job_id", err)
+	}
+	val, ok = pathParams["child_job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "child_job_id")
+	}
+	protoReq.ChildJobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "child_job_id", err)
+	}
+	msg, err := client.GetBatchChildDownloadUrl(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_GetBatchChildDownloadUrl_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetBatchChildDownloadUrlRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["parent_job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "parent_job_id")
+	}
+	protoReq.ParentJobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "parent_job_id", err)
+	}
+	val, ok = pathParams["child_job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "child_job_id")
+	}
+	protoReq.ChildJobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "child_job_id", err)
+	}
+	msg, err := server.GetBatchChildDownloadUrl(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_CostCalcService_DownloadExportBatchZip_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DownloadExportBatchZipRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["parent_job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "parent_job_id")
+	}
+	protoReq.ParentJobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "parent_job_id", err)
+	}
+	msg, err := client.DownloadExportBatchZip(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_DownloadExportBatchZip_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DownloadExportBatchZipRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["parent_job_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "parent_job_id")
+	}
+	protoReq.ParentJobId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "parent_job_id", err)
+	}
+	msg, err := server.DownloadExportBatchZip(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_CostCalcService_ListExportJobs_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_CostCalcService_ListExportJobs_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListExportJobsRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CostCalcService_ListExportJobs_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.ListExportJobs(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_ListExportJobs_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListExportJobsRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CostCalcService_ListExportJobs_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.ListExportJobs(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 // RegisterCostCalcServiceHandlerServer registers the http handlers for service CostCalcService to "mux".
 // UnaryRPC     :call CostCalcServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -781,6 +1150,26 @@ func RegisterCostCalcServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		}
 		forward_CostCalcService_ListCostResults_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_ListCostResultPeriods_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/ListCostResultPeriods", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/periods"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_ListCostResultPeriods_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_ListCostResultPeriods_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_CostCalcService_GetCostBreakdown_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -860,6 +1249,166 @@ func RegisterCostCalcServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 		forward_CostCalcService_ApproveCostResult_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_GetRouteCostSheet_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/GetRouteCostSheet", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/{product_sys_id}/{period}/{calculation_type}/route-sheet"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_GetRouteCostSheet_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_GetRouteCostSheet_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_CostCalcService_RequestProductCostSheetExport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/RequestProductCostSheetExport", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/request-export"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_RequestProductCostSheetExport_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_RequestProductCostSheetExport_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_GetProductCostSheetDownloadURL_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/GetProductCostSheetDownloadURL", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{job_id}/download"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_GetProductCostSheetDownloadURL_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_GetProductCostSheetDownloadURL_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_ListCostSheetExportBatchChildren_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/ListCostSheetExportBatchChildren", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{parent_job_id}/children"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_ListCostSheetExportBatchChildren_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_ListCostSheetExportBatchChildren_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_GetProductCostSheetExportJobStatus_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/GetProductCostSheetExportJobStatus", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{job_id}/status"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_GetProductCostSheetExportJobStatus_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_GetProductCostSheetExportJobStatus_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_GetBatchChildDownloadUrl_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/GetBatchChildDownloadUrl", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{parent_job_id}/children/{child_job_id}/download-url"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_GetBatchChildDownloadUrl_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_GetBatchChildDownloadUrl_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_DownloadExportBatchZip_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/DownloadExportBatchZip", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{parent_job_id}/download-all"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_DownloadExportBatchZip_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_DownloadExportBatchZip_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_ListExportJobs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/ListExportJobs", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_ListExportJobs_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_ListExportJobs_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 
 	return nil
@@ -1037,6 +1586,23 @@ func RegisterCostCalcServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		}
 		forward_CostCalcService_ListCostResults_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_ListCostResultPeriods_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/ListCostResultPeriods", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/periods"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_ListCostResultPeriods_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_ListCostResultPeriods_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_CostCalcService_GetCostBreakdown_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1105,35 +1671,189 @@ func RegisterCostCalcServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		}
 		forward_CostCalcService_ApproveCostResult_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_GetRouteCostSheet_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/GetRouteCostSheet", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/{product_sys_id}/{period}/{calculation_type}/route-sheet"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_GetRouteCostSheet_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_GetRouteCostSheet_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_CostCalcService_RequestProductCostSheetExport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/RequestProductCostSheetExport", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/request-export"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_RequestProductCostSheetExport_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_RequestProductCostSheetExport_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_GetProductCostSheetDownloadURL_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/GetProductCostSheetDownloadURL", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{job_id}/download"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_GetProductCostSheetDownloadURL_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_GetProductCostSheetDownloadURL_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_ListCostSheetExportBatchChildren_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/ListCostSheetExportBatchChildren", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{parent_job_id}/children"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_ListCostSheetExportBatchChildren_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_ListCostSheetExportBatchChildren_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_GetProductCostSheetExportJobStatus_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/GetProductCostSheetExportJobStatus", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{job_id}/status"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_GetProductCostSheetExportJobStatus_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_GetProductCostSheetExportJobStatus_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_GetBatchChildDownloadUrl_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/GetBatchChildDownloadUrl", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{parent_job_id}/children/{child_job_id}/download-url"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_GetBatchChildDownloadUrl_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_GetBatchChildDownloadUrl_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_DownloadExportBatchZip_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/DownloadExportBatchZip", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports/{parent_job_id}/download-all"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_DownloadExportBatchZip_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_DownloadExportBatchZip_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_CostCalcService_ListExportJobs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/ListExportJobs", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/exports"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_ListExportJobs_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_ListExportJobs_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	return nil
 }
 
 var (
-	pattern_CostCalcService_TriggerCalcJob_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "calc-jobs", "trigger"}, ""))
-	pattern_CostCalcService_GetCalcJob_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "finance", "calc-jobs", "job_id"}, ""))
-	pattern_CostCalcService_ListCalcJobs_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "calc-jobs"}, ""))
-	pattern_CostCalcService_ListCalcJobChunks_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "calc-jobs", "job_id", "chunks"}, ""))
-	pattern_CostCalcService_ListCalcJobProducts_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "calc-jobs", "job_id", "products"}, ""))
-	pattern_CostCalcService_CancelCalcJob_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "calc-jobs", "job_id", "cancel"}, ""))
-	pattern_CostCalcService_GetCostResult_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 1, 0, 4, 1, 5, 6}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "period", "calculation_type"}, ""))
-	pattern_CostCalcService_ListCostResults_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "cost-results"}, ""))
-	pattern_CostCalcService_GetCostBreakdown_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "period", "calculation_type", "breakdown"}, ""))
-	pattern_CostCalcService_ListCostHistory_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "history"}, ""))
-	pattern_CostCalcService_VerifyCostResult_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "cost_id", "verify"}, ""))
-	pattern_CostCalcService_ApproveCostResult_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "cost_id", "approve"}, ""))
+	pattern_CostCalcService_TriggerCalcJob_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "calc-jobs", "trigger"}, ""))
+	pattern_CostCalcService_GetCalcJob_0                         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "finance", "calc-jobs", "job_id"}, ""))
+	pattern_CostCalcService_ListCalcJobs_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "calc-jobs"}, ""))
+	pattern_CostCalcService_ListCalcJobChunks_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "calc-jobs", "job_id", "chunks"}, ""))
+	pattern_CostCalcService_ListCalcJobProducts_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "calc-jobs", "job_id", "products"}, ""))
+	pattern_CostCalcService_CancelCalcJob_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "calc-jobs", "job_id", "cancel"}, ""))
+	pattern_CostCalcService_GetCostResult_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 1, 0, 4, 1, 5, 6}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "period", "calculation_type"}, ""))
+	pattern_CostCalcService_ListCostResults_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "cost-results"}, ""))
+	pattern_CostCalcService_ListCostResultPeriods_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "cost-results", "periods"}, ""))
+	pattern_CostCalcService_GetCostBreakdown_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "period", "calculation_type", "breakdown"}, ""))
+	pattern_CostCalcService_ListCostHistory_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "history"}, ""))
+	pattern_CostCalcService_VerifyCostResult_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "cost_id", "verify"}, ""))
+	pattern_CostCalcService_ApproveCostResult_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "cost_id", "approve"}, ""))
+	pattern_CostCalcService_GetRouteCostSheet_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "period", "calculation_type", "route-sheet"}, ""))
+	pattern_CostCalcService_RequestProductCostSheetExport_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "cost-results", "request-export"}, ""))
+	pattern_CostCalcService_GetProductCostSheetDownloadURL_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"api", "v1", "finance", "cost-results", "exports", "job_id", "download"}, ""))
+	pattern_CostCalcService_ListCostSheetExportBatchChildren_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"api", "v1", "finance", "cost-results", "exports", "parent_job_id", "children"}, ""))
+	pattern_CostCalcService_GetProductCostSheetExportJobStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"api", "v1", "finance", "cost-results", "exports", "job_id", "status"}, ""))
+	pattern_CostCalcService_GetBatchChildDownloadUrl_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6, 1, 0, 4, 1, 5, 7, 2, 8}, []string{"api", "v1", "finance", "cost-results", "exports", "parent_job_id", "children", "child_job_id", "download-url"}, ""))
+	pattern_CostCalcService_DownloadExportBatchZip_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"api", "v1", "finance", "cost-results", "exports", "parent_job_id", "download-all"}, ""))
+	pattern_CostCalcService_ListExportJobs_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "cost-results", "exports"}, ""))
 )
 
 var (
-	forward_CostCalcService_TriggerCalcJob_0      = runtime.ForwardResponseMessage
-	forward_CostCalcService_GetCalcJob_0          = runtime.ForwardResponseMessage
-	forward_CostCalcService_ListCalcJobs_0        = runtime.ForwardResponseMessage
-	forward_CostCalcService_ListCalcJobChunks_0   = runtime.ForwardResponseMessage
-	forward_CostCalcService_ListCalcJobProducts_0 = runtime.ForwardResponseMessage
-	forward_CostCalcService_CancelCalcJob_0       = runtime.ForwardResponseMessage
-	forward_CostCalcService_GetCostResult_0       = runtime.ForwardResponseMessage
-	forward_CostCalcService_ListCostResults_0     = runtime.ForwardResponseMessage
-	forward_CostCalcService_GetCostBreakdown_0    = runtime.ForwardResponseMessage
-	forward_CostCalcService_ListCostHistory_0     = runtime.ForwardResponseMessage
-	forward_CostCalcService_VerifyCostResult_0    = runtime.ForwardResponseMessage
-	forward_CostCalcService_ApproveCostResult_0   = runtime.ForwardResponseMessage
+	forward_CostCalcService_TriggerCalcJob_0                     = runtime.ForwardResponseMessage
+	forward_CostCalcService_GetCalcJob_0                         = runtime.ForwardResponseMessage
+	forward_CostCalcService_ListCalcJobs_0                       = runtime.ForwardResponseMessage
+	forward_CostCalcService_ListCalcJobChunks_0                  = runtime.ForwardResponseMessage
+	forward_CostCalcService_ListCalcJobProducts_0                = runtime.ForwardResponseMessage
+	forward_CostCalcService_CancelCalcJob_0                      = runtime.ForwardResponseMessage
+	forward_CostCalcService_GetCostResult_0                      = runtime.ForwardResponseMessage
+	forward_CostCalcService_ListCostResults_0                    = runtime.ForwardResponseMessage
+	forward_CostCalcService_ListCostResultPeriods_0              = runtime.ForwardResponseMessage
+	forward_CostCalcService_GetCostBreakdown_0                   = runtime.ForwardResponseMessage
+	forward_CostCalcService_ListCostHistory_0                    = runtime.ForwardResponseMessage
+	forward_CostCalcService_VerifyCostResult_0                   = runtime.ForwardResponseMessage
+	forward_CostCalcService_ApproveCostResult_0                  = runtime.ForwardResponseMessage
+	forward_CostCalcService_GetRouteCostSheet_0                  = runtime.ForwardResponseMessage
+	forward_CostCalcService_RequestProductCostSheetExport_0      = runtime.ForwardResponseMessage
+	forward_CostCalcService_GetProductCostSheetDownloadURL_0     = runtime.ForwardResponseMessage
+	forward_CostCalcService_ListCostSheetExportBatchChildren_0   = runtime.ForwardResponseMessage
+	forward_CostCalcService_GetProductCostSheetExportJobStatus_0 = runtime.ForwardResponseMessage
+	forward_CostCalcService_GetBatchChildDownloadUrl_0           = runtime.ForwardResponseMessage
+	forward_CostCalcService_DownloadExportBatchZip_0             = runtime.ForwardResponseMessage
+	forward_CostCalcService_ListExportJobs_0                     = runtime.ForwardResponseMessage
 )
