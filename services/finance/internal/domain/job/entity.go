@@ -9,26 +9,30 @@ import (
 
 // Execution represents a job execution aggregate root.
 type Execution struct {
-	id            uuid.UUID
-	code          Code
-	jobType       Type
-	subtype       string
-	period        string
-	status        Status
-	priority      int
-	params        json.RawMessage
-	resultSummary json.RawMessage
-	errorMessage  string
-	progress      int
-	retryCount    int
-	maxRetries    int
-	queuedAt      time.Time
-	startedAt     *time.Time
-	completedAt   *time.Time
-	createdBy     string
-	cancelledBy   string
-	cancelledAt   *time.Time
-	logs          []*ExecutionLog
+	id                uuid.UUID
+	code              Code
+	jobType           Type
+	subtype           string
+	period            string
+	status            Status
+	priority          int
+	params            json.RawMessage
+	resultSummary     json.RawMessage
+	errorMessage      string
+	progress          int
+	retryCount        int
+	maxRetries        int
+	queuedAt          time.Time
+	startedAt         *time.Time
+	completedAt       *time.Time
+	createdBy         string
+	cancelledBy       string
+	cancelledAt       *time.Time
+	logs              []*ExecutionLog
+	parentJobID       *uuid.UUID
+	totalChildren     int
+	completedChildren int
+	failedChildren    int
 }
 
 // NewExecution creates a new job execution.
@@ -66,6 +70,50 @@ func NewExecution(
 	}, nil
 }
 
+// NewParentExecution creates a new batch-tracking parent job execution. A
+// parent has no product list or file output of its own — it exists purely to
+// aggregate child job progress and fire exactly one completion notification
+// once every child has finished. totalChildren must be positive.
+func NewParentExecution(
+	jobType Type,
+	subtype string,
+	period string,
+	createdBy string,
+	priority int,
+	params json.RawMessage,
+	totalChildren int,
+) (*Execution, error) {
+	if totalChildren < 1 {
+		return nil, ErrInvalidTotalChildren
+	}
+	exec, err := NewExecution(jobType, subtype, period, createdBy, priority, params)
+	if err != nil {
+		return nil, err
+	}
+	exec.totalChildren = totalChildren
+	return exec, nil
+}
+
+// NewChildExecution creates a new job execution that belongs to a batch
+// fan-out, referencing its parent's job ID. Otherwise behaves exactly like a
+// standalone job — same status lifecycle, same worker handling.
+func NewChildExecution(
+	jobType Type,
+	subtype string,
+	period string,
+	createdBy string,
+	priority int,
+	params json.RawMessage,
+	parentJobID uuid.UUID,
+) (*Execution, error) {
+	exec, err := NewExecution(jobType, subtype, period, createdBy, priority, params)
+	if err != nil {
+		return nil, err
+	}
+	exec.parentJobID = &parentJobID
+	return exec, nil
+}
+
 // Reconstitute rebuilds an Execution from persistence data.
 func Reconstitute(
 	id uuid.UUID,
@@ -88,28 +136,36 @@ func Reconstitute(
 	cancelledBy string,
 	cancelledAt *time.Time,
 	logs []*ExecutionLog,
+	parentJobID *uuid.UUID,
+	totalChildren int,
+	completedChildren int,
+	failedChildren int,
 ) *Execution {
 	return &Execution{
-		id:            id,
-		code:          code,
-		jobType:       jobType,
-		subtype:       subtype,
-		period:        period,
-		status:        status,
-		priority:      priority,
-		params:        params,
-		resultSummary: resultSummary,
-		errorMessage:  errorMessage,
-		progress:      progress,
-		retryCount:    retryCount,
-		maxRetries:    maxRetries,
-		queuedAt:      queuedAt,
-		startedAt:     startedAt,
-		completedAt:   completedAt,
-		createdBy:     createdBy,
-		cancelledBy:   cancelledBy,
-		cancelledAt:   cancelledAt,
-		logs:          logs,
+		id:                id,
+		code:              code,
+		jobType:           jobType,
+		subtype:           subtype,
+		period:            period,
+		status:            status,
+		priority:          priority,
+		params:            params,
+		resultSummary:     resultSummary,
+		errorMessage:      errorMessage,
+		progress:          progress,
+		retryCount:        retryCount,
+		maxRetries:        maxRetries,
+		queuedAt:          queuedAt,
+		startedAt:         startedAt,
+		completedAt:       completedAt,
+		createdBy:         createdBy,
+		cancelledBy:       cancelledBy,
+		cancelledAt:       cancelledAt,
+		logs:              logs,
+		parentJobID:       parentJobID,
+		totalChildren:     totalChildren,
+		completedChildren: completedChildren,
+		failedChildren:    failedChildren,
 	}
 }
 
@@ -124,9 +180,13 @@ func (e *Execution) Start() error {
 	return nil
 }
 
-// Complete transitions the job to success state.
+// Complete transitions the job to success state. A standalone job must be
+// StatusProcessing (it went through Start()). A batch parent job is
+// tracking-only and never dispatched to a worker, so it never leaves
+// StatusQueued until its last child's completion drives it straight to
+// success — StatusQueued is accepted here for that case only.
 func (e *Execution) Complete(resultSummary json.RawMessage) error {
-	if e.status != StatusProcessing {
+	if e.status != StatusProcessing && !(e.IsParent() && e.status == StatusQueued) {
 		return ErrInvalidStatus
 	}
 	e.status = StatusSuccess
@@ -250,6 +310,48 @@ func (e *Execution) CancelledAt() *time.Time { return e.cancelledAt } //nolint:m
 
 // Logs returns the execution logs.
 func (e *Execution) Logs() []*ExecutionLog { return e.logs }
+
+// ParentJobID returns the parent job's ID, or nil for a standalone job or a
+// parent job itself.
+func (e *Execution) ParentJobID() *uuid.UUID { return e.parentJobID }
+
+// TotalChildren returns the number of child jobs this parent expects.
+func (e *Execution) TotalChildren() int { return e.totalChildren }
+
+// CompletedChildren returns the number of child jobs that finished SUCCESS.
+func (e *Execution) CompletedChildren() int { return e.completedChildren }
+
+// FailedChildren returns the number of child jobs that finished FAILED.
+func (e *Execution) FailedChildren() int { return e.failedChildren }
+
+// IsParent returns true if this job is a batch-tracking parent (expects one
+// or more children and is not itself a child of another job).
+func (e *Execution) IsParent() bool { return e.totalChildren > 0 && e.parentJobID == nil }
+
+// IsChild returns true if this job belongs to a batch fan-out.
+func (e *Execution) IsChild() bool { return e.parentJobID != nil }
+
+// IsBatchComplete reports whether every expected child has finished, i.e. the
+// parent's completed+failed counters have reached its total. Meaningless (and
+// always false) for a non-parent job.
+func (e *Execution) IsBatchComplete() bool {
+	return e.totalChildren > 0 && e.completedChildren+e.failedChildren >= e.totalChildren
+}
+
+// IncrementCompletedChildren records one more successfully finished child
+// in-memory. The authoritative increment happens via a single atomic
+// UPDATE ... RETURNING in the repository (see Repository.IncrementChildProgress);
+// this method exists so callers holding a reconstituted parent can reflect the
+// same change without a second round-trip, and for unit tests.
+func (e *Execution) IncrementCompletedChildren() {
+	e.completedChildren++
+}
+
+// IncrementFailedChildren records one more failed child in-memory. See
+// IncrementCompletedChildren for the atomicity note.
+func (e *Execution) IncrementFailedChildren() {
+	e.failedChildren++
+}
 
 // ExecutionLog represents a single step log entry within a job execution.
 type ExecutionLog struct {

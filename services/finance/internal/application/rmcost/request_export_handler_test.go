@@ -61,6 +61,24 @@ func (m *jobRepoMock) GetNextSequence(ctx context.Context, t job.Type, p string)
 	return args.Int(0), args.Error(1)
 }
 
+func (m *jobRepoMock) CreateChildren(ctx context.Context, execs []*job.Execution) error {
+	return m.Called(ctx, execs).Error(0)
+}
+
+func (m *jobRepoMock) IncrementChildProgress(ctx context.Context, parentJobID uuid.UUID, success bool) (bool, error) {
+	args := m.Called(ctx, parentJobID, success)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *jobRepoMock) ListChildren(ctx context.Context, parentJobID uuid.UUID) ([]*job.Execution, error) {
+	args := m.Called(ctx, parentJobID)
+	var out []*job.Execution
+	if v := args.Get(0); v != nil {
+		out = v.([]*job.Execution)
+	}
+	return out, args.Error(1)
+}
+
 type exportPubMock struct{ mock.Mock }
 
 func (m *exportPubMock) PublishRMCostExport(ctx context.Context, jobID, period, rmType, ghID, search, recipient, by string) error {

@@ -132,6 +132,24 @@ func (m *mockJobRepo) GetNextSequence(ctx context.Context, jobType job.Type, per
 	return args.Int(0), args.Error(1)
 }
 
+func (m *mockJobRepo) CreateChildren(ctx context.Context, execs []*job.Execution) error {
+	return m.Called(ctx, execs).Error(0)
+}
+
+func (m *mockJobRepo) IncrementChildProgress(ctx context.Context, parentJobID uuid.UUID, success bool) (bool, error) {
+	args := m.Called(ctx, parentJobID, success)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockJobRepo) ListChildren(ctx context.Context, parentJobID uuid.UUID) ([]*job.Execution, error) {
+	args := m.Called(ctx, parentJobID)
+	var out []*job.Execution
+	if v := args.Get(0); v != nil {
+		out = v.([]*job.Execution)
+	}
+	return out, args.Error(1)
+}
+
 // mockPublisher implements appcost.JobPublisher.
 type mockPublisher struct{ mock.Mock }
 

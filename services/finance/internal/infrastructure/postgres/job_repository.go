@@ -41,8 +41,9 @@ func (r *JobRepository) Create(ctx context.Context, exec *job.Execution) error {
 	query := `
 		INSERT INTO job_execution (
 			job_id, job_code, job_type, job_subtype, period, status, priority,
-			params, progress, retry_count, max_retries, queued_at, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			params, progress, retry_count, max_retries, queued_at, created_by,
+			jex_parent_job_id, jex_total_children
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -59,6 +60,8 @@ func (r *JobRepository) Create(ctx context.Context, exec *job.Execution) error {
 		exec.MaxRetries(),
 		exec.QueuedAt(),
 		exec.CreatedBy(),
+		nullUUID(exec.ParentJobID()),
+		exec.TotalChildren(),
 	)
 	if err != nil {
 		if isDuplicateActiveJob(err) {
@@ -68,6 +71,122 @@ func (r *JobRepository) Create(ctx context.Context, exec *job.Execution) error {
 	}
 
 	return nil
+}
+
+// CreateChildren persists N child job executions in a single transaction,
+// each referencing parentJobID and each assigned its own sequential code.
+// Mirrors Create per row so children behave identically to standalone jobs
+// once persisted (same status lifecycle, same worker handling).
+func (r *JobRepository) CreateChildren(ctx context.Context, execs []*job.Execution) (err error) {
+	if len(execs) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin create children tx: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+				err = errors.Join(err, fmt.Errorf("rollback create children: %w", rbErr))
+			}
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	const insertQuery = `
+		INSERT INTO job_execution (
+			job_id, job_code, job_type, job_subtype, period, status, priority,
+			params, progress, retry_count, max_retries, queued_at, created_by,
+			jex_parent_job_id, jex_total_children
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+	`
+
+	for _, exec := range execs {
+		seq, seqErr := r.nextSequenceTx(ctx, tx, exec.JobType(), exec.Period())
+		if seqErr != nil {
+			return fmt.Errorf("get next sequence: %w", seqErr)
+		}
+		code := job.GenerateCode(exec.JobType(), exec.Period(), seq)
+		exec.SetCode(code)
+
+		if _, execErr := tx.ExecContext(ctx, insertQuery,
+			exec.ID(),
+			exec.Code().String(),
+			exec.JobType().String(),
+			nullString(exec.Subtype()),
+			nullString(exec.Period()),
+			exec.Status().String(),
+			exec.Priority(),
+			nullJSON(exec.Params()),
+			exec.Progress(),
+			exec.RetryCount(),
+			exec.MaxRetries(),
+			exec.QueuedAt(),
+			exec.CreatedBy(),
+			nullUUID(exec.ParentJobID()),
+			exec.TotalChildren(),
+		); execErr != nil {
+			return fmt.Errorf("create child job execution: %w", execErr)
+		}
+	}
+
+	return nil
+}
+
+// IncrementChildProgress atomically increments a parent job's completed- or
+// failed-children counter and reports whether the batch is now fully done.
+// The single UPDATE ... RETURNING avoids a read-then-write race: concurrent
+// children finishing at the same moment each get their own atomic increment
+// applied by Postgres's row-level locking, and each caller sees the
+// post-increment totals it itself produced.
+func (r *JobRepository) IncrementChildProgress(ctx context.Context, parentJobID uuid.UUID, success bool) (bool, error) {
+	column := "jex_failed_children"
+	if success {
+		column = "jex_completed_children"
+	}
+	query := fmt.Sprintf(`
+		UPDATE job_execution
+		SET %s = %s + 1
+		WHERE job_id = $1
+		RETURNING jex_completed_children, jex_failed_children, jex_total_children
+	`, column, column)
+
+	var completed, failed, total int
+	if err := r.db.QueryRowContext(ctx, query, parentJobID).Scan(&completed, &failed, &total); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, job.ErrNotFound
+		}
+		return false, fmt.Errorf("increment child progress: %w", err)
+	}
+
+	return total > 0 && completed+failed >= total, nil
+}
+
+// nextSequenceTx mirrors GetNextSequence but runs inside an existing
+// transaction so a batch of child inserts sees a consistent view and cannot
+// race itself into duplicate sequence numbers within the same tx.
+func (r *JobRepository) nextSequenceTx(ctx context.Context, tx *sql.Tx, jobType job.Type, period string) (int, error) {
+	query := `
+		SELECT COALESCE(MAX(
+			CAST(NULLIF(SPLIT_PART(job_code, '-', 3), '') AS INT)
+		), 0) + 1
+		FROM job_execution
+		WHERE job_type = $1 AND ($2 = '' OR period = $2)
+	`
+
+	periodArg := ""
+	if period != "" {
+		periodArg = period
+	}
+
+	var seq int
+	if err := tx.QueryRowContext(ctx, query, jobType.String(), periodArg).Scan(&seq); err != nil {
+		return 1, fmt.Errorf("get next sequence: %w", err)
+	}
+	return seq, nil
 }
 
 // GetByID retrieves a job execution by its ID, including logs.
@@ -90,6 +209,7 @@ func (r *JobRepository) GetByID(ctx context.Context, id uuid.UUID) (*job.Executi
 		exec.QueuedAt(), exec.StartedAt(), exec.CompletedAt(),
 		exec.CreatedBy(), exec.CancelledBy(), exec.CancelledAt(),
 		logs,
+		exec.ParentJobID(), exec.TotalChildren(), exec.CompletedChildren(), exec.FailedChildren(),
 	), nil
 }
 
@@ -126,6 +246,9 @@ func (r *JobRepository) List(ctx context.Context, filter job.ListFilter) (_ []*j
 		args = append(args, "%"+filter.Search+"%")
 		argIdx++
 	}
+	if filter.ExcludeChildren {
+		conditions = append(conditions, "je.jex_parent_job_id IS NULL")
+	}
 
 	where := ""
 	if len(conditions) > 0 {
@@ -148,7 +271,8 @@ func (r *JobRepository) List(ctx context.Context, filter job.ListFilter) (_ []*j
 		SELECT je.job_id, je.job_code, je.job_type, je.job_subtype, je.period,
 			   je.status, je.priority, je.params, je.result_summary, je.error_message,
 			   je.progress, je.retry_count, je.max_retries, je.queued_at, je.started_at,
-			   je.completed_at, je.created_by, je.cancelled_by, je.cancelled_at
+			   je.completed_at, je.created_by, je.cancelled_by, je.cancelled_at,
+			   je.jex_parent_job_id, je.jex_total_children, je.jex_completed_children, je.jex_failed_children
 		FROM job_execution je %s
 		ORDER BY je.queued_at DESC
 		LIMIT $%d OFFSET $%d
@@ -179,6 +303,45 @@ func (r *JobRepository) List(ctx context.Context, filter job.ListFilter) (_ []*j
 	}
 
 	return executions, total, nil
+}
+
+// ListChildren returns every child job execution belonging to the given
+// parent, ordered by creation time ascending.
+func (r *JobRepository) ListChildren(ctx context.Context, parentJobID uuid.UUID) (_ []*job.Execution, err error) {
+	query := `
+		SELECT je.job_id, je.job_code, je.job_type, je.job_subtype, je.period,
+			   je.status, je.priority, je.params, je.result_summary, je.error_message,
+			   je.progress, je.retry_count, je.max_retries, je.queued_at, je.started_at,
+			   je.completed_at, je.created_by, je.cancelled_by, je.cancelled_at,
+			   je.jex_parent_job_id, je.jex_total_children, je.jex_completed_children, je.jex_failed_children
+		FROM job_execution je
+		WHERE je.jex_parent_job_id = $1
+		ORDER BY je.queued_at ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, parentJobID)
+	if err != nil {
+		return nil, fmt.Errorf("list child job executions: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close rows: %w", closeErr))
+		}
+	}()
+
+	var executions []*job.Execution
+	for rows.Next() {
+		exec, scanErr := r.scanExecutionRow(rows)
+		if scanErr != nil {
+			return nil, fmt.Errorf("scan child job execution: %w", scanErr)
+		}
+		executions = append(executions, exec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
+	}
+
+	return executions, nil
 }
 
 // UpdateStatus atomically updates a job execution's status fields.
@@ -330,32 +493,37 @@ func (r *JobRepository) scanExecution(ctx context.Context, whereClause string, a
 		SELECT je.job_id, je.job_code, je.job_type, je.job_subtype, je.period,
 			   je.status, je.priority, je.params, je.result_summary, je.error_message,
 			   je.progress, je.retry_count, je.max_retries, je.queued_at, je.started_at,
-			   je.completed_at, je.created_by, je.cancelled_by, je.cancelled_at
+			   je.completed_at, je.created_by, je.cancelled_by, je.cancelled_at,
+			   je.jex_parent_job_id, je.jex_total_children, je.jex_completed_children, je.jex_failed_children
 		FROM job_execution je %s
 	`, whereClause)
 
 	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var (
-		id            uuid.UUID
-		codeStr       string
-		jobType       string
-		subtype       sql.NullString
-		period        sql.NullString
-		status        string
-		priority      int
-		params        sql.NullString
-		resultSummary sql.NullString
-		errorMessage  sql.NullString
-		progress      int
-		retryCount    int
-		maxRetries    int
-		queuedAt      time.Time
-		startedAt     sql.NullTime
-		completedAt   sql.NullTime
-		createdBy     string
-		cancelledBy   sql.NullString
-		cancelledAt   sql.NullTime
+		id                uuid.UUID
+		codeStr           string
+		jobType           string
+		subtype           sql.NullString
+		period            sql.NullString
+		status            string
+		priority          int
+		params            sql.NullString
+		resultSummary     sql.NullString
+		errorMessage      sql.NullString
+		progress          int
+		retryCount        int
+		maxRetries        int
+		queuedAt          time.Time
+		startedAt         sql.NullTime
+		completedAt       sql.NullTime
+		createdBy         string
+		cancelledBy       sql.NullString
+		cancelledAt       sql.NullTime
+		parentJobID       uuid.NullUUID
+		totalChildren     int
+		completedChildren int
+		failedChildren    int
 	)
 
 	err := row.Scan(
@@ -363,6 +531,7 @@ func (r *JobRepository) scanExecution(ctx context.Context, whereClause string, a
 		&status, &priority, &params, &resultSummary, &errorMessage,
 		&progress, &retryCount, &maxRetries, &queuedAt, &startedAt,
 		&completedAt, &createdBy, &cancelledBy, &cancelledAt,
+		&parentJobID, &totalChildren, &completedChildren, &failedChildren,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -384,6 +553,7 @@ func (r *JobRepository) scanExecution(ctx context.Context, whereClause string, a
 		queuedAt, nullTimePtr(startedAt), nullTimePtr(completedAt),
 		createdBy, cancelledBy.String, nullTimePtr(cancelledAt),
 		nil,
+		nullUUIDPtr(parentJobID), totalChildren, completedChildren, failedChildren,
 	), nil
 }
 
@@ -392,25 +562,29 @@ func (r *JobRepository) scanExecution(ctx context.Context, whereClause string, a
 //nolint:misspell // Go vars match domain field names (cancelledBy/cancelledAt)
 func (r *JobRepository) scanExecutionRow(rows *sql.Rows) (*job.Execution, error) {
 	var (
-		id            uuid.UUID
-		codeStr       string
-		jobType       string
-		subtype       sql.NullString
-		period        sql.NullString
-		status        string
-		priority      int
-		params        sql.NullString
-		resultSummary sql.NullString
-		errorMessage  sql.NullString
-		progress      int
-		retryCount    int
-		maxRetries    int
-		queuedAt      time.Time
-		startedAt     sql.NullTime
-		completedAt   sql.NullTime
-		createdBy     string
-		cancelledBy   sql.NullString
-		cancelledAt   sql.NullTime
+		id                uuid.UUID
+		codeStr           string
+		jobType           string
+		subtype           sql.NullString
+		period            sql.NullString
+		status            string
+		priority          int
+		params            sql.NullString
+		resultSummary     sql.NullString
+		errorMessage      sql.NullString
+		progress          int
+		retryCount        int
+		maxRetries        int
+		queuedAt          time.Time
+		startedAt         sql.NullTime
+		completedAt       sql.NullTime
+		createdBy         string
+		cancelledBy       sql.NullString
+		cancelledAt       sql.NullTime
+		parentJobID       uuid.NullUUID
+		totalChildren     int
+		completedChildren int
+		failedChildren    int
 	)
 
 	err := rows.Scan(
@@ -418,6 +592,7 @@ func (r *JobRepository) scanExecutionRow(rows *sql.Rows) (*job.Execution, error)
 		&status, &priority, &params, &resultSummary, &errorMessage,
 		&progress, &retryCount, &maxRetries, &queuedAt, &startedAt,
 		&completedAt, &createdBy, &cancelledBy, &cancelledAt,
+		&parentJobID, &totalChildren, &completedChildren, &failedChildren,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan row: %w", err)
@@ -436,6 +611,7 @@ func (r *JobRepository) scanExecutionRow(rows *sql.Rows) (*job.Execution, error)
 		queuedAt, nullTimePtr(startedAt), nullTimePtr(completedAt),
 		createdBy, cancelledBy.String, nullTimePtr(cancelledAt),
 		nil,
+		nullUUIDPtr(parentJobID), totalChildren, completedChildren, failedChildren,
 	), nil
 }
 
@@ -526,6 +702,21 @@ func nullTimePtr(nt sql.NullTime) *time.Time {
 		return nil
 	}
 	return &nt.Time
+}
+
+func nullUUID(id *uuid.UUID) uuid.NullUUID {
+	if id == nil {
+		return uuid.NullUUID{}
+	}
+	return uuid.NullUUID{UUID: *id, Valid: true}
+}
+
+func nullUUIDPtr(nu uuid.NullUUID) *uuid.UUID {
+	if !nu.Valid {
+		return nil
+	}
+	id := nu.UUID
+	return &id
 }
 
 func isDuplicateActiveJob(err error) bool {

@@ -31,4 +31,18 @@ var (
 
 	// ErrInvalidPriority is returned when the priority is out of range.
 	ErrInvalidPriority = errors.New("priority must be between 1 and 10")
+
+	// ErrInvalidTotalChildren is returned when a parent job is created with a
+	// non-positive expected child count.
+	ErrInvalidTotalChildren = errors.New("parent job total children must be at least 1")
+
+	// ErrNotBatchParent is returned when an operation that requires a
+	// batch-tracking parent job (e.g. listing children) is attempted on a
+	// standalone or child job.
+	ErrNotBatchParent = errors.New("job is not a batch-tracking parent")
+
+	// ErrNotBatchChild is returned when the requested child job does not
+	// belong to the given parent job (e.g. wrong parent_job_id, or the job
+	// is not a child at all).
+	ErrNotBatchChild = errors.New("job is not a child of the given parent job")
 )
