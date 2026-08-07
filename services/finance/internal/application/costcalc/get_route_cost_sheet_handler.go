@@ -150,33 +150,52 @@ func buildStage(
 		ProductSysID:  s.ProductSysID,
 		ParamSnapshot: map[string]string{},
 	}
-	if p, ok := products[s.ProductSysID]; ok && p != nil {
-		if stage.ItemCode == "" {
-			stage.ItemCode = p.ProductCode()
-		}
-		if stage.ProductName == "" {
-			stage.ProductName = p.ProductName()
-		}
-		if stage.ShadeCode == "" {
-			stage.ShadeCode = p.ShadeCode()
-		}
-		if stage.ShadeName == "" {
-			stage.ShadeName = p.ShadeName()
-		}
+	if p := products[s.ProductSysID]; p != nil {
+		fillIdentityFromProductMaster(&stage, p)
 	}
-	// Text params are master data, not calc output — they populate even for an
-	// uncalculated stage, so this runs before the res==nil bail-out.
-	if res != nil {
-		stage.HasCost = true
-		snap := map[string]float64{}
-		// A corrupt snapshot degrades those columns to "-" rather than failing
-		// the whole sheet; the text params below still land.
-		if err := decodeJSONBlob(res.ParamSnapshot(), &snap); err == nil {
-			for k, v := range snap {
-				stage.ParamSnapshot[k] = strconv.FormatFloat(v, 'f', -1, 64)
-			}
-		}
-	}
-	maps.Copy(stage.ParamSnapshot, capText)
+	fillCostFromResult(&stage, res)
+	applyCapText(&stage, capText)
 	return stage
+}
+
+// fillIdentityFromProductMaster backfills blank identity columns from the
+// product master lookup, so the sheet header is never blank when the route
+// seq's own denormalized labels are missing.
+func fillIdentityFromProductMaster(stage *RouteCostSheetStage, p *costproductmaster.CostProductMaster) {
+	if stage.ItemCode == "" {
+		stage.ItemCode = p.ProductCode()
+	}
+	if stage.ProductName == "" {
+		stage.ProductName = p.ProductName()
+	}
+	if stage.ShadeCode == "" {
+		stage.ShadeCode = p.ShadeCode()
+	}
+	if stage.ShadeName == "" {
+		stage.ShadeName = p.ShadeName()
+	}
+}
+
+func fillCostFromResult(stage *RouteCostSheetStage, res *costcalcdom.Result) {
+	if res == nil {
+		return
+	}
+	stage.HasCost = true
+	snap := map[string]float64{}
+	// A corrupt snapshot degrades those columns to "-" rather than failing
+	// the whole sheet; the text params below still land.
+	if err := decodeJSONBlob(res.ParamSnapshot(), &snap); err == nil {
+		for k, v := range snap {
+			stage.ParamSnapshot[k] = strconv.FormatFloat(v, 'f', -1, 64)
+		}
+	}
+}
+
+// applyCapText overlays the stage's text-valued params, read from master data
+// rather than the snapshot. It is applied last and wins over any same-code
+// numeric: a non-empty cpp_value_text means the master explicitly stores a
+// label there ("NA", a machine name), which is more truthful than the 0 that
+// buildInitialScope zero-fills into the scope for an absent numeric.
+func applyCapText(stage *RouteCostSheetStage, capText map[string]string) {
+	maps.Copy(stage.ParamSnapshot, capText)
 }

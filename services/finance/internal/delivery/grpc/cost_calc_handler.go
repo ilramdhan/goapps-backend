@@ -371,9 +371,9 @@ func (h *CostCalcHandler) GetProductCostSheetDownloadURL(
 	}
 	jobID, err := uuid.Parse(req.GetJobId())
 	if err != nil {
-		return &financev1.GetProductCostSheetDownloadURLResponse{
+		return &financev1.GetProductCostSheetDownloadURLResponse{ //nolint:nilerr // error travels in the response body
 			Base: ErrorResponse("400", "invalid job_id"),
-		}, nil //nolint:nilerr // error travels in the response body
+		}, nil
 	}
 	userID, ok := GetUserIDFromCtx(ctx)
 	if !ok || userID == "" {
@@ -442,7 +442,7 @@ func costSheetExportBatchChildrenFromResult(children []costsheet.BatchChildResul
 // GetBatchChildDownloadUrl freshly presigns one child job's artifact
 // download URL, called at click-time instead of at list-time, so the link
 // never expires between listing the batch and the user clicking download.
-func (h *CostCalcHandler) GetBatchChildDownloadUrl(
+func (h *CostCalcHandler) GetBatchChildDownloadUrl( //nolint:revive // name must match the generated CostCalcServiceServer interface
 	ctx context.Context, req *financev1.GetBatchChildDownloadUrlRequest,
 ) (*financev1.GetBatchChildDownloadUrlResponse, error) {
 	if h.sheetChildURLH == nil {
@@ -1197,6 +1197,24 @@ func costCalcErrToGRPCCode(err error) codes.Code {
 
 // costCalcErrToBase maps domain + application errors to a BaseResponse envelope.
 func costCalcErrToBase(err error) *commonv1.BaseResponse {
+	if base := mappedCostCalcErrToBase(err); base != nil {
+		return base
+	}
+	if s, ok := status.FromError(err); ok && s != nil && s.Code() != codes.Unknown {
+		return ErrorResponse(grpcCodeToStatusCode(s.Code()), s.Message())
+	}
+	// Validation errors from errors_validation.go are plain errors.New(...);
+	// surface their text as 400 for client-visible feedback.
+	if isCalcValidationErr(err) {
+		return ErrorResponse("400", err.Error())
+	}
+	return ErrorResponse("500", err.Error())
+}
+
+// mappedCostCalcErrToBase matches the well-known sentinel domain/application
+// errors, returning nil when err doesn't match any of them so the caller can
+// fall through to gRPC-status / validation-string handling.
+func mappedCostCalcErrToBase(err error) *commonv1.BaseResponse {
 	switch {
 	case errors.Is(err, costcalcdom.ErrJobNotFound):
 		return ErrorResponse("404", "calc job not found")
@@ -1222,16 +1240,9 @@ func costCalcErrToBase(err error) *commonv1.BaseResponse {
 	case errors.Is(err, costcalc.ErrProductRequired),
 		errors.Is(err, costcalcdom.ErrInvalidPeriod):
 		return ErrorResponse("400", err.Error())
+	default:
+		return nil
 	}
-	if s, ok := status.FromError(err); ok && s != nil && s.Code() != codes.Unknown {
-		return ErrorResponse(grpcCodeToStatusCode(s.Code()), s.Message())
-	}
-	// Validation errors from errors_validation.go are plain errors.New(...);
-	// surface their text as 400 for client-visible feedback.
-	if isCalcValidationErr(err) {
-		return ErrorResponse("400", err.Error())
-	}
-	return ErrorResponse("500", err.Error())
 }
 
 // isCalcValidationErr matches the well-known validation strings from

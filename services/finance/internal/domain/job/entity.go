@@ -186,7 +186,7 @@ func (e *Execution) Start() error {
 // StatusQueued until its last child's completion drives it straight to
 // success — StatusQueued is accepted here for that case only.
 func (e *Execution) Complete(resultSummary json.RawMessage) error {
-	if e.status != StatusProcessing && !(e.IsParent() && e.status == StatusQueued) {
+	if e.status != StatusProcessing && (!e.IsParent() || e.status != StatusQueued) {
 		return ErrInvalidStatus
 	}
 	e.status = StatusSuccess
