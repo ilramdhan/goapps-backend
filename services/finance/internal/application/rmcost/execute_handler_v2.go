@@ -15,6 +15,15 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmgroup"
 )
 
+// ExecuteCommand carries the inputs for an RM cost recalculation job run.
+type ExecuteCommand struct {
+	JobID         uuid.UUID
+	Period        string
+	GroupHeadID   *uuid.UUID
+	TriggerReason rmcost.HistoryTriggerReason
+	CalculatedBy  string
+}
+
 // ExecuteHandlerV2 is the V2 worker entrypoint.
 type ExecuteHandlerV2 struct {
 	jobRepo    job.Repository
