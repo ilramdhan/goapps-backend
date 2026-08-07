@@ -3,9 +3,11 @@ package grpc
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -13,7 +15,9 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 )
 
 // CostCalcHandler implements financev1.CostCalcServiceServer by delegating to
@@ -31,8 +35,17 @@ type CostCalcHandler struct {
 	getBreakdownH    *costcalc.GetCostBreakdownHandler
 	listHistoryH     *costcalc.ListCostHistoryHandler
 	listResultsH     *costcalc.ListCostResultsHandler
+	periodsH         *costcalc.PeriodsHandler
 	verifyH          *costcalc.VerifyCostHandler
 	approveH         *costcalc.ApproveCostHandler
+	routeSheetH      *costcalc.GetRouteCostSheetHandler
+	sheetExportH     *costsheet.RequestExportHandler
+	sheetURLH        *costsheet.GetExportURLHandler
+	sheetBatchH      *costsheet.ListBatchChildrenHandler
+	sheetChildURLH   *costsheet.GetBatchChildDownloadURLHandler
+	sheetStatusH     *costsheet.GetJobStatusHandler
+	sheetZipH        *costsheet.DownloadBatchZipHandler
+	sheetListH       *costsheet.ListExportJobsHandler
 	// svc gives ProcessChunkInternal direct access to Service.ProcessChunk;
 	// the worker invokes this RPC with the chunk payload off the RMQ queue.
 	svc *costcalc.Service
@@ -53,8 +66,17 @@ func NewCostCalcHandler(
 	getBreakdownH *costcalc.GetCostBreakdownHandler,
 	listHistoryH *costcalc.ListCostHistoryHandler,
 	listResultsH *costcalc.ListCostResultsHandler,
+	periodsH *costcalc.PeriodsHandler,
 	verifyH *costcalc.VerifyCostHandler,
 	approveH *costcalc.ApproveCostHandler,
+	routeSheetH *costcalc.GetRouteCostSheetHandler,
+	sheetExportH *costsheet.RequestExportHandler,
+	sheetURLH *costsheet.GetExportURLHandler,
+	sheetBatchH *costsheet.ListBatchChildrenHandler,
+	sheetChildURLH *costsheet.GetBatchChildDownloadURLHandler,
+	sheetStatusH *costsheet.GetJobStatusHandler,
+	sheetZipH *costsheet.DownloadBatchZipHandler,
+	sheetListH *costsheet.ListExportJobsHandler,
 ) *CostCalcHandler {
 	return &CostCalcHandler{
 		svc:              svc,
@@ -68,8 +90,17 @@ func NewCostCalcHandler(
 		getBreakdownH:    getBreakdownH,
 		listHistoryH:     listHistoryH,
 		listResultsH:     listResultsH,
+		periodsH:         periodsH,
 		verifyH:          verifyH,
 		approveH:         approveH,
+		routeSheetH:      routeSheetH,
+		sheetExportH:     sheetExportH,
+		sheetURLH:        sheetURLH,
+		sheetBatchH:      sheetBatchH,
+		sheetChildURLH:   sheetChildURLH,
+		sheetStatusH:     sheetStatusH,
+		sheetZipH:        sheetZipH,
+		sheetListH:       sheetListH,
 	}
 }
 
@@ -238,6 +269,327 @@ func (h *CostCalcHandler) GetCostBreakdown(ctx context.Context, req *financev1.G
 	}, nil
 }
 
+// GetRouteCostSheet returns every route stage of a product as one column set,
+// the backing data for the product cost sheet export.
+func (h *CostCalcHandler) GetRouteCostSheet(ctx context.Context, req *financev1.GetRouteCostSheetRequest) (*financev1.GetRouteCostSheetResponse, error) {
+	stages, err := h.routeSheetH.Handle(ctx, costcalc.GetRouteCostSheetQuery{
+		ProductSysID: req.GetProductSysId(),
+		Period:       req.GetPeriod(),
+		CalcType:     protoToCalcType(req.GetCalculationType()),
+	})
+	if err != nil {
+		return &financev1.GetRouteCostSheetResponse{Base: costCalcErrToBase(err)}, nil
+	}
+	out := make([]*financev1.RouteCostSheetStage, 0, len(stages))
+	for i := range stages {
+		out = append(out, routeCostSheetStageToProto(stages[i]))
+	}
+	return &financev1.GetRouteCostSheetResponse{
+		Base:   successResponse("OK"),
+		Stages: out,
+	}, nil
+}
+
+// routeCostSheetStageToProto maps one application stage to its proto form. The
+// param snapshot is already stringified upstream, so it transfers as-is.
+func routeCostSheetStageToProto(s costcalc.RouteCostSheetStage) *financev1.RouteCostSheetStage {
+	return &financev1.RouteCostSheetStage{
+		RouteLevel:    s.RouteLevel,
+		RouteSeq:      s.RouteSeq,
+		RouteName:     s.RouteName,
+		ItemCode:      s.ItemCode,
+		ProductName:   s.ProductName,
+		ShadeCode:     s.ShadeCode,
+		ShadeName:     s.ShadeName,
+		ProductSysId:  s.ProductSysID,
+		HasCost:       s.HasCost,
+		ParamSnapshot: s.ParamSnapshot,
+	}
+}
+
+// RequestProductCostSheetExport queues an asynchronous A4 xlsx export job. The
+// worker renders one sheet per product and uploads the workbook to MinIO; the
+// caller is notified via the IAM notification system when it is ready.
+func (h *CostCalcHandler) RequestProductCostSheetExport(
+	ctx context.Context, req *financev1.RequestProductCostSheetExportRequest,
+) (*financev1.RequestProductCostSheetExportResponse, error) {
+	if h.sheetExportH == nil {
+		return &financev1.RequestProductCostSheetExportResponse{
+			Base: ErrorResponse("503", "export queue unavailable"),
+		}, nil
+	}
+	userID, ok := GetUserIDFromCtx(ctx)
+	if !ok || userID == "" {
+		return &financev1.RequestProductCostSheetExportResponse{
+			Base: ErrorResponse("401", "not authenticated"),
+		}, nil
+	}
+
+	res, err := h.sheetExportH.Handle(ctx, costsheet.RequestExportCommand{
+		Period:           req.GetPeriod(),
+		CalcType:         protoToCalcType(req.GetCalculationType()),
+		ProductTypeIDs:   req.GetProductTypeIds(),
+		Search:           req.GetSearch(),
+		Status:           protoToResultStatusString(req.GetStatus()),
+		ProductSysIDs:    req.GetProductSysIds(),
+		RequestingUserID: userID,
+		CreatedBy:        getUserFromContext(ctx),
+	})
+	if err != nil {
+		return &financev1.RequestProductCostSheetExportResponse{Base: costCalcErrToBase(err)}, nil
+	}
+	return &financev1.RequestProductCostSheetExportResponse{
+		Base: successResponse("Export queued. You will be notified when the file is ready."),
+		Data: productCostSheetExportJobInfoFromExecution(res.Execution),
+	}, nil
+}
+
+// productCostSheetExportJobInfoFromExecution maps a job.Execution (either a
+// standalone export job or a batch-tracking parent) to the wire message.
+// Non-batch jobs report is_batch=false with all counters at zero.
+func productCostSheetExportJobInfoFromExecution(exec *job.Execution) *financev1.ProductCostSheetExportJobInfo {
+	return &financev1.ProductCostSheetExportJobInfo{
+		JobId:             exec.ID().String(),
+		JobCode:           exec.Code().String(),
+		Status:            string(exec.Status()),
+		IsBatch:           exec.IsParent(),
+		TotalChildren:     safeIntToInt32(exec.TotalChildren()),
+		CompletedChildren: safeIntToInt32(exec.CompletedChildren()),
+		FailedChildren:    safeIntToInt32(exec.FailedChildren()),
+	}
+}
+
+// GetProductCostSheetDownloadURL presigns the finished export artifact for the
+// job's owner.
+func (h *CostCalcHandler) GetProductCostSheetDownloadURL(
+	ctx context.Context, req *financev1.GetProductCostSheetDownloadURLRequest,
+) (*financev1.GetProductCostSheetDownloadURLResponse, error) {
+	if h.sheetURLH == nil {
+		return &financev1.GetProductCostSheetDownloadURLResponse{
+			Base: ErrorResponse("503", "storage unavailable"),
+		}, nil
+	}
+	jobID, err := uuid.Parse(req.GetJobId())
+	if err != nil {
+		return &financev1.GetProductCostSheetDownloadURLResponse{
+			Base: ErrorResponse("400", "invalid job_id"),
+		}, nil //nolint:nilerr // error travels in the response body
+	}
+	userID, ok := GetUserIDFromCtx(ctx)
+	if !ok || userID == "" {
+		return &financev1.GetProductCostSheetDownloadURLResponse{
+			Base: ErrorResponse("401", "not authenticated"),
+		}, nil
+	}
+
+	res, err := h.sheetURLH.Handle(ctx, costsheet.GetExportURLCommand{JobID: jobID, UserID: userID})
+	if err != nil {
+		return &financev1.GetProductCostSheetDownloadURLResponse{Base: costCalcErrToBase(err)}, nil
+	}
+	return &financev1.GetProductCostSheetDownloadURLResponse{
+		Base: successResponse("download URL generated"),
+		Data: &financev1.ProductCostSheetDownloadInfo{
+			Url:       res.URL,
+			FileName:  res.FileName,
+			ExpiresAt: res.ExpiresAt.Format(time.RFC3339),
+		},
+	}, nil
+}
+
+// ListCostSheetExportBatchChildren enumerates a batch-tracking parent job's
+// child export jobs, each with its download URL once ready.
+func (h *CostCalcHandler) ListCostSheetExportBatchChildren(
+	ctx context.Context, req *financev1.ListCostSheetExportBatchChildrenRequest,
+) (*financev1.ListCostSheetExportBatchChildrenResponse, error) {
+	if h.sheetBatchH == nil {
+		return &financev1.ListCostSheetExportBatchChildrenResponse{
+			Base: ErrorResponse("503", "storage unavailable"),
+		}, nil
+	}
+	parentJobID, err := uuid.Parse(req.GetParentJobId())
+	if err != nil {
+		return &financev1.ListCostSheetExportBatchChildrenResponse{ //nolint:nilerr // error travels in the response body
+			Base: ErrorResponse("400", "invalid parent_job_id"),
+		}, nil
+	}
+
+	res, err := h.sheetBatchH.Handle(ctx, costsheet.ListBatchChildrenQuery{ParentJobID: parentJobID})
+	if err != nil {
+		return &financev1.ListCostSheetExportBatchChildrenResponse{Base: costCalcErrToBase(err)}, nil
+	}
+	return &financev1.ListCostSheetExportBatchChildrenResponse{
+		Base:     successResponse("OK"),
+		Children: costSheetExportBatchChildrenFromResult(res.Children),
+	}, nil
+}
+
+// costSheetExportBatchChildrenFromResult maps the application layer's child
+// results to the wire message.
+func costSheetExportBatchChildrenFromResult(children []costsheet.BatchChildResult) []*financev1.CostSheetExportBatchChildInfo {
+	out := make([]*financev1.CostSheetExportBatchChildInfo, 0, len(children))
+	for _, c := range children {
+		out = append(out, &financev1.CostSheetExportBatchChildInfo{
+			JobId:       c.JobID.String(),
+			JobCode:     c.JobCode,
+			Status:      string(c.Status),
+			DownloadUrl: c.DownloadURL,
+			FileName:    c.FileName,
+		})
+	}
+	return out
+}
+
+// GetBatchChildDownloadUrl freshly presigns one child job's artifact
+// download URL, called at click-time instead of at list-time, so the link
+// never expires between listing the batch and the user clicking download.
+func (h *CostCalcHandler) GetBatchChildDownloadUrl(
+	ctx context.Context, req *financev1.GetBatchChildDownloadUrlRequest,
+) (*financev1.GetBatchChildDownloadUrlResponse, error) {
+	if h.sheetChildURLH == nil {
+		return &financev1.GetBatchChildDownloadUrlResponse{
+			Base: ErrorResponse("503", "storage unavailable"),
+		}, nil
+	}
+	parentJobID, err := uuid.Parse(req.GetParentJobId())
+	if err != nil {
+		return &financev1.GetBatchChildDownloadUrlResponse{ //nolint:nilerr // error travels in the response body
+			Base: ErrorResponse("400", "invalid parent_job_id"),
+		}, nil
+	}
+	childJobID, err := uuid.Parse(req.GetChildJobId())
+	if err != nil {
+		return &financev1.GetBatchChildDownloadUrlResponse{ //nolint:nilerr // error travels in the response body
+			Base: ErrorResponse("400", "invalid child_job_id"),
+		}, nil
+	}
+
+	res, err := h.sheetChildURLH.Handle(ctx, costsheet.GetBatchChildDownloadURLQuery{
+		ParentJobID: parentJobID,
+		ChildJobID:  childJobID,
+	})
+	if err != nil {
+		return &financev1.GetBatchChildDownloadUrlResponse{Base: costCalcErrToBase(err)}, nil
+	}
+	return &financev1.GetBatchChildDownloadUrlResponse{
+		Base:        successResponse("download URL generated"),
+		DownloadUrl: res.URL,
+		FileName:    res.FileName,
+	}, nil
+}
+
+// DownloadExportBatchZip bundles every completed child artifact of a batch
+// export job into a single zip archive, returned as one unary response so
+// the browser can trigger a native "download all" instead of downloading
+// up to 200 child files one at a time.
+//
+// DownloadExportBatchZipResponse has no BaseResponse envelope (unlike the
+// other RPCs in this file — see the proto comment: the response only carries
+// zip_data/file_name), so errors are returned as real gRPC status errors
+// instead of being embedded in a Base field.
+func (h *CostCalcHandler) DownloadExportBatchZip(
+	ctx context.Context, req *financev1.DownloadExportBatchZipRequest,
+) (*financev1.DownloadExportBatchZipResponse, error) {
+	if h.sheetZipH == nil {
+		return nil, status.Error(codes.Unavailable, "storage unavailable")
+	}
+	parentJobID, err := uuid.Parse(req.GetParentJobId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid parent_job_id")
+	}
+
+	res, err := h.sheetZipH.Handle(ctx, costsheet.DownloadBatchZipQuery{ParentJobID: parentJobID})
+	if err != nil {
+		return nil, status.Error(costCalcErrToGRPCCode(err), err.Error())
+	}
+	return &financev1.DownloadExportBatchZipResponse{
+		ZipData:  res.ZipData,
+		FileName: res.FileName,
+	}, nil
+}
+
+// GetProductCostSheetExportJobStatus polls a standalone or batch-parent
+// export job's live status/progress while it is still in flight.
+func (h *CostCalcHandler) GetProductCostSheetExportJobStatus(
+	ctx context.Context, req *financev1.GetProductCostSheetExportJobStatusRequest,
+) (*financev1.GetProductCostSheetExportJobStatusResponse, error) {
+	if h.sheetStatusH == nil {
+		return &financev1.GetProductCostSheetExportJobStatusResponse{
+			Base: ErrorResponse("503", "export queue unavailable"),
+		}, nil
+	}
+	jobID, err := uuid.Parse(req.GetJobId())
+	if err != nil {
+		return &financev1.GetProductCostSheetExportJobStatusResponse{ //nolint:nilerr // error travels in the response body
+			Base: ErrorResponse("400", "invalid job_id"),
+		}, nil
+	}
+
+	res, err := h.sheetStatusH.Handle(ctx, costsheet.GetJobStatusQuery{JobID: jobID})
+	if err != nil {
+		return &financev1.GetProductCostSheetExportJobStatusResponse{Base: costCalcErrToBase(err)}, nil
+	}
+	info := productCostSheetExportJobInfoFromExecution(res.Execution)
+	return &financev1.GetProductCostSheetExportJobStatusResponse{
+		Base:              successResponse("OK"),
+		JobId:             info.GetJobId(),
+		JobCode:           info.GetJobCode(),
+		Status:            info.GetStatus(),
+		IsBatch:           info.GetIsBatch(),
+		TotalChildren:     info.GetTotalChildren(),
+		CompletedChildren: info.GetCompletedChildren(),
+		FailedChildren:    info.GetFailedChildren(),
+	}, nil
+}
+
+// ListExportJobs returns a paginated, newest-first history of recent product
+// cost sheet export jobs (both standalone jobs and batch parents; batch
+// children never appear on their own), optionally filtered by period.
+func (h *CostCalcHandler) ListExportJobs(
+	ctx context.Context, req *financev1.ListExportJobsRequest,
+) (*financev1.ListExportJobsResponse, error) {
+	if h.sheetListH == nil {
+		return &financev1.ListExportJobsResponse{
+			Base: ErrorResponse("503", "export queue unavailable"),
+		}, nil
+	}
+
+	res, err := h.sheetListH.Handle(ctx, costsheet.ListExportJobsQuery{
+		Period:   req.GetPeriod(),
+		Page:     int(req.GetPagination().GetPage()),
+		PageSize: int(req.GetPagination().GetPageSize()),
+	})
+	if err != nil {
+		return &financev1.ListExportJobsResponse{Base: costCalcErrToBase(err)}, nil
+	}
+
+	jobs := make([]*financev1.ExportJobSummary, 0, len(res.Items))
+	for _, exec := range res.Items {
+		jobs = append(jobs, exportJobSummaryFromExecution(exec))
+	}
+
+	return &financev1.ListExportJobsResponse{
+		Base:       successResponse("OK"),
+		Jobs:       jobs,
+		Pagination: calcPaginationResponse(res.Page, res.PageSize, int(res.Total)),
+	}, nil
+}
+
+// exportJobSummaryFromExecution maps a job.Execution to the wire summary used
+// by the recent-exports history listing.
+func exportJobSummaryFromExecution(exec *job.Execution) *financev1.ExportJobSummary {
+	return &financev1.ExportJobSummary{
+		JobId:             exec.ID().String(),
+		JobCode:           exec.Code().String(),
+		Period:            exec.Period(),
+		Status:            exec.Status().String(),
+		TotalChildren:     safeIntToInt32(exec.TotalChildren()),
+		CompletedChildren: safeIntToInt32(exec.CompletedChildren()),
+		FailedChildren:    safeIntToInt32(exec.FailedChildren()),
+		QueuedAt:          timestamppb.New(exec.QueuedAt()),
+		IsBatch:           exec.IsParent(),
+	}
+}
+
 // ListCostHistory returns versioned cost history for a product.
 func (h *CostCalcHandler) ListCostHistory(ctx context.Context, req *financev1.ListCostHistoryRequest) (*financev1.ListCostHistoryResponse, error) {
 	res, err := h.listHistoryH.Handle(ctx, costcalc.ListCostHistoryQuery{
@@ -263,12 +615,15 @@ func (h *CostCalcHandler) ListCostHistory(ctx context.Context, req *financev1.Li
 // ListCostResults lists active cost results across products for a period.
 func (h *CostCalcHandler) ListCostResults(ctx context.Context, req *financev1.ListCostResultsRequest) (*financev1.ListCostResultsResponse, error) {
 	res, err := h.listResultsH.Handle(ctx, costcalc.ListCostResultsQuery{
-		Period:   req.GetPeriod(),
-		CalcType: protoToCalcType(req.GetCalculationType()),
-		Status:   protoToResultStatusString(req.GetStatus()),
-		Search:   req.GetSearch(),
-		Page:     int(req.GetPagination().GetPage()),
-		PageSize: int(req.GetPagination().GetPageSize()),
+		Period:         req.GetPeriod(),
+		CalcType:       protoToCalcType(req.GetCalculationType()),
+		Status:         protoToResultStatusString(req.GetStatus()),
+		Search:         req.GetSearch(),
+		ProductTypeIDs: req.GetProductTypeIds(),
+		SortBy:         req.GetSortBy(),
+		SortOrder:      req.GetSortOrder(),
+		Page:           int(req.GetPagination().GetPage()),
+		PageSize:       int(req.GetPagination().GetPageSize()),
 	})
 	if err != nil {
 		return &financev1.ListCostResultsResponse{Base: costCalcErrToBase(err)}, nil
@@ -282,6 +637,18 @@ func (h *CostCalcHandler) ListCostResults(ctx context.Context, req *financev1.Li
 		Items:          items,
 		Pagination:     calcPaginationResponse(res.Page, res.PageSize, res.Total),
 		ResolvedPeriod: res.ResolvedPeriod,
+	}, nil
+}
+
+// ListCostResultPeriods returns distinct periods with cost results.
+func (h *CostCalcHandler) ListCostResultPeriods(ctx context.Context, _ *financev1.ListCostResultPeriodsRequest) (*financev1.ListCostResultPeriodsResponse, error) {
+	periods, err := h.periodsH.Handle(ctx)
+	if err != nil {
+		return &financev1.ListCostResultPeriodsResponse{Base: costCalcErrToBase(err)}, nil
+	}
+	return &financev1.ListCostResultPeriodsResponse{
+		Base:    successResponse("cost result periods retrieved successfully"),
+		Periods: periods,
 	}, nil
 }
 
@@ -666,6 +1033,8 @@ func summaryToProto(s *costcalcdom.ResultSummary) *financev1.CostResult {
 		JobId:           s.JobID,
 		CalculatedAt:    timeToProto(s.CalculatedAt),
 		CalculatedBy:    s.CalculatedBy,
+		ProductTypeId:   s.ProductTypeID,
+		ProductTypeCode: s.ProductTypeCode,
 	}
 }
 
@@ -812,6 +1181,20 @@ func calcPaginationResponse(page, pageSize, total int) *commonv1.PaginationRespo
 // error mapping
 // =============================================================================
 
+// costCalcErrToGRPCCode maps domain + application errors to a gRPC status
+// code, for the few RPCs (like DownloadExportBatchZip) whose response
+// message has no BaseResponse envelope to carry the error in-band.
+func costCalcErrToGRPCCode(err error) codes.Code {
+	switch {
+	case errors.Is(err, costcalcdom.ErrJobNotFound), errors.Is(err, costcalcdom.ErrCostNotFound), errors.Is(err, job.ErrNotFound):
+		return codes.NotFound
+	case errors.Is(err, job.ErrNotBatchParent), errors.Is(err, job.ErrNotBatchChild):
+		return codes.FailedPrecondition
+	default:
+		return codes.Internal
+	}
+}
+
 // costCalcErrToBase maps domain + application errors to a BaseResponse envelope.
 func costCalcErrToBase(err error) *commonv1.BaseResponse {
 	switch {
@@ -819,6 +1202,14 @@ func costCalcErrToBase(err error) *commonv1.BaseResponse {
 		return ErrorResponse("404", "calc job not found")
 	case errors.Is(err, costcalcdom.ErrCostNotFound):
 		return ErrorResponse("404", "cost result not found")
+	case errors.Is(err, job.ErrNotFound):
+		return ErrorResponse("404", "job not found")
+	case errors.Is(err, job.ErrNotBatchParent):
+		return ErrorResponse("409", err.Error())
+	case errors.Is(err, job.ErrNotBatchChild):
+		return ErrorResponse("404", err.Error())
+	case errors.Is(err, job.ErrDuplicateActiveJob):
+		return ConflictResponse("An export is already in progress for this period. Please wait for it to complete.")
 	case errors.Is(err, costcalcdom.ErrJobInvalidStatus):
 		return ErrorResponse("409", err.Error())
 	case errors.Is(err, costcalcdom.ErrCostInvalidStatus):
@@ -850,17 +1241,11 @@ func isCalcValidationErr(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := err.Error()
-	for _, v := range []string{
+	return slices.Contains([]string{
 		"job_id must be > 0",
 		"product_sys_id must be > 0",
 		"cost_id must be > 0",
 		"period must be YYYYMM",
 		"actor required",
-	} {
-		if msg == v {
-			return true
-		}
-	}
-	return false
+	}, err.Error())
 }

@@ -54,6 +54,26 @@ func (a *JobPublisherAdapter) PublishRMCostExport(
 	return a.publisher.PublishJob(ctx, RoutingKeyRMCostExport, msg)
 }
 
+// PublishProductCostSheetExport publishes a product cost sheet async export job
+// message. productSysIDs is the already-resolved, already-capped product list;
+// requestingUserID is the notification recipient when the workbook is ready.
+func (a *JobPublisherAdapter) PublishProductCostSheetExport(
+	ctx context.Context,
+	jobID, period, requestingUserID, createdBy string,
+	productSysIDs []int64,
+) error {
+	msg := JobMessage{
+		JobID:            jobID,
+		JobType:          "product_cost_sheet_export",
+		Subtype:          "xlsx",
+		Period:           period,
+		CreatedBy:        createdBy,
+		RequestingUserID: requestingUserID,
+		ProductSysIDs:    productSysIDs,
+	}
+	return a.publisher.PublishJob(ctx, RoutingKeyProductCostSheetExport, msg)
+}
+
 // PublishImportJob publishes a costing data import job message.
 // jobID is the int64 primary key from cost_import_job. entity is the entity type (e.g. "product_master").
 // requestingUserID is the UUID of the user who submitted the import; used to route

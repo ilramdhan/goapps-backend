@@ -13,6 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costbulkimport"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc/evaluator"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costimportetl"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductapplicableparam"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
@@ -142,7 +144,34 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 		iamNotif, log.Logger,
 	)
 
-	consumers := buildConsumers(rmqConn, syncHandler, rmCostExec, rmCostExportHandler, costingImportHandler)
+	// Product cost sheet export. The handler only needs the route cost sheet
+	// query, so the costcalc service is built with the two collaborators that
+	// query actually touches (result repo + product/route loader); the trigger
+	// publisher is nil because the worker never queues calc jobs.
+	calcSvc := costcalc.NewService(
+		postgres.NewCostCalcJobRepository(db),
+		postgres.NewCostCalcChunkRepository(db),
+		postgres.NewCostCalcJobProductRepository(db),
+		postgres.NewCostResultRepository(db),
+		postgres.NewCostAuditHistoryRepository(db),
+		costcalc.NewProductLoader(db.DB),
+		evaluator.NewCache(),
+		nil,
+		nil,
+	)
+	costSheetExportHandler := workerinternal.NewCostSheetExportHandler(
+		jobRepo,
+		costcalc.NewGetRouteCostSheetHandler(calcSvc),
+		storageSvc,
+		iamNotif,
+		log.Logger,
+		"",
+	)
+
+	consumers := buildConsumers(
+		rmqConn, syncHandler, rmCostExec, rmCostExportHandler, costingImportHandler, costSheetExportHandler,
+		cfg.RabbitMQ.ExportWorkerConcurrency,
+	)
 
 	go watchConnection(ctx, rmqConn)
 
@@ -156,14 +185,40 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	return nil
 }
 
-// buildConsumers wires the four rabbitmq consumers (oracle_sync, rm_cost_calc,
-// rm_cost_export, costing_import) with their respective message handlers.
+// buildConsumers wires the five rabbitmq consumers (oracle_sync, rm_cost_calc,
+// rm_cost_export, costing_import, product_cost_sheet_export) with their
+// respective message handlers.
+//
+// Concurrency: only product_cost_sheet_export runs with a bounded worker pool
+// (exportConcurrency, via NewConcurrentConsumer on its own dedicated AMQP
+// channel/QoS). Every other queue stays on rabbitmq.NewConsumer (strictly
+// sequential, sharing the connection's default channel at
+// rabbitmq.prefetch_count):
+//   - oracle_sync / rm_cost_calc: period-dependent recalculation jobs whose
+//     handlers were not verified safe under concurrent execution — running
+//     two calculations for overlapping periods/groups at once risks
+//     interleaved writes to the same landed-cost rows. Left sequential.
+//   - rm_cost_export: single-file export, no batch/child fan-out, so there is
+//     no 200-jobs-at-once workload to speed up; left sequential rather than
+//     changing behavior with no benefit.
+//   - costing_import: bulk import handlers stage rows and run set-based ETL;
+//     concurrent imports were not audited for shared staging-table/tx
+//     assumptions. Left sequential (conservative default per task scope).
+//   - product_cost_sheet_export: verified concurrency-safe — job state
+//     transitions go through pgx (concurrency-safe pool), the evaluator
+//     cache is guarded by sync.RWMutex, IncrementChildProgress is a single
+//     atomic UPDATE ... RETURNING, and each delivery's workbook/temp file is
+//     locally scoped (no shared writer or package-level mutable state). This
+//     is also the one queue where batch parents fan out 200+ child jobs, so
+//     it is the only one with a real sequential-processing bottleneck.
 func buildConsumers(
 	rmqConn *rabbitmq.Connection,
 	syncHandler *oraclesync.SyncHandler,
 	rmCostExec *apprmcost.ExecuteHandlerV2,
 	rmCostExportHandler *workerinternal.RMCostExportHandler,
 	costingImportHandler *workerinternal.CostingImportHandler,
+	costSheetExportHandler *workerinternal.CostSheetExportHandler,
+	exportConcurrency int,
 ) []*rabbitmq.Consumer {
 	syncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return runOracleSyncJob(ctx, syncHandler, msg)
@@ -177,11 +232,17 @@ func buildConsumers(
 	costingImportMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return costingImportHandler.Handle(ctx, msg)
 	}
+	costSheetExportMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		return costSheetExportHandler.Handle(ctx, msg)
+	}
 	return []*rabbitmq.Consumer{
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueOracleSync, syncMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostCalc, rmCostMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostExport, rmCostExportMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueImportJob, costingImportMsgHandler, log.Logger),
+		rabbitmq.NewConcurrentConsumer(
+			rmqConn, rabbitmq.QueueProductCostSheetExport, costSheetExportMsgHandler, log.Logger, exportConcurrency,
+		),
 	}
 }
 

@@ -58,6 +58,9 @@ oracle:
 rabbitmq:
   url: "amqp://guest:guest@localhost:5672/"  # Override via RABBITMQ_URL env var
   prefetch_count: 1
+  # product_cost_sheet_export only — bounded worker-pool concurrency inside
+  # this single process (see RabbitMQConfig.ExportWorkerConcurrency).
+  export_worker_concurrency: 8
   reconnect_delay: 5s
 
 tracing:

@@ -29,6 +29,10 @@ type JobMessage struct {
 	Search string `json:"search,omitempty"`
 	// RMType is the cost-type filter for rm_cost_export. Empty = all.
 	RMType string `json:"rm_type,omitempty"`
+	// ProductSysIDs is the resolved product list for product_cost_sheet_export.
+	// The requesting handler resolves any filter to explicit IDs before
+	// publishing, so the worker never re-runs the filter query.
+	ProductSysIDs []int64 `json:"product_sys_ids,omitempty"`
 }
 
 // Publisher publishes messages to RabbitMQ exchanges.

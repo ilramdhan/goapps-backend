@@ -34,6 +34,7 @@ import (
 	cpmapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbpush"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
@@ -127,11 +128,13 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	var oracleSyncPublisher oraclesync.JobPublisher
 	var rmCostPublisher apprmcost.JobPublisher
 	var rmCostExportPublisher apprmcost.ExportJobPublisher
+	var costSheetExportPublisher costsheet.ExportJobPublisher
 	var costCalcJobTriggerPub costcalc.JobTriggerPublisher
 	if rmqAdapter != nil {
 		oracleSyncPublisher = rmqAdapter
 		rmCostPublisher = rmqAdapter
 		rmCostExportPublisher = rmqAdapter
+		costSheetExportPublisher = rmqAdapter
 	}
 	if costJobPub != nil {
 		costCalcJobTriggerPub = costJobPub
@@ -300,6 +303,9 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 
 	// MinIO storage — shared between RM Cost export downloads and Phase A attachments.
 	var rmCostExportURL *apprmcost.GetExportURLHandler
+	var costSheetExportURL *costsheet.GetExportURLHandler
+	var costSheetChildURL *costsheet.GetBatchChildDownloadURLHandler
+	var costSheetZip *costsheet.DownloadBatchZipHandler
 	var storageSvc storage.Service
 	if client, sErr := storage.NewMinIOClient(storage.Config{
 		Endpoint:           cfg.Storage.Endpoint,
@@ -315,6 +321,9 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	} else {
 		storageSvc = client
 		rmCostExportURL = apprmcost.NewGetExportURLHandler(jobRepo, client, 5*time.Minute)
+		costSheetExportURL = costsheet.NewGetExportURLHandler(jobRepo, client, 5*time.Minute)
+		costSheetChildURL = costsheet.NewGetBatchChildDownloadURLHandler(jobRepo, client)
+		costSheetZip = costsheet.NewDownloadBatchZipHandler(jobRepo, client)
 	}
 
 	editInputsHandler := apprmcost.NewEditInputsHandler(rmCostRepo, rmCostInputsRepo)
@@ -561,8 +570,17 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costcalc.NewGetCostBreakdownHandler(calcSvc),
 		costcalc.NewListCostHistoryHandler(calcSvc),
 		costcalc.NewListCostResultsHandler(calcSvc),
+		costcalc.NewPeriodsHandler(calcSvc),
 		costcalc.NewVerifyCostHandler(calcSvc),
 		costcalc.NewApproveCostHandler(calcSvc),
+		costcalc.NewGetRouteCostSheetHandler(calcSvc),
+		costsheet.NewRequestExportHandler(jobRepo, costResultRepo, costSheetExportPublisher),
+		costSheetExportURL,
+		costsheet.NewListBatchChildrenHandler(jobRepo, storageSvc),
+		costSheetChildURL,
+		costsheet.NewGetJobStatusHandler(jobRepo),
+		costSheetZip,
+		costsheet.NewListExportJobsHandler(jobRepo),
 	)
 
 	// MB Push-to-Head: adapts MBHeadRepository/CostResultRepository to mbpush's ports.

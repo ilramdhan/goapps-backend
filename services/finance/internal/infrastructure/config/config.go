@@ -67,9 +67,17 @@ type OracleConfig struct {
 
 // RabbitMQConfig holds RabbitMQ connection configuration.
 type RabbitMQConfig struct {
-	URL            string        `mapstructure:"url"`
-	PrefetchCount  int           `mapstructure:"prefetch_count"`
-	ReconnectDelay time.Duration `mapstructure:"reconnect_delay"`
+	URL           string `mapstructure:"url"`
+	PrefetchCount int    `mapstructure:"prefetch_count"`
+	// ExportWorkerConcurrency bounds how many product_cost_sheet_export
+	// deliveries the worker processes in parallel via a dedicated AMQP channel
+	// (see rabbitmq.NewConcurrentConsumer). Scoped to this one queue only —
+	// every other job type this worker consumes stays on the shared channel at
+	// PrefetchCount (default 1, strictly sequential), since their handlers
+	// were not verified safe under concurrent execution. See
+	// cmd/worker/main.go buildConsumers for the per-queue decision.
+	ExportWorkerConcurrency int           `mapstructure:"export_worker_concurrency"`
+	ReconnectDelay          time.Duration `mapstructure:"reconnect_delay"`
 }
 
 // CORSConfig holds CORS configuration for SSO multi-app support.
@@ -264,6 +272,10 @@ func setDefaults(v *viper.Viper) {
 	// RabbitMQ defaults (URL must come from env var — never hardcode credentials)
 	v.SetDefault("rabbitmq.url", "")
 	v.SetDefault("rabbitmq.prefetch_count", 1)
+	// product_cost_sheet_export only: bounded parallelism inside the single
+	// worker process/pod so a 200+ child batch export doesn't run strictly
+	// sequentially. See RabbitMQConfig.ExportWorkerConcurrency doc.
+	v.SetDefault("rabbitmq.export_worker_concurrency", 8)
 	v.SetDefault("rabbitmq.reconnect_delay", 5*time.Second)
 
 	// Tracing defaults

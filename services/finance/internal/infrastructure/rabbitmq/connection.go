@@ -27,6 +27,10 @@ const (
 	QueueRMCostExport = "finance.jobs.rm_cost_export"
 	// RoutingKeyRMCostExport is the routing key for RM cost export messages.
 	RoutingKeyRMCostExport = "rm_cost_export"
+	// QueueProductCostSheetExport is the queue for product cost sheet async export jobs.
+	QueueProductCostSheetExport = "finance.jobs.product_cost_sheet_export"
+	// RoutingKeyProductCostSheetExport is the routing key for product cost sheet export messages.
+	RoutingKeyProductCostSheetExport = "product_cost_sheet_export"
 	// QueueImportJob is the queue name for costing data import jobs.
 	QueueImportJob = "finance.costing.import"
 	// RoutingKeyImportJob is the routing key for costing data import jobs.
@@ -94,9 +98,31 @@ func NewConnection(cfg config.RabbitMQConfig, logger zerolog.Logger) (*Connectio
 	return c, nil
 }
 
-// Channel returns the underlying AMQP channel.
+// Channel returns the underlying shared AMQP channel. All consumers created
+// with concurrency 1 (the default) share this channel and therefore its
+// single QoS(prefetch_count) setting.
 func (c *Connection) Channel() *amqp.Channel {
 	return c.channel
+}
+
+// OpenChannel opens a new, independent AMQP channel on the same connection
+// with its own QoS(prefetchCount) setting. Used by consumers that need a
+// prefetch higher than the shared channel's — e.g. a bounded worker pool
+// processing several deliveries concurrently — without changing the prefetch
+// of any other consumer sharing the default Channel(). The caller owns
+// closing the returned channel.
+func (c *Connection) OpenChannel(prefetchCount int) (*amqp.Channel, error) {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("open channel: %w", err)
+	}
+	if err := ch.Qos(prefetchCount, 0, false); err != nil {
+		if closeErr := ch.Close(); closeErr != nil {
+			c.logger.Warn().Err(closeErr).Msg("close channel after qos failure")
+		}
+		return nil, fmt.Errorf("set qos: %w", err)
+	}
+	return ch, nil
 }
 
 // Close closes the channel and connection.
@@ -170,6 +196,14 @@ func (c *Connection) declareTopology() error {
 	}
 	if err := c.channel.QueueBind(QueueRMCostExport, RoutingKeyRMCostExport, ExchangeName, false, nil); err != nil {
 		return fmt.Errorf("bind rm cost export queue: %w", err)
+	}
+
+	// Product cost sheet export queue with dead-letter routing.
+	if _, err := c.channel.QueueDeclare(QueueProductCostSheetExport, true, false, false, false, args); err != nil {
+		return fmt.Errorf("declare product cost sheet export queue: %w", err)
+	}
+	if err := c.channel.QueueBind(QueueProductCostSheetExport, RoutingKeyProductCostSheetExport, ExchangeName, false, nil); err != nil {
+		return fmt.Errorf("bind product cost sheet export queue: %w", err)
 	}
 
 	// Costing import queue with dead-letter routing.
