@@ -62,10 +62,34 @@ var internalLookupMethods = map[string]struct{}{
 	// ResolveCostProductMasterByErpCode links PPC sales-order staging rows to
 	// finance products by ERP item/shade code. Read-only, same trust boundary.
 	"/finance.v1.CostMasterLookupService/ResolveCostProductMasterByErpCode": {},
-	// MachineService.ListMachines is the machine master projection PPC's
-	// machine-sync worker reads (finance mst_machine → PPC machine, merged with
-	// Oracle TXTMACH). Read-only; safe to expose to the trusted PPC service.
+}
+
+// dualAuthMethods are RPCs called BOTH by trusted internal services (via the
+// shared service secret, no user JWT) AND by end users through the normal
+// Finance UI (via a user JWT). Unlike internalLookupMethods, a missing service
+// secret header does NOT reject the request — it falls through to standard
+// JWT authentication instead.
+var dualAuthMethods = map[string]struct{}{
+	// MachineService.ListMachines is read both by PPC's machine-sync worker
+	// (finance mst_machine → PPC machine, merged with Oracle TXTMACH) via the
+	// internal service secret, and by the Finance UI's Machine master page via
+	// a normal user JWT. It must not require the internal secret for the UI.
 	"/finance.v1.MachineService/ListMachines": {},
+}
+
+// hasServiceSecretHeader reports whether the request carries either of the
+// internal service-secret headers, regardless of whether the value matches.
+func hasServiceSecretHeader(ctx context.Context) bool {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return false
+	}
+	for _, header := range []string{"x-service-secret", "x-internal-token"} {
+		if len(md.Get(header)) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // serviceSecretValid reports whether the request carries a matching internal
@@ -136,6 +160,17 @@ func AuthInterceptor(cfg *config.JWTConfig, blacklist TokenBlacklistChecker, per
 		// grants a synthetic SUPER_ADMIN identity so the permission interceptor's
 		// bypass applies. This does NOT relax auth for any user-facing RPC.
 		if _, ok := internalLookupMethods[info.FullMethod]; ok {
+			if !serviceSecretValid(ctx, svcSecret) {
+				return nil, status.Error(codes.Unauthenticated, "lookup: missing or invalid internal service secret")
+			}
+			return handler(withServiceIdentity(ctx), req)
+		}
+
+		// dualAuthMethods: only take the internal-secret shortcut when the
+		// caller actually presented a service-secret header (and it's valid).
+		// Otherwise fall through to normal user JWT auth below, so the
+		// Finance UI's own JWT-authenticated calls keep working.
+		if _, ok := dualAuthMethods[info.FullMethod]; ok && hasServiceSecretHeader(ctx) {
 			if !serviceSecretValid(ctx, svcSecret) {
 				return nil, status.Error(codes.Unauthenticated, "lookup: missing or invalid internal service secret")
 			}
