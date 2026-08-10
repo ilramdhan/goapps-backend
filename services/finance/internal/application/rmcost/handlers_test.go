@@ -13,17 +13,7 @@ import (
 	appcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
-	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmgroup"
 )
-
-func newGroupHead(t *testing.T) *rmgroup.Head {
-	t.Helper()
-	code, err := rmgroup.NewCode("GRP-TEST")
-	require.NoError(t, err)
-	head, err := rmgroup.NewHead(code, "Test Group", "", 1.0, 10.0, "user:test")
-	require.NoError(t, err)
-	return head
-}
 
 // --- TriggerHandler ---
 
@@ -88,50 +78,6 @@ func TestTriggerHandler_EmptyCreatedBy(t *testing.T) {
 	h := appcost.NewTriggerHandler(new(mockJobRepo), pub)
 	_, err := h.Handle(context.Background(), appcost.TriggerCommand{Period: "202604"})
 	assert.ErrorIs(t, err, rmcost.ErrEmptyCreatedBy)
-}
-
-// --- CalculateHandler ---
-
-func TestCalculateHandler_SingleHead_EmptyDetails(t *testing.T) {
-	ctx := context.Background()
-	head := newGroupHead(t)
-	id := head.ID()
-
-	groupRepo := new(mockGroupRepo)
-	costRepo := new(mockCostRepo)
-	src := new(mockSourceReader)
-
-	groupRepo.On("GetHeadByID", ctx, id).Return(head, nil)
-	groupRepo.On("ListActiveDetailsByHeadID", ctx, id).Return([]*rmgroup.Detail{}, nil)
-	costRepo.On("GetByPeriodAndCode", ctx, "202604", head.Code().String()).
-		Return(nil, rmcost.ErrNotFound)
-	costRepo.On("Upsert", ctx, mock.AnythingOfType("*rmcost.Cost"), mock.AnythingOfType("rmcost.History")).
-		Return(nil)
-
-	h := appcost.NewCalculateHandler(groupRepo, costRepo, src)
-	res, err := h.Handle(ctx, appcost.CalculateCommand{
-		Period: "202604", GroupHeadID: &id, CalculatedBy: "user:calc",
-	})
-	require.NoError(t, err)
-	assert.Equal(t, 1, res.Processed)
-	assert.Len(t, res.Costs, 1)
-	// Empty details => no source fetch, all-zero rates => cost == costPerKg (10).
-	assert.Equal(t, 10.0, *res.Costs[0].CostValuation())
-	src.AssertNotCalled(t, "FetchRateInputs")
-}
-
-func TestCalculateHandler_InvalidPeriod(t *testing.T) {
-	h := appcost.NewCalculateHandler(new(mockGroupRepo), new(mockCostRepo), new(mockSourceReader))
-	_, err := h.Handle(context.Background(), appcost.CalculateCommand{
-		Period: "bad", CalculatedBy: "u",
-	})
-	assert.ErrorIs(t, err, rmcost.ErrInvalidPeriod)
-}
-
-func TestCalculateHandler_EmptyCalculatedBy(t *testing.T) {
-	h := appcost.NewCalculateHandler(new(mockGroupRepo), new(mockCostRepo), new(mockSourceReader))
-	_, err := h.Handle(context.Background(), appcost.CalculateCommand{Period: "202604"})
-	assert.ErrorIs(t, err, rmcost.ErrEmptyCalculatedBy)
 }
 
 // --- GetHandler ---

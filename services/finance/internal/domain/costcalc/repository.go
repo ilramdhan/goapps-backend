@@ -71,20 +71,31 @@ type ResultRepository interface {
 	// ListResults lists active cost results across products for a filter, with
 	// product code/name resolved via join. Returns rows + total + resolved period.
 	ListResults(ctx context.Context, f ResultListFilter) ([]*ResultSummary, int, string, error)
+	// ListByProductIDsPeriodType returns the active result for each requested
+	// product in one round-trip, keyed by product_sys_id. Products with no
+	// result for the tuple are absent from the map (not an error) — a route
+	// stage that has never been calculated is a legitimate state.
+	ListByProductIDsPeriodType(ctx context.Context, productSysIDs []int64, period string, calcType CalculationType) (map[int64]*Result, error)
 	MarkVerified(ctx context.Context, costID int64, by string) error
 	MarkApproved(ctx context.Context, costID int64, by string) error
+	// ListDistinctPeriods returns the distinct periods (YYYYMM) that have cost
+	// results, ordered newest first.
+	ListDistinctPeriods(ctx context.Context) ([]string, error)
 }
 
 // ResultListFilter is the filter for ListResults. Empty Period means "latest
 // period present in cst_product_cost"; empty CalcType/Status means no filter
 // (Status additionally excludes SUPERSEDED when unset).
 type ResultListFilter struct {
-	Period   string
-	CalcType CalculationType
-	Status   string
-	Search   string
-	Page     int
-	PageSize int
+	Period         string
+	CalcType       CalculationType
+	Status         string
+	Search         string
+	ProductTypeIDs []int32
+	SortBy         string
+	SortOrder      string
+	Page           int
+	PageSize       int
 }
 
 // ResultSummary is a flat, list-friendly projection of a cost result with the
@@ -108,6 +119,10 @@ type ResultSummary struct {
 	JobID        int64
 	CalculatedAt time.Time
 	CalculatedBy string
+	// ProductTypeID / ProductTypeCode come from the cost_product_master join;
+	// zero/empty when the product row is missing.
+	ProductTypeID   int32
+	ProductTypeCode string
 }
 
 // AuditHistoryRepository persists AuditHistoryEntry rows.

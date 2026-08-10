@@ -17,7 +17,6 @@ import (
 type RMCostHandler struct {
 	financev1.UnimplementedRMCostServiceServer
 	triggerHandler     *apprmcost.TriggerHandler
-	calculateHandler   *apprmcost.CalculateHandler
 	getHandler         *apprmcost.GetHandler
 	listHandler        *apprmcost.ListHandler
 	historyHandler     *apprmcost.HistoryHandler
@@ -34,7 +33,6 @@ type RMCostHandler struct {
 // NewRMCostHandler builds an RMCostHandler.
 func NewRMCostHandler(
 	trigger *apprmcost.TriggerHandler,
-	calculate *apprmcost.CalculateHandler,
 	get *apprmcost.GetHandler,
 	list *apprmcost.ListHandler,
 	history *apprmcost.HistoryHandler,
@@ -52,7 +50,6 @@ func NewRMCostHandler(
 	}
 	return &RMCostHandler{
 		triggerHandler:     trigger,
-		calculateHandler:   calculate,
 		getHandler:         get,
 		listHandler:        list,
 		historyHandler:     history,
@@ -96,40 +93,6 @@ func (h *RMCostHandler) TriggerRMCostCalculation(ctx context.Context, req *finan
 	return &financev1.TriggerRMCostCalculationResponse{
 		Base:  successResponse("RM cost calculation enqueued"),
 		JobId: result.Execution.ID().String(),
-	}, nil
-}
-
-// CalculateRMCost runs the calculation synchronously.
-func (h *RMCostHandler) CalculateRMCost(ctx context.Context, req *financev1.CalculateRMCostRequest) (*financev1.CalculateRMCostResponse, error) {
-	if baseResp := h.validationHelper.ValidateRequest(req); baseResp != nil {
-		RecordRMCostOperation(opCalculate, false)
-		return &financev1.CalculateRMCostResponse{Base: baseResp}, nil
-	}
-
-	cmd := apprmcost.CalculateCommand{
-		Period:        req.Period,
-		TriggerReason: rmcostdomain.HistoryTriggerReason(triggerReasonToString(req.TriggerReason)),
-		CalculatedBy:  getUserFromContext(ctx),
-	}
-	if gid, badResp := parseOptionalGroupHeadID(req.GroupHeadId); badResp != nil {
-		RecordRMCostOperation(opCalculate, false)
-		return &financev1.CalculateRMCostResponse{Base: badResp}, nil
-	} else if gid != nil {
-		cmd.GroupHeadID = gid
-	}
-
-	result, err := h.calculateHandler.Handle(ctx, cmd)
-	if err != nil {
-		RecordRMCostOperation(opCalculate, false)
-		return &financev1.CalculateRMCostResponse{Base: domainErrorToBaseResponse(err)}, nil
-	}
-
-	RecordRMCostOperation(opCalculate, true)
-	return &financev1.CalculateRMCostResponse{
-		Base:      successResponse("RM cost calculated"),
-		Processed: safeIntToInt32(result.Processed),
-		Skipped:   safeIntToInt32(result.Skipped),
-		Period:    result.Period,
 	}, nil
 }
 

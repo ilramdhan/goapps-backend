@@ -271,6 +271,46 @@ func (s *CostCalcReposSuite) TestResult_UpsertWithSupersedeVersionBump() {
 	require.Equal(s.T(), 2, active.Version())
 }
 
+func (s *CostCalcReposSuite) TestResult_ListDistinctPeriods() {
+	job1 := s.createJob("202601")
+	job2 := s.createJob("202602")
+
+	r1 := costcalc.NewResult(
+		s.productSysID, "202601", costcalc.CalcTypeActual, s.routeHeadID, 1,
+		100.0, 60.0, 40.0, 100.0, 0, "IDR",
+		nil, nil, nil, nil, "hash-p1", job1.ID(), "integ-test",
+		0, 0, 0, 0, 0, 0, 0,
+	)
+	_, _, _, _, err := s.resultRepo.UpsertWithSupersede(s.ctx, r1)
+	require.NoError(s.T(), err)
+
+	r2 := costcalc.NewResult(
+		s.productSysID, "202602", costcalc.CalcTypeActual, s.routeHeadID, 1,
+		110.0, 65.0, 45.0, 110.0, 0, "IDR",
+		nil, nil, nil, nil, "hash-p2", job2.ID(), "integ-test",
+		0, 0, 0, 0, 0, 0, 0,
+	)
+	_, _, _, _, err = s.resultRepo.UpsertWithSupersede(s.ctx, r2)
+	require.NoError(s.T(), err)
+
+	periods, err := s.resultRepo.ListDistinctPeriods(s.ctx)
+	require.NoError(s.T(), err)
+	require.Contains(s.T(), periods, "202601")
+	require.Contains(s.T(), periods, "202602")
+
+	// Newest first.
+	idx601, idx602 := -1, -1
+	for i, p := range periods {
+		if p == "202601" {
+			idx601 = i
+		}
+		if p == "202602" {
+			idx602 = i
+		}
+	}
+	require.Greater(s.T(), idx601, idx602, "202601 must sort after 202602 (DESC order)")
+}
+
 // ---------------------------------------------------------------------------
 // Audit history repository
 // ---------------------------------------------------------------------------

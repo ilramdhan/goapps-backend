@@ -1,7 +1,6 @@
 // Package rmcost — V2 calculation handler. Runs the V2 per-detail engine,
 // snapshots intermediates to cst_rm_cost_detail, and persists V2 columns on
-// cst_rm_cost. The V1 handler (calculate_handler.go) is left untouched for
-// the gRPC paths that still call it; the worker can switch to V2 incrementally.
+// cst_rm_cost. V2 is the sole production RM cost calculation path.
 package rmcost
 
 import (
@@ -16,6 +15,32 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmgroup"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
+
+// SourceDataReader loads the per-stage consumption/stock/PO records that feed the
+// landed-cost engine. Implementations read from `cst_item_cons_stk_po` filtered
+// to (period, item_codes) and return the per-stage qty/val pointers needed by
+// rmcost.AggregateRates.
+type SourceDataReader interface {
+	FetchRateInputs(ctx context.Context, period string, itemCodes []string) ([]rmcost.RateInputs, int, error)
+	// FetchItemUOMs returns a map of item_code -> uom for the given period, for
+	// items whose uom column is non-empty in the sync feed. Used as a fallback
+	// when the rm_group detail rows were created without a UOM.
+	FetchItemUOMs(ctx context.Context, period string, itemCodes []string) (map[string]string, error)
+}
+
+// pickGroupUOM returns the UOM code from the first non-dummy detail whose
+// UOMCode is non-empty. Returns "" when no candidate exists.
+func pickGroupUOM(details []*rmgroup.Detail) string {
+	for _, d := range details {
+		if d.IsDummy() {
+			continue
+		}
+		if u := d.UOMCode(); u != "" {
+			return u
+		}
+	}
+	return ""
+}
 
 // V2SourceReader fetches per-(item, grade) source qty/val for the V2 engine.
 // Implemented by postgres.SyncDataRepository.

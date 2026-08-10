@@ -137,7 +137,11 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	}
 
 	// 1. Initialize scope from CAPP values and pre-fill missing params with 0.
-	scope := buildInitialScope(in)
+	// zeroFilled tracks which scope keys hold a synthetic placeholder rather
+	// than a real value — see buildInitialScope. It is narrowed as the compute
+	// pass assigns genuine values, and whatever remains at the end marks
+	// params that must be omitted from ParamSnapshot (see scopeSnapshot).
+	scope, zeroFilled := buildInitialScope(in)
 
 	// 2. Aggregate RM cost across every sequence in the route.
 	totalRM, rmDetail, levelMap, err := aggregateRMCost(in)
@@ -146,9 +150,10 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		return nil, err
 	}
 	scope[ScopeKeyCostRMTotal] = totalRM
+	delete(zeroFilled, ScopeKeyCostRMTotal)
 
 	// 3. Evaluate formulas in topo order (loader pre-sorted).
-	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, in.Formulas, in.ProductSysID, in.MBCosts, in.CalcType)
+	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, in.Formulas, in.ProductSysID, in.MBCosts, in.CalcType, zeroFilled)
 	if err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
@@ -185,7 +190,7 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		TotalConversion: conv,
 		TotalCost:       finalCost,
 		RMCostDetail:    rmDetail,
-		ParamSnapshot:   scopeSnapshot(scope),
+		ParamSnapshot:   scopeSnapshot(scope, zeroFilled),
 		FormulaTrace:    formulaTrace,
 		CostByLevel:     buildCostByLevel(levelMap, conv, in.Route, in.ProductSysID, in.UpstreamCosts),
 		InputHash:       inputHash(in, totalRM),
@@ -195,7 +200,18 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 // buildInitialScope creates and populates the formula evaluation scope.
 // It copies CAPP values, pre-fills missing formula input params with 0, and
 // injects the marketing_result() built-in function.
-func buildInitialScope(in ComputeInput) map[string]any {
+//
+// It also returns zeroFilled, the set of scope keys that received the
+// synthetic 0 placeholder rather than a real CAPP value. The placeholder
+// exists only so expr-lang never evaluates against nil (see the pre-fill loop
+// below); it is not a genuine computed or imported value, and per Decision #8
+// (product cost sheet export) it must not be reported to the export layer as
+// if it were. Callers narrow zeroFilled as real values get assigned into
+// scope (e.g. COST_RM_TOTAL, formula outputs) and pass what remains to
+// scopeSnapshot so those keys are omitted from ParamSnapshot entirely —
+// consistent with how GetRouteCostSheetHandler already treats any key absent
+// from the snapshot as "print '-', never a fabricated zero".
+func buildInitialScope(in ComputeInput) (map[string]any, map[string]bool) {
 	scope := make(map[string]any, len(in.CAPP)+len(in.Formulas)+8)
 	for k, v := range in.CAPP {
 		scope[k] = v
@@ -203,12 +219,16 @@ func buildInitialScope(in ComputeInput) map[string]any {
 
 	// Pre-fill missing formula input params with 0 so expr-lang never sees nil.
 	// AllowUndefinedVariables() returns nil for absent vars, causing arithmetic
-	// panics like "<nil> > int". Defaulting to 0 is safe: conditional formulas
-	// (e.g. VB_QTY > 0 ? X/VB_QTY : 0) will take the zero branch, and additive
-	// formulas produce 0 contributions rather than crashing.
+	// panics like "<nil> > int". Defaulting to 0 is safe for computation:
+	// conditional formulas (e.g. VB_QTY > 0 ? X/VB_QTY : 0) will take the zero
+	// branch, and additive formulas produce 0 contributions rather than
+	// crashing. zeroFilled records which keys got this treatment so the
+	// snapshot written to cpc_param_snapshot can omit them instead of
+	// persisting a fabricated zero (Decision #8).
 	// Also pre-fill the formula's own ResultParamCode: some formulas (e.g.
 	// F_YARN_SPECIAL_COST_FLAG_PASS with expression "SPECIAL_COST_FLAG") read
 	// their own result param but declare no explicit InputParamCodes entries.
+	zeroFilled := make(map[string]bool, len(in.Formulas)*2)
 	for _, f := range in.Formulas {
 		if f.FormulaType == FormulaTypeRMLookup {
 			continue // RM_LOOKUP handled separately in evalFormulaChain
@@ -216,16 +236,18 @@ func buildInitialScope(in ComputeInput) map[string]any {
 		for _, code := range f.InputParamCodes {
 			if _, exists := scope[code]; !exists {
 				scope[code] = float64(0)
+				zeroFilled[code] = true
 			}
 		}
 		// Ensure the result param itself is 0-defaulted for pass-through formulas.
 		if _, exists := scope[f.ResultParamCode]; !exists {
 			scope[f.ResultParamCode] = float64(0)
+			zeroFilled[f.ResultParamCode] = true
 		}
 	}
 
 	injectMarketingResult(scope, in.SellingSnapshot)
-	return scope
+	return scope, zeroFilled
 }
 
 // injectMarketingResult adds the marketing_result() built-in function to scope.
@@ -272,6 +294,7 @@ func evalFormulaChain(
 	productSysID int64,
 	mbCosts map[string]float64,
 	calcType costcalcdom.CalculationType,
+	zeroFilled map[string]bool,
 ) ([]FormulaEvalTrace, error) {
 	trace := make([]FormulaEvalTrace, 0, len(formulas))
 	for _, f := range formulas {
@@ -281,6 +304,9 @@ func evalFormulaChain(
 		}
 		trace = append(trace, t)
 		scope[f.ResultParamCode] = t.Output
+		// The result param now holds a real, formula-computed value — it is no
+		// longer a synthetic placeholder even if it started as one.
+		delete(zeroFilled, f.ResultParamCode)
 	}
 	return trace, nil
 }
@@ -300,8 +326,31 @@ func evalSingleFormulaStep(
 	case "SNAPSHOT":
 		return evalSnapshotFormula(f, scope), nil
 	case FormulaTypeRMLookup:
-		// Phase-1: RM_LOOKUP → alias totalRM into result param.
-		// Phase-2 will implement per-pricing-type splitting.
+		// Phase-1: RM_LOOKUP -> alias totalRM into result param, for ALL
+		// three RM_LOOKUP formulas (F_YARN_RM_RATE, F_YARN_CAP_CONVERSION,
+		// F_YARN_DEL_CONVERSION -- migration 000408). Each has a distinct
+		// Oracle DSL expression (see loader.go LoadUpstreamCosts doc), but
+		// this switch does not evaluate the DSL at all: it ignores
+		// f.Expression entirely and returns the same totalRM for every one
+		// of them, regardless of which RM_LOOKUP formula is being resolved.
+		//
+		// aggregateRMCost/resolveRMUnitCost (below) already implement two
+		// real pieces of the DSL correctly: pricing-type selection (ACTUAL /
+		// FORECAST / SELLING -> cost_val / cost_mark / cost_sim, see
+		// loader.go LoadRMCosts) for GROUP- and ITEM-type RMs, and the
+		// upstream_product(...).COST_CAP_FINAL hand-off for PRODUCT-type RMs
+		// via LoadUpstreamCosts. What is NOT implemented is the distinction
+		// the DSL itself draws between COST_CAP_FINAL (captive) and
+		// COST_DEL_FINAL (delivery) for PRODUCT-type upstream references:
+		// F_YARN_CAP_CONVERSION's expression wants COST_CAP_FINAL and
+		// F_YARN_DEL_CONVERSION's wants COST_DEL_FINAL, but
+		// in.UpstreamCosts (populated solely by LoadUpstreamCosts) only ever
+		// carries CAPTIVE_COST_QLTY_LOSS. Aliasing all three RM_LOOKUP
+		// results to the same totalRM means DELIVERY_CONVERSION effectively
+		// receives the captive number, not the delivery number, whenever a
+		// route has a PRODUCT-type RM. That per-DSL-target split (not
+		// "per-pricing-type", which already works) is the real Phase-2 gap
+		// -- confirm scope with costing before implementing (C10/C11).
 		return FormulaEvalTrace{
 			FormulaCode:     f.FormulaCode,
 			Expression:      f.Expression,
@@ -533,9 +582,20 @@ func toFloat(v any) (float64, bool) {
 	}
 }
 
-func scopeSnapshot(scope map[string]any) map[string]float64 {
+// scopeSnapshot narrows the working evaluation scope into the map persisted
+// as cpc_param_snapshot. Keys still marked in zeroFilled at this point never
+// received a real value during the compute pass — they are the synthetic
+// placeholder buildInitialScope injected purely so expr-lang would not panic
+// on a nil variable — so they are omitted entirely rather than persisted as a
+// fabricated 0. An absent key is exactly the signal
+// GetRouteCostSheetHandler/the Excel export already use to print "-"
+// (Decision #8), so no new absent/present mechanism is introduced here.
+func scopeSnapshot(scope map[string]any, zeroFilled map[string]bool) map[string]float64 {
 	out := make(map[string]float64, len(scope))
 	for k, v := range scope {
+		if zeroFilled[k] {
+			continue
+		}
 		if f, ok := toFloat(v); ok {
 			out[k] = f
 		}

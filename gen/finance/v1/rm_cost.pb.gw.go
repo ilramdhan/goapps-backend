@@ -62,33 +62,6 @@ func local_request_RMCostService_TriggerRMCostCalculation_0(ctx context.Context,
 	return msg, metadata, err
 }
 
-func request_RMCostService_CalculateRMCost_0(ctx context.Context, marshaler runtime.Marshaler, client RMCostServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq CalculateRMCostRequest
-		metadata runtime.ServerMetadata
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	msg, err := client.CalculateRMCost(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_RMCostService_CalculateRMCost_0(ctx context.Context, marshaler runtime.Marshaler, server RMCostServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq CalculateRMCostRequest
-		metadata runtime.ServerMetadata
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	msg, err := server.CalculateRMCost(ctx, &protoReq)
-	return msg, metadata, err
-}
-
 func request_RMCostService_GetRMCost_0(ctx context.Context, marshaler runtime.Marshaler, client RMCostServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq GetRMCostRequest
@@ -491,26 +464,6 @@ func RegisterRMCostServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		}
 		forward_RMCostService_TriggerRMCostCalculation_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_RMCostService_CalculateRMCost_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.RMCostService/CalculateRMCost", runtime.WithHTTPPathPattern("/api/v1/finance/rm-costs/calculate"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_RMCostService_CalculateRMCost_0(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_RMCostService_CalculateRMCost_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
 	mux.Handle(http.MethodGet, pattern_RMCostService_GetRMCost_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -768,23 +721,6 @@ func RegisterRMCostServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		}
 		forward_RMCostService_TriggerRMCostCalculation_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_RMCostService_CalculateRMCost_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.RMCostService/CalculateRMCost", runtime.WithHTTPPathPattern("/api/v1/finance/rm-costs/calculate"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_RMCostService_CalculateRMCost_0(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_RMCostService_CalculateRMCost_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
 	mux.Handle(http.MethodGet, pattern_RMCostService_GetRMCost_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -960,7 +896,6 @@ func RegisterRMCostServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 var (
 	pattern_RMCostService_TriggerRMCostCalculation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "rm-costs", "trigger"}, ""))
-	pattern_RMCostService_CalculateRMCost_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "rm-costs", "calculate"}, ""))
 	pattern_RMCostService_GetRMCost_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"api", "v1", "finance", "rm-costs", "period", "rm_code"}, ""))
 	pattern_RMCostService_ListRMCosts_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "rm-costs"}, ""))
 	pattern_RMCostService_ListRMCostHistory_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "rm-costs", "history"}, ""))
@@ -975,7 +910,6 @@ var (
 
 var (
 	forward_RMCostService_TriggerRMCostCalculation_0 = runtime.ForwardResponseMessage
-	forward_RMCostService_CalculateRMCost_0          = runtime.ForwardResponseMessage
 	forward_RMCostService_GetRMCost_0                = runtime.ForwardResponseMessage
 	forward_RMCostService_ListRMCosts_0              = runtime.ForwardResponseMessage
 	forward_RMCostService_ListRMCostHistory_0        = runtime.ForwardResponseMessage

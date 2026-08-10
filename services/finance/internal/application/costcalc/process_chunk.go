@@ -274,10 +274,52 @@ func (s *Service) emitProductBlocked(ctx context.Context, in ProcessChunkInput, 
 	})
 }
 
+// Snapshot keys for the 7 fast-query cost columns on cst_product_cost. These
+// are mst_parameter codes as seeded by migrations 000407/000408. The engine
+// previously read the pre-000406 aliases (COST_CAP_FINAL / COST_DEL_FINAL /
+// VBn_DEL_COST), which no longer exist — so all 7 columns were written as 0 on
+// every run. Keep these in sync with mst_parameter, not with the column names.
+const (
+	snapKeyCaptiveCost  = "CAPTIVE_COST_QLTY_LOSS"
+	snapKeyDeliveryCost = "DELIVERY_COST_QLTY_LOSS"
+)
+
+// snapKeysVolumeBucketDelCost are the 5 volume-bucket delivery-cost keys, in
+// bucket order 1..5.
+var snapKeysVolumeBucketDelCost = [5]string{
+	"VOLUME_BUCKET_1_DEL_COST",
+	"VOLUME_BUCKET_2_DEL_COST",
+	"VOLUME_BUCKET_3_DEL_COST",
+	"VOLUME_BUCKET_4_DEL_COST",
+	"VOLUME_BUCKET_5_DEL_COST",
+}
+
+// captiveDeliveryCosts holds the 7 denormalized cost values pulled out of a
+// param snapshot. Absent keys read as 0, matching the NUMERIC column defaults.
+type captiveDeliveryCosts struct {
+	captive  float64
+	delivery float64
+	vb       [5]float64
+}
+
+// extractCaptiveDeliveryCosts pulls the 7 fast-query cost values from a param
+// snapshot so the key contract is testable without a live database.
+func extractCaptiveDeliveryCosts(snap map[string]float64) captiveDeliveryCosts {
+	cc := captiveDeliveryCosts{
+		captive:  snap[snapKeyCaptiveCost],
+		delivery: snap[snapKeyDeliveryCost],
+	}
+	for i, k := range snapKeysVolumeBucketDelCost {
+		cc.vb[i] = snap[k]
+	}
+	return cc
+}
+
 // persistResult upserts the cost result, writes audit-history on supersede,
 // and marks the job_product row SUCCESS with a compact calc-log blob.
 func (s *Service) persistResult(ctx context.Context, in ProcessChunkInput, pid int64, route *costroute.Graph, out *ComputeOutput) error {
 	snap := out.ParamSnapshot
+	cc := extractCaptiveDeliveryCosts(snap)
 	r := costcalcdom.NewResult(
 		pid, in.Period, in.CalcType, route.Head.HeadID, 1,
 		out.CostPerUnit, out.TotalRMCost, out.TotalConversion, out.TotalCost,
@@ -286,9 +328,8 @@ func (s *Service) persistResult(ctx context.Context, in ProcessChunkInput, pid i
 		jsonOrNil(snap), jsonOrNil(out.FormulaTrace),
 		out.InputHash,
 		in.JobID, in.Actor,
-		snap["COST_CAP_FINAL"], snap["COST_DEL_FINAL"],
-		snap["VB1_DEL_COST"], snap["VB2_DEL_COST"], snap["VB3_DEL_COST"],
-		snap["VB4_DEL_COST"], snap["VB5_DEL_COST"],
+		cc.captive, cc.delivery,
+		cc.vb[0], cc.vb[1], cc.vb[2], cc.vb[3], cc.vb[4],
 	)
 
 	newID, prevVer, prevTotal, prevID, err := s.resultRepo.UpsertWithSupersede(ctx, r)

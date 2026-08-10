@@ -8,7 +8,6 @@ import (
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
-	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmgroup"
 )
 
 // mockCostRepo implements rmcost.Repository.
@@ -133,130 +132,27 @@ func (m *mockJobRepo) GetNextSequence(ctx context.Context, jobType job.Type, per
 	return args.Int(0), args.Error(1)
 }
 
+func (m *mockJobRepo) CreateChildren(ctx context.Context, execs []*job.Execution) error {
+	return m.Called(ctx, execs).Error(0)
+}
+
+func (m *mockJobRepo) IncrementChildProgress(ctx context.Context, parentJobID uuid.UUID, success bool) (bool, error) {
+	args := m.Called(ctx, parentJobID, success)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockJobRepo) ListChildren(ctx context.Context, parentJobID uuid.UUID) ([]*job.Execution, error) {
+	args := m.Called(ctx, parentJobID)
+	var out []*job.Execution
+	if v := args.Get(0); v != nil {
+		out = v.([]*job.Execution)
+	}
+	return out, args.Error(1)
+}
+
 // mockPublisher implements appcost.JobPublisher.
 type mockPublisher struct{ mock.Mock }
 
 func (m *mockPublisher) PublishRMCostCalculation(ctx context.Context, jobID, period string, groupHeadID *uuid.UUID, reason, createdBy string) error {
 	return m.Called(ctx, jobID, period, groupHeadID, reason, createdBy).Error(0)
-}
-
-// mockGroupRepo implements rmgroup.Repository (subset used by CalculateHandler).
-type mockGroupRepo struct{ mock.Mock }
-
-func (m *mockGroupRepo) CreateHead(ctx context.Context, head *rmgroup.Head) error {
-	return m.Called(ctx, head).Error(0)
-}
-
-func (m *mockGroupRepo) GetHeadByID(ctx context.Context, id uuid.UUID) (*rmgroup.Head, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*rmgroup.Head), args.Error(1)
-}
-
-func (m *mockGroupRepo) GetHeadByCode(ctx context.Context, code rmgroup.Code) (*rmgroup.Head, error) {
-	args := m.Called(ctx, code)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*rmgroup.Head), args.Error(1)
-}
-
-func (m *mockGroupRepo) ListHeads(ctx context.Context, filter rmgroup.ListFilter) ([]*rmgroup.Head, int64, error) {
-	args := m.Called(ctx, filter)
-	var out []*rmgroup.Head
-	if v := args.Get(0); v != nil {
-		out = v.([]*rmgroup.Head)
-	}
-	return out, args.Get(1).(int64), args.Error(2)
-}
-
-func (m *mockGroupRepo) UpdateHead(ctx context.Context, head *rmgroup.Head) error {
-	return m.Called(ctx, head).Error(0)
-}
-
-func (m *mockGroupRepo) ListAllHeads(_ context.Context, _ *bool) ([]*rmgroup.Head, error) {
-	return nil, nil
-}
-
-func (m *mockGroupRepo) SoftDeleteHead(ctx context.Context, id uuid.UUID, deletedBy string) error {
-	return m.Called(ctx, id, deletedBy).Error(0)
-}
-
-func (m *mockGroupRepo) ExistsHeadByCode(ctx context.Context, code rmgroup.Code) (bool, error) {
-	args := m.Called(ctx, code)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *mockGroupRepo) ExistsHeadByID(ctx context.Context, id uuid.UUID) (bool, error) {
-	args := m.Called(ctx, id)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *mockGroupRepo) AddDetail(ctx context.Context, detail *rmgroup.Detail) error {
-	return m.Called(ctx, detail).Error(0)
-}
-
-func (m *mockGroupRepo) UpdateDetail(ctx context.Context, detail *rmgroup.Detail) error {
-	return m.Called(ctx, detail).Error(0)
-}
-
-func (m *mockGroupRepo) GetDetailByID(ctx context.Context, id uuid.UUID) (*rmgroup.Detail, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*rmgroup.Detail), args.Error(1)
-}
-
-func (m *mockGroupRepo) GetActiveDetailByItemCodeGrade(ctx context.Context, itemCode rmgroup.ItemCode, gradeCode string) (*rmgroup.Detail, error) {
-	args := m.Called(ctx, itemCode, gradeCode)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*rmgroup.Detail), args.Error(1)
-}
-
-func (m *mockGroupRepo) ListDetailsByHeadID(ctx context.Context, headID uuid.UUID) ([]*rmgroup.Detail, error) {
-	args := m.Called(ctx, headID)
-	var out []*rmgroup.Detail
-	if v := args.Get(0); v != nil {
-		out = v.([]*rmgroup.Detail)
-	}
-	return out, args.Error(1)
-}
-
-func (m *mockGroupRepo) ListActiveDetailsByHeadID(ctx context.Context, headID uuid.UUID) ([]*rmgroup.Detail, error) {
-	args := m.Called(ctx, headID)
-	var out []*rmgroup.Detail
-	if v := args.Get(0); v != nil {
-		out = v.([]*rmgroup.Detail)
-	}
-	return out, args.Error(1)
-}
-
-func (m *mockGroupRepo) SoftDeleteDetail(ctx context.Context, id uuid.UUID, deletedBy string) error {
-	return m.Called(ctx, id, deletedBy).Error(0)
-}
-
-// mockSourceReader implements appcost.SourceDataReader.
-type mockSourceReader struct{ mock.Mock }
-
-func (m *mockSourceReader) FetchRateInputs(ctx context.Context, period string, itemCodes []string) ([]rmcost.RateInputs, int, error) {
-	args := m.Called(ctx, period, itemCodes)
-	var out []rmcost.RateInputs
-	if v := args.Get(0); v != nil {
-		out = v.([]rmcost.RateInputs)
-	}
-	return out, args.Int(1), args.Error(2)
-}
-
-func (m *mockSourceReader) FetchItemUOMs(ctx context.Context, period string, itemCodes []string) (map[string]string, error) {
-	args := m.Called(ctx, period, itemCodes)
-	var out map[string]string
-	if v := args.Get(0); v != nil {
-		out = v.(map[string]string)
-	}
-	return out, args.Error(1)
 }

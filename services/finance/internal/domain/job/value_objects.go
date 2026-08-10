@@ -53,11 +53,12 @@ type Type string
 
 // Type constants.
 const (
-	TypeOracleSync        Type = "oracle_sync"
-	TypeRMCostCalculation Type = "rm_cost_calculation"
-	TypeRMCostExport      Type = "rm_cost_export"
-	TypeCalculation       Type = "calculation"
-	TypeExport            Type = "export"
+	TypeOracleSync             Type = "oracle_sync"
+	TypeRMCostCalculation      Type = "rm_cost_calculation"
+	TypeRMCostExport           Type = "rm_cost_export"
+	TypeCalculation            Type = "calculation"
+	TypeExport                 Type = "export"
+	TypeProductCostSheetExport Type = "product_cost_sheet_export"
 )
 
 // String returns the string representation.

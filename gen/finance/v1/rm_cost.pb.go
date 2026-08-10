@@ -1451,145 +1451,6 @@ func (x *TriggerRMCostCalculationResponse) GetJobId() string {
 	return ""
 }
 
-// CalculateRMCost runs a calculation synchronously and returns the produced rows.
-// Intended for admin/troubleshooting use — production traffic should go through
-// TriggerRMCostCalculation.
-type CalculateRMCostRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Period (YYYYMM).
-	Period string `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
-	// Optional single-group scope.
-	GroupHeadId *string `protobuf:"bytes,2,opt,name=group_head_id,json=groupHeadId,proto3,oneof" json:"group_head_id,omitempty"`
-	// Why this calc was run.
-	TriggerReason RMCostTriggerReason `protobuf:"varint,3,opt,name=trigger_reason,json=triggerReason,proto3,enum=finance.v1.RMCostTriggerReason" json:"trigger_reason,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CalculateRMCostRequest) Reset() {
-	*x = CalculateRMCostRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CalculateRMCostRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CalculateRMCostRequest) ProtoMessage() {}
-
-func (x *CalculateRMCostRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CalculateRMCostRequest.ProtoReflect.Descriptor instead.
-func (*CalculateRMCostRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *CalculateRMCostRequest) GetPeriod() string {
-	if x != nil {
-		return x.Period
-	}
-	return ""
-}
-
-func (x *CalculateRMCostRequest) GetGroupHeadId() string {
-	if x != nil && x.GroupHeadId != nil {
-		return *x.GroupHeadId
-	}
-	return ""
-}
-
-func (x *CalculateRMCostRequest) GetTriggerReason() RMCostTriggerReason {
-	if x != nil {
-		return x.TriggerReason
-	}
-	return RMCostTriggerReason_RM_COST_TRIGGER_REASON_UNSPECIFIED
-}
-
-// Calculate response.
-type CalculateRMCostResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Standard response envelope.
-	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	// Number of group heads processed.
-	Processed int32 `protobuf:"varint,2,opt,name=processed,proto3" json:"processed,omitempty"`
-	// Number of group heads skipped (no active details / no source rows).
-	Skipped int32 `protobuf:"varint,3,opt,name=skipped,proto3" json:"skipped,omitempty"`
-	// Period that was calculated (echoes request).
-	Period        string `protobuf:"bytes,4,opt,name=period,proto3" json:"period,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CalculateRMCostResponse) Reset() {
-	*x = CalculateRMCostResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CalculateRMCostResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CalculateRMCostResponse) ProtoMessage() {}
-
-func (x *CalculateRMCostResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CalculateRMCostResponse.ProtoReflect.Descriptor instead.
-func (*CalculateRMCostResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *CalculateRMCostResponse) GetBase() *v1.BaseResponse {
-	if x != nil {
-		return x.Base
-	}
-	return nil
-}
-
-func (x *CalculateRMCostResponse) GetProcessed() int32 {
-	if x != nil {
-		return x.Processed
-	}
-	return 0
-}
-
-func (x *CalculateRMCostResponse) GetSkipped() int32 {
-	if x != nil {
-		return x.Skipped
-	}
-	return 0
-}
-
-func (x *CalculateRMCostResponse) GetPeriod() string {
-	if x != nil {
-		return x.Period
-	}
-	return ""
-}
-
 // GetRMCost fetches a single cost row by (period, rm_code).
 type GetRMCostRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1603,7 +1464,7 @@ type GetRMCostRequest struct {
 
 func (x *GetRMCostRequest) Reset() {
 	*x = GetRMCostRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[8]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1615,7 +1476,7 @@ func (x *GetRMCostRequest) String() string {
 func (*GetRMCostRequest) ProtoMessage() {}
 
 func (x *GetRMCostRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[8]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1628,7 +1489,7 @@ func (x *GetRMCostRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRMCostRequest.ProtoReflect.Descriptor instead.
 func (*GetRMCostRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{8}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetRMCostRequest) GetPeriod() string {
@@ -1658,7 +1519,7 @@ type GetRMCostResponse struct {
 
 func (x *GetRMCostResponse) Reset() {
 	*x = GetRMCostResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[9]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1670,7 +1531,7 @@ func (x *GetRMCostResponse) String() string {
 func (*GetRMCostResponse) ProtoMessage() {}
 
 func (x *GetRMCostResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[9]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1683,7 +1544,7 @@ func (x *GetRMCostResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRMCostResponse.ProtoReflect.Descriptor instead.
 func (*GetRMCostResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{9}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetRMCostResponse) GetBase() *v1.BaseResponse {
@@ -1725,7 +1586,7 @@ type ListRMCostsRequest struct {
 
 func (x *ListRMCostsRequest) Reset() {
 	*x = ListRMCostsRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[10]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1737,7 +1598,7 @@ func (x *ListRMCostsRequest) String() string {
 func (*ListRMCostsRequest) ProtoMessage() {}
 
 func (x *ListRMCostsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[10]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1750,7 +1611,7 @@ func (x *ListRMCostsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRMCostsRequest.ProtoReflect.Descriptor instead.
 func (*ListRMCostsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{10}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListRMCostsRequest) GetPage() int32 {
@@ -1824,7 +1685,7 @@ type ListRMCostsResponse struct {
 
 func (x *ListRMCostsResponse) Reset() {
 	*x = ListRMCostsResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[11]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1836,7 +1697,7 @@ func (x *ListRMCostsResponse) String() string {
 func (*ListRMCostsResponse) ProtoMessage() {}
 
 func (x *ListRMCostsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[11]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1849,7 +1710,7 @@ func (x *ListRMCostsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRMCostsResponse.ProtoReflect.Descriptor instead.
 func (*ListRMCostsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{11}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListRMCostsResponse) GetBase() *v1.BaseResponse {
@@ -1894,7 +1755,7 @@ type ListRMCostHistoryRequest struct {
 
 func (x *ListRMCostHistoryRequest) Reset() {
 	*x = ListRMCostHistoryRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[12]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1906,7 +1767,7 @@ func (x *ListRMCostHistoryRequest) String() string {
 func (*ListRMCostHistoryRequest) ProtoMessage() {}
 
 func (x *ListRMCostHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[12]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1919,7 +1780,7 @@ func (x *ListRMCostHistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRMCostHistoryRequest.ProtoReflect.Descriptor instead.
 func (*ListRMCostHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{12}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListRMCostHistoryRequest) GetPage() int32 {
@@ -1979,7 +1840,7 @@ type ListRMCostHistoryResponse struct {
 
 func (x *ListRMCostHistoryResponse) Reset() {
 	*x = ListRMCostHistoryResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[13]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1991,7 +1852,7 @@ func (x *ListRMCostHistoryResponse) String() string {
 func (*ListRMCostHistoryResponse) ProtoMessage() {}
 
 func (x *ListRMCostHistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[13]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2004,7 +1865,7 @@ func (x *ListRMCostHistoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRMCostHistoryResponse.ProtoReflect.Descriptor instead.
 func (*ListRMCostHistoryResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{13}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListRMCostHistoryResponse) GetBase() *v1.BaseResponse {
@@ -2038,7 +1899,7 @@ type ListCostDetailsRequest struct {
 
 func (x *ListCostDetailsRequest) Reset() {
 	*x = ListCostDetailsRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[14]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2050,7 +1911,7 @@ func (x *ListCostDetailsRequest) String() string {
 func (*ListCostDetailsRequest) ProtoMessage() {}
 
 func (x *ListCostDetailsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[14]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2063,7 +1924,7 @@ func (x *ListCostDetailsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCostDetailsRequest.ProtoReflect.Descriptor instead.
 func (*ListCostDetailsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{14}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListCostDetailsRequest) GetRmCostId() string {
@@ -2084,7 +1945,7 @@ type ListCostDetailsResponse struct {
 
 func (x *ListCostDetailsResponse) Reset() {
 	*x = ListCostDetailsResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[15]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2096,7 +1957,7 @@ func (x *ListCostDetailsResponse) String() string {
 func (*ListCostDetailsResponse) ProtoMessage() {}
 
 func (x *ListCostDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[15]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2109,7 +1970,7 @@ func (x *ListCostDetailsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCostDetailsResponse.ProtoReflect.Descriptor instead.
 func (*ListCostDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{15}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListCostDetailsResponse) GetBase() *v1.BaseResponse {
@@ -2152,7 +2013,7 @@ type UpdateRMCostInputsRequest struct {
 
 func (x *UpdateRMCostInputsRequest) Reset() {
 	*x = UpdateRMCostInputsRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[16]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2164,7 +2025,7 @@ func (x *UpdateRMCostInputsRequest) String() string {
 func (*UpdateRMCostInputsRequest) ProtoMessage() {}
 
 func (x *UpdateRMCostInputsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[16]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2177,7 +2038,7 @@ func (x *UpdateRMCostInputsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRMCostInputsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRMCostInputsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{16}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *UpdateRMCostInputsRequest) GetRmCostId() string {
@@ -2296,7 +2157,7 @@ type UpdateRMCostInputsResponse struct {
 
 func (x *UpdateRMCostInputsResponse) Reset() {
 	*x = UpdateRMCostInputsResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[17]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2308,7 +2169,7 @@ func (x *UpdateRMCostInputsResponse) String() string {
 func (*UpdateRMCostInputsResponse) ProtoMessage() {}
 
 func (x *UpdateRMCostInputsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[17]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2321,7 +2182,7 @@ func (x *UpdateRMCostInputsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRMCostInputsResponse.ProtoReflect.Descriptor instead.
 func (*UpdateRMCostInputsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{17}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UpdateRMCostInputsResponse) GetBase() *v1.BaseResponse {
@@ -2350,7 +2211,7 @@ type UpdateCostDetailFixRateRequest struct {
 
 func (x *UpdateCostDetailFixRateRequest) Reset() {
 	*x = UpdateCostDetailFixRateRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[18]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2362,7 +2223,7 @@ func (x *UpdateCostDetailFixRateRequest) String() string {
 func (*UpdateCostDetailFixRateRequest) ProtoMessage() {}
 
 func (x *UpdateCostDetailFixRateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[18]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2375,7 +2236,7 @@ func (x *UpdateCostDetailFixRateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCostDetailFixRateRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCostDetailFixRateRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{18}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateCostDetailFixRateRequest) GetCostDetailId() string {
@@ -2404,7 +2265,7 @@ type UpdateCostDetailFixRateResponse struct {
 
 func (x *UpdateCostDetailFixRateResponse) Reset() {
 	*x = UpdateCostDetailFixRateResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[19]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2416,7 +2277,7 @@ func (x *UpdateCostDetailFixRateResponse) String() string {
 func (*UpdateCostDetailFixRateResponse) ProtoMessage() {}
 
 func (x *UpdateCostDetailFixRateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[19]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2429,7 +2290,7 @@ func (x *UpdateCostDetailFixRateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCostDetailFixRateResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCostDetailFixRateResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{19}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpdateCostDetailFixRateResponse) GetBase() *v1.BaseResponse {
@@ -2462,7 +2323,7 @@ type ListRMCostPeriodsRequest struct {
 
 func (x *ListRMCostPeriodsRequest) Reset() {
 	*x = ListRMCostPeriodsRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[20]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2474,7 +2335,7 @@ func (x *ListRMCostPeriodsRequest) String() string {
 func (*ListRMCostPeriodsRequest) ProtoMessage() {}
 
 func (x *ListRMCostPeriodsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[20]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2487,7 +2348,7 @@ func (x *ListRMCostPeriodsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRMCostPeriodsRequest.ProtoReflect.Descriptor instead.
 func (*ListRMCostPeriodsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{20}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{18}
 }
 
 // ExportRMCostsRequest filters the cost rows to export. No pagination.
@@ -2507,7 +2368,7 @@ type ExportRMCostsRequest struct {
 
 func (x *ExportRMCostsRequest) Reset() {
 	*x = ExportRMCostsRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[21]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2519,7 +2380,7 @@ func (x *ExportRMCostsRequest) String() string {
 func (*ExportRMCostsRequest) ProtoMessage() {}
 
 func (x *ExportRMCostsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[21]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2532,7 +2393,7 @@ func (x *ExportRMCostsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportRMCostsRequest.ProtoReflect.Descriptor instead.
 func (*ExportRMCostsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{21}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ExportRMCostsRequest) GetPeriod() string {
@@ -2578,7 +2439,7 @@ type ExportRMCostsResponse struct {
 
 func (x *ExportRMCostsResponse) Reset() {
 	*x = ExportRMCostsResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[22]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2590,7 +2451,7 @@ func (x *ExportRMCostsResponse) String() string {
 func (*ExportRMCostsResponse) ProtoMessage() {}
 
 func (x *ExportRMCostsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[22]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2603,7 +2464,7 @@ func (x *ExportRMCostsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportRMCostsResponse.ProtoReflect.Descriptor instead.
 func (*ExportRMCostsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{22}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ExportRMCostsResponse) GetBase() *v1.BaseResponse {
@@ -2646,7 +2507,7 @@ type RequestRMCostExportRequest struct {
 
 func (x *RequestRMCostExportRequest) Reset() {
 	*x = RequestRMCostExportRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[23]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2658,7 +2519,7 @@ func (x *RequestRMCostExportRequest) String() string {
 func (*RequestRMCostExportRequest) ProtoMessage() {}
 
 func (x *RequestRMCostExportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[23]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2671,7 +2532,7 @@ func (x *RequestRMCostExportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestRMCostExportRequest.ProtoReflect.Descriptor instead.
 func (*RequestRMCostExportRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{23}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RequestRMCostExportRequest) GetPeriod() string {
@@ -2713,7 +2574,7 @@ type RequestRMCostExportResponse struct {
 
 func (x *RequestRMCostExportResponse) Reset() {
 	*x = RequestRMCostExportResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[24]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2725,7 +2586,7 @@ func (x *RequestRMCostExportResponse) String() string {
 func (*RequestRMCostExportResponse) ProtoMessage() {}
 
 func (x *RequestRMCostExportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[24]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2738,7 +2599,7 @@ func (x *RequestRMCostExportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestRMCostExportResponse.ProtoReflect.Descriptor instead.
 func (*RequestRMCostExportResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{24}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RequestRMCostExportResponse) GetBase() *v1.BaseResponse {
@@ -2766,7 +2627,7 @@ type GetExportDownloadURLRequest struct {
 
 func (x *GetExportDownloadURLRequest) Reset() {
 	*x = GetExportDownloadURLRequest{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[25]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2778,7 +2639,7 @@ func (x *GetExportDownloadURLRequest) String() string {
 func (*GetExportDownloadURLRequest) ProtoMessage() {}
 
 func (x *GetExportDownloadURLRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[25]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2791,7 +2652,7 @@ func (x *GetExportDownloadURLRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExportDownloadURLRequest.ProtoReflect.Descriptor instead.
 func (*GetExportDownloadURLRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{25}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetExportDownloadURLRequest) GetJobId() string {
@@ -2812,7 +2673,7 @@ type GetExportDownloadURLResponse struct {
 
 func (x *GetExportDownloadURLResponse) Reset() {
 	*x = GetExportDownloadURLResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[26]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2824,7 +2685,7 @@ func (x *GetExportDownloadURLResponse) String() string {
 func (*GetExportDownloadURLResponse) ProtoMessage() {}
 
 func (x *GetExportDownloadURLResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[26]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2837,7 +2698,7 @@ func (x *GetExportDownloadURLResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExportDownloadURLResponse.ProtoReflect.Descriptor instead.
 func (*GetExportDownloadURLResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{26}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetExportDownloadURLResponse) GetBase() *v1.BaseResponse {
@@ -2869,7 +2730,7 @@ type ExportDownloadInfo struct {
 
 func (x *ExportDownloadInfo) Reset() {
 	*x = ExportDownloadInfo{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[27]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2881,7 +2742,7 @@ func (x *ExportDownloadInfo) String() string {
 func (*ExportDownloadInfo) ProtoMessage() {}
 
 func (x *ExportDownloadInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[27]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2894,7 +2755,7 @@ func (x *ExportDownloadInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportDownloadInfo.ProtoReflect.Descriptor instead.
 func (*ExportDownloadInfo) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{27}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ExportDownloadInfo) GetUrl() string {
@@ -2933,7 +2794,7 @@ type ExportJobInfo struct {
 
 func (x *ExportJobInfo) Reset() {
 	*x = ExportJobInfo{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[28]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2945,7 +2806,7 @@ func (x *ExportJobInfo) String() string {
 func (*ExportJobInfo) ProtoMessage() {}
 
 func (x *ExportJobInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[28]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2958,7 +2819,7 @@ func (x *ExportJobInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportJobInfo.ProtoReflect.Descriptor instead.
 func (*ExportJobInfo) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{28}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ExportJobInfo) GetJobId() string {
@@ -2995,7 +2856,7 @@ type ListRMCostPeriodsResponse struct {
 
 func (x *ListRMCostPeriodsResponse) Reset() {
 	*x = ListRMCostPeriodsResponse{}
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[29]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3007,7 +2868,7 @@ func (x *ListRMCostPeriodsResponse) String() string {
 func (*ListRMCostPeriodsResponse) ProtoMessage() {}
 
 func (x *ListRMCostPeriodsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_rm_cost_proto_msgTypes[29]
+	mi := &file_finance_v1_rm_cost_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3020,7 +2881,7 @@ func (x *ListRMCostPeriodsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRMCostPeriodsResponse.ProtoReflect.Descriptor instead.
 func (*ListRMCostPeriodsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{29}
+	return file_finance_v1_rm_cost_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListRMCostPeriodsResponse) GetBase() *v1.BaseResponse {
@@ -3271,17 +3132,7 @@ const file_finance_v1_rm_cost_proto_rawDesc = "" +
 	"\x0e_group_head_id\"f\n" +
 	" TriggerRMCostCalculationResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x15\n" +
-	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"\xda\x01\n" +
-	"\x16CalculateRMCostRequest\x12)\n" +
-	"\x06period\x18\x01 \x01(\tB\x11\xbaH\x0er\f2\a^\\d{6}$\x98\x01\x06R\x06period\x121\n" +
-	"\rgroup_head_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\vgroupHeadId\x88\x01\x01\x12P\n" +
-	"\x0etrigger_reason\x18\x03 \x01(\x0e2\x1f.finance.v1.RMCostTriggerReasonB\b\xbaH\x05\x82\x01\x02 \x00R\rtriggerReasonB\x10\n" +
-	"\x0e_group_head_id\"\x96\x01\n" +
-	"\x17CalculateRMCostResponse\x12+\n" +
-	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x1c\n" +
-	"\tprocessed\x18\x02 \x01(\x05R\tprocessed\x12\x18\n" +
-	"\askipped\x18\x03 \x01(\x05R\askipped\x12\x16\n" +
-	"\x06period\x18\x04 \x01(\tR\x06period\"a\n" +
+	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"a\n" +
 	"\x10GetRMCostRequest\x12)\n" +
 	"\x06period\x18\x01 \x01(\tB\x11\xbaH\x0er\f2\a^\\d{6}$\x98\x01\x06R\x06period\x12\"\n" +
 	"\arm_code\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\x06rmCode\"h\n" +
@@ -3414,10 +3265,9 @@ const file_finance_v1_rm_cost_proto_rawDesc = "" +
 	"(RM_COST_TRIGGER_REASON_ORACLE_SYNC_CHAIN\x10\x01\x12'\n" +
 	"#RM_COST_TRIGGER_REASON_GROUP_UPDATE\x10\x02\x12(\n" +
 	"$RM_COST_TRIGGER_REASON_DETAIL_CHANGE\x10\x03\x12$\n" +
-	" RM_COST_TRIGGER_REASON_MANUAL_UI\x10\x042\xfe\r\n" +
+	" RM_COST_TRIGGER_REASON_MANUAL_UI\x10\x042\xf2\f\n" +
 	"\rRMCostService\x12\xa2\x01\n" +
-	"\x18TriggerRMCostCalculation\x12+.finance.v1.TriggerRMCostCalculationRequest\x1a,.finance.v1.TriggerRMCostCalculationResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /api/v1/finance/rm-costs/trigger\x12\x89\x01\n" +
-	"\x0fCalculateRMCost\x12\".finance.v1.CalculateRMCostRequest\x1a#.finance.v1.CalculateRMCostResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/finance/rm-costs/calculate\x12}\n" +
+	"\x18TriggerRMCostCalculation\x12+.finance.v1.TriggerRMCostCalculationRequest\x1a,.finance.v1.TriggerRMCostCalculationResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /api/v1/finance/rm-costs/trigger\x12}\n" +
 	"\tGetRMCost\x12\x1c.finance.v1.GetRMCostRequest\x1a\x1d.finance.v1.GetRMCostResponse\"3\x82\xd3\xe4\x93\x02-\x12+/api/v1/finance/rm-costs/{period}/{rm_code}\x12p\n" +
 	"\vListRMCosts\x12\x1e.finance.v1.ListRMCostsRequest\x1a\x1f.finance.v1.ListRMCostsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/v1/finance/rm-costs\x12\x8a\x01\n" +
 	"\x11ListRMCostHistory\x12$.finance.v1.ListRMCostHistoryRequest\x1a%.finance.v1.ListRMCostHistoryResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/v1/finance/rm-costs/history\x12\x8a\x01\n" +
@@ -3445,7 +3295,7 @@ func file_finance_v1_rm_cost_proto_rawDescGZIP() []byte {
 }
 
 var file_finance_v1_rm_cost_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_finance_v1_rm_cost_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_finance_v1_rm_cost_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_finance_v1_rm_cost_proto_goTypes = []any{
 	(RMCostType)(0),                          // 0: finance.v1.RMCostType
 	(RMCostTriggerReason)(0),                 // 1: finance.v1.RMCostTriggerReason
@@ -3455,120 +3305,114 @@ var file_finance_v1_rm_cost_proto_goTypes = []any{
 	(*RMCostHistory)(nil),                    // 5: finance.v1.RMCostHistory
 	(*TriggerRMCostCalculationRequest)(nil),  // 6: finance.v1.TriggerRMCostCalculationRequest
 	(*TriggerRMCostCalculationResponse)(nil), // 7: finance.v1.TriggerRMCostCalculationResponse
-	(*CalculateRMCostRequest)(nil),           // 8: finance.v1.CalculateRMCostRequest
-	(*CalculateRMCostResponse)(nil),          // 9: finance.v1.CalculateRMCostResponse
-	(*GetRMCostRequest)(nil),                 // 10: finance.v1.GetRMCostRequest
-	(*GetRMCostResponse)(nil),                // 11: finance.v1.GetRMCostResponse
-	(*ListRMCostsRequest)(nil),               // 12: finance.v1.ListRMCostsRequest
-	(*ListRMCostsResponse)(nil),              // 13: finance.v1.ListRMCostsResponse
-	(*ListRMCostHistoryRequest)(nil),         // 14: finance.v1.ListRMCostHistoryRequest
-	(*ListRMCostHistoryResponse)(nil),        // 15: finance.v1.ListRMCostHistoryResponse
-	(*ListCostDetailsRequest)(nil),           // 16: finance.v1.ListCostDetailsRequest
-	(*ListCostDetailsResponse)(nil),          // 17: finance.v1.ListCostDetailsResponse
-	(*UpdateRMCostInputsRequest)(nil),        // 18: finance.v1.UpdateRMCostInputsRequest
-	(*UpdateRMCostInputsResponse)(nil),       // 19: finance.v1.UpdateRMCostInputsResponse
-	(*UpdateCostDetailFixRateRequest)(nil),   // 20: finance.v1.UpdateCostDetailFixRateRequest
-	(*UpdateCostDetailFixRateResponse)(nil),  // 21: finance.v1.UpdateCostDetailFixRateResponse
-	(*ListRMCostPeriodsRequest)(nil),         // 22: finance.v1.ListRMCostPeriodsRequest
-	(*ExportRMCostsRequest)(nil),             // 23: finance.v1.ExportRMCostsRequest
-	(*ExportRMCostsResponse)(nil),            // 24: finance.v1.ExportRMCostsResponse
-	(*RequestRMCostExportRequest)(nil),       // 25: finance.v1.RequestRMCostExportRequest
-	(*RequestRMCostExportResponse)(nil),      // 26: finance.v1.RequestRMCostExportResponse
-	(*GetExportDownloadURLRequest)(nil),      // 27: finance.v1.GetExportDownloadURLRequest
-	(*GetExportDownloadURLResponse)(nil),     // 28: finance.v1.GetExportDownloadURLResponse
-	(*ExportDownloadInfo)(nil),               // 29: finance.v1.ExportDownloadInfo
-	(*ExportJobInfo)(nil),                    // 30: finance.v1.ExportJobInfo
-	(*ListRMCostPeriodsResponse)(nil),        // 31: finance.v1.ListRMCostPeriodsResponse
-	(RMGroupFlag)(0),                         // 32: finance.v1.RMGroupFlag
-	(*v1.AuditInfo)(nil),                     // 33: common.v1.AuditInfo
-	(RMValuationFlag)(0),                     // 34: finance.v1.RMValuationFlag
-	(RMMarketingFlag)(0),                     // 35: finance.v1.RMMarketingFlag
-	(*v1.BaseResponse)(nil),                  // 36: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),            // 37: common.v1.PaginationResponse
+	(*GetRMCostRequest)(nil),                 // 8: finance.v1.GetRMCostRequest
+	(*GetRMCostResponse)(nil),                // 9: finance.v1.GetRMCostResponse
+	(*ListRMCostsRequest)(nil),               // 10: finance.v1.ListRMCostsRequest
+	(*ListRMCostsResponse)(nil),              // 11: finance.v1.ListRMCostsResponse
+	(*ListRMCostHistoryRequest)(nil),         // 12: finance.v1.ListRMCostHistoryRequest
+	(*ListRMCostHistoryResponse)(nil),        // 13: finance.v1.ListRMCostHistoryResponse
+	(*ListCostDetailsRequest)(nil),           // 14: finance.v1.ListCostDetailsRequest
+	(*ListCostDetailsResponse)(nil),          // 15: finance.v1.ListCostDetailsResponse
+	(*UpdateRMCostInputsRequest)(nil),        // 16: finance.v1.UpdateRMCostInputsRequest
+	(*UpdateRMCostInputsResponse)(nil),       // 17: finance.v1.UpdateRMCostInputsResponse
+	(*UpdateCostDetailFixRateRequest)(nil),   // 18: finance.v1.UpdateCostDetailFixRateRequest
+	(*UpdateCostDetailFixRateResponse)(nil),  // 19: finance.v1.UpdateCostDetailFixRateResponse
+	(*ListRMCostPeriodsRequest)(nil),         // 20: finance.v1.ListRMCostPeriodsRequest
+	(*ExportRMCostsRequest)(nil),             // 21: finance.v1.ExportRMCostsRequest
+	(*ExportRMCostsResponse)(nil),            // 22: finance.v1.ExportRMCostsResponse
+	(*RequestRMCostExportRequest)(nil),       // 23: finance.v1.RequestRMCostExportRequest
+	(*RequestRMCostExportResponse)(nil),      // 24: finance.v1.RequestRMCostExportResponse
+	(*GetExportDownloadURLRequest)(nil),      // 25: finance.v1.GetExportDownloadURLRequest
+	(*GetExportDownloadURLResponse)(nil),     // 26: finance.v1.GetExportDownloadURLResponse
+	(*ExportDownloadInfo)(nil),               // 27: finance.v1.ExportDownloadInfo
+	(*ExportJobInfo)(nil),                    // 28: finance.v1.ExportJobInfo
+	(*ListRMCostPeriodsResponse)(nil),        // 29: finance.v1.ListRMCostPeriodsResponse
+	(RMGroupFlag)(0),                         // 30: finance.v1.RMGroupFlag
+	(*v1.AuditInfo)(nil),                     // 31: common.v1.AuditInfo
+	(RMValuationFlag)(0),                     // 32: finance.v1.RMValuationFlag
+	(RMMarketingFlag)(0),                     // 33: finance.v1.RMMarketingFlag
+	(*v1.BaseResponse)(nil),                  // 34: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),            // 35: common.v1.PaginationResponse
 }
 var file_finance_v1_rm_cost_proto_depIdxs = []int32{
 	0,  // 0: finance.v1.RMCost.rm_type:type_name -> finance.v1.RMCostType
 	2,  // 1: finance.v1.RMCost.rates:type_name -> finance.v1.RMCostRates
-	32, // 2: finance.v1.RMCost.flag_valuation:type_name -> finance.v1.RMGroupFlag
-	32, // 3: finance.v1.RMCost.flag_marketing:type_name -> finance.v1.RMGroupFlag
-	32, // 4: finance.v1.RMCost.flag_simulation:type_name -> finance.v1.RMGroupFlag
-	32, // 5: finance.v1.RMCost.flag_valuation_used:type_name -> finance.v1.RMGroupFlag
-	32, // 6: finance.v1.RMCost.flag_marketing_used:type_name -> finance.v1.RMGroupFlag
-	32, // 7: finance.v1.RMCost.flag_simulation_used:type_name -> finance.v1.RMGroupFlag
-	33, // 8: finance.v1.RMCost.audit:type_name -> common.v1.AuditInfo
-	34, // 9: finance.v1.RMCost.valuation_flag:type_name -> finance.v1.RMValuationFlag
-	35, // 10: finance.v1.RMCost.marketing_flag:type_name -> finance.v1.RMMarketingFlag
-	34, // 11: finance.v1.RMCost.valuation_flag_used:type_name -> finance.v1.RMValuationFlag
-	35, // 12: finance.v1.RMCost.marketing_flag_used:type_name -> finance.v1.RMMarketingFlag
-	33, // 13: finance.v1.RMCostDetail.audit:type_name -> common.v1.AuditInfo
+	30, // 2: finance.v1.RMCost.flag_valuation:type_name -> finance.v1.RMGroupFlag
+	30, // 3: finance.v1.RMCost.flag_marketing:type_name -> finance.v1.RMGroupFlag
+	30, // 4: finance.v1.RMCost.flag_simulation:type_name -> finance.v1.RMGroupFlag
+	30, // 5: finance.v1.RMCost.flag_valuation_used:type_name -> finance.v1.RMGroupFlag
+	30, // 6: finance.v1.RMCost.flag_marketing_used:type_name -> finance.v1.RMGroupFlag
+	30, // 7: finance.v1.RMCost.flag_simulation_used:type_name -> finance.v1.RMGroupFlag
+	31, // 8: finance.v1.RMCost.audit:type_name -> common.v1.AuditInfo
+	32, // 9: finance.v1.RMCost.valuation_flag:type_name -> finance.v1.RMValuationFlag
+	33, // 10: finance.v1.RMCost.marketing_flag:type_name -> finance.v1.RMMarketingFlag
+	32, // 11: finance.v1.RMCost.valuation_flag_used:type_name -> finance.v1.RMValuationFlag
+	33, // 12: finance.v1.RMCost.marketing_flag_used:type_name -> finance.v1.RMMarketingFlag
+	31, // 13: finance.v1.RMCostDetail.audit:type_name -> common.v1.AuditInfo
 	0,  // 14: finance.v1.RMCostHistory.rm_type:type_name -> finance.v1.RMCostType
 	2,  // 15: finance.v1.RMCostHistory.rates:type_name -> finance.v1.RMCostRates
-	32, // 16: finance.v1.RMCostHistory.flag_valuation:type_name -> finance.v1.RMGroupFlag
-	32, // 17: finance.v1.RMCostHistory.flag_marketing:type_name -> finance.v1.RMGroupFlag
-	32, // 18: finance.v1.RMCostHistory.flag_simulation:type_name -> finance.v1.RMGroupFlag
-	32, // 19: finance.v1.RMCostHistory.flag_valuation_used:type_name -> finance.v1.RMGroupFlag
-	32, // 20: finance.v1.RMCostHistory.flag_marketing_used:type_name -> finance.v1.RMGroupFlag
-	32, // 21: finance.v1.RMCostHistory.flag_simulation_used:type_name -> finance.v1.RMGroupFlag
+	30, // 16: finance.v1.RMCostHistory.flag_valuation:type_name -> finance.v1.RMGroupFlag
+	30, // 17: finance.v1.RMCostHistory.flag_marketing:type_name -> finance.v1.RMGroupFlag
+	30, // 18: finance.v1.RMCostHistory.flag_simulation:type_name -> finance.v1.RMGroupFlag
+	30, // 19: finance.v1.RMCostHistory.flag_valuation_used:type_name -> finance.v1.RMGroupFlag
+	30, // 20: finance.v1.RMCostHistory.flag_marketing_used:type_name -> finance.v1.RMGroupFlag
+	30, // 21: finance.v1.RMCostHistory.flag_simulation_used:type_name -> finance.v1.RMGroupFlag
 	1,  // 22: finance.v1.RMCostHistory.trigger_reason:type_name -> finance.v1.RMCostTriggerReason
 	1,  // 23: finance.v1.TriggerRMCostCalculationRequest.trigger_reason:type_name -> finance.v1.RMCostTriggerReason
-	36, // 24: finance.v1.TriggerRMCostCalculationResponse.base:type_name -> common.v1.BaseResponse
-	1,  // 25: finance.v1.CalculateRMCostRequest.trigger_reason:type_name -> finance.v1.RMCostTriggerReason
-	36, // 26: finance.v1.CalculateRMCostResponse.base:type_name -> common.v1.BaseResponse
-	36, // 27: finance.v1.GetRMCostResponse.base:type_name -> common.v1.BaseResponse
-	3,  // 28: finance.v1.GetRMCostResponse.data:type_name -> finance.v1.RMCost
-	0,  // 29: finance.v1.ListRMCostsRequest.rm_type:type_name -> finance.v1.RMCostType
-	36, // 30: finance.v1.ListRMCostsResponse.base:type_name -> common.v1.BaseResponse
-	3,  // 31: finance.v1.ListRMCostsResponse.data:type_name -> finance.v1.RMCost
-	37, // 32: finance.v1.ListRMCostsResponse.pagination:type_name -> common.v1.PaginationResponse
-	36, // 33: finance.v1.ListRMCostHistoryResponse.base:type_name -> common.v1.BaseResponse
-	5,  // 34: finance.v1.ListRMCostHistoryResponse.data:type_name -> finance.v1.RMCostHistory
-	37, // 35: finance.v1.ListRMCostHistoryResponse.pagination:type_name -> common.v1.PaginationResponse
-	36, // 36: finance.v1.ListCostDetailsResponse.base:type_name -> common.v1.BaseResponse
-	4,  // 37: finance.v1.ListCostDetailsResponse.data:type_name -> finance.v1.RMCostDetail
-	34, // 38: finance.v1.UpdateRMCostInputsRequest.valuation_flag:type_name -> finance.v1.RMValuationFlag
-	35, // 39: finance.v1.UpdateRMCostInputsRequest.marketing_flag:type_name -> finance.v1.RMMarketingFlag
-	36, // 40: finance.v1.UpdateRMCostInputsResponse.base:type_name -> common.v1.BaseResponse
-	3,  // 41: finance.v1.UpdateRMCostInputsResponse.data:type_name -> finance.v1.RMCost
-	36, // 42: finance.v1.UpdateCostDetailFixRateResponse.base:type_name -> common.v1.BaseResponse
-	4,  // 43: finance.v1.UpdateCostDetailFixRateResponse.detail:type_name -> finance.v1.RMCostDetail
-	3,  // 44: finance.v1.UpdateCostDetailFixRateResponse.parent_cost:type_name -> finance.v1.RMCost
-	0,  // 45: finance.v1.ExportRMCostsRequest.rm_type:type_name -> finance.v1.RMCostType
-	36, // 46: finance.v1.ExportRMCostsResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 47: finance.v1.RequestRMCostExportRequest.rm_type:type_name -> finance.v1.RMCostType
-	36, // 48: finance.v1.RequestRMCostExportResponse.base:type_name -> common.v1.BaseResponse
-	30, // 49: finance.v1.RequestRMCostExportResponse.data:type_name -> finance.v1.ExportJobInfo
-	36, // 50: finance.v1.GetExportDownloadURLResponse.base:type_name -> common.v1.BaseResponse
-	29, // 51: finance.v1.GetExportDownloadURLResponse.data:type_name -> finance.v1.ExportDownloadInfo
-	36, // 52: finance.v1.ListRMCostPeriodsResponse.base:type_name -> common.v1.BaseResponse
-	6,  // 53: finance.v1.RMCostService.TriggerRMCostCalculation:input_type -> finance.v1.TriggerRMCostCalculationRequest
-	8,  // 54: finance.v1.RMCostService.CalculateRMCost:input_type -> finance.v1.CalculateRMCostRequest
-	10, // 55: finance.v1.RMCostService.GetRMCost:input_type -> finance.v1.GetRMCostRequest
-	12, // 56: finance.v1.RMCostService.ListRMCosts:input_type -> finance.v1.ListRMCostsRequest
-	14, // 57: finance.v1.RMCostService.ListRMCostHistory:input_type -> finance.v1.ListRMCostHistoryRequest
-	22, // 58: finance.v1.RMCostService.ListRMCostPeriods:input_type -> finance.v1.ListRMCostPeriodsRequest
-	23, // 59: finance.v1.RMCostService.ExportRMCosts:input_type -> finance.v1.ExportRMCostsRequest
-	27, // 60: finance.v1.RMCostService.GetExportDownloadURL:input_type -> finance.v1.GetExportDownloadURLRequest
-	25, // 61: finance.v1.RMCostService.RequestRMCostExport:input_type -> finance.v1.RequestRMCostExportRequest
-	16, // 62: finance.v1.RMCostService.ListCostDetails:input_type -> finance.v1.ListCostDetailsRequest
-	18, // 63: finance.v1.RMCostService.UpdateRMCostInputs:input_type -> finance.v1.UpdateRMCostInputsRequest
-	20, // 64: finance.v1.RMCostService.UpdateCostDetailFixRate:input_type -> finance.v1.UpdateCostDetailFixRateRequest
-	7,  // 65: finance.v1.RMCostService.TriggerRMCostCalculation:output_type -> finance.v1.TriggerRMCostCalculationResponse
-	9,  // 66: finance.v1.RMCostService.CalculateRMCost:output_type -> finance.v1.CalculateRMCostResponse
-	11, // 67: finance.v1.RMCostService.GetRMCost:output_type -> finance.v1.GetRMCostResponse
-	13, // 68: finance.v1.RMCostService.ListRMCosts:output_type -> finance.v1.ListRMCostsResponse
-	15, // 69: finance.v1.RMCostService.ListRMCostHistory:output_type -> finance.v1.ListRMCostHistoryResponse
-	31, // 70: finance.v1.RMCostService.ListRMCostPeriods:output_type -> finance.v1.ListRMCostPeriodsResponse
-	24, // 71: finance.v1.RMCostService.ExportRMCosts:output_type -> finance.v1.ExportRMCostsResponse
-	28, // 72: finance.v1.RMCostService.GetExportDownloadURL:output_type -> finance.v1.GetExportDownloadURLResponse
-	26, // 73: finance.v1.RMCostService.RequestRMCostExport:output_type -> finance.v1.RequestRMCostExportResponse
-	17, // 74: finance.v1.RMCostService.ListCostDetails:output_type -> finance.v1.ListCostDetailsResponse
-	19, // 75: finance.v1.RMCostService.UpdateRMCostInputs:output_type -> finance.v1.UpdateRMCostInputsResponse
-	21, // 76: finance.v1.RMCostService.UpdateCostDetailFixRate:output_type -> finance.v1.UpdateCostDetailFixRateResponse
-	65, // [65:77] is the sub-list for method output_type
-	53, // [53:65] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	34, // 24: finance.v1.TriggerRMCostCalculationResponse.base:type_name -> common.v1.BaseResponse
+	34, // 25: finance.v1.GetRMCostResponse.base:type_name -> common.v1.BaseResponse
+	3,  // 26: finance.v1.GetRMCostResponse.data:type_name -> finance.v1.RMCost
+	0,  // 27: finance.v1.ListRMCostsRequest.rm_type:type_name -> finance.v1.RMCostType
+	34, // 28: finance.v1.ListRMCostsResponse.base:type_name -> common.v1.BaseResponse
+	3,  // 29: finance.v1.ListRMCostsResponse.data:type_name -> finance.v1.RMCost
+	35, // 30: finance.v1.ListRMCostsResponse.pagination:type_name -> common.v1.PaginationResponse
+	34, // 31: finance.v1.ListRMCostHistoryResponse.base:type_name -> common.v1.BaseResponse
+	5,  // 32: finance.v1.ListRMCostHistoryResponse.data:type_name -> finance.v1.RMCostHistory
+	35, // 33: finance.v1.ListRMCostHistoryResponse.pagination:type_name -> common.v1.PaginationResponse
+	34, // 34: finance.v1.ListCostDetailsResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 35: finance.v1.ListCostDetailsResponse.data:type_name -> finance.v1.RMCostDetail
+	32, // 36: finance.v1.UpdateRMCostInputsRequest.valuation_flag:type_name -> finance.v1.RMValuationFlag
+	33, // 37: finance.v1.UpdateRMCostInputsRequest.marketing_flag:type_name -> finance.v1.RMMarketingFlag
+	34, // 38: finance.v1.UpdateRMCostInputsResponse.base:type_name -> common.v1.BaseResponse
+	3,  // 39: finance.v1.UpdateRMCostInputsResponse.data:type_name -> finance.v1.RMCost
+	34, // 40: finance.v1.UpdateCostDetailFixRateResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 41: finance.v1.UpdateCostDetailFixRateResponse.detail:type_name -> finance.v1.RMCostDetail
+	3,  // 42: finance.v1.UpdateCostDetailFixRateResponse.parent_cost:type_name -> finance.v1.RMCost
+	0,  // 43: finance.v1.ExportRMCostsRequest.rm_type:type_name -> finance.v1.RMCostType
+	34, // 44: finance.v1.ExportRMCostsResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 45: finance.v1.RequestRMCostExportRequest.rm_type:type_name -> finance.v1.RMCostType
+	34, // 46: finance.v1.RequestRMCostExportResponse.base:type_name -> common.v1.BaseResponse
+	28, // 47: finance.v1.RequestRMCostExportResponse.data:type_name -> finance.v1.ExportJobInfo
+	34, // 48: finance.v1.GetExportDownloadURLResponse.base:type_name -> common.v1.BaseResponse
+	27, // 49: finance.v1.GetExportDownloadURLResponse.data:type_name -> finance.v1.ExportDownloadInfo
+	34, // 50: finance.v1.ListRMCostPeriodsResponse.base:type_name -> common.v1.BaseResponse
+	6,  // 51: finance.v1.RMCostService.TriggerRMCostCalculation:input_type -> finance.v1.TriggerRMCostCalculationRequest
+	8,  // 52: finance.v1.RMCostService.GetRMCost:input_type -> finance.v1.GetRMCostRequest
+	10, // 53: finance.v1.RMCostService.ListRMCosts:input_type -> finance.v1.ListRMCostsRequest
+	12, // 54: finance.v1.RMCostService.ListRMCostHistory:input_type -> finance.v1.ListRMCostHistoryRequest
+	20, // 55: finance.v1.RMCostService.ListRMCostPeriods:input_type -> finance.v1.ListRMCostPeriodsRequest
+	21, // 56: finance.v1.RMCostService.ExportRMCosts:input_type -> finance.v1.ExportRMCostsRequest
+	25, // 57: finance.v1.RMCostService.GetExportDownloadURL:input_type -> finance.v1.GetExportDownloadURLRequest
+	23, // 58: finance.v1.RMCostService.RequestRMCostExport:input_type -> finance.v1.RequestRMCostExportRequest
+	14, // 59: finance.v1.RMCostService.ListCostDetails:input_type -> finance.v1.ListCostDetailsRequest
+	16, // 60: finance.v1.RMCostService.UpdateRMCostInputs:input_type -> finance.v1.UpdateRMCostInputsRequest
+	18, // 61: finance.v1.RMCostService.UpdateCostDetailFixRate:input_type -> finance.v1.UpdateCostDetailFixRateRequest
+	7,  // 62: finance.v1.RMCostService.TriggerRMCostCalculation:output_type -> finance.v1.TriggerRMCostCalculationResponse
+	9,  // 63: finance.v1.RMCostService.GetRMCost:output_type -> finance.v1.GetRMCostResponse
+	11, // 64: finance.v1.RMCostService.ListRMCosts:output_type -> finance.v1.ListRMCostsResponse
+	13, // 65: finance.v1.RMCostService.ListRMCostHistory:output_type -> finance.v1.ListRMCostHistoryResponse
+	29, // 66: finance.v1.RMCostService.ListRMCostPeriods:output_type -> finance.v1.ListRMCostPeriodsResponse
+	22, // 67: finance.v1.RMCostService.ExportRMCosts:output_type -> finance.v1.ExportRMCostsResponse
+	26, // 68: finance.v1.RMCostService.GetExportDownloadURL:output_type -> finance.v1.GetExportDownloadURLResponse
+	24, // 69: finance.v1.RMCostService.RequestRMCostExport:output_type -> finance.v1.RequestRMCostExportResponse
+	15, // 70: finance.v1.RMCostService.ListCostDetails:output_type -> finance.v1.ListCostDetailsResponse
+	17, // 71: finance.v1.RMCostService.UpdateRMCostInputs:output_type -> finance.v1.UpdateRMCostInputsResponse
+	19, // 72: finance.v1.RMCostService.UpdateCostDetailFixRate:output_type -> finance.v1.UpdateCostDetailFixRateResponse
+	62, // [62:73] is the sub-list for method output_type
+	51, // [51:62] is the sub-list for method input_type
+	51, // [51:51] is the sub-list for extension type_name
+	51, // [51:51] is the sub-list for extension extendee
+	0,  // [0:51] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_rm_cost_proto_init() }
@@ -3581,20 +3425,19 @@ func file_finance_v1_rm_cost_proto_init() {
 	file_finance_v1_rm_cost_proto_msgTypes[2].OneofWrappers = []any{}
 	file_finance_v1_rm_cost_proto_msgTypes[3].OneofWrappers = []any{}
 	file_finance_v1_rm_cost_proto_msgTypes[4].OneofWrappers = []any{}
-	file_finance_v1_rm_cost_proto_msgTypes[6].OneofWrappers = []any{}
+	file_finance_v1_rm_cost_proto_msgTypes[8].OneofWrappers = []any{}
 	file_finance_v1_rm_cost_proto_msgTypes[10].OneofWrappers = []any{}
-	file_finance_v1_rm_cost_proto_msgTypes[12].OneofWrappers = []any{}
+	file_finance_v1_rm_cost_proto_msgTypes[14].OneofWrappers = []any{}
 	file_finance_v1_rm_cost_proto_msgTypes[16].OneofWrappers = []any{}
-	file_finance_v1_rm_cost_proto_msgTypes[18].OneofWrappers = []any{}
+	file_finance_v1_rm_cost_proto_msgTypes[19].OneofWrappers = []any{}
 	file_finance_v1_rm_cost_proto_msgTypes[21].OneofWrappers = []any{}
-	file_finance_v1_rm_cost_proto_msgTypes[23].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_rm_cost_proto_rawDesc), len(file_finance_v1_rm_cost_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   30,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -1078,9 +1078,13 @@ type CostResult struct {
 	// When verified (if applicable).
 	VerifiedAt *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
 	// User who verified (resolved label).
-	VerifiedBy    string `protobuf:"bytes,21,opt,name=verified_by,json=verifiedBy,proto3" json:"verified_by,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	VerifiedBy string `protobuf:"bytes,21,opt,name=verified_by,json=verifiedBy,proto3" json:"verified_by,omitempty"`
+	// Product type id (from cost_product_master.cpm_product_type_id).
+	ProductTypeId int32 `protobuf:"varint,22,opt,name=product_type_id,json=productTypeId,proto3" json:"product_type_id,omitempty"`
+	// Resolved product type code (never the raw id in the UI).
+	ProductTypeCode string `protobuf:"bytes,23,opt,name=product_type_code,json=productTypeCode,proto3" json:"product_type_code,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CostResult) Reset() {
@@ -1256,6 +1260,20 @@ func (x *CostResult) GetVerifiedAt() *timestamppb.Timestamp {
 func (x *CostResult) GetVerifiedBy() string {
 	if x != nil {
 		return x.VerifiedBy
+	}
+	return ""
+}
+
+func (x *CostResult) GetProductTypeId() int32 {
+	if x != nil {
+		return x.ProductTypeId
+	}
+	return 0
+}
+
+func (x *CostResult) GetProductTypeCode() string {
+	if x != nil {
+		return x.ProductTypeCode
 	}
 	return ""
 }
@@ -1449,7 +1467,10 @@ type CostRMDetail struct {
 	// Consumption ratio.
 	Ratio string `protobuf:"bytes,6,opt,name=ratio,proto3" json:"ratio,omitempty"`
 	// Contribution = unit_cost × ratio.
-	Contribution  string `protobuf:"bytes,7,opt,name=contribution,proto3" json:"contribution,omitempty"`
+	Contribution string `protobuf:"bytes,7,opt,name=contribution,proto3" json:"contribution,omitempty"`
+	// Route level this RM edge feeds (1 = FG; 2..N upstream). Already stored in
+	// cpc_rm_cost_detail JSON; previously omitted from the contract.
+	RouteLevel    int32 `protobuf:"varint,8,opt,name=route_level,json=routeLevel,proto3" json:"route_level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1531,6 +1552,13 @@ func (x *CostRMDetail) GetContribution() string {
 		return x.Contribution
 	}
 	return ""
+}
+
+func (x *CostRMDetail) GetRouteLevel() int32 {
+	if x != nil {
+		return x.RouteLevel
+	}
+	return 0
 }
 
 // FormulaEval traces one formula evaluation step.
@@ -2652,7 +2680,19 @@ type ListCostResultsRequest struct {
 	// Product code/name search (case-insensitive, optional).
 	Search string `protobuf:"bytes,4,opt,name=search,proto3" json:"search,omitempty"`
 	// Result status filter (UNSPECIFIED = active only, i.e. exclude SUPERSEDED).
-	Status        CostResultStatus `protobuf:"varint,5,opt,name=status,proto3,enum=finance.v1.CostResultStatus" json:"status,omitempty"`
+	Status CostResultStatus `protobuf:"varint,5,opt,name=status,proto3,enum=finance.v1.CostResultStatus" json:"status,omitempty"`
+	// Product type filter (empty = all types).
+	ProductTypeIds []int32 `protobuf:"varint,6,rep,packed,name=product_type_ids,json=productTypeIds,proto3" json:"product_type_ids,omitempty"`
+	// Sort field. Accepted: productCode, productName, period, calculationType,
+	// costPerUnit, totalCost, status, calculatedAt. Unknown/empty = default order
+	// (cpc_calculated_at DESC, cpc_cost_id DESC).
+	SortBy string `protobuf:"bytes,7,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// Sort direction; empty = asc when sort_by names a column (an empty sort_by
+	// still falls back to the default newest-first order). Lowercase only,
+	// matching every other finance list RPC — the repository compares with
+	// EqualFold, so the uppercase spellings were accepted-but-redundant surface
+	// area.
+	SortOrder     string `protobuf:"bytes,8,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2720,6 +2760,27 @@ func (x *ListCostResultsRequest) GetStatus() CostResultStatus {
 		return x.Status
 	}
 	return CostResultStatus_COST_RESULT_STATUS_UNSPECIFIED
+}
+
+func (x *ListCostResultsRequest) GetProductTypeIds() []int32 {
+	if x != nil {
+		return x.ProductTypeIds
+	}
+	return nil
+}
+
+func (x *ListCostResultsRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListCostResultsRequest) GetSortOrder() string {
+	if x != nil {
+		return x.SortOrder
+	}
+	return ""
 }
 
 // ListCostResultsResponse returns a page of cost results across products.
@@ -2795,6 +2856,98 @@ func (x *ListCostResultsResponse) GetResolvedPeriod() string {
 	return ""
 }
 
+// ListCostResultPeriodsRequest has no filter arguments.
+type ListCostResultPeriodsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCostResultPeriodsRequest) Reset() {
+	*x = ListCostResultPeriodsRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCostResultPeriodsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCostResultPeriodsRequest) ProtoMessage() {}
+
+func (x *ListCostResultPeriodsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCostResultPeriodsRequest.ProtoReflect.Descriptor instead.
+func (*ListCostResultPeriodsRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{25}
+}
+
+// ListCostResultPeriodsResponse carries the distinct set of calculated periods.
+type ListCostResultPeriodsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Distinct periods ordered DESC (newest first), YYYYMM strings.
+	Periods       []string `protobuf:"bytes,2,rep,name=periods,proto3" json:"periods,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCostResultPeriodsResponse) Reset() {
+	*x = ListCostResultPeriodsResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCostResultPeriodsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCostResultPeriodsResponse) ProtoMessage() {}
+
+func (x *ListCostResultPeriodsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCostResultPeriodsResponse.ProtoReflect.Descriptor instead.
+func (*ListCostResultPeriodsResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ListCostResultPeriodsResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ListCostResultPeriodsResponse) GetPeriods() []string {
+	if x != nil {
+		return x.Periods
+	}
+	return nil
+}
+
 // GetCostBreakdownRequest fetches the full drill-down for a cost.
 type GetCostBreakdownRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2810,7 +2963,7 @@ type GetCostBreakdownRequest struct {
 
 func (x *GetCostBreakdownRequest) Reset() {
 	*x = GetCostBreakdownRequest{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[25]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2822,7 +2975,7 @@ func (x *GetCostBreakdownRequest) String() string {
 func (*GetCostBreakdownRequest) ProtoMessage() {}
 
 func (x *GetCostBreakdownRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[25]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2835,7 +2988,7 @@ func (x *GetCostBreakdownRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCostBreakdownRequest.ProtoReflect.Descriptor instead.
 func (*GetCostBreakdownRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{25}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetCostBreakdownRequest) GetProductSysId() int64 {
@@ -2872,7 +3025,7 @@ type GetCostBreakdownResponse struct {
 
 func (x *GetCostBreakdownResponse) Reset() {
 	*x = GetCostBreakdownResponse{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[26]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2884,7 +3037,7 @@ func (x *GetCostBreakdownResponse) String() string {
 func (*GetCostBreakdownResponse) ProtoMessage() {}
 
 func (x *GetCostBreakdownResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[26]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2897,7 +3050,7 @@ func (x *GetCostBreakdownResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCostBreakdownResponse.ProtoReflect.Descriptor instead.
 func (*GetCostBreakdownResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{26}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetCostBreakdownResponse) GetBase() *v1.BaseResponse {
@@ -2912,6 +3065,1021 @@ func (x *GetCostBreakdownResponse) GetBreakdown() *CostBreakdown {
 		return x.Breakdown
 	}
 	return nil
+}
+
+// RouteCostSheetStage is one route stage (one column of the product cost sheet).
+// Stages are ordered by (route_level, route_seq) as stored in cost_route_seq.
+type RouteCostSheetStage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Route level (1 = first stage; ascending downstream).
+	RouteLevel int32 `protobuf:"varint,1,opt,name=route_level,json=routeLevel,proto3" json:"route_level,omitempty"`
+	// Sequence within the level.
+	RouteSeq int32 `protobuf:"varint,2,opt,name=route_seq,json=routeSeq,proto3" json:"route_seq,omitempty"`
+	// Route stage name (e.g. "POY", "PTY").
+	RouteName string `protobuf:"bytes,3,opt,name=route_name,json=routeName,proto3" json:"route_name,omitempty"`
+	// Item code of the stage product (used as the sheet/column label; never an id).
+	ItemCode string `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty"`
+	// Resolved product name of the stage product.
+	ProductName string `protobuf:"bytes,5,opt,name=product_name,json=productName,proto3" json:"product_name,omitempty"`
+	// Shade code (if applicable).
+	ShadeCode string `protobuf:"bytes,6,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
+	// Shade name (if applicable).
+	ShadeName string `protobuf:"bytes,7,opt,name=shade_name,json=shadeName,proto3" json:"shade_name,omitempty"`
+	// Stage product sys id (internal; not rendered in the sheet).
+	ProductSysId int64 `protobuf:"varint,8,opt,name=product_sys_id,json=productSysId,proto3" json:"product_sys_id,omitempty"`
+	// False when no cost row exists for this stage in the requested period/type;
+	// the export renders an all-"-" column instead of failing.
+	HasCost bool `protobuf:"varint,9,opt,name=has_cost,json=hasCost,proto3" json:"has_cost,omitempty"`
+	// Parameter snapshot for this stage (key = param_code, val = stringified value).
+	ParamSnapshot map[string]string `protobuf:"bytes,10,rep,name=param_snapshot,json=paramSnapshot,proto3" json:"param_snapshot,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RouteCostSheetStage) Reset() {
+	*x = RouteCostSheetStage{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RouteCostSheetStage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RouteCostSheetStage) ProtoMessage() {}
+
+func (x *RouteCostSheetStage) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RouteCostSheetStage.ProtoReflect.Descriptor instead.
+func (*RouteCostSheetStage) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *RouteCostSheetStage) GetRouteLevel() int32 {
+	if x != nil {
+		return x.RouteLevel
+	}
+	return 0
+}
+
+func (x *RouteCostSheetStage) GetRouteSeq() int32 {
+	if x != nil {
+		return x.RouteSeq
+	}
+	return 0
+}
+
+func (x *RouteCostSheetStage) GetRouteName() string {
+	if x != nil {
+		return x.RouteName
+	}
+	return ""
+}
+
+func (x *RouteCostSheetStage) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *RouteCostSheetStage) GetProductName() string {
+	if x != nil {
+		return x.ProductName
+	}
+	return ""
+}
+
+func (x *RouteCostSheetStage) GetShadeCode() string {
+	if x != nil {
+		return x.ShadeCode
+	}
+	return ""
+}
+
+func (x *RouteCostSheetStage) GetShadeName() string {
+	if x != nil {
+		return x.ShadeName
+	}
+	return ""
+}
+
+func (x *RouteCostSheetStage) GetProductSysId() int64 {
+	if x != nil {
+		return x.ProductSysId
+	}
+	return 0
+}
+
+func (x *RouteCostSheetStage) GetHasCost() bool {
+	if x != nil {
+		return x.HasCost
+	}
+	return false
+}
+
+func (x *RouteCostSheetStage) GetParamSnapshot() map[string]string {
+	if x != nil {
+		return x.ParamSnapshot
+	}
+	return nil
+}
+
+// GetRouteCostSheetRequest fetches every route stage's cost snapshot for one
+// product in a single round-trip, so an N-column sheet costs one call.
+type GetRouteCostSheetRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Target product sys id; must be > 0.
+	ProductSysId int64 `protobuf:"varint,1,opt,name=product_sys_id,json=productSysId,proto3" json:"product_sys_id,omitempty"`
+	// Period in YYYYMM format.
+	Period string `protobuf:"bytes,2,opt,name=period,proto3" json:"period,omitempty"`
+	// Calculation flavor; cannot be UNSPECIFIED.
+	CalculationType CalculationType `protobuf:"varint,3,opt,name=calculation_type,json=calculationType,proto3,enum=finance.v1.CalculationType" json:"calculation_type,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetRouteCostSheetRequest) Reset() {
+	*x = GetRouteCostSheetRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRouteCostSheetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRouteCostSheetRequest) ProtoMessage() {}
+
+func (x *GetRouteCostSheetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRouteCostSheetRequest.ProtoReflect.Descriptor instead.
+func (*GetRouteCostSheetRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GetRouteCostSheetRequest) GetProductSysId() int64 {
+	if x != nil {
+		return x.ProductSysId
+	}
+	return 0
+}
+
+func (x *GetRouteCostSheetRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+func (x *GetRouteCostSheetRequest) GetCalculationType() CalculationType {
+	if x != nil {
+		return x.CalculationType
+	}
+	return CalculationType_CALCULATION_TYPE_UNSPECIFIED
+}
+
+// GetRouteCostSheetResponse returns the ordered route stages with snapshots.
+type GetRouteCostSheetResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Stages ordered by (route_level, route_seq).
+	Stages        []*RouteCostSheetStage `protobuf:"bytes,2,rep,name=stages,proto3" json:"stages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRouteCostSheetResponse) Reset() {
+	*x = GetRouteCostSheetResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRouteCostSheetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRouteCostSheetResponse) ProtoMessage() {}
+
+func (x *GetRouteCostSheetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRouteCostSheetResponse.ProtoReflect.Descriptor instead.
+func (*GetRouteCostSheetResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetRouteCostSheetResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetRouteCostSheetResponse) GetStages() []*RouteCostSheetStage {
+	if x != nil {
+		return x.Stages
+	}
+	return nil
+}
+
+// RequestProductCostSheetExportRequest queues an async product-cost-sheet
+// export job. Carries the same filter shape as ListCostResultsRequest, plus an
+// optional explicit product selection that overrides the filter when non-empty.
+type RequestProductCostSheetExportRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Period in YYYYMM. Required — MinIO artifacts are namespaced by period.
+	Period string `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
+	// Calculation type filter (UNSPECIFIED = all types in the period).
+	CalculationType CalculationType `protobuf:"varint,2,opt,name=calculation_type,json=calculationType,proto3,enum=finance.v1.CalculationType" json:"calculation_type,omitempty"`
+	// Product type filter (empty = all types).
+	ProductTypeIds []int32 `protobuf:"varint,3,rep,packed,name=product_type_ids,json=productTypeIds,proto3" json:"product_type_ids,omitempty"`
+	// Product code/name search (case-insensitive, optional).
+	Search string `protobuf:"bytes,4,opt,name=search,proto3" json:"search,omitempty"`
+	// Result status filter (UNSPECIFIED = active only).
+	Status CostResultStatus `protobuf:"varint,5,opt,name=status,proto3,enum=finance.v1.CostResultStatus" json:"status,omitempty"`
+	// Explicit product selection; when non-empty the filters above are ignored.
+	// Capped at the export handler's own maxExportProducts so an oversized
+	// request is rejected at the edge instead of silently truncated deep in the
+	// handler. Keep the two numbers in sync.
+	ProductSysIds []int64 `protobuf:"varint,6,rep,packed,name=product_sys_ids,json=productSysIds,proto3" json:"product_sys_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestProductCostSheetExportRequest) Reset() {
+	*x = RequestProductCostSheetExportRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestProductCostSheetExportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestProductCostSheetExportRequest) ProtoMessage() {}
+
+func (x *RequestProductCostSheetExportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestProductCostSheetExportRequest.ProtoReflect.Descriptor instead.
+func (*RequestProductCostSheetExportRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *RequestProductCostSheetExportRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+func (x *RequestProductCostSheetExportRequest) GetCalculationType() CalculationType {
+	if x != nil {
+		return x.CalculationType
+	}
+	return CalculationType_CALCULATION_TYPE_UNSPECIFIED
+}
+
+func (x *RequestProductCostSheetExportRequest) GetProductTypeIds() []int32 {
+	if x != nil {
+		return x.ProductTypeIds
+	}
+	return nil
+}
+
+func (x *RequestProductCostSheetExportRequest) GetSearch() string {
+	if x != nil {
+		return x.Search
+	}
+	return ""
+}
+
+func (x *RequestProductCostSheetExportRequest) GetStatus() CostResultStatus {
+	if x != nil {
+		return x.Status
+	}
+	return CostResultStatus_COST_RESULT_STATUS_UNSPECIFIED
+}
+
+func (x *RequestProductCostSheetExportRequest) GetProductSysIds() []int64 {
+	if x != nil {
+		return x.ProductSysIds
+	}
+	return nil
+}
+
+// RequestProductCostSheetExportResponse acknowledges the queued job.
+type RequestProductCostSheetExportResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Queued job summary (job_id, job_code, status).
+	Data          *ProductCostSheetExportJobInfo `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestProductCostSheetExportResponse) Reset() {
+	*x = RequestProductCostSheetExportResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestProductCostSheetExportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestProductCostSheetExportResponse) ProtoMessage() {}
+
+func (x *RequestProductCostSheetExportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestProductCostSheetExportResponse.ProtoReflect.Descriptor instead.
+func (*RequestProductCostSheetExportResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *RequestProductCostSheetExportResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *RequestProductCostSheetExportResponse) GetData() *ProductCostSheetExportJobInfo {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// ProductCostSheetExportJobInfo summarizes a freshly-queued export job.
+type ProductCostSheetExportJobInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job_execution.job_id (UUID).
+	JobId string `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// Human-readable code (e.g. "PCS_EX-202604-001").
+	JobCode string `protobuf:"bytes,2,opt,name=job_code,json=jobCode,proto3" json:"job_code,omitempty"`
+	// Initial status, typically "QUEUED".
+	Status string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	// True when this job is a batch-tracking parent (jex_total_children > 0)
+	// fanned out into multiple child export jobs. When false, total_children/
+	// completed_children/failed_children are all 0 and irrelevant.
+	IsBatch bool `protobuf:"varint,4,opt,name=is_batch,json=isBatch,proto3" json:"is_batch,omitempty"`
+	// Total child jobs expected (only meaningful when is_batch = true).
+	TotalChildren int32 `protobuf:"varint,5,opt,name=total_children,json=totalChildren,proto3" json:"total_children,omitempty"`
+	// Child jobs that finished SUCCESS so far.
+	CompletedChildren int32 `protobuf:"varint,6,opt,name=completed_children,json=completedChildren,proto3" json:"completed_children,omitempty"`
+	// Child jobs that finished FAILED so far.
+	FailedChildren int32 `protobuf:"varint,7,opt,name=failed_children,json=failedChildren,proto3" json:"failed_children,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ProductCostSheetExportJobInfo) Reset() {
+	*x = ProductCostSheetExportJobInfo{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProductCostSheetExportJobInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProductCostSheetExportJobInfo) ProtoMessage() {}
+
+func (x *ProductCostSheetExportJobInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProductCostSheetExportJobInfo.ProtoReflect.Descriptor instead.
+func (*ProductCostSheetExportJobInfo) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ProductCostSheetExportJobInfo) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *ProductCostSheetExportJobInfo) GetJobCode() string {
+	if x != nil {
+		return x.JobCode
+	}
+	return ""
+}
+
+func (x *ProductCostSheetExportJobInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ProductCostSheetExportJobInfo) GetIsBatch() bool {
+	if x != nil {
+		return x.IsBatch
+	}
+	return false
+}
+
+func (x *ProductCostSheetExportJobInfo) GetTotalChildren() int32 {
+	if x != nil {
+		return x.TotalChildren
+	}
+	return 0
+}
+
+func (x *ProductCostSheetExportJobInfo) GetCompletedChildren() int32 {
+	if x != nil {
+		return x.CompletedChildren
+	}
+	return 0
+}
+
+func (x *ProductCostSheetExportJobInfo) GetFailedChildren() int32 {
+	if x != nil {
+		return x.FailedChildren
+	}
+	return 0
+}
+
+// GetProductCostSheetDownloadURLRequest identifies the export job whose
+// artifact the caller wants to download.
+type GetProductCostSheetDownloadURLRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job_execution.job_id (UUID).
+	JobId         string `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProductCostSheetDownloadURLRequest) Reset() {
+	*x = GetProductCostSheetDownloadURLRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProductCostSheetDownloadURLRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProductCostSheetDownloadURLRequest) ProtoMessage() {}
+
+func (x *GetProductCostSheetDownloadURLRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProductCostSheetDownloadURLRequest.ProtoReflect.Descriptor instead.
+func (*GetProductCostSheetDownloadURLRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *GetProductCostSheetDownloadURLRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+// GetProductCostSheetDownloadURLResponse carries a presigned download URL.
+type GetProductCostSheetDownloadURLResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Presigned URL + suggested filename + expiry.
+	Data          *ProductCostSheetDownloadInfo `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProductCostSheetDownloadURLResponse) Reset() {
+	*x = GetProductCostSheetDownloadURLResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProductCostSheetDownloadURLResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProductCostSheetDownloadURLResponse) ProtoMessage() {}
+
+func (x *GetProductCostSheetDownloadURLResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProductCostSheetDownloadURLResponse.ProtoReflect.Descriptor instead.
+func (*GetProductCostSheetDownloadURLResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *GetProductCostSheetDownloadURLResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetProductCostSheetDownloadURLResponse) GetData() *ProductCostSheetDownloadInfo {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// ProductCostSheetDownloadInfo carries the presigned URL for the UI.
+type ProductCostSheetDownloadInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Short-lived presigned URL the browser can redirect to.
+	Url string `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	// Suggested filename (Content-Disposition).
+	FileName string `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	// ISO8601 expiry for the presigned URL.
+	ExpiresAt     string `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProductCostSheetDownloadInfo) Reset() {
+	*x = ProductCostSheetDownloadInfo{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProductCostSheetDownloadInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProductCostSheetDownloadInfo) ProtoMessage() {}
+
+func (x *ProductCostSheetDownloadInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProductCostSheetDownloadInfo.ProtoReflect.Descriptor instead.
+func (*ProductCostSheetDownloadInfo) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ProductCostSheetDownloadInfo) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *ProductCostSheetDownloadInfo) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+func (x *ProductCostSheetDownloadInfo) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+// ListCostSheetExportBatchChildrenRequest identifies the batch-tracking
+// parent job whose child export jobs should be enumerated.
+type ListCostSheetExportBatchChildrenRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job_execution.job_id of the parent (batch-tracking) job.
+	ParentJobId   string `protobuf:"bytes,1,opt,name=parent_job_id,json=parentJobId,proto3" json:"parent_job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCostSheetExportBatchChildrenRequest) Reset() {
+	*x = ListCostSheetExportBatchChildrenRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCostSheetExportBatchChildrenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCostSheetExportBatchChildrenRequest) ProtoMessage() {}
+
+func (x *ListCostSheetExportBatchChildrenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCostSheetExportBatchChildrenRequest.ProtoReflect.Descriptor instead.
+func (*ListCostSheetExportBatchChildrenRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *ListCostSheetExportBatchChildrenRequest) GetParentJobId() string {
+	if x != nil {
+		return x.ParentJobId
+	}
+	return ""
+}
+
+// ListCostSheetExportBatchChildrenResponse lists every child job belonging
+// to a batch fan-out, in creation order.
+type ListCostSheetExportBatchChildrenResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Child jobs ordered by creation time (ascending).
+	Children      []*CostSheetExportBatchChildInfo `protobuf:"bytes,2,rep,name=children,proto3" json:"children,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCostSheetExportBatchChildrenResponse) Reset() {
+	*x = ListCostSheetExportBatchChildrenResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCostSheetExportBatchChildrenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCostSheetExportBatchChildrenResponse) ProtoMessage() {}
+
+func (x *ListCostSheetExportBatchChildrenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCostSheetExportBatchChildrenResponse.ProtoReflect.Descriptor instead.
+func (*ListCostSheetExportBatchChildrenResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ListCostSheetExportBatchChildrenResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ListCostSheetExportBatchChildrenResponse) GetChildren() []*CostSheetExportBatchChildInfo {
+	if x != nil {
+		return x.Children
+	}
+	return nil
+}
+
+// CostSheetExportBatchChildInfo summarizes one child job within a batch
+// fan-out, including its download URL once the artifact is ready.
+type CostSheetExportBatchChildInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job_execution.job_id (UUID).
+	JobId string `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// Human-readable code (e.g. "PCS_EX-202604-001").
+	JobCode string `protobuf:"bytes,2,opt,name=job_code,json=jobCode,proto3" json:"job_code,omitempty"`
+	// Current status (e.g. "QUEUED", "PROCESSING", "SUCCESS", "FAILED").
+	Status string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	// Short-lived presigned download URL; empty until status is SUCCESS and
+	// the URL could be resolved. Never causes the batch listing to fail.
+	DownloadUrl string `protobuf:"bytes,4,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
+	// Suggested filename (Content-Disposition); empty when download_url is empty.
+	FileName      string `protobuf:"bytes,5,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CostSheetExportBatchChildInfo) Reset() {
+	*x = CostSheetExportBatchChildInfo{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostSheetExportBatchChildInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostSheetExportBatchChildInfo) ProtoMessage() {}
+
+func (x *CostSheetExportBatchChildInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostSheetExportBatchChildInfo.ProtoReflect.Descriptor instead.
+func (*CostSheetExportBatchChildInfo) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *CostSheetExportBatchChildInfo) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *CostSheetExportBatchChildInfo) GetJobCode() string {
+	if x != nil {
+		return x.JobCode
+	}
+	return ""
+}
+
+func (x *CostSheetExportBatchChildInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *CostSheetExportBatchChildInfo) GetDownloadUrl() string {
+	if x != nil {
+		return x.DownloadUrl
+	}
+	return ""
+}
+
+func (x *CostSheetExportBatchChildInfo) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+// GetProductCostSheetExportJobStatusRequest identifies the export job (either
+// a standalone job or a batch-tracking parent) whose live status/progress
+// should be polled while it is still QUEUED or PROCESSING.
+type GetProductCostSheetExportJobStatusRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job_execution.job_id (UUID). Works for both a standalone job and a batch
+	// parent job.
+	JobId         string `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProductCostSheetExportJobStatusRequest) Reset() {
+	*x = GetProductCostSheetExportJobStatusRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProductCostSheetExportJobStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProductCostSheetExportJobStatusRequest) ProtoMessage() {}
+
+func (x *GetProductCostSheetExportJobStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProductCostSheetExportJobStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetProductCostSheetExportJobStatusRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *GetProductCostSheetExportJobStatusRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+// GetProductCostSheetExportJobStatusResponse reports the job's current
+// status and, for a batch parent, its live child-completion counters.
+type GetProductCostSheetExportJobStatusResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// job_execution.job_id (UUID).
+	JobId string `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// Human-readable code (e.g. "PCS_EX-202604-001").
+	JobCode string `protobuf:"bytes,3,opt,name=job_code,json=jobCode,proto3" json:"job_code,omitempty"`
+	// Current status (e.g. "QUEUED", "PROCESSING", "SUCCESS", "FAILED").
+	Status string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	// True when this job is a batch-tracking parent (jex_total_children > 0).
+	// When false, total_children/completed_children/failed_children are all 0.
+	IsBatch bool `protobuf:"varint,5,opt,name=is_batch,json=isBatch,proto3" json:"is_batch,omitempty"`
+	// Total child jobs expected (only meaningful when is_batch = true).
+	TotalChildren int32 `protobuf:"varint,6,opt,name=total_children,json=totalChildren,proto3" json:"total_children,omitempty"`
+	// Child jobs that finished SUCCESS so far.
+	CompletedChildren int32 `protobuf:"varint,7,opt,name=completed_children,json=completedChildren,proto3" json:"completed_children,omitempty"`
+	// Child jobs that finished FAILED so far.
+	FailedChildren int32 `protobuf:"varint,8,opt,name=failed_children,json=failedChildren,proto3" json:"failed_children,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) Reset() {
+	*x = GetProductCostSheetExportJobStatusResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProductCostSheetExportJobStatusResponse) ProtoMessage() {}
+
+func (x *GetProductCostSheetExportJobStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProductCostSheetExportJobStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetProductCostSheetExportJobStatusResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) GetJobCode() string {
+	if x != nil {
+		return x.JobCode
+	}
+	return ""
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) GetIsBatch() bool {
+	if x != nil {
+		return x.IsBatch
+	}
+	return false
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) GetTotalChildren() int32 {
+	if x != nil {
+		return x.TotalChildren
+	}
+	return 0
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) GetCompletedChildren() int32 {
+	if x != nil {
+		return x.CompletedChildren
+	}
+	return 0
+}
+
+func (x *GetProductCostSheetExportJobStatusResponse) GetFailedChildren() int32 {
+	if x != nil {
+		return x.FailedChildren
+	}
+	return 0
 }
 
 // ListCostHistoryRequest lists versioned cost history for a product.
@@ -2929,7 +4097,7 @@ type ListCostHistoryRequest struct {
 
 func (x *ListCostHistoryRequest) Reset() {
 	*x = ListCostHistoryRequest{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[27]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2941,7 +4109,7 @@ func (x *ListCostHistoryRequest) String() string {
 func (*ListCostHistoryRequest) ProtoMessage() {}
 
 func (x *ListCostHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[27]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2954,7 +4122,7 @@ func (x *ListCostHistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCostHistoryRequest.ProtoReflect.Descriptor instead.
 func (*ListCostHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{27}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ListCostHistoryRequest) GetProductSysId() int64 {
@@ -2993,7 +4161,7 @@ type ListCostHistoryResponse struct {
 
 func (x *ListCostHistoryResponse) Reset() {
 	*x = ListCostHistoryResponse{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[28]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3005,7 +4173,7 @@ func (x *ListCostHistoryResponse) String() string {
 func (*ListCostHistoryResponse) ProtoMessage() {}
 
 func (x *ListCostHistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[28]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3018,7 +4186,7 @@ func (x *ListCostHistoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCostHistoryResponse.ProtoReflect.Descriptor instead.
 func (*ListCostHistoryResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{28}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ListCostHistoryResponse) GetBase() *v1.BaseResponse {
@@ -3053,7 +4221,7 @@ type VerifyCostResultRequest struct {
 
 func (x *VerifyCostResultRequest) Reset() {
 	*x = VerifyCostResultRequest{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[29]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3065,7 +4233,7 @@ func (x *VerifyCostResultRequest) String() string {
 func (*VerifyCostResultRequest) ProtoMessage() {}
 
 func (x *VerifyCostResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[29]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3078,7 +4246,7 @@ func (x *VerifyCostResultRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyCostResultRequest.ProtoReflect.Descriptor instead.
 func (*VerifyCostResultRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{29}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *VerifyCostResultRequest) GetCostId() int64 {
@@ -3101,7 +4269,7 @@ type VerifyCostResultResponse struct {
 
 func (x *VerifyCostResultResponse) Reset() {
 	*x = VerifyCostResultResponse{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[30]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3113,7 +4281,7 @@ func (x *VerifyCostResultResponse) String() string {
 func (*VerifyCostResultResponse) ProtoMessage() {}
 
 func (x *VerifyCostResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[30]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3126,7 +4294,7 @@ func (x *VerifyCostResultResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyCostResultResponse.ProtoReflect.Descriptor instead.
 func (*VerifyCostResultResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{30}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *VerifyCostResultResponse) GetBase() *v1.BaseResponse {
@@ -3154,7 +4322,7 @@ type ApproveCostResultRequest struct {
 
 func (x *ApproveCostResultRequest) Reset() {
 	*x = ApproveCostResultRequest{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[31]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3166,7 +4334,7 @@ func (x *ApproveCostResultRequest) String() string {
 func (*ApproveCostResultRequest) ProtoMessage() {}
 
 func (x *ApproveCostResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[31]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3179,7 +4347,7 @@ func (x *ApproveCostResultRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveCostResultRequest.ProtoReflect.Descriptor instead.
 func (*ApproveCostResultRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{31}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ApproveCostResultRequest) GetCostId() int64 {
@@ -3202,7 +4370,7 @@ type ApproveCostResultResponse struct {
 
 func (x *ApproveCostResultResponse) Reset() {
 	*x = ApproveCostResultResponse{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[32]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3214,7 +4382,7 @@ func (x *ApproveCostResultResponse) String() string {
 func (*ApproveCostResultResponse) ProtoMessage() {}
 
 func (x *ApproveCostResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[32]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3227,7 +4395,7 @@ func (x *ApproveCostResultResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveCostResultResponse.ProtoReflect.Descriptor instead.
 func (*ApproveCostResultResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{32}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ApproveCostResultResponse) GetBase() *v1.BaseResponse {
@@ -3266,7 +4434,7 @@ type ProcessChunkInternalRequest struct {
 
 func (x *ProcessChunkInternalRequest) Reset() {
 	*x = ProcessChunkInternalRequest{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[33]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3278,7 +4446,7 @@ func (x *ProcessChunkInternalRequest) String() string {
 func (*ProcessChunkInternalRequest) ProtoMessage() {}
 
 func (x *ProcessChunkInternalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[33]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3291,7 +4459,7 @@ func (x *ProcessChunkInternalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessChunkInternalRequest.ProtoReflect.Descriptor instead.
 func (*ProcessChunkInternalRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{33}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ProcessChunkInternalRequest) GetJobId() int64 {
@@ -3353,7 +4521,7 @@ type ProcessChunkInternalResponse struct {
 
 func (x *ProcessChunkInternalResponse) Reset() {
 	*x = ProcessChunkInternalResponse{}
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[34]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3365,7 +4533,7 @@ func (x *ProcessChunkInternalResponse) String() string {
 func (*ProcessChunkInternalResponse) ProtoMessage() {}
 
 func (x *ProcessChunkInternalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_calc_proto_msgTypes[34]
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3378,7 +4546,7 @@ func (x *ProcessChunkInternalResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessChunkInternalResponse.ProtoReflect.Descriptor instead.
 func (*ProcessChunkInternalResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{34}
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ProcessChunkInternalResponse) GetBase() *v1.BaseResponse {
@@ -3407,6 +4575,473 @@ func (x *ProcessChunkInternalResponse) GetBlockedCount() int32 {
 		return x.BlockedCount
 	}
 	return 0
+}
+
+// GetBatchChildDownloadUrlRequest identifies one child job within a batch
+// fan-out whose artifact should be freshly presigned.
+type GetBatchChildDownloadUrlRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job_execution.job_id of the parent (batch-tracking) job.
+	ParentJobId string `protobuf:"bytes,1,opt,name=parent_job_id,json=parentJobId,proto3" json:"parent_job_id,omitempty"`
+	// job_execution.job_id of the child job whose artifact is downloaded.
+	ChildJobId    string `protobuf:"bytes,2,opt,name=child_job_id,json=childJobId,proto3" json:"child_job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBatchChildDownloadUrlRequest) Reset() {
+	*x = GetBatchChildDownloadUrlRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBatchChildDownloadUrlRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBatchChildDownloadUrlRequest) ProtoMessage() {}
+
+func (x *GetBatchChildDownloadUrlRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBatchChildDownloadUrlRequest.ProtoReflect.Descriptor instead.
+func (*GetBatchChildDownloadUrlRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *GetBatchChildDownloadUrlRequest) GetParentJobId() string {
+	if x != nil {
+		return x.ParentJobId
+	}
+	return ""
+}
+
+func (x *GetBatchChildDownloadUrlRequest) GetChildJobId() string {
+	if x != nil {
+		return x.ChildJobId
+	}
+	return ""
+}
+
+// GetBatchChildDownloadUrlResponse carries a freshly presigned download URL
+// for one child job's artifact. Re-presigned on every call; short validity
+// (~5 min) is fine since it is used immediately after fetch.
+type GetBatchChildDownloadUrlResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Short-lived presigned URL the browser can redirect to.
+	DownloadUrl string `protobuf:"bytes,2,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
+	// Suggested filename (Content-Disposition).
+	FileName      string `protobuf:"bytes,3,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBatchChildDownloadUrlResponse) Reset() {
+	*x = GetBatchChildDownloadUrlResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBatchChildDownloadUrlResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBatchChildDownloadUrlResponse) ProtoMessage() {}
+
+func (x *GetBatchChildDownloadUrlResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBatchChildDownloadUrlResponse.ProtoReflect.Descriptor instead.
+func (*GetBatchChildDownloadUrlResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *GetBatchChildDownloadUrlResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetBatchChildDownloadUrlResponse) GetDownloadUrl() string {
+	if x != nil {
+		return x.DownloadUrl
+	}
+	return ""
+}
+
+func (x *GetBatchChildDownloadUrlResponse) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+// DownloadExportBatchZipRequest identifies the batch-tracking parent job
+// whose completed child artifacts should be bundled into a single zip.
+type DownloadExportBatchZipRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job_execution.job_id of the parent (batch-tracking) job.
+	ParentJobId   string `protobuf:"bytes,1,opt,name=parent_job_id,json=parentJobId,proto3" json:"parent_job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadExportBatchZipRequest) Reset() {
+	*x = DownloadExportBatchZipRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadExportBatchZipRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadExportBatchZipRequest) ProtoMessage() {}
+
+func (x *DownloadExportBatchZipRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadExportBatchZipRequest.ProtoReflect.Descriptor instead.
+func (*DownloadExportBatchZipRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *DownloadExportBatchZipRequest) GetParentJobId() string {
+	if x != nil {
+		return x.ParentJobId
+	}
+	return ""
+}
+
+// DownloadExportBatchZipResponse carries the zipped bytes of every completed
+// child file in the batch as one unary response (small few-hundred-KB-to-
+// few-MB payloads are fine here; no streaming precedent exists in this file).
+type DownloadExportBatchZipResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Zip archive bytes containing every completed child export file.
+	ZipData []byte `protobuf:"bytes,1,opt,name=zip_data,json=zipData,proto3" json:"zip_data,omitempty"`
+	// Suggested filename (Content-Disposition).
+	FileName      string `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadExportBatchZipResponse) Reset() {
+	*x = DownloadExportBatchZipResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadExportBatchZipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadExportBatchZipResponse) ProtoMessage() {}
+
+func (x *DownloadExportBatchZipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadExportBatchZipResponse.ProtoReflect.Descriptor instead.
+func (*DownloadExportBatchZipResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *DownloadExportBatchZipResponse) GetZipData() []byte {
+	if x != nil {
+		return x.ZipData
+	}
+	return nil
+}
+
+func (x *DownloadExportBatchZipResponse) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+// ListExportJobsRequest lists recent cost-sheet export job_execution rows
+// (both batch-tracking parents and standalone single jobs), for a "recent
+// exports" UI.
+type ListExportJobsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Pagination params.
+	Pagination *v1.PaginationRequest `protobuf:"bytes,1,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	// Optional period filter (YYYYMM).
+	Period        string `protobuf:"bytes,2,opt,name=period,proto3" json:"period,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExportJobsRequest) Reset() {
+	*x = ListExportJobsRequest{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExportJobsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExportJobsRequest) ProtoMessage() {}
+
+func (x *ListExportJobsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExportJobsRequest.ProtoReflect.Descriptor instead.
+func (*ListExportJobsRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *ListExportJobsRequest) GetPagination() *v1.PaginationRequest {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+func (x *ListExportJobsRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+// ListExportJobsResponse returns a page of export job summaries.
+type ListExportJobsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Page of export job summaries, newest first.
+	Jobs []*ExportJobSummary `protobuf:"bytes,2,rep,name=jobs,proto3" json:"jobs,omitempty"`
+	// Pagination metadata.
+	Pagination    *v1.PaginationResponse `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExportJobsResponse) Reset() {
+	*x = ListExportJobsResponse{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExportJobsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExportJobsResponse) ProtoMessage() {}
+
+func (x *ListExportJobsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExportJobsResponse.ProtoReflect.Descriptor instead.
+func (*ListExportJobsResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *ListExportJobsResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ListExportJobsResponse) GetJobs() []*ExportJobSummary {
+	if x != nil {
+		return x.Jobs
+	}
+	return nil
+}
+
+func (x *ListExportJobsResponse) GetPagination() *v1.PaginationResponse {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+// ExportJobSummary summarizes one export job row (parent/batch or standalone)
+// for the recent-exports listing.
+type ExportJobSummary struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job_execution.job_id (UUID).
+	JobId string `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// Human-readable code (e.g. "PCS_EX-202604-001").
+	JobCode string `protobuf:"bytes,2,opt,name=job_code,json=jobCode,proto3" json:"job_code,omitempty"`
+	// Period in YYYYMM format.
+	Period string `protobuf:"bytes,3,opt,name=period,proto3" json:"period,omitempty"`
+	// Current status (e.g. "QUEUED", "PROCESSING", "SUCCESS", "FAILED").
+	Status string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	// Total child jobs expected (only meaningful when is_batch = true).
+	TotalChildren int32 `protobuf:"varint,5,opt,name=total_children,json=totalChildren,proto3" json:"total_children,omitempty"`
+	// Child jobs that finished SUCCESS so far.
+	CompletedChildren int32 `protobuf:"varint,6,opt,name=completed_children,json=completedChildren,proto3" json:"completed_children,omitempty"`
+	// Child jobs that finished FAILED so far.
+	FailedChildren int32 `protobuf:"varint,7,opt,name=failed_children,json=failedChildren,proto3" json:"failed_children,omitempty"`
+	// When the job was queued.
+	QueuedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=queued_at,json=queuedAt,proto3" json:"queued_at,omitempty"`
+	// True when this job is a batch-tracking parent fanned out into multiple
+	// child export jobs; false for a standalone single job.
+	IsBatch       bool `protobuf:"varint,9,opt,name=is_batch,json=isBatch,proto3" json:"is_batch,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportJobSummary) Reset() {
+	*x = ExportJobSummary{}
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportJobSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportJobSummary) ProtoMessage() {}
+
+func (x *ExportJobSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_calc_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportJobSummary.ProtoReflect.Descriptor instead.
+func (*ExportJobSummary) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_calc_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *ExportJobSummary) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *ExportJobSummary) GetJobCode() string {
+	if x != nil {
+		return x.JobCode
+	}
+	return ""
+}
+
+func (x *ExportJobSummary) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+func (x *ExportJobSummary) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ExportJobSummary) GetTotalChildren() int32 {
+	if x != nil {
+		return x.TotalChildren
+	}
+	return 0
+}
+
+func (x *ExportJobSummary) GetCompletedChildren() int32 {
+	if x != nil {
+		return x.CompletedChildren
+	}
+	return 0
+}
+
+func (x *ExportJobSummary) GetFailedChildren() int32 {
+	if x != nil {
+		return x.FailedChildren
+	}
+	return 0
+}
+
+func (x *ExportJobSummary) GetQueuedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.QueuedAt
+	}
+	return nil
+}
+
+func (x *ExportJobSummary) GetIsBatch() bool {
+	if x != nil {
+		return x.IsBatch
+	}
+	return false
 }
 
 var File_finance_v1_cost_calc_proto protoreflect.FileDescriptor
@@ -3487,7 +5122,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"durationMs\x12\x17\n" +
 	"\acost_id\x18\x0e \x01(\x03R\x06costId\x12#\n" +
 	"\rerror_message\x18\x0f \x01(\tR\ferrorMessage\x120\n" +
-	"\x14calculation_log_json\x18\x10 \x01(\tR\x12calculationLogJson\"\xa9\x06\n" +
+	"\x14calculation_log_json\x18\x10 \x01(\tR\x12calculationLogJson\"\xfd\x06\n" +
 	"\n" +
 	"CostResult\x12\x17\n" +
 	"\acost_id\x18\x01 \x01(\x03R\x06costId\x12$\n" +
@@ -3514,7 +5149,9 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\vverified_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"verifiedAt\x12\x1f\n" +
 	"\vverified_by\x18\x15 \x01(\tR\n" +
-	"verifiedBy\"\x86\x03\n" +
+	"verifiedBy\x12&\n" +
+	"\x0fproduct_type_id\x18\x16 \x01(\x05R\rproductTypeId\x12*\n" +
+	"\x11product_type_code\x18\x17 \x01(\tR\x0fproductTypeCode\"\x86\x03\n" +
 	"\rCostBreakdown\x120\n" +
 	"\asummary\x18\x01 \x01(\v2\x16.finance.v1.CostResultR\asummary\x125\n" +
 	"\bby_level\x18\x02 \x03(\v2\x1a.finance.v1.LevelBreakdownR\abyLevel\x127\n" +
@@ -3531,7 +5168,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\fproduct_code\x18\x03 \x01(\tR\vproductCode\x12!\n" +
 	"\fproduct_name\x18\x04 \x01(\tR\vproductName\x12+\n" +
 	"\x11cost_contribution\x18\x05 \x01(\tR\x10costContribution\x12\x14\n" +
-	"\x05ratio\x18\x06 \x01(\tR\x05ratio\"\xd5\x01\n" +
+	"\x05ratio\x18\x06 \x01(\tR\x05ratio\"\xf6\x01\n" +
 	"\fCostRMDetail\x12\x17\n" +
 	"\arm_type\x18\x01 \x01(\tR\x06rmType\x12\x19\n" +
 	"\bref_code\x18\x02 \x01(\tR\arefCode\x12\x1b\n" +
@@ -3540,7 +5177,9 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"shade_code\x18\x04 \x01(\tR\tshadeCode\x12\x1b\n" +
 	"\tunit_cost\x18\x05 \x01(\tR\bunitCost\x12\x14\n" +
 	"\x05ratio\x18\x06 \x01(\tR\x05ratio\x12\"\n" +
-	"\fcontribution\x18\a \x01(\tR\fcontribution\"\xba\x02\n" +
+	"\fcontribution\x18\a \x01(\tR\fcontribution\x12\x1f\n" +
+	"\vroute_level\x18\b \x01(\x05R\n" +
+	"routeLevel\"\xba\x02\n" +
 	"\vFormulaEval\x12!\n" +
 	"\fformula_code\x18\x01 \x01(\tR\vformulaCode\x12!\n" +
 	"\fformula_name\x18\x02 \x01(\tR\vformulaName\x12\x1e\n" +
@@ -3633,7 +5272,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x10calculation_type\x18\x03 \x01(\x0e2\x1b.finance.v1.CalculationTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x0fcalculationType\"t\n" +
 	"\x15GetCostResultResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
-	"\x06result\x18\x02 \x01(\v2\x16.finance.v1.CostResultR\x06result\"\xa3\x02\n" +
+	"\x06result\x18\x02 \x01(\v2\x16.finance.v1.CostResultR\x06result\"\x8f\x04\n" +
 	"\x16ListCostResultsRequest\x12<\n" +
 	"\n" +
 	"pagination\x18\x01 \x01(\v2\x1c.common.v1.PaginationRequestR\n" +
@@ -3641,14 +5280,22 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x06period\x18\x02 \x01(\tB\x14\xbaH\x11r\x0f2\r^$|^[0-9]{6}$R\x06period\x12F\n" +
 	"\x10calculation_type\x18\x03 \x01(\x0e2\x1b.finance.v1.CalculationTypeR\x0fcalculationType\x12\x1f\n" +
 	"\x06search\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06search\x124\n" +
-	"\x06status\x18\x05 \x01(\x0e2\x1c.finance.v1.CostResultStatusR\x06status\"\xdc\x01\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x1c.finance.v1.CostResultStatusR\x06status\x123\n" +
+	"\x10product_type_ids\x18\x06 \x03(\x05B\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x0eproductTypeIds\x12\x81\x01\n" +
+	"\asort_by\x18\a \x01(\tBh\xbaHercR\x00R\vproductCodeR\vproductNameR\x06periodR\x0fcalculationTypeR\vcostPerUnitR\ttotalCostR\x06statusR\fcalculatedAtR\x06sortBy\x121\n" +
+	"\n" +
+	"sort_order\x18\b \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\"\xdc\x01\n" +
 	"\x17ListCostResultsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x05items\x18\x02 \x03(\v2\x16.finance.v1.CostResultR\x05items\x12=\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
 	"pagination\x12'\n" +
-	"\x0fresolved_period\x18\x04 \x01(\tR\x0eresolvedPeriod\"\xc5\x01\n" +
+	"\x0fresolved_period\x18\x04 \x01(\tR\x0eresolvedPeriod\"\x1e\n" +
+	"\x1cListCostResultPeriodsRequest\"f\n" +
+	"\x1dListCostResultPeriodsResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x18\n" +
+	"\aperiods\x18\x02 \x03(\tR\aperiods\"\xc5\x01\n" +
 	"\x17GetCostBreakdownRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fproductSysId\x12)\n" +
 	"\x06period\x18\x02 \x01(\tB\x11\xbaH\x0er\f2\n" +
@@ -3656,7 +5303,85 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x10calculation_type\x18\x03 \x01(\x0e2\x1b.finance.v1.CalculationTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x0fcalculationType\"\x80\x01\n" +
 	"\x18GetCostBreakdownResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x127\n" +
-	"\tbreakdown\x18\x02 \x01(\v2\x19.finance.v1.CostBreakdownR\tbreakdown\"\xcd\x01\n" +
+	"\tbreakdown\x18\x02 \x01(\v2\x19.finance.v1.CostBreakdownR\tbreakdown\"\xce\x03\n" +
+	"\x13RouteCostSheetStage\x12\x1f\n" +
+	"\vroute_level\x18\x01 \x01(\x05R\n" +
+	"routeLevel\x12\x1b\n" +
+	"\troute_seq\x18\x02 \x01(\x05R\brouteSeq\x12\x1d\n" +
+	"\n" +
+	"route_name\x18\x03 \x01(\tR\trouteName\x12\x1b\n" +
+	"\titem_code\x18\x04 \x01(\tR\bitemCode\x12!\n" +
+	"\fproduct_name\x18\x05 \x01(\tR\vproductName\x12\x1d\n" +
+	"\n" +
+	"shade_code\x18\x06 \x01(\tR\tshadeCode\x12\x1d\n" +
+	"\n" +
+	"shade_name\x18\a \x01(\tR\tshadeName\x12$\n" +
+	"\x0eproduct_sys_id\x18\b \x01(\x03R\fproductSysId\x12\x19\n" +
+	"\bhas_cost\x18\t \x01(\bR\ahasCost\x12Y\n" +
+	"\x0eparam_snapshot\x18\n" +
+	" \x03(\v22.finance.v1.RouteCostSheetStage.ParamSnapshotEntryR\rparamSnapshot\x1a@\n" +
+	"\x12ParamSnapshotEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc6\x01\n" +
+	"\x18GetRouteCostSheetRequest\x12-\n" +
+	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fproductSysId\x12)\n" +
+	"\x06period\x18\x02 \x01(\tB\x11\xbaH\x0er\f2\n" +
+	"^[0-9]{6}$R\x06period\x12P\n" +
+	"\x10calculation_type\x18\x03 \x01(\x0e2\x1b.finance.v1.CalculationTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x0fcalculationType\"\x81\x01\n" +
+	"\x19GetRouteCostSheetResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x127\n" +
+	"\x06stages\x18\x02 \x03(\v2\x1f.finance.v1.RouteCostSheetStageR\x06stages\"\xd8\x02\n" +
+	"$RequestProductCostSheetExportRequest\x12)\n" +
+	"\x06period\x18\x01 \x01(\tB\x11\xbaH\x0er\f2\n" +
+	"^[0-9]{6}$R\x06period\x12F\n" +
+	"\x10calculation_type\x18\x02 \x01(\x0e2\x1b.finance.v1.CalculationTypeR\x0fcalculationType\x123\n" +
+	"\x10product_type_ids\x18\x03 \x03(\x05B\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x0eproductTypeIds\x12\x1f\n" +
+	"\x06search\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06search\x124\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x1c.finance.v1.CostResultStatusR\x06status\x121\n" +
+	"\x0fproduct_sys_ids\x18\x06 \x03(\x03B\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\rproductSysIds\"\x93\x01\n" +
+	"%RequestProductCostSheetExportResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12=\n" +
+	"\x04data\x18\x02 \x01(\v2).finance.v1.ProductCostSheetExportJobInfoR\x04data\"\x83\x02\n" +
+	"\x1dProductCostSheetExportJobInfo\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x19\n" +
+	"\bjob_code\x18\x02 \x01(\tR\ajobCode\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x19\n" +
+	"\bis_batch\x18\x04 \x01(\bR\aisBatch\x12%\n" +
+	"\x0etotal_children\x18\x05 \x01(\x05R\rtotalChildren\x12-\n" +
+	"\x12completed_children\x18\x06 \x01(\x05R\x11completedChildren\x12'\n" +
+	"\x0ffailed_children\x18\a \x01(\x05R\x0efailedChildren\"H\n" +
+	"%GetProductCostSheetDownloadURLRequest\x12\x1f\n" +
+	"\x06job_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\"\x93\x01\n" +
+	"&GetProductCostSheetDownloadURLResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12<\n" +
+	"\x04data\x18\x02 \x01(\v2(.finance.v1.ProductCostSheetDownloadInfoR\x04data\"l\n" +
+	"\x1cProductCostSheetDownloadInfo\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12\x1b\n" +
+	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x03 \x01(\tR\texpiresAt\"W\n" +
+	"'ListCostSheetExportBatchChildrenRequest\x12,\n" +
+	"\rparent_job_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vparentJobId\"\x9e\x01\n" +
+	"(ListCostSheetExportBatchChildrenResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12E\n" +
+	"\bchildren\x18\x02 \x03(\v2).finance.v1.CostSheetExportBatchChildInfoR\bchildren\"\xa9\x01\n" +
+	"\x1dCostSheetExportBatchChildInfo\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x19\n" +
+	"\bjob_code\x18\x02 \x01(\tR\ajobCode\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12!\n" +
+	"\fdownload_url\x18\x04 \x01(\tR\vdownloadUrl\x12\x1b\n" +
+	"\tfile_name\x18\x05 \x01(\tR\bfileName\"L\n" +
+	")GetProductCostSheetExportJobStatusRequest\x12\x1f\n" +
+	"\x06job_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\"\xbd\x02\n" +
+	"*GetProductCostSheetExportJobStatusResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x15\n" +
+	"\x06job_id\x18\x02 \x01(\tR\x05jobId\x12\x19\n" +
+	"\bjob_code\x18\x03 \x01(\tR\ajobCode\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12\x19\n" +
+	"\bis_batch\x18\x05 \x01(\bR\aisBatch\x12%\n" +
+	"\x0etotal_children\x18\x06 \x01(\x05R\rtotalChildren\x12-\n" +
+	"\x12completed_children\x18\a \x01(\x05R\x11completedChildren\x12'\n" +
+	"\x0ffailed_children\x18\b \x01(\x05R\x0efailedChildren\"\xcd\x01\n" +
 	"\x16ListCostHistoryRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fproductSysId\x12<\n" +
 	"\n" +
@@ -3692,7 +5417,41 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12#\n" +
 	"\rsuccess_count\x18\x02 \x01(\x05R\fsuccessCount\x12!\n" +
 	"\ffailed_count\x18\x03 \x01(\x05R\vfailedCount\x12#\n" +
-	"\rblocked_count\x18\x04 \x01(\x05R\fblockedCount*\x8d\x01\n" +
+	"\rblocked_count\x18\x04 \x01(\x05R\fblockedCount\"{\n" +
+	"\x1fGetBatchChildDownloadUrlRequest\x12,\n" +
+	"\rparent_job_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vparentJobId\x12*\n" +
+	"\fchild_job_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"childJobId\"\x8f\x01\n" +
+	" GetBatchChildDownloadUrlResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
+	"\fdownload_url\x18\x02 \x01(\tR\vdownloadUrl\x12\x1b\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"M\n" +
+	"\x1dDownloadExportBatchZipRequest\x12,\n" +
+	"\rparent_job_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vparentJobId\"X\n" +
+	"\x1eDownloadExportBatchZipResponse\x12\x19\n" +
+	"\bzip_data\x18\x01 \x01(\fR\azipData\x12\x1b\n" +
+	"\tfile_name\x18\x02 \x01(\tR\bfileName\"\x83\x01\n" +
+	"\x15ListExportJobsRequest\x12<\n" +
+	"\n" +
+	"pagination\x18\x01 \x01(\v2\x1c.common.v1.PaginationRequestR\n" +
+	"pagination\x12,\n" +
+	"\x06period\x18\x02 \x01(\tB\x14\xbaH\x11r\x0f2\r^$|^[0-9]{6}$R\x06period\"\xb6\x01\n" +
+	"\x16ListExportJobsResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x120\n" +
+	"\x04jobs\x18\x02 \x03(\v2\x1c.finance.v1.ExportJobSummaryR\x04jobs\x12=\n" +
+	"\n" +
+	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
+	"pagination\"\xc7\x02\n" +
+	"\x10ExportJobSummary\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x19\n" +
+	"\bjob_code\x18\x02 \x01(\tR\ajobCode\x12\x16\n" +
+	"\x06period\x18\x03 \x01(\tR\x06period\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12%\n" +
+	"\x0etotal_children\x18\x05 \x01(\x05R\rtotalChildren\x12-\n" +
+	"\x12completed_children\x18\x06 \x01(\x05R\x11completedChildren\x12'\n" +
+	"\x0ffailed_children\x18\a \x01(\x05R\x0efailedChildren\x127\n" +
+	"\tqueued_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\bqueuedAt\x12\x19\n" +
+	"\bis_batch\x18\t \x01(\bR\aisBatch*\x8d\x01\n" +
 	"\x0fCalculationType\x12 \n" +
 	"\x1cCALCULATION_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17CALCULATION_TYPE_ACTUAL\x10\x01\x12\x1d\n" +
@@ -3735,7 +5494,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x1dCOST_RESULT_STATUS_CALCULATED\x10\x01\x12\x1f\n" +
 	"\x1bCOST_RESULT_STATUS_VERIFIED\x10\x02\x12\x1f\n" +
 	"\x1bCOST_RESULT_STATUS_APPROVED\x10\x03\x12!\n" +
-	"\x1dCOST_RESULT_STATUS_SUPERSEDED\x10\x042\xf2\x0e\n" +
+	"\x1dCOST_RESULT_STATUS_SUPERSEDED\x10\x042\xa5\x1c\n" +
 	"\x0fCostCalcService\x12\x85\x01\n" +
 	"\x0eTriggerCalcJob\x12!.finance.v1.TriggerCalcJobRequest\x1a\".finance.v1.TriggerCalcJobResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/finance/calc-jobs/trigger\x12w\n" +
 	"\n" +
@@ -3745,12 +5504,21 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x13ListCalcJobProducts\x12&.finance.v1.ListCalcJobProductsRequest\x1a'.finance.v1.ListCalcJobProductsResponse\"3\x82\xd3\xe4\x93\x02-\x12+/api/v1/finance/calc-jobs/{job_id}/products\x12\x8a\x01\n" +
 	"\rCancelCalcJob\x12 .finance.v1.CancelCalcJobRequest\x1a!.finance.v1.CancelCalcJobResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/finance/calc-jobs/{job_id}/cancel\x12\xa7\x01\n" +
 	"\rGetCostResult\x12 .finance.v1.GetCostResultRequest\x1a!.finance.v1.GetCostResultResponse\"Q\x82\xd3\xe4\x93\x02K\x12I/api/v1/finance/cost-results/{product_sys_id}/{period}/{calculation_type}\x12\x80\x01\n" +
-	"\x0fListCostResults\x12\".finance.v1.ListCostResultsRequest\x1a#.finance.v1.ListCostResultsResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v1/finance/cost-results\x12\xba\x01\n" +
+	"\x0fListCostResults\x12\".finance.v1.ListCostResultsRequest\x1a#.finance.v1.ListCostResultsResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v1/finance/cost-results\x12\x9a\x01\n" +
+	"\x15ListCostResultPeriods\x12(.finance.v1.ListCostResultPeriodsRequest\x1a).finance.v1.ListCostResultPeriodsResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/finance/cost-results/periods\x12\xba\x01\n" +
 	"\x10GetCostBreakdown\x12#.finance.v1.GetCostBreakdownRequest\x1a$.finance.v1.GetCostBreakdownResponse\"[\x82\xd3\xe4\x93\x02U\x12S/api/v1/finance/cost-results/{product_sys_id}/{period}/{calculation_type}/breakdown\x12\x99\x01\n" +
 	"\x0fListCostHistory\x12\".finance.v1.ListCostHistoryRequest\x1a#.finance.v1.ListCostHistoryResponse\"=\x82\xd3\xe4\x93\x027\x125/api/v1/finance/cost-results/{product_sys_id}/history\x12\x97\x01\n" +
 	"\x10VerifyCostResult\x12#.finance.v1.VerifyCostResultRequest\x1a$.finance.v1.VerifyCostResultResponse\"8\x82\xd3\xe4\x93\x022:\x01*\"-/api/v1/finance/cost-results/{cost_id}/verify\x12\x9b\x01\n" +
-	"\x11ApproveCostResult\x12$.finance.v1.ApproveCostResultRequest\x1a%.finance.v1.ApproveCostResultResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/finance/cost-results/{cost_id}/approve\x12i\n" +
-	"\x14ProcessChunkInternal\x12'.finance.v1.ProcessChunkInternalRequest\x1a(.finance.v1.ProcessChunkInternalResponseB\xa7\x01\n" +
+	"\x11ApproveCostResult\x12$.finance.v1.ApproveCostResultRequest\x1a%.finance.v1.ApproveCostResultResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/finance/cost-results/{cost_id}/approve\x12\xbf\x01\n" +
+	"\x11GetRouteCostSheet\x12$.finance.v1.GetRouteCostSheetRequest\x1a%.finance.v1.GetRouteCostSheetResponse\"]\x82\xd3\xe4\x93\x02W\x12U/api/v1/finance/cost-results/{product_sys_id}/{period}/{calculation_type}/route-sheet\x12\xbc\x01\n" +
+	"\x1dRequestProductCostSheetExport\x120.finance.v1.RequestProductCostSheetExportRequest\x1a1.finance.v1.RequestProductCostSheetExportResponse\"6\x82\xd3\xe4\x93\x020:\x01*\"+/api/v1/finance/cost-results/request-export\x12\xc7\x01\n" +
+	"\x1eGetProductCostSheetDownloadURL\x121.finance.v1.GetProductCostSheetDownloadURLRequest\x1a2.finance.v1.GetProductCostSheetDownloadURLResponse\">\x82\xd3\xe4\x93\x028\x126/api/v1/finance/cost-results/exports/{job_id}/download\x12\xd4\x01\n" +
+	" ListCostSheetExportBatchChildren\x123.finance.v1.ListCostSheetExportBatchChildrenRequest\x1a4.finance.v1.ListCostSheetExportBatchChildrenResponse\"E\x82\xd3\xe4\x93\x02?\x12=/api/v1/finance/cost-results/exports/{parent_job_id}/children\x12\xd1\x01\n" +
+	"\"GetProductCostSheetExportJobStatus\x125.finance.v1.GetProductCostSheetExportJobStatusRequest\x1a6.finance.v1.GetProductCostSheetExportJobStatusResponse\"<\x82\xd3\xe4\x93\x026\x124/api/v1/finance/cost-results/exports/{job_id}/status\x12i\n" +
+	"\x14ProcessChunkInternal\x12'.finance.v1.ProcessChunkInternalRequest\x1a(.finance.v1.ProcessChunkInternalResponse\x12\xd8\x01\n" +
+	"\x18GetBatchChildDownloadUrl\x12+.finance.v1.GetBatchChildDownloadUrlRequest\x1a,.finance.v1.GetBatchChildDownloadUrlResponse\"a\x82\xd3\xe4\x93\x02[\x12Y/api/v1/finance/cost-results/exports/{parent_job_id}/children/{child_job_id}/download-url\x12\xba\x01\n" +
+	"\x16DownloadExportBatchZip\x12).finance.v1.DownloadExportBatchZipRequest\x1a*.finance.v1.DownloadExportBatchZipResponse\"I\x82\xd3\xe4\x93\x02C\x12A/api/v1/finance/cost-results/exports/{parent_job_id}/download-all\x12\x85\x01\n" +
+	"\x0eListExportJobs\x12!.finance.v1.ListExportJobsRequest\x1a\".finance.v1.ListExportJobsResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/finance/cost-results/exportsB\xa7\x01\n" +
 	"\x0ecom.finance.v1B\rCostCalcProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
 	"Finance.V1\xca\x02\n" +
 	"Finance\\V1\xe2\x02\x16Finance\\V1\\GPBMetadata\xea\x02\vFinance::V1b\x06proto3"
@@ -3768,162 +5536,224 @@ func file_finance_v1_cost_calc_proto_rawDescGZIP() []byte {
 }
 
 var file_finance_v1_cost_calc_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_finance_v1_cost_calc_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
+var file_finance_v1_cost_calc_proto_msgTypes = make([]protoimpl.MessageInfo, 61)
 var file_finance_v1_cost_calc_proto_goTypes = []any{
-	(CalculationType)(0),                 // 0: finance.v1.CalculationType
-	(CalcJobStatus)(0),                   // 1: finance.v1.CalcJobStatus
-	(CalcJobScope)(0),                    // 2: finance.v1.CalcJobScope
-	(ChunkStatus)(0),                     // 3: finance.v1.ChunkStatus
-	(JobProductStatus)(0),                // 4: finance.v1.JobProductStatus
-	(CostResultStatus)(0),                // 5: finance.v1.CostResultStatus
-	(*CalJob)(nil),                       // 6: finance.v1.CalJob
-	(*CalJobChunk)(nil),                  // 7: finance.v1.CalJobChunk
-	(*CalJobProduct)(nil),                // 8: finance.v1.CalJobProduct
-	(*CostResult)(nil),                   // 9: finance.v1.CostResult
-	(*CostBreakdown)(nil),                // 10: finance.v1.CostBreakdown
-	(*LevelBreakdown)(nil),               // 11: finance.v1.LevelBreakdown
-	(*CostRMDetail)(nil),                 // 12: finance.v1.CostRMDetail
-	(*FormulaEval)(nil),                  // 13: finance.v1.FormulaEval
-	(*CostHistoryEntry)(nil),             // 14: finance.v1.CostHistoryEntry
-	(*TriggerCalcJobRequest)(nil),        // 15: finance.v1.TriggerCalcJobRequest
-	(*TriggerCalcJobResponse)(nil),       // 16: finance.v1.TriggerCalcJobResponse
-	(*GetCalcJobRequest)(nil),            // 17: finance.v1.GetCalcJobRequest
-	(*GetCalcJobResponse)(nil),           // 18: finance.v1.GetCalcJobResponse
-	(*ListCalcJobsRequest)(nil),          // 19: finance.v1.ListCalcJobsRequest
-	(*ListCalcJobsResponse)(nil),         // 20: finance.v1.ListCalcJobsResponse
-	(*ListCalcJobChunksRequest)(nil),     // 21: finance.v1.ListCalcJobChunksRequest
-	(*ListCalcJobChunksResponse)(nil),    // 22: finance.v1.ListCalcJobChunksResponse
-	(*ListCalcJobProductsRequest)(nil),   // 23: finance.v1.ListCalcJobProductsRequest
-	(*ListCalcJobProductsResponse)(nil),  // 24: finance.v1.ListCalcJobProductsResponse
-	(*CancelCalcJobRequest)(nil),         // 25: finance.v1.CancelCalcJobRequest
-	(*CancelCalcJobResponse)(nil),        // 26: finance.v1.CancelCalcJobResponse
-	(*GetCostResultRequest)(nil),         // 27: finance.v1.GetCostResultRequest
-	(*GetCostResultResponse)(nil),        // 28: finance.v1.GetCostResultResponse
-	(*ListCostResultsRequest)(nil),       // 29: finance.v1.ListCostResultsRequest
-	(*ListCostResultsResponse)(nil),      // 30: finance.v1.ListCostResultsResponse
-	(*GetCostBreakdownRequest)(nil),      // 31: finance.v1.GetCostBreakdownRequest
-	(*GetCostBreakdownResponse)(nil),     // 32: finance.v1.GetCostBreakdownResponse
-	(*ListCostHistoryRequest)(nil),       // 33: finance.v1.ListCostHistoryRequest
-	(*ListCostHistoryResponse)(nil),      // 34: finance.v1.ListCostHistoryResponse
-	(*VerifyCostResultRequest)(nil),      // 35: finance.v1.VerifyCostResultRequest
-	(*VerifyCostResultResponse)(nil),     // 36: finance.v1.VerifyCostResultResponse
-	(*ApproveCostResultRequest)(nil),     // 37: finance.v1.ApproveCostResultRequest
-	(*ApproveCostResultResponse)(nil),    // 38: finance.v1.ApproveCostResultResponse
-	(*ProcessChunkInternalRequest)(nil),  // 39: finance.v1.ProcessChunkInternalRequest
-	(*ProcessChunkInternalResponse)(nil), // 40: finance.v1.ProcessChunkInternalResponse
-	nil,                                  // 41: finance.v1.CostBreakdown.ParamSnapshotEntry
-	nil,                                  // 42: finance.v1.FormulaEval.InputsEntry
-	(*timestamppb.Timestamp)(nil),        // 43: google.protobuf.Timestamp
-	(*v1.BaseResponse)(nil),              // 44: common.v1.BaseResponse
-	(*v1.PaginationRequest)(nil),         // 45: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),        // 46: common.v1.PaginationResponse
+	(CalculationType)(0),                               // 0: finance.v1.CalculationType
+	(CalcJobStatus)(0),                                 // 1: finance.v1.CalcJobStatus
+	(CalcJobScope)(0),                                  // 2: finance.v1.CalcJobScope
+	(ChunkStatus)(0),                                   // 3: finance.v1.ChunkStatus
+	(JobProductStatus)(0),                              // 4: finance.v1.JobProductStatus
+	(CostResultStatus)(0),                              // 5: finance.v1.CostResultStatus
+	(*CalJob)(nil),                                     // 6: finance.v1.CalJob
+	(*CalJobChunk)(nil),                                // 7: finance.v1.CalJobChunk
+	(*CalJobProduct)(nil),                              // 8: finance.v1.CalJobProduct
+	(*CostResult)(nil),                                 // 9: finance.v1.CostResult
+	(*CostBreakdown)(nil),                              // 10: finance.v1.CostBreakdown
+	(*LevelBreakdown)(nil),                             // 11: finance.v1.LevelBreakdown
+	(*CostRMDetail)(nil),                               // 12: finance.v1.CostRMDetail
+	(*FormulaEval)(nil),                                // 13: finance.v1.FormulaEval
+	(*CostHistoryEntry)(nil),                           // 14: finance.v1.CostHistoryEntry
+	(*TriggerCalcJobRequest)(nil),                      // 15: finance.v1.TriggerCalcJobRequest
+	(*TriggerCalcJobResponse)(nil),                     // 16: finance.v1.TriggerCalcJobResponse
+	(*GetCalcJobRequest)(nil),                          // 17: finance.v1.GetCalcJobRequest
+	(*GetCalcJobResponse)(nil),                         // 18: finance.v1.GetCalcJobResponse
+	(*ListCalcJobsRequest)(nil),                        // 19: finance.v1.ListCalcJobsRequest
+	(*ListCalcJobsResponse)(nil),                       // 20: finance.v1.ListCalcJobsResponse
+	(*ListCalcJobChunksRequest)(nil),                   // 21: finance.v1.ListCalcJobChunksRequest
+	(*ListCalcJobChunksResponse)(nil),                  // 22: finance.v1.ListCalcJobChunksResponse
+	(*ListCalcJobProductsRequest)(nil),                 // 23: finance.v1.ListCalcJobProductsRequest
+	(*ListCalcJobProductsResponse)(nil),                // 24: finance.v1.ListCalcJobProductsResponse
+	(*CancelCalcJobRequest)(nil),                       // 25: finance.v1.CancelCalcJobRequest
+	(*CancelCalcJobResponse)(nil),                      // 26: finance.v1.CancelCalcJobResponse
+	(*GetCostResultRequest)(nil),                       // 27: finance.v1.GetCostResultRequest
+	(*GetCostResultResponse)(nil),                      // 28: finance.v1.GetCostResultResponse
+	(*ListCostResultsRequest)(nil),                     // 29: finance.v1.ListCostResultsRequest
+	(*ListCostResultsResponse)(nil),                    // 30: finance.v1.ListCostResultsResponse
+	(*ListCostResultPeriodsRequest)(nil),               // 31: finance.v1.ListCostResultPeriodsRequest
+	(*ListCostResultPeriodsResponse)(nil),              // 32: finance.v1.ListCostResultPeriodsResponse
+	(*GetCostBreakdownRequest)(nil),                    // 33: finance.v1.GetCostBreakdownRequest
+	(*GetCostBreakdownResponse)(nil),                   // 34: finance.v1.GetCostBreakdownResponse
+	(*RouteCostSheetStage)(nil),                        // 35: finance.v1.RouteCostSheetStage
+	(*GetRouteCostSheetRequest)(nil),                   // 36: finance.v1.GetRouteCostSheetRequest
+	(*GetRouteCostSheetResponse)(nil),                  // 37: finance.v1.GetRouteCostSheetResponse
+	(*RequestProductCostSheetExportRequest)(nil),       // 38: finance.v1.RequestProductCostSheetExportRequest
+	(*RequestProductCostSheetExportResponse)(nil),      // 39: finance.v1.RequestProductCostSheetExportResponse
+	(*ProductCostSheetExportJobInfo)(nil),              // 40: finance.v1.ProductCostSheetExportJobInfo
+	(*GetProductCostSheetDownloadURLRequest)(nil),      // 41: finance.v1.GetProductCostSheetDownloadURLRequest
+	(*GetProductCostSheetDownloadURLResponse)(nil),     // 42: finance.v1.GetProductCostSheetDownloadURLResponse
+	(*ProductCostSheetDownloadInfo)(nil),               // 43: finance.v1.ProductCostSheetDownloadInfo
+	(*ListCostSheetExportBatchChildrenRequest)(nil),    // 44: finance.v1.ListCostSheetExportBatchChildrenRequest
+	(*ListCostSheetExportBatchChildrenResponse)(nil),   // 45: finance.v1.ListCostSheetExportBatchChildrenResponse
+	(*CostSheetExportBatchChildInfo)(nil),              // 46: finance.v1.CostSheetExportBatchChildInfo
+	(*GetProductCostSheetExportJobStatusRequest)(nil),  // 47: finance.v1.GetProductCostSheetExportJobStatusRequest
+	(*GetProductCostSheetExportJobStatusResponse)(nil), // 48: finance.v1.GetProductCostSheetExportJobStatusResponse
+	(*ListCostHistoryRequest)(nil),                     // 49: finance.v1.ListCostHistoryRequest
+	(*ListCostHistoryResponse)(nil),                    // 50: finance.v1.ListCostHistoryResponse
+	(*VerifyCostResultRequest)(nil),                    // 51: finance.v1.VerifyCostResultRequest
+	(*VerifyCostResultResponse)(nil),                   // 52: finance.v1.VerifyCostResultResponse
+	(*ApproveCostResultRequest)(nil),                   // 53: finance.v1.ApproveCostResultRequest
+	(*ApproveCostResultResponse)(nil),                  // 54: finance.v1.ApproveCostResultResponse
+	(*ProcessChunkInternalRequest)(nil),                // 55: finance.v1.ProcessChunkInternalRequest
+	(*ProcessChunkInternalResponse)(nil),               // 56: finance.v1.ProcessChunkInternalResponse
+	(*GetBatchChildDownloadUrlRequest)(nil),            // 57: finance.v1.GetBatchChildDownloadUrlRequest
+	(*GetBatchChildDownloadUrlResponse)(nil),           // 58: finance.v1.GetBatchChildDownloadUrlResponse
+	(*DownloadExportBatchZipRequest)(nil),              // 59: finance.v1.DownloadExportBatchZipRequest
+	(*DownloadExportBatchZipResponse)(nil),             // 60: finance.v1.DownloadExportBatchZipResponse
+	(*ListExportJobsRequest)(nil),                      // 61: finance.v1.ListExportJobsRequest
+	(*ListExportJobsResponse)(nil),                     // 62: finance.v1.ListExportJobsResponse
+	(*ExportJobSummary)(nil),                           // 63: finance.v1.ExportJobSummary
+	nil,                                                // 64: finance.v1.CostBreakdown.ParamSnapshotEntry
+	nil,                                                // 65: finance.v1.FormulaEval.InputsEntry
+	nil,                                                // 66: finance.v1.RouteCostSheetStage.ParamSnapshotEntry
+	(*timestamppb.Timestamp)(nil),                      // 67: google.protobuf.Timestamp
+	(*v1.BaseResponse)(nil),                            // 68: common.v1.BaseResponse
+	(*v1.PaginationRequest)(nil),                       // 69: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),                      // 70: common.v1.PaginationResponse
 }
 var file_finance_v1_cost_calc_proto_depIdxs = []int32{
-	0,  // 0: finance.v1.CalJob.calculation_type:type_name -> finance.v1.CalculationType
-	2,  // 1: finance.v1.CalJob.scope:type_name -> finance.v1.CalcJobScope
-	1,  // 2: finance.v1.CalJob.status:type_name -> finance.v1.CalcJobStatus
-	43, // 3: finance.v1.CalJob.queued_at:type_name -> google.protobuf.Timestamp
-	43, // 4: finance.v1.CalJob.started_at:type_name -> google.protobuf.Timestamp
-	43, // 5: finance.v1.CalJob.completed_at:type_name -> google.protobuf.Timestamp
-	3,  // 6: finance.v1.CalJobChunk.status:type_name -> finance.v1.ChunkStatus
-	43, // 7: finance.v1.CalJobChunk.queued_at:type_name -> google.protobuf.Timestamp
-	43, // 8: finance.v1.CalJobChunk.dispatched_at:type_name -> google.protobuf.Timestamp
-	43, // 9: finance.v1.CalJobChunk.started_at:type_name -> google.protobuf.Timestamp
-	43, // 10: finance.v1.CalJobChunk.completed_at:type_name -> google.protobuf.Timestamp
-	4,  // 11: finance.v1.CalJobProduct.status:type_name -> finance.v1.JobProductStatus
-	43, // 12: finance.v1.CalJobProduct.started_at:type_name -> google.protobuf.Timestamp
-	43, // 13: finance.v1.CalJobProduct.completed_at:type_name -> google.protobuf.Timestamp
-	0,  // 14: finance.v1.CostResult.calculation_type:type_name -> finance.v1.CalculationType
-	5,  // 15: finance.v1.CostResult.status:type_name -> finance.v1.CostResultStatus
-	43, // 16: finance.v1.CostResult.calculated_at:type_name -> google.protobuf.Timestamp
-	43, // 17: finance.v1.CostResult.verified_at:type_name -> google.protobuf.Timestamp
-	9,  // 18: finance.v1.CostBreakdown.summary:type_name -> finance.v1.CostResult
-	11, // 19: finance.v1.CostBreakdown.by_level:type_name -> finance.v1.LevelBreakdown
-	12, // 20: finance.v1.CostBreakdown.rm_details:type_name -> finance.v1.CostRMDetail
-	13, // 21: finance.v1.CostBreakdown.formula_trace:type_name -> finance.v1.FormulaEval
-	41, // 22: finance.v1.CostBreakdown.param_snapshot:type_name -> finance.v1.CostBreakdown.ParamSnapshotEntry
-	42, // 23: finance.v1.FormulaEval.inputs:type_name -> finance.v1.FormulaEval.InputsEntry
-	0,  // 24: finance.v1.CostHistoryEntry.calculation_type:type_name -> finance.v1.CalculationType
-	5,  // 25: finance.v1.CostHistoryEntry.status:type_name -> finance.v1.CostResultStatus
-	43, // 26: finance.v1.CostHistoryEntry.calculated_at:type_name -> google.protobuf.Timestamp
-	0,  // 27: finance.v1.TriggerCalcJobRequest.calculation_type:type_name -> finance.v1.CalculationType
-	2,  // 28: finance.v1.TriggerCalcJobRequest.scope:type_name -> finance.v1.CalcJobScope
-	44, // 29: finance.v1.TriggerCalcJobResponse.base:type_name -> common.v1.BaseResponse
-	6,  // 30: finance.v1.TriggerCalcJobResponse.job:type_name -> finance.v1.CalJob
-	44, // 31: finance.v1.GetCalcJobResponse.base:type_name -> common.v1.BaseResponse
-	6,  // 32: finance.v1.GetCalcJobResponse.job:type_name -> finance.v1.CalJob
-	45, // 33: finance.v1.ListCalcJobsRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,  // 34: finance.v1.ListCalcJobsRequest.calculation_type:type_name -> finance.v1.CalculationType
-	1,  // 35: finance.v1.ListCalcJobsRequest.status:type_name -> finance.v1.CalcJobStatus
-	44, // 36: finance.v1.ListCalcJobsResponse.base:type_name -> common.v1.BaseResponse
-	6,  // 37: finance.v1.ListCalcJobsResponse.items:type_name -> finance.v1.CalJob
-	46, // 38: finance.v1.ListCalcJobsResponse.pagination:type_name -> common.v1.PaginationResponse
-	45, // 39: finance.v1.ListCalcJobChunksRequest.pagination:type_name -> common.v1.PaginationRequest
-	3,  // 40: finance.v1.ListCalcJobChunksRequest.status:type_name -> finance.v1.ChunkStatus
-	44, // 41: finance.v1.ListCalcJobChunksResponse.base:type_name -> common.v1.BaseResponse
-	7,  // 42: finance.v1.ListCalcJobChunksResponse.items:type_name -> finance.v1.CalJobChunk
-	46, // 43: finance.v1.ListCalcJobChunksResponse.pagination:type_name -> common.v1.PaginationResponse
-	45, // 44: finance.v1.ListCalcJobProductsRequest.pagination:type_name -> common.v1.PaginationRequest
-	4,  // 45: finance.v1.ListCalcJobProductsRequest.status:type_name -> finance.v1.JobProductStatus
-	44, // 46: finance.v1.ListCalcJobProductsResponse.base:type_name -> common.v1.BaseResponse
-	8,  // 47: finance.v1.ListCalcJobProductsResponse.items:type_name -> finance.v1.CalJobProduct
-	46, // 48: finance.v1.ListCalcJobProductsResponse.pagination:type_name -> common.v1.PaginationResponse
-	44, // 49: finance.v1.CancelCalcJobResponse.base:type_name -> common.v1.BaseResponse
-	6,  // 50: finance.v1.CancelCalcJobResponse.job:type_name -> finance.v1.CalJob
-	0,  // 51: finance.v1.GetCostResultRequest.calculation_type:type_name -> finance.v1.CalculationType
-	44, // 52: finance.v1.GetCostResultResponse.base:type_name -> common.v1.BaseResponse
-	9,  // 53: finance.v1.GetCostResultResponse.result:type_name -> finance.v1.CostResult
-	45, // 54: finance.v1.ListCostResultsRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,  // 55: finance.v1.ListCostResultsRequest.calculation_type:type_name -> finance.v1.CalculationType
-	5,  // 56: finance.v1.ListCostResultsRequest.status:type_name -> finance.v1.CostResultStatus
-	44, // 57: finance.v1.ListCostResultsResponse.base:type_name -> common.v1.BaseResponse
-	9,  // 58: finance.v1.ListCostResultsResponse.items:type_name -> finance.v1.CostResult
-	46, // 59: finance.v1.ListCostResultsResponse.pagination:type_name -> common.v1.PaginationResponse
-	0,  // 60: finance.v1.GetCostBreakdownRequest.calculation_type:type_name -> finance.v1.CalculationType
-	44, // 61: finance.v1.GetCostBreakdownResponse.base:type_name -> common.v1.BaseResponse
-	10, // 62: finance.v1.GetCostBreakdownResponse.breakdown:type_name -> finance.v1.CostBreakdown
-	45, // 63: finance.v1.ListCostHistoryRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,  // 64: finance.v1.ListCostHistoryRequest.calculation_type:type_name -> finance.v1.CalculationType
-	44, // 65: finance.v1.ListCostHistoryResponse.base:type_name -> common.v1.BaseResponse
-	14, // 66: finance.v1.ListCostHistoryResponse.items:type_name -> finance.v1.CostHistoryEntry
-	46, // 67: finance.v1.ListCostHistoryResponse.pagination:type_name -> common.v1.PaginationResponse
-	44, // 68: finance.v1.VerifyCostResultResponse.base:type_name -> common.v1.BaseResponse
-	9,  // 69: finance.v1.VerifyCostResultResponse.result:type_name -> finance.v1.CostResult
-	44, // 70: finance.v1.ApproveCostResultResponse.base:type_name -> common.v1.BaseResponse
-	9,  // 71: finance.v1.ApproveCostResultResponse.result:type_name -> finance.v1.CostResult
-	0,  // 72: finance.v1.ProcessChunkInternalRequest.calculation_type:type_name -> finance.v1.CalculationType
-	44, // 73: finance.v1.ProcessChunkInternalResponse.base:type_name -> common.v1.BaseResponse
-	15, // 74: finance.v1.CostCalcService.TriggerCalcJob:input_type -> finance.v1.TriggerCalcJobRequest
-	17, // 75: finance.v1.CostCalcService.GetCalcJob:input_type -> finance.v1.GetCalcJobRequest
-	19, // 76: finance.v1.CostCalcService.ListCalcJobs:input_type -> finance.v1.ListCalcJobsRequest
-	21, // 77: finance.v1.CostCalcService.ListCalcJobChunks:input_type -> finance.v1.ListCalcJobChunksRequest
-	23, // 78: finance.v1.CostCalcService.ListCalcJobProducts:input_type -> finance.v1.ListCalcJobProductsRequest
-	25, // 79: finance.v1.CostCalcService.CancelCalcJob:input_type -> finance.v1.CancelCalcJobRequest
-	27, // 80: finance.v1.CostCalcService.GetCostResult:input_type -> finance.v1.GetCostResultRequest
-	29, // 81: finance.v1.CostCalcService.ListCostResults:input_type -> finance.v1.ListCostResultsRequest
-	31, // 82: finance.v1.CostCalcService.GetCostBreakdown:input_type -> finance.v1.GetCostBreakdownRequest
-	33, // 83: finance.v1.CostCalcService.ListCostHistory:input_type -> finance.v1.ListCostHistoryRequest
-	35, // 84: finance.v1.CostCalcService.VerifyCostResult:input_type -> finance.v1.VerifyCostResultRequest
-	37, // 85: finance.v1.CostCalcService.ApproveCostResult:input_type -> finance.v1.ApproveCostResultRequest
-	39, // 86: finance.v1.CostCalcService.ProcessChunkInternal:input_type -> finance.v1.ProcessChunkInternalRequest
-	16, // 87: finance.v1.CostCalcService.TriggerCalcJob:output_type -> finance.v1.TriggerCalcJobResponse
-	18, // 88: finance.v1.CostCalcService.GetCalcJob:output_type -> finance.v1.GetCalcJobResponse
-	20, // 89: finance.v1.CostCalcService.ListCalcJobs:output_type -> finance.v1.ListCalcJobsResponse
-	22, // 90: finance.v1.CostCalcService.ListCalcJobChunks:output_type -> finance.v1.ListCalcJobChunksResponse
-	24, // 91: finance.v1.CostCalcService.ListCalcJobProducts:output_type -> finance.v1.ListCalcJobProductsResponse
-	26, // 92: finance.v1.CostCalcService.CancelCalcJob:output_type -> finance.v1.CancelCalcJobResponse
-	28, // 93: finance.v1.CostCalcService.GetCostResult:output_type -> finance.v1.GetCostResultResponse
-	30, // 94: finance.v1.CostCalcService.ListCostResults:output_type -> finance.v1.ListCostResultsResponse
-	32, // 95: finance.v1.CostCalcService.GetCostBreakdown:output_type -> finance.v1.GetCostBreakdownResponse
-	34, // 96: finance.v1.CostCalcService.ListCostHistory:output_type -> finance.v1.ListCostHistoryResponse
-	36, // 97: finance.v1.CostCalcService.VerifyCostResult:output_type -> finance.v1.VerifyCostResultResponse
-	38, // 98: finance.v1.CostCalcService.ApproveCostResult:output_type -> finance.v1.ApproveCostResultResponse
-	40, // 99: finance.v1.CostCalcService.ProcessChunkInternal:output_type -> finance.v1.ProcessChunkInternalResponse
-	87, // [87:100] is the sub-list for method output_type
-	74, // [74:87] is the sub-list for method input_type
-	74, // [74:74] is the sub-list for extension type_name
-	74, // [74:74] is the sub-list for extension extendee
-	0,  // [0:74] is the sub-list for field type_name
+	0,   // 0: finance.v1.CalJob.calculation_type:type_name -> finance.v1.CalculationType
+	2,   // 1: finance.v1.CalJob.scope:type_name -> finance.v1.CalcJobScope
+	1,   // 2: finance.v1.CalJob.status:type_name -> finance.v1.CalcJobStatus
+	67,  // 3: finance.v1.CalJob.queued_at:type_name -> google.protobuf.Timestamp
+	67,  // 4: finance.v1.CalJob.started_at:type_name -> google.protobuf.Timestamp
+	67,  // 5: finance.v1.CalJob.completed_at:type_name -> google.protobuf.Timestamp
+	3,   // 6: finance.v1.CalJobChunk.status:type_name -> finance.v1.ChunkStatus
+	67,  // 7: finance.v1.CalJobChunk.queued_at:type_name -> google.protobuf.Timestamp
+	67,  // 8: finance.v1.CalJobChunk.dispatched_at:type_name -> google.protobuf.Timestamp
+	67,  // 9: finance.v1.CalJobChunk.started_at:type_name -> google.protobuf.Timestamp
+	67,  // 10: finance.v1.CalJobChunk.completed_at:type_name -> google.protobuf.Timestamp
+	4,   // 11: finance.v1.CalJobProduct.status:type_name -> finance.v1.JobProductStatus
+	67,  // 12: finance.v1.CalJobProduct.started_at:type_name -> google.protobuf.Timestamp
+	67,  // 13: finance.v1.CalJobProduct.completed_at:type_name -> google.protobuf.Timestamp
+	0,   // 14: finance.v1.CostResult.calculation_type:type_name -> finance.v1.CalculationType
+	5,   // 15: finance.v1.CostResult.status:type_name -> finance.v1.CostResultStatus
+	67,  // 16: finance.v1.CostResult.calculated_at:type_name -> google.protobuf.Timestamp
+	67,  // 17: finance.v1.CostResult.verified_at:type_name -> google.protobuf.Timestamp
+	9,   // 18: finance.v1.CostBreakdown.summary:type_name -> finance.v1.CostResult
+	11,  // 19: finance.v1.CostBreakdown.by_level:type_name -> finance.v1.LevelBreakdown
+	12,  // 20: finance.v1.CostBreakdown.rm_details:type_name -> finance.v1.CostRMDetail
+	13,  // 21: finance.v1.CostBreakdown.formula_trace:type_name -> finance.v1.FormulaEval
+	64,  // 22: finance.v1.CostBreakdown.param_snapshot:type_name -> finance.v1.CostBreakdown.ParamSnapshotEntry
+	65,  // 23: finance.v1.FormulaEval.inputs:type_name -> finance.v1.FormulaEval.InputsEntry
+	0,   // 24: finance.v1.CostHistoryEntry.calculation_type:type_name -> finance.v1.CalculationType
+	5,   // 25: finance.v1.CostHistoryEntry.status:type_name -> finance.v1.CostResultStatus
+	67,  // 26: finance.v1.CostHistoryEntry.calculated_at:type_name -> google.protobuf.Timestamp
+	0,   // 27: finance.v1.TriggerCalcJobRequest.calculation_type:type_name -> finance.v1.CalculationType
+	2,   // 28: finance.v1.TriggerCalcJobRequest.scope:type_name -> finance.v1.CalcJobScope
+	68,  // 29: finance.v1.TriggerCalcJobResponse.base:type_name -> common.v1.BaseResponse
+	6,   // 30: finance.v1.TriggerCalcJobResponse.job:type_name -> finance.v1.CalJob
+	68,  // 31: finance.v1.GetCalcJobResponse.base:type_name -> common.v1.BaseResponse
+	6,   // 32: finance.v1.GetCalcJobResponse.job:type_name -> finance.v1.CalJob
+	69,  // 33: finance.v1.ListCalcJobsRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,   // 34: finance.v1.ListCalcJobsRequest.calculation_type:type_name -> finance.v1.CalculationType
+	1,   // 35: finance.v1.ListCalcJobsRequest.status:type_name -> finance.v1.CalcJobStatus
+	68,  // 36: finance.v1.ListCalcJobsResponse.base:type_name -> common.v1.BaseResponse
+	6,   // 37: finance.v1.ListCalcJobsResponse.items:type_name -> finance.v1.CalJob
+	70,  // 38: finance.v1.ListCalcJobsResponse.pagination:type_name -> common.v1.PaginationResponse
+	69,  // 39: finance.v1.ListCalcJobChunksRequest.pagination:type_name -> common.v1.PaginationRequest
+	3,   // 40: finance.v1.ListCalcJobChunksRequest.status:type_name -> finance.v1.ChunkStatus
+	68,  // 41: finance.v1.ListCalcJobChunksResponse.base:type_name -> common.v1.BaseResponse
+	7,   // 42: finance.v1.ListCalcJobChunksResponse.items:type_name -> finance.v1.CalJobChunk
+	70,  // 43: finance.v1.ListCalcJobChunksResponse.pagination:type_name -> common.v1.PaginationResponse
+	69,  // 44: finance.v1.ListCalcJobProductsRequest.pagination:type_name -> common.v1.PaginationRequest
+	4,   // 45: finance.v1.ListCalcJobProductsRequest.status:type_name -> finance.v1.JobProductStatus
+	68,  // 46: finance.v1.ListCalcJobProductsResponse.base:type_name -> common.v1.BaseResponse
+	8,   // 47: finance.v1.ListCalcJobProductsResponse.items:type_name -> finance.v1.CalJobProduct
+	70,  // 48: finance.v1.ListCalcJobProductsResponse.pagination:type_name -> common.v1.PaginationResponse
+	68,  // 49: finance.v1.CancelCalcJobResponse.base:type_name -> common.v1.BaseResponse
+	6,   // 50: finance.v1.CancelCalcJobResponse.job:type_name -> finance.v1.CalJob
+	0,   // 51: finance.v1.GetCostResultRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 52: finance.v1.GetCostResultResponse.base:type_name -> common.v1.BaseResponse
+	9,   // 53: finance.v1.GetCostResultResponse.result:type_name -> finance.v1.CostResult
+	69,  // 54: finance.v1.ListCostResultsRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,   // 55: finance.v1.ListCostResultsRequest.calculation_type:type_name -> finance.v1.CalculationType
+	5,   // 56: finance.v1.ListCostResultsRequest.status:type_name -> finance.v1.CostResultStatus
+	68,  // 57: finance.v1.ListCostResultsResponse.base:type_name -> common.v1.BaseResponse
+	9,   // 58: finance.v1.ListCostResultsResponse.items:type_name -> finance.v1.CostResult
+	70,  // 59: finance.v1.ListCostResultsResponse.pagination:type_name -> common.v1.PaginationResponse
+	68,  // 60: finance.v1.ListCostResultPeriodsResponse.base:type_name -> common.v1.BaseResponse
+	0,   // 61: finance.v1.GetCostBreakdownRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 62: finance.v1.GetCostBreakdownResponse.base:type_name -> common.v1.BaseResponse
+	10,  // 63: finance.v1.GetCostBreakdownResponse.breakdown:type_name -> finance.v1.CostBreakdown
+	66,  // 64: finance.v1.RouteCostSheetStage.param_snapshot:type_name -> finance.v1.RouteCostSheetStage.ParamSnapshotEntry
+	0,   // 65: finance.v1.GetRouteCostSheetRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 66: finance.v1.GetRouteCostSheetResponse.base:type_name -> common.v1.BaseResponse
+	35,  // 67: finance.v1.GetRouteCostSheetResponse.stages:type_name -> finance.v1.RouteCostSheetStage
+	0,   // 68: finance.v1.RequestProductCostSheetExportRequest.calculation_type:type_name -> finance.v1.CalculationType
+	5,   // 69: finance.v1.RequestProductCostSheetExportRequest.status:type_name -> finance.v1.CostResultStatus
+	68,  // 70: finance.v1.RequestProductCostSheetExportResponse.base:type_name -> common.v1.BaseResponse
+	40,  // 71: finance.v1.RequestProductCostSheetExportResponse.data:type_name -> finance.v1.ProductCostSheetExportJobInfo
+	68,  // 72: finance.v1.GetProductCostSheetDownloadURLResponse.base:type_name -> common.v1.BaseResponse
+	43,  // 73: finance.v1.GetProductCostSheetDownloadURLResponse.data:type_name -> finance.v1.ProductCostSheetDownloadInfo
+	68,  // 74: finance.v1.ListCostSheetExportBatchChildrenResponse.base:type_name -> common.v1.BaseResponse
+	46,  // 75: finance.v1.ListCostSheetExportBatchChildrenResponse.children:type_name -> finance.v1.CostSheetExportBatchChildInfo
+	68,  // 76: finance.v1.GetProductCostSheetExportJobStatusResponse.base:type_name -> common.v1.BaseResponse
+	69,  // 77: finance.v1.ListCostHistoryRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,   // 78: finance.v1.ListCostHistoryRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 79: finance.v1.ListCostHistoryResponse.base:type_name -> common.v1.BaseResponse
+	14,  // 80: finance.v1.ListCostHistoryResponse.items:type_name -> finance.v1.CostHistoryEntry
+	70,  // 81: finance.v1.ListCostHistoryResponse.pagination:type_name -> common.v1.PaginationResponse
+	68,  // 82: finance.v1.VerifyCostResultResponse.base:type_name -> common.v1.BaseResponse
+	9,   // 83: finance.v1.VerifyCostResultResponse.result:type_name -> finance.v1.CostResult
+	68,  // 84: finance.v1.ApproveCostResultResponse.base:type_name -> common.v1.BaseResponse
+	9,   // 85: finance.v1.ApproveCostResultResponse.result:type_name -> finance.v1.CostResult
+	0,   // 86: finance.v1.ProcessChunkInternalRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 87: finance.v1.ProcessChunkInternalResponse.base:type_name -> common.v1.BaseResponse
+	68,  // 88: finance.v1.GetBatchChildDownloadUrlResponse.base:type_name -> common.v1.BaseResponse
+	69,  // 89: finance.v1.ListExportJobsRequest.pagination:type_name -> common.v1.PaginationRequest
+	68,  // 90: finance.v1.ListExportJobsResponse.base:type_name -> common.v1.BaseResponse
+	63,  // 91: finance.v1.ListExportJobsResponse.jobs:type_name -> finance.v1.ExportJobSummary
+	70,  // 92: finance.v1.ListExportJobsResponse.pagination:type_name -> common.v1.PaginationResponse
+	67,  // 93: finance.v1.ExportJobSummary.queued_at:type_name -> google.protobuf.Timestamp
+	15,  // 94: finance.v1.CostCalcService.TriggerCalcJob:input_type -> finance.v1.TriggerCalcJobRequest
+	17,  // 95: finance.v1.CostCalcService.GetCalcJob:input_type -> finance.v1.GetCalcJobRequest
+	19,  // 96: finance.v1.CostCalcService.ListCalcJobs:input_type -> finance.v1.ListCalcJobsRequest
+	21,  // 97: finance.v1.CostCalcService.ListCalcJobChunks:input_type -> finance.v1.ListCalcJobChunksRequest
+	23,  // 98: finance.v1.CostCalcService.ListCalcJobProducts:input_type -> finance.v1.ListCalcJobProductsRequest
+	25,  // 99: finance.v1.CostCalcService.CancelCalcJob:input_type -> finance.v1.CancelCalcJobRequest
+	27,  // 100: finance.v1.CostCalcService.GetCostResult:input_type -> finance.v1.GetCostResultRequest
+	29,  // 101: finance.v1.CostCalcService.ListCostResults:input_type -> finance.v1.ListCostResultsRequest
+	31,  // 102: finance.v1.CostCalcService.ListCostResultPeriods:input_type -> finance.v1.ListCostResultPeriodsRequest
+	33,  // 103: finance.v1.CostCalcService.GetCostBreakdown:input_type -> finance.v1.GetCostBreakdownRequest
+	49,  // 104: finance.v1.CostCalcService.ListCostHistory:input_type -> finance.v1.ListCostHistoryRequest
+	51,  // 105: finance.v1.CostCalcService.VerifyCostResult:input_type -> finance.v1.VerifyCostResultRequest
+	53,  // 106: finance.v1.CostCalcService.ApproveCostResult:input_type -> finance.v1.ApproveCostResultRequest
+	36,  // 107: finance.v1.CostCalcService.GetRouteCostSheet:input_type -> finance.v1.GetRouteCostSheetRequest
+	38,  // 108: finance.v1.CostCalcService.RequestProductCostSheetExport:input_type -> finance.v1.RequestProductCostSheetExportRequest
+	41,  // 109: finance.v1.CostCalcService.GetProductCostSheetDownloadURL:input_type -> finance.v1.GetProductCostSheetDownloadURLRequest
+	44,  // 110: finance.v1.CostCalcService.ListCostSheetExportBatchChildren:input_type -> finance.v1.ListCostSheetExportBatchChildrenRequest
+	47,  // 111: finance.v1.CostCalcService.GetProductCostSheetExportJobStatus:input_type -> finance.v1.GetProductCostSheetExportJobStatusRequest
+	55,  // 112: finance.v1.CostCalcService.ProcessChunkInternal:input_type -> finance.v1.ProcessChunkInternalRequest
+	57,  // 113: finance.v1.CostCalcService.GetBatchChildDownloadUrl:input_type -> finance.v1.GetBatchChildDownloadUrlRequest
+	59,  // 114: finance.v1.CostCalcService.DownloadExportBatchZip:input_type -> finance.v1.DownloadExportBatchZipRequest
+	61,  // 115: finance.v1.CostCalcService.ListExportJobs:input_type -> finance.v1.ListExportJobsRequest
+	16,  // 116: finance.v1.CostCalcService.TriggerCalcJob:output_type -> finance.v1.TriggerCalcJobResponse
+	18,  // 117: finance.v1.CostCalcService.GetCalcJob:output_type -> finance.v1.GetCalcJobResponse
+	20,  // 118: finance.v1.CostCalcService.ListCalcJobs:output_type -> finance.v1.ListCalcJobsResponse
+	22,  // 119: finance.v1.CostCalcService.ListCalcJobChunks:output_type -> finance.v1.ListCalcJobChunksResponse
+	24,  // 120: finance.v1.CostCalcService.ListCalcJobProducts:output_type -> finance.v1.ListCalcJobProductsResponse
+	26,  // 121: finance.v1.CostCalcService.CancelCalcJob:output_type -> finance.v1.CancelCalcJobResponse
+	28,  // 122: finance.v1.CostCalcService.GetCostResult:output_type -> finance.v1.GetCostResultResponse
+	30,  // 123: finance.v1.CostCalcService.ListCostResults:output_type -> finance.v1.ListCostResultsResponse
+	32,  // 124: finance.v1.CostCalcService.ListCostResultPeriods:output_type -> finance.v1.ListCostResultPeriodsResponse
+	34,  // 125: finance.v1.CostCalcService.GetCostBreakdown:output_type -> finance.v1.GetCostBreakdownResponse
+	50,  // 126: finance.v1.CostCalcService.ListCostHistory:output_type -> finance.v1.ListCostHistoryResponse
+	52,  // 127: finance.v1.CostCalcService.VerifyCostResult:output_type -> finance.v1.VerifyCostResultResponse
+	54,  // 128: finance.v1.CostCalcService.ApproveCostResult:output_type -> finance.v1.ApproveCostResultResponse
+	37,  // 129: finance.v1.CostCalcService.GetRouteCostSheet:output_type -> finance.v1.GetRouteCostSheetResponse
+	39,  // 130: finance.v1.CostCalcService.RequestProductCostSheetExport:output_type -> finance.v1.RequestProductCostSheetExportResponse
+	42,  // 131: finance.v1.CostCalcService.GetProductCostSheetDownloadURL:output_type -> finance.v1.GetProductCostSheetDownloadURLResponse
+	45,  // 132: finance.v1.CostCalcService.ListCostSheetExportBatchChildren:output_type -> finance.v1.ListCostSheetExportBatchChildrenResponse
+	48,  // 133: finance.v1.CostCalcService.GetProductCostSheetExportJobStatus:output_type -> finance.v1.GetProductCostSheetExportJobStatusResponse
+	56,  // 134: finance.v1.CostCalcService.ProcessChunkInternal:output_type -> finance.v1.ProcessChunkInternalResponse
+	58,  // 135: finance.v1.CostCalcService.GetBatchChildDownloadUrl:output_type -> finance.v1.GetBatchChildDownloadUrlResponse
+	60,  // 136: finance.v1.CostCalcService.DownloadExportBatchZip:output_type -> finance.v1.DownloadExportBatchZipResponse
+	62,  // 137: finance.v1.CostCalcService.ListExportJobs:output_type -> finance.v1.ListExportJobsResponse
+	116, // [116:138] is the sub-list for method output_type
+	94,  // [94:116] is the sub-list for method input_type
+	94,  // [94:94] is the sub-list for extension type_name
+	94,  // [94:94] is the sub-list for extension extendee
+	0,   // [0:94] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_calc_proto_init() }
@@ -3937,7 +5767,7 @@ func file_finance_v1_cost_calc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_cost_calc_proto_rawDesc), len(file_finance_v1_cost_calc_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   37,
+			NumMessages:   61,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -9,12 +9,15 @@ import (
 
 // ListCostResultsQuery filters active cost results across products.
 type ListCostResultsQuery struct {
-	Period   string
-	CalcType costcalcdom.CalculationType
-	Status   string
-	Search   string
-	Page     int
-	PageSize int
+	Period         string
+	CalcType       costcalcdom.CalculationType
+	Status         string
+	Search         string
+	ProductTypeIDs []int32
+	SortBy         string
+	SortOrder      string
+	Page           int
+	PageSize       int
 }
 
 // ListCostResultsResult is the paginated cross-product result list.
@@ -40,14 +43,9 @@ func NewListCostResultsHandler(svc *Service) *ListCostResultsHandler {
 // Handle executes the query.
 func (h *ListCostResultsHandler) Handle(ctx context.Context, q ListCostResultsQuery) (*ListCostResultsResult, error) {
 	page, size := normalizePagination(q.Page, q.PageSize)
-	items, total, period, err := h.svc.resultRepo.ListResults(ctx, costcalcdom.ResultListFilter{
-		Period:   q.Period,
-		CalcType: q.CalcType,
-		Status:   q.Status,
-		Search:   q.Search,
-		Page:     page,
-		PageSize: size,
-	})
+	f := costcalcdom.ResultListFilter(q)
+	f.Page, f.PageSize = page, size
+	items, total, period, err := h.svc.resultRepo.ListResults(ctx, f)
 	if err != nil {
 		return nil, fmt.Errorf("list cost results: %w", err)
 	}
