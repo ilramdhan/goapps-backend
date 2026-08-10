@@ -42,6 +42,31 @@ const (
 	ScopeKeyConversion = "COST_CONVERSION"
 )
 
+// Reserved scope keys carrying the POY spin fixed-cost pool (migration 000474)
+// into the pool arm of F_YARN_{POWER,MANPOWER,OVERHEAD,SPARES}_KG (000476).
+//
+// These are period-global, not per-product, so they are deliberately NOT
+// mst_parameter rows: a param row would put them on every product's CAPP form.
+// They follow the ScopeKeyCostRMTotal precedent — injected by the engine and
+// removed from the zero-filled set so the trace records the real value.
+const (
+	// ScopeKeySpinCommonPOYDenier is the reference denier the shared pool is
+	// normalized to before being re-scaled by each product's ACT_DENIER.
+	ScopeKeySpinCommonPOYDenier = "SPIN_COMMON_POY_DENIER"
+	// ScopeKeySpinPOYProduction is total monthly POY production (kg) — the
+	// divisor that turns each monthly pool into a per-kg rate.
+	ScopeKeySpinPOYProduction = "SPIN_POY_PRODUCTION"
+	// ScopeKeySpinPowerMonth is the shared monthly spin power cost.
+	ScopeKeySpinPowerMonth = "SPIN_POWER_MONTH"
+	// ScopeKeySpinManpowerMonth is the shared monthly spin manpower cost.
+	ScopeKeySpinManpowerMonth = "SPIN_MANPOWER_MONTH"
+	// ScopeKeySpinOverheadsMonth is the shared monthly spin overhead cost.
+	ScopeKeySpinOverheadsMonth = "SPIN_OVERHEADS_MONTH"
+	// ScopeKeySpinConsSprsMonth is the shared monthly spin consumables and
+	// spares cost.
+	ScopeKeySpinConsSprsMonth = "SPIN_CONSSPRS_MONTH"
+)
+
 // ComputeInput aggregates everything ComputeProduct needs for one product.
 // All fields are pre-loaded by the chunk processor (S8b.7) via the bulk
 // loader (S8b.5); ComputeProduct itself performs no I/O.
@@ -63,6 +88,10 @@ type ComputeInput struct {
 	// product refers to is the caller's responsibility (not yet wired into bulkLoad —
 	// see Task 21b/PRD §13 Phase 5); nil is valid for products with no such formulas.
 	MBCosts map[string]float64
+	// SpinFixedCost holds the period's POY spin pool keyed by ScopeKeySpin*.
+	// Empty/nil for periods with no mst_spin_fixed_cost row; the pool arm's
+	// SPIN_POY_PRODUCTION > 0 guard then yields 0 rather than dividing by zero.
+	SpinFixedCost map[string]float64
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
@@ -246,8 +275,23 @@ func buildInitialScope(in ComputeInput) (map[string]any, map[string]bool) {
 		}
 	}
 
+	injectSpinFixedCost(scope, zeroFilled, in.SpinFixedCost)
 	injectMarketingResult(scope, in.SellingSnapshot)
 	return scope, zeroFilled
+}
+
+// injectSpinFixedCost writes the period's POY spin pool into scope, after the
+// zero-fill pass so a real value always wins over the fabricated 0, and clears
+// each key from zeroFilled so cpc_param_snapshot records what the pool arm
+// actually divided by. Mirrors the ScopeKeyCostRMTotal handling in ComputeProduct.
+//
+// A period with no pool row leaves the keys at their zero-filled 0; the
+// SPIN_POY_PRODUCTION > 0 guard in the formula then returns 0 for that product.
+func injectSpinFixedCost(scope map[string]any, zeroFilled map[string]bool, pool map[string]float64) {
+	for k, v := range pool {
+		scope[k] = v
+		delete(zeroFilled, k)
+	}
 }
 
 // injectMarketingResult adds the marketing_result() built-in function to scope.

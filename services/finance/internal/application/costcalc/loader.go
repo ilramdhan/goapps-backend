@@ -26,6 +26,7 @@ const (
 	loaderKindUpstream        = "upstream"
 	loaderKindSellingSnapshot = "selling_snapshot"
 	loaderKindMBCosts         = "mb_costs"
+	loaderKindSpinFixedCost   = "spin_fixed_cost"
 )
 
 // observeLoad observes bulk loader latency under the given kind label.
@@ -58,6 +59,11 @@ type ProductLoader interface {
 	// cost_type (ACTUAL/SELLING/FORECAST). Missing (mbh_id, cost_type) pairs are simply
 	// absent from the inner map — callers must check presence, not assume zero-value.
 	LoadMBCosts(ctx context.Context, mbhIDs []string) (map[string]map[string]float64, error)
+	// LoadSpinFixedCost returns the POY spin fixed-cost pool for a period, keyed by
+	// the scope code the formulas reference (SPIN_POWER_MONTH, ...). Returns an empty
+	// map — never an error — when the period has no row, which makes every POY
+	// pool-arm formula divide-guard to 0 rather than aborting the chunk.
+	LoadSpinFixedCost(ctx context.Context, period string) (map[string]float64, error)
 }
 
 type productLoader struct {
@@ -972,5 +978,66 @@ func (l *productLoader) LoadMBCosts(ctx context.Context, mbhIDs []string) (map[s
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate MB cost rows: %w", err)
 	}
+	return out, nil
+}
+
+// =============================================================================
+// LoadSpinFixedCost
+// =============================================================================
+
+// LoadSpinFixedCost reads the POY spin fixed-cost pool (migration 000474) and
+// returns it keyed by the scope codes the 000476 formulas reference.
+//
+// Period resolution takes the newest live row at or before the requested period,
+// which is an exact match when one exists. Legacy MST_PARAM_DATA group
+// MST_SPIN_FIXED_COST_4_AVG is current-only — one global snapshot, no history — so
+// recomputing an older period in legacy also read the current values. Carrying the
+// nearest earlier row forward reproduces that while letting mst_spin_fixed_cost
+// accumulate real history: once Finance enters a monthly row it takes over from its
+// own period onward, with no code change.
+//
+// The cutoff matters as much as the fallback. Resolving to the globally newest row
+// instead would let a future pool leak into a recompute of an earlier period — costing
+// 202606 off the 202607 pool — which is wrong and hard to spot, because every value
+// involved stays a plausible number.
+//
+// Returns an empty map, not an error, when no live row sits at or before the period.
+// That silently zeros POY fixed cost rather than failing (the pool arm's divide guards
+// return 0, a valid number that raises no error), so the seeded anchor row must sit at
+// or before the earliest period the engine is ever asked to cost.
+func (l *productLoader) LoadSpinFixedCost(ctx context.Context, period string) (map[string]float64, error) {
+	defer observeLoad(loaderKindSpinFixedCost, time.Now())
+	out := map[string]float64{}
+
+	// msfc_period is a zero-padded YYYYMM string, so lexicographic <= is
+	// chronological.
+	const q = `
+		SELECT msfc_common_poy_denier, msfc_poy_production,
+		       msfc_spin_power_month, msfc_spin_manpower_month,
+		       msfc_spin_overheads_month, msfc_spin_conssprs_month
+		FROM mst_spin_fixed_cost
+		WHERE deleted_at IS NULL
+		  AND msfc_is_active = TRUE
+		  AND msfc_period <= $1
+		ORDER BY msfc_period DESC
+		LIMIT 1`
+
+	var denier, production, power, manpower, overheads, conssprs float64
+	err := l.db.QueryRowContext(ctx, q, period).Scan(
+		&denier, &production, &power, &manpower, &overheads, &conssprs,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load spin fixed cost: %w", err)
+	}
+
+	out[ScopeKeySpinCommonPOYDenier] = denier
+	out[ScopeKeySpinPOYProduction] = production
+	out[ScopeKeySpinPowerMonth] = power
+	out[ScopeKeySpinManpowerMonth] = manpower
+	out[ScopeKeySpinOverheadsMonth] = overheads
+	out[ScopeKeySpinConsSprsMonth] = conssprs
 	return out, nil
 }

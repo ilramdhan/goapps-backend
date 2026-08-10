@@ -117,6 +117,9 @@ type loadedBundle struct {
 	rmCosts          map[string]float64
 	upstreamCosts    map[int64]float64
 	sellingSnapshots map[int64]map[string]float64
+	// spinFixedCost is period-global, not per-product: one row shared by every
+	// POY product in the chunk.
+	spinFixedCost map[string]float64
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -152,6 +155,13 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		sellingSnaps = make(map[int64]map[string]float64, len(in.Products))
 	}
 
+	spinPool, spinErr := s.loader.LoadSpinFixedCost(ctx, in.Period)
+	if spinErr != nil {
+		// Non-fatal, same rationale as selling snapshots: an empty pool makes the
+		// POY pool arm guard to 0 instead of aborting every product in the chunk.
+		spinPool = map[string]float64{}
+	}
+
 	return &loadedBundle{
 		routes:           routes,
 		capp:             capp,
@@ -159,6 +169,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		rmCosts:          rmCosts,
 		upstreamCosts:    upstreamCosts,
 		sellingSnapshots: sellingSnaps,
+		spinFixedCost:    spinPool,
 	}, nil
 }
 
@@ -197,6 +208,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		UpstreamCosts:   loaded.upstreamCosts,
 		EvalCache:       s.cache,
 		SellingSnapshot: sellingSnap,
+		SpinFixedCost:   loaded.spinFixedCost,
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)
