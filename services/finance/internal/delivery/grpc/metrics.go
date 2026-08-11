@@ -182,6 +182,14 @@ var (
 		[]string{"operation", "status"},
 	)
 
+	spinFixedCostOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spin_fixed_cost_operations_total",
+			Help: "Total number of Spin Fixed Cost operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
 	productGradeOperationsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "product_grade_operations_total",
@@ -267,6 +275,11 @@ func RecordMachineOperation(operation string, success bool) {
 // RecordInterminglingOperation records an Intermingling operation metric.
 func RecordInterminglingOperation(operation string, success bool) {
 	interminglingOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordSpinFixedCostOperation records a Spin Fixed Cost operation metric.
+func RecordSpinFixedCostOperation(operation string, success bool) {
+	spinFixedCostOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
 }
 
 // RecordProductGradeOperation records a Product Grade operation metric.
