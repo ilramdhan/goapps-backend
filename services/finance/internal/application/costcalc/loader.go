@@ -60,10 +60,19 @@ type ProductLoader interface {
 	// absent from the inner map — callers must check presence, not assume zero-value.
 	LoadMBCosts(ctx context.Context, mbhIDs []string) (map[string]map[string]float64, error)
 	// LoadSpinFixedCost returns the POY spin fixed-cost pool for a period, keyed by
-	// the scope code the formulas reference (SPIN_POWER_MONTH, ...). Returns an empty
-	// map — never an error — when the period has no row, which makes every POY
-	// pool-arm formula divide-guard to 0 rather than aborting the chunk.
-	LoadSpinFixedCost(ctx context.Context, period string) (map[string]float64, error)
+	// the scope code the formulas reference (SPIN_POWER_MONTH, ...), together with
+	// the period of the master row it resolved to. An empty SpinPool.Period means no
+	// active row sits at or before the requested period; the caller treats that as
+	// fatal, because an absent pool would zero POY fixed cost instead of failing.
+	LoadSpinFixedCost(ctx context.Context, period string) (SpinPool, error)
+}
+
+// SpinPool is the POY spin fixed-cost pool resolved for a period, together with
+// the period of the master row it actually came from. Period is empty when no
+// row at or before the requested period exists.
+type SpinPool struct {
+	Period string
+	Values map[string]float64
 }
 
 type productLoader struct {
@@ -1001,18 +1010,19 @@ func (l *productLoader) LoadMBCosts(ctx context.Context, mbhIDs []string) (map[s
 // 202606 off the 202607 pool — which is wrong and hard to spot, because every value
 // involved stays a plausible number.
 //
-// Returns an empty map, not an error, when no live row sits at or before the period.
-// That silently zeros POY fixed cost rather than failing (the pool arm's divide guards
-// return 0, a valid number that raises no error), so the seeded anchor row must sit at
-// or before the earliest period the engine is ever asked to cost.
-func (l *productLoader) LoadSpinFixedCost(ctx context.Context, period string) (map[string]float64, error) {
+// Returns a zero-value SpinPool — empty Period, nil Values — and no error when no
+// live row sits at or before the period. Fatality is the caller's call, not the
+// loader's: bulkLoad turns the empty Period into ErrMissingSpinFixedCost so the pool
+// can never silently zero POY fixed cost (the pool arm's divide guards return 0, a
+// valid number that raises no error).
+func (l *productLoader) LoadSpinFixedCost(ctx context.Context, period string) (SpinPool, error) {
 	defer observeLoad(loaderKindSpinFixedCost, time.Now())
-	out := map[string]float64{}
 
 	// msfc_period is a zero-padded YYYYMM string, so lexicographic <= is
 	// chronological.
 	const q = `
-		SELECT msfc_common_poy_denier, msfc_poy_production,
+		SELECT msfc_period,
+		       msfc_common_poy_denier, msfc_poy_production,
 		       msfc_spin_power_month, msfc_spin_manpower_month,
 		       msfc_spin_overheads_month, msfc_spin_conssprs_month
 		FROM mst_spin_fixed_cost
@@ -1022,22 +1032,25 @@ func (l *productLoader) LoadSpinFixedCost(ctx context.Context, period string) (m
 		ORDER BY msfc_period DESC
 		LIMIT 1`
 
+	var poolPeriod string
 	var denier, production, power, manpower, overheads, conssprs float64
 	err := l.db.QueryRowContext(ctx, q, period).Scan(
+		&poolPeriod,
 		&denier, &production, &power, &manpower, &overheads, &conssprs,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return out, nil
+		return SpinPool{}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("load spin fixed cost: %w", err)
+		return SpinPool{}, fmt.Errorf("load spin fixed cost: %w", err)
 	}
 
+	out := map[string]float64{}
 	out[ScopeKeySpinCommonPOYDenier] = denier
 	out[ScopeKeySpinPOYProduction] = production
 	out[ScopeKeySpinPowerMonth] = power
 	out[ScopeKeySpinManpowerMonth] = manpower
 	out[ScopeKeySpinOverheadsMonth] = overheads
 	out[ScopeKeySpinConsSprsMonth] = conssprs
-	return out, nil
+	return SpinPool{Period: poolPeriod, Values: out}, nil
 }

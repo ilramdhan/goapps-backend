@@ -1240,6 +1240,10 @@ func mappedCostCalcErrToBase(err error) *commonv1.BaseResponse {
 	case errors.Is(err, costcalc.ErrProductRequired),
 		errors.Is(err, costcalcdom.ErrInvalidPeriod):
 		return ErrorResponse("400", err.Error())
+	// Configuration gap, not a server fault: Finance has not entered a
+	// mst_spin_fixed_cost row at or before the requested period.
+	case errors.Is(err, costcalcdom.ErrMissingSpinFixedCost):
+		return ErrorResponse("400", err.Error())
 	default:
 		return nil
 	}

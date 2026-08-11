@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mutugading/goapps-backend/pkg/costcalc/metrics"
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
@@ -117,9 +119,10 @@ type loadedBundle struct {
 	rmCosts          map[string]float64
 	upstreamCosts    map[int64]float64
 	sellingSnapshots map[int64]map[string]float64
-	// spinFixedCost is period-global, not per-product: one row shared by every
-	// POY product in the chunk.
-	spinFixedCost map[string]float64
+	// spinPool is period-global, not per-product: one master row shared by every
+	// POY product in the chunk. Its Period may be older than the requested period
+	// (deliberate carry-forward) and is recorded per product in the calculation log.
+	spinPool SpinPool
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -155,11 +158,25 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		sellingSnaps = make(map[int64]map[string]float64, len(in.Products))
 	}
 
-	spinPool, spinErr := s.loader.LoadSpinFixedCost(ctx, in.Period)
-	if spinErr != nil {
-		// Non-fatal, same rationale as selling snapshots: an empty pool makes the
-		// POY pool arm guard to 0 instead of aborting every product in the chunk.
-		spinPool = map[string]float64{}
+	spinPool, err := s.loader.LoadSpinFixedCost(ctx, in.Period)
+	if err != nil {
+		return nil, fmt.Errorf("load spin fixed cost: %w", err)
+	}
+	// Hard block rather than zero-fill: an absent pool would make every POY pool-arm
+	// formula divide-guard to 0 and silently understate fixed cost, which reads as a
+	// plausible number nobody catches.
+	if spinPool.Period == "" {
+		return nil, fmt.Errorf("%w: period %s", costcalcdom.ErrMissingSpinFixedCost, in.Period)
+	}
+	// Carry-forward from an older row is legitimate (see LoadSpinFixedCost), but the
+	// chunk should say so out loud once.
+	if spinPool.Period != in.Period {
+		log.Warn().
+			Str("requested_period", in.Period).
+			Str("spin_pool_period", spinPool.Period).
+			Int64("job_id", in.JobID).
+			Int64("chunk_id", in.ChunkID).
+			Msg("spin fixed cost pool is stale: no master row for the requested period, POY fixed cost computed from an older month's pool")
 	}
 
 	return &loadedBundle{
@@ -169,7 +186,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		rmCosts:          rmCosts,
 		upstreamCosts:    upstreamCosts,
 		sellingSnapshots: sellingSnaps,
-		spinFixedCost:    spinPool,
+		spinPool:         spinPool,
 	}, nil
 }
 
@@ -208,13 +225,13 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		UpstreamCosts:   loaded.upstreamCosts,
 		EvalCache:       s.cache,
 		SellingSnapshot: sellingSnap,
-		SpinFixedCost:   loaded.spinFixedCost,
+		SpinFixedCost:   loaded.spinPool.Values,
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)
 	}
 
-	if persistErr := s.persistResult(ctx, in, pid, route, out); persistErr != nil {
+	if persistErr := s.persistResult(ctx, in, pid, route, out, loaded.spinPool.Period); persistErr != nil {
 		if e := s.productRepo.MarkFailed(ctx, in.JobID, pid, persistErr.Error(), logBytes(persistErr)); e != nil {
 			_ = e
 		}
@@ -329,7 +346,7 @@ func extractCaptiveDeliveryCosts(snap map[string]float64) captiveDeliveryCosts {
 
 // persistResult upserts the cost result, writes audit-history on supersede,
 // and marks the job_product row SUCCESS with a compact calc-log blob.
-func (s *Service) persistResult(ctx context.Context, in ProcessChunkInput, pid int64, route *costroute.Graph, out *ComputeOutput) error {
+func (s *Service) persistResult(ctx context.Context, in ProcessChunkInput, pid int64, route *costroute.Graph, out *ComputeOutput, spinPoolPeriod string) error {
 	snap := out.ParamSnapshot
 	cc := extractCaptiveDeliveryCosts(snap)
 	r := costcalcdom.NewResult(
@@ -353,7 +370,7 @@ func (s *Service) persistResult(ctx context.Context, in ProcessChunkInput, pid i
 		s.writeRecomputeAudit(ctx, in, pid, newID, prevVer, prevTotal, prevID, out.CostPerUnit)
 	}
 
-	if err := s.productRepo.MarkSuccess(ctx, in.JobID, pid, newID, 0, buildCalculationLog(out)); err != nil {
+	if err := s.productRepo.MarkSuccess(ctx, in.JobID, pid, newID, 0, buildCalculationLog(out, spinPoolPeriod)); err != nil {
 		return fmt.Errorf("mark product success: %w", err)
 	}
 	return nil
@@ -387,7 +404,11 @@ func (s *Service) writeRecomputeAudit(ctx context.Context, in ProcessChunkInput,
 
 // buildCalculationLog serializes a compact execution trace into JSON for
 // cjp_calculation_log. Used by the "drill into product" UI view.
-func buildCalculationLog(out *ComputeOutput) []byte {
+// spinPoolPeriod is the period of the mst_spin_fixed_cost row the POY pool was
+// actually resolved from. It is recorded per product so a stale (carried-forward)
+// pool is visible to finance on the row they are looking at, not only in a chunk
+// log line nobody reads.
+func buildCalculationLog(out *ComputeOutput, spinPoolPeriod string) []byte {
 	doc := map[string]any{
 		"cost_per_unit":    out.CostPerUnit,
 		"total_rm_cost":    out.TotalRMCost,
@@ -396,6 +417,7 @@ func buildCalculationLog(out *ComputeOutput) []byte {
 		"formula_trace":    out.FormulaTrace,
 		"cost_by_level":    out.CostByLevel,
 		"input_hash":       out.InputHash,
+		"spin_pool_period": spinPoolPeriod,
 	}
 	b, err := json.Marshal(doc)
 	if err != nil {

@@ -14,8 +14,12 @@ var (
 	ErrMissingRMCost       = errors.New("missing RM cost for item")
 	ErrMissingUpstreamCost = errors.New("missing upstream product cost")
 	ErrMissingMBCost       = errors.New("missing MB cost lookup value")
-	ErrFormulaEval         = errors.New("formula evaluation failed")
-	ErrCycleDetected       = errors.New("dependency cycle detected")
-	ErrChunkRetryExhausted = errors.New("chunk retry attempts exhausted")
-	ErrInvalidPeriod       = errors.New("period must be YYYYMM")
+	// ErrMissingSpinFixedCost is returned when no active mst_spin_fixed_cost row
+	// exists at or before the requested period. Proceeding would zero-fill the POY
+	// spin pool and silently understate fixed cost rather than fail.
+	ErrMissingSpinFixedCost = errors.New("no active spin fixed cost master row at or before the requested period")
+	ErrFormulaEval          = errors.New("formula evaluation failed")
+	ErrCycleDetected        = errors.New("dependency cycle detected")
+	ErrChunkRetryExhausted  = errors.New("chunk retry attempts exhausted")
+	ErrInvalidPeriod        = errors.New("period must be YYYYMM")
 )
