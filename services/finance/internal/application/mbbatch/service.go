@@ -64,12 +64,23 @@ type BatchError struct {
 }
 
 // RunMBBatch computes cst_product_cost rows (ACTUAL/SELLING/FORECAST) for every VALIDATED
-// MB Head's auto-gen'd product, for the given period, in nested-MB dependency order so a
-// parent MB's PRODUCT-type composition-RM read of a child MB's cost always finds that
-// child's cst_product_cost already written in this same batch run (design doc §10.3).
+// MB Head's auto-gen'd product, for the given period, in nested-MB dependency order
+// (design doc §10.3).
+//
+// KNOWN GAP (pre-existing, not introduced by ENG-MB-02): the dependency ordering does NOT
+// currently make a child's cost visible to its parent within the same run. Results are
+// written through tx (persistResult), but the parent's upstream read goes through
+// s.loader, which holds the *sql.DB pool rather than this transaction
+// (costcalc.productLoader). Under READ COMMITTED the uncommitted in-batch writes are
+// invisible, so a parent whose child is computed in this same batch reads the previous
+// committed run's value — or fails with ErrMissingUpstreamCost if no committed row exists
+// yet. Ordering only pays off across runs. Closing this needs the loader to accept a
+// transaction, which changes the interface shared with the yarn path; tracked separately.
 // A single MB's failure is recorded in the returned BatchResult.Errors and does not abort
 // the remaining MBs in the batch (mirrors mbpush.ExecuteHandler.executeBatch).
-func (s *Service) RunMBBatch(ctx context.Context, period string) (*BatchResult, error) {
+// jobID is the cal_job row this batch runs under; it is stamped onto every persisted
+// cst_product_cost row so results stay traceable to the job that produced them.
+func (s *Service) RunMBBatch(ctx context.Context, period string, jobID int64) (*BatchResult, error) {
 	candidates, err := BuildDAG(ctx, s.headReader, s.edgeReader)
 	if err != nil {
 		return nil, fmt.Errorf("run mb batch: %w", err)
@@ -79,7 +90,7 @@ func (s *Service) RunMBBatch(ctx context.Context, period string) (*BatchResult, 
 		return result, nil
 	}
 	err = s.db.Transaction(ctx, func(tx *sql.Tx) error {
-		return s.runBatch(ctx, tx, candidates, period, result)
+		return s.runBatch(ctx, tx, candidates, period, jobID, result)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("run mb batch: %w", err)
@@ -87,12 +98,12 @@ func (s *Service) RunMBBatch(ctx context.Context, period string) (*BatchResult, 
 	return result, nil
 }
 
-func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadCandidate, period string, result *BatchResult) error {
+func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadCandidate, period string, jobID int64, result *BatchResult) error {
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "mb_batch:"+period); err != nil {
 		return fmt.Errorf("acquire mb batch lock for period %s: %w", period, err)
 	}
 	for _, c := range candidates {
-		if err := s.runOneMB(ctx, tx, c, period); err != nil {
+		if err := s.runOneMB(ctx, tx, c, period, jobID); err != nil {
 			result.Errors = append(result.Errors, BatchError{MBHID: c.MBHID, Error: err.Error()})
 			continue
 		}
@@ -105,12 +116,12 @@ func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadC
 // runOneMB computes and persists all 3 calc-type rows for one MB's auto-gen'd product,
 // isolated in its own savepoint so this MB's failure does not need to abort the whole batch
 // caller's transaction (mirrors mbpush.ExecuteHandler.pushOneMB).
-func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string) error {
+func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64) error {
 	const savepoint = "sp_mb_batch"
 	if _, err := tx.ExecContext(ctx, "SAVEPOINT "+savepoint); err != nil {
 		return fmt.Errorf("savepoint: %w", err)
 	}
-	if err := s.computeAndPersist(ctx, tx, c, period); err != nil {
+	if err := s.computeAndPersist(ctx, tx, c, period, jobID); err != nil {
 		if _, rbErr := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT "+savepoint); rbErr != nil {
 			return fmt.Errorf("rollback to savepoint after %w: %w", err, rbErr)
 		}
@@ -122,7 +133,7 @@ func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, p
 	return nil
 }
 
-func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string) error {
+func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64) error {
 	productSysID := c.CostProductID
 
 	cappByProduct, err := s.loader.LoadCAPP(ctx, []int64{productSysID})
@@ -191,7 +202,7 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 	}
 
 	for _, calcType := range mbBatchCalcTypes {
-		if err := s.persistResult(ctx, tx, productSysID, period, calcType, route.Head.HeadID, outputs[calcType]); err != nil {
+		if err := s.persistResult(ctx, tx, productSysID, period, calcType, route.Head.HeadID, jobID, outputs[calcType]); err != nil {
 			return fmt.Errorf("persist %s: %w", calcType, err)
 		}
 	}
@@ -220,23 +231,35 @@ func mergeCAPP(base, sharedVals map[string]float64) map[string]float64 {
 	return out
 }
 
-func (s *Service) persistResult(ctx context.Context, tx *sql.Tx, productSysID int64, period string, calcType costcalcdom.CalculationType, routeHeadID int64, out *costcalc.ComputeOutput) error {
-	r := costcalcdom.NewResult(
+func (s *Service) persistResult(ctx context.Context, tx *sql.Tx, productSysID int64, period string, calcType costcalcdom.CalculationType, routeHeadID, jobID int64, out *costcalc.ComputeOutput) error {
+	r := newMBResult(productSysID, period, calcType, routeHeadID, jobID, out)
+	_, _, _, _, err := s.resultWriter.UpsertWithSupersedeTx(ctx, tx, r)
+	if err != nil {
+		return fmt.Errorf("upsert with supersede: %w", err)
+	}
+	return nil
+}
+
+// newMBResult builds the cst_product_cost row for one MB calc-type pass. Pure so the
+// argument positions — NewResult takes seven consecutive float64s — can be asserted in
+// a test rather than trusted.
+//
+// captiveCost, deliveryCost, and vb1..vb5 are deliberately 0 (the insert's NULLIF turns
+// them into NULL). They are yarn cost-sheet concepts — captive is row 61, delivery row
+// 62 — that MB does not compute. Since ENG-MB-02 made LoadUpstreamCosts read
+// cpc_cost_per_unit for MB-typed products, nothing reads them for MB either.
+func newMBResult(productSysID int64, period string, calcType costcalcdom.CalculationType, routeHeadID, jobID int64, out *costcalc.ComputeOutput) *costcalcdom.Result {
+	return costcalcdom.NewResult(
 		productSysID, period, calcType, routeHeadID, 1,
 		out.CostPerUnit, out.TotalRMCost, out.TotalConversion, out.TotalCost,
 		0, "IDR",
 		jsonOrNil(out.CostByLevel), jsonOrNil(out.RMCostDetail),
 		jsonOrNil(out.ParamSnapshot), jsonOrNil(out.FormulaTrace),
 		out.InputHash,
-		0, "system:mb_batch",
-		0, 0,
-		0, 0, 0, 0, 0,
+		jobID, "system:mb_batch",
+		0, 0, // captiveCost, deliveryCost — yarn-only
+		0, 0, 0, 0, 0, // vb1..vb5 del cost — yarn-only
 	)
-	_, _, _, _, err := s.resultWriter.UpsertWithSupersedeTx(ctx, tx, r)
-	if err != nil {
-		return fmt.Errorf("upsert with supersede: %w", err)
-	}
-	return nil
 }
 
 // jsonOrNil marshals v to JSON, returning nil on error (mirrors costcalc's process_chunk.go
