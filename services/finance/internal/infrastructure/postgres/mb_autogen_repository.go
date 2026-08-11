@@ -185,9 +185,13 @@ func mbInsertRouteRMs(ctx context.Context, tx *sql.Tx, seqID, parentProductSysID
 			rmType = costroute.RmTypeProduct
 			rmProductSysID = &refProductSysID
 		} else {
+			// GROUP and CARRIER both price through an RM group.
+			groupRef, groupErr := mbGroupRef(row)
+			if groupErr != nil {
+				return groupErr
+			}
 			rmType = costroute.RmTypeGroup
-			groupCode := row.GroupCode
-			rmGroupCode = &groupCode
+			rmGroupCode = groupRef
 		}
 
 		if _, err := tx.ExecContext(ctx, q, seqID, parentProductSysID, rmProductSysID, rmGroupCode, rmType, ratio, actorUserID); err != nil {
@@ -195,6 +199,25 @@ func mbInsertRouteRMs(ctx context.Context, tx *sql.Tx, seqID, parentProductSysID
 		}
 	}
 	return nil
+}
+
+// mbGroupRef resolves the cost_route_rm.crm_rm_group_code for a composition row that
+// prices through an RM group (source type GROUP or CARRIER).
+//
+// The empty-code rejection is the point of this function. VersionRow.GroupCode comes
+// from a COALESCE(g.group_code,”) over a LEFT JOIN (mb_composition_repository.go), so
+// a row whose mbcm_group_head_id is NULL — legal since migration 000459 — arrives as
+// "". Writing that empty string satisfies chk_crm_one_ref and chk_crm_type_ref_match
+// (migration 000222) because it is not NULL, and the resulting route line resolves to
+// no RM cost at all and prices at 0 at month-end rather than raising ErrMissingRMCost.
+// Carrier PBT carries real cost, so it must be priced through a group like any other
+// material. Failing here surfaces the problem at Validate, where it is fixable.
+func mbGroupRef(row VersionRow) (*string, error) {
+	if row.GroupCode == "" {
+		return nil, fmt.Errorf("mb autogen: %s row seq %d has no RM group", row.SourceType, row.SeqNo)
+	}
+	groupCode := row.GroupCode
+	return &groupCode, nil
 }
 
 func mbResolveRefProductSysID(ctx context.Context, tx *sql.Tx, refMbhID string) (int64, error) {
