@@ -91,6 +91,15 @@ var machineNumericReaders = map[string]func(*machine.Entity) (float64, bool){
 		}
 		return 0, false
 	},
+	// mc_weightage was registered in mst_lookup_master_column by 000425 but had no
+	// reader here, so the fill-group UI could offer the column while the handler
+	// could not resolve it. Wired up alongside the MC_WEIGHTAGE param (000475).
+	"mc_weightage": func(e *machine.Entity) (float64, bool) {
+		if v := e.McWeightage(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
 }
 
 // interminglingNumericReaders maps lookup_source_column → value extractor for mst_intermingling entity.

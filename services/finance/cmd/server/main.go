@@ -163,6 +163,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	cstMBCostRepo := postgres.NewCstMBCostRepository(db)
 	machineRepo := postgres.NewMachineRepository(db)
 	interminglingRepo := postgres.NewInterminglingRepository(db)
+	spinFixedCostRepo := postgres.NewSpinFixedCostRepository(db)
 	productGradeRepo := postgres.NewProductGradeRepository(db)
 	lookupMasterRepo := postgres.NewLookupMasterRepository(db)
 	// NOTE: legacy productRepo / prdRequestRepo wired to dropped tables — removed.
@@ -253,6 +254,11 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	interminglingHandler, err := grpcdelivery.NewInterminglingHandler(interminglingRepo)
+	if err != nil {
+		return err
+	}
+
+	spinFixedCostHandler, err := grpcdelivery.NewSpinFixedCostHandler(spinFixedCostRepo)
 	if err != nil {
 		return err
 	}
@@ -703,7 +709,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		mbHeadHandler, mbSpinHandler,
 		mbCompositionHandler, mbParamHandler, mbLustureHandler, mbWorkflowLogHandler, mbPushHandler,
 		mbBatchHandler,
-		machineHandler, interminglingHandler, productGradeHandler, lookupMasterHandler, yarnLookupFillHandler,
+		machineHandler, interminglingHandler, spinFixedCostHandler, productGradeHandler, lookupMasterHandler, yarnLookupFillHandler,
 		oracleSyncHandler, rmGroupHandler, rmCostHandler,
 		costProductTypeHandler, costRmTypeHandler, costErpHandler, costProductMasterHandler, costRouteHandler,
 		costMasterLookupHandler,
@@ -829,6 +835,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	mbBatchHandler *grpcdelivery.MBBatchHandler,
 	machineHandler *grpcdelivery.MachineHandler,
 	interminglingHandler *grpcdelivery.InterminglingHandler,
+	spinFixedCostHandler *grpcdelivery.SpinFixedCostHandler,
 	productGradeHandler *grpcdelivery.ProductGradeHandler,
 	lookupMasterHandler *grpcdelivery.LookupMasterHandler,
 	yarnLookupFillHandler *grpcdelivery.YarnLookupFillHandler,
@@ -885,6 +892,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	// Yarn master services.
 	financev1.RegisterMachineServiceServer(grpcServer.GRPCServer(), machineHandler)
 	financev1.RegisterInterminglingServiceServer(grpcServer.GRPCServer(), interminglingHandler)
+	financev1.RegisterSpinFixedCostServiceServer(grpcServer.GRPCServer(), spinFixedCostHandler)
 	financev1.RegisterProductGradeServiceServer(grpcServer.GRPCServer(), productGradeHandler)
 	financev1.RegisterLookupMasterServiceServer(grpcServer.GRPCServer(), lookupMasterHandler)
 	financev1.RegisterYarnLookupFillServiceServer(grpcServer.GRPCServer(), yarnLookupFillHandler)

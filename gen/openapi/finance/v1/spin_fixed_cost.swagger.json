@@ -1,0 +1,568 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/spin_fixed_cost.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "SpinFixedCostService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/spin-fixed-costs": {
+      "get": {
+        "summary": "ListSpinFixedCosts lists spinning fixed-cost pools with search, filter, and pagination.",
+        "operationId": "SpinFixedCostService_ListSpinFixedCosts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSpinFixedCostsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, default 1, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100, default 10).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in period).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\nACTIVE_FILTER_UNSPECIFIED (0) = show all, ACTIVE_FILTER_ACTIVE (1) = only active,\nACTIVE_FILTER_INACTIVE (2) = only inactive.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "period",
+            "description": "Filter by period in YYYYMM format (empty = all periods).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"period\", \"created_at\", \"updated_at\" (default: \"period\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"desc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SpinFixedCostService"
+        ]
+      },
+      "post": {
+        "summary": "CreateSpinFixedCost creates a new spinning fixed-cost pool for a period.",
+        "operationId": "SpinFixedCostService_CreateSpinFixedCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateSpinFixedCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateSpinFixedCostRequest is the request for creating a new spinning fixed-cost pool.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSpinFixedCostRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SpinFixedCostService"
+        ]
+      }
+    },
+    "/api/v1/finance/spin-fixed-costs/{id}": {
+      "get": {
+        "summary": "GetSpinFixedCost retrieves a spinning fixed-cost pool by ID.",
+        "operationId": "SpinFixedCostService_GetSpinFixedCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSpinFixedCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Spinning fixed-cost pool ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SpinFixedCostService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteSpinFixedCost soft deletes a spinning fixed-cost pool.",
+        "operationId": "SpinFixedCostService_DeleteSpinFixedCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSpinFixedCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Spinning fixed-cost pool ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SpinFixedCostService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateSpinFixedCost updates an existing spinning fixed-cost pool.\nNote: period is immutable and cannot be changed.",
+        "operationId": "SpinFixedCostService_UpdateSpinFixedCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateSpinFixedCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Spinning fixed-cost pool ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SpinFixedCostServiceUpdateSpinFixedCostBody"
+            }
+          }
+        ],
+        "tags": [
+          "SpinFixedCostService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "SpinFixedCostServiceUpdateSpinFixedCostBody": {
+      "type": "object",
+      "properties": {
+        "commonPoyDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "New common POY denier (optional, must be greater than zero if provided)."
+        },
+        "poyProduction": {
+          "type": "number",
+          "format": "double",
+          "description": "New total POY production (optional, must be greater than zero if provided)."
+        },
+        "spinPowerMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "New monthly spinning power cost (optional, zero or greater if provided)."
+        },
+        "spinManpowerMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "New monthly spinning manpower cost (optional, zero or greater if provided)."
+        },
+        "spinOverheadsMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "New monthly spinning overheads cost (optional, zero or greater if provided)."
+        },
+        "spinConssprsMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "New monthly spinning consumable spare parts cost (optional, zero or greater if provided)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "New active status (optional)."
+        }
+      },
+      "description": "UpdateSpinFixedCostRequest is the request for updating a spinning fixed-cost pool.\nNote: period is immutable and cannot be changed after creation."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateSpinFixedCostRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "description": "Period in YYYYMM format (e.g., \"202606\"). Immutable after creation."
+        },
+        "commonPoyDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Common POY denier for the period. Must be greater than zero (calc engine divisor)."
+        },
+        "poyProduction": {
+          "type": "number",
+          "format": "double",
+          "description": "Total POY production for the period. Must be greater than zero (calc engine divisor)."
+        },
+        "spinPowerMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "Monthly spinning power cost (must be zero or greater)."
+        },
+        "spinManpowerMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "Monthly spinning manpower cost (must be zero or greater)."
+        },
+        "spinOverheadsMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "Monthly spinning overheads cost (must be zero or greater)."
+        },
+        "spinConssprsMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "Monthly spinning consumable spare parts cost (must be zero or greater)."
+        }
+      },
+      "description": "CreateSpinFixedCostRequest is the request for creating a new spinning fixed-cost pool."
+    },
+    "v1CreateSpinFixedCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SpinFixedCost",
+          "description": "Created spinning fixed-cost pool data."
+        }
+      },
+      "description": "CreateSpinFixedCostResponse is the response for creating a spinning fixed-cost pool."
+    },
+    "v1DeleteSpinFixedCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteSpinFixedCostResponse is the response for deleting a spinning fixed-cost pool."
+    },
+    "v1GetSpinFixedCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SpinFixedCost",
+          "description": "Spinning fixed-cost pool data."
+        }
+      },
+      "description": "GetSpinFixedCostResponse is the response for getting a spinning fixed-cost pool."
+    },
+    "v1ListSpinFixedCostsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpinFixedCost"
+          },
+          "description": "List of spinning fixed-cost pools."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListSpinFixedCostsResponse is the response for listing spinning fixed-cost pools."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1SpinFixedCost": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "period": {
+          "type": "string",
+          "description": "Period in YYYYMM format (e.g., \"202606\"). Immutable after creation."
+        },
+        "commonPoyDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Common POY denier for the period. Used as a divisor by the calc engine."
+        },
+        "poyProduction": {
+          "type": "number",
+          "format": "double",
+          "description": "Total POY production for the period. Used as a divisor by the calc engine."
+        },
+        "spinPowerMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "Monthly spinning power cost."
+        },
+        "spinManpowerMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "Monthly spinning manpower cost."
+        },
+        "spinOverheadsMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "Monthly spinning overheads cost."
+        },
+        "spinConssprsMonth": {
+          "type": "number",
+          "format": "double",
+          "description": "Monthly spinning consumable spare parts cost."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "SpinFixedCost represents the monthly POY (HOY) spinning fixed-cost pool.\nExactly one live row exists per period; the pool is shared by every POY product."
+    },
+    "v1UpdateSpinFixedCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1SpinFixedCost",
+          "description": "Updated spinning fixed-cost pool data."
+        }
+      },
+      "description": "UpdateSpinFixedCostResponse is the response for updating a spinning fixed-cost pool."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

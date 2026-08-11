@@ -199,6 +199,22 @@ func (s *ProcessChunkSuite) seedCAPPAndCPP() {
 		INSERT INTO cost_product_applicable_param (capp_product_sys_id, capp_param_id, capp_is_required, capp_created_by)
 		VALUES ($1, $2, FALSE, $3)`, s.productID, rawRateID, s.actor)
 	require.NoError(s.T(), err)
+
+	// The product must ALSO own the formula's *result* param. LoadFormulas
+	// (loadPerProductFormulas) only returns formulas whose result_param_id is
+	// assigned to the product via cost_product_applicable_param — that join is
+	// what scopes global formulas to the products they actually apply to.
+	// Without this row the fixture's COST_STAGE_OUT formula is never loaded,
+	// the product silently degrades to pure-RM cost (25.0 instead of 32.0),
+	// and the failure looks misleadingly like a missing CAPP *value*.
+	// No cost_product_parameter row here on purpose: COST_STAGE_OUT is a
+	// formula output, not a filled-in input.
+	_, err = s.raw.ExecContext(s.ctx, `
+		INSERT INTO cost_product_applicable_param (capp_product_sys_id, capp_param_id, capp_is_required, capp_created_by)
+		VALUES ($1, $2, FALSE, $3)
+		ON CONFLICT (capp_product_sys_id, capp_param_id) DO NOTHING`,
+		s.productID, s.paramIDs["COST_STAGE_OUT"], s.actor)
+	require.NoError(s.T(), err)
 	if s.cappValue {
 		_, err := s.raw.ExecContext(s.ctx, `
 			INSERT INTO cost_product_parameter (cpp_product_sys_id, cpp_param_id, cpp_value_numeric, cpp_filled_by, cpp_created_by)
