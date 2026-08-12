@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"maps"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc/evaluator"
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
@@ -67,15 +69,13 @@ type BatchError struct {
 // MB Head's auto-gen'd product, for the given period, in nested-MB dependency order
 // (design doc §10.3).
 //
-// KNOWN GAP (pre-existing, not introduced by ENG-MB-02): the dependency ordering does NOT
-// currently make a child's cost visible to its parent within the same run. Results are
-// written through tx (persistResult), but the parent's upstream read goes through
-// s.loader, which holds the *sql.DB pool rather than this transaction
-// (costcalc.productLoader). Under READ COMMITTED the uncommitted in-batch writes are
-// invisible, so a parent whose child is computed in this same batch reads the previous
-// committed run's value — or fails with ErrMissingUpstreamCost if no committed row exists
-// yet. Ordering only pays off across runs. Closing this needs the loader to accept a
-// transaction, which changes the interface shared with the yarn path; tracked separately.
+// Nested MBs resolve in ONE run at any depth: results are written through tx, which the
+// *sql.DB-backed loader cannot see under READ COMMITTED, so each MB's freshly computed
+// cost is also published to a per-run batchCosts cache and overlaid on the loader's result
+// (see batchcosts.go). Because candidates are topologically sorted deepest-child-first,
+// a parent always finds its children already published. This keeps costcalc.ProductLoader
+// — shared with the yarn path — untouched.
+//
 // A single MB's failure is recorded in the returned BatchResult.Errors and does not abort
 // the remaining MBs in the batch (mirrors mbpush.ExecuteHandler.executeBatch).
 // jobID is the cal_job row this batch runs under; it is stamped onto every persisted
@@ -102,8 +102,9 @@ func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadC
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "mb_batch:"+period); err != nil {
 		return fmt.Errorf("acquire mb batch lock for period %s: %w", period, err)
 	}
+	costs := newBatchCosts(candidates)
 	for _, c := range candidates {
-		if err := s.runOneMB(ctx, tx, c, period, jobID); err != nil {
+		if err := s.runOneMB(ctx, tx, c, period, jobID, costs); err != nil {
 			result.Errors = append(result.Errors, BatchError{MBHID: c.MBHID, Error: err.Error()})
 			continue
 		}
@@ -116,12 +117,13 @@ func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadC
 // runOneMB computes and persists all 3 calc-type rows for one MB's auto-gen'd product,
 // isolated in its own savepoint so this MB's failure does not need to abort the whole batch
 // caller's transaction (mirrors mbpush.ExecuteHandler.pushOneMB).
-func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64) error {
+func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64, costs *batchCosts) error {
 	const savepoint = "sp_mb_batch"
 	if _, err := tx.ExecContext(ctx, "SAVEPOINT "+savepoint); err != nil {
 		return fmt.Errorf("savepoint: %w", err)
 	}
-	if err := s.computeAndPersist(ctx, tx, c, period, jobID); err != nil {
+	computed, err := s.computeAndPersist(ctx, tx, c, period, jobID, costs)
+	if err != nil {
 		if _, rbErr := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT "+savepoint); rbErr != nil {
 			return fmt.Errorf("rollback to savepoint after %w: %w", err, rbErr)
 		}
@@ -130,27 +132,29 @@ func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, p
 	if _, err := tx.ExecContext(ctx, "RELEASE SAVEPOINT "+savepoint); err != nil {
 		return fmt.Errorf("release savepoint: %w", err)
 	}
+	// Published only after RELEASE: a rolled-back MB must not feed a value to its parent.
+	costs.publish(c.CostProductID, computed)
 	return nil
 }
 
-func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64) error {
+func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64, costs *batchCosts) (map[costcalcdom.CalculationType]float64, error) {
 	productSysID := c.CostProductID
 
 	cappByProduct, err := s.loader.LoadCAPP(ctx, []int64{productSysID})
 	if err != nil {
-		return fmt.Errorf("load capp: %w", err)
+		return nil, fmt.Errorf("load capp: %w", err)
 	}
 	formulasByProduct, err := s.loader.LoadFormulas(ctx, []int64{productSysID})
 	if err != nil {
-		return fmt.Errorf("load formulas: %w", err)
+		return nil, fmt.Errorf("load formulas: %w", err)
 	}
 	routesByProduct, err := s.loader.LoadRoutesByProducts(ctx, []int64{productSysID})
 	if err != nil {
-		return fmt.Errorf("load route: %w", err)
+		return nil, fmt.Errorf("load route: %w", err)
 	}
 	route, ok := routesByProduct[productSysID]
 	if !ok || route == nil {
-		return fmt.Errorf("no COMPLETE/LOCKED route found for product %d", productSysID)
+		return nil, fmt.Errorf("no COMPLETE/LOCKED route found for product %d", productSysID)
 	}
 
 	allFormulas := formulasByProduct[productSysID]
@@ -165,11 +169,18 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 	for _, calcType := range mbBatchCalcTypes {
 		rmCosts, err := s.loader.LoadRMCosts(ctx, groupCodes, period, string(calcType))
 		if err != nil {
-			return fmt.Errorf("load rm costs (%s): %w", calcType, err)
+			return nil, fmt.Errorf("load rm costs (%s): %w", calcType, err)
 		}
-		upstream, err := s.loadUpstreamCosts(ctx, nestedMBProducts, period, string(calcType))
+		upstream, err := s.loadUpstreamCosts(ctx, upstreamRequest{
+			products: nestedMBProducts,
+			period:   period,
+			calcType: calcType,
+			parent:   c,
+			jobID:    jobID,
+			costs:    costs,
+		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		typeCAPP := capp
@@ -192,7 +203,7 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 			EvalCache:     s.evalCache,
 		})
 		if err != nil {
-			return fmt.Errorf("compute %s: %w", calcType, err)
+			return nil, fmt.Errorf("compute %s: %w", calcType, err)
 		}
 		outputs[calcType] = out
 
@@ -201,25 +212,70 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 		}
 	}
 
+	computed := make(map[costcalcdom.CalculationType]float64, len(outputs))
 	for _, calcType := range mbBatchCalcTypes {
 		if err := s.persistResult(ctx, tx, productSysID, period, calcType, route.Head.HeadID, jobID, outputs[calcType]); err != nil {
-			return fmt.Errorf("persist %s: %w", calcType, err)
+			return nil, fmt.Errorf("persist %s: %w", calcType, err)
 		}
+		computed[calcType] = outputs[calcType].CostPerUnit
 	}
-	return nil
+	return computed, nil
 }
 
-// loadUpstreamCosts resolves this MB's nested-MB PRODUCT-type RM references from
-// cst_product_cost, for the given calc type. No PRODUCT-type RMs returns an empty map.
-func (s *Service) loadUpstreamCosts(ctx context.Context, products []int64, period, calcType string) (map[int64]float64, error) {
-	if len(products) == 0 {
+// upstreamRequest carries everything loadUpstreamCosts needs, including the parent MB and
+// job so a fallback can be logged with enough identity for finance to act on it.
+type upstreamRequest struct {
+	products []int64
+	period   string
+	calcType costcalcdom.CalculationType
+	parent   MBHeadCandidate
+	jobID    int64
+	costs    *batchCosts
+}
+
+// loadUpstreamCosts resolves this MB's nested-MB PRODUCT-type RM references, for the given
+// calc type. It reads the committed cst_product_cost rows via the loader, then overlays the
+// costs this run has already computed (in.costs) so a child computed moments ago in the same
+// batch wins over the previous run's value. No PRODUCT-type RMs returns an empty map.
+func (s *Service) loadUpstreamCosts(ctx context.Context, in upstreamRequest) (map[int64]float64, error) {
+	if len(in.products) == 0 {
 		return map[int64]float64{}, nil
 	}
-	upstream, err := s.loader.LoadUpstreamCosts(ctx, products, period, calcType)
+	upstream, err := s.loader.LoadUpstreamCosts(ctx, in.products, in.period, string(in.calcType))
 	if err != nil {
-		return nil, fmt.Errorf("load upstream costs (%s): %w", calcType, err)
+		return nil, fmt.Errorf("load upstream costs (%s): %w", in.calcType, err)
 	}
+	if upstream == nil {
+		upstream = make(map[int64]float64, len(in.products))
+	}
+	in.costs.overlay(upstream, in.calcType, in.products)
+	s.warnUnscheduledChildren(in, upstream)
 	return upstream, nil
+}
+
+// warnUnscheduledChildren logs every nested-MB reference this run cannot compute because the
+// child MB Head is not VALIDATED, so it was never a batch candidate. Its parent silently
+// prices through whatever cst_product_cost already holds — the previous period's or run's
+// figure, or nothing at all — and that is exactly the case finance needs told about rather
+// than discovering as a wrong number weeks later.
+func (s *Service) warnUnscheduledChildren(in upstreamRequest, upstream map[int64]float64) {
+	for _, pid := range in.products {
+		if in.costs.scheduled(pid) {
+			continue
+		}
+		prior, hasPrior := upstream[pid]
+		log.Warn().
+			Int64("job_id", in.jobID).
+			Str("period", in.period).
+			Str("calc_type", string(in.calcType)).
+			Str("parent_mbh_id", in.parent.MBHID).
+			Str("parent_mb_code", in.parent.Code).
+			Int64("parent_product_sys_id", in.parent.CostProductID).
+			Int64("child_product_sys_id", pid).
+			Bool("has_prior_cost", hasPrior).
+			Float64("prior_cost_per_unit", prior).
+			Msg("nested MB child is not VALIDATED so it is not computed in this batch: parent prices it from the previously committed cost, validate the child MB Head to have it recomputed here")
+	}
 }
 
 // mergeCAPP layers sharedVals (the ACTUAL pass's SHARED formula outputs) over base CAPP,
