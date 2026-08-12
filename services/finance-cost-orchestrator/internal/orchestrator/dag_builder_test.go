@@ -143,3 +143,133 @@ func TestDagBuilder_Filtered_RequiresTypeID(t *testing.T) {
 	_, _, err := b.Build(context.Background(), ScopeInput{Scope: costcalc.ScopeFiltered})
 	require.Error(t, err)
 }
+
+// mbTypeID returns the MB product type id, skipping when the dev DB has none.
+func mbTypeID(t *testing.T, db *sql.DB) int32 {
+	t.Helper()
+	var id int32
+	err := db.QueryRowContext(context.Background(),
+		`SELECT cpt_type_id FROM cost_product_type WHERE cpt_type_code = $1`, typeCodeMB).Scan(&id)
+	if err == sql.ErrNoRows {
+		t.Skip("no MB product type in dev DB; skip")
+	}
+	require.NoError(t, err)
+	return id
+}
+
+// A FILTERED job naming the MB type is a user mistake, not an empty result: MB is owned
+// by the MB Batch path. It must fail loudly rather than report SUCCESS having computed
+// nothing.
+func TestDagBuilder_FilteredByMBType_Rejected(t *testing.T) {
+	db := openTestDB(t)
+	defer func() { _ = db.Close() }()
+	b := NewDagBuilder(db)
+
+	_, _, err := b.Build(context.Background(), ScopeInput{
+		Scope:               costcalc.ScopeFiltered,
+		ProductTypeIDFilter: mbTypeID(t, db),
+	})
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrMBScopeNotAllowed)
+}
+
+// Same rule when the MB is named directly by product id.
+func TestDagBuilder_SingleProductMB_Rejected(t *testing.T) {
+	db := openTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	var mbProduct int64
+	err := db.QueryRowContext(context.Background(), `
+		SELECT pm.cpm_product_sys_id
+		FROM cost_product_master pm
+		JOIN cost_product_type pt ON pt.cpt_type_id = pm.cpm_product_type_id
+		WHERE pt.cpt_type_code = $1
+		LIMIT 1`, typeCodeMB).Scan(&mbProduct)
+	if err == sql.ErrNoRows {
+		t.Skip("no MB products in dev DB; skip")
+	}
+	require.NoError(t, err)
+
+	b := NewDagBuilder(db)
+	_, _, err = b.Build(context.Background(), ScopeInput{
+		Scope:        costcalc.ScopeSingleProduct,
+		ProductSysID: mbProduct,
+	})
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrMBScopeNotAllowed)
+}
+
+// ALL excludes MB silently — the user asked for the calc engine's own population, which
+// does not include MB. This is the assertion that the exclusion predicate actually bites.
+func TestDagBuilder_All_ExcludesMBFromSeedSet(t *testing.T) {
+	db := openTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	seed, err := NewDagBuilder(db).allActiveProducts(context.Background())
+	require.NoError(t, err)
+	if len(seed) == 0 {
+		t.Skip("no active routes in dev DB")
+	}
+
+	rows, err := db.QueryContext(context.Background(), `
+		SELECT pm.cpm_product_sys_id
+		FROM cost_product_master pm
+		JOIN cost_product_type pt ON pt.cpt_type_id = pm.cpm_product_type_id
+		WHERE pt.cpt_type_code = $1`, typeCodeMB)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+
+	mb := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		require.NoError(t, rows.Scan(&id))
+		mb[id] = true
+	}
+	require.NoError(t, rows.Err())
+	if len(mb) == 0 {
+		t.Skip("no MB products in dev DB; nothing to exclude")
+	}
+
+	for _, id := range seed {
+		require.False(t, mb[id], "MB product %d must not be in the ScopeAll seed set", id)
+	}
+}
+
+// The other product types must be entirely unaffected — this is the guarantee that the MB
+// exclusion does not disturb the yarn path. Every non-MB product with an active route is
+// still selected.
+func TestDagBuilder_All_KeepsEveryNonMBProduct(t *testing.T) {
+	db := openTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	seed, err := NewDagBuilder(db).allActiveProducts(context.Background())
+	require.NoError(t, err)
+	if len(seed) == 0 {
+		t.Skip("no active routes in dev DB")
+	}
+	got := map[int64]bool{}
+	for _, id := range seed {
+		got[id] = true
+	}
+
+	rows, err := db.QueryContext(context.Background(), `
+		SELECT DISTINCT crh.crh_product_sys_id
+		FROM cost_route_head crh
+		WHERE crh.crh_routing_status IN ('COMPLETE','LOCKED')
+		  AND crh.crh_deleted_at IS NULL
+		  AND NOT EXISTS (
+		    SELECT 1 FROM cost_product_master pm
+		    JOIN cost_product_type pt ON pt.cpt_type_id = pm.cpm_product_type_id
+		    WHERE pm.cpm_product_sys_id = crh.crh_product_sys_id
+		      AND pt.cpt_type_code = $1
+		  )`, typeCodeMB)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var id int64
+		require.NoError(t, rows.Scan(&id))
+		require.True(t, got[id], "non-MB product %d with an active route must still be selected", id)
+	}
+	require.NoError(t, rows.Err())
+}

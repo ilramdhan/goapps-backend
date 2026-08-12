@@ -1238,6 +1238,7 @@ func mappedCostCalcErrToBase(err error) *commonv1.BaseResponse {
 	case errors.Is(err, costcalc.ErrScopeNotYetSupported):
 		return ErrorResponse("501", err.Error())
 	case errors.Is(err, costcalc.ErrProductRequired),
+		errors.Is(err, costcalc.ErrMBNotCalcJobEligible),
 		errors.Is(err, costcalcdom.ErrInvalidPeriod):
 		return ErrorResponse("400", err.Error())
 	// Configuration gap, not a server fault: Finance has not entered a

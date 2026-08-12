@@ -566,7 +566,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	)
 	costCalcHandler := grpcdelivery.NewCostCalcHandler(
 		calcSvc,
-		costcalc.NewTriggerJobHandler(calcSvc),
+		costcalc.NewTriggerJobHandler(calcSvc, costcalc.WithMBGuard(postgres.NewMBTypeChecker(db))),
 		costcalc.NewGetJobHandler(calcSvc),
 		costcalc.NewListJobsHandler(calcSvc),
 		costcalc.NewListChunksHandler(calcSvc),
