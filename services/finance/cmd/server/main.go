@@ -560,13 +560,17 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costAuditHistoryRepo := postgres.NewCostAuditHistoryRepository(db)
 	calcEvalCache := evaluator.NewCache()
 	calcLoader := costcalc.NewProductLoader(db.DB)
+	// One checker instance serves all three MB guards: the trigger-time scope rejection,
+	// the persist-time refusal inside ProcessChunk, and the manual verify/approve block.
+	mbTypeChecker := postgres.NewMBTypeChecker(db)
 	calcSvc := costcalc.NewService(
 		calcJobRepo, calcChunkRepo, calcJobProductRepo, costResultRepo, costAuditHistoryRepo,
 		calcLoader, calcEvalCache, nil, costCalcJobTriggerPub,
+		costcalc.WithMBProductGuard(mbTypeChecker),
 	)
 	costCalcHandler := grpcdelivery.NewCostCalcHandler(
 		calcSvc,
-		costcalc.NewTriggerJobHandler(calcSvc, costcalc.WithMBGuard(postgres.NewMBTypeChecker(db))),
+		costcalc.NewTriggerJobHandler(calcSvc, costcalc.WithMBGuard(mbTypeChecker)),
 		costcalc.NewGetJobHandler(calcSvc),
 		costcalc.NewListJobsHandler(calcSvc),
 		costcalc.NewListChunksHandler(calcSvc),
@@ -577,8 +581,8 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costcalc.NewListCostHistoryHandler(calcSvc),
 		costcalc.NewListCostResultsHandler(calcSvc),
 		costcalc.NewPeriodsHandler(calcSvc),
-		costcalc.NewVerifyCostHandler(calcSvc),
-		costcalc.NewApproveCostHandler(calcSvc),
+		costcalc.NewVerifyCostHandler(calcSvc, costcalc.WithVerifyMBGuard(mbTypeChecker)),
+		costcalc.NewApproveCostHandler(calcSvc, costcalc.WithApproveMBGuard(mbTypeChecker)),
 		costcalc.NewGetRouteCostSheetHandler(calcSvc),
 		costsheet.NewRequestExportHandler(jobRepo, costResultRepo, costSheetExportPublisher),
 		costSheetExportURL,
@@ -592,7 +596,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// MB Push-to-Head: adapts MBHeadRepository/CostResultRepository to mbpush's ports.
 	mbPushHeadReader := mbpush.NewMBHeadReaderAdapter(mbHeadRepo)
 	mbPushCostReader := mbpush.NewCostReaderAdapter(costResultRepo)
-	mbPushPreviewHandler := mbpush.NewPreviewHandler(mbPushHeadReader, mbPushCostReader)
+	mbPushPreviewHandler := mbpush.NewPreviewHandler(mbPushHeadReader, mbPushCostReader, cstMBCostRepo)
 	mbPushExecuteHandler := mbpush.NewExecuteHandler(db, mbPushHeadReader, mbPushCostReader, cstMBCostRepo, mbPushLogRepo)
 	mbPushHandler, err := grpcdelivery.NewMBPushHandler(mbPushPreviewHandler, mbPushExecuteHandler, mbPushLogRepo)
 	if err != nil {

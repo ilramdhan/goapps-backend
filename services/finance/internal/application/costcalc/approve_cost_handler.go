@@ -14,12 +14,26 @@ type ApproveCostCommand struct {
 
 // ApproveCostHandler transitions a VERIFIED result to APPROVED.
 type ApproveCostHandler struct {
-	svc *Service
+	svc     *Service
+	mbGuard MBCostRowChecker
+}
+
+// ApproveOption customizes the handler at construction.
+type ApproveOption func(*ApproveCostHandler)
+
+// WithApproveMBGuard installs the MB rejection check. Omitting it leaves the check
+// disabled; tests omit it.
+func WithApproveMBGuard(c MBCostRowChecker) ApproveOption {
+	return func(h *ApproveCostHandler) { h.mbGuard = c }
 }
 
 // NewApproveCostHandler constructs the handler.
-func NewApproveCostHandler(svc *Service) *ApproveCostHandler {
-	return &ApproveCostHandler{svc: svc}
+func NewApproveCostHandler(svc *Service, opts ...ApproveOption) *ApproveCostHandler {
+	h := &ApproveCostHandler{svc: svc}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // Handle executes the approval.
@@ -29,6 +43,9 @@ func (h *ApproveCostHandler) Handle(ctx context.Context, cmd ApproveCostCommand)
 	}
 	if cmd.Actor == "" {
 		return errors.New(errMsgActorRequired)
+	}
+	if err := rejectMBCostRow(ctx, h.mbGuard, cmd.CostID); err != nil {
+		return err
 	}
 	if err := h.svc.resultRepo.MarkApproved(ctx, cmd.CostID, cmd.Actor); err != nil {
 		return fmt.Errorf("mark approved: %w", err)

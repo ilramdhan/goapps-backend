@@ -42,7 +42,7 @@ func (h *MBPushHandler) PreviewPushToHead(ctx context.Context, req *financev1.Pr
 		return &financev1.PreviewPushToHeadResponse{Base: baseResp}, nil
 	}
 
-	pushable, skipped, err := h.previewHandler.Preview(ctx, req.Period)
+	result, err := h.previewHandler.Preview(ctx, req.Period)
 	if err != nil {
 		RecordMBPushOperation("preview", false)
 		return &financev1.PreviewPushToHeadResponse{Base: domainErrorToBaseResponse(err)}, nil
@@ -50,19 +50,20 @@ func (h *MBPushHandler) PreviewPushToHead(ctx context.Context, req *financev1.Pr
 
 	RecordMBPushOperation("preview", true)
 
-	pushableItems := make([]*financev1.PushableMbHead, len(pushable))
-	for i, p := range pushable {
+	pushableItems := make([]*financev1.PushableMbHead, len(result.Pushable))
+	for i, p := range result.Pushable {
 		pushableItems[i] = pushableMBHeadToProto(p)
 	}
-	skippedItems := make([]*financev1.SkippedMbHead, len(skipped))
-	for i, s := range skipped {
+	skippedItems := make([]*financev1.SkippedMbHead, len(result.Skipped))
+	for i, s := range result.Skipped {
 		skippedItems[i] = skippedMBHeadToProto(s)
 	}
 
 	return &financev1.PreviewPushToHeadResponse{
-		Base:     successResponse("MB push preview retrieved successfully"),
-		Pushable: pushableItems,
-		Skipped:  skippedItems,
+		Base:             successResponse("MB push preview retrieved successfully"),
+		Pushable:         pushableItems,
+		Skipped:          skippedItems,
+		NeedsRepushCount: result.NeedsRepushCount,
 	}, nil
 }
 
@@ -146,6 +147,7 @@ func pushableMBHeadToProto(p appmbpush.PushableMBHead) *financev1.PushableMbHead
 		HasActual:   p.HasActual,
 		HasSelling:  p.HasSelling,
 		HasForecast: p.HasForecast,
+		NeedsRepush: p.NeedsRepush,
 	}
 }
 

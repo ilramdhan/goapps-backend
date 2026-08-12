@@ -14838,7 +14838,12 @@ type PushableMbHead struct {
 	// Whether a SELLING cost value is available to push.
 	HasSelling bool `protobuf:"varint,5,opt,name=has_selling,json=hasSelling,proto3" json:"has_selling,omitempty"`
 	// Whether a FORECAST cost value is available to push.
-	HasForecast   bool `protobuf:"varint,6,opt,name=has_forecast,json=hasForecast,proto3" json:"has_forecast,omitempty"`
+	HasForecast bool `protobuf:"varint,6,opt,name=has_forecast,json=hasForecast,proto3" json:"has_forecast,omitempty"`
+	// Whether this head was already pushed for the period but its pushed cost has since gone
+	// stale — the source cst_product_cost row is SUPERSEDED (or unlinked) and a newer
+	// non-superseded row exists. Informational only: such a head is still pushable, and
+	// re-pushing is exactly the remedy.
+	NeedsRepush   bool `protobuf:"varint,7,opt,name=needs_repush,json=needsRepush,proto3" json:"needs_repush,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -14911,6 +14916,13 @@ func (x *PushableMbHead) GetHasSelling() bool {
 func (x *PushableMbHead) GetHasForecast() bool {
 	if x != nil {
 		return x.HasForecast
+	}
+	return false
+}
+
+func (x *PushableMbHead) GetNeedsRepush() bool {
+	if x != nil {
+		return x.NeedsRepush
 	}
 	return false
 }
@@ -14996,9 +15008,12 @@ type PreviewPushToHeadResponse struct {
 	// MB Heads eligible for push.
 	Pushable []*PushableMbHead `protobuf:"bytes,2,rep,name=pushable,proto3" json:"pushable,omitempty"`
 	// MB Heads excluded from push, with reasons.
-	Skipped       []*SkippedMbHead `protobuf:"bytes,3,rep,name=skipped,proto3" json:"skipped,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Skipped []*SkippedMbHead `protobuf:"bytes,3,rep,name=skipped,proto3" json:"skipped,omitempty"`
+	// Count of pushable heads flagged needs_repush — heads whose already-pushed cost went stale
+	// after a later MB Batch run. Surfaced as its own bucket so operators can act on it.
+	NeedsRepushCount int32 `protobuf:"varint,4,opt,name=needs_repush_count,json=needsRepushCount,proto3" json:"needs_repush_count,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *PreviewPushToHeadResponse) Reset() {
@@ -15050,6 +15065,13 @@ func (x *PreviewPushToHeadResponse) GetSkipped() []*SkippedMbHead {
 		return x.Skipped
 	}
 	return nil
+}
+
+func (x *PreviewPushToHeadResponse) GetNeedsRepushCount() int32 {
+	if x != nil {
+		return x.NeedsRepushCount
+	}
+	return 0
 }
 
 // ExecutePushToHeadRequest is the request for executing a push-to-head batch for a period.
@@ -17013,7 +17035,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"E\n" +
 	"\x18PreviewPushToHeadRequest\x12)\n" +
 	"\x06period\x18\x01 \x01(\tB\x11\xbaH\x0er\f2\n" +
-	"^[0-9]{6}$R\x06period\"\xb2\x01\n" +
+	"^[0-9]{6}$R\x06period\"\xd5\x01\n" +
 	"\x0ePushableMbHead\x12\x15\n" +
 	"\x06mbh_id\x18\x01 \x01(\tR\x05mbhId\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -17022,16 +17044,18 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"has_actual\x18\x04 \x01(\bR\thasActual\x12\x1f\n" +
 	"\vhas_selling\x18\x05 \x01(\bR\n" +
 	"hasSelling\x12!\n" +
-	"\fhas_forecast\x18\x06 \x01(\bR\vhasForecast\"f\n" +
+	"\fhas_forecast\x18\x06 \x01(\bR\vhasForecast\x12!\n" +
+	"\fneeds_repush\x18\a \x01(\bR\vneedsRepush\"f\n" +
 	"\rSkippedMbHead\x12\x15\n" +
 	"\x06mbh_id\x18\x01 \x01(\tR\x05mbhId\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\"\xb5\x01\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"\xe3\x01\n" +
 	"\x19PreviewPushToHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x126\n" +
 	"\bpushable\x18\x02 \x03(\v2\x1a.finance.v1.PushableMbHeadR\bpushable\x123\n" +
-	"\askipped\x18\x03 \x03(\v2\x19.finance.v1.SkippedMbHeadR\askipped\"o\n" +
+	"\askipped\x18\x03 \x03(\v2\x19.finance.v1.SkippedMbHeadR\askipped\x12,\n" +
+	"\x12needs_repush_count\x18\x04 \x01(\x05R\x10needsRepushCount\"o\n" +
 	"\x18ExecutePushToHeadRequest\x12)\n" +
 	"\x06period\x18\x01 \x01(\tB\x11\xbaH\x0er\f2\n" +
 	"^[0-9]{6}$R\x06period\x12(\n" +
