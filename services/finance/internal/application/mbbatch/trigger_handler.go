@@ -55,7 +55,7 @@ func (h *TriggerHandler) Handle(ctx context.Context, period, actor string) (*Tri
 		return nil, err
 	}
 
-	batchResult, runErr := h.svc.RunMBBatch(ctx, period)
+	batchResult, runErr := h.svc.RunMBBatch(ctx, period, job.ID())
 	if runErr != nil {
 		if compErr := h.failJob(ctx, job, runErr); compErr != nil {
 			return nil, compErr

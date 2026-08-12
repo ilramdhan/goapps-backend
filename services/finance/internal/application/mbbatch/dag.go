@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 )
 
@@ -53,6 +55,14 @@ func topoSortMBHeads(candidates []MBHeadCandidate, byID map[string]MBHeadCandida
 	seenEdge := make(map[[2]string]struct{}, len(edges))
 	for _, e := range edges {
 		if _, ok := byID[e.RefMBHID]; !ok {
+			// The referenced child MB Head is not VALIDATED, so it is not a candidate and
+			// cannot be computed in this run. Say so once per edge: the parent will fall
+			// back to the child's previously committed cost (see warnUnscheduledChildren).
+			log.Warn().
+				Str("parent_mbh_id", e.MBHID).
+				Str("parent_mb_code", byID[e.MBHID].Code).
+				Str("child_mbh_id", e.RefMBHID).
+				Msg("mb dag: nested MB reference skipped, referenced MB Head is not VALIDATED and will not be recomputed in this batch")
 			continue
 		}
 		if e.MBHID == e.RefMBHID {

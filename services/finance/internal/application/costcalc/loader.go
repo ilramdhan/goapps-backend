@@ -871,31 +871,57 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 // LoadUpstreamCosts
 // =============================================================================
 
-// LoadUpstreamCosts returns the captive cost of upstream products that were
-// already calculated in prior waves of the same job. Rows in SUPERSEDED status
-// are excluded.
+// LoadUpstreamCosts returns the per-unit cost of upstream products that were already
+// calculated in prior waves of the same job, for products referenced as PRODUCT-type
+// RMs. Rows in SUPERSEDED status are excluded. The column read depends on the
+// upstream's product type.
 //
-// The value returned is CAPTIVE_COST_QLTY_LOSS (cost sheet row 61), NOT
-// cpc_cost_per_unit. When a downstream stage references an upstream product as a
-// PRODUCT-type RM, the upstream's captive cost becomes the downstream's RM_RATE
-// (row 6) and RM_LANDED_COST (row 7) — visible in the export template, where
-// row 61 of column k is byte-identical to row 6 of column k+1 across every
-// adjacent pair of route stages.
+// # Yarn and every non-MB type: CAPTIVE_COST_QLTY_LOSS (cpc_captive_cost)
 //
-// This is what the Oracle DSL in F_YARN_RM_RATE (migration 000408) already
-// specifies: `upstream_product(rm_product_legacy_id).COST_CAP_FINAL`, where
-// COST_CAP_FINAL is the pre-000406 alias of CAPTIVE_COST_QLTY_LOSS.
+// Cost sheet row 61, NOT cpc_cost_per_unit. When a downstream stage references an
+// upstream product as a PRODUCT-type RM, the upstream's captive cost becomes the
+// downstream's RM_RATE (row 6) and RM_LANDED_COST (row 7) — visible in the export
+// template, where row 61 of column k is byte-identical to row 6 of column k+1 across
+// every adjacent pair of route stages. This is what the Oracle DSL in F_YARN_RM_RATE
+// (migration 000408) already specifies: `upstream_product(rm_product_legacy_id).COST_CAP_FINAL`,
+// where COST_CAP_FINAL is the pre-000406 alias of CAPTIVE_COST_QLTY_LOSS.
 //
-// cpc_cost_per_unit is the wrong source: it is whatever resolveFinalCost's
+// cpc_cost_per_unit is the wrong source here: it is whatever resolveFinalCost's
 // terminal-formula heuristic settled on, which for most yarn products is
 // DELIVERY_COST_QLTY_LOSS (row 62) — delivery cost, one step past the captive
-// hand-off. On 202604/ACTUAL it matched delivery for 3,133 rows, captive for
-// only 573, and neither for 5,921.
+// hand-off. On 202604/ACTUAL it matched delivery for 3,133 rows, captive for only
+// 573, and neither for 5,921.
 //
-// COALESCE to 0 rather than skipping NULL rows: a NULL cpc_captive_cost means
-// the upstream was calculated before T3.1 fixed the snapshot keys. Returning 0
-// keeps the map entry present so resolveRMUnitCost reports a zero cost instead
-// of the misleading ErrMissingUpstreamCost ("not calculated yet").
+// COALESCE to 0 rather than skipping NULL rows: a NULL cpc_captive_cost means the
+// upstream was calculated before T3.1 fixed the snapshot keys. Returning 0 keeps the
+// map entry present so resolveRMUnitCost reports a zero cost instead of the
+// misleading ErrMissingUpstreamCost ("not calculated yet"). This legacy tolerance is
+// deliberately yarn-only.
+//
+// # MB (cpt_type_code = 'MB'): cpc_cost_per_unit
+//
+// Captive cost is a yarn cost-sheet concept. mbbatch never computes one — it passes a
+// literal 0 for the captive argument and the insert wraps that in NULLIF, so every MB
+// row stores NULL. Reading captive for a nested-MB reference therefore COALESCEd to 0
+// while keeping the map key present, which suppressed the ErrMissingUpstreamCost guard
+// and silently deleted the whole nested contribution from the parent MB's RM cost
+// (defect ENG-MB-02).
+//
+// cpc_cost_per_unit is what MB's own seeded formula already specifies: migration
+// 000452's F_MB_RM_COST branches on `mbcm_source_type='MB'` to
+// `cst_product_cost.cpc_cost_per_unit[MB_ref, period, cost_type]`.
+//
+// No COALESCE on this branch, by design: cpc_cost_per_unit is NOT NULL (migration
+// 000228), so a present row always carries a real value and an absent row leaves the
+// key absent — which is exactly what makes compute raise ErrMissingUpstreamCost and
+// mark the parent BLOCKED instead of publishing a quietly wrong number.
+//
+// # Join safety
+//
+// Both JOINs are INNER over NOT NULL foreign keys (cpc_product_sys_id → 000228;
+// cpm_product_type_id → 000106), so no row is lost. The partial unique index
+// uk_cpc_active (000228) admits at most one non-SUPERSEDED row per
+// (product, period, calc_type), so the JOINs cannot fan out into duplicate map keys.
 func (l *productLoader) LoadUpstreamCosts(ctx context.Context, productSysIDs []int64, period, calcType string) (map[int64]float64, error) {
 	defer observeLoad(loaderKindUpstream, time.Now())
 	out := map[int64]float64{}
@@ -906,12 +932,18 @@ func (l *productLoader) LoadUpstreamCosts(ctx context.Context, productSysIDs []i
 		return nil, errors.New("LoadUpstreamCosts: period and calcType are required")
 	}
 	const q = `
-		SELECT cpc_product_sys_id, COALESCE(cpc_captive_cost, 0)
-		FROM cst_product_cost
-		WHERE cpc_product_sys_id = ANY($1)
-		  AND cpc_period = $2
-		  AND cpc_calculation_type = $3
-		  AND cpc_status <> 'SUPERSEDED'`
+		SELECT pc.cpc_product_sys_id,
+		       CASE WHEN pt.cpt_type_code = 'MB'
+		            THEN pc.cpc_cost_per_unit
+		            ELSE COALESCE(pc.cpc_captive_cost, 0)
+		       END
+		FROM cst_product_cost pc
+		JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = pc.cpc_product_sys_id
+		JOIN cost_product_type   pt  ON pt.cpt_type_id         = cpm.cpm_product_type_id
+		WHERE pc.cpc_product_sys_id = ANY($1)
+		  AND pc.cpc_period = $2
+		  AND pc.cpc_calculation_type = $3
+		  AND pc.cpc_status <> 'SUPERSEDED'`
 	rows, err := l.db.QueryContext(ctx, q, pq.Array(productSysIDs), period, calcType)
 	if err != nil {
 		return nil, fmt.Errorf("load upstream costs: %w", err)

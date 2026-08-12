@@ -78,18 +78,20 @@ func TestTopoSortFormulas_Empty(t *testing.T) {
 
 type LoaderSuite struct {
 	suite.Suite
-	ctx         context.Context
-	db          *sql.DB
-	loader      ProductLoader
-	productIDs  []int64 // 3 products
-	upstreamID  int64   // additional product used as an upstream reference
-	upstreamNil int64   // upstream whose cpc_captive_cost is NULL (pre-T3.1 data)
-	headIDs     []int64 // route heads, 1 per product
-	formulaIDs  []string
-	paramIDs    map[string]string // paramCode → uuid
-	period      string
-	calcType    string
-	actor       string
+	ctx            context.Context
+	db             *sql.DB
+	loader         ProductLoader
+	productIDs     []int64 // 3 products
+	upstreamID     int64   // yarn-typed upstream; cpc_captive_cost populated
+	upstreamNil    int64   // yarn-typed upstream whose cpc_captive_cost is NULL (pre-T3.1 data)
+	upstreamMB     int64   // MB-typed upstream; must resolve via cpc_cost_per_unit
+	upstreamMBNone int64   // MB-typed upstream with NO cst_product_cost row at all
+	headIDs        []int64 // route heads, 1 per product
+	formulaIDs     []string
+	paramIDs       map[string]string // paramCode → uuid
+	period         string
+	calcType       string
+	actor          string
 	// fixture tagging for cleanup
 	codePrefix string
 }
@@ -137,7 +139,7 @@ func (s *LoaderSuite) TearDownSuite() {
 	}
 	_, _ = s.db.ExecContext(s.ctx,
 		`DELETE FROM cst_product_cost WHERE cpc_product_sys_id = ANY($1)`,
-		int64ToArray(append(s.productIDs, s.upstreamID, s.upstreamNil)))
+		int64ToArray(append(s.productIDs, s.upstreamID, s.upstreamNil, s.upstreamMB, s.upstreamMBNone)))
 	_, _ = s.db.ExecContext(s.ctx,
 		`DELETE FROM cst_rm_cost WHERE period = $1`, s.period)
 	_, _ = s.db.ExecContext(s.ctx,
@@ -145,7 +147,7 @@ func (s *LoaderSuite) TearDownSuite() {
 		int64ToArray(s.headIDs))
 	_, _ = s.db.ExecContext(s.ctx,
 		`DELETE FROM cost_product_master WHERE cpm_product_sys_id = ANY($1)`,
-		int64ToArray(append(s.productIDs, s.upstreamID, s.upstreamNil)))
+		int64ToArray(append(s.productIDs, s.upstreamID, s.upstreamNil, s.upstreamMB, s.upstreamMBNone)))
 	_ = s.db.Close()
 }
 
@@ -160,12 +162,18 @@ func (s *LoaderSuite) seedAll() {
 }
 
 func (s *LoaderSuite) seedProducts() {
-	var typeID int
+	// Product type is resolved explicitly, not by "ORDER BY ... LIMIT 1": the
+	// upstream-cost loader branches on cpt_type_code = 'MB', so a fixture with an
+	// arbitrary type would exercise whichever branch the seed order happened to pick.
+	var nonMBTypeID, mbTypeID int
 	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
-		`SELECT cpt_type_id FROM cost_product_type ORDER BY cpt_type_id LIMIT 1`,
-	).Scan(&typeID))
+		`SELECT cpt_type_id FROM cost_product_type WHERE cpt_type_code <> 'MB' ORDER BY cpt_type_id LIMIT 1`,
+	).Scan(&nonMBTypeID))
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT cpt_type_id FROM cost_product_type WHERE cpt_type_code = 'MB'`,
+	).Scan(&mbTypeID), "migration 000450 must have seeded the MB product type")
 
-	insert := func(suffix string) int64 {
+	insert := func(suffix string, typeID int) int64 {
 		var id int64
 		require.NoError(s.T(), s.db.QueryRowContext(s.ctx, `
 			INSERT INTO cost_product_master (cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_created_by, cpm_updated_by)
@@ -174,9 +182,15 @@ func (s *LoaderSuite) seedProducts() {
 		).Scan(&id))
 		return id
 	}
-	s.productIDs = []int64{insert("-A"), insert("-B"), insert("-C")}
-	s.upstreamID = insert("-UP")
-	s.upstreamNil = insert("-UPNIL")
+	s.productIDs = []int64{
+		insert("-A", nonMBTypeID),
+		insert("-B", nonMBTypeID),
+		insert("-C", nonMBTypeID),
+	}
+	s.upstreamID = insert("-UP", nonMBTypeID)
+	s.upstreamNil = insert("-UPNIL", nonMBTypeID)
+	s.upstreamMB = insert("-UPMB", mbTypeID)
+	s.upstreamMBNone = insert("-UPMBNONE", mbTypeID)
 }
 
 func (s *LoaderSuite) seedRoutes() {
@@ -323,6 +337,20 @@ func (s *LoaderSuite) seedUpstreamCost() {
 		VALUES ($1, $2, $3, $4, $5, 'SUPERSEDED', $6, 0)`,
 		s.upstreamID, s.period, s.calcType, s.headIDs[0], 1.0, s.actor)
 	require.NoError(s.T(), err)
+
+	// MB-typed upstream. captive is NULL (mbbatch hardcodes 0 and the insert wraps it
+	// in NULLIF, so every MB row lands NULL) while cpc_cost_per_unit carries the real
+	// figure. 33.33 is distinct from both the yarn fixtures' 42.42 and 99.99 so a test
+	// asserting on it cannot pass by reading the wrong row.
+	_, err = s.db.ExecContext(s.ctx, `
+		INSERT INTO cst_product_cost (cpc_product_sys_id, cpc_period, cpc_calculation_type, cpc_route_head_id, cpc_cost_per_unit, cpc_captive_cost, cpc_status, cpc_calculated_by)
+		VALUES ($1, $2, $3, $4, $5, NULL, 'CALCULATED', $6)`,
+		s.upstreamMB, s.period, s.calcType, s.headIDs[0], 33.33, s.actor)
+	require.NoError(s.T(), err)
+
+	// s.upstreamMBNone deliberately gets NO cst_product_cost row: an MB with no
+	// calculated cost must leave the map key absent so compute raises
+	// ErrMissingUpstreamCost instead of silently contributing 0.
 }
 
 // ---------- Tests ----------
@@ -424,12 +452,47 @@ func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_ReturnsCaptiveNotCostPerUnit(
 	require.Greater(s.T(), math.Abs(99.99-got[s.upstreamID]), 0.01, "must not return cpc_cost_per_unit")
 }
 
-func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_NullCaptiveYieldsZeroNotMissing() {
+// Yarn only. A NULL cpc_captive_cost means the upstream was calculated before T3.1
+// fixed the snapshot keys; the COALESCE keeps the key present so resolveRMUnitCost
+// reports a zero cost rather than the misleading "not calculated yet" error. MB
+// upstreams get no such tolerance — see TestLoader_LoadUpstreamCosts_MBWithoutCostRowIsAbsent.
+func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_YarnNullCaptiveYieldsZeroNotMissing() {
 	got, err := s.loader.LoadUpstreamCosts(s.ctx, []int64{s.upstreamNil}, s.period, s.calcType)
 	require.NoError(s.T(), err)
 	v, has := got[s.upstreamNil]
 	require.True(s.T(), has, "key must be present so the RM resolves to 0 instead of ErrMissingUpstreamCost")
 	require.InDelta(s.T(), 0.0, v, 0.0001)
+}
+
+// T1 — ENG-MB-02. An MB-typed upstream resolves from cpc_cost_per_unit, which is
+// what migration 000452's seeded F_MB_RM_COST spec names for a nested-MB reference.
+// Before this fix the loader returned COALESCE(cpc_captive_cost, 0) = 0 for every MB,
+// silently deleting the entire nested contribution from the parent's RM cost.
+func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_MBReturnsCostPerUnit() {
+	got, err := s.loader.LoadUpstreamCosts(s.ctx, []int64{s.upstreamMB}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	v, has := got[s.upstreamMB]
+	require.True(s.T(), has, "MB upstream with a calculated row must be present")
+	require.InDelta(s.T(), 33.33, v, 0.0001, "must return cpc_cost_per_unit for an MB-typed product")
+}
+
+// T2 — yarn regression guard. The ELSE arm of the new CASE must stay byte-identical
+// to the pre-fix expression: captive cost (cost-sheet row 61), never cost_per_unit.
+func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_YarnStillReturnsCaptive() {
+	got, err := s.loader.LoadUpstreamCosts(s.ctx, []int64{s.upstreamID}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	require.InDelta(s.T(), 42.42, got[s.upstreamID], 0.01, "yarn must still return cpc_captive_cost")
+	require.Greater(s.T(), math.Abs(99.99-got[s.upstreamID]), 0.01, "yarn must not return cpc_cost_per_unit")
+}
+
+// T3 — no zero-masking on the MB branch. cpc_cost_per_unit is NOT NULL (migration
+// 000228), so an MB with no cost row yields an absent key, which resolveRMUnitCost
+// turns into ErrMissingUpstreamCost and the chunk processor turns into BLOCKED.
+func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_MBWithoutCostRowIsAbsent() {
+	got, err := s.loader.LoadUpstreamCosts(s.ctx, []int64{s.upstreamMBNone}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	_, has := got[s.upstreamMBNone]
+	require.False(s.T(), has, "an uncalculated MB must be absent, not present-with-zero")
 }
 
 // ---------- helpers ----------
