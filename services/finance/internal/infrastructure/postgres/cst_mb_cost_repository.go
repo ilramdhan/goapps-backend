@@ -38,6 +38,51 @@ func (r *CstMBCostRepository) Upsert(ctx context.Context, tx *sql.Tx, mbhID, per
 	return nil
 }
 
+// ListStalePushedMBHIDs returns the distinct mbh_ids whose already-pushed cost for period has
+// gone stale: an active cst_mb_cost row exists, but its source cst_product_cost row is either
+// unlinked (mbc_source_cpc_id IS NULL, e.g. the FK's ON DELETE SET NULL fired) or SUPERSEDED,
+// while a newer non-superseded row exists for the same product/period/cost type. That happens
+// when MB Batch re-runs after a push — the pushed value is stale and silently so, hence this
+// read-only visibility query. Never used to gate a write; Preview only labels the head.
+func (r *CstMBCostRepository) ListStalePushedMBHIDs(ctx context.Context, period string) ([]string, error) {
+	const q = `
+		SELECT DISTINCT mbc.mbc_mbh_id::text
+		FROM cst_mb_cost mbc
+		JOIN mst_mb_head mbh
+		  ON mbh.mbh_id = mbc.mbc_mbh_id
+		 AND mbh.mbh_entry_status = 'VALIDATED'
+		 AND mbh.deleted_at IS NULL
+		LEFT JOIN cst_product_cost src ON src.cpc_cost_id = mbc.mbc_source_cpc_id
+		WHERE mbc.mbc_period = $1
+		  AND mbc.mbc_is_active = TRUE
+		  AND (mbc.mbc_source_cpc_id IS NULL OR src.cpc_status = 'SUPERSEDED')
+		  AND EXISTS (
+		        SELECT 1 FROM cst_product_cost cur
+		        WHERE cur.cpc_product_sys_id = mbh.mbh_cost_product_id
+		          AND cur.cpc_period = mbc.mbc_period
+		          AND cur.cpc_calculation_type = mbc.mbc_cost_type
+		          AND cur.cpc_status != 'SUPERSEDED'
+		      )`
+	rows, err := r.db.QueryContext(ctx, q, period)
+	if err != nil {
+		return nil, fmt.Errorf("cst_mb_cost_repository: list stale pushed mbh ids: %w", err)
+	}
+	defer closeRows(rows)
+
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("cst_mb_cost_repository: scan stale pushed mbh id: %w", err)
+		}
+		out = append(out, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("cst_mb_cost_repository: iterate stale pushed mbh ids: %w", err)
+	}
+	return out, nil
+}
+
 // LatestByType returns the most recent active cost_value for mbhID + costType, used by
 // Plan 04's LoadMBCosts calc-engine loader — the sole read path for MB cost consumers.
 func (r *CstMBCostRepository) LatestByType(ctx context.Context, mbhID, costType string) (string, error) {

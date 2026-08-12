@@ -28,12 +28,42 @@ type TriggerCommand struct {
 // engine. Other scopes will land in S8c when the orchestrator + RMQ worker
 // machinery exists.
 type TriggerJobHandler struct {
-	svc *Service
+	svc     *Service
+	mbGuard MBTypeChecker
+}
+
+// MBTypeChecker answers whether a product / product type is Master Batch, so the
+// trigger path can reject MB calc jobs before a cal_job row is even created.
+//
+// MB is owned by the MB_BATCH path (mbbatch.RunMBBatch, "MB Push to Head"), which
+// computes ACTUAL/SELLING/FORECAST in one dependency-ordered run and pushes the
+// results into cst_mb_cost. A calc job over the same product would supersede the
+// APPROVED cst_product_cost row that a push already consumed, leaving cst_mb_cost
+// pointing at a SUPERSEDED source with a stale value. The orchestrator enforces the
+// same rule on its side (see its dag_builder.go); this check exists so the user gets
+// a synchronous error instead of an asynchronously FAILED job.
+type MBTypeChecker interface {
+	IsMBProduct(ctx context.Context, productSysID int64) (bool, error)
+	IsMBProductType(ctx context.Context, productTypeID int32) (bool, error)
+}
+
+// TriggerOption customizes the handler at construction.
+type TriggerOption func(*TriggerJobHandler)
+
+// WithMBGuard installs the MB rejection check. Omitting it leaves the finance-side
+// check disabled — the orchestrator still enforces the rule, so behavior stays
+// correct, just less immediate. Tests omit it.
+func WithMBGuard(c MBTypeChecker) TriggerOption {
+	return func(h *TriggerJobHandler) { h.mbGuard = c }
 }
 
 // NewTriggerJobHandler constructs the handler.
-func NewTriggerJobHandler(svc *Service) *TriggerJobHandler {
-	return &TriggerJobHandler{svc: svc}
+func NewTriggerJobHandler(svc *Service, opts ...TriggerOption) *TriggerJobHandler {
+	h := &TriggerJobHandler{svc: svc}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // auditEntityKindJob is the EntityKind value for all COST_CALC_JOB_* audit events.
@@ -47,6 +77,12 @@ var ErrScopeNotYetSupported = errors.New("scope not yet supported in S8b foundat
 // product id.
 var ErrProductRequired = errors.New("product_sys_id required for SINGLE_PRODUCT scope")
 
+// ErrMBNotCalcJobEligible is returned when a calc job explicitly targets Master
+// Batch products. MB is computed by MB Batch (MB Push to Head), which owns all
+// three calc types; see MBTypeChecker for why a second writer is harmful.
+var ErrMBNotCalcJobEligible = errors.New(
+	"MB products are calculated from MB Batch (MB Push to Head), not from calc jobs")
+
 // Handle creates a job + chunk + job_product row, runs ProcessChunk inline,
 // finalizes the job, and returns the fully-resolved Job aggregate.
 //
@@ -57,6 +93,9 @@ var ErrProductRequired = errors.New("product_sys_id required for SINGLE_PRODUCT 
 // there too — the orchestrator walks the full upstream DAG and computes
 // intermediates first. Only fall back to the inline path when RMQ is offline.
 func (h *TriggerJobHandler) Handle(ctx context.Context, cmd TriggerCommand) (*costcalcdom.Job, error) {
+	if err := h.rejectMBScope(ctx, cmd); err != nil {
+		return nil, err
+	}
 	if cmd.Scope != costcalcdom.ScopeSingleProduct {
 		return h.dispatchToOrchestrator(ctx, cmd)
 	}
@@ -215,6 +254,52 @@ func (h *TriggerJobHandler) completeJob(ctx context.Context, job *costcalcdom.Jo
 		Actor:      job.CreatedBy(),
 		Message:    fmt.Sprintf("job %s: success=%d failed=%d blocked=%d", job.Status(), out.Success, out.Failed, out.Blocked),
 	})
+	return nil
+}
+
+// rejectMBScope fails a trigger that explicitly targets MB, before any cal_job row
+// is written. Only the two scopes that can NAME MB are checked:
+//
+//   - SINGLE_PRODUCT, when the product itself is MB;
+//   - FILTERED, when the chosen product type is MB.
+//
+// ALL is deliberately not rejected — the user is asking for the calc engine's whole
+// population, which simply does not include MB. The orchestrator filters MB out of
+// that seed set silently.
+//
+// SINGLE_ROUTE is left to the orchestrator: resolving a route head to its product
+// needs a query this handler has no repository for, and the orchestrator's
+// productsOfRouteHead already drops MB.
+func (h *TriggerJobHandler) rejectMBScope(ctx context.Context, cmd TriggerCommand) error {
+	if h.mbGuard == nil {
+		return nil
+	}
+	switch cmd.Scope {
+	case costcalcdom.ScopeSingleProduct:
+		if cmd.ProductSysID == 0 {
+			return nil // ErrProductRequired is raised by the caller.
+		}
+		isMB, err := h.mbGuard.IsMBProduct(ctx, cmd.ProductSysID)
+		if err != nil {
+			return fmt.Errorf("check MB product: %w", err)
+		}
+		if isMB {
+			return fmt.Errorf("product %d: %w", cmd.ProductSysID, ErrMBNotCalcJobEligible)
+		}
+	case costcalcdom.ScopeFiltered:
+		if cmd.ProductTypeIDFilter == 0 {
+			return nil
+		}
+		isMB, err := h.mbGuard.IsMBProductType(ctx, cmd.ProductTypeIDFilter)
+		if err != nil {
+			return fmt.Errorf("check MB product type: %w", err)
+		}
+		if isMB {
+			return ErrMBNotCalcJobEligible
+		}
+	case costcalcdom.ScopeAll, costcalcdom.ScopeSingleRoute, costcalcdom.ScopeMBBatch:
+		return nil
+	}
 	return nil
 }
 

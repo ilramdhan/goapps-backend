@@ -29,6 +29,9 @@ const (
 	blockReasonMissingUpstream = "MISSING_UPSTREAM_COST"
 	blockReasonMissingMBCost   = "MISSING_MB_COST"
 	blockReasonFormulaError    = "FORMULA_ERROR"
+	// blockReasonMBOwnedByBatch marks an MB product that reached a generic calc chunk as a
+	// dependency node rather than as a job target. See computeOne.
+	blockReasonMBOwnedByBatch = "MB_OWNED_BY_MB_BATCH"
 )
 
 // ProcessChunkInput is the slice of work passed into ProcessChunk.
@@ -123,6 +126,9 @@ type loadedBundle struct {
 	// POY product in the chunk. Its Period may be older than the requested period
 	// (deliberate carry-forward) and is recorded per product in the calculation log.
 	spinPool SpinPool
+	// mbProducts is the set of this chunk's product ids that are MB-typed. Empty when
+	// no MB guard is wired. See computeOne for why they are skipped, not computed.
+	mbProducts map[int64]bool
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -149,6 +155,11 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 	upstreamCosts, err := s.loader.LoadUpstreamCosts(ctx, upstreamIDs, in.Period, string(in.CalcType))
 	if err != nil {
 		return nil, fmt.Errorf("load upstream costs: %w", err)
+	}
+
+	mbProducts, err := s.loadMBProductSet(ctx, in.Products)
+	if err != nil {
+		return nil, err
 	}
 
 	sellingSnaps, snapErr := s.loader.LoadSellingSnapshots(ctx, in.Products, in.Period)
@@ -187,7 +198,21 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		upstreamCosts:    upstreamCosts,
 		sellingSnapshots: sellingSnaps,
 		spinPool:         spinPool,
+		mbProducts:       mbProducts,
 	}, nil
+}
+
+// loadMBProductSet resolves which of the chunk's products are MB-typed. A nil guard
+// (tests, or wiring that omits it) yields an empty set, i.e. the pre-guard behavior.
+func (s *Service) loadMBProductSet(ctx context.Context, products []int64) (map[int64]bool, error) {
+	if s.mbProductGuard == nil {
+		return map[int64]bool{}, nil
+	}
+	set, err := s.mbProductGuard.MBProductIDs(ctx, products)
+	if err != nil {
+		return nil, fmt.Errorf("load MB product set: %w", err)
+	}
+	return set, nil
 }
 
 type productOutcome int
@@ -201,6 +226,30 @@ const (
 // computeOne runs the full per-product pipeline: gate on route presence,
 // compute, persist, mark job_product.
 func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int64, loaded *loadedBundle) productOutcome {
+	// MB products are written exclusively by MB Batch (application/mbbatch), which owns
+	// all three calc types and whose output MB Push-to-Head consumes. The orchestrator
+	// already keeps MB out of every job SEED set, but loadProductRMEdges deliberately does
+	// NOT filter MB during dependency resolution — a non-MB product that referenced an MB
+	// as a PRODUCT-type RM would therefore pull that MB into the DAG as a node, and
+	// persistResult would UpsertWithSupersede its cst_product_cost rows, superseding the
+	// APPROVED row a push already consumed. Refusing at the WRITE site closes that hole
+	// without touching dependency resolution.
+	//
+	// Nothing is lost by skipping: a parent consuming an MB reads the MB's committed value,
+	// never a value recomputed here — either through the MB_COST_LOOKUP formula path off
+	// cst_mb_cost (compute.go, FormulaTypeMBCostLookup) or, for a nested-MB PRODUCT-type RM,
+	// through LoadUpstreamCosts reading the already-committed cst_product_cost row. Both
+	// read committed state, so this skip cannot change any parent's number.
+	if loaded.mbProducts[pid] {
+		if e := s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonMBOwnedByBatch, nil); e != nil {
+			_ = e
+		}
+		s.emitProductBlocked(ctx, in, pid, blockReasonMBOwnedByBatch,
+			errors.New("MB product is calculated by MB Batch (MB Push to Head), not by the calc engine"))
+		metrics.ProductsTotal.WithLabelValues(productStatusBlocked, blockReasonMBOwnedByBatch).Inc()
+		return productOutcomeBlocked
+	}
+
 	route, ok := loaded.routes[pid]
 	if !ok || route == nil || route.Head == nil {
 		if e := s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonMissingRoute, nil); e != nil {

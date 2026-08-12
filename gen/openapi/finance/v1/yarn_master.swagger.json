@@ -7502,6 +7502,11 @@
             "$ref": "#/definitions/v1SkippedMbHead"
           },
           "description": "MB Heads excluded from push, with reasons."
+        },
+        "needsRepushCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Count of pushable heads flagged needs_repush — heads whose already-pushed cost went stale\nafter a later MB Batch run. Surfaced as its own bucket so operators can act on it."
         }
       },
       "description": "PreviewPushToHeadResponse is the response listing pushable and skipped MB Heads for a period."
@@ -7609,6 +7614,10 @@
         "hasForecast": {
           "type": "boolean",
           "description": "Whether a FORECAST cost value is available to push."
+        },
+        "needsRepush": {
+          "type": "boolean",
+          "description": "Whether this head was already pushed for the period but its pushed cost has since gone\nstale — the source cst_product_cost row is SUPERSEDED (or unlinked) and a newer\nnon-superseded row exists. Informational only: such a head is still pushable, and\nre-pushing is exactly the remedy."
         }
       },
       "description": "PushableMbHead describes an MB Head eligible to receive pushed costs for the previewed period."

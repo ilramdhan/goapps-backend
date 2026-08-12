@@ -17,12 +17,26 @@ type VerifyCostCommand struct {
 
 // VerifyCostHandler transitions a CALCULATED result to VERIFIED.
 type VerifyCostHandler struct {
-	svc *Service
+	svc     *Service
+	mbGuard MBCostRowChecker
+}
+
+// VerifyOption customizes the handler at construction.
+type VerifyOption func(*VerifyCostHandler)
+
+// WithVerifyMBGuard installs the MB rejection check. Omitting it leaves the check
+// disabled; tests omit it.
+func WithVerifyMBGuard(c MBCostRowChecker) VerifyOption {
+	return func(h *VerifyCostHandler) { h.mbGuard = c }
 }
 
 // NewVerifyCostHandler constructs the handler.
-func NewVerifyCostHandler(svc *Service) *VerifyCostHandler {
-	return &VerifyCostHandler{svc: svc}
+func NewVerifyCostHandler(svc *Service, opts ...VerifyOption) *VerifyCostHandler {
+	h := &VerifyCostHandler{svc: svc}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // Handle executes the verification.
@@ -32,6 +46,9 @@ func (h *VerifyCostHandler) Handle(ctx context.Context, cmd VerifyCostCommand) e
 	}
 	if cmd.Actor == "" {
 		return errors.New(errMsgActorRequired)
+	}
+	if err := rejectMBCostRow(ctx, h.mbGuard, cmd.CostID); err != nil {
+		return err
 	}
 	if err := h.svc.resultRepo.MarkVerified(ctx, cmd.CostID, cmd.Actor); err != nil {
 		return fmt.Errorf("mark verified: %w", err)

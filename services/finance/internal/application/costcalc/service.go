@@ -20,6 +20,23 @@ type Service struct {
 	cache         *evaluator.Cache
 	auditEmitter  AuditEmitter
 	jobTriggerPub JobTriggerPublisher
+
+	mbProductGuard MBProductSetChecker
+}
+
+// MBProductSetChecker resolves which of a chunk's products are MB-typed, so ProcessChunk
+// can refuse to persist a cst_product_cost row for an MB. See computeOne for the full
+// rationale. nil disables the guard.
+type MBProductSetChecker interface {
+	MBProductIDs(ctx context.Context, productSysIDs []int64) (map[int64]bool, error)
+}
+
+// ServiceOption customizes the service at construction.
+type ServiceOption func(*Service)
+
+// WithMBProductGuard installs the persist-site MB guard.
+func WithMBProductGuard(c MBProductSetChecker) ServiceOption {
+	return func(s *Service) { s.mbProductGuard = c }
 }
 
 // JobTriggerPublisher signals the orchestrator (via RMQ) to plan + execute a
@@ -65,8 +82,9 @@ func NewService(
 	cache *evaluator.Cache,
 	auditEmitter AuditEmitter,
 	jobTriggerPub JobTriggerPublisher,
+	opts ...ServiceOption,
 ) *Service {
-	return &Service{
+	s := &Service{
 		jobRepo:       jobRepo,
 		chunkRepo:     chunkRepo,
 		productRepo:   productRepo,
@@ -77,6 +95,10 @@ func NewService(
 		auditEmitter:  auditEmitter,
 		jobTriggerPub: jobTriggerPub,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // emitAudit is a best-effort fire-and-forget helper: nil emitter means skip,

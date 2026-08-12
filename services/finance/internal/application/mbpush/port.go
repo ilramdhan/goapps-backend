@@ -35,6 +35,14 @@ type CostReader interface {
 	MarkApprovedFromCalculatedTx(ctx context.Context, tx *sql.Tx, costID int64, by string) error
 }
 
+// StalePushReader reports which MB Heads were already pushed for a period but whose pushed cost
+// has since been superseded by a later MB Batch run. Read-only: it informs Preview's labeling
+// and never gates a write.
+type StalePushReader interface {
+	// ListStalePushedMBHIDs returns the mbh_ids in a stale-push state for period.
+	ListStalePushedMBHIDs(ctx context.Context, period string) ([]string, error)
+}
+
 // MBCostWriter upserts the active-cost cache row inside a caller-supplied transaction.
 type MBCostWriter interface {
 	Upsert(ctx context.Context, tx *sql.Tx, mbhID, period, costType, costValue string, sourceCpcID int64, pushedBy string) error
