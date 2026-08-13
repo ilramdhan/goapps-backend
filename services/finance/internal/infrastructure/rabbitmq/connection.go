@@ -2,8 +2,10 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -42,15 +44,64 @@ const (
 )
 
 // Connection wraps an AMQP connection and channel.
+//
+// The conn/channel pair is guarded by mu so that Supervise can swap in a fresh
+// pair after a broker outage while publishers concurrently read it. Publishers
+// resolve the channel per publish (see Publisher.PublishJob and
+// CostJobPublisher.PublishJobTriggered), so a swap heals them with no
+// publisher-side changes.
 type Connection struct {
+	mu      sync.RWMutex
 	conn    *amqp.Connection
 	channel *amqp.Channel
-	config  config.RabbitMQConfig
-	logger  zerolog.Logger
+	// closed records a deliberate Close() so Supervise can distinguish an
+	// intentional shutdown from an unexpected broker-side close.
+	closed bool
+	// onReconnect holds topology hooks re-run after every successful redial.
+	onReconnect []func(*amqp.Channel) error
+
+	config config.RabbitMQConfig
+	logger zerolog.Logger
 }
 
 // NewConnection creates a new RabbitMQ connection and declares topology.
 func NewConnection(cfg config.RabbitMQConfig, logger zerolog.Logger) (*Connection, error) {
+	return dial(cfg, logger)
+}
+
+// NewConnectionWithRetry creates a connection, retrying up to maxAttempts times
+// with the configured reconnect delay between attempts. Use this at startup so
+// a service that boots before RabbitMQ is reachable still ends up with working
+// publishers instead of permanently nil ones. Returns the last dial error when
+// every attempt fails.
+func NewConnectionWithRetry(cfg config.RabbitMQConfig, logger zerolog.Logger, maxAttempts int) (*Connection, error) {
+	if maxAttempts < 1 {
+		maxAttempts = 1
+	}
+	delay := reconnectDelay(cfg)
+	var last error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		c, err := dial(cfg, logger)
+		if err == nil {
+			return c, nil
+		}
+		last = err
+		if attempt < maxAttempts {
+			logger.Warn().
+				Err(err).
+				Int("attempt", attempt).
+				Int("max_attempts", maxAttempts).
+				Dur("retry_in", delay).
+				Str("url", SanitizeURL(cfg.URL)).
+				Msg("RabbitMQ connect failed, retrying")
+			time.Sleep(delay)
+		}
+	}
+	return nil, last
+}
+
+// dial performs a single connect + QoS + topology-declare cycle.
+func dial(cfg config.RabbitMQConfig, logger zerolog.Logger) (*Connection, error) {
 	conn, err := amqp.Dial(cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("connect to rabbitmq: %w", err)
@@ -65,12 +116,7 @@ func NewConnection(cfg config.RabbitMQConfig, logger zerolog.Logger) (*Connectio
 	}
 
 	if err := ch.Qos(cfg.PrefetchCount, 0, false); err != nil {
-		if closeErr := ch.Close(); closeErr != nil {
-			logger.Warn().Err(closeErr).Msg("close channel after qos failure")
-		}
-		if closeErr := conn.Close(); closeErr != nil {
-			logger.Warn().Err(closeErr).Msg("close connection after qos failure")
-		}
+		closeBoth(conn, ch, logger, "qos failure")
 		return nil, fmt.Errorf("set qos: %w", err)
 	}
 
@@ -82,27 +128,53 @@ func NewConnection(cfg config.RabbitMQConfig, logger zerolog.Logger) (*Connectio
 	}
 
 	if err := c.declareTopology(); err != nil {
-		if closeErr := ch.Close(); closeErr != nil {
-			logger.Warn().Err(closeErr).Msg("close channel after topology failure")
-		}
-		if closeErr := conn.Close(); closeErr != nil {
-			logger.Warn().Err(closeErr).Msg("close connection after topology failure")
-		}
+		closeBoth(conn, ch, logger, "topology failure")
 		return nil, fmt.Errorf("declare topology: %w", err)
 	}
 
 	logger.Info().
-		Str("url", sanitizeURL(cfg.URL)).
+		Str("url", SanitizeURL(cfg.URL)).
 		Msg("RabbitMQ connected and topology declared")
 
 	return c, nil
 }
 
+// closeBoth tears down a half-built connection, logging (not returning) errors.
+func closeBoth(conn *amqp.Connection, ch *amqp.Channel, logger zerolog.Logger, reason string) {
+	if closeErr := ch.Close(); closeErr != nil {
+		logger.Warn().Err(closeErr).Msgf("close channel after %s", reason)
+	}
+	if closeErr := conn.Close(); closeErr != nil {
+		logger.Warn().Err(closeErr).Msgf("close connection after %s", reason)
+	}
+}
+
 // Channel returns the underlying shared AMQP channel. All consumers created
 // with concurrency 1 (the default) share this channel and therefore its
 // single QoS(prefetch_count) setting.
+//
+// After a Supervise-driven reconnect this returns the new channel. A caller
+// may still observe a channel that is in the process of closing; the publish
+// then fails with an error and the caller retries, which is how every caller
+// already behaves.
 func (c *Connection) Channel() *amqp.Channel {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return c.channel
+}
+
+// OnReconnect registers a hook run after every successful reconnect, once the
+// base topology has been re-declared. Durable exchanges and queues survive a
+// client reconnect but NOT a broker restart, and some topology is declared only
+// in a constructor (e.g. CostJobPublisher declares the finance.cost exchange),
+// so those declares must be replayed here to keep publishing working.
+func (c *Connection) OnReconnect(fn func(*amqp.Channel) error) {
+	if fn == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.onReconnect = append(c.onReconnect, fn)
 }
 
 // OpenChannel opens a new, independent AMQP channel on the same connection
@@ -112,7 +184,11 @@ func (c *Connection) Channel() *amqp.Channel {
 // of any other consumer sharing the default Channel(). The caller owns
 // closing the returned channel.
 func (c *Connection) OpenChannel(prefetchCount int) (*amqp.Channel, error) {
-	ch, err := c.conn.Channel()
+	c.mu.RLock()
+	conn := c.conn
+	c.mu.RUnlock()
+
+	ch, err := conn.Channel()
 	if err != nil {
 		return nil, fmt.Errorf("open channel: %w", err)
 	}
@@ -125,15 +201,22 @@ func (c *Connection) OpenChannel(prefetchCount int) (*amqp.Channel, error) {
 	return ch, nil
 }
 
-// Close closes the channel and connection.
+// Close closes the channel and connection. It also marks the connection as
+// deliberately closed so a running Supervise does not treat the resulting
+// close notification as an outage worth redialing.
 func (c *Connection) Close() error {
-	if c.channel != nil {
-		if err := c.channel.Close(); err != nil {
+	c.mu.Lock()
+	c.closed = true
+	ch, conn := c.channel, c.conn
+	c.mu.Unlock()
+
+	if ch != nil {
+		if err := ch.Close(); err != nil {
 			c.logger.Warn().Err(err).Msg("close rabbitmq channel")
 		}
 	}
-	if c.conn != nil {
-		if err := c.conn.Close(); err != nil {
+	if conn != nil {
+		if err := conn.Close(); err != nil {
 			return fmt.Errorf("close rabbitmq connection: %w", err)
 		}
 	}
@@ -141,17 +224,106 @@ func (c *Connection) Close() error {
 	return nil
 }
 
-// NotifyClose returns a channel that signals connection closure.
+// NotifyClose returns a channel that signals closure of the connection that is
+// current at call time. After a Supervise-driven reconnect, a previously
+// returned notification channel refers to the old connection; call it again to
+// observe the new one.
 func (c *Connection) NotifyClose() chan *amqp.Error {
-	return c.conn.NotifyClose(make(chan *amqp.Error, 1))
+	c.mu.RLock()
+	conn := c.conn
+	c.mu.RUnlock()
+	return conn.NotifyClose(make(chan *amqp.Error, 1))
 }
 
 // ReconnectDelay returns the configured reconnect delay.
 func (c *Connection) ReconnectDelay() time.Duration {
-	if c.config.ReconnectDelay > 0 {
-		return c.config.ReconnectDelay
+	return reconnectDelay(c.config)
+}
+
+// reconnectDelay resolves the retry delay, defaulting to 5s when unset.
+func reconnectDelay(cfg config.RabbitMQConfig) time.Duration {
+	if cfg.ReconnectDelay > 0 {
+		return cfg.ReconnectDelay
 	}
 	return 5 * time.Second
+}
+
+// isClosed reports whether Close() was called on this connection.
+func (c *Connection) isClosed() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.closed
+}
+
+// Supervise blocks until ctx is done, redialing RabbitMQ whenever the current
+// connection closes unexpectedly. After each successful redial the base
+// topology is re-declared, the conn/channel pair is swapped in place, and every
+// OnReconnect hook is replayed — so publishers, which resolve the channel per
+// publish, resume working without restarting the process.
+//
+// Known limitation: this heals PUBLISHERS only. Consumers created via
+// OpenChannel or Channel are NOT re-subscribed after a swap — their delivery
+// goroutine still holds the dead channel. cmd/worker relies on process restart
+// for consumer recovery.
+func (c *Connection) Supervise(ctx context.Context) {
+	for {
+		closeCh := c.NotifyClose()
+		select {
+		case <-ctx.Done():
+			return
+		case amqpErr := <-closeCh:
+			if c.isClosed() || ctx.Err() != nil {
+				return
+			}
+			c.logger.Warn().
+				AnErr("amqp_error", amqpErr).
+				Str("url", SanitizeURL(c.config.URL)).
+				Msg("RabbitMQ connection lost, reconnecting")
+			if !c.redialLoop(ctx) {
+				return
+			}
+		}
+	}
+}
+
+// redialLoop retries dialing until it succeeds, ctx is cancelled, or the
+// connection was deliberately closed. Reports whether a swap happened.
+func (c *Connection) redialLoop(ctx context.Context) bool {
+	delay := c.ReconnectDelay()
+	for attempt := 1; ; attempt++ {
+		if c.isClosed() {
+			return false
+		}
+		fresh, err := dial(c.config, c.logger)
+		if err == nil {
+			c.swap(fresh)
+			c.logger.Info().Int("attempt", attempt).Msg("RabbitMQ reconnected, publishers recovered")
+			return true
+		}
+		c.logger.Warn().Err(err).Int("attempt", attempt).Dur("retry_in", delay).
+			Msg("RabbitMQ reconnect attempt failed")
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(delay):
+		}
+	}
+}
+
+// swap installs the freshly dialed conn/channel and replays reconnect hooks.
+func (c *Connection) swap(fresh *Connection) {
+	c.mu.Lock()
+	c.conn, c.channel = fresh.conn, fresh.channel
+	hooks := make([]func(*amqp.Channel) error, len(c.onReconnect))
+	copy(hooks, c.onReconnect)
+	ch := c.channel
+	c.mu.Unlock()
+
+	for _, hook := range hooks {
+		if err := hook(ch); err != nil {
+			c.logger.Error().Err(err).Msg("RabbitMQ reconnect hook failed; some topology may be missing")
+		}
+	}
 }
 
 func (c *Connection) declareTopology() error {
@@ -217,8 +389,8 @@ func (c *Connection) declareTopology() error {
 	return nil
 }
 
-// sanitizeURL removes credentials from the AMQP URL for logging.
-func sanitizeURL(rawURL string) string {
+// SanitizeURL removes credentials from the AMQP URL for logging.
+func SanitizeURL(rawURL string) string {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
 		return "amqp://***"

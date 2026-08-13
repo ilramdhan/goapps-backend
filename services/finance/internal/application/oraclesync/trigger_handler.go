@@ -2,11 +2,17 @@ package oraclesync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 )
+
+// ErrPublisherUnavailable is returned when the finance service has no working
+// RabbitMQ publisher, so no sync job can be queued.
+var ErrPublisherUnavailable = errors.New("message queue unavailable: RabbitMQ not connected " +
+	"(finance service could not reach the broker at startup; check RabbitMQ health and restart the finance service)")
 
 // TriggerCommand holds the input for triggering a sync job.
 type TriggerCommand struct {
@@ -41,7 +47,7 @@ func NewTriggerHandler(jobRepo job.Repository, publisher JobPublisher) *TriggerH
 // Handle creates a job execution and publishes it to the queue.
 func (h *TriggerHandler) Handle(ctx context.Context, cmd TriggerCommand) (*TriggerResult, error) {
 	if h.publisher == nil {
-		return nil, fmt.Errorf("message queue unavailable: RabbitMQ not connected")
+		return nil, ErrPublisherUnavailable
 	}
 
 	// Resolve period if not provided.

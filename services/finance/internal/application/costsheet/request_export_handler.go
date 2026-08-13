@@ -14,6 +14,11 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 )
 
+// ErrPublisherUnavailable is returned when the finance service has no working
+// RabbitMQ publisher, so no export job can be queued.
+var ErrPublisherUnavailable = errors.New("message queue unavailable: RabbitMQ not connected " +
+	"(finance service could not reach the broker at startup; check RabbitMQ health and restart the finance service)")
+
 // maxExportProducts caps how many products a single export job renders.
 // Filter resolutions above this no longer truncate — they fan out into a
 // parent job plus N ≤maxExportProducts-sized child jobs (see Handle), each
@@ -212,7 +217,7 @@ func chunkIDs(ids []int64, size int) [][]int64 {
 // validate checks the fields Handle needs before doing any work.
 func (h *RequestExportHandler) validate(cmd RequestExportCommand) error {
 	if h.publisher == nil {
-		return fmt.Errorf("message queue unavailable: RabbitMQ not connected")
+		return ErrPublisherUnavailable
 	}
 	if cmd.Period == "" {
 		return fmt.Errorf("period is required")

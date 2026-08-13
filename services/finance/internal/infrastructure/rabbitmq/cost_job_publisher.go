@@ -35,17 +35,29 @@ type CostJobPublisher struct {
 // finance.cost exchange + job_triggered queue so finance can publish without
 // requiring the orchestrator to have booted first.
 func NewCostJobPublisher(conn *Connection, logger zerolog.Logger) (*CostJobPublisher, error) {
-	ch := conn.Channel()
+	if err := declareCostTopology(conn.Channel()); err != nil {
+		return nil, err
+	}
+	// Durable topology survives a client reconnect but not a broker restart,
+	// and these declares live only here — replay them after every reconnect so
+	// publishing keeps working without a finance restart.
+	conn.OnReconnect(declareCostTopology)
+	return &CostJobPublisher{conn: conn, logger: logger}, nil
+}
+
+// declareCostTopology idempotently declares the finance.cost exchange, the
+// job_triggered queue, and their binding on the given channel.
+func declareCostTopology(ch *amqp.Channel) error {
 	if err := ch.ExchangeDeclare(CostExchange, "direct", true, false, false, false, nil); err != nil {
-		return nil, fmt.Errorf("declare exchange %s: %w", CostExchange, err)
+		return fmt.Errorf("declare exchange %s: %w", CostExchange, err)
 	}
 	if _, err := ch.QueueDeclare(CostJobTriggeredQueue, true, false, false, false, nil); err != nil {
-		return nil, fmt.Errorf("declare queue %s: %w", CostJobTriggeredQueue, err)
+		return fmt.Errorf("declare queue %s: %w", CostJobTriggeredQueue, err)
 	}
 	if err := ch.QueueBind(CostJobTriggeredQueue, CostJobTriggeredRoutingKey, CostExchange, false, nil); err != nil {
-		return nil, fmt.Errorf("bind queue %s: %w", CostJobTriggeredQueue, err)
+		return fmt.Errorf("bind queue %s: %w", CostJobTriggeredQueue, err)
 	}
-	return &CostJobPublisher{conn: conn, logger: logger}, nil
+	return nil
 }
 
 type jobTriggeredEvent struct {
