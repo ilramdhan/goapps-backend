@@ -3,6 +3,7 @@ package rmcost
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,6 +13,12 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
 )
+
+// ErrPublisherUnavailable is returned when the finance service has no working
+// RabbitMQ publisher, so no job can be queued. The "RabbitMQ not connected"
+// substring is asserted on by handlers_test.go — keep it.
+var ErrPublisherUnavailable = errors.New("message queue unavailable: RabbitMQ not connected " +
+	"(finance service could not reach the broker at startup; check RabbitMQ health and restart the finance service)")
 
 // TriggerReason identifies why the calculation was requested. Maps to
 // rmcost.HistoryTriggerReason on the worker side via the job params JSON.
@@ -70,7 +77,7 @@ func NewTriggerHandler(jobRepo job.Repository, publisher JobPublisher) *TriggerH
 // so operators see the error instead of a permanently-QUEUED row.
 func (h *TriggerHandler) Handle(ctx context.Context, cmd TriggerCommand) (*TriggerResult, error) {
 	if h.publisher == nil {
-		return nil, fmt.Errorf("message queue unavailable: RabbitMQ not connected")
+		return nil, ErrPublisherUnavailable
 	}
 	if cmd.CreatedBy == "" {
 		return nil, rmcost.ErrEmptyCreatedBy

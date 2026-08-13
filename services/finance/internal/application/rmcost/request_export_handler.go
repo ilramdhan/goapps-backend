@@ -43,7 +43,7 @@ func NewRequestExportHandler(jobRepo job.Repository, publisher ExportJobPublishe
 // Handle creates a job_execution row and publishes the message to RabbitMQ.
 func (h *RequestExportHandler) Handle(ctx context.Context, cmd RequestExportCommand) (*RequestExportResult, error) {
 	if h.publisher == nil {
-		return nil, fmt.Errorf("message queue unavailable: RabbitMQ not connected")
+		return nil, ErrPublisherUnavailable
 	}
 	if cmd.Period == "" {
 		return nil, fmt.Errorf("period is required")

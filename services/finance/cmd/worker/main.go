@@ -80,7 +80,7 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	}
 
 	// Setup RabbitMQ.
-	rmqConn, err := rabbitmq.NewConnection(cfg.RabbitMQ, log.Logger)
+	rmqConn, err := rabbitmq.NewConnectionWithRetry(cfg.RabbitMQ, log.Logger, 3)
 	if err != nil {
 		return err
 	}

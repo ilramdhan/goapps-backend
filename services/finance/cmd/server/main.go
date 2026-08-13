@@ -120,7 +120,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	// Setup RabbitMQ (optional - graceful degradation for publisher)
-	rmqAdapter, costJobPub, closeRabbitMQ := setupRabbitMQ(cfg)
+	rmqAdapter, costJobPub, closeRabbitMQ := setupRabbitMQ(ctx, cfg)
 	defer closeRabbitMQ()
 
 	// Wrap into explicit interface values so that when RabbitMQ is unavailable
@@ -981,12 +981,26 @@ func startServers(ctx context.Context, cfg *config.Config,
 // graceful degradation). Returns the job-publisher adapter (oracle sync / RM
 // cost), the cost-calc job-trigger publisher (orchestrator hand-off), and a
 // close function for graceful shutdown.
-func setupRabbitMQ(cfg *config.Config) (*rabbitmq.JobPublisherAdapter, *rabbitmq.CostJobPublisher, func()) {
-	rmqConn, err := rabbitmq.NewConnection(cfg.RabbitMQ, log.Logger)
+func setupRabbitMQ(ctx context.Context, cfg *config.Config) (*rabbitmq.JobPublisherAdapter, *rabbitmq.CostJobPublisher, func()) {
+	const connectAttempts = 3
+
+	rmqConn, err := rabbitmq.NewConnectionWithRetry(cfg.RabbitMQ, log.Logger, connectAttempts)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to connect to RabbitMQ, sync trigger will fail")
+		log.Warn().
+			Err(err).
+			Str("url", rabbitmq.SanitizeURL(cfg.RabbitMQ.URL)).
+			Int("attempts", connectAttempts).
+			Msg("Failed to connect to RabbitMQ after all attempts; the service will still start, " +
+				"but RM cost recalculate/export, cost sheet export, oracle sync trigger and " +
+				"multi-product calc scopes will fail until RabbitMQ is reachable and finance is restarted")
 		return nil, nil, func() {}
 	}
+
+	// Supervise redials on connection loss and swaps the live channel in place,
+	// so publishers recover mid-life instead of staying broken for the pod's
+	// whole lifetime. Bound to the root ctx: cancelled on shutdown.
+	superviseCtx, stopSupervisor := context.WithCancel(ctx)
+	go rmqConn.Supervise(superviseCtx)
 
 	publisher := rabbitmq.NewPublisher(rmqConn, log.Logger)
 	adapter := rabbitmq.NewJobPublisherAdapter(publisher, log.Logger)
@@ -998,6 +1012,7 @@ func setupRabbitMQ(cfg *config.Config) (*rabbitmq.JobPublisherAdapter, *rabbitmq
 	}
 
 	closeFunc := func() {
+		stopSupervisor()
 		if closeErr := rmqConn.Close(); closeErr != nil {
 			log.Warn().Err(closeErr).Msg("Failed to close RabbitMQ connection")
 		}
