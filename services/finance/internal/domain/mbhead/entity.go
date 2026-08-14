@@ -50,30 +50,130 @@ type Entity struct {
 	paramMBProdPerDay      *string
 	paramThroughputPerHour string
 	paramNoOfProcess       string
+	vsNumber               string
+	noOfProcess            string
+	shades                 []*Shade
 }
 
-// New creates a new MB Head entity with validation.
+// NewInput carries the field values for New.
 //
-//nolint:revive // Many parameters required for construction.
-func New(mbCosting string, oracleSysID, mgtName *string, denier *float64, filament *int, dozing *float64, mbhCheckStatus, mbhStatus *string, mbhLdrPrsn *float64, mbhFinalProduct, mbhCode *string, createdBy string, isBoughtout bool, devCode, shadeCode, shadeName, crossSection, lustureCode string, machineID *uuid.UUID) (*Entity, error) {
-	if mbCosting == "" {
-		return nil, ErrEmptyMBCosting
+// The 11 fields marked required in spec section 2.1 are plain (non-pointer) values: omitting
+// one is now an error rather than a "leave unset" signal. The remaining pointer fields stay
+// genuinely optional.
+type NewInput struct {
+	// Required (spec section 2.1).
+	MBCosting    string
+	MgtName      string
+	DevCode      string
+	VsNumber     string
+	NoOfProcess  string
+	ShadeCode    string
+	ShadeName    string
+	CrossSection string
+	FinalProduct string
+	Denier       float64
+	Filament     int
+	LdrPrsn      float64
+
+	// Optional.
+	OracleSysID    *string
+	Dozing         *float64
+	MBHCheckStatus *string
+	MBHStatus      *string
+	MBHCode        *string
+	LustureCode    string
+	MachineID      *uuid.UUID
+
+	// Metadata.
+	CreatedBy   string
+	IsBoughtout bool
+}
+
+// validatedFields holds the parsed value objects for the required fields.
+type validatedFields struct {
+	mbCosting    string
+	mgtName      MgtName
+	devCode      DevCode
+	vsNumber     VsNumber
+	noOfProcess  NoOfProcess
+	shadeCode    ShadeCode
+	shadeName    ShadeName
+	crossSection CrossSection
+	finalProduct FinalProduct
+	denier       Denier
+	filament     Filament
+	ldrPrsn      LdrPercent
+}
+
+// validateRequired parses every required field, returning on the first failure.
+func validateRequired(in NewInput) (*validatedFields, error) {
+	var (
+		f   validatedFields
+		err error
+	)
+	if f.mbCosting, err = newBoundedString(in.MBCosting, maxMBCostingLen, ErrEmptyMBCosting, ErrMBCostingTooLong); err != nil {
+		return nil, err
 	}
-	if len(mbCosting) > 100 {
-		return nil, ErrMBCostingTooLong
+	if f.mgtName, err = NewMgtName(in.MgtName); err != nil {
+		return nil, err
 	}
-	if createdBy == "" {
+	if f.devCode, err = NewDevCode(in.DevCode); err != nil {
+		return nil, err
+	}
+	if f.vsNumber, err = NewVsNumber(in.VsNumber); err != nil {
+		return nil, err
+	}
+	if f.noOfProcess, err = NewNoOfProcess(in.NoOfProcess); err != nil {
+		return nil, err
+	}
+	if f.shadeCode, err = NewShadeCode(in.ShadeCode); err != nil {
+		return nil, err
+	}
+	if f.shadeName, err = NewShadeName(in.ShadeName); err != nil {
+		return nil, err
+	}
+	if f.crossSection, err = NewCrossSection(in.CrossSection); err != nil {
+		return nil, err
+	}
+	if f.finalProduct, err = NewFinalProduct(in.FinalProduct); err != nil {
+		return nil, err
+	}
+	if f.denier, err = NewDenier(in.Denier); err != nil {
+		return nil, err
+	}
+	if f.filament, err = NewFilament(in.Filament); err != nil {
+		return nil, err
+	}
+	if f.ldrPrsn, err = NewLdrPercent(in.LdrPrsn); err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+// New creates a new MB Head entity, validating all 11 required recipe fields.
+func New(in NewInput) (*Entity, error) {
+	if in.CreatedBy == "" {
 		return nil, ErrEmptyCreatedBy
 	}
+	f, err := validateRequired(in)
+	if err != nil {
+		return nil, err
+	}
+	mgtName := f.mgtName.String()
+	finalProduct := f.finalProduct.String()
+	denier := f.denier.Float64()
+	filament := f.filament.Int()
+	ldrPrsn := f.ldrPrsn.Float64()
 	return &Entity{
-		id: uuid.New(), oracleSysID: oracleSysID, mbCosting: mbCosting, mgtName: mgtName,
-		denier: denier, filament: filament, dozing: dozing,
-		mbhCheckStatus: mbhCheckStatus, mbhStatus: mbhStatus, mbhLdrPrsn: mbhLdrPrsn,
-		mbhFinalProduct: mbhFinalProduct, mbhCode: mbhCode,
-		isActive: true, createdAt: time.Now(), createdBy: createdBy,
-		isBoughtout: isBoughtout, devCode: devCode, shadeCode: shadeCode,
-		shadeName: shadeName, crossSection: crossSection, lustureCode: lustureCode,
-		machineID: machineID,
+		id: uuid.New(), oracleSysID: in.OracleSysID, mbCosting: f.mbCosting, mgtName: &mgtName,
+		denier: &denier, filament: &filament, dozing: in.Dozing,
+		mbhCheckStatus: in.MBHCheckStatus, mbhStatus: in.MBHStatus, mbhLdrPrsn: &ldrPrsn,
+		mbhFinalProduct: &finalProduct, mbhCode: in.MBHCode,
+		isActive: true, createdAt: time.Now(), createdBy: in.CreatedBy,
+		isBoughtout: in.IsBoughtout, devCode: f.devCode.String(), shadeCode: f.shadeCode.String(),
+		shadeName: f.shadeName.String(), crossSection: f.crossSection.String(),
+		lustureCode: in.LustureCode, machineID: in.MachineID,
+		vsNumber: f.vsNumber.String(), noOfProcess: f.noOfProcess.String(),
 	}, nil
 }
 
@@ -90,7 +190,7 @@ func Reconstruct(
 	costProductID int64, costGeneratedAt *string, costGeneratedBy string,
 	paramWaste, paramQualityLoss, paramEfficiency, paramDevExpense, paramPacking,
 	paramMBProdPerDay *string, paramThroughputPerHour, paramNoOfProcess string,
-	machineID *uuid.UUID,
+	machineID *uuid.UUID, vsNumber, noOfProcess string,
 ) *Entity {
 	return &Entity{
 		id: id, oracleSysID: oracleSysID, mbCosting: mbCosting, mgtName: mgtName,
@@ -109,7 +209,7 @@ func Reconstruct(
 		paramEfficiency: paramEfficiency, paramDevExpense: paramDevExpense,
 		paramPacking: paramPacking, paramMBProdPerDay: paramMBProdPerDay,
 		paramThroughputPerHour: paramThroughputPerHour, paramNoOfProcess: paramNoOfProcess,
-		machineID: machineID,
+		machineID: machineID, vsNumber: vsNumber, noOfProcess: noOfProcess,
 	}
 }
 
@@ -236,10 +336,28 @@ func (e *Entity) ParamMBProdPerDay() *string { return e.paramMBProdPerDay }
 // ParamThroughputPerHour returns the snapshotted throughput-per-hour parameter value.
 func (e *Entity) ParamThroughputPerHour() string { return e.paramThroughputPerHour }
 
-// ParamNoOfProcess returns the snapshotted number-of-process parameter value.
+// ParamNoOfProcess returns the snapshotted number-of-process parameter value, frozen at
+// Validate time by FreezeParams. Distinct from NoOfProcess, which is the user's editable
+// header choice (spec section 2.4).
 func (e *Entity) ParamNoOfProcess() string { return e.paramNoOfProcess }
 
-// UpdateInput carries optional field mutations for Update.
+// VsNumber returns the VS number, unique among live records.
+func (e *Entity) VsNumber() string { return e.vsNumber }
+
+// NoOfProcess returns the user-selected number-of-process option code (S/D/T). This is the
+// editable header value, not the frozen ParamNoOfProcess snapshot (spec section 2.4).
+func (e *Entity) NoOfProcess() string { return e.noOfProcess }
+
+// Shades returns the additional (non-header) shades attached to this MB head.
+func (e *Entity) Shades() []*Shade { return e.shades }
+
+// UpdateInput carries field mutations for Update.
+//
+// Fields stay pointer-typed so the domain can distinguish "not supplied" from "set to zero",
+// but the 12 required fields (spec section 2.1) are validated whenever they ARE supplied:
+// passing a pointer to an empty string is rejected, not silently accepted. Per the Phase 2
+// proto change these 12 arrive full-replace from the delivery layer, so in practice they are
+// always non-nil on the update path.
 type UpdateInput struct {
 	MBCosting       *string
 	MgtName         *string
@@ -252,7 +370,10 @@ type UpdateInput struct {
 	MBHFinalProduct *string
 	MBHCode         *string
 	IsActive        *bool
+	IsBoughtout     *bool
 	DevCode         *string
+	VsNumber        *string
+	NoOfProcess     *string
 	ShadeCode       *string
 	ShadeName       *string
 	CrossSection    *string
@@ -260,12 +381,15 @@ type UpdateInput struct {
 	MachineID       *uuid.UUID
 }
 
-// Update applies optional field changes to the entity.
+// Update applies field changes to the entity, validating every required field supplied.
 func (e *Entity) Update(in UpdateInput, updatedBy string) error {
 	if e.IsDeleted() {
 		return ErrAlreadyDeleted
 	}
-	if err := e.applyMBCosting(in.MBCosting); err != nil {
+	if err := e.applyRequiredStrings(in); err != nil {
+		return err
+	}
+	if err := e.applyRequiredNumerics(in); err != nil {
 		return err
 	}
 	e.applyOptionalFields(in)
@@ -273,6 +397,83 @@ func (e *Entity) Update(in UpdateInput, updatedBy string) error {
 	now := time.Now()
 	e.updatedAt = &now
 	e.updatedBy = &updatedBy
+	return nil
+}
+
+// boundedStringRule binds one supplied value to its destination and its length bounds.
+type boundedStringRule struct {
+	src        *string
+	dst        *string
+	dstPtr     **string
+	maxLen     int
+	errEmpty   error
+	errTooLong error
+}
+
+// applyRequiredStrings validates and assigns every required string field that was supplied.
+func (e *Entity) applyRequiredStrings(in UpdateInput) error {
+	rules := []boundedStringRule{
+		{src: in.MBCosting, dst: &e.mbCosting, maxLen: maxMBCostingLen, errEmpty: ErrEmptyMBCosting, errTooLong: ErrMBCostingTooLong},
+		{src: in.DevCode, dst: &e.devCode, maxLen: maxDevCodeLen, errEmpty: ErrEmptyDevCode, errTooLong: ErrDevCodeTooLong},
+		{src: in.VsNumber, dst: &e.vsNumber, maxLen: maxVsNumberLen, errEmpty: ErrEmptyVsNumber, errTooLong: ErrVsNumberTooLong},
+		{src: in.NoOfProcess, dst: &e.noOfProcess, maxLen: maxNoOfProcessLen, errEmpty: ErrEmptyNoOfProcess, errTooLong: ErrNoOfProcessTooLong},
+		{src: in.ShadeCode, dst: &e.shadeCode, maxLen: maxShadeCodeLen, errEmpty: ErrEmptyShadeCode, errTooLong: ErrShadeCodeTooLong},
+		{src: in.ShadeName, dst: &e.shadeName, maxLen: maxShadeNameLen, errEmpty: ErrEmptyShadeName, errTooLong: ErrShadeNameTooLong},
+		{src: in.CrossSection, dst: &e.crossSection, maxLen: maxCrossSectionLen, errEmpty: ErrEmptyCrossSection, errTooLong: ErrCrossSectionTooLong},
+		{src: in.MgtName, dstPtr: &e.mgtName, maxLen: maxMgtNameLen, errEmpty: ErrEmptyMgtName, errTooLong: ErrMgtNameTooLong},
+		{src: in.MBHFinalProduct, dstPtr: &e.mbhFinalProduct, maxLen: maxFinalProductLen, errEmpty: ErrEmptyFinalProduct, errTooLong: ErrFinalProductTooLong},
+	}
+	for _, r := range rules {
+		if err := applyBoundedString(r); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// applyBoundedString validates one rule and writes through whichever destination it carries.
+func applyBoundedString(r boundedStringRule) error {
+	if r.src == nil {
+		return nil
+	}
+	v, err := newBoundedString(*r.src, r.maxLen, r.errEmpty, r.errTooLong)
+	if err != nil {
+		return err
+	}
+	if r.dst != nil {
+		*r.dst = v
+		return nil
+	}
+	*r.dstPtr = &v
+	return nil
+}
+
+// applyRequiredNumerics validates and assigns the required numeric fields that were supplied.
+func (e *Entity) applyRequiredNumerics(in UpdateInput) error {
+	if in.Denier != nil {
+		v, err := NewDenier(*in.Denier)
+		if err != nil {
+			return err
+		}
+		f := v.Float64()
+		e.denier = &f
+	}
+	if in.Filament != nil {
+		v, err := NewFilament(*in.Filament)
+		if err != nil {
+			return err
+		}
+		i := v.Int()
+		e.filament = &i
+	}
+	if in.MBHLdrPrsn != nil {
+		v, err := NewLdrPercent(*in.MBHLdrPrsn)
+		if err != nil {
+			return err
+		}
+		f := v.Float64()
+		e.mbhLdrPrsn = &f
+	}
 	return nil
 }
 
@@ -288,17 +489,73 @@ func (e *Entity) SoftDelete(deletedBy string) error {
 	return nil
 }
 
-func (e *Entity) applyMBCosting(mbCosting *string) error {
-	if mbCosting == nil {
-		return nil
+// ReplaceShades swaps the head's additional shades for the supplied set, enforcing the
+// max-3-shades rule (spec section 4.2): at most 2 children, distinct sequence numbers,
+// distinct shade codes, and no child repeating the header's own shade code. Persistence is
+// replace-on-save (spec section 4.4), so an empty slice clears all children.
+//
+// This is application-layer enforcement by necessity: no DB constraint can count sibling
+// rows or compare a child against its parent's column.
+func (e *Entity) ReplaceShades(shades []*Shade) error {
+	if err := e.validateShades(shades); err != nil {
+		return err
 	}
-	if *mbCosting == "" {
-		return ErrEmptyMBCosting
+	for _, s := range shades {
+		s.SetParent(e.id)
 	}
-	if len(*mbCosting) > 100 {
-		return ErrMBCostingTooLong
+	e.shades = shades
+	return nil
+}
+
+// AddShade appends one additional shade, re-validating the whole set afterwards.
+func (e *Entity) AddShade(s *Shade) error {
+	if s == nil {
+		return ErrShadeNotFound
 	}
-	e.mbCosting = *mbCosting
+	next := make([]*Shade, 0, len(e.shades)+1)
+	next = append(next, e.shades...)
+	next = append(next, s)
+	return e.ReplaceShades(next)
+}
+
+// SetShades hydrates shades from persistence without re-validating, so legacy rows stay
+// readable. Mirrors Reconstruct.
+func (e *Entity) SetShades(shades []*Shade) { e.shades = shades }
+
+// validateShades enforces the count, sequence-number and shade-code rules for a candidate set.
+func (e *Entity) validateShades(shades []*Shade) error {
+	if len(shades) > MaxAdditionalShades {
+		return ErrTooManyShades
+	}
+	seenSeq := make(map[int32]struct{}, len(shades))
+	seenCode := make(map[string]struct{}, len(shades))
+	for _, s := range shades {
+		if s == nil {
+			return ErrShadeNotFound
+		}
+		if s.SeqNo() < MinShadeSeqNo || s.SeqNo() > MaxShadeSeqNo {
+			return ErrInvalidShadeSeqNo
+		}
+		if _, dup := seenSeq[s.SeqNo()]; dup {
+			return ErrDuplicateShadeSeqNo
+		}
+		seenSeq[s.SeqNo()] = struct{}{}
+		if err := e.checkShadeCode(s.ShadeCode(), seenCode); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkShadeCode rejects a child code that repeats the header code or an earlier sibling.
+func (e *Entity) checkShadeCode(code string, seen map[string]struct{}) error {
+	if code == e.shadeCode {
+		return ErrShadeCodeMatchesHeader
+	}
+	if _, dup := seen[code]; dup {
+		return ErrDuplicateShadeCode
+	}
+	seen[code] = struct{}{}
 	return nil
 }
 
@@ -381,16 +638,9 @@ func (e *Entity) Revoke(reason string) error {
 	return nil
 }
 
+// applyOptionalFields assigns the unvalidated optional fields. The required fields are handled
+// by applyRequiredStrings / applyRequiredNumerics and are deliberately absent here.
 func (e *Entity) applyOptionalFields(in UpdateInput) {
-	if in.MgtName != nil {
-		e.mgtName = in.MgtName
-	}
-	if in.Denier != nil {
-		e.denier = in.Denier
-	}
-	if in.Filament != nil {
-		e.filament = in.Filament
-	}
 	if in.Dozing != nil {
 		e.dozing = in.Dozing
 	}
@@ -400,33 +650,19 @@ func (e *Entity) applyOptionalFields(in UpdateInput) {
 	if in.MBHStatus != nil {
 		e.mbhStatus = in.MBHStatus
 	}
-	if in.MBHLdrPrsn != nil {
-		e.mbhLdrPrsn = in.MBHLdrPrsn
-	}
-	if in.MBHFinalProduct != nil {
-		e.mbhFinalProduct = in.MBHFinalProduct
-	}
 	if in.MBHCode != nil {
 		e.mbhCode = in.MBHCode
 	}
 	if in.IsActive != nil {
 		e.isActive = *in.IsActive
 	}
+	if in.IsBoughtout != nil {
+		e.isBoughtout = *in.IsBoughtout
+	}
 }
 
+// applyRecipeIdentityFields assigns the unvalidated identity fields.
 func (e *Entity) applyRecipeIdentityFields(in UpdateInput) {
-	if in.DevCode != nil {
-		e.devCode = *in.DevCode
-	}
-	if in.ShadeCode != nil {
-		e.shadeCode = *in.ShadeCode
-	}
-	if in.ShadeName != nil {
-		e.shadeName = *in.ShadeName
-	}
-	if in.CrossSection != nil {
-		e.crossSection = *in.CrossSection
-	}
 	if in.LustureCode != nil {
 		e.lustureCode = *in.LustureCode
 	}

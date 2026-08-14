@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
 
@@ -67,15 +68,8 @@ func (ew *excelWriter) error() error {
 	return errors.Join(ew.errs...)
 }
 
-// mbHeadExportHeaders lists the export/template column headers in column order.
-var mbHeadExportHeaders = []string{
-	"No", "MB Costing", "Mgt Name", "Dev Code", "Shade Code", "Shade Name",
-	"Cross Section", "Lusture Code", "Denier", "Filament", "Dozing",
-	"Is Bought Out", "Active", "Created At", "Created By",
-}
-
 // setupExcelSheet creates and configures the export sheet.
-func setupExcelSheet(f *excelize.File, sheetName string) error {
+func setupExcelSheet(f *excelize.File, sheetName string, headers []string) error {
 	index, err := f.NewSheet(sheetName)
 	if err != nil {
 		return fmt.Errorf("failed to create sheet: %w", err)
@@ -87,7 +81,7 @@ func setupExcelSheet(f *excelize.File, sheetName string) error {
 		log.Debug().Err(deleteErr).Msg("Could not delete default Sheet1")
 	}
 
-	for col, header := range mbHeadExportHeaders {
+	for col, header := range headers {
 		cell, err := excelize.CoordinatesToCellName(col+1, 1)
 		if err != nil {
 			return fmt.Errorf("failed to get cell name: %w", err)
@@ -97,7 +91,7 @@ func setupExcelSheet(f *excelize.File, sheetName string) error {
 		}
 	}
 
-	lastCol, err := excelize.CoordinatesToCellName(len(mbHeadExportHeaders), 1)
+	lastCol, err := excelize.CoordinatesToCellName(len(headers), 1)
 	if err != nil {
 		return fmt.Errorf("failed to get last header cell name: %w", err)
 	}
@@ -138,23 +132,41 @@ func optStr(v *string) any {
 	return *v
 }
 
-// writeMBHeadRow writes a single MB Head entity's fields into the given Excel row.
-func writeMBHeadRow(writer *excelWriter, row int, idx int, e *mbhead.Entity) {
-	writer.setCellValue(fmt.Sprintf("A%d", row), idx+1)
-	writer.setCellValue(fmt.Sprintf("B%d", row), e.MBCosting())
-	writer.setCellValue(fmt.Sprintf("C%d", row), optStr(e.MgtName()))
-	writer.setCellValue(fmt.Sprintf("D%d", row), e.DevCode())
-	writer.setCellValue(fmt.Sprintf("E%d", row), e.ShadeCode())
-	writer.setCellValue(fmt.Sprintf("F%d", row), e.ShadeName())
-	writer.setCellValue(fmt.Sprintf("G%d", row), e.CrossSection())
-	writer.setCellValue(fmt.Sprintf("H%d", row), e.LustureCode())
-	writer.setCellValue(fmt.Sprintf("I%d", row), optFloat(e.Denier()))
-	writer.setCellValue(fmt.Sprintf("J%d", row), optInt(e.Filament()))
-	writer.setCellValue(fmt.Sprintf("K%d", row), optFloat(e.Dozing()))
-	writer.setCellValue(fmt.Sprintf("L%d", row), e.IsBoughtout())
-	writer.setCellValue(fmt.Sprintf("M%d", row), e.IsActive())
-	writer.setCellValue(fmt.Sprintf("N%d", row), e.CreatedAt().Format("2006-01-02 15:04:05"))
-	writer.setCellValue(fmt.Sprintf("O%d", row), e.CreatedBy())
+// mbHeadColumnWidth sizes a column from its header text: wide enough to read the header, with
+// a floor so short headers still fit their values. Derived rather than hardcoded per letter so
+// the widths cannot drift out of step with the shared column table.
+func mbHeadColumnWidth(header string) float64 {
+	const minWidth = 12.0
+	w := float64(len(header)) + 4
+	if w < minWidth {
+		return minWidth
+	}
+	return w
+}
+
+// setMBHeadColumnWidths sizes every column of cols by index.
+func setMBHeadColumnWidths(writer *excelWriter, cols []mbHeadImportColumn) {
+	for i, col := range cols {
+		name, err := excelize.ColumnNumberToName(i + 1)
+		if err != nil {
+			writer.errs = append(writer.errs, fmt.Errorf("column %d name: %w", i+1, err))
+			continue
+		}
+		writer.setColWidth(name, name, mbHeadColumnWidth(col.header))
+	}
+}
+
+// writeMBHeadRow writes one export row. Cells are addressed by column index off the shared
+// column table, so adding a column to mbHeadImportColumns needs no change here.
+func writeMBHeadRow(writer *excelWriter, cols []mbHeadImportColumn, rowNum int, row mbHeadExportRow) {
+	for i, col := range cols {
+		cell, err := excelize.CoordinatesToCellName(i+1, rowNum)
+		if err != nil {
+			writer.errs = append(writer.errs, fmt.Errorf("column %d: %w", i+1, err))
+			continue
+		}
+		writer.setCellValue(cell, col.export(row))
+	}
 }
 
 // Handle executes the export MB Heads query.
@@ -162,6 +174,17 @@ func (h *ExportHandler) Handle(ctx context.Context, query ExportQuery) (result *
 	heads, err := h.repo.ListAll(ctx, mbhead.ExportFilter{IsActive: query.IsActive})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get mb heads for export: %w", err)
+	}
+
+	// One batched query rather than a ListShades per head: the export is unpaginated over the
+	// whole table, so a per-row lookup would be an N+1 across thousands of rows.
+	ids := make([]uuid.UUID, 0, len(heads))
+	for _, e := range heads {
+		ids = append(ids, e.ID())
+	}
+	shadesByHead, err := h.repo.ListShadesByHeads(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get mb head shades for export: %w", err)
 	}
 
 	f := excelize.NewFile()
@@ -174,26 +197,19 @@ func (h *ExportHandler) Handle(ctx context.Context, query ExportQuery) (result *
 		}
 	}()
 
+	cols := mbHeadExportColumns()
 	sheetName := "MB Heads"
-	if err := setupExcelSheet(f, sheetName); err != nil {
+	if err := setupExcelSheet(f, sheetName, mbHeadColumnHeaders(cols)); err != nil {
 		return nil, err
 	}
 
 	writer := &excelWriter{f: f, sheetName: sheetName}
 
 	for i, e := range heads {
-		writeMBHeadRow(writer, i+2, i, e)
+		writeMBHeadRow(writer, cols, i+2, mbHeadExportRow{entity: e, shades: shadesByHead[e.ID()]})
 	}
 
-	writer.setColWidth("A", "A", 5)
-	writer.setColWidth("B", "B", 20)
-	writer.setColWidth("C", "C", 25)
-	writer.setColWidth("D", "F", 15)
-	writer.setColWidth("G", "H", 15)
-	writer.setColWidth("I", "K", 10)
-	writer.setColWidth("L", "M", 10)
-	writer.setColWidth("N", "N", 20)
-	writer.setColWidth("O", "O", 20)
+	setMBHeadColumnWidths(writer, cols)
 
 	if writer.hasErrors() {
 		log.Warn().Err(writer.error()).Msg("Some Excel formatting operations failed")

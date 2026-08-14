@@ -32,7 +32,7 @@ func TestRefreezeHandler_Handle_AppliesHeadOverridesThenCallsRepo(t *testing.T) 
 		1001, nil, "",
 		nil, nil, nil, nil, nil,
 		strPtr("20"), "55", "T",
-		nil,
+		nil, "", "",
 	)
 
 	mockRepo.On("GetByID", ctx, costProduct.ID()).Return(costProduct, nil)
@@ -102,7 +102,7 @@ func TestRefreezeHandler_Handle_UsesSameOverrideLogicAsValidate(t *testing.T) {
 		2002, nil, "",
 		nil, nil, nil, nil, nil,
 		nil, "20", "S",
-		nil,
+		nil, "", "",
 	)
 
 	mockRepo.On("GetByID", ctx, costProduct.ID()).Return(costProduct, nil)

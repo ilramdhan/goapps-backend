@@ -33,6 +33,29 @@ type Repository interface {
 	// ExistsByID checks if an MB Head with the given UUID exists.
 	ExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
 
+	// ExistsByDevCode reports whether a live MB Head already uses the given development code.
+	// excludeID, when non-nil, omits that row so an update does not collide with itself
+	// (spec section 3.2).
+	ExistsByDevCode(ctx context.Context, code string, excludeID *uuid.UUID) (bool, error)
+
+	// ExistsByVsNumber reports whether a live MB Head already uses the given VS number.
+	// excludeID, when non-nil, omits that row so an update does not collide with itself
+	// (spec section 3.2).
+	ExistsByVsNumber(ctx context.Context, number string, excludeID *uuid.UUID) (bool, error)
+
+	// ListShades retrieves the live additional shades for one MB head, ordered by seq no.
+	ListShades(ctx context.Context, mbhID uuid.UUID) ([]*Shade, error)
+
+	// ListShadesByHeads retrieves the live additional shades for many MB heads at once, keyed by
+	// head ID. It exists so the export can render the shade 2/3 columns without issuing one
+	// ListShades per row across the whole table.
+	ListShadesByHeads(ctx context.Context, mbhIDs []uuid.UUID) (map[uuid.UUID][]*Shade, error)
+
+	// ReplaceShades reconciles the child shade rows for one MB head to exactly the supplied
+	// set: rows absent from shades are soft-deleted, new rows inserted, existing rows updated.
+	// An empty slice clears all children (spec section 4.4). Runs in a single transaction.
+	ReplaceShades(ctx context.Context, mbhID uuid.UUID, shades []*Shade, actorUserID string) error
+
 	// ListAll retrieves all non-deleted MB Heads matching filter, unpaginated (for export).
 	ListAll(ctx context.Context, filter ExportFilter) ([]*Entity, error)
 

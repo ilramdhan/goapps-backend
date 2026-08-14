@@ -3,6 +3,8 @@ package grpc
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,10 +44,10 @@ func NewMBHeadHandler(repo mbhead.Repository, paramRepo mbparam.Repository) (*MB
 		return nil, err
 	}
 	return &MBHeadHandler{
-		createHandler:    appmbhead.NewCreateHandler(repo),
+		createHandler:    appmbhead.NewCreateHandler(repo, paramRepo),
 		getHandler:       appmbhead.NewGetHandler(repo),
 		listHandler:      appmbhead.NewListHandler(repo),
-		updateHandler:    appmbhead.NewUpdateHandler(repo),
+		updateHandler:    appmbhead.NewUpdateHandler(repo, paramRepo),
 		deleteHandler:    appmbhead.NewDeleteHandler(repo),
 		submitHandler:    appmbhead.NewSubmitHandler(repo),
 		approveHandler:   appmbhead.NewApproveHandler(repo),
@@ -54,7 +56,7 @@ func NewMBHeadHandler(repo mbhead.Repository, paramRepo mbparam.Repository) (*MB
 		revokeHandler:    appmbhead.NewRevokeHandler(repo),
 		refreezeHandler:  appmbhead.NewRefreezeHandler(repo, paramRepo),
 		exportHandler:    appmbhead.NewExportHandler(repo),
-		importHandler:    appmbhead.NewImportHandler(repo),
+		importHandler:    appmbhead.NewImportHandler(repo, paramRepo),
 		templateHandler:  appmbhead.NewTemplateHandler(),
 		validation:       v,
 	}, nil
@@ -65,12 +67,6 @@ func (h *MBHeadHandler) CreateMBHead(ctx context.Context, req *financev1.CreateM
 	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
 		RecordMBHeadOperation("create", false)
 		return &financev1.CreateMBHeadResponse{Base: baseResp}, nil
-	}
-
-	var filament *int
-	if req.MbhFilament != nil {
-		v := int(*req.MbhFilament)
-		filament = &v
 	}
 
 	machineID, badResp := parseOptionalMachineID(req.MbhMachineId)
@@ -84,7 +80,7 @@ func (h *MBHeadHandler) CreateMBHead(ctx context.Context, req *financev1.CreateM
 		OracleSysID:     req.MbhOracleSysId,
 		MgtName:         req.MbhMgtName,
 		Denier:          req.MbhDenier,
-		Filament:        filament,
+		Filament:        int(req.MbhFilament),
 		Dozing:          req.MbhDozing,
 		MBHCheckStatus:  req.MbhCheckStatus,
 		MBHStatus:       req.MbhStatus,
@@ -93,16 +89,19 @@ func (h *MBHeadHandler) CreateMBHead(ctx context.Context, req *financev1.CreateM
 		MBHCode:         req.MbhCode,
 		CreatedBy:       getUserFromContext(ctx),
 		IsBoughtout:     req.MbhIsBoughtout,
-		DevCode:         req.GetMbhDevCode(),
-		ShadeCode:       req.GetMbhShadeCode(),
-		ShadeName:       req.GetMbhShadeName(),
-		CrossSection:    req.GetMbhCrossSection(),
+		DevCode:         req.MbhDevCode,
+		VsNumber:        req.MbhVsNumber,
+		NoOfProcess:     req.MbhNoOfProcess,
+		ShadeCode:       req.MbhShadeCode,
+		ShadeName:       req.MbhShadeName,
+		CrossSection:    req.MbhCrossSection,
 		LustureCode:     req.GetMbhLustureCode(),
 		MachineID:       machineID,
+		Shades:          shadeInputsFromProto(req.Shades),
 	})
 	if err != nil {
 		RecordMBHeadOperation("create", false)
-		return &financev1.CreateMBHeadResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.CreateMBHeadResponse{Base: mbHeadErrorToBaseResponse(err)}, nil
 	}
 
 	RecordMBHeadOperation("create", true)
@@ -151,12 +150,6 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 		return &financev1.UpdateMBHeadResponse{Base: invalidIDResponse("mbh_id")}, nil //nolint:nilerr // BaseResponse pattern: error returned in response body
 	}
 
-	var filament *int
-	if req.MbhFilament != nil {
-		v := int(*req.MbhFilament)
-		filament = &v
-	}
-
 	machineID, badResp := parseOptionalMachineID(req.MbhMachineId)
 	if badResp != nil {
 		RecordMBHeadOperation("update", false)
@@ -168,7 +161,7 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 		MBCosting:       req.MbhMbCosting,
 		MgtName:         req.MbhMgtName,
 		Denier:          req.MbhDenier,
-		Filament:        filament,
+		Filament:        int(req.MbhFilament),
 		Dozing:          req.MbhDozing,
 		MBHCheckStatus:  req.MbhCheckStatus,
 		MBHStatus:       req.MbhStatus,
@@ -177,16 +170,19 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 		MBHCode:         req.MbhCode,
 		IsActive:        req.MbhIsActive,
 		DevCode:         req.MbhDevCode,
+		VsNumber:        req.MbhVsNumber,
+		NoOfProcess:     req.MbhNoOfProcess,
 		ShadeCode:       req.MbhShadeCode,
 		ShadeName:       req.MbhShadeName,
 		CrossSection:    req.MbhCrossSection,
 		LustureCode:     req.MbhLustureCode,
 		MachineID:       machineID,
+		Shades:          shadeInputsFromProto(req.Shades),
 		UpdatedBy:       getUserFromContext(ctx),
 	})
 	if err != nil {
 		RecordMBHeadOperation("update", false)
-		return &financev1.UpdateMBHeadResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.UpdateMBHeadResponse{Base: mbHeadErrorToBaseResponse(err)}, nil
 	}
 
 	RecordMBHeadOperation("update", true)
@@ -445,6 +441,7 @@ func (h *MBHeadHandler) ImportMBHeads(ctx context.Context, req *financev1.Import
 		FileName:        req.FileName,
 		DuplicateAction: req.DuplicateAction,
 		CreatedBy:       getUserFromContext(ctx),
+		DryRun:          req.GetDryRun(),
 	}
 
 	result, err := h.importHandler.Handle(ctx, cmd)
@@ -455,22 +452,53 @@ func (h *MBHeadHandler) ImportMBHeads(ctx context.Context, req *financev1.Import
 
 	RecordMBHeadOperation("import", true)
 
-	importErrors := make([]*financev1.ImportError, len(result.Errors))
-	for i, e := range result.Errors {
-		importErrors[i] = &financev1.ImportError{
-			RowNumber: e.RowNumber,
-			Field:     e.Field,
-			Message:   e.Message,
-		}
-	}
+	importErrors := mbHeadImportErrorsToProto(result)
 
 	return &financev1.ImportMBHeadsResponse{
-		Base:         successResponse("Import completed"),
+		Base:         mbHeadImportBaseResponse(result),
 		SuccessCount: result.SuccessCount,
+		UpdatedCount: result.UpdatedCount,
 		SkippedCount: result.SkippedCount,
 		FailedCount:  result.FailedCount,
 		Errors:       importErrors,
 	}, nil
+}
+
+// mbHeadImportBaseResponse reports failure (fixes I7) when every row in the file failed and none
+// succeeded or updated — the client can no longer mistake a fully-rejected file for a successful
+// no-op import.
+func mbHeadImportBaseResponse(result *appmbhead.ImportResult) *commonv1.BaseResponse {
+	if result.FailedCount > 0 && result.SuccessCount == 0 && result.UpdatedCount == 0 {
+		return ErrorResponse("400", "import failed: all rows were rejected")
+	}
+	return successResponse("Import completed")
+}
+
+// mbHeadImportErrorsToProto maps the (already capped) per-row errors, then appends grouped
+// summary rows when the individual list was truncated (cap: appmbhead.maxImportErrors) so a very
+// large failed file still communicates its shape instead of silently dropping errors.
+func mbHeadImportErrorsToProto(result *appmbhead.ImportResult) []*financev1.ImportError {
+	importErrors := make([]*financev1.ImportError, 0, len(result.Errors)+len(result.ErrorSummary))
+	for _, e := range result.Errors {
+		importErrors = append(importErrors, &financev1.ImportError{
+			RowNumber: e.RowNumber,
+			Field:     e.Field,
+			Message:   e.Message,
+		})
+	}
+
+	if int(result.FailedCount) <= len(result.Errors) {
+		return importErrors
+	}
+
+	for _, s := range result.ErrorSummary {
+		importErrors = append(importErrors, &financev1.ImportError{
+			RowNumber: 0,
+			Field:     s.Field,
+			Message:   fmt.Sprintf("%d row(s): %s", s.Count, s.Message),
+		})
+	}
+	return importErrors
 }
 
 // DownloadMBHeadTemplate downloads the Excel import template for MB Heads.
@@ -517,6 +545,9 @@ func mbHeadEntityToProto(e *mbhead.Entity) *financev1.MBHead {
 	p.MbhCode = e.MBHCode()
 	p.IsBoughtout = e.IsBoughtout()
 	p.DevCode = e.DevCode()
+	p.MbhVsNumber = e.VsNumber()
+	p.MbhNoOfProcess = e.NoOfProcess()
+	p.Shades = mbHeadShadesToProto(e.Shades())
 	p.ShadeCode = e.ShadeCode()
 	p.ShadeName = e.ShadeName()
 	p.CrossSection = e.CrossSection()
@@ -563,6 +594,116 @@ func mbHeadEntityToProto(e *mbhead.Entity) *financev1.MBHead {
 		p.Audit.UpdatedBy = *e.UpdatedBy()
 	}
 	return p
+}
+
+// mbHeadFieldErrors maps each MB Head domain sentinel to the request field it belongs to, so
+// the frontend can render the message inline instead of as a banner. Uniqueness conflicts are
+// deliberately included: they are field-scoped (409) rather than generic.
+var mbHeadFieldErrors = []struct {
+	err    error
+	field  string
+	status string
+}{
+	{mbhead.ErrEmptyMBCosting, "mbh_mb_costing", statusBadRequest},
+	{mbhead.ErrMBCostingTooLong, "mbh_mb_costing", statusBadRequest},
+	{mbhead.ErrAlreadyExists, "mbh_mb_costing", statusConflict},
+	{mbhead.ErrEmptyMgtName, "mbh_mgt_name", statusBadRequest},
+	{mbhead.ErrMgtNameTooLong, "mbh_mgt_name", statusBadRequest},
+	{mbhead.ErrEmptyDevCode, "mbh_dev_code", statusBadRequest},
+	{mbhead.ErrDevCodeTooLong, "mbh_dev_code", statusBadRequest},
+	{mbhead.ErrDevCodeAlreadyExists, "mbh_dev_code", statusConflict},
+	{mbhead.ErrEmptyVsNumber, "mbh_vs_number", statusBadRequest},
+	{mbhead.ErrVsNumberTooLong, "mbh_vs_number", statusBadRequest},
+	{mbhead.ErrVsNumberAlreadyExists, "mbh_vs_number", statusConflict},
+	{mbhead.ErrEmptyNoOfProcess, "mbh_no_of_process", statusBadRequest},
+	{mbhead.ErrNoOfProcessTooLong, "mbh_no_of_process", statusBadRequest},
+	{mbhead.ErrInvalidNoOfProcess, "mbh_no_of_process", statusBadRequest},
+	{mbhead.ErrEmptyShadeCode, "mbh_shade_code", statusBadRequest},
+	{mbhead.ErrShadeCodeTooLong, "mbh_shade_code", statusBadRequest},
+	{mbhead.ErrEmptyShadeName, "mbh_shade_name", statusBadRequest},
+	{mbhead.ErrShadeNameTooLong, "mbh_shade_name", statusBadRequest},
+	{mbhead.ErrEmptyCrossSection, "mbh_cross_section", statusBadRequest},
+	{mbhead.ErrCrossSectionTooLong, "mbh_cross_section", statusBadRequest},
+	{mbhead.ErrEmptyFinalProduct, "mbh_final_product", statusBadRequest},
+	{mbhead.ErrFinalProductTooLong, "mbh_final_product", statusBadRequest},
+	{mbhead.ErrInvalidDenier, "mbh_denier", statusBadRequest},
+	{mbhead.ErrInvalidFilament, "mbh_filament", statusBadRequest},
+	{mbhead.ErrInvalidLdrPercent, "mbh_ldr_prsn", statusBadRequest},
+	{mbhead.ErrTooManyShades, "shades", statusBadRequest},
+	{mbhead.ErrDuplicateShadeCode, "shades", statusBadRequest},
+	{mbhead.ErrShadeCodeMatchesHeader, "shades", statusBadRequest},
+	{mbhead.ErrInvalidShadeSeqNo, "shades", statusBadRequest},
+	{mbhead.ErrDuplicateShadeSeqNo, "shades", statusBadRequest},
+	{mbhead.ErrShadeNotFound, "shades", statusBadRequest},
+}
+
+const (
+	statusBadRequest = "400"
+	statusConflict   = "409"
+)
+
+// mbHeadErrorToBaseResponse maps MB Head domain sentinels to a field-scoped BaseResponse with a
+// populated ValidationErrors entry, matching the invalidIDResponse convention. Anything not in
+// the table falls through to the shared domainErrorToBaseResponse mapping.
+func mbHeadErrorToBaseResponse(err error) *commonv1.BaseResponse {
+	for _, m := range mbHeadFieldErrors {
+		if errors.Is(err, m.err) {
+			return &commonv1.BaseResponse{
+				IsSuccess:  false,
+				StatusCode: m.status,
+				Message:    err.Error(),
+				ValidationErrors: []*commonv1.ValidationError{
+					{Field: m.field, Message: err.Error()},
+				},
+			}
+		}
+	}
+	return domainErrorToBaseResponse(err)
+}
+
+// shadeInputsFromProto converts the write-side MBHeadShadeInput list into application shade
+// inputs. A nil or empty list clears all children on save (replace-on-save, spec section 4.4).
+func shadeInputsFromProto(in []*financev1.MBHeadShadeInput) []appmbhead.ShadeInput {
+	out := make([]appmbhead.ShadeInput, 0, len(in))
+	for _, s := range in {
+		if s == nil {
+			continue
+		}
+		out = append(out, appmbhead.ShadeInput{
+			SeqNo:     s.MbhsSeqNo,
+			ShadeCode: s.MbhsShadeCode,
+			ShadeName: s.MbhsShadeName,
+		})
+	}
+	return out
+}
+
+// mbHeadShadesToProto converts domain shade children into their read-side proto form.
+func mbHeadShadesToProto(shades []*mbhead.Shade) []*financev1.MBHeadShade {
+	out := make([]*financev1.MBHeadShade, 0, len(shades))
+	for _, s := range shades {
+		if s == nil {
+			continue
+		}
+		p := &financev1.MBHeadShade{
+			MbhsId:        s.ID().String(),
+			MbhsSeqNo:     s.SeqNo(),
+			MbhsShadeCode: s.ShadeCode(),
+			MbhsShadeName: s.ShadeName(),
+			Audit: &commonv1.AuditInfo{
+				CreatedAt: s.CreatedAt().Format(time.RFC3339),
+				CreatedBy: s.CreatedBy(),
+			},
+		}
+		if s.UpdatedAt() != nil {
+			p.Audit.UpdatedAt = s.UpdatedAt().Format(time.RFC3339)
+		}
+		if s.UpdatedBy() != nil {
+			p.Audit.UpdatedBy = *s.UpdatedBy()
+		}
+		out = append(out, p)
+	}
+	return out
 }
 
 // parseOptionalMachineID parses an optional *string mbh_machine_id into a *uuid.UUID.

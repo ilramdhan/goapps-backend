@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
@@ -39,8 +40,10 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 			mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_final_product, mbh_code,
 			mbh_is_active, created_at, created_by,
 			mbh_is_boughtout, mbh_dev_code, mbh_shade_code, mbh_shade_name,
-			mbh_cross_section, mbh_lusture_code, mbh_machine_id
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+			mbh_cross_section, mbh_lusture_code, mbh_machine_id,
+			mbh_vs_number, mbh_no_of_process
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
+			NULLIF($23,''), NULLIF($24,''))
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -64,19 +67,35 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 		entity.CrossSection(),
 		entity.LustureCode(),
 		entity.MachineID(),
+		entity.VsNumber(),
+		entity.NoOfProcess(),
 	)
 	if err != nil {
-		if isMBHeadUniqueViolation(err) {
-			return mbhead.ErrAlreadyExists
+		if dupErr := mbHeadUniqueViolation(err); dupErr != nil {
+			return dupErr
 		}
 		return fmt.Errorf("create mb head: %w", err)
 	}
 	return nil
 }
 
-// GetByID retrieves an MB Head by its UUID primary key.
+// GetByID retrieves an MB Head by its UUID primary key, with its additional shades hydrated.
+//
+// Shades are loaded here rather than in List: the detail read is the only path that renders
+// or round-trips children (spec section 4.4 makes save replace-on-send, so an edit form that
+// never received them would silently clear them), while List would pay an N+1 for data the
+// grid does not show.
 func (r *MBHeadRepository) GetByID(ctx context.Context, id uuid.UUID) (*mbhead.Entity, error) {
-	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbh_id = $1 AND deleted_at IS NULL`, id))
+	entity, err := r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbh_id = $1 AND deleted_at IS NULL`, id))
+	if err != nil {
+		return nil, err
+	}
+	shades, err := r.ListShades(ctx, entity.ID())
+	if err != nil {
+		return nil, err
+	}
+	entity.SetShades(shades)
+	return entity, nil
 }
 
 // GetByMBCosting retrieves an MB Head by its unique mb_costing value.
@@ -162,7 +181,9 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 			mbh_shade_name    = $17,
 			mbh_cross_section = $18,
 			mbh_lusture_code  = $19,
-			mbh_machine_id    = $20
+			mbh_machine_id    = $20,
+			mbh_vs_number     = NULLIF($21,''),
+			mbh_no_of_process = NULLIF($22,'')
 		WHERE mbh_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -185,8 +206,13 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 		entity.CrossSection(),
 		entity.LustureCode(),
 		entity.MachineID(),
+		entity.VsNumber(),
+		entity.NoOfProcess(),
 	)
 	if err != nil {
+		if dupErr := mbHeadUniqueViolation(err); dupErr != nil {
+			return dupErr
+		}
 		return fmt.Errorf("update mb head: %w", err)
 	}
 	rowsAffected, err := result.RowsAffected()
@@ -238,6 +264,46 @@ func (r *MBHeadRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, 
 	).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("exists by id: %w", err)
+	}
+	return exists, nil
+}
+
+// ExistsByDevCode reports whether a live MB Head already uses the given development code.
+// excludeID, when non-nil, omits that row so an update does not collide with itself.
+func (r *MBHeadRepository) ExistsByDevCode(ctx context.Context, code string, excludeID *uuid.UUID) (bool, error) {
+	return r.existsByUniqueColumn(ctx, "mbh_dev_code", code, excludeID)
+}
+
+// ExistsByVsNumber reports whether a live MB Head already uses the given VS number.
+// excludeID, when non-nil, omits that row so an update does not collide with itself.
+func (r *MBHeadRepository) ExistsByVsNumber(ctx context.Context, number string, excludeID *uuid.UUID) (bool, error) {
+	return r.existsByUniqueColumn(ctx, "mbh_vs_number", number, excludeID)
+}
+
+// existsByUniqueColumn backs the dev-code / vs-number pre-checks. column is never
+// caller-supplied — both call sites pass a compile-time literal — so interpolating it is
+// safe; the value itself stays parameterized.
+func (r *MBHeadRepository) existsByUniqueColumn(
+	ctx context.Context, column, value string, excludeID *uuid.UUID,
+) (bool, error) {
+	if value == "" {
+		// The partial unique indexes exempt NULL and '' — an empty value can never collide.
+		return false, nil
+	}
+
+	query := fmt.Sprintf(
+		`SELECT EXISTS(SELECT 1 FROM mst_mb_head WHERE %s = $1 AND deleted_at IS NULL`, column,
+	)
+	args := []interface{}{value}
+	if excludeID != nil {
+		query += ` AND mbh_id <> $2`
+		args = append(args, *excludeID)
+	}
+	query += `)`
+
+	var exists bool
+	if err := r.db.QueryRowContext(ctx, query, args...).Scan(&exists); err != nil {
+		return false, fmt.Errorf("exists by %s: %w", column, err)
 	}
 	return exists, nil
 }
@@ -351,7 +417,8 @@ func (r *MBHeadRepository) selectCols() string {
 		       mbh_lusture_code, mbh_cost_product_id, mbh_cost_generated_at, mbh_cost_generated_by,
 		       mbh_param_waste, mbh_param_quality_loss, mbh_param_efficiency, mbh_param_dev_expense,
 		       mbh_param_packing, mbh_param_mb_prod_per_day, mbh_param_throughput_per_hour,
-		       mbh_param_no_of_process, mbh_machine_id
+		       mbh_param_no_of_process, mbh_machine_id,
+		       mbh_vs_number, mbh_no_of_process
 		FROM mst_mb_head
 	`
 }
@@ -410,6 +477,8 @@ type mbHeadDTO struct {
 	ParamThroughputPerHour sql.NullString
 	ParamNoOfProcess       sql.NullString
 	MachineID              sql.NullString
+	VsNumber               sql.NullString
+	NoOfProcess            sql.NullString
 }
 
 func nullTimeToStringPtr(n sql.NullTime) *string {
@@ -447,6 +516,7 @@ func (d *mbHeadDTO) toEntity() *mbhead.Entity {
 		nullableStringPtr(d.ParamPacking), nullableStringPtr(d.ParamMBProdPerDay),
 		d.ParamThroughputPerHour.String, d.ParamNoOfProcess.String,
 		nullableUUIDPtr(d.MachineID),
+		d.VsNumber.String, d.NoOfProcess.String,
 	)
 }
 
@@ -464,6 +534,7 @@ func (r *MBHeadRepository) scanOne(row *sql.Row) (*mbhead.Entity, error) {
 		&d.ParamWaste, &d.ParamQualityLoss, &d.ParamEfficiency, &d.ParamDevExpense,
 		&d.ParamPacking, &d.ParamMBProdPerDay, &d.ParamThroughputPerHour, &d.ParamNoOfProcess,
 		&d.MachineID,
+		&d.VsNumber, &d.NoOfProcess,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbhead.ErrNotFound
@@ -488,6 +559,7 @@ func (r *MBHeadRepository) scanRow(rows *sql.Rows) (*mbhead.Entity, error) {
 		&d.ParamWaste, &d.ParamQualityLoss, &d.ParamEfficiency, &d.ParamDevExpense,
 		&d.ParamPacking, &d.ParamMBProdPerDay, &d.ParamThroughputPerHour, &d.ParamNoOfProcess,
 		&d.MachineID,
+		&d.VsNumber, &d.NoOfProcess,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan mb head row: %w", err)
@@ -495,7 +567,52 @@ func (r *MBHeadRepository) scanRow(rows *sql.Rows) (*mbhead.Entity, error) {
 	return d.toEntity(), nil
 }
 
-func isMBHeadUniqueViolation(err error) bool {
+// Unique index names from migration 000477 (plus the pre-existing mb_costing index),
+// used to turn a bare 23505 into a field-specific domain error (spec section 3.2).
+const (
+	uixMBHeadMBCosting = "uix_mst_mb_head_mb_costing"
+	uixMBHeadDevCode   = "uix_mst_mb_head_dev_code"
+	uixMBHeadVsNumber  = "uix_mst_mb_head_vs_number"
+	uqMBHeadShadeSeq   = "uq_mbhs_seq"
+	uqMBHeadShadeCode  = "uq_mbhs_code"
+)
+
+// uniqueViolationConstraint returns the violated constraint name and true when err is a
+// PostgreSQL unique_violation (23505). Handles both the lib/pq and the pgx/v5/stdlib
+// (pgconn.PgError) error types, since the service opens its pool with the pgx driver.
+func uniqueViolationConstraint(err error) (string, bool) {
 	var pqErr *pq.Error
-	return errors.As(err, &pqErr) && pqErr.Code == "23505"
+	if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+		return pqErr.Constraint, true
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return pgErr.ConstraintName, true
+	}
+	return "", false
+}
+
+// mbHeadUniqueViolation maps a PostgreSQL unique violation on mst_mb_head or
+// mst_mb_head_shade to the matching domain sentinel, or nil when err is not a 23505.
+func mbHeadUniqueViolation(err error) error {
+	constraint, ok := uniqueViolationConstraint(err)
+	if !ok {
+		return nil
+	}
+	switch constraint {
+	case uixMBHeadDevCode:
+		return mbhead.ErrDevCodeAlreadyExists
+	case uixMBHeadVsNumber:
+		return mbhead.ErrVsNumberAlreadyExists
+	case uqMBHeadShadeSeq:
+		return mbhead.ErrDuplicateShadeSeqNo
+	case uqMBHeadShadeCode:
+		return mbhead.ErrDuplicateShadeCode
+	case uixMBHeadMBCosting:
+		return mbhead.ErrAlreadyExists
+	default:
+		// Unknown index (e.g. the column-level mbh_oracle_sys_id UNIQUE) — the generic
+		// sentinel keeps the previous behavior rather than leaking a driver error.
+		return mbhead.ErrAlreadyExists
+	}
 }

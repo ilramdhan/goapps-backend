@@ -3,6 +3,7 @@ package mbhead
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
@@ -22,49 +23,14 @@ func NewTemplateHandler() *TemplateHandler {
 	return &TemplateHandler{}
 }
 
-// templateExcelWriter wraps excelize file with error collection for non-critical operations.
-type templateExcelWriter struct {
-	f         *excelize.File
-	sheetName string
-	errs      []error
-}
-
-func (tw *templateExcelWriter) setCellValue(cell string, value any) {
-	if err := tw.f.SetCellValue(tw.sheetName, cell, value); err != nil {
-		tw.errs = append(tw.errs, fmt.Errorf("cell %s: %w", cell, err))
-	}
-}
-
-func (tw *templateExcelWriter) setColWidth(startCol, endCol string, width float64) {
-	if err := tw.f.SetColWidth(tw.sheetName, startCol, endCol, width); err != nil {
-		tw.errs = append(tw.errs, fmt.Errorf("column %s-%s: %w", startCol, endCol, err))
-	}
-}
-
-func (tw *templateExcelWriter) hasErrors() bool {
-	return len(tw.errs) > 0
-}
-
-// mbHeadTemplateHeaders lists the import template column headers in column order.
-var mbHeadTemplateHeaders = []string{
-	"MB Costing", "Mgt Name", "Dev Code", "Shade Code", "Shade Name",
-	"Cross Section", "Lusture Code", "Denier", "Filament", "Dozing", "Is Bought Out",
-}
-
-// mbHeadTemplateSampleData holds sample rows matching mbHeadTemplateHeaders column order.
-var mbHeadTemplateSampleData = [][]string{
-	{"MBC-0001", "Black MB Batch", "DEV-001", "SH-BLK", "Black", "ROUND", "LC-01", "150", "48", "1.2", "FALSE"},
-	{"MBC-0002", "White MB Batch", "DEV-002", "SH-WHT", "White", "ROUND", "LC-02", "75", "36", "1.0", "TRUE"},
-}
-
 // writeMBHeadTemplateHeaders writes and styles the header row, returning the last header column.
-func writeMBHeadTemplateHeaders(f *excelize.File, sheetName string) (string, error) {
-	lastCol, err := excelize.CoordinatesToCellName(len(mbHeadTemplateHeaders), 1)
+func writeMBHeadTemplateHeaders(f *excelize.File, sheetName string, headers []string) (string, error) {
+	lastCol, err := excelize.CoordinatesToCellName(len(headers), 1)
 	if err != nil {
 		return "", fmt.Errorf("failed to get last header cell name: %w", err)
 	}
 
-	for col, header := range mbHeadTemplateHeaders {
+	for col, header := range headers {
 		cell, err := excelize.CoordinatesToCellName(col+1, 1)
 		if err != nil {
 			return "", fmt.Errorf("failed to get cell name: %w", err)
@@ -89,17 +55,18 @@ func writeMBHeadTemplateHeaders(f *excelize.File, sheetName string) (string, err
 	return lastCol, nil
 }
 
-// writeMBHeadTemplateSampleRows writes the sample data rows into the writer's sheet.
-func writeMBHeadTemplateSampleRows(writer *templateExcelWriter) {
-	for i, sample := range mbHeadTemplateSampleData {
-		row := i + 2
-		for col, value := range sample {
-			cell, cellErr := excelize.CoordinatesToCellName(col+1, row)
+// writeMBHeadTemplateSampleRows writes the two illustrative rows carried by the shared column
+// table, so the samples cannot fall out of step with the headers above them.
+func writeMBHeadTemplateSampleRows(writer *excelWriter, cols []mbHeadImportColumn) {
+	for sample := range len(cols[0].samples) {
+		rowNum := sample + 2
+		for i, col := range cols {
+			cell, cellErr := excelize.CoordinatesToCellName(i+1, rowNum)
 			if cellErr != nil {
-				writer.errs = append(writer.errs, fmt.Errorf("row %d col %d: %w", row, col, cellErr))
+				writer.errs = append(writer.errs, fmt.Errorf("row %d col %d: %w", rowNum, i+1, cellErr))
 				continue
 			}
-			writer.setCellValue(cell, value)
+			writer.setCellValue(cell, col.samples[sample])
 		}
 	}
 }
@@ -127,17 +94,16 @@ func (h *TemplateHandler) Handle() (result *TemplateResult, err error) {
 		log.Debug().Err(deleteErr).Msg("Could not delete default Sheet1")
 	}
 
-	if _, err := writeMBHeadTemplateHeaders(f, sheetName); err != nil {
+	// The template carries exactly the import's canonical columns — no audit columns, because
+	// they are read-only provenance the import ignores.
+	cols := mbHeadImportColumns
+	if _, err := writeMBHeadTemplateHeaders(f, sheetName, mbHeadColumnHeaders(cols)); err != nil {
 		return nil, err
 	}
 
-	writer := &templateExcelWriter{f: f, sheetName: sheetName}
-	writeMBHeadTemplateSampleRows(writer)
-
-	writer.setColWidth("A", "A", 15)
-	writer.setColWidth("B", "B", 25)
-	writer.setColWidth("C", "G", 15)
-	writer.setColWidth("H", "K", 12)
+	writer := &excelWriter{f: f, sheetName: sheetName}
+	writeMBHeadTemplateSampleRows(writer, cols)
+	setMBHeadColumnWidths(writer, cols)
 
 	if writer.hasErrors() {
 		log.Warn().Errs("errors", writer.errs).Msg("Some Excel formatting operations failed")
@@ -158,21 +124,50 @@ func (h *TemplateHandler) Handle() (result *TemplateResult, err error) {
 	}, nil
 }
 
-// addMBHeadInstructionsSheet adds a non-critical instructions sheet to the template.
+// addMBHeadInstructionsSheet adds a non-critical instructions sheet to the template. The
+// required-column list is generated from the shared column table so it cannot go stale.
 func addMBHeadInstructionsSheet(f *excelize.File) error {
 	sheetName := "Instructions"
 	if _, err := f.NewSheet(sheetName); err != nil {
 		return fmt.Errorf("failed to create instructions sheet: %w", err)
 	}
 
+	var required []string
+	for _, col := range mbHeadImportColumns {
+		if col.required {
+			required = append(required, col.header)
+		}
+	}
+
 	instructions := []string{
 		"MB Head Import Instructions",
 		"",
-		"1. MB Costing is required and must be unique (max 100 characters).",
-		"2. Dev Code, Shade Code, Shade Name, Cross Section, Lusture Code are plain text fields.",
-		"3. Denier, Filament, Dozing are numeric — leave blank if unknown.",
-		"4. Is Bought Out must be TRUE or FALSE.",
-		"5. Duplicate MB Costing values are handled per the duplicate action selected on import (skip, update, or error).",
+		"1. Columns are matched by header NAME, not by position — you may reorder them freely.",
+		"   Extra columns are ignored, so an exported file can be edited and imported back as-is.",
+		"",
+		"2. These columns are REQUIRED on every row and must not be left blank:",
+		"   " + strings.Join(required, ", "),
+		"",
+		"3. MB Costing, Development No and VS Number must each be unique across all MB recipes,",
+		"   and unique within the file you are importing.",
+		"",
+		"4. No of Process must be one of the active option codes configured in the MB parameter",
+		"   master (NO_OF_PROCESS). Ask an administrator for the current list — it is maintained",
+		"   in the master data, not fixed in the file format.",
+		"",
+		"5. POY Denier and POY Filament must be greater than 0. LDR % must be between 0 and 100.",
+		"",
+		"6. Dozing is numeric and optional. Is Bought Out must be TRUE or FALSE (blank means FALSE).",
+		"",
+		"7. Shade Code 2/3 and Shade Name 2/3 are optional additional shades. Supply both the code",
+		"   and the name for a shade, and keep each code distinct from the others and from the main",
+		"   Shade Code. Leaving them blank clears any existing additional shades on update.",
+		"",
+		"8. Duplicate MB Costing values are handled per the duplicate action selected on import",
+		"   (skip, update, or error).",
+		"",
+		"9. Tick 'dry run' on import to validate the whole file and see the errors without writing",
+		"   anything to the database.",
 	}
 
 	for i, line := range instructions {
@@ -185,7 +180,7 @@ func addMBHeadInstructionsSheet(f *excelize.File) error {
 		}
 	}
 
-	if err := f.SetColWidth(sheetName, "A", "A", 80); err != nil {
+	if err := f.SetColWidth(sheetName, "A", "A", 90); err != nil {
 		return fmt.Errorf("failed to set instructions column width: %w", err)
 	}
 

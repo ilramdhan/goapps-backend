@@ -58,6 +58,7 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd ValidateCommand) (*mbh
 		return nil, err
 	}
 	applyHeadParamOverrides(params, entity)
+	applyHeadNoOfProcess(params, entity)
 
 	fromState := entity.EntryStatus()
 	entity.FreezeParams(
@@ -103,6 +104,27 @@ func applyHeadParamOverrides(params *mbhead.ParamSnapshot, entity *mbhead.Entity
 	}
 	if pd := entity.ParamMBProdPerDay(); pd != nil && *pd != "" {
 		params.MBProdPerDay = pd
+	}
+}
+
+// applyHeadNoOfProcess seeds the frozen no-of-process snapshot from the head's own
+// user-selected mbh_no_of_process column (spec section 2.4).
+//
+// mbh_no_of_process and mbh_param_no_of_process are DISTINCT fields with distinct roles:
+// the former is the user's editable choice (required on create/update since Phase 2), the
+// latter is the immutable snapshot taken at Validate time. Before this column existed,
+// Validate could only seed the snapshot from the mst_mb_param picklist default ('D'), which
+// is why 4168 legacy rows all carry 'D' — a default, not a choice.
+//
+// This runs AFTER applyHeadParamOverrides so the user's current selection wins over a value
+// frozen by an earlier Validate. It is deliberately NOT called from RefreezeHandler: re-freeze
+// preserves what was frozen, and applyHeadParamOverrides alone still serves that path.
+//
+// An empty header value falls through to the applyHeadParamOverrides / master-default chain —
+// freezing an empty string would break the mst_mb_param_option numeric lookup during auto-gen.
+func applyHeadNoOfProcess(params *mbhead.ParamSnapshot, entity *mbhead.Entity) {
+	if np := entity.NoOfProcess(); np != "" {
+		params.NoOfProcess = np
 	}
 }
 

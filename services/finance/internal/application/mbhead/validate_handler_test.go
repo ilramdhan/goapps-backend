@@ -116,7 +116,20 @@ func activeParamMasters(t *testing.T) []*mbparamdomain.Entity {
 
 // approvedHeadWithParams builds an APPROVED own-production head carrying its own
 // per-product throughput / no_of_process / prod_per_day values (as DATA-MB-02 set them).
+//
+// noOfProcess here is the FROZEN mbh_param_no_of_process snapshot. The head's own
+// mbh_no_of_process column (migration 000477) is left empty, matching every legacy row —
+// use approvedHeadWithHeadNoOfProcess to exercise it.
 func approvedHeadWithParams(throughput, noOfProcess string, prodPerDay *string) *mbheaddomain.Entity {
+	return approvedHeadWithHeadNoOfProcess(throughput, noOfProcess, prodPerDay, "")
+}
+
+// approvedHeadWithHeadNoOfProcess is approvedHeadWithParams plus the user-selected
+// mbh_no_of_process header column. It is distinct from the frozen mbh_param_no_of_process
+// snapshot (spec section 2.4): the header value is what Validate must seed the snapshot from.
+func approvedHeadWithHeadNoOfProcess(
+	throughput, noOfProcess string, prodPerDay *string, headNoOfProcess string,
+) *mbheaddomain.Entity {
 	return mbheaddomain.Reconstruct(
 		uuid.New(), nil, "MB001", nil, nil,
 		nil, nil, nil, nil, nil,
@@ -127,7 +140,7 @@ func approvedHeadWithParams(throughput, noOfProcess string, prodPerDay *string) 
 		0, nil, "",
 		nil, nil, nil, nil, nil,
 		prodPerDay, throughput, noOfProcess,
-		nil,
+		nil, "", headNoOfProcess,
 	)
 }
 
@@ -281,7 +294,7 @@ func TestValidateHandler_Handle_BoughtoutFromDraftUsesHeadParams(t *testing.T) {
 		0, nil, "",
 		nil, nil, nil, nil, nil,
 		nil, "20", "S",
-		nil,
+		nil, "", "",
 	)
 
 	mockRepo.On("GetByID", ctx, entity.ID()).Return(entity, nil)
@@ -310,6 +323,89 @@ func TestValidateHandler_Handle_BoughtoutFromDraftUsesHeadParams(t *testing.T) {
 	mockParams.AssertExpectations(t)
 }
 
+// TestValidateHandler_Handle_SeedsFrozenNoOfProcessFromHeadColumn covers the spec section 2.4
+// seeding rule: the frozen mbh_param_no_of_process snapshot must be taken from the head's own
+// user-selected mbh_no_of_process column, which outranks both a stale earlier freeze and the
+// mst_mb_param master default ('D'). Here the head was previously frozen at 'S' but the user
+// has since selected 'T', so Validate must freeze 'T'.
+func TestValidateHandler_Handle_SeedsFrozenNoOfProcessFromHeadColumn(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockParams := new(MockParamRepository)
+	handler := mbhead.NewValidateHandler(mockRepo, mockParams)
+	ctx := context.Background()
+
+	entity := approvedHeadWithHeadNoOfProcess("34", "S", strPtr("18"), "T")
+
+	mockRepo.On("GetByID", ctx, entity.ID()).Return(entity, nil)
+	mockParams.On("ListActive", ctx).Return(activeParamMasters(t), nil)
+
+	var captured *mbheaddomain.ParamSnapshot
+	mockRepo.On("TransitionWithAutoGen",
+		ctx, entity.ID(), mbheaddomain.StatusApproved, mbheaddomain.StatusValidated,
+		int32(2), "", "tester",
+		mock.AnythingOfType("*mbhead.ParamSnapshot"),
+		mock.AnythingOfType("*mbhead.Entity"),
+	).Run(func(args mock.Arguments) {
+		captured = args.Get(7).(*mbheaddomain.ParamSnapshot)
+	}).Return(nil)
+
+	result, err := handler.Handle(ctx, mbhead.ValidateCommand{
+		MbhID: entity.ID(), ActorUserID: "tester",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	require.NotNil(t, captured)
+	assert.Equal(t, "T", captured.NoOfProcess,
+		"the header's mbh_no_of_process must outrank the stale frozen 'S' and the master 'D'")
+	assert.Equal(t, "T", result.ParamNoOfProcess(),
+		"the in-memory entity must agree — mbFreezeCostParams reads this getter")
+
+	// Throughput has no equivalent header column, so it still resolves the old way.
+	assert.Equal(t, "34", captured.ThroughputPerHour)
+
+	mockRepo.AssertExpectations(t)
+	mockParams.AssertExpectations(t)
+}
+
+// TestValidateHandler_Handle_EmptyHeadNoOfProcessKeepsExistingPrecedence pins that a legacy
+// head with no mbh_no_of_process value (all 4203 rows before migration 000477) still follows
+// the frozen-then-master-default chain rather than freezing an empty string.
+func TestValidateHandler_Handle_EmptyHeadNoOfProcessKeepsExistingPrecedence(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockParams := new(MockParamRepository)
+	handler := mbhead.NewValidateHandler(mockRepo, mockParams)
+	ctx := context.Background()
+
+	// Frozen 'S', header empty → frozen wins. Empty on both → master 'D' wins.
+	entity := approvedHeadWithHeadNoOfProcess("34", "", nil, "")
+
+	mockRepo.On("GetByID", ctx, entity.ID()).Return(entity, nil)
+	mockParams.On("ListActive", ctx).Return(activeParamMasters(t), nil)
+
+	var captured *mbheaddomain.ParamSnapshot
+	mockRepo.On("TransitionWithAutoGen",
+		ctx, entity.ID(), mbheaddomain.StatusApproved, mbheaddomain.StatusValidated,
+		int32(2), "", "tester",
+		mock.AnythingOfType("*mbhead.ParamSnapshot"),
+		mock.AnythingOfType("*mbhead.Entity"),
+	).Run(func(args mock.Arguments) {
+		captured = args.Get(7).(*mbheaddomain.ParamSnapshot)
+	}).Return(nil)
+
+	_, err := handler.Handle(ctx, mbhead.ValidateCommand{
+		MbhID: entity.ID(), ActorUserID: "tester",
+	})
+	require.NoError(t, err)
+
+	require.NotNil(t, captured)
+	assert.Equal(t, "D", captured.NoOfProcess,
+		"an empty header value must not freeze an empty string — it falls back to the master default")
+
+	mockRepo.AssertExpectations(t)
+	mockParams.AssertExpectations(t)
+}
+
 // TestValidateHandler_Handle_RejectsNonApprovedOwnProduction pins the pre-existing
 // gate so the ENG-MB-01 change does not loosen it.
 func TestValidateHandler_Handle_RejectsNonApprovedOwnProduction(t *testing.T) {
@@ -329,7 +425,7 @@ func TestValidateHandler_Handle_RejectsNonApprovedOwnProduction(t *testing.T) {
 		0, nil, "",
 		nil, nil, nil, nil, nil,
 		nil, "34", "S",
-		nil,
+		nil, "", "",
 	)
 
 	mockRepo.On("GetByID", ctx, draft.ID()).Return(draft, nil)
