@@ -3801,17 +3801,17 @@
         },
         "mbhMgtName": {
           "type": "string",
-          "description": "Updated management display name (max 100 chars)."
+          "description": "Updated management display name / MB Name (1-100 chars). Required."
         },
         "mbhDenier": {
           "type": "number",
           "format": "double",
-          "description": "Updated yarn denier."
+          "description": "Updated POY denier (\u003e 0). Required."
         },
         "mbhFilament": {
           "type": "integer",
           "format": "int32",
-          "description": "Updated number of filaments."
+          "description": "Updated POY filament count (\u003e 0). Required."
         },
         "mbhDozing": {
           "type": "number",
@@ -3833,11 +3833,11 @@
         "mbhLdrPrsn": {
           "type": "number",
           "format": "double",
-          "description": "Optional Oracle CMBH_LDR_PRSN (≥ 0)."
+          "description": "Updated LDR percentage (0-100). Required."
         },
         "mbhFinalProduct": {
           "type": "string",
-          "description": "Optional Oracle CMBH_FINAL_PRODUCT (max 200 chars)."
+          "description": "Updated final product description (1-200 chars). Required."
         },
         "mbhCode": {
           "type": "string",
@@ -3845,19 +3845,19 @@
         },
         "mbhDevCode": {
           "type": "string",
-          "description": "Development code (max 50 chars)."
+          "description": "Updated development number (1-50 chars). Required. Unique among live records."
         },
         "mbhShadeCode": {
           "type": "string",
-          "description": "Shade code (max 20 chars)."
+          "description": "Updated shade code (1-20 chars). Required."
         },
         "mbhShadeName": {
           "type": "string",
-          "description": "Shade name (max 100 chars)."
+          "description": "Updated shade name (1-100 chars). Required."
         },
         "mbhCrossSection": {
           "type": "string",
-          "description": "Cross-section descriptor (max 20 chars)."
+          "description": "Updated cross-section descriptor (1-20 chars). Required."
         },
         "mbhLustureCode": {
           "type": "string",
@@ -3866,6 +3866,22 @@
         "mbhMachineId": {
           "type": "string",
           "description": "Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id)."
+        },
+        "mbhVsNumber": {
+          "type": "string",
+          "description": "Updated VS number (1-50 chars). Required. Unique among live records."
+        },
+        "mbhNoOfProcess": {
+          "type": "string",
+          "description": "Updated number of process option code, e.g. \"S\"/\"D\"/\"T\" (1-10 chars). Required."
+        },
+        "shades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBHeadShadeInput"
+          },
+          "description": "Full desired list of additional shades beyond the header shade (at most 2). Replace-on-save."
         }
       },
       "description": "UpdateMBHeadRequest is the request for updating an MB Head record."
@@ -4758,17 +4774,17 @@
         },
         "mbhMgtName": {
           "type": "string",
-          "description": "Management display name (max 100 chars)."
+          "description": "Management display name / MB Name (1-100 chars). Required."
         },
         "mbhDenier": {
           "type": "number",
           "format": "double",
-          "description": "Optional yarn denier."
+          "description": "POY denier (\u003e 0). Required."
         },
         "mbhFilament": {
           "type": "integer",
           "format": "int32",
-          "description": "Optional number of filaments."
+          "description": "POY filament count (\u003e 0). Required."
         },
         "mbhDozing": {
           "type": "number",
@@ -4786,11 +4802,11 @@
         "mbhLdrPrsn": {
           "type": "number",
           "format": "double",
-          "description": "Optional Oracle CMBH_LDR_PRSN (≥ 0)."
+          "description": "LDR percentage (0-100). Required."
         },
         "mbhFinalProduct": {
           "type": "string",
-          "description": "Optional Oracle CMBH_FINAL_PRODUCT (max 200 chars)."
+          "description": "Final product description (1-200 chars). Required."
         },
         "mbhCode": {
           "type": "string",
@@ -4802,19 +4818,19 @@
         },
         "mbhDevCode": {
           "type": "string",
-          "description": "Development code (max 50 chars)."
+          "description": "Development number (1-50 chars). Required. Unique among live records."
         },
         "mbhShadeCode": {
           "type": "string",
-          "description": "Shade code (max 20 chars)."
+          "description": "Shade code (1-20 chars). Required."
         },
         "mbhShadeName": {
           "type": "string",
-          "description": "Shade name (max 100 chars)."
+          "description": "Shade name (1-100 chars). Required."
         },
         "mbhCrossSection": {
           "type": "string",
-          "description": "Cross-section descriptor (max 20 chars)."
+          "description": "Cross-section descriptor (1-20 chars). Required."
         },
         "mbhLustureCode": {
           "type": "string",
@@ -4823,6 +4839,22 @@
         "mbhMachineId": {
           "type": "string",
           "description": "Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id)."
+        },
+        "mbhVsNumber": {
+          "type": "string",
+          "description": "VS number (1-50 chars). Required. Unique among live records."
+        },
+        "mbhNoOfProcess": {
+          "type": "string",
+          "description": "Number of process option code, e.g. \"S\"/\"D\"/\"T\" (1-10 chars). Required."
+        },
+        "shades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBHeadShadeInput"
+          },
+          "description": "Additional shades beyond the header shade (at most 2)."
         }
       },
       "description": "CreateMBHeadRequest is the request for creating an MB Head record."
@@ -6058,6 +6090,10 @@
         "duplicateAction": {
           "type": "string",
           "description": "How to handle duplicate mb_costing values."
+        },
+        "dryRun": {
+          "type": "boolean",
+          "description": "When true, validate every row and return counts and errors without writing anything."
         }
       },
       "description": "ImportMBHeadsRequest is the request for importing MB Head records from Excel."
@@ -6091,6 +6127,11 @@
             "$ref": "#/definitions/v1ImportError"
           },
           "description": "Per-row import errors."
+        },
+        "updatedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of existing records updated."
         }
       },
       "description": "ImportMBHeadsResponse is the response for importing MB Head records."
@@ -6893,9 +6934,71 @@
         "machineId": {
           "type": "string",
           "description": "Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id). Optional."
+        },
+        "mbhVsNumber": {
+          "type": "string",
+          "description": "VS number. Unique among live records."
+        },
+        "mbhNoOfProcess": {
+          "type": "string",
+          "description": "Number of process option code (references mst_mb_param_option where mbpo_mbp_code = 'NO_OF_PROCESS'), e.g. \"S\"/\"D\"/\"T\"."
+        },
+        "shades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBHeadShade"
+          },
+          "description": "Additional shade codes beyond the header shade (at most 2). Label-only metadata, no costing impact."
         }
       },
       "description": "MBHead represents a Melange Batch head master record (MEL yarn type only)."
+    },
+    "v1MBHeadShade": {
+      "type": "object",
+      "properties": {
+        "mbhsId": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "mbhsSeqNo": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display sequence number within the head (2 or 3; the header shade is #1)."
+        },
+        "mbhsShadeCode": {
+          "type": "string",
+          "description": "Shade code."
+        },
+        "mbhsShadeName": {
+          "type": "string",
+          "description": "Shade name."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "MBHeadShade is an additional shade code carried by an MB Head beyond the header shade."
+    },
+    "v1MBHeadShadeInput": {
+      "type": "object",
+      "properties": {
+        "mbhsSeqNo": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display sequence number within the head (2 or 3; the header shade is #1)."
+        },
+        "mbhsShadeCode": {
+          "type": "string",
+          "description": "Shade code (max 20 chars)."
+        },
+        "mbhsShadeName": {
+          "type": "string",
+          "description": "Shade name (max 100 chars)."
+        }
+      },
+      "description": "MBHeadShadeInput is a desired additional shade supplied on MB Head create/update."
     },
     "v1MBSpin": {
       "type": "object",
