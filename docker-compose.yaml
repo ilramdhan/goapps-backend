@@ -15,7 +15,7 @@ services:
       POSTGRES_USER: iam
       POSTGRES_PASSWORD: iam123
     volumes:
-      - iam_postgres_data:/var/lib/postgresql/data
+      - iam_postgres_data:/var/lib/postgresql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U iam -d iam_db" ]
       interval: 10s
@@ -35,7 +35,7 @@ services:
       POSTGRES_USER: finance
       POSTGRES_PASSWORD: finance123
     volumes:
-      - finance_postgres_data:/var/lib/postgresql/data
+      - finance_postgres_data:/var/lib/postgresql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U finance -d finance_db" ]
       interval: 10s
@@ -55,7 +55,7 @@ services:
       POSTGRES_USER: ppc
       POSTGRES_PASSWORD: ppc123
     volumes:
-      - ppc_postgres_data:/var/lib/postgresql/data
+      - ppc_postgres_data:/var/lib/postgresql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ppc -d ppc_db" ]
       interval: 10s

@@ -1,0 +1,54 @@
+name: ppc-infra
+# NOTE: Prefer using the shared docker-compose.yaml at the backend root.
+# This per-service compose is for PPC-only development.
+#
+# PPC needs less infrastructure than IAM/Finance: its config.yaml declares no
+# redis, rabbitmq or minio section, so only PostgreSQL and Jaeger are here.
+# Ports match config.yaml defaults (postgres 5436, OTLP 4317), which means this
+# file and the root compose are mutually exclusive -- run one or the other.
+#
+# PPC also calls finance and iam over gRPC (see finance_client / iam_client in
+# config.yaml). Those services still run on the host, not in this compose.
+
+services:
+  # PostgreSQL Database for PPC
+  postgres:
+    image: postgres:18-alpine
+    container_name: ppc-postgres
+    ports:
+      - "5436:5432"
+    environment:
+      POSTGRES_DB: ppc_db
+      POSTGRES_USER: ppc
+      POSTGRES_PASSWORD: ppc123
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ppc -d ppc_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ppc-network
+
+  # Jaeger - Distributed Tracing (config.yaml tracing.endpoint = localhost:4317)
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: ppc-jaeger
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14268:14268" # Collector HTTP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - ppc-network
+
+volumes:
+  postgres_data:
+
+
+networks:
+  ppc-network:
+    driver: bridge
