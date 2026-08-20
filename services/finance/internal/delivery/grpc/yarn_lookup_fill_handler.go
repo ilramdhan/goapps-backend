@@ -283,6 +283,20 @@ func (h *YarnLookupFillHandler) GetLookupFillValues(ctx context.Context, req *fi
 	}
 }
 
+// warnNoReader reports a lookup_source_column that is registered in
+// mst_lookup_master_column but has no reader in the Go-side reader maps (or no
+// switch case). Such a column is silently skipped and yields an empty fill, so
+// the only trace of the failure is this log line. It stays a warning rather than
+// an error on purpose: registered-but-unreadable columns still exist in the wild
+// and hard-failing would break otherwise working lookups.
+func warnNoReader(ctx context.Context, source, col, paramCode, sourceParamCode string) {
+	log.Ctx(ctx).Warn().
+		Str("lookup_source_column", col).
+		Str("param_code", paramCode).
+		Str("source_param_code", sourceParamCode).
+		Msg(source + " fill: no reader registered for lookup_source_column — value skipped")
+}
+
 func (h *YarnLookupFillHandler) fillFromMachine(ctx context.Context, mcCode, triggerParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
 	mc, err := h.machineRepo.GetByCode(ctx, mcCode)
 	if err != nil {
@@ -296,10 +310,15 @@ func (h *YarnLookupFillHandler) fillFromMachine(ctx context.Context, mcCode, tri
 
 	nums := make(map[string]float64, len(childParams))
 	for _, p := range childParams {
-		if reader, ok := machineNumericReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(mc); hasVal {
-				nums[p.Code().String()] = val
-			}
+		col := p.LookupSourceColumn()
+		numReader, hasNumReader := machineNumericReaders[col]
+		if !hasNumReader {
+			// Machine has no text readers, so an unmapped column is unfillable.
+			warnNoReader(ctx, "Machine", col, p.Code().String(), triggerParamCode)
+			continue
+		}
+		if val, hasVal := numReader(mc); hasVal {
+			nums[p.Code().String()] = val
 		}
 	}
 
@@ -326,10 +345,15 @@ func (h *YarnLookupFillHandler) fillFromIntermingling(ctx context.Context, intmC
 
 	nums := make(map[string]float64, len(childParams))
 	for _, p := range childParams {
-		if reader, ok := interminglingNumericReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(intm); hasVal {
-				nums[p.Code().String()] = val
-			}
+		col := p.LookupSourceColumn()
+		numReader, hasNumReader := interminglingNumericReaders[col]
+		if !hasNumReader {
+			// Intermingling has no text readers, so an unmapped column is unfillable.
+			warnNoReader(ctx, "Intermingling", col, p.Code().String(), triggerParamCode)
+			continue
+		}
+		if val, hasVal := numReader(intm); hasVal {
+			nums[p.Code().String()] = val
 		}
 	}
 
@@ -356,15 +380,21 @@ func (h *YarnLookupFillHandler) fillFromProductGrade(ctx context.Context, pgCode
 	nums := make(map[string]float64, len(childParams))
 	texts := make(map[string]string, len(childParams))
 	for _, p := range childParams {
-		if reader, ok := productGradeNumericReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(grade); hasVal {
+		col := p.LookupSourceColumn()
+		numReader, hasNumReader := productGradeNumericReaders[col]
+		if hasNumReader {
+			if val, hasVal := numReader(grade); hasVal {
 				nums[p.Code().String()] = val
 			}
 		}
-		if reader, ok := productGradeTextReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(grade); hasVal {
+		textReader, hasTextReader := productGradeTextReaders[col]
+		if hasTextReader {
+			if val, hasVal := textReader(grade); hasVal {
 				texts[p.Code().String()] = val
 			}
+		}
+		if !hasNumReader && !hasTextReader {
+			warnNoReader(ctx, "Product grade", col, p.Code().String(), triggerParamCode)
 		}
 	}
 
@@ -406,13 +436,7 @@ func (h *YarnLookupFillHandler) fillFromMBHead(ctx context.Context, mbCosting, t
 			}
 		}
 		if !hasNumReader && !hasTextReader {
-			// M-a2: an unregistered lookup_source_column is silently skipped, which
-			// yields an empty fill instead of an error. Log it so the failure is visible.
-			log.Ctx(ctx).Warn().
-				Str("lookup_source_column", col).
-				Str("param_code", p.Code().String()).
-				Str("source_param_code", triggerParamCode).
-				Msg("MB Head fill: no reader registered for lookup_source_column — value skipped")
+			warnNoReader(ctx, "MB Head", col, p.Code().String(), triggerParamCode)
 		}
 	}
 
@@ -452,10 +476,12 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 
 	nums := make(map[string]float64, len(childParams))
 	for _, p := range childParams {
-		switch p.LookupSourceColumn() {
+		col := p.LookupSourceColumn()
+		switch col {
 		case "no_of_bob":
 			nums[p.Code().String()] = float64(bbc.NoOfBob())
 		case "bbcr_bob_rate_mkt":
+			// A zero/missing rate is a deliberate no-fill, not an unknown column.
 			if latestBobRateMkt > 0 {
 				nums[p.Code().String()] = latestBobRateMkt
 			}
@@ -463,6 +489,8 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 			if latestBoxRateMkt > 0 {
 				nums[p.Code().String()] = latestBoxRateMkt
 			}
+		default:
+			warnNoReader(ctx, "Box bobbin cost", col, p.Code().String(), triggerParamCode)
 		}
 	}
 
@@ -510,13 +538,7 @@ func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey,
 			}
 		}
 		if !hasNumReader && !hasTextReader {
-			// M-a2: an unregistered lookup_source_column is silently skipped, which
-			// yields an empty fill instead of an error. Log it so the failure is visible.
-			log.Ctx(ctx).Warn().
-				Str("lookup_source_column", col).
-				Str("param_code", p.Code().String()).
-				Str("source_param_code", sourceParamCode).
-				Msg("MB Spin fill: no reader registered for lookup_source_column — value skipped")
+			warnNoReader(ctx, "MB Spin", col, p.Code().String(), sourceParamCode)
 		}
 	}
 
