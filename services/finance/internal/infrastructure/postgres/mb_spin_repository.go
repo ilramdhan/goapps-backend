@@ -209,12 +209,16 @@ func (r *MBSpinRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, 
 
 // GetByMBCosting retrieves an MB Spin by its MB costing code.
 func (r *MBSpinRepository) GetByMBCosting(ctx context.Context, code string) (*mbspin.Entity, error) {
-	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_mb_costing = $1 AND deleted_at IS NULL`, code))
+	// D20/M2a: deterministic tie-breaker on duplicate keys; no mbs_is_active filter on purpose
+	// (filtering would shift the winner and empty out keys that have zero active spins).
+	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_mb_costing = $1 AND deleted_at IS NULL ORDER BY created_at ASC, mbs_id ASC LIMIT 1`, code))
 }
 
 // GetByOrionItemCode retrieves the first active MB Spin with the given ORION item code.
 func (r *MBSpinRepository) GetByOrionItemCode(ctx context.Context, code string) (*mbspin.Entity, error) {
-	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_orion_item_code = $1 AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1`, code))
+	// D20/M2a: deterministic tie-breaker on duplicate keys; no mbs_is_active filter on purpose
+	// (filtering would shift the winner and empty out keys that have zero active spins).
+	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_orion_item_code = $1 AND deleted_at IS NULL ORDER BY created_at ASC, mbs_id ASC LIMIT 1`, code))
 }
 
 // =============================================================================
