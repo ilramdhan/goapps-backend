@@ -3925,6 +3925,11 @@
         "mbsFinalProduct": {
           "type": "string",
           "description": "Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars)."
+        },
+        "mbsRunLdrPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage (≥ 0)."
         }
       },
       "description": "CreateMBSpinRequest is the request for creating an MB Spin record."
@@ -3999,6 +4004,11 @@
         "mbsFinalProduct": {
           "type": "string",
           "description": "Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars)."
+        },
+        "mbsRunLdrPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage (≥ 0)."
         }
       },
       "description": "UpdateMBSpinRequest is the request for updating an MB Spin record."
@@ -6960,6 +6970,11 @@
         "mbsFinalProduct": {
           "type": "string",
           "description": "Optional Oracle CMBS_FINAL_PRODUCT — final product description."
+        },
+        "mbsRunLdrPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage used in production (D30: authoritative LDR for costing)."
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",

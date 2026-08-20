@@ -21,6 +21,7 @@ type UpdateCommand struct {
 	CostRateMkt     *float64
 	MBSStatus       *string
 	MBSLdrPrsn      *float64
+	MBSRunLdrPct    *float64
 	MBSFinalProduct *string
 	IsActive        *bool
 	UpdatedBy       string
@@ -53,6 +54,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbspin.
 		CostRateMkt:     cmd.CostRateMkt,
 		MBSStatus:       cmd.MBSStatus,
 		MBSLdrPrsn:      cmd.MBSLdrPrsn,
+		MBSRunLdrPct:    cmd.MBSRunLdrPct,
 		MBSFinalProduct: cmd.MBSFinalProduct,
 		IsActive:        cmd.IsActive,
 	}, cmd.UpdatedBy); err != nil {

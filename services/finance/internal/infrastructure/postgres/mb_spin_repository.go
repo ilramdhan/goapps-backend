@@ -35,9 +35,9 @@ func (r *MBSpinRepository) Create(ctx context.Context, entity *mbspin.Entity) er
 			mbs_id, mbs_oracle_sys_id, mbs_orion_item_code, mbs_mbh_id, mbs_mgt_name,
 			mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
 			mbs_cc, mbs_cost_rate_mkt,
-			mbs_status, mbs_ldr_prsn, mbs_final_product,
+			mbs_status, mbs_ldr_prsn, mbs_run_ldr_pct, mbs_final_product,
 			mbs_is_active, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -52,6 +52,7 @@ func (r *MBSpinRepository) Create(ctx context.Context, entity *mbspin.Entity) er
 		entity.CostRateMkt(),
 		entity.MBSStatus(),
 		entity.MBSLdrPrsn(),
+		entity.MBSRunLdrPct(),
 		entity.MBSFinalProduct(),
 		entity.IsActive(),
 		entity.CreatedAt(),
@@ -142,10 +143,11 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 			mbs_cost_rate_mkt = $8,
 			mbs_status        = $9,
 			mbs_ldr_prsn      = $10,
-			mbs_final_product = $11,
-			mbs_is_active     = $12,
-			updated_at        = $13,
-			updated_by        = $14
+			mbs_run_ldr_pct   = $11,
+			mbs_final_product = $12,
+			mbs_is_active     = $13,
+			updated_at        = $14,
+			updated_by        = $15
 		WHERE mbs_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -158,6 +160,7 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 		entity.CostRateMkt(),
 		entity.MBSStatus(),
 		entity.MBSLdrPrsn(),
+		entity.MBSRunLdrPct(),
 		entity.MBSFinalProduct(),
 		entity.IsActive(),
 		entity.UpdatedAt(),
@@ -230,7 +233,7 @@ func (r *MBSpinRepository) selectCols() string {
 		SELECT mbs_id, mbs_oracle_sys_id, mbs_orion_item_code, mbs_mbh_id, mbs_mgt_name,
 		       mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
 		       mbs_cc, mbs_cost_rate_mkt,
-		       mbs_status, mbs_ldr_prsn, mbs_final_product,
+		       mbs_status, mbs_ldr_prsn, mbs_run_ldr_pct, mbs_final_product,
 		       mbs_is_active,
 		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
 		FROM mst_mb_spin
@@ -262,6 +265,7 @@ type mbSpinDTO struct {
 	CostRateMkt     sql.NullFloat64
 	MBSStatus       sql.NullString
 	MBSLdrPrsn      sql.NullFloat64
+	MBSRunLdrPct    sql.NullFloat64
 	MBSFinalProduct sql.NullString
 	IsActive        bool
 	CreatedAt       time.Time
@@ -287,6 +291,7 @@ func (d *mbSpinDTO) toEntity() *mbspin.Entity {
 		nullableFloat64Ptr(d.CostRateMkt),
 		nullableStringPtr(d.MBSStatus),
 		nullableFloat64Ptr(d.MBSLdrPrsn),
+		nullableFloat64Ptr(d.MBSRunLdrPct),
 		nullableStringPtr(d.MBSFinalProduct),
 		d.IsActive,
 		d.CreatedAt, d.CreatedBy,
@@ -301,7 +306,7 @@ func (r *MBSpinRepository) scanOne(row *sql.Row) (*mbspin.Entity, error) {
 		&d.ID, &d.OracleSysID, &d.OrionItemCode, &d.HeadID, &d.MgtName,
 		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting,
 		&d.CC, &d.CostRateMkt,
-		&d.MBSStatus, &d.MBSLdrPrsn, &d.MBSFinalProduct,
+		&d.MBSStatus, &d.MBSLdrPrsn, &d.MBSRunLdrPct, &d.MBSFinalProduct,
 		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)
@@ -320,7 +325,7 @@ func (r *MBSpinRepository) scanRow(rows *sql.Rows) (*mbspin.Entity, error) {
 		&d.ID, &d.OracleSysID, &d.OrionItemCode, &d.HeadID, &d.MgtName,
 		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting,
 		&d.CC, &d.CostRateMkt,
-		&d.MBSStatus, &d.MBSLdrPrsn, &d.MBSFinalProduct,
+		&d.MBSStatus, &d.MBSLdrPrsn, &d.MBSRunLdrPct, &d.MBSFinalProduct,
 		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 	)

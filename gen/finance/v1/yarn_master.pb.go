@@ -7957,6 +7957,8 @@ type MBSpin struct {
 	MbsLdrPrsn *float64 `protobuf:"fixed64,13,opt,name=mbs_ldr_prsn,json=mbsLdrPrsn,proto3,oneof" json:"mbs_ldr_prsn,omitempty"`
 	// Optional Oracle CMBS_FINAL_PRODUCT — final product description.
 	MbsFinalProduct *string `protobuf:"bytes,14,opt,name=mbs_final_product,json=mbsFinalProduct,proto3,oneof" json:"mbs_final_product,omitempty"`
+	// Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage used in production (D30: authoritative LDR for costing).
+	MbsRunLdrPct *float64 `protobuf:"fixed64,15,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
 	// Audit metadata.
 	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -8091,6 +8093,13 @@ func (x *MBSpin) GetMbsFinalProduct() string {
 	return ""
 }
 
+func (x *MBSpin) GetMbsRunLdrPct() float64 {
+	if x != nil && x.MbsRunLdrPct != nil {
+		return *x.MbsRunLdrPct
+	}
+	return 0
+}
+
 func (x *MBSpin) GetAudit() *v1.AuditInfo {
 	if x != nil {
 		return x.Audit
@@ -8125,8 +8134,10 @@ type CreateMBSpinRequest struct {
 	MbsLdrPrsn *float64 `protobuf:"fixed64,11,opt,name=mbs_ldr_prsn,json=mbsLdrPrsn,proto3,oneof" json:"mbs_ldr_prsn,omitempty"`
 	// Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars).
 	MbsFinalProduct *string `protobuf:"bytes,12,opt,name=mbs_final_product,json=mbsFinalProduct,proto3,oneof" json:"mbs_final_product,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage (≥ 0).
+	MbsRunLdrPct  *float64 `protobuf:"fixed64,13,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateMBSpinRequest) Reset() {
@@ -8241,6 +8252,13 @@ func (x *CreateMBSpinRequest) GetMbsFinalProduct() string {
 		return *x.MbsFinalProduct
 	}
 	return ""
+}
+
+func (x *CreateMBSpinRequest) GetMbsRunLdrPct() float64 {
+	if x != nil && x.MbsRunLdrPct != nil {
+		return *x.MbsRunLdrPct
+	}
+	return 0
 }
 
 // CreateMBSpinResponse is the response for creating an MB Spin record.
@@ -8437,8 +8455,10 @@ type UpdateMBSpinRequest struct {
 	MbsLdrPrsn *float64 `protobuf:"fixed64,12,opt,name=mbs_ldr_prsn,json=mbsLdrPrsn,proto3,oneof" json:"mbs_ldr_prsn,omitempty"`
 	// Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars).
 	MbsFinalProduct *string `protobuf:"bytes,13,opt,name=mbs_final_product,json=mbsFinalProduct,proto3,oneof" json:"mbs_final_product,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage (≥ 0).
+	MbsRunLdrPct  *float64 `protobuf:"fixed64,14,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateMBSpinRequest) Reset() {
@@ -8560,6 +8580,13 @@ func (x *UpdateMBSpinRequest) GetMbsFinalProduct() string {
 		return *x.MbsFinalProduct
 	}
 	return ""
+}
+
+func (x *UpdateMBSpinRequest) GetMbsRunLdrPct() float64 {
+	if x != nil && x.MbsRunLdrPct != nil {
+		return *x.MbsRunLdrPct
+	}
+	return 0
 }
 
 // UpdateMBSpinResponse is the response for updating an MB Spin record.
@@ -16470,7 +16497,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06reason\"k\n" +
 	"\x14RevokeMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xbe\x05\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xfe\x05\n" +
 	"\x06MBSpin\x12\x15\n" +
 	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12)\n" +
 	"\x11mbs_oracle_sys_id\x18\x02 \x01(\tR\x0embsOracleSysId\x12\x1c\n" +
@@ -16493,6 +16520,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\fmbs_ldr_prsn\x18\r \x01(\x01H\x06R\n" +
 	"mbsLdrPrsn\x88\x01\x01\x12/\n" +
 	"\x11mbs_final_product\x18\x0e \x01(\tH\aR\x0fmbsFinalProduct\x88\x01\x01\x12*\n" +
+	"\x0fmbs_run_ldr_pct\x18\x0f \x01(\x01H\bR\fmbsRunLdrPct\x88\x01\x01\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
@@ -16501,7 +16529,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x12_mbs_cost_rate_mktB\r\n" +
 	"\v_mbs_statusB\x0f\n" +
 	"\r_mbs_ldr_prsnB\x14\n" +
-	"\x12_mbs_final_product\"\xe3\x05\n" +
+	"\x12_mbs_final_productB\x12\n" +
+	"\x10_mbs_run_ldr_pct\"\xb3\x06\n" +
 	"\x13CreateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12+\n" +
 	"\fmbs_mgt_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\n" +
@@ -16520,7 +16549,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	" \x01(\tB\a\xbaH\x04r\x02\x18dH\aR\tmbsStatus\x88\x01\x01\x125\n" +
 	"\fmbs_ldr_prsn\x18\v \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\bR\n" +
 	"mbsLdrPrsn\x88\x01\x01\x129\n" +
-	"\x11mbs_final_product\x18\f \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\tR\x0fmbsFinalProduct\x88\x01\x01B\x14\n" +
+	"\x11mbs_final_product\x18\f \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\tR\x0fmbsFinalProduct\x88\x01\x01\x12:\n" +
+	"\x0fmbs_run_ldr_pct\x18\r \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\n" +
+	"R\fmbsRunLdrPct\x88\x01\x01B\x14\n" +
 	"\x12_mbs_oracle_sys_idB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
@@ -16530,7 +16561,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x12_mbs_cost_rate_mktB\r\n" +
 	"\v_mbs_statusB\x0f\n" +
 	"\r_mbs_ldr_prsnB\x14\n" +
-	"\x12_mbs_final_product\"k\n" +
+	"\x12_mbs_final_productB\x12\n" +
+	"\x10_mbs_run_ldr_pct\"k\n" +
 	"\x14CreateMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"T\n" +
@@ -16539,7 +16571,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\"h\n" +
 	"\x11GetMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"\x86\x06\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"\xd6\x06\n" +
 	"\x13UpdateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\x120\n" +
@@ -16560,7 +16592,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\fmbs_ldr_prsn\x18\f \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\tR\n" +
 	"mbsLdrPrsn\x88\x01\x01\x129\n" +
 	"\x11mbs_final_product\x18\r \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\n" +
-	"R\x0fmbsFinalProduct\x88\x01\x01B\x0f\n" +
+	"R\x0fmbsFinalProduct\x88\x01\x01\x12:\n" +
+	"\x0fmbs_run_ldr_pct\x18\x0e \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\vR\fmbsRunLdrPct\x88\x01\x01B\x0f\n" +
 	"\r_mbs_mgt_nameB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
@@ -16571,7 +16604,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x12_mbs_cost_rate_mktB\r\n" +
 	"\v_mbs_statusB\x0f\n" +
 	"\r_mbs_ldr_prsnB\x14\n" +
-	"\x12_mbs_final_product\"k\n" +
+	"\x12_mbs_final_productB\x12\n" +
+	"\x10_mbs_run_ldr_pct\"k\n" +
 	"\x14UpdateMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"W\n" +

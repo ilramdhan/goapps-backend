@@ -160,8 +160,25 @@ var mbSpinNumericReaders = map[string]func(*mbspin.Entity) (float64, bool){
 		}
 		return 0, false
 	},
+	// D30: mbs_dozing is the retired, contaminated legacy column. Kept registered on
+	// purpose until L1 repoints lookup_source_column — removing it now would empty out
+	// the fills that are currently live.
 	"mbs_dozing": func(e *mbspin.Entity) (float64, bool) {
 		if v := e.Dozing(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	// D30: mbs_run_ldr_pct is the actual LDR used in production — the correct value for costing.
+	"mbs_run_ldr_pct": func(e *mbspin.Entity) (float64, bool) {
+		if v := e.MBSRunLdrPct(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	// D30: mbs_ldr_prsn is the planned LDR, set while the product is still new.
+	"mbs_ldr_prsn": func(e *mbspin.Entity) (float64, bool) {
+		if v := e.MBSLdrPrsn(); v != nil {
 			return *v, true
 		}
 		return 0, false
@@ -454,15 +471,26 @@ func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey,
 	texts := make(map[string]string)
 	for _, p := range children {
 		col := p.LookupSourceColumn()
-		if reader, ok := mbSpinNumericReaders[col]; ok {
-			if val, has := reader(spin); has {
+		numReader, hasNumReader := mbSpinNumericReaders[col]
+		if hasNumReader {
+			if val, has := numReader(spin); has {
 				nums[p.Code().String()] = val
 			}
 		}
-		if reader, ok := mbSpinTextReaders[col]; ok {
-			if val, has := reader(spin); has {
+		textReader, hasTextReader := mbSpinTextReaders[col]
+		if hasTextReader {
+			if val, has := textReader(spin); has {
 				texts[p.Code().String()] = val
 			}
+		}
+		if !hasNumReader && !hasTextReader {
+			// M-a2: an unregistered lookup_source_column is silently skipped, which
+			// yields an empty fill instead of an error. Log it so the failure is visible.
+			log.Ctx(ctx).Warn().
+				Str("lookup_source_column", col).
+				Str("param_code", p.Code().String()).
+				Str("source_param_code", sourceParamCode).
+				Msg("MB Spin fill: no reader registered for lookup_source_column — value skipped")
 		}
 	}
 

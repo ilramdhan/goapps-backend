@@ -74,6 +74,7 @@ func (h *MBSpinHandler) CreateMBSpin(ctx context.Context, req *financev1.CreateM
 		CostRateMkt:     req.MbsCostRateMkt,
 		MBSStatus:       req.MbsStatus,
 		MBSLdrPrsn:      req.MbsLdrPrsn,
+		MBSRunLdrPct:    req.MbsRunLdrPct,
 		MBSFinalProduct: req.MbsFinalProduct,
 		CreatedBy:       getUserFromContext(ctx),
 	})
@@ -145,6 +146,7 @@ func (h *MBSpinHandler) UpdateMBSpin(ctx context.Context, req *financev1.UpdateM
 		CostRateMkt:     req.MbsCostRateMkt,
 		MBSStatus:       req.MbsStatus,
 		MBSLdrPrsn:      req.MbsLdrPrsn,
+		MBSRunLdrPct:    req.MbsRunLdrPct,
 		MBSFinalProduct: req.MbsFinalProduct,
 		IsActive:        req.MbsIsActive,
 		UpdatedBy:       getUserFromContext(ctx),
@@ -291,6 +293,7 @@ func mbSpinEntityToProto(e *mbspin.Entity) *financev1.MBSpin {
 	p.MbsCostRateMkt = e.CostRateMkt()
 	p.MbsStatus = e.MBSStatus()
 	p.MbsLdrPrsn = e.MBSLdrPrsn()
+	p.MbsRunLdrPct = e.MBSRunLdrPct()
 	p.MbsFinalProduct = e.MBSFinalProduct()
 	if e.UpdatedAt() != nil {
 		p.Audit.UpdatedAt = e.UpdatedAt().Format(time.RFC3339)

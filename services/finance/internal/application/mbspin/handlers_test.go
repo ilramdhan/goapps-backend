@@ -175,7 +175,7 @@ func TestGetHandler_Handle(t *testing.T) {
 
 		id := uuid.New()
 		headID := uuid.New()
-		expected, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+		expected, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
@@ -228,7 +228,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 
 		id := uuid.New()
 		headID := uuid.New()
-		entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+		entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		newName := "Spin Beta"
@@ -305,9 +305,9 @@ func TestListHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		headID := uuid.New()
-		entity1, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+		entity1, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
-		entity2, err := mbspindomain.New(headID, "Spin Beta", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+		entity2, err := mbspindomain.New(headID, "Spin Beta", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("mbspin.ListFilter")).Return(
