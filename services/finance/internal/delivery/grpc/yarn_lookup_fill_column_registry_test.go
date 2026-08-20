@@ -110,14 +110,10 @@ var t6Exceptions = map[masterColumn]string{
 var t7Exceptions = map[masterColumn]string{
 	// The original T7 finding — mbs_denier, mbs_dozing, mbs_mgt_name, mbs_filament,
 	// plus the D30 planned-LDR reader mbs_ldr_prsn — was RESOLVED by migration
-	// 000477, which registers all five in mst_lookup_master_column. They are no
-	// longer exceptions and must not be listed here; TestLookupColumnExceptionsAreLive
-	// fails on a stale entry.
-
-	// D30 planned-LDR reader on the MB_HEAD side. 000416 registered only the
-	// mbh_run_ldr_pct half; unlike its MB_SPIN counterpart this one is still
-	// unregistered, so it stays an exception until a migration adds it.
-	{"MB_HEAD", "mbh_ldr_prsn"}: "D30 planned-LDR reader; 000416 registered only mbh_run_ldr_pct — not offered in the dropdown by design",
+	// 000477, which registers all five in mst_lookup_master_column. Its MB_HEAD
+	// twin mbh_ldr_prsn was RESOLVED the same way by 000478. None of them is an
+	// exception any more and they must not be listed here;
+	// TestLookupColumnExceptionsAreLive fails on a stale entry.
 
 	// fillFromBoxBobbinCost still switches on these two, but migration 000412
 	// DELETEd them ("columns never existed") in favour of bobin_cost/box_cost.
