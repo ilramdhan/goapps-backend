@@ -227,6 +227,63 @@ var mbSpinTextReaders = map[string]func(*mbspin.Entity) (string, bool){
 	},
 }
 
+// boxBobbinCostColumns mirrors the `case` labels of fillFromBoxBobbinCost, which
+// resolves columns with a literal switch instead of a reader map and therefore
+// cannot be enumerated reflectively. TestBoxBobbinSwitchColumnsMatchSource
+// asserts this slice against the handler source so it cannot drift from the
+// switch it copies.
+var boxBobbinCostColumns = []string{
+	"no_of_bob",
+	"bbcr_bob_rate_mkt",
+	"bbcr_box_rate_mkt",
+}
+
+// LookupReaderColumns returns every lookup_source_column the fill handler can
+// actually resolve, keyed by lookup master code.
+//
+// This is derived from the reader maps above — the single source of truth. It
+// exists so the startup registry-divergence check can compare the live contents
+// of mst_lookup_master_column against the readers without maintaining a second
+// hand-written column list, which is the very duplication that produced the R30
+// drift in the first place.
+func LookupReaderColumns() map[string]map[string]struct{} {
+	out := make(map[string]map[string]struct{}, 6)
+	add := func(master, col string) {
+		if out[master] == nil {
+			out[master] = map[string]struct{}{}
+		}
+		out[master][col] = struct{}{}
+	}
+	for col := range machineNumericReaders {
+		add("MACHINE", col)
+	}
+	for col := range interminglingNumericReaders {
+		add("INTERMINGLING", col)
+	}
+	for col := range productGradeNumericReaders {
+		add("PRODUCT_GRADE", col)
+	}
+	for col := range productGradeTextReaders {
+		add("PRODUCT_GRADE", col)
+	}
+	for col := range mbHeadNumericReaders {
+		add("MB_HEAD", col)
+	}
+	for col := range mbHeadTextReaders {
+		add("MB_HEAD", col)
+	}
+	for col := range mbSpinNumericReaders {
+		add("MB_SPIN", col)
+	}
+	for col := range mbSpinTextReaders {
+		add("MB_SPIN", col)
+	}
+	for _, col := range boxBobbinCostColumns {
+		add("BOX_BOBBIN_COST", col)
+	}
+	return out
+}
+
 // YarnLookupFillHandler implements financev1.YarnLookupFillServiceServer.
 // It routes GetLookupFillValues requests to master-specific fill logic.
 type YarnLookupFillHandler struct {

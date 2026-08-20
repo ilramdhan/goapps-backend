@@ -90,6 +90,35 @@ func (r *LookupMasterRepository) ListColumns(ctx context.Context, masterCode str
 	return out, nil
 }
 
+// ListAllColumns returns every row of mst_lookup_master_column across all masters.
+// The startup registry-divergence check needs the table as it actually exists in
+// the running database — the UI "Add Column" action writes here directly, so the
+// live contents can differ from anything the migrations declare.
+func (r *LookupMasterRepository) ListAllColumns(ctx context.Context) ([]*lookupmaster.Column, error) {
+	const q = `SELECT lmc_id::text, lmc_master_code, lmc_column_name, lmc_display_name, lmc_data_type, lmc_sort_order
+	           FROM mst_lookup_master_column
+	           ORDER BY lmc_master_code, lmc_sort_order, lmc_column_name`
+
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list all lookup master columns: %w", err)
+	}
+	defer closeRows(rows)
+
+	var out []*lookupmaster.Column
+	for rows.Next() {
+		c := &lookupmaster.Column{}
+		if scanErr := rows.Scan(&c.ID, &c.MasterCode, &c.ColumnName, &c.DisplayName, &c.DataType, &c.SortOrder); scanErr != nil {
+			return nil, fmt.Errorf("scan lookup master column: %w", scanErr)
+		}
+		out = append(out, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate all lookup master columns: %w", err)
+	}
+	return out, nil
+}
+
 // CreateMaster inserts a new lookup master into the registry.
 func (r *LookupMasterRepository) CreateMaster(ctx context.Context, m *lookupmaster.LookupMaster, createdBy string) error {
 	const q = `INSERT INTO mst_lookup_master (lm_code, lm_display_name, lm_api_path, lm_code_field, lm_label_field, lm_table_name, created_by)

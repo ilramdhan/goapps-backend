@@ -35,6 +35,7 @@ import (
 	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupregistry"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbpush"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
@@ -279,6 +280,12 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return fmt.Errorf("new yarn lookup fill handler: %w", err)
 	}
+
+	// R30 — compare the live mst_lookup_master_column rows against the readers
+	// compiled into the fill handler and log any divergence. Deliberately
+	// non-fatal and self-timeboxed: the divergences it reports already exist in
+	// production, and a registry query failure must never block startup.
+	lookupregistry.NewStartupChecker(lookupMasterRepo, grpcdelivery.LookupReaderColumns()).Run(ctx)
 
 	oracleSyncHandler, err := grpcdelivery.NewOracleSyncHandler(
 		triggerHandler, getJobHandler, listJobsHandler,

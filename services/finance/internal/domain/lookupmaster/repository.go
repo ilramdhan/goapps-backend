@@ -8,6 +8,10 @@ type Repository interface {
 	ListMasters(ctx context.Context, activeOnly bool) ([]*LookupMaster, error)
 	// ListColumns returns fillable columns for a given master code, ordered by sort_order.
 	ListColumns(ctx context.Context, masterCode string) ([]*Column, error)
+	// ListAllColumns returns every registered fillable column across all masters.
+	// Used by the startup registry-divergence check, which needs the live table
+	// contents rather than what the migrations happen to say.
+	ListAllColumns(ctx context.Context) ([]*Column, error)
 	// CreateMaster inserts a new master into the registry.
 	CreateMaster(ctx context.Context, m *LookupMaster, createdBy string) error
 	// DeleteMaster removes a master from the registry by code.

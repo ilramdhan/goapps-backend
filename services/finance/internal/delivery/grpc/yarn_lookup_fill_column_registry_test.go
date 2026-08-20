@@ -129,52 +129,17 @@ var t7Exceptions = map[masterColumn]string{
 
 // ─── Go-side inventory ──────────────────────────────────────────────────────
 
-// boxBobbinSwitchColumns mirrors the `case` labels of fillFromBoxBobbinCost,
-// which uses a literal switch instead of a reader map and therefore cannot be
-// enumerated reflectively. TestBoxBobbinSwitchColumnsMatchSource asserts this
-// list against the handler source so it cannot drift from the switch either.
-var boxBobbinSwitchColumns = []string{
-	"no_of_bob",
-	"bbcr_bob_rate_mkt",
-	"bbcr_box_rate_mkt",
-}
-
 // goReaderColumns returns every lookup_source_column the Go side can resolve,
-// keyed by lookup master code.
+// keyed by lookup master code. It delegates to LookupReaderColumns() in
+// yarn_lookup_fill_handler.go — the same inventory the startup divergence check
+// consumes — so this test can never validate against a second, stale copy.
 func goReaderColumns() map[string]map[string]bool {
 	out := map[string]map[string]bool{}
-	add := func(master, col string) {
-		if out[master] == nil {
-			out[master] = map[string]bool{}
+	for master, cols := range LookupReaderColumns() {
+		out[master] = map[string]bool{}
+		for col := range cols {
+			out[master][col] = true
 		}
-		out[master][col] = true
-	}
-	for col := range machineNumericReaders {
-		add("MACHINE", col)
-	}
-	for col := range interminglingNumericReaders {
-		add("INTERMINGLING", col)
-	}
-	for col := range productGradeNumericReaders {
-		add("PRODUCT_GRADE", col)
-	}
-	for col := range productGradeTextReaders {
-		add("PRODUCT_GRADE", col)
-	}
-	for col := range mbHeadNumericReaders {
-		add("MB_HEAD", col)
-	}
-	for col := range mbHeadTextReaders {
-		add("MB_HEAD", col)
-	}
-	for col := range mbSpinNumericReaders {
-		add("MB_SPIN", col)
-	}
-	for col := range mbSpinTextReaders {
-		add("MB_SPIN", col)
-	}
-	for _, col := range boxBobbinSwitchColumns {
-		add("BOX_BOBBIN_COST", col)
 	}
 	return out
 }
@@ -311,7 +276,7 @@ func TestLookupColumnParserSanity(t *testing.T) {
 	}
 }
 
-// TestBoxBobbinSwitchColumnsMatchSource keeps boxBobbinSwitchColumns honest.
+// TestBoxBobbinSwitchColumnsMatchSource keeps boxBobbinCostColumns honest.
 // fillFromBoxBobbinCost resolves columns with a literal switch, so unlike the
 // reader maps it cannot be enumerated at runtime — the list above is a copy, and
 // a copy is exactly the kind of hand-maintained duplicate R30 is about. This
@@ -337,12 +302,13 @@ func TestBoxBobbinSwitchColumnsMatchSource(t *testing.T) {
 		inSource = append(inSource, m[1])
 	}
 	sort.Strings(inSource)
-	copied := append([]string(nil), boxBobbinSwitchColumns...)
+	copied := append([]string(nil), boxBobbinCostColumns...)
 	sort.Strings(copied)
 
 	assert.Equal(t, inSource, copied,
-		"boxBobbinSwitchColumns is out of sync with the switch in fillFromBoxBobbinCost. Update the slice in "+
-			"this file to match the case labels, otherwise the BOX_BOBBIN_COST side of the R30 drift check is wrong.")
+		"boxBobbinCostColumns is out of sync with the switch in fillFromBoxBobbinCost. Update the slice in "+
+			"yarn_lookup_fill_handler.go to match the case labels, otherwise the BOX_BOBBIN_COST side of the R30 "+
+			"drift check — and the startup divergence check that shares this inventory — is wrong.")
 }
 
 // ─── The two-way check ──────────────────────────────────────────────────────
