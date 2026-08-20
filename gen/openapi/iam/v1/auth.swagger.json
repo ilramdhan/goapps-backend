@@ -1061,6 +1061,15 @@
       },
       "description": "VerifyEmailResponse confirms the email is verified."
     },
+    "v1VerifyPasswordResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      },
+      "description": "VerifyPasswordResponse returns success if password matches; error otherwise."
+    },
     "v1VerifyResetOTPRequest": {
       "type": "object",
       "properties": {

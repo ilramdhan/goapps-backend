@@ -783,6 +783,22 @@
       },
       "description": "RequestNotificationResponse returns the dispatch result."
     },
+    "v1StreamNotificationsResponse": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "notification": {
+          "$ref": "#/definitions/v1Notification"
+        },
+        "isHeartbeat": {
+          "type": "boolean",
+          "description": "is_heartbeat = true when this event has no payload — a periodic ping\nkeeping the SSE/HTTP connection alive through buffering proxies."
+        }
+      },
+      "description": "StreamNotificationsResponse is the streaming envelope. event_id is a sortable\nresume cursor (server-generated ULID-like string) the client passes back\nas `since` on reconnect. Heartbeat events have notification = null and\nonly carry event_id to keep proxies alive."
+    },
     "v1ValidationError": {
       "type": "object",
       "properties": {
