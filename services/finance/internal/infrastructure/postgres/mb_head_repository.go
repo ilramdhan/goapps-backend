@@ -39,8 +39,8 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 			mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_final_product, mbh_code,
 			mbh_is_active, created_at, created_by,
 			mbh_is_boughtout, mbh_dev_code, mbh_shade_code, mbh_shade_name,
-			mbh_cross_section, mbh_lusture_code, mbh_machine_id
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+			mbh_cross_section, mbh_lusture_code, mbh_machine_id, mbh_run_ldr_pct
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -64,6 +64,7 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 		entity.CrossSection(),
 		entity.LustureCode(),
 		entity.MachineID(),
+		entity.MBHRunLdrPct(),
 	)
 	if err != nil {
 		if isMBHeadUniqueViolation(err) {
@@ -162,7 +163,8 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 			mbh_shade_name    = $17,
 			mbh_cross_section = $18,
 			mbh_lusture_code  = $19,
-			mbh_machine_id    = $20
+			mbh_machine_id    = $20,
+			mbh_run_ldr_pct   = $21
 		WHERE mbh_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -185,6 +187,7 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 		entity.CrossSection(),
 		entity.LustureCode(),
 		entity.MachineID(),
+		entity.MBHRunLdrPct(),
 	)
 	if err != nil {
 		return fmt.Errorf("update mb head: %w", err)
@@ -343,7 +346,7 @@ func (r *MBHeadRepository) selectCols() string {
 	return `
 		SELECT mbh_id, mbh_oracle_sys_id, mbh_mb_costing, mbh_mgt_name,
 		       mbh_denier, mbh_filament, mbh_dozing,
-		       mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_final_product, mbh_code,
+		       mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_run_ldr_pct, mbh_final_product, mbh_code,
 		       mbh_is_active,
 		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by,
 		       mbh_entry_status, mbh_is_boughtout, mbh_current_version, mbh_machine_fixed_total,
@@ -378,6 +381,7 @@ type mbHeadDTO struct {
 	MBHCheckStatus  sql.NullString
 	MBHStatus       sql.NullString
 	MBHLdrPrsn      sql.NullFloat64
+	MBHRunLdrPct    sql.NullFloat64
 	MBHFinalProduct sql.NullString
 	MBHCode         sql.NullString
 	IsActive        bool
@@ -432,6 +436,7 @@ func (d *mbHeadDTO) toEntity() *mbhead.Entity {
 		nullableStringPtr(d.MBHCheckStatus),
 		nullableStringPtr(d.MBHStatus),
 		nullableFloat64Ptr(d.MBHLdrPrsn),
+		nullableFloat64Ptr(d.MBHRunLdrPct),
 		nullableStringPtr(d.MBHFinalProduct),
 		nullableStringPtr(d.MBHCode),
 		d.IsActive,
@@ -455,7 +460,7 @@ func (r *MBHeadRepository) scanOne(row *sql.Row) (*mbhead.Entity, error) {
 	err := row.Scan(
 		&d.ID, &d.OracleSysID, &d.MBCosting, &d.MgtName,
 		&d.Denier, &d.Filament, &d.Dozing,
-		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHFinalProduct, &d.MBHCode,
+		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHRunLdrPct, &d.MBHFinalProduct, &d.MBHCode,
 		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 		&d.EntryStatus, &d.IsBoughtout, &d.CurrentVersion, &d.MachineFixedTotal,
@@ -479,7 +484,7 @@ func (r *MBHeadRepository) scanRow(rows *sql.Rows) (*mbhead.Entity, error) {
 	err := rows.Scan(
 		&d.ID, &d.OracleSysID, &d.MBCosting, &d.MgtName,
 		&d.Denier, &d.Filament, &d.Dozing,
-		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHFinalProduct, &d.MBHCode,
+		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHRunLdrPct, &d.MBHFinalProduct, &d.MBHCode,
 		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 		&d.EntryStatus, &d.IsBoughtout, &d.CurrentVersion, &d.MachineFixedTotal,

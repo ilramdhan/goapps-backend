@@ -19,6 +19,7 @@ type Entity struct {
 	mbhCheckStatus         *string
 	mbhStatus              *string
 	mbhLdrPrsn             *float64
+	mbhRunLdrPct           *float64
 	mbhFinalProduct        *string
 	mbhCode                *string
 	isActive               bool
@@ -55,7 +56,7 @@ type Entity struct {
 // New creates a new MB Head entity with validation.
 //
 //nolint:revive // Many parameters required for construction.
-func New(mbCosting string, oracleSysID, mgtName *string, denier *float64, filament *int, dozing *float64, mbhCheckStatus, mbhStatus *string, mbhLdrPrsn *float64, mbhFinalProduct, mbhCode *string, createdBy string, isBoughtout bool, devCode, shadeCode, shadeName, crossSection, lustureCode string, machineID *uuid.UUID) (*Entity, error) {
+func New(mbCosting string, oracleSysID, mgtName *string, denier *float64, filament *int, dozing *float64, mbhCheckStatus, mbhStatus *string, mbhLdrPrsn, mbhRunLdrPct *float64, mbhFinalProduct, mbhCode *string, createdBy string, isBoughtout bool, devCode, shadeCode, shadeName, crossSection, lustureCode string, machineID *uuid.UUID) (*Entity, error) {
 	if mbCosting == "" {
 		return nil, ErrEmptyMBCosting
 	}
@@ -69,6 +70,7 @@ func New(mbCosting string, oracleSysID, mgtName *string, denier *float64, filame
 		id: uuid.New(), oracleSysID: oracleSysID, mbCosting: mbCosting, mgtName: mgtName,
 		denier: denier, filament: filament, dozing: dozing,
 		mbhCheckStatus: mbhCheckStatus, mbhStatus: mbhStatus, mbhLdrPrsn: mbhLdrPrsn,
+		mbhRunLdrPct:    mbhRunLdrPct,
 		mbhFinalProduct: mbhFinalProduct, mbhCode: mbhCode,
 		isActive: true, createdAt: time.Now(), createdBy: createdBy,
 		isBoughtout: isBoughtout, devCode: devCode, shadeCode: shadeCode,
@@ -82,7 +84,7 @@ func New(mbCosting string, oracleSysID, mgtName *string, denier *float64, filame
 //nolint:revive // Many parameters required for persistence reconstitution.
 func Reconstruct(
 	id uuid.UUID, oracleSysID *string, mbCosting string, mgtName *string, denier *float64,
-	filament *int, dozing *float64, mbhCheckStatus, mbhStatus *string, mbhLdrPrsn *float64,
+	filament *int, dozing *float64, mbhCheckStatus, mbhStatus *string, mbhLdrPrsn, mbhRunLdrPct *float64,
 	mbhFinalProduct, mbhCode *string, isActive bool, createdAt time.Time, createdBy string,
 	updatedAt *time.Time, updatedBy *string, deletedAt *time.Time, deletedBy *string,
 	entryStatus string, isBoughtout bool, currentVersion int32, machineFixedTotal *string,
@@ -96,6 +98,7 @@ func Reconstruct(
 		id: id, oracleSysID: oracleSysID, mbCosting: mbCosting, mgtName: mgtName,
 		denier: denier, filament: filament, dozing: dozing,
 		mbhCheckStatus: mbhCheckStatus, mbhStatus: mbhStatus, mbhLdrPrsn: mbhLdrPrsn,
+		mbhRunLdrPct:    mbhRunLdrPct,
 		mbhFinalProduct: mbhFinalProduct, mbhCode: mbhCode,
 		isActive:  isActive,
 		createdAt: createdAt, createdBy: createdBy, updatedAt: updatedAt, updatedBy: updatedBy,
@@ -142,6 +145,11 @@ func (e *Entity) MBHStatus() *string { return e.mbhStatus }
 
 // MBHLdrPrsn returns the optional Oracle leader person value.
 func (e *Entity) MBHLdrPrsn() *float64 { return e.mbhLdrPrsn }
+
+// MBHRunLdrPct returns the optional Oracle CMBH_RUN_LDR_PRSN — the actual LDR
+// percentage used in production. D30: this is the authoritative LDR for costing,
+// while MBHLdrPrsn holds the planned value set while the product is still new.
+func (e *Entity) MBHRunLdrPct() *float64 { return e.mbhRunLdrPct }
 
 // MBHFinalProduct returns the optional Oracle final product code.
 func (e *Entity) MBHFinalProduct() *string { return e.mbhFinalProduct }
@@ -249,6 +257,7 @@ type UpdateInput struct {
 	MBHCheckStatus  *string
 	MBHStatus       *string
 	MBHLdrPrsn      *float64
+	MBHRunLdrPct    *float64
 	MBHFinalProduct *string
 	MBHCode         *string
 	IsActive        *bool
@@ -402,6 +411,9 @@ func (e *Entity) applyOptionalFields(in UpdateInput) {
 	}
 	if in.MBHLdrPrsn != nil {
 		e.mbhLdrPrsn = in.MBHLdrPrsn
+	}
+	if in.MBHRunLdrPct != nil {
+		e.mbhRunLdrPct = in.MBHRunLdrPct
 	}
 	if in.MBHFinalProduct != nil {
 		e.mbhFinalProduct = in.MBHFinalProduct

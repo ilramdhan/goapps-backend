@@ -120,7 +120,7 @@ func approvedHeadWithParams(throughput, noOfProcess string, prodPerDay *string) 
 	return mbheaddomain.Reconstruct(
 		uuid.New(), nil, "MB001", nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, true, time.Now(), "admin",
+		nil, nil, nil, true, time.Now(), "admin",
 		nil, nil, nil, nil,
 		mbheaddomain.StatusApproved, false, 1, nil,
 		"", "", "", "", "", "",
@@ -274,7 +274,7 @@ func TestValidateHandler_Handle_BoughtoutFromDraftUsesHeadParams(t *testing.T) {
 	entity := mbheaddomain.Reconstruct(
 		uuid.New(), nil, "MB-BOUGHT", nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, true, time.Now(), "admin",
+		nil, nil, nil, true, time.Now(), "admin",
 		nil, nil, nil, nil,
 		mbheaddomain.StatusDraft, true, 1, nil,
 		"", "", "", "", "", "",
@@ -322,7 +322,7 @@ func TestValidateHandler_Handle_RejectsNonApprovedOwnProduction(t *testing.T) {
 	draft := mbheaddomain.Reconstruct(
 		entity.ID(), nil, "MB001", nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, true, time.Now(), "admin",
+		nil, nil, nil, true, time.Now(), "admin",
 		nil, nil, nil, nil,
 		mbheaddomain.StatusDraft, false, 1, nil,
 		"", "", "", "", "", "",

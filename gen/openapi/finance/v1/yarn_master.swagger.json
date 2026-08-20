@@ -3866,6 +3866,11 @@
         "mbhMachineId": {
           "type": "string",
           "description": "Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id)."
+        },
+        "mbhRunLdrPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage (≥ 0)."
         }
       },
       "description": "UpdateMBHeadRequest is the request for updating an MB Head record."
@@ -4833,6 +4838,11 @@
         "mbhMachineId": {
           "type": "string",
           "description": "Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id)."
+        },
+        "mbhRunLdrPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage (≥ 0)."
         }
       },
       "description": "CreateMBHeadRequest is the request for creating an MB Head record."
@@ -6801,6 +6811,11 @@
           "type": "number",
           "format": "double",
           "description": "Optional Oracle CMBH_LDR_PRSN — LDR person value."
+        },
+        "mbhRunLdrPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage used in production (D30: authoritative LDR for costing)."
         },
         "mbhFinalProduct": {
           "type": "string",

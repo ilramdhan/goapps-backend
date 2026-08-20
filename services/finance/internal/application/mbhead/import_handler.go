@@ -301,7 +301,7 @@ func (h *ImportHandler) createMBHead(
 	entity, err := mbhead.New(
 		data.mbCosting, nil, strPtrOrNil(data.mgtName),
 		denier, filament, dozing,
-		nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil,
 		createdBy, isBoughtout, data.devCode, data.shadeCode, data.shadeName,
 		data.crossSection, data.lustureCode, nil,
 	)

@@ -20,6 +20,7 @@ type UpdateCommand struct {
 	MBHCheckStatus  *string
 	MBHStatus       *string
 	MBHLdrPrsn      *float64
+	MBHRunLdrPct    *float64
 	MBHFinalProduct *string
 	MBHCode         *string
 	IsActive        *bool
@@ -58,6 +59,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 		MBHCheckStatus:  cmd.MBHCheckStatus,
 		MBHStatus:       cmd.MBHStatus,
 		MBHLdrPrsn:      cmd.MBHLdrPrsn,
+		MBHRunLdrPct:    cmd.MBHRunLdrPct,
 		MBHFinalProduct: cmd.MBHFinalProduct,
 		MBHCode:         cmd.MBHCode,
 		IsActive:        cmd.IsActive,

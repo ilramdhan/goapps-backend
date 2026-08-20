@@ -140,6 +140,20 @@ var mbHeadNumericReaders = map[string]func(*mbhead.Entity) (float64, bool){
 		}
 		return 0, false
 	},
+	// D30: mbh_run_ldr_pct is the actual LDR used in production — the correct value for costing.
+	"mbh_run_ldr_pct": func(e *mbhead.Entity) (float64, bool) {
+		if v := e.MBHRunLdrPct(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	// D30: mbh_ldr_prsn is the planned LDR, set while the product is still new.
+	"mbh_ldr_prsn": func(e *mbhead.Entity) (float64, bool) {
+		if v := e.MBHLdrPrsn(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
 }
 
 // mbHeadTextReaders maps lookup_source_column → text value extractor for mst_mb_head entity.
@@ -378,15 +392,27 @@ func (h *YarnLookupFillHandler) fillFromMBHead(ctx context.Context, mbCosting, t
 	nums := make(map[string]float64, len(childParams))
 	texts := make(map[string]string, len(childParams))
 	for _, p := range childParams {
-		if reader, ok := mbHeadNumericReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(mbh); hasVal {
+		col := p.LookupSourceColumn()
+		numReader, hasNumReader := mbHeadNumericReaders[col]
+		if hasNumReader {
+			if val, hasVal := numReader(mbh); hasVal {
 				nums[p.Code().String()] = val
 			}
 		}
-		if reader, ok := mbHeadTextReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(mbh); hasVal {
+		textReader, hasTextReader := mbHeadTextReaders[col]
+		if hasTextReader {
+			if val, hasVal := textReader(mbh); hasVal {
 				texts[p.Code().String()] = val
 			}
+		}
+		if !hasNumReader && !hasTextReader {
+			// M-a2: an unregistered lookup_source_column is silently skipped, which
+			// yields an empty fill instead of an error. Log it so the failure is visible.
+			log.Ctx(ctx).Warn().
+				Str("lookup_source_column", col).
+				Str("param_code", p.Code().String()).
+				Str("source_param_code", triggerParamCode).
+				Msg("MB Head fill: no reader registered for lookup_source_column — value skipped")
 		}
 	}
 

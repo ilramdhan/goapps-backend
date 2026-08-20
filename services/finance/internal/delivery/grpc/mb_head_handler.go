@@ -89,6 +89,7 @@ func (h *MBHeadHandler) CreateMBHead(ctx context.Context, req *financev1.CreateM
 		MBHCheckStatus:  req.MbhCheckStatus,
 		MBHStatus:       req.MbhStatus,
 		MBHLdrPrsn:      req.MbhLdrPrsn,
+		MBHRunLdrPct:    req.MbhRunLdrPct,
 		MBHFinalProduct: req.MbhFinalProduct,
 		MBHCode:         req.MbhCode,
 		CreatedBy:       getUserFromContext(ctx),
@@ -173,6 +174,7 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 		MBHCheckStatus:  req.MbhCheckStatus,
 		MBHStatus:       req.MbhStatus,
 		MBHLdrPrsn:      req.MbhLdrPrsn,
+		MBHRunLdrPct:    req.MbhRunLdrPct,
 		MBHFinalProduct: req.MbhFinalProduct,
 		MBHCode:         req.MbhCode,
 		IsActive:        req.MbhIsActive,
@@ -513,6 +515,7 @@ func mbHeadEntityToProto(e *mbhead.Entity) *financev1.MBHead {
 	p.MbhCheckStatus = e.MBHCheckStatus()
 	p.MbhStatus = e.MBHStatus()
 	p.MbhLdrPrsn = e.MBHLdrPrsn()
+	p.MbhRunLdrPct = e.MBHRunLdrPct()
 	p.MbhFinalProduct = e.MBHFinalProduct()
 	p.MbhCode = e.MBHCode()
 	p.IsBoughtout = e.IsBoughtout()

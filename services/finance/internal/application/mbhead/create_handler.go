@@ -20,6 +20,7 @@ type CreateCommand struct {
 	MBHCheckStatus  *string
 	MBHStatus       *string
 	MBHLdrPrsn      *float64
+	MBHRunLdrPct    *float64
 	MBHFinalProduct *string
 	MBHCode         *string
 	CreatedBy       string
@@ -55,7 +56,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbhead.
 	entity, err := mbhead.New(
 		cmd.MBCosting, cmd.OracleSysID, cmd.MgtName,
 		cmd.Denier, cmd.Filament, cmd.Dozing,
-		cmd.MBHCheckStatus, cmd.MBHStatus, cmd.MBHLdrPrsn, cmd.MBHFinalProduct, cmd.MBHCode,
+		cmd.MBHCheckStatus, cmd.MBHStatus, cmd.MBHLdrPrsn, cmd.MBHRunLdrPct, cmd.MBHFinalProduct, cmd.MBHCode,
 		cmd.CreatedBy, cmd.IsBoughtout, cmd.DevCode, cmd.ShadeCode, cmd.ShadeName,
 		cmd.CrossSection, cmd.LustureCode, cmd.MachineID,
 	)

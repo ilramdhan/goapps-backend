@@ -5854,6 +5854,8 @@ type MBHead struct {
 	MbhStatus *string `protobuf:"bytes,10,opt,name=mbh_status,json=mbhStatus,proto3,oneof" json:"mbh_status,omitempty"`
 	// Optional Oracle CMBH_LDR_PRSN — LDR person value.
 	MbhLdrPrsn *float64 `protobuf:"fixed64,11,opt,name=mbh_ldr_prsn,json=mbhLdrPrsn,proto3,oneof" json:"mbh_ldr_prsn,omitempty"`
+	// Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage used in production (D30: authoritative LDR for costing).
+	MbhRunLdrPct *float64 `protobuf:"fixed64,37,opt,name=mbh_run_ldr_pct,json=mbhRunLdrPct,proto3,oneof" json:"mbh_run_ldr_pct,omitempty"`
 	// Optional Oracle CMBH_FINAL_PRODUCT — final product description.
 	MbhFinalProduct *string `protobuf:"bytes,12,opt,name=mbh_final_product,json=mbhFinalProduct,proto3,oneof" json:"mbh_final_product,omitempty"`
 	// Optional Oracle CMBH_CODE — product code.
@@ -6011,6 +6013,13 @@ func (x *MBHead) GetMbhStatus() string {
 func (x *MBHead) GetMbhLdrPrsn() float64 {
 	if x != nil && x.MbhLdrPrsn != nil {
 		return *x.MbhLdrPrsn
+	}
+	return 0
+}
+
+func (x *MBHead) GetMbhRunLdrPct() float64 {
+	if x != nil && x.MbhRunLdrPct != nil {
+		return *x.MbhRunLdrPct
 	}
 	return 0
 }
@@ -6228,7 +6237,9 @@ type CreateMBHeadRequest struct {
 	// Lusture code, references MbLusture.code (max 10 chars).
 	MbhLustureCode *string `protobuf:"bytes,17,opt,name=mbh_lusture_code,json=mbhLustureCode,proto3,oneof" json:"mbh_lusture_code,omitempty"`
 	// Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id).
-	MbhMachineId  *string `protobuf:"bytes,18,opt,name=mbh_machine_id,json=mbhMachineId,proto3,oneof" json:"mbh_machine_id,omitempty"`
+	MbhMachineId *string `protobuf:"bytes,18,opt,name=mbh_machine_id,json=mbhMachineId,proto3,oneof" json:"mbh_machine_id,omitempty"`
+	// Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage (≥ 0).
+	MbhRunLdrPct  *float64 `protobuf:"fixed64,19,opt,name=mbh_run_ldr_pct,json=mbhRunLdrPct,proto3,oneof" json:"mbh_run_ldr_pct,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6387,6 +6398,13 @@ func (x *CreateMBHeadRequest) GetMbhMachineId() string {
 		return *x.MbhMachineId
 	}
 	return ""
+}
+
+func (x *CreateMBHeadRequest) GetMbhRunLdrPct() float64 {
+	if x != nil && x.MbhRunLdrPct != nil {
+		return *x.MbhRunLdrPct
+	}
+	return 0
 }
 
 // CreateMBHeadResponse is the response for creating an MB Head record.
@@ -6583,7 +6601,9 @@ type UpdateMBHeadRequest struct {
 	// Lusture code, references MbLusture.code (max 10 chars).
 	MbhLustureCode *string `protobuf:"bytes,17,opt,name=mbh_lusture_code,json=mbhLustureCode,proto3,oneof" json:"mbh_lusture_code,omitempty"`
 	// Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id).
-	MbhMachineId  *string `protobuf:"bytes,18,opt,name=mbh_machine_id,json=mbhMachineId,proto3,oneof" json:"mbh_machine_id,omitempty"`
+	MbhMachineId *string `protobuf:"bytes,18,opt,name=mbh_machine_id,json=mbhMachineId,proto3,oneof" json:"mbh_machine_id,omitempty"`
+	// Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage (≥ 0).
+	MbhRunLdrPct  *float64 `protobuf:"fixed64,19,opt,name=mbh_run_ldr_pct,json=mbhRunLdrPct,proto3,oneof" json:"mbh_run_ldr_pct,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6742,6 +6762,13 @@ func (x *UpdateMBHeadRequest) GetMbhMachineId() string {
 		return *x.MbhMachineId
 	}
 	return ""
+}
+
+func (x *UpdateMBHeadRequest) GetMbhRunLdrPct() float64 {
+	if x != nil && x.MbhRunLdrPct != nil {
+		return *x.MbhRunLdrPct
+	}
+	return 0
 }
 
 // UpdateMBHeadResponse is the response for updating an MB Head record.
@@ -16272,7 +16299,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"$DownloadProductGradeTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xab\f\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xeb\f\n" +
 	"\x06MBHead\x12\x15\n" +
 	"\x06mbh_id\x18\x01 \x01(\tR\x05mbhId\x12)\n" +
 	"\x11mbh_oracle_sys_id\x18\x02 \x01(\tR\x0embhOracleSysId\x12$\n" +
@@ -16290,9 +16317,10 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"mbh_status\x18\n" +
 	" \x01(\tH\x04R\tmbhStatus\x88\x01\x01\x12%\n" +
 	"\fmbh_ldr_prsn\x18\v \x01(\x01H\x05R\n" +
-	"mbhLdrPrsn\x88\x01\x01\x12/\n" +
-	"\x11mbh_final_product\x18\f \x01(\tH\x06R\x0fmbhFinalProduct\x88\x01\x01\x12\x1e\n" +
-	"\bmbh_code\x18\r \x01(\tH\aR\ambhCode\x88\x01\x01\x12!\n" +
+	"mbhLdrPrsn\x88\x01\x01\x12*\n" +
+	"\x0fmbh_run_ldr_pct\x18% \x01(\x01H\x06R\fmbhRunLdrPct\x88\x01\x01\x12/\n" +
+	"\x11mbh_final_product\x18\f \x01(\tH\aR\x0fmbhFinalProduct\x88\x01\x01\x12\x1e\n" +
+	"\bmbh_code\x18\r \x01(\tH\bR\ambhCode\x88\x01\x01\x12!\n" +
 	"\fentry_status\x18\x0e \x01(\tR\ventryStatus\x12!\n" +
 	"\fis_boughtout\x18\x0f \x01(\bR\visBoughtout\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12'\n" +
@@ -16319,16 +16347,17 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x19param_throughput_per_hour\x18\" \x01(\tR\x16paramThroughputPerHour\x12-\n" +
 	"\x13param_no_of_process\x18# \x01(\tR\x10paramNoOfProcess\x12,\n" +
 	"\n" +
-	"machine_id\x18$ \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\bR\tmachineId\x88\x01\x01B\r\n" +
+	"machine_id\x18$ \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\tR\tmachineId\x88\x01\x01B\r\n" +
 	"\v_mbh_denierB\x0f\n" +
 	"\r_mbh_filamentB\r\n" +
 	"\v_mbh_dozingB\x13\n" +
 	"\x11_mbh_check_statusB\r\n" +
 	"\v_mbh_statusB\x0f\n" +
-	"\r_mbh_ldr_prsnB\x14\n" +
+	"\r_mbh_ldr_prsnB\x12\n" +
+	"\x10_mbh_run_ldr_pctB\x14\n" +
 	"\x12_mbh_final_productB\v\n" +
 	"\t_mbh_codeB\r\n" +
-	"\v_machine_id\"\xab\t\n" +
+	"\v_machine_id\"\xfb\t\n" +
 	"\x13CreateMBHeadRequest\x12/\n" +
 	"\x0embh_mb_costing\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\fmbhMbCosting\x127\n" +
 	"\x11mbh_oracle_sys_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x1eH\x00R\x0embhOracleSysId\x88\x01\x01\x12.\n" +
@@ -16356,7 +16385,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x11mbh_cross_section\x18\x10 \x01(\tB\a\xbaH\x04r\x02\x18\x14H\rR\x0fmbhCrossSection\x88\x01\x01\x126\n" +
 	"\x10mbh_lusture_code\x18\x11 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
 	"H\x0eR\x0embhLustureCode\x88\x01\x01\x123\n" +
-	"\x0embh_machine_id\x18\x12 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x0fR\fmbhMachineId\x88\x01\x01B\x14\n" +
+	"\x0embh_machine_id\x18\x12 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x0fR\fmbhMachineId\x88\x01\x01\x12:\n" +
+	"\x0fmbh_run_ldr_pct\x18\x13 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x10R\fmbhRunLdrPct\x88\x01\x01B\x14\n" +
 	"\x12_mbh_oracle_sys_idB\x0f\n" +
 	"\r_mbh_mgt_nameB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
@@ -16372,7 +16402,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x0f_mbh_shade_nameB\x14\n" +
 	"\x12_mbh_cross_sectionB\x13\n" +
 	"\x11_mbh_lusture_codeB\x11\n" +
-	"\x0f_mbh_machine_id\"k\n" +
+	"\x0f_mbh_machine_idB\x12\n" +
+	"\x10_mbh_run_ldr_pct\"k\n" +
 	"\x14CreateMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"3\n" +
@@ -16380,7 +16411,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\"h\n" +
 	"\x11GetMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xa6\t\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xf6\t\n" +
 	"\x13UpdateMBHeadRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x124\n" +
 	"\x0embh_mb_costing\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dH\x00R\fmbhMbCosting\x88\x01\x01\x12.\n" +
@@ -16408,7 +16439,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x11mbh_cross_section\x18\x10 \x01(\tB\a\xbaH\x04r\x02\x18\x14H\x0eR\x0fmbhCrossSection\x88\x01\x01\x126\n" +
 	"\x10mbh_lusture_code\x18\x11 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
 	"H\x0fR\x0embhLustureCode\x88\x01\x01\x123\n" +
-	"\x0embh_machine_id\x18\x12 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x10R\fmbhMachineId\x88\x01\x01B\x11\n" +
+	"\x0embh_machine_id\x18\x12 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x10R\fmbhMachineId\x88\x01\x01\x12:\n" +
+	"\x0fmbh_run_ldr_pct\x18\x13 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x11R\fmbhRunLdrPct\x88\x01\x01B\x11\n" +
 	"\x0f_mbh_mb_costingB\x0f\n" +
 	"\r_mbh_mgt_nameB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
@@ -16425,7 +16457,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x0f_mbh_shade_nameB\x14\n" +
 	"\x12_mbh_cross_sectionB\x13\n" +
 	"\x11_mbh_lusture_codeB\x11\n" +
-	"\x0f_mbh_machine_id\"k\n" +
+	"\x0f_mbh_machine_idB\x12\n" +
+	"\x10_mbh_run_ldr_pct\"k\n" +
 	"\x14UpdateMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"6\n" +
