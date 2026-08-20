@@ -108,20 +108,15 @@ var t6Exceptions = map[masterColumn]string{
 
 // t7Exceptions: a Go reader exists, deliberately not registered by any migration.
 var t7Exceptions = map[masterColumn]string{
-	// The original T7 finding. These four are wired as lookup_source_column by
-	// migration 000407 (lines 231-234) and are actively filling values today, but
-	// no migration ever inserted them into mst_lookup_master_column — so they are
-	// invisible to the dropdown. Registering them is a data/migration change with
-	// UI-visible consequences (new selectable options), not a code change, so it
-	// is tracked separately rather than silently done from a test.
-	{"MB_SPIN", "mbs_denier"}:   "wired by 000407 and live, never inserted into mst_lookup_master_column — needs a registration migration",
-	{"MB_SPIN", "mbs_dozing"}:   "wired by 000407 and live (retired/contaminated legacy column, kept until L1 repoints it) — never registered",
-	{"MB_SPIN", "mbs_mgt_name"}: "wired by 000407 and live, never inserted into mst_lookup_master_column — needs a registration migration",
-	{"MB_SPIN", "mbs_filament"}: "wired by 000407 and live, never inserted into mst_lookup_master_column — needs a registration migration",
+	// The original T7 finding — mbs_denier, mbs_dozing, mbs_mgt_name, mbs_filament,
+	// plus the D30 planned-LDR reader mbs_ldr_prsn — was RESOLVED by migration
+	// 000477, which registers all five in mst_lookup_master_column. They are no
+	// longer exceptions and must not be listed here; TestLookupColumnExceptionsAreLive
+	// fails on a stale entry.
 
-	// D30 planned-LDR readers. Added as the deliberate counterpart to the
-	// *_run_ldr_pct readers; 000414/000416 registered only the run_ldr_pct half.
-	{"MB_SPIN", "mbs_ldr_prsn"}: "D30 planned-LDR reader; 000414 registered only mbs_run_ldr_pct — not offered in the dropdown by design",
+	// D30 planned-LDR reader on the MB_HEAD side. 000416 registered only the
+	// mbh_run_ldr_pct half; unlike its MB_SPIN counterpart this one is still
+	// unregistered, so it stays an exception until a migration adds it.
 	{"MB_HEAD", "mbh_ldr_prsn"}: "D30 planned-LDR reader; 000416 registered only mbh_run_ldr_pct — not offered in the dropdown by design",
 
 	// fillFromBoxBobbinCost still switches on these two, but migration 000412
