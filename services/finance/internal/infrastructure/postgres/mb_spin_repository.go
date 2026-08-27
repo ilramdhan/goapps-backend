@@ -36,8 +36,9 @@ func (r *MBSpinRepository) Create(ctx context.Context, entity *mbspin.Entity) er
 			mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
 			mbs_cc, mbs_cost_rate_mkt,
 			mbs_status, mbs_ldr_prsn, mbs_run_ldr_pct, mbs_final_product,
+			mbs_ldr_is_fixed, mbs_dozing_is_fixed,
 			mbs_is_active, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -54,6 +55,8 @@ func (r *MBSpinRepository) Create(ctx context.Context, entity *mbspin.Entity) er
 		entity.MBSLdrPrsn(),
 		entity.MBSRunLdrPct(),
 		entity.MBSFinalProduct(),
+		entity.LDRIsFixed(),
+		entity.DozingIsFixed(),
 		entity.IsActive(),
 		entity.CreatedAt(),
 		entity.CreatedBy(),
@@ -145,9 +148,11 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 			mbs_ldr_prsn      = $10,
 			mbs_run_ldr_pct   = $11,
 			mbs_final_product = $12,
-			mbs_is_active     = $13,
-			updated_at        = $14,
-			updated_by        = $15
+			mbs_ldr_is_fixed    = $13,
+			mbs_dozing_is_fixed = $14,
+			mbs_is_active     = $15,
+			updated_at        = $16,
+			updated_by        = $17
 		WHERE mbs_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -162,6 +167,8 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 		entity.MBSLdrPrsn(),
 		entity.MBSRunLdrPct(),
 		entity.MBSFinalProduct(),
+		entity.LDRIsFixed(),
+		entity.DozingIsFixed(),
 		entity.IsActive(),
 		entity.UpdatedAt(),
 		entity.UpdatedBy(),
@@ -224,6 +231,42 @@ func (r *MBSpinRepository) GetByOrionItemCode(ctx context.Context, code string) 
 	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbs_orion_item_code = $1 AND deleted_at IS NULL ORDER BY created_at ASC, mbs_id ASC LIMIT 1`, code))
 }
 
+// ResolveUniqueByOrionItemCode reports whether exactly one non-deleted spin
+// carries the given ORION item code, WITHOUT picking a winner on ambiguity.
+//
+// ⚠ Deliberately no LIMIT/ORDER BY tie-breaker here (unlike GetByOrionItemCode's
+// D20/M2a pattern): this is the save-time resolver for cpp_value_mb_spin_id, and
+// picking an arbitrary row among the 177 duplicate ORION codes (up to 16 rows
+// each, 466 rows total) would silently mis-resolve. Selecting up to 2 rows is
+// enough to distinguish "exactly one" from "more than one" without scanning the
+// whole duplicate set.
+func (r *MBSpinRepository) ResolveUniqueByOrionItemCode(ctx context.Context, code string) (uuid.UUID, bool, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT mbs_id FROM mst_mb_spin WHERE mbs_orion_item_code = $1 AND deleted_at IS NULL LIMIT 2`,
+		code,
+	)
+	if err != nil {
+		return uuid.UUID{}, false, fmt.Errorf("resolve unique by orion item code: %w", err)
+	}
+	defer closeRows(rows)
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if scanErr := rows.Scan(&id); scanErr != nil {
+			return uuid.UUID{}, false, fmt.Errorf("scan orion item code match: %w", scanErr)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return uuid.UUID{}, false, fmt.Errorf("iterate orion item code matches: %w", err)
+	}
+	if len(ids) != 1 {
+		return uuid.UUID{}, false, nil
+	}
+	return ids[0], true, nil
+}
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -234,8 +277,11 @@ func (r *MBSpinRepository) selectCols() string {
 		       mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
 		       mbs_cc, mbs_cost_rate_mkt,
 		       mbs_status, mbs_ldr_prsn, mbs_run_ldr_pct, mbs_final_product,
+		       mbs_ldr_is_fixed, mbs_dozing_is_fixed,
 		       mbs_is_active,
-		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
+		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by,
+		       mbs_parent_spin_id, mbs_duplicated_at, mbs_duplicated_by,
+		       mbs_last_recalc_at, mbs_last_recalc_by, mbs_cost_product_id
 		FROM mst_mb_spin
 	`
 }
@@ -267,6 +313,8 @@ type mbSpinDTO struct {
 	MBSLdrPrsn      sql.NullFloat64
 	MBSRunLdrPct    sql.NullFloat64
 	MBSFinalProduct sql.NullString
+	LDRIsFixed      sql.NullBool
+	DozingIsFixed   sql.NullBool
 	IsActive        bool
 	CreatedAt       time.Time
 	CreatedBy       string
@@ -274,9 +322,33 @@ type mbSpinDTO struct {
 	UpdatedBy       sql.NullString
 	DeletedAt       sql.NullTime
 	DeletedBy       sql.NullString
+	// Lineage / recalc trail (migration 000484) + ownership (000490). All six are
+	// NULL on every legacy Oracle row and stay that way — there is no backfill for
+	// the 000484 five.
+	ParentSpinID  sql.NullString
+	DuplicatedAt  sql.NullTime
+	DuplicatedBy  sql.NullString
+	LastRecalcAt  sql.NullTime
+	LastRecalcBy  sql.NullString
+	CostProductID sql.NullInt64
 }
 
 func (d *mbSpinDTO) toEntity() *mbspin.Entity {
+	e := d.reconstruct()
+	e.HydrateLineage(mbspin.Lineage{
+		ParentSpinID:  nullableUUIDPtr(d.ParentSpinID),
+		DuplicatedAt:  nullableTimePtr(d.DuplicatedAt),
+		DuplicatedBy:  nullableStringPtr(d.DuplicatedBy),
+		LastRecalcAt:  nullableTimePtr(d.LastRecalcAt),
+		LastRecalcBy:  nullableStringPtr(d.LastRecalcBy),
+		CostProductID: nullableInt64Ptr(d.CostProductID),
+	})
+	return e
+}
+
+// reconstruct maps only the columns Reconstruct takes positionally; the 000484 /
+// 000490 columns are applied separately by toEntity via HydrateLineage.
+func (d *mbSpinDTO) reconstruct() *mbspin.Entity {
 	return mbspin.Reconstruct(
 		d.ID,
 		nullableStringPtr(d.OracleSysID),
@@ -293,6 +365,8 @@ func (d *mbSpinDTO) toEntity() *mbspin.Entity {
 		nullableFloat64Ptr(d.MBSLdrPrsn),
 		nullableFloat64Ptr(d.MBSRunLdrPct),
 		nullableStringPtr(d.MBSFinalProduct),
+		nullableBoolPtr(d.LDRIsFixed),
+		nullableBoolPtr(d.DozingIsFixed),
 		d.IsActive,
 		d.CreatedAt, d.CreatedBy,
 		nullableTimePtr(d.UpdatedAt), nullableStringPtr(d.UpdatedBy),
@@ -307,8 +381,11 @@ func (r *MBSpinRepository) scanOne(row *sql.Row) (*mbspin.Entity, error) {
 		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting,
 		&d.CC, &d.CostRateMkt,
 		&d.MBSStatus, &d.MBSLdrPrsn, &d.MBSRunLdrPct, &d.MBSFinalProduct,
+		&d.LDRIsFixed, &d.DozingIsFixed,
 		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
+		&d.ParentSpinID, &d.DuplicatedAt, &d.DuplicatedBy,
+		&d.LastRecalcAt, &d.LastRecalcBy, &d.CostProductID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbspin.ErrNotFound
@@ -326,8 +403,11 @@ func (r *MBSpinRepository) scanRow(rows *sql.Rows) (*mbspin.Entity, error) {
 		&d.Denier, &d.Filament, &d.Dozing, &d.MBCosting,
 		&d.CC, &d.CostRateMkt,
 		&d.MBSStatus, &d.MBSLdrPrsn, &d.MBSRunLdrPct, &d.MBSFinalProduct,
+		&d.LDRIsFixed, &d.DozingIsFixed,
 		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
+		&d.ParentSpinID, &d.DuplicatedAt, &d.DuplicatedBy,
+		&d.LastRecalcAt, &d.LastRecalcBy, &d.CostProductID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan mb spin row: %w", err)

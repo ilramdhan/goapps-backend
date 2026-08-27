@@ -24,7 +24,12 @@ type CreateCommand struct {
 	MBSLdrPrsn      *float64
 	MBSRunLdrPct    *float64
 	MBSFinalProduct *string
-	CreatedBy       string
+	// LDRIsFixed / DozingIsFixed carry the fix/actual markers (recalc rule #3).
+	// Leave nil to mean "unknown", which IsFixedLDR/IsFixedDozing treat as FIXED.
+	// The duplicate-spin path must pass an explicit false so the copy can be recalculated.
+	LDRIsFixed    *bool
+	DozingIsFixed *bool
+	CreatedBy     string
 }
 
 // CreateHandler handles the CreateMBSpin command.
@@ -44,6 +49,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbspin.
 		cmd.Denier, cmd.Filament, cmd.Dozing, cmd.MBCosting,
 		cmd.CC, cmd.CostRateMkt,
 		cmd.MBSStatus, cmd.MBSLdrPrsn, cmd.MBSRunLdrPct, cmd.MBSFinalProduct,
+		cmd.LDRIsFixed, cmd.DozingIsFixed,
 		cmd.CreatedBy,
 	)
 	if err != nil {

@@ -240,3 +240,57 @@ func (s *MBSpinLookupDeterminismSuite) TestGetByOrionItemCode_SoftDeletedSource_
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), clone, byMB.ID())
 }
+
+// ResolveUniqueByOrionItemCode is the SAVE-time resolver for cpp_value_mb_spin_id
+// (migration 000494). Unlike the two getters above, it must NEVER pick a winner
+// among duplicates — these tests lock in that it reports ok=false rather than an
+// arbitrary row whenever the code is shared by more than one spin, matches the
+// GetByOrionItemCode getter's exact single match, or matches nothing at all.
+func (s *MBSpinLookupDeterminismSuite) TestResolveUniqueByOrionItemCode_SingleMatch_ReturnsIt() {
+	orionKey := mbSpinFixturePrefix + "UNIQUE-ORION"
+	only := uuid.MustParse("00000000-0000-0000-0000-0000000000e1")
+
+	s.insertSpin(only, mbSpinFixturePrefix+"mbc-e1", &orionKey, baseTime(), true)
+
+	id, ok, err := s.repo.ResolveUniqueByOrionItemCode(s.ctx, orionKey)
+	require.NoError(s.T(), err)
+	require.True(s.T(), ok)
+	require.Equal(s.T(), only, id)
+}
+
+func (s *MBSpinLookupDeterminismSuite) TestResolveUniqueByOrionItemCode_MultipleMatches_ReportsAmbiguous() {
+	orionKey := mbSpinFixturePrefix + "DUP-RESOLVE-ORION"
+
+	s.insertSpin(uuid.New(), mbSpinFixturePrefix+"mbc-e2a", &orionKey, baseTime(), true)
+	s.insertSpin(uuid.New(), mbSpinFixturePrefix+"mbc-e2b", &orionKey, baseTime().Add(time.Hour), true)
+
+	id, ok, err := s.repo.ResolveUniqueByOrionItemCode(s.ctx, orionKey)
+	require.NoError(s.T(), err)
+	require.False(s.T(), ok, "must refuse to pick a winner among duplicates")
+	require.Equal(s.T(), uuid.UUID{}, id)
+}
+
+func (s *MBSpinLookupDeterminismSuite) TestResolveUniqueByOrionItemCode_NoMatch_ReportsAmbiguous() {
+	id, ok, err := s.repo.ResolveUniqueByOrionItemCode(s.ctx, mbSpinFixturePrefix+"NO-SUCH-CODE")
+	require.NoError(s.T(), err)
+	require.False(s.T(), ok)
+	require.Equal(s.T(), uuid.UUID{}, id)
+}
+
+// A soft-deleted spin must not count toward uniqueness in either direction: it
+// must not make an otherwise-unique code ambiguous, and it must not itself be
+// returned as the resolved winner.
+func (s *MBSpinLookupDeterminismSuite) TestResolveUniqueByOrionItemCode_SoftDeletedSpinExcluded() {
+	orionKey := mbSpinFixturePrefix + "SOFTDEL-RESOLVE-ORION"
+	live := uuid.MustParse("00000000-0000-0000-0000-0000000000e3")
+	deleted := uuid.MustParse("00000000-0000-0000-0000-0000000000e4")
+
+	s.insertSpin(live, mbSpinFixturePrefix+"mbc-e3", &orionKey, baseTime(), true)
+	s.insertSpin(deleted, mbSpinFixturePrefix+"mbc-e4", &orionKey, baseTime().Add(time.Hour), true)
+	s.softDeleteSpin(deleted)
+
+	id, ok, err := s.repo.ResolveUniqueByOrionItemCode(s.ctx, orionKey)
+	require.NoError(s.T(), err)
+	require.True(s.T(), ok, "soft-deleted duplicate must not make this ambiguous")
+	require.Equal(s.T(), live, id)
+}
