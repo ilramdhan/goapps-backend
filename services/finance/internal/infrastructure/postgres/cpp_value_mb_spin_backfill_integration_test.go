@@ -322,6 +322,12 @@ func (s *CPPValueMBSpinBackfillSuite) TestBackfill_AlreadyResolvedRow_NeverOverw
 	realSpin := uuid.New()
 	decoySpin := uuid.New()
 	s.insertMBSpin(realSpin, code, false)
+	// decoySpin must be a real mst_mb_spin row too (fk_cpp_value_mb_spin
+	// requires cpp_value_mb_spin_id to reference an existing mst_mb_spin.mbs_id)
+	// even though it deliberately carries a DIFFERENT orion code — the point is
+	// solely to prove the migration does not touch a non-NULL cell, not that
+	// the pre-existing value is a plausible resolution for this row's code.
+	s.insertMBSpin(decoySpin, cppBackfillFixturePrefix+"ALREADY-RESOLVED-DECOY", false)
 
 	// Row already resolved to decoySpin (simulating a prior save-path/backfill
 	// write) even though decoySpin does not actually share this orion code —
