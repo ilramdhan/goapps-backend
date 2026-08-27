@@ -65,11 +65,6 @@ func (m *MockRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, er
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockRepository) UpdateEntryStatus(ctx context.Context, id uuid.UUID, entryStatus string, currentVersion int32, stateReason string) error {
-	args := m.Called(ctx, id, entryStatus, currentVersion, stateReason)
-	return args.Error(0)
-}
-
 func (m *MockRepository) ListAll(ctx context.Context, filter mbheaddomain.ExportFilter) ([]*mbheaddomain.Entity, error) {
 	args := m.Called(ctx, filter)
 	if args.Get(0) == nil {
@@ -88,6 +83,29 @@ func (m *MockRepository) TransitionWithAutoGen(ctx context.Context, id uuid.UUID
 	return args.Error(0)
 }
 
+func (m *MockRepository) ListShades(ctx context.Context, mbhID uuid.UUID) ([]mbheaddomain.Shade, error) {
+	args := m.Called(ctx, mbhID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]mbheaddomain.Shade), args.Error(1)
+}
+
+func (m *MockRepository) ReplaceShades(ctx context.Context, mbhID uuid.UUID, shades []mbheaddomain.Shade, actorUserID string) error {
+	args := m.Called(ctx, mbhID, shades, actorUserID)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ExistsByVSNumber(ctx context.Context, vsNumber string, excludeID uuid.UUID) (bool, error) {
+	args := m.Called(ctx, vsNumber, excludeID)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockRepository) ExistsByDevCode(ctx context.Context, devCode string, excludeID uuid.UUID) (bool, error) {
+	args := m.Called(ctx, devCode, excludeID)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *MockRepository) RefreezeCostParams(ctx context.Context, id uuid.UUID, entity *mbheaddomain.Entity, params *mbheaddomain.ParamSnapshot) error {
 	args := m.Called(ctx, id, entity, params)
 	return args.Error(0)
@@ -96,7 +114,7 @@ func (m *MockRepository) RefreezeCostParams(ctx context.Context, id uuid.UUID, e
 func TestCreateHandler_Handle(t *testing.T) {
 	t.Run("success - creates new MB Head", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo)
+		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo())
 		ctx := context.Background()
 
 		cmd := mbhead.CreateCommand{
@@ -117,7 +135,7 @@ func TestCreateHandler_Handle(t *testing.T) {
 
 	t.Run("error - duplicate mb_costing", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo)
+		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo())
 		ctx := context.Background()
 
 		cmd := mbhead.CreateCommand{
@@ -136,7 +154,7 @@ func TestCreateHandler_Handle(t *testing.T) {
 
 	t.Run("error - empty mb_costing", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo)
+		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo())
 		ctx := context.Background()
 
 		cmd := mbhead.CreateCommand{
@@ -154,7 +172,7 @@ func TestCreateHandler_Handle(t *testing.T) {
 
 	t.Run("error - empty created_by", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo)
+		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo())
 		ctx := context.Background()
 
 		cmd := mbhead.CreateCommand{
@@ -178,7 +196,7 @@ func TestGetHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		id := uuid.New()
-		expected, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin", false, "", "", "", "", "", nil)
+		expected, err := mbheaddomain.New(mbheaddomain.NewParams{MBCosting: "MB001", CreatedBy: "admin"})
 		require.NoError(t, err)
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
@@ -230,7 +248,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		id := uuid.New()
-		entity, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin", false, "", "", "", "", "", nil)
+		entity, err := mbheaddomain.New(mbheaddomain.NewParams{MBCosting: "MB001", CreatedBy: "admin"})
 		require.NoError(t, err)
 
 		newCosting := "MB001-UPD"
@@ -306,9 +324,9 @@ func TestListHandler_Handle(t *testing.T) {
 		handler := mbhead.NewListHandler(mockRepo)
 		ctx := context.Background()
 
-		entity1, err := mbheaddomain.New("MB001", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin", false, "", "", "", "", "", nil)
+		entity1, err := mbheaddomain.New(mbheaddomain.NewParams{MBCosting: "MB001", CreatedBy: "admin"})
 		require.NoError(t, err)
-		entity2, err := mbheaddomain.New("MB002", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin", false, "", "", "", "", "", nil)
+		entity2, err := mbheaddomain.New(mbheaddomain.NewParams{MBCosting: "MB002", CreatedBy: "admin"})
 		require.NoError(t, err)
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("mbhead.ListFilter")).Return(

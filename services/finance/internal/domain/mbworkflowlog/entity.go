@@ -11,6 +11,15 @@ type Entity struct {
 	actorAt     string
 	reason      string
 	version     int32
+	// meta is the mbwl_meta JSONB document as raw JSON text, empty when the row
+	// carries none.
+	//
+	// ⚠ The column has existed since migration 000448:10 but carried NO Go path
+	// at all until P8 — it was neither written nor read. It is a free-form
+	// document on purpose (the DOZING_CHANGED payload is not the only shape it
+	// will ever hold), so the domain keeps it as opaque JSON text and does NOT
+	// validate its shape: the producer owns the schema.
+	meta string
 }
 
 // NewEntity constructs a new workflow-log row, validating mbh_id and to_state are present.
@@ -24,11 +33,27 @@ func NewEntity(mbhID, fromState, toState, actorUserID string) (*Entity, error) {
 	return &Entity{mbhID: mbhID, fromState: fromState, toState: toState, actorUserID: actorUserID}, nil
 }
 
+// WithMeta attaches the mbwl_meta JSONB document to this log row and returns the
+// same entity, so it can be chained onto NewEntity.
+//
+// Passing "" leaves the column NULL. ⛔ No shape validation happens here — see
+// the meta field comment.
+func (e *Entity) WithMeta(meta string) *Entity {
+	e.meta = meta
+	return e
+}
+
+// WithReason attaches the free-form mbwl_reason text and returns the same entity.
+func (e *Entity) WithReason(reason string) *Entity {
+	e.reason = reason
+	return e
+}
+
 // Reconstruct rebuilds a workflow-log Entity from persisted values, bypassing NewEntity's
 // validation since the row already exists in storage.
 //
 //nolint:revive // positional params mirror the hydration DTO's column order
-func Reconstruct(id, mbhID, fromState, toState, actorUserID, actorAt, reason string, version int32) *Entity {
+func Reconstruct(id, mbhID, fromState, toState, actorUserID, actorAt, reason string, version int32, meta string) *Entity {
 	return &Entity{
 		id:          id,
 		mbhID:       mbhID,
@@ -38,6 +63,7 @@ func Reconstruct(id, mbhID, fromState, toState, actorUserID, actorAt, reason str
 		actorAt:     actorAt,
 		reason:      reason,
 		version:     version,
+		meta:        meta,
 	}
 }
 
@@ -64,3 +90,7 @@ func (e *Entity) Reason() string { return e.reason }
 
 // Version returns the mb_head composition version this transition was recorded against.
 func (e *Entity) Version() int32 { return e.version }
+
+// Meta returns the mbwl_meta JSONB document as raw JSON text, empty when the row
+// has none.
+func (e *Entity) Meta() string { return e.meta }
