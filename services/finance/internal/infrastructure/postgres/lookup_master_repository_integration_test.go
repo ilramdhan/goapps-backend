@@ -133,7 +133,12 @@ func (s *ListMasterOptionsSuite) TestListMasterOptions_MBSpin_WithOrionCode_Uses
 	orion := lmOptFixturePrefix + "ORION-1"
 	s.insertSpin(id, label, &orion)
 
-	opts, err := s.repo.ListMasterOptions(s.ctx, "MB_SPIN", "", 0)
+	// mst_mb_spin holds ~2700 real Oracle-seeded rows (see file header); an
+	// unfiltered call is capped by defaultMasterOptionsLimit (200) and, sorted
+	// alphabetically by label, never reaches this ITEST- prefixed fixture. Scope
+	// the search to the fixture label so the assertion doesn't depend on where
+	// real production data happens to sort relative to it.
+	opts, err := s.repo.ListMasterOptions(s.ctx, "MB_SPIN", label, 0)
 	require.NoError(s.T(), err)
 
 	got, found := findOptionByLabel(opts, label)
@@ -149,7 +154,9 @@ func (s *ListMasterOptionsSuite) TestListMasterOptions_MBSpin_WithoutOrionCode_F
 	label := lmOptFixturePrefix + "without-orion"
 	s.insertSpin(id, label, nil)
 
-	opts, err := s.repo.ListMasterOptions(s.ctx, "MB_SPIN", "", 0)
+	// See the sibling WithOrionCode test above for why this must search by the
+	// fixture label instead of relying on the unfiltered default-limit result set.
+	opts, err := s.repo.ListMasterOptions(s.ctx, "MB_SPIN", label, 0)
 	require.NoError(s.T(), err)
 
 	got, found := findOptionByLabel(opts, label)
