@@ -1,0 +1,66 @@
+# Prod-Mirror PostgreSQL for Local Development
+#
+# WHY THIS EXISTS
+# ---------------
+# The default docker-compose.yaml runs THREE separate postgres containers with
+# three databases (finance_db :5434, iam_db :5435, ppc_db :5436). Production and
+# staging do NOT look like that. In K8s there is ONE postgres StatefulSet with
+# TWO databases:
+#
+#   goapps  -> finance + iam SHARE this database and the SAME `public` schema.
+#              They are separated only by their golang-migrate version tables
+#              (schema_migrations_finance / schema_migrations_iam).
+#              See goapps-infra/services/{finance,iam}-service/base/migrate-job.yaml
+#   ppc_db  -> ppc lives in its own database (locked decision D1).
+#              See goapps-infra/services/ppc-service/base/migrate-job.yaml
+#
+# Because of the shared schema, finance and iam collide on real tables in prod
+# (e.g. `audit_logs`, created by both with different columns and `IF NOT EXISTS`,
+# so whichever migrates first wins). A 3-database local setup can never surface
+# that class of bug. This compose file reproduces the prod topology so it can.
+#
+# Usage:
+#   docker compose -f docker-compose.mirror.yaml up -d
+#   ./scripts/local-mirror/sync-from-prod.sh
+#   source scripts/local-mirror/env.mirror.sh   # then `make run` in any service
+#
+# This runs ALONGSIDE docker-compose.yaml on a different port (5433), so the
+# existing 3-database setup keeps working untouched.
+name: goapps-mirror
+
+services:
+  mirror-postgres:
+    image: postgres:18-alpine
+    container_name: goapps-mirror-postgres
+    ports:
+      # 5433 chosen to avoid the default 5432 and the existing 5434/5435/5436.
+      - "5433:5432"
+    environment:
+      # Superuser `postgres` matches prod, where services authenticate with the
+      # POSTGRES_USER from the postgres-secret. Keeping the same role name means
+      # a prod dump restores without ownership rewriting.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # `goapps` is the finance+iam database. `ppc_db` is created by the init
+      # script below, since POSTGRES_DB only bootstraps a single database.
+      POSTGRES_DB: goapps
+    volumes:
+      # Mount the parent dir, not /var/lib/postgresql/data: postgres:18 sets
+      # PGDATA=/var/lib/postgresql/18/docker and refuses to start if the data
+      # dir itself is the mount point. This matches docker-compose.yaml:18.
+      - mirror_postgres_data:/var/lib/postgresql
+      - ./scripts/local-mirror/init-mirror.sql:/docker-entrypoint-initdb.d/10-init-mirror.sql:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d goapps" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - goapps-mirror
+
+volumes:
+  mirror_postgres_data:
+
+networks:
+  goapps-mirror:
+    driver: bridge
