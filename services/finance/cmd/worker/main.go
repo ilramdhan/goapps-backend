@@ -129,9 +129,13 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	cappRepo := postgres.NewCostProductParameterRepository(db)
 	cppRepo := postgres.NewCostProductParameterRepository(db)
 	costRouteRepo := postgres.NewCostRouteRepository(db)
+	// mbSpinRepo resolves cpp_value_mb_spin_id for MB_SPIN lookup parameters
+	// during the CPP Excel import, mirroring the interactive save path's
+	// resolution (see costproductparameter.Handlers wiring in cmd/server).
+	mbSpinRepo := postgres.NewMBSpinRepository(db)
 	cpmImportHandler := costproductmaster.NewAsyncImportHandler(cpmRepo, cptRepo, costImportJobRepo)
 	cappImportHandler := costproductapplicableparam.NewAsyncImportHandler(cappRepo, costImportJobRepo)
-	cppImportHandler := costproductparameter.NewAsyncImportHandler(cppRepo, costImportJobRepo)
+	cppImportHandler := costproductparameter.NewAsyncImportHandler(cppRepo, costImportJobRepo, mbSpinRepo)
 	bulkExportHandler := costbulkimport.NewExportHandler(
 		cpmRepo, cppRepo, cptRepo, costRouteRepo, costImportJobRepo, storageSvc, log.Logger,
 	)

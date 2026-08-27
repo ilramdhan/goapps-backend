@@ -126,6 +126,22 @@ var (
 		[]string{"operation", "status"},
 	)
 
+	mbCrossSectionOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "mb_cross_section_operations_total",
+			Help: "Total number of MB Cross Section operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
+	mbCrossSectionFactorOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "mb_cross_section_factor_operations_total",
+			Help: "Total number of MB Cross Section Factor operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
 	mbParamOperationsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "mb_param_operations_total",
@@ -305,6 +321,16 @@ func RecordMBCompositionOperation(operation string, success bool) {
 // RecordMBLustureOperation records an MB Lusture operation metric.
 func RecordMBLustureOperation(operation string, success bool) {
 	mbLustureOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordMBCrossSectionOperation records an MB Cross Section operation metric.
+func RecordMBCrossSectionOperation(operation string, success bool) {
+	mbCrossSectionOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordMBCrossSectionFactorOperation records an MB Cross Section Factor operation metric.
+func RecordMBCrossSectionFactorOperation(operation string, success bool) {
+	mbCrossSectionFactorOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
 }
 
 // RecordMBParamOperation records an MB Param operation metric.
