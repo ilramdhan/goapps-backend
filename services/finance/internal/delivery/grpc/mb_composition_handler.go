@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
@@ -56,7 +57,7 @@ func (h *MBCompositionHandler) CreateMbComposition(ctx context.Context, req *fin
 	})
 	if err != nil {
 		RecordMBCompositionOperation("create", false)
-		return &financev1.CreateMbCompositionResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.CreateMbCompositionResponse{Base: mbCompositionErrToBase(err)}, nil
 	}
 
 	RecordMBCompositionOperation("create", true)
@@ -84,7 +85,7 @@ func (h *MBCompositionHandler) UpdateMbComposition(ctx context.Context, req *fin
 	})
 	if err != nil {
 		RecordMBCompositionOperation("update", false)
-		return &financev1.UpdateMbCompositionResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.UpdateMbCompositionResponse{Base: mbCompositionErrToBase(err)}, nil
 	}
 
 	RecordMBCompositionOperation("update", true)
@@ -103,7 +104,7 @@ func (h *MBCompositionHandler) DeleteMbComposition(ctx context.Context, req *fin
 
 	if err := h.deleteHandler.Handle(ctx, appmbcomposition.DeleteCommand{ID: req.MbcmId}); err != nil {
 		RecordMBCompositionOperation("delete", false)
-		return &financev1.DeleteMbCompositionResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.DeleteMbCompositionResponse{Base: mbCompositionErrToBase(err)}, nil
 	}
 
 	RecordMBCompositionOperation("delete", true)
@@ -163,6 +164,27 @@ func (h *MBCompositionHandler) ListMbCompositionVersions(ctx context.Context, re
 		Base: successResponse("MB composition versions retrieved successfully"),
 		Data: items,
 	}, nil
+}
+
+// mbCompositionErrToBase maps mbcomposition write-path sentinels to a BaseResponse,
+// falling back to the shared domainErrorToBaseResponse for everything else.
+//
+// Only ErrParentNotDraft needs an explicit arm: the other composition sentinels
+// already land correctly through domainErrorToBaseResponse's substring matching
+// (both ErrNotFound and ErrParentHeadNotFound contain "not found" → 404), whereas
+// "can only be modified while the parent mb head is in DRAFT status" matches none of
+// its substrings and would otherwise be reported as a 500 server error — which is
+// wrong twice over: it is the caller's precondition that failed, and a 500 tells the
+// operator nothing actionable.
+//
+// 412 is the HTTP code this project's grpcCodeToHTTPStatus assigns to
+// codes.FailedPrecondition, which is the right gRPC code here: the request is
+// well-formed, the resource exists, but the parent head's state forbids the write.
+func mbCompositionErrToBase(err error) *commonv1.BaseResponse {
+	if errors.Is(err, mbcomposition.ErrParentNotDraft) {
+		return ErrorResponse("412", err.Error())
+	}
+	return domainErrorToBaseResponse(err)
 }
 
 // mbCompositionEntityToProto converts a domain mbcomposition Entity to its proto representation.
