@@ -6,6 +6,7 @@ import (
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/lookupmaster"
+	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
 
 // LookupMasterHandler implements financev1.LookupMasterServiceServer.
@@ -172,16 +173,46 @@ func (h *LookupMasterHandler) ListTableColumns(ctx context.Context, req *finance
 }
 
 // ListMasterOptions returns combobox options (value+label) by querying the registered table.
+//
+// ⭐ DIPERBARUI 2026-08-26 (perf: SP Code dropdown lag, server-side search):
+// forwards the new optional search/limit request fields straight through to
+// the repository — search="" and limit=0 (both proto field zero-values when
+// the client omits them) preserve the pre-change behavior exactly, aside
+// from the new server-side default LIMIT (see
+// LookupMasterRepository.ListMasterOptions).
 func (h *LookupMasterHandler) ListMasterOptions(ctx context.Context, req *financev1.ListMasterOptionsRequest) (*financev1.ListMasterOptionsResponse, error) { //nolint:nilerr // BaseResponse pattern
-	opts, err := h.repo.ListMasterOptions(ctx, req.GetMasterCode())
+	opts, err := h.repo.ListMasterOptions(ctx, req.GetMasterCode(), req.GetSearch(), int(req.GetLimit()))
 	if err != nil {
 		return &financev1.ListMasterOptionsResponse{Base: domainErrorToBaseResponse(err)}, nil
 	}
 	items := make([]*financev1.MasterOption, 0, len(opts))
 	for _, o := range opts {
-		items = append(items, &financev1.MasterOption{Value: o.Value, Label: o.Label})
+		items = append(items, &financev1.MasterOption{
+			Value: o.Value,
+			Label: o.Label,
+			// ⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): only set for MB_SPIN
+			// options (see LookupMasterRepository.ListMasterOptions); nil elsewhere.
+			// ~~D30: Dozing comes from the retired/contaminated mbs_dozing column —
+			// displayed as-is per explicit product decision, not authoritative LDR.~~
+			// Dozing withdrawn by explicit user decision 2026-08-26 (D30
+			// contamination); replaced by LdrPrsn/RunLdrPct below.
+			Denier:    o.Denier,
+			Filament:  masterOptionFilamentPtr(o.Filament),
+			LdrPrsn:   o.LdrPrsn,
+			RunLdrPct: o.RunLdrPct,
+		})
 	}
 	return &financev1.ListMasterOptionsResponse{Base: successResponse(""), Data: items}, nil
+}
+
+// masterOptionFilamentPtr converts the domain *int filament value to the *int32
+// the proto field requires, with bounds clamping. Absent (nil) stays absent.
+func masterOptionFilamentPtr(v *int) *int32 {
+	if v == nil {
+		return nil
+	}
+	out := safeconv.IntToInt32(*v)
+	return &out
 }
 
 // ExportLookupMasters exports all masters and columns to an Excel workbook.

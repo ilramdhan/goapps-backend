@@ -300,7 +300,11 @@ func (h *Handler) loadValidOptions(ctx context.Context, jobID int64, candidates 
 		if _, seen := validByMaster[c.MasterCode]; seen {
 			continue
 		}
-		opts, optErr := h.lookups.ListMasterOptions(ctx, c.MasterCode)
+		// search="" + limit=-1: this validation must see the master's COMPLETE
+		// option set, not the combobox's paged default (see MasterOptionsSource
+		// doc comment) — otherwise valid values beyond the default page would be
+		// rejected as unknown.
+		opts, optErr := h.lookups.ListMasterOptions(ctx, c.MasterCode, "", -1)
 		if optErr != nil {
 			h.logger.Warn().Err(optErr).Int64("job_id", jobID).Str("master_code", c.MasterCode).Msg("etl import: cannot load master options; skipping validation for this master")
 			continue
