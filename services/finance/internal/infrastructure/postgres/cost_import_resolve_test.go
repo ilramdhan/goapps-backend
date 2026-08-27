@@ -390,7 +390,7 @@ func (s *CostImportResolveSuite) TestResolveLayer2Params_MBSpinUniqueOrionCode()
 	require.NoError(s.T(), err)
 
 	_, err = s.repo.CopyStagingProductParameter(s.ctx, jobID, staticProducer([][]string{
-		{legacyA, paramCode, "", orionCode, ""},
+		{legacyA, paramCode, "TEXT", "", orionCode, ""},
 	}))
 	require.NoError(s.T(), err)
 
@@ -439,7 +439,7 @@ func (s *CostImportResolveSuite) TestResolveLayer2Params_MBSpinAmbiguousOrionCod
 	require.NoError(s.T(), err)
 
 	_, err = s.repo.CopyStagingProductParameter(s.ctx, jobID, staticProducer([][]string{
-		{legacyA, paramCode, "", orionCode, ""},
+		{legacyA, paramCode, "TEXT", "", orionCode, ""},
 	}))
 	require.NoError(s.T(), err)
 
@@ -481,7 +481,7 @@ func (s *CostImportResolveSuite) TestResolveLayer2Params_MBSpinNoMatchStaysNull(
 	require.NoError(s.T(), err)
 
 	_, err = s.repo.CopyStagingProductParameter(s.ctx, jobID, staticProducer([][]string{
-		{legacyA, paramCode, "", unknownCode, ""},
+		{legacyA, paramCode, "TEXT", "", unknownCode, ""},
 	}))
 	require.NoError(s.T(), err)
 
