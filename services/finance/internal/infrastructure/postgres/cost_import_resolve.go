@@ -228,9 +228,13 @@ WHERE s.job_id = $1
 	//      zero or by more than one non-deleted spin (177 legacy codes are
 	//      shared by up to 16 rows each in production) resolves to NULL
 	//      instead of guessing. Deliberately NOT LIMIT 1 / ORDER BY ... LIMIT 1
-	//      / DISTINCT ON / MIN(mbs_id) — any of those would silently pick an
-	//      arbitrary winner among duplicates and lock the product to the
-	//      wrong MB Spin in downstream cost calculations.
+	//      / DISTINCT ON — any of those would silently pick an arbitrary
+	//      winner among duplicates and lock the product to the wrong MB Spin
+	//      in downstream cost calculations. The outer (array_agg(m2.mbs_id))[1]
+	//      (mbs_id is UUID, which has no MIN/MAX aggregate in Postgres) is
+	//      only there to satisfy Postgres' GROUP BY projection rule; it never
+	//      picks among duplicates because HAVING COUNT(*) = 1 already
+	//      guarantees the group has exactly one row by this point.
 	// Every other lookup master (and every non-lookup TEXT/NUMBER/BOOLEAN
 	// param) leaves this NULL — cpp_value_text keeps carrying the raw import
 	// value completely unchanged regardless of what this resolves to.
@@ -239,7 +243,7 @@ WHERE s.job_id = $1
         COALESCE(
             (SELECT m.mbs_id FROM mst_mb_spin m
                WHERE m.mbs_id::text = s.value_text AND m.deleted_at IS NULL),
-            (SELECT m2.mbs_id FROM mst_mb_spin m2
+            (SELECT (array_agg(m2.mbs_id))[1] FROM mst_mb_spin m2
                WHERE m2.mbs_orion_item_code = s.value_text AND m2.deleted_at IS NULL
                GROUP BY m2.mbs_orion_item_code
                HAVING COUNT(*) = 1)
