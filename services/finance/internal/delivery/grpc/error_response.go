@@ -99,6 +99,66 @@ func invalidIDResponse(fieldName string) *commonv1.BaseResponse {
 	}
 }
 
+// frozenCheckStatusResponse returns a BaseResponse rejecting a write to the
+// FROZEN mbh_check_status column (plan §11 item 106, user decision = option 2:
+// REJECT LOUDLY, never ignore silently).
+//
+// 🔴 The rejection fires whenever the field is PRESENT, not merely when it is
+// non-empty. mbh_check_status is a proto3 `optional string`, so presence IS
+// tracked: nil = absent, non-nil = the caller deliberately sent something. An
+// explicitly sent "" is the MOST destructive case, not the most harmless one —
+// letting it through would overwrite a stored Oracle trace with an empty string.
+// Accepting "" while rejecting "Current" would therefore seal the safe write and
+// wave the dangerous one through. Callers that used to send this field must drop
+// it from the payload entirely.
+//
+// The message explains WHY so an operator learns the rule instead of guessing.
+func frozenCheckStatusResponse() *commonv1.BaseResponse {
+	const msg = "mbh_check_status is frozen: it is the Oracle import trace and is " +
+		"read-only. Remove the field from the request; the derived value is " +
+		"maintained by the server in mbh_check_status_calc."
+	return &commonv1.BaseResponse{
+		IsSuccess:  false,
+		StatusCode: "400",
+		Message:    msg,
+		ValidationErrors: []*commonv1.ValidationError{
+			{Field: "mbh_check_status", Message: msg},
+		},
+	}
+}
+
+// Messages returned for MB Recipe workflow actions that were removed by the
+// USER DECISION of 2026-08-26 (see mb_head_handler.go). The workflow is now
+// DRAFT (editable) → SUBMITTED (not editable) → APPROVED (locked); from SUBMITTED the
+// only actions are Approve and Reject, and a locked recipe offers only Request Unlock.
+//
+// Each message says WHAT was removed and WHAT to do instead, so an operator or an
+// out-of-date client learns the new rule rather than seeing a bare failure.
+const (
+	unApproveRemovedMessage = "un-approve has been removed from the MB recipe workflow. " +
+		"An approved recipe is locked; use Request Unlock to reopen it for editing."
+	revokeRemovedMessage = "revoke has been removed from the MB recipe workflow. " +
+		"Deactivate the recipe with its active flag instead of revoking it."
+)
+
+// featureRemovedResponse returns a BaseResponse rejecting an RPC whose feature has been
+// removed from the product while the RPC itself stays in the proto contract.
+//
+// 🔴 410 Gone, deliberately — ⛔ not 400 and ⛔ not 501. The request is well formed and
+// the caller is not at fault for having been built against it; the capability simply no
+// longer exists at this endpoint. 410 is the one status that says exactly that, and it
+// keeps these refusals distinguishable from ordinary validation failures in logs.
+//
+// The BaseResponse pattern is used (⛔ never a raw gRPC error) so REST clients through
+// the gateway see the same envelope as every other MB Head response.
+func featureRemovedResponse(message string) *commonv1.BaseResponse {
+	return &commonv1.BaseResponse{
+		IsSuccess:  false,
+		StatusCode: "410",
+		Message:    message,
+	}
+}
+
 // grpcCodeToHTTPStatus maps gRPC status codes to HTTP status codes.
 func grpcCodeToHTTPStatus(code codes.Code) int {
 	switch code {

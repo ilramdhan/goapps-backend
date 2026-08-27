@@ -69,7 +69,30 @@ var (
 		Name: "finance_cost_audit_writes_total",
 		Help: "Audit history rows written.",
 	})
+
+	// FormulaNonFiniteTotal increments each time a formula evaluation produced
+	// a non-finite result (NaN / +Inf / -Inf) that the evaluator silently
+	// converted to 0. Every increment means one costing number is a fabricated
+	// 0 rather than a computed value.
+	//
+	// Label cardinality: formula_code is bounded by the mst_formula table
+	// (tens of rows), kind is one of three constants. Parameter VALUES are
+	// deliberately NOT labels — they are unbounded and would explode the
+	// series count; they go to the throttled WARN log instead.
+	FormulaNonFiniteTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "finance_cost_formula_non_finite_total",
+			Help: "Formula evaluations whose non-finite (NaN/Inf) result was converted to 0.",
+		},
+		[]string{"formula_code", "kind"},
+	)
 )
+
+// RecordFormulaNonFinite increments the non-finite conversion counter for one
+// formula and kind. kind must be one of "nan", "pos_inf", "neg_inf".
+func RecordFormulaNonFinite(formulaCode, kind string) {
+	FormulaNonFiniteTotal.WithLabelValues(formulaCode, kind).Inc()
+}
 
 // Histograms.
 var (

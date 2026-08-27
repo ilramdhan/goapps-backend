@@ -85,6 +85,39 @@ func TestNewType_Valid(t *testing.T) {
 	}
 }
 
+func TestNewType_MBXSectionLookup(t *testing.T) {
+	ft, err := NewType("MB_XSECTION_LOOKUP")
+	require.NoError(t, err)
+	assert.Equal(t, "MB_XSECTION_LOOKUP", ft.String())
+	assert.Equal(t, TypeMBXSectionLookup, ft)
+	assert.True(t, ft.IsValid())
+}
+
+// TestNewType_AcceptsAllCheckConstraintValues is the guard test: the list below is
+// the verbatim mst_formula_formula_type_check value set from migration
+// migrations/postgres/000480_create_mst_mb_cross_section_factor.up.sql:120-126.
+// Any value the DB may legally store must be constructible by NewType, otherwise
+// dto.toEntity (internal/infrastructure/postgres/formula_repository.go) fails with
+// ErrInvalidFormulaType and breaks Formula reads generally — not just MB dozing.
+// When a future migration widens the CHECK, add the value here and to NewType.
+func TestNewType_AcceptsAllCheckConstraintValues(t *testing.T) {
+	checkConstraintValues := []string{
+		"CALCULATION", "SQL_QUERY", "CONSTANT", "LOOKUP", "RM_LOOKUP", "CONDITIONAL",
+		"FROM_MARKETING", "INTERMINGLING", "SNAPSHOT", "PENDING", "INITIAL_VALUE",
+		"MB_COST_LOOKUP", "MB_XSECTION_LOOKUP",
+	}
+	require.Len(t, checkConstraintValues, 13, "000480 CHECK constraint holds 13 values")
+
+	for _, v := range checkConstraintValues {
+		t.Run(v, func(t *testing.T) {
+			ft, err := NewType(v)
+			require.NoError(t, err, "formula_type %q is allowed by the DB CHECK but rejected by NewType", v)
+			assert.Equal(t, v, ft.String())
+			assert.True(t, ft.IsValid())
+		})
+	}
+}
+
 func TestNewType_Invalid(t *testing.T) {
 	tests := []string{"", "INVALID", "CALC", "SQL"}
 

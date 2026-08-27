@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	appmbspin "github.com/mutugading/goapps-backend/services/finance/internal/application/mbspin"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbdozing"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
@@ -24,23 +26,57 @@ type MBSpinHandler struct {
 	listHandler   *appmbspin.ListHandler
 	updateHandler *appmbspin.UpdateHandler
 	deleteHandler *appmbspin.DeleteHandler
-	validation    *ValidationHelper
+	// duplicateHandler is nil when the service was built without the recalc
+	// collaborators; DuplicateMBSpin then reports Unimplemented instead of
+	// pretending to work.
+	duplicateHandler *appmbspin.DuplicateHandler
+	validation       *ValidationHelper
 }
 
-// NewMBSpinHandler constructs an MBSpinHandler.
+// NewMBSpinHandler constructs an MBSpinHandler without the duplicate/recalc
+// collaborators. DuplicateMBSpin is unavailable on such a handler.
 func NewMBSpinHandler(repo mbspin.Repository) (*MBSpinHandler, error) {
+	return newMBSpinHandler(repo, nil, nil)
+}
+
+// NewMBSpinHandlerWithRecalc constructs the full MBSpinHandler: duplicate spin
+// plus the child-recalc cascade on update.
+//
+// ⛔ Neither collaborator is a costing engine. recalcRepo writes spin rows and
+// ONE audit row; impactRepo is READ-ONLY and merely counts the cost products
+// bound to a spin. Recalculation stops at the child spin (D24) — ⛔ no yarn
+// product is ever recomputed from here.
+func NewMBSpinHandlerWithRecalc(
+	repo mbspin.Repository,
+	recalcRepo mbspin.RecalcRepository,
+	impactRepo mbdozing.ImpactRepository,
+) (*MBSpinHandler, error) {
+	return newMBSpinHandler(repo, recalcRepo, impactRepo)
+}
+
+func newMBSpinHandler(
+	repo mbspin.Repository,
+	recalcRepo mbspin.RecalcRepository,
+	impactRepo mbdozing.ImpactRepository,
+) (*MBSpinHandler, error) {
 	v, err := NewValidationHelper()
 	if err != nil {
 		return nil, err
 	}
-	return &MBSpinHandler{
+	h := &MBSpinHandler{
 		createHandler: appmbspin.NewCreateHandler(repo),
 		getHandler:    appmbspin.NewGetHandler(repo),
 		listHandler:   appmbspin.NewListHandler(repo),
 		updateHandler: appmbspin.NewUpdateHandler(repo),
 		deleteHandler: appmbspin.NewDeleteHandler(repo),
 		validation:    v,
-	}, nil
+	}
+	if recalcRepo != nil {
+		svc := appmbspin.NewRecalcService(repo, recalcRepo, impactRepo)
+		h.updateHandler = appmbspin.NewUpdateHandlerWithRecalc(repo, svc)
+		h.duplicateHandler = appmbspin.NewDuplicateHandler(repo, svc)
+	}
+	return h, nil
 }
 
 // CreateMBSpin creates a new MB spin record.
@@ -74,7 +110,10 @@ func (h *MBSpinHandler) CreateMBSpin(ctx context.Context, req *financev1.CreateM
 		CostRateMkt:     req.MbsCostRateMkt,
 		MBSStatus:       req.MbsStatus,
 		MBSLdrPrsn:      req.MbsLdrPrsn,
+		MBSRunLdrPct:    req.MbsRunLdrPct,
 		MBSFinalProduct: req.MbsFinalProduct,
+		LDRIsFixed:      req.MbsLdrIsFixed,
+		DozingIsFixed:   req.MbsDozingIsFixed,
 		CreatedBy:       getUserFromContext(ctx),
 	})
 	if err != nil {
@@ -145,7 +184,10 @@ func (h *MBSpinHandler) UpdateMBSpin(ctx context.Context, req *financev1.UpdateM
 		CostRateMkt:     req.MbsCostRateMkt,
 		MBSStatus:       req.MbsStatus,
 		MBSLdrPrsn:      req.MbsLdrPrsn,
+		MBSRunLdrPct:    req.MbsRunLdrPct,
 		MBSFinalProduct: req.MbsFinalProduct,
+		LDRIsFixed:      req.MbsLdrIsFixed,
+		DozingIsFixed:   req.MbsDozingIsFixed,
 		IsActive:        req.MbsIsActive,
 		UpdatedBy:       getUserFromContext(ctx),
 	})
@@ -291,7 +333,11 @@ func mbSpinEntityToProto(e *mbspin.Entity) *financev1.MBSpin {
 	p.MbsCostRateMkt = e.CostRateMkt()
 	p.MbsStatus = e.MBSStatus()
 	p.MbsLdrPrsn = e.MBSLdrPrsn()
+	p.MbsRunLdrPct = e.MBSRunLdrPct()
 	p.MbsFinalProduct = e.MBSFinalProduct()
+	// Absence-vs-zero: nil stays nil so the UI can tell "unknown" from "computed".
+	p.MbsLdrIsFixed = e.LDRIsFixed()
+	p.MbsDozingIsFixed = e.DozingIsFixed()
 	if e.UpdatedAt() != nil {
 		p.Audit.UpdatedAt = e.UpdatedAt().Format(time.RFC3339)
 	}
@@ -299,4 +345,131 @@ func mbSpinEntityToProto(e *mbspin.Entity) *financev1.MBSpin {
 		p.Audit.UpdatedBy = *e.UpdatedBy()
 	}
 	return p
+}
+
+// =============================================================================
+// Duplicate spin (P8)
+// =============================================================================
+
+// DuplicateMBSpin clones one MB spin into a fresh R&D child.
+//
+// ⛔ THE RESPONSE'S impact_* FIELDS ARE A PREVIEW, NOT A RESULT (decision D24).
+// Duplicating a spin does NOT recalculate a single yarn product: the numbers
+// below are counted by a read-only SELECT over the products bound to the source
+// spin's ORION item code. ⛔ No costing engine is invoked anywhere on this path.
+//
+// skipped[] reports the source spin's DIRECT children that a recalc would have
+// left alone because they hold actual production values (rule A7). It is one
+// level deep only (R13).
+func (h *MBSpinHandler) DuplicateMBSpin(ctx context.Context, req *financev1.DuplicateMBSpinRequest) (*financev1.DuplicateMBSpinResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		RecordMBSpinOperation("duplicate", false)
+		return &financev1.DuplicateMBSpinResponse{Base: baseResp}, nil
+	}
+	if h.duplicateHandler == nil {
+		RecordMBSpinOperation("duplicate", false)
+		return nil, status.Error(codes.Unimplemented, "DuplicateMBSpin is not enabled on this server build")
+	}
+
+	spinID, err := uuid.Parse(req.GetMbsId())
+	if err != nil {
+		RecordMBSpinOperation("duplicate", false)
+		return &financev1.DuplicateMBSpinResponse{Base: invalidIDResponse("mbs_id")}, nil //nolint:nilerr // BaseResponse pattern: error returned in response body
+	}
+	headID, err := uuid.Parse(req.GetMbhId())
+	if err != nil {
+		RecordMBSpinOperation("duplicate", false)
+		return &financev1.DuplicateMBSpinResponse{Base: invalidIDResponse("mbh_id")}, nil //nolint:nilerr // BaseResponse pattern: error returned in response body
+	}
+
+	var filament *int
+	if req.MbsFilament != nil {
+		v := int(*req.MbsFilament)
+		filament = &v
+	}
+
+	result, err := h.duplicateHandler.Handle(ctx, appmbspin.DuplicateCommand{
+		SourceSpinID: spinID,
+		HeadID:       &headID,
+		MgtName:      req.MbsMgtName,
+		Denier:       req.MbsDenier,
+		Filament:     filament,
+		// OrionItemCode stays nil: D19 requires the clone's ERP keys to be NULL,
+		// which is why DuplicateMBSpinRequest carries no such field.
+		ActorUserID: getUserFromContext(ctx),
+	})
+	if err != nil {
+		RecordMBSpinOperation("duplicate", false)
+		return &financev1.DuplicateMBSpinResponse{Base: mbSpinErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern: error returned in response body
+	}
+
+	RecordMBSpinOperation("duplicate", true)
+	resp := &financev1.DuplicateMBSpinResponse{
+		Base: successResponse("MB spin duplicated successfully"),
+		Data: mbSpinEntityToProto(result.Clone),
+	}
+	applyRecalcToDuplicateResponse(resp, result.Recalc)
+	return resp, nil
+}
+
+// applyRecalcToDuplicateResponse copies the skip list and the D24 impact PREVIEW
+// onto the response.
+//
+// ⛔ Every impact number here comes from mbdozing.ImpactRepository, a read-only
+// repository that SELECTs the products carrying this spin's code. ⛔ Nothing was
+// recalculated to produce them.
+func applyRecalcToDuplicateResponse(resp *financev1.DuplicateMBSpinResponse, recalc *appmbspin.RecalcResult) {
+	if recalc == nil {
+		return
+	}
+	skipped := make([]*financev1.MBSpinRecalcSkipped, 0, len(recalc.Skipped))
+	for i := range recalc.Skipped {
+		s := recalc.Skipped[i]
+		skipped = append(skipped, &financev1.MBSpinRecalcSkipped{
+			MbsId:      s.SpinID.String(),
+			MbsMgtName: s.MgtName,
+			MbsStatus:  s.Status,
+			Reason:     s.Reason,
+		})
+	}
+	resp.Skipped = skipped
+	resp.SkippedCount = safeconv.IntToInt32(len(skipped))
+
+	rows := make([]*financev1.DozingImpactRow, 0, len(recalc.ImpactRows))
+	for i := range recalc.ImpactRows {
+		r := recalc.ImpactRows[i]
+		rows = append(rows, &financev1.DozingImpactRow{
+			CpmProductSysId: r.ProductSysID,
+			CpmProductCode:  r.ProductCode,
+			CpmProductName:  r.ProductName,
+			CpmIsLocked:     r.IsLocked,
+			FrozenDozing:    r.FrozenDozing,
+		})
+	}
+	resp.ImpactPreview = rows
+	resp.ImpactTotalAffected = safeconv.IntToInt32(recalc.ImpactTotals.TotalAffected)
+	resp.ImpactTotalLocked = safeconv.IntToInt32(recalc.ImpactTotals.TotalLocked)
+	resp.ImpactTruncated = recalc.ImpactTruncated
+}
+
+// mbSpinErrorToBaseResponse maps the P8 duplicate/recalc sentinels onto HTTP-ish
+// status codes.
+//
+// The generic domainErrorToBaseResponse matches on substrings ("not found",
+// "already exists", "invalid") and none of these five sentinels contains one, so
+// without this they would all surface as 500s — a cycle, a duplicate ERP code, or
+// a too-wide fan-out are all CLIENT-correctable conditions, not server faults.
+func mbSpinErrorToBaseResponse(err error) *commonv1.BaseResponse {
+	switch {
+	case errors.Is(err, mbspin.ErrDuplicateOrionItemCode):
+		return ConflictResponse(err.Error())
+	case errors.Is(err, mbspin.ErrParentCycle),
+		errors.Is(err, mbspin.ErrMaxDuplicateDepth),
+		errors.Is(err, mbspin.ErrAlreadyDeleted):
+		return BadRequestResponse(err.Error())
+	case errors.Is(err, mbspin.ErrTooManyChildren):
+		return BadRequestResponse(err.Error() + "; recalculate the affected child spins manually")
+	default:
+		return domainErrorToBaseResponse(err)
+	}
 }

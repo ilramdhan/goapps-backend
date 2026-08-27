@@ -25,16 +25,97 @@ func NewMBCompositionRepository(db *DB) *MBCompositionRepository {
 // Verify interface implementation at compile time.
 var _ mbcomposition.Repository = (*MBCompositionRepository)(nil)
 
+// mbCompositionParentLockQuery takes the row lock that makes the composition-sum
+// rule hold under concurrency (G24). Package-level so the FOR UPDATE clause is
+// pinned by a test — dropping it would silently reintroduce the race, and there is
+// no DB constraint that would catch the resulting bad total.
+const mbCompositionParentLockQuery = `SELECT 1 FROM mst_mb_head WHERE mbh_id = $1 AND deleted_at IS NULL FOR UPDATE`
+
+// rowQuerier is the subset of *sql.DB / *sql.Tx the composition write paths need,
+// so one implementation serves both the plain and the transactional call sites.
+type rowQuerier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
 // Create persists a new composition row.
 func (r *MBCompositionRepository) Create(ctx context.Context, e *mbcomposition.Entity) error {
-	const q = `
+	return r.createOn(ctx, r.db, e)
+}
+
+// CreateWithSumGuard inserts e with the composition-sum rule checked atomically (G24).
+//
+// The lock is what makes the rule hold under concurrency: SELECT ... FOR UPDATE on
+// the parent mst_mb_head row serializes every guarded writer for that mbh_id, so the
+// sum a writer reads cannot be invalidated by another writer between the read and the
+// insert. Without it, two requests each observing a total of 90 could both add 10 and
+// both pass, storing 110 — and nothing in the schema would catch it, since there is
+// deliberately no CHECK constraint (4 legacy recipes would fail it).
+//
+// A nil guard means the feature flag is off: no lock is taken and no sum is read, so
+// the unenforced path costs exactly what it did before.
+func (r *MBCompositionRepository) CreateWithSumGuard(ctx context.Context, e *mbcomposition.Entity, guard mbcomposition.SumGuard) error {
+	if guard == nil {
+		return r.Create(ctx, e)
+	}
+	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
+		if err := r.guardSumTx(ctx, tx, e.MbhID(), guard); err != nil {
+			return err
+		}
+		return r.createOn(ctx, tx, e)
+	})
+}
+
+// UpdateWithSumGuard updates e with the composition-sum rule checked atomically (G24).
+// See CreateWithSumGuard for why the parent-row lock is required.
+func (r *MBCompositionRepository) UpdateWithSumGuard(ctx context.Context, e *mbcomposition.Entity, guard mbcomposition.SumGuard) error {
+	if guard == nil {
+		return r.Update(ctx, e)
+	}
+	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
+		if err := r.guardSumTx(ctx, tx, e.MbhID(), guard); err != nil {
+			return err
+		}
+		return r.updateOn(ctx, tx, e)
+	})
+}
+
+// guardSumTx locks the parent head row, reads the current non-carrier percentage sum
+// under that lock, and hands it to guard. Must be called inside a transaction.
+//
+// ⚠ The lock is taken on mst_mb_head, ⛔ NOT on the mst_mb_composition rows: the rule
+// being protected is a property of the whole composition set for one mbh_id, and a
+// concurrent INSERT adds a row that no pre-existing row lock could cover. Locking the
+// single parent row is both sufficient and the narrowest scope that is.
+func (r *MBCompositionRepository) guardSumTx(ctx context.Context, tx *sql.Tx, mbhID string, guard mbcomposition.SumGuard) error {
+	var one int
+	if err := tx.QueryRowContext(ctx, mbCompositionParentLockQuery, mbhID).Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return mbcomposition.ErrParentHeadNotFound
+		}
+		return fmt.Errorf("mb_composition_repository: lock parent head: %w", err)
+	}
+
+	const sumQ = `
+		SELECT COALESCE(SUM(mbcm_composition_pct), 0)::text
+		FROM mst_mb_composition
+		WHERE mbcm_mbh_id = $1 AND deleted_at IS NULL AND mbcm_is_carrier = FALSE`
+	var total string
+	if err := tx.QueryRowContext(ctx, sumQ, mbhID).Scan(&total); err != nil {
+		return fmt.Errorf("mb_composition_repository: sum percentage under lock: %w", err)
+	}
+	return guard(total)
+}
+
+func (r *MBCompositionRepository) createOn(ctx context.Context, q rowQuerier, e *mbcomposition.Entity) error {
+	const stmt = `
 		INSERT INTO mst_mb_composition
 			(mbcm_mbh_id, mbcm_seq_no, mbcm_group_head_id, mbcm_composition_pct,
 			 mbcm_source_type, mbcm_mb_ref_mbh_id, mbcm_is_carrier, mbcm_created_by)
 		VALUES ($1, $2, NULLIF($3, '')::uuid, $4, $5, NULLIF($6, '')::uuid, $7, $8)
 		RETURNING mbcm_id`
 	var id string
-	err := r.db.QueryRowContext(ctx, q,
+	err := q.QueryRowContext(ctx, stmt,
 		e.MbhID(), e.SeqNo(), e.GroupHeadID(), e.CompositionPct(),
 		e.SourceType(), e.MbRefMbhID(), e.IsCarrier(), e.CreatedBy(),
 	).Scan(&id)
@@ -46,13 +127,17 @@ func (r *MBCompositionRepository) Create(ctx context.Context, e *mbcomposition.E
 
 // Update persists changes to an existing composition row.
 func (r *MBCompositionRepository) Update(ctx context.Context, e *mbcomposition.Entity) error {
-	const q = `
+	return r.updateOn(ctx, r.db, e)
+}
+
+func (r *MBCompositionRepository) updateOn(ctx context.Context, q rowQuerier, e *mbcomposition.Entity) error {
+	const stmt = `
 		UPDATE mst_mb_composition
 		SET mbcm_group_head_id = NULLIF($2, '')::uuid, mbcm_composition_pct = $3, mbcm_source_type = $4,
 		    mbcm_mb_ref_mbh_id = NULLIF($5, '')::uuid, mbcm_is_carrier = $6,
 		    mbcm_updated_at = NOW(), mbcm_updated_by = $7
 		WHERE mbcm_id = $1 AND deleted_at IS NULL`
-	result, err := r.db.ExecContext(ctx, q, e.ID(), e.GroupHeadID(), e.CompositionPct(), e.SourceType(), e.MbRefMbhID(), e.IsCarrier(), e.UpdatedBy())
+	result, err := q.ExecContext(ctx, stmt, e.ID(), e.GroupHeadID(), e.CompositionPct(), e.SourceType(), e.MbRefMbhID(), e.IsCarrier(), e.UpdatedBy())
 	if err != nil {
 		return fmt.Errorf("mb_composition_repository: update: %w", err)
 	}
@@ -81,6 +166,24 @@ func (r *MBCompositionRepository) Delete(ctx context.Context, id string) error {
 		return mbcomposition.ErrNotFound
 	}
 	return nil
+}
+
+// ParentEntryStatus returns the parent head's mbh_entry_status for the DRAFT gate.
+//
+// It reads mst_mb_head, not mst_mb_composition: the gate's question is about the
+// PARENT's workflow state. Soft-deleted heads are excluded, so a deleted head is
+// reported as ErrParentHeadNotFound rather than yielding its last status and
+// letting a write through against a head that no longer exists.
+func (r *MBCompositionRepository) ParentEntryStatus(ctx context.Context, mbhID string) (string, error) {
+	const q = `SELECT mbh_entry_status FROM mst_mb_head WHERE mbh_id = $1 AND deleted_at IS NULL`
+	var status string
+	if err := r.db.QueryRowContext(ctx, q, mbhID).Scan(&status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", mbcomposition.ErrParentHeadNotFound
+		}
+		return "", fmt.Errorf("mb_composition_repository: parent entry status: %w", err)
+	}
+	return status, nil
 }
 
 // GetByID returns a single active composition row by ID.

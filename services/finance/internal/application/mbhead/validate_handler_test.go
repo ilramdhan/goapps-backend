@@ -120,7 +120,7 @@ func approvedHeadWithParams(throughput, noOfProcess string, prodPerDay *string) 
 	return mbheaddomain.Reconstruct(
 		uuid.New(), nil, "MB001", nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, true, time.Now(), "admin",
+		nil, nil, nil, true, time.Now(), "admin",
 		nil, nil, nil, nil,
 		mbheaddomain.StatusApproved, false, 1, nil,
 		"", "", "", "", "", "",
@@ -274,7 +274,7 @@ func TestValidateHandler_Handle_BoughtoutFromDraftUsesHeadParams(t *testing.T) {
 	entity := mbheaddomain.Reconstruct(
 		uuid.New(), nil, "MB-BOUGHT", nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, true, time.Now(), "admin",
+		nil, nil, nil, true, time.Now(), "admin",
 		nil, nil, nil, nil,
 		mbheaddomain.StatusDraft, true, 1, nil,
 		"", "", "", "", "", "",
@@ -322,7 +322,7 @@ func TestValidateHandler_Handle_RejectsNonApprovedOwnProduction(t *testing.T) {
 	draft := mbheaddomain.Reconstruct(
 		entity.ID(), nil, "MB001", nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, true, time.Now(), "admin",
+		nil, nil, nil, true, time.Now(), "admin",
 		nil, nil, nil, nil,
 		mbheaddomain.StatusDraft, false, 1, nil,
 		"", "", "", "", "", "",
@@ -342,4 +342,101 @@ func TestValidateHandler_Handle_RejectsNonApprovedOwnProduction(t *testing.T) {
 	assert.ErrorIs(t, err, mbheaddomain.ErrInvalidTransition)
 	mockParams.AssertNotCalled(t, "ListActive", ctx)
 	mockRepo.AssertExpectations(t)
+}
+
+// validateOriginTestEntity builds a minimal MB head at the given status/boughtout combo,
+// with per-head throughput/no_of_process set so freeze never falls through to a missing
+// master default.
+func validateOriginTestEntity(status string, boughtout bool) *mbheaddomain.Entity {
+	return mbheaddomain.Reconstruct(
+		uuid.New(), nil, "MB-ORIGIN", nil, nil,
+		nil, nil, nil, nil, nil,
+		nil, nil, nil, true, time.Now(), "admin",
+		nil, nil, nil, nil,
+		status, boughtout, 1, nil,
+		"", "", "", "", "", "",
+		0, nil, "",
+		nil, nil, nil, nil, nil,
+		nil, "20", "S",
+		nil,
+	)
+}
+
+// TestValidateHandler_Handle_OriginGateTruthTable pins the FULL (status x boughtout)
+// truth table for the validate-origin gate, so the ENG-MB-01/Opsi-A tidy-up (splitting
+// the single validateOrigins-plus-bypass map into ownProductionValidateOrigins and
+// boughtoutValidateOrigins) can never silently drift the set of legal origins again.
+//
+// The table was derived BEFORE the tidy-up from the two facts that decided this
+// combination's outcome pre-refactor: the old validateOrigins gate (SUBMITTED, APPROVED,
+// bypassed entirely for boughtout) and canTransition(from, StatusValidated) in
+// state_machine.go, which entity.Validate() enforces underneath. Every "berhasil" /
+// "gagal" cell below must match that pre-refactor behavior exactly — this test is what
+// makes that guarantee durable.
+func TestValidateHandler_Handle_OriginGateTruthTable(t *testing.T) {
+	allStatuses := []string{
+		mbheaddomain.StatusDraft, mbheaddomain.StatusSubmitted, mbheaddomain.StatusApproved,
+		mbheaddomain.StatusValidated, mbheaddomain.StatusRejected, mbheaddomain.StatusUnApproved,
+		mbheaddomain.StatusUnlockRequested,
+	}
+
+	type cell struct {
+		status    string
+		boughtout bool
+		wantOK    bool
+	}
+	var cells []cell
+	for _, s := range allStatuses {
+		for _, bo := range []bool{false, true} {
+			wantOK := false
+			switch {
+			case !bo && (s == mbheaddomain.StatusSubmitted || s == mbheaddomain.StatusApproved):
+				wantOK = true
+			case bo && (s == mbheaddomain.StatusDraft || s == mbheaddomain.StatusSubmitted ||
+				s == mbheaddomain.StatusApproved || s == mbheaddomain.StatusUnlockRequested):
+				// The UNLOCK_REQUESTED/boughtout cell is kept ok=true SOLELY because that is
+				// what the pre-refactor gate already allowed (see boughtoutValidateOrigins'
+				// doc comment) — not because anyone decided it should be reachable.
+				wantOK = true
+			}
+			cells = append(cells, cell{status: s, boughtout: bo, wantOK: wantOK})
+		}
+	}
+
+	for _, tc := range cells {
+		name := tc.status + "/boughtout=" + map[bool]string{true: "true", false: "false"}[tc.boughtout]
+		t.Run(name, func(t *testing.T) {
+			mockRepo := new(MockRepository)
+			mockParams := new(MockParamRepository)
+			handler := mbhead.NewValidateHandler(mockRepo, mockParams)
+			ctx := context.Background()
+
+			entity := validateOriginTestEntity(tc.status, tc.boughtout)
+			mockRepo.On("GetByID", ctx, entity.ID()).Return(entity, nil)
+
+			if tc.wantOK {
+				mockParams.On("ListActive", ctx).Return(activeParamMasters(t), nil)
+				mockRepo.On("TransitionWithAutoGen",
+					ctx, entity.ID(), tc.status, mbheaddomain.StatusValidated,
+					mock.AnythingOfType("int32"), "", "tester",
+					mock.AnythingOfType("*mbhead.ParamSnapshot"),
+					mock.AnythingOfType("*mbhead.Entity"),
+				).Return(nil)
+			}
+
+			_, err := handler.Handle(ctx, mbhead.ValidateCommand{
+				MbhID: entity.ID(), ActorUserID: "tester",
+			})
+
+			if tc.wantOK {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, mbheaddomain.ErrInvalidTransition)
+			}
+			mockRepo.AssertExpectations(t)
+			if !tc.wantOK {
+				mockParams.AssertNotCalled(t, "ListActive", ctx)
+			}
+		})
+	}
 }

@@ -352,13 +352,13 @@ func getRequiredPermission(fullMethod string) string {
 	// Format: {service}.{module}.{entity}.{action}
 	permissions := map[string]string{
 		// UOM Service
-		"/finance.v1.UOMService/CreateUOM": "finance.master.uom.create",
-		"/finance.v1.UOMService/GetUOM":    "finance.master.uom.view",
-		"/finance.v1.UOMService/ListUOMs":  "finance.master.uom.view",
-		"/finance.v1.UOMService/UpdateUOM": "finance.master.uom.update",
-		"/finance.v1.UOMService/DeleteUOM": "finance.master.uom.delete",
-		"/finance.v1.UOMService/ImportUOM": "finance.master.uom.create",
-		"/finance.v1.UOMService/ExportUOM": "finance.master.uom.view",
+		"/finance.v1.UOMService/CreateUOM":  "finance.master.uom.create",
+		"/finance.v1.UOMService/GetUOM":     "finance.master.uom.view",
+		"/finance.v1.UOMService/ListUOMs":   "finance.master.uom.view",
+		"/finance.v1.UOMService/UpdateUOM":  "finance.master.uom.update",
+		"/finance.v1.UOMService/DeleteUOM":  "finance.master.uom.delete",
+		"/finance.v1.UOMService/ImportUOMs": "finance.master.uom.create",
+		"/finance.v1.UOMService/ExportUOMs": "finance.master.uom.view",
 
 		// RM Category Service
 		"/finance.v1.RMCategoryService/CreateRMCategory":           "finance.master.rmcategory.create",
@@ -386,28 +386,80 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostCalcService/ProcessChunkInternal": "finance.cost.caljob.trigger",
 
 		// MBHeadService
-		"/finance.v1.MBHeadService/CreateMBHead":           "finance.mb.head.create",
-		"/finance.v1.MBHeadService/GetMBHead":              "finance.mb.head.view",
-		"/finance.v1.MBHeadService/ListMBHeads":            "finance.mb.head.view",
-		"/finance.v1.MBHeadService/UpdateMBHead":           "finance.mb.head.update",
-		"/finance.v1.MBHeadService/DeleteMBHead":           "finance.mb.head.delete",
-		"/finance.v1.MBHeadService/ExportMBHeads":          "finance.mb.head.view",
+		"/finance.v1.MBHeadService/CreateMBHead":  "finance.mb.head.create",
+		"/finance.v1.MBHeadService/GetMBHead":     "finance.mb.head.view",
+		"/finance.v1.MBHeadService/ListMBHeads":   "finance.mb.head.view",
+		"/finance.v1.MBHeadService/UpdateMBHead":  "finance.mb.head.update",
+		"/finance.v1.MBHeadService/DeleteMBHead":  "finance.mb.head.delete",
+		"/finance.v1.MBHeadService/ExportMBHeads": "finance.mb.head.view",
+		// P12: the denormalized full-recipe export gates on the dedicated recipe-export
+		// permission seeded by iam migration 000083, NOT on finance.mb.head.view — it
+		// discloses composition and MB cost, which plain head viewing does not.
+		"/finance.v1.MBHeadService/ExportMBRecipeFull":     "finance.mb.recipe.export",
 		"/finance.v1.MBHeadService/ImportMBHeads":          "finance.mb.head.create",
 		"/finance.v1.MBHeadService/DownloadMBHeadTemplate": "finance.mb.head.view",
 		"/finance.v1.MBHeadService/SubmitMBHead":           "finance.mb.head.submit",
 		"/finance.v1.MBHeadService/ApproveMBHead":          "finance.mb.head.approve",
 		"/finance.v1.MBHeadService/ValidateMBHead":         "finance.mb.head.validate",
-		"/finance.v1.MBHeadService/UnApproveMBHead":        "finance.mb.head.unapprove",
-		"/finance.v1.MBHeadService/RevokeMBHead":           "finance.mb.head.revoke",
+		// 🔴 USER DECISION 2026-08-26 — Un-approve and Revoke were REMOVED from the MB
+		// Recipe workflow. Both RPCs now refuse every call with a 410 BaseResponse
+		// (mb_head_handler.go), and their application handlers refuse too.
+		//
+		// ⛔ These two mappings are deliberately KEPT anyway. getRequiredPermission
+		// returns "" for any RPC missing from this map, and PermissionInterceptor reads
+		// "" as "any authenticated user may call this" — dropping the rows would turn two
+		// permission-gated RPCs into open ones and would widen the hole the K-34 (c)
+		// coverage ratchet in permission_coverage_test.go exists to freeze. Keeping them
+		// costs nothing: the call is refused a layer later regardless.
+		"/finance.v1.MBHeadService/UnApproveMBHead": "finance.mb.head.unapprove",
+		"/finance.v1.MBHeadService/RevokeMBHead":    "finance.mb.head.revoke",
+		"/finance.v1.MBHeadService/RejectMBHead":    "finance.mb.head.reject",
+		// K-30 option A: the REJECTED → DRAFT return deliberately reuses the EXISTING
+		// submit permission instead of a dedicated one — the author entitled to submit an
+		// MB may pull their own MB back to DRAFT to fix it. Zero IAM migrations, zero new
+		// seeds. This is not a copy-paste slip.
+		"/finance.v1.MBHeadService/ReturnMBHeadToDraft": "finance.mb.head.submit",
+		// P10 lock/unlock — the two sides of the workflow gate on DIFFERENT codes, per
+		// an explicit USER DECISION: asking for an unlock and deciding on one are
+		// separate entitlements, so a plain requester cannot approve anything.
+		//
+		//   finance.mb.recipe.unlockrequest → RequestUnlockMBHead  (may ASK)
+		//   finance.mb.recipe.unlock        → GrantUnlockMBHead,
+		//                                     RejectUnlockMBHead   (may DECIDE)
+		//
+		// The code is CONCATENATED ("unlockrequest", not "unlock.request") because
+		// chk_permission_code_format (iam 000004:55) and its Go mirror
+		// (iam internal/domain/role/entity.go:27) accept EXACTLY 4 dot-separated
+		// segments. ⛔ Do not "tidy" it into a fifth segment — the seed INSERT would
+		// be rejected by the CHECK constraint and this RPC would deny everyone.
+		//
+		// ⛔ There is deliberately NO self-approval / "is this my own request" identity
+		// check anywhere in this flow. The permission split alone produces the behavior
+		// the user asked for: a requester without the deciding code is rejected by this
+		// map, and someone who holds the deciding code may approve a request they filed
+		// themselves — that is intended, ⛔ do not "fix" it with an actor comparison.
+		//
+		// ⚠ FAIL-CLOSED WARNING: an RPC mapped to a code that no role holds rejects
+		// EVERYONE. finance.mb.recipe.unlock is ALREADY SEEDED by iam migration 000083
+		// (:27) and granted to MB_APPROVER (:107, :160). The new
+		// finance.mb.recipe.unlockrequest code is seeded and granted to all four MB
+		// tiers by iam migration 000087 — ⚠ that migration MUST BE APPLIED, or every
+		// RequestUnlockMBHead call is denied for EVERY user, not just some.
+		"/finance.v1.MBHeadService/RequestUnlockMBHead": "finance.mb.recipe.unlockrequest",
+		"/finance.v1.MBHeadService/GrantUnlockMBHead":   "finance.mb.recipe.unlock",
+		"/finance.v1.MBHeadService/RejectUnlockMBHead":  "finance.mb.recipe.unlock",
 
 		// MBSpinService (reuses finance.yarnmaster.mbspin.* seeded in iam mig 000057)
-		"/finance.v1.MBSpinService/CreateMBSpin":           "finance.yarnmaster.mbspin.create",
-		"/finance.v1.MBSpinService/GetMBSpin":              "finance.yarnmaster.mbspin.view",
-		"/finance.v1.MBSpinService/ListMBSpins":            "finance.yarnmaster.mbspin.view",
-		"/finance.v1.MBSpinService/UpdateMBSpin":           "finance.yarnmaster.mbspin.update",
-		"/finance.v1.MBSpinService/DeleteMBSpin":           "finance.yarnmaster.mbspin.delete",
-		"/finance.v1.MBSpinService/ExportMBSpins":          "finance.yarnmaster.mbspin.view",
-		"/finance.v1.MBSpinService/ImportMBSpins":          "finance.yarnmaster.mbspin.create",
+		"/finance.v1.MBSpinService/CreateMBSpin":  "finance.yarnmaster.mbspin.create",
+		"/finance.v1.MBSpinService/GetMBSpin":     "finance.yarnmaster.mbspin.view",
+		"/finance.v1.MBSpinService/ListMBSpins":   "finance.yarnmaster.mbspin.view",
+		"/finance.v1.MBSpinService/UpdateMBSpin":  "finance.yarnmaster.mbspin.update",
+		"/finance.v1.MBSpinService/DeleteMBSpin":  "finance.yarnmaster.mbspin.delete",
+		"/finance.v1.MBSpinService/ExportMBSpins": "finance.yarnmaster.mbspin.view",
+		"/finance.v1.MBSpinService/ImportMBSpins": "finance.yarnmaster.mbspin.create",
+		// DuplicateMBSpin = tulis (bikin spin baru) ⇒ .create, sama seperti CreateMBSpin/ImportMBSpins.
+		// Kode ini sudah di-seed (iam 000057:47) dan sudah dipakai CreateMBSpin ⇒ nol risiko fail-closed.
+		"/finance.v1.MBSpinService/DuplicateMBSpin":        "finance.yarnmaster.mbspin.create",
 		"/finance.v1.MBSpinService/DownloadMBSpinTemplate": "finance.yarnmaster.mbspin.view",
 
 		// MbCompositionService — composition rows are part of the MB head recipe, reuse its permissions.
@@ -423,6 +475,36 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.MbLustureService/DeleteMbLusture": "finance.master.mblusture.delete",
 		"/finance.v1.MbLustureService/GetMbLusture":    "finance.master.mblusture.view",
 		"/finance.v1.MbLustureService/ListMbLusture":   "finance.master.mblusture.view",
+
+		// MbCrossSectionService (master data)
+		"/finance.v1.MbCrossSectionService/CreateMbCrossSection": "finance.master.mbxsection.create",
+		"/finance.v1.MbCrossSectionService/UpdateMbCrossSection": "finance.master.mbxsection.update",
+		"/finance.v1.MbCrossSectionService/DeleteMbCrossSection": "finance.master.mbxsection.delete",
+		"/finance.v1.MbCrossSectionService/GetMbCrossSection":    "finance.master.mbxsection.view",
+		"/finance.v1.MbCrossSectionService/ListMbCrossSection":   "finance.master.mbxsection.view",
+
+		// MbCrossSectionFactorService (master data) — the directed-pair conversion factors.
+		//
+		// These 5 RPCs previously REUSED the finance.master.mbxsection.* master
+		// permissions. User decision K-21 (gate G17-FAKTOR-PERM, 2026-08-22)
+		// REJECTED that piggy-backing: conversion factors feed the LDR
+		// calculation, so the right to change them must be separable from the
+		// right to change the master code list. They now require their own
+		// permissions, seeded by IAM migration
+		// 000086_seed_mb_cross_section_factor_permissions.up.sql.
+		//
+		// ⚠ These entries and that migration must ship together: an unmapped RPC
+		// FAILS OPEN here (see the `required == ""` branch below), and a mapped
+		// RPC whose permission row does not exist fails CLOSED for everyone.
+		"/finance.v1.MbCrossSectionFactorService/CreateMbCrossSectionFactor": "finance.master.mbxsectionfactor.create",
+		"/finance.v1.MbCrossSectionFactorService/UpdateMbCrossSectionFactor": "finance.master.mbxsectionfactor.update",
+		"/finance.v1.MbCrossSectionFactorService/DeleteMbCrossSectionFactor": "finance.master.mbxsectionfactor.delete",
+		"/finance.v1.MbCrossSectionFactorService/GetMbCrossSectionFactor":    "finance.master.mbxsectionfactor.view",
+		"/finance.v1.MbCrossSectionFactorService/ListMbCrossSectionFactor":   "finance.master.mbxsectionfactor.view",
+
+		// MBDozingService (read-only LDR calculation + impact preview).
+		"/finance.v1.MBDozingService/CalculateDozing":     "finance.mb.dozing.calculate",
+		"/finance.v1.MBDozingService/PreviewDozingImpact": "finance.mb.dozing.preview",
 
 		// MbParamService (master data)
 		"/finance.v1.MbParamService/CreateMbParam":       "finance.master.mbparam.create",
@@ -500,6 +582,11 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostProductMasterService/UpdateCostProductMasterErpLinkage": "finance.product.route.create",
 		"/finance.v1.CostProductMasterService/DeactivateCostProductMaster":       "finance.product.route.update",
 		"/finance.v1.CostProductMasterService/UnlockCostProductMaster":           "finance.product.route.update",
+		// K-43: tiga bulk RPC masuk lingkup "Master Product MB"; Export/DownloadTemplate = baca (.view),
+		// Import = tulis massal (.create), mengikuti preseden Create/Update di atas.
+		"/finance.v1.CostProductMasterService/ExportCostProductMasters":          "finance.product.route.view",
+		"/finance.v1.CostProductMasterService/ImportCostProductMasters":          "finance.product.route.create",
+		"/finance.v1.CostProductMasterService/DownloadCostProductMasterTemplate": "finance.product.route.view",
 
 		// CostFillTaskService — authenticated-only (access controlled by fill config domain)
 		"/finance.v1.CostFillTaskService/ListFillTasks":   "",
@@ -512,6 +599,24 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostLevelAssignmentConfigService/UpsertLevelConfig":  "finance.product.request.resolve",
 		"/finance.v1.CostLevelAssignmentConfigService/DeleteGlobalConfig": "finance.product.request.resolve",
 		"/finance.v1.CostLevelAssignmentConfigService/ListGlobalConfigs":  "finance.product.request.view",
+
+		// ShadeService (master shade CRUD, R8) — permissions seeded by iam
+		// migration 000089. DeactivateShade maps to .delete: the seed names that
+		// code "Deactivate Shade" even though the RPC only soft-deactivates
+		// (ces_is_active = false), matching the sibling masters' action naming.
+		//
+		// ⚠ 000089 assigns all five finance.master.shade.* permissions ONLY to the
+		// SUPER_ADMIN role (000089:102-110). SUPER_ADMIN already bypasses this
+		// entire permission map via IsSuperAdmin(), so that grant has no practical
+		// effect. No other role currently holds any finance.master.shade.*
+		// permission — see the auth_interceptor.go task report for the open
+		// decision this raises.
+		"/finance.v1.ShadeService/CreateShade":     "finance.master.shade.create",
+		"/finance.v1.ShadeService/GetShade":        "finance.master.shade.view",
+		"/finance.v1.ShadeService/UpdateShade":     "finance.master.shade.update",
+		"/finance.v1.ShadeService/DeactivateShade": "finance.master.shade.delete",
+		"/finance.v1.ShadeService/ListShades":      "finance.master.shade.view",
+		"/finance.v1.ShadeService/SyncShades":      "finance.master.shade.sync",
 	}
 
 	return permissions[fullMethod]

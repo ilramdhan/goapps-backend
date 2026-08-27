@@ -41,4 +41,20 @@ type TableColumn struct {
 type MasterOption struct {
 	Value string
 	Label string
+	// ⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): Denier, Filament, LdrPrsn,
+	// and RunLdrPct are only populated when the option's source table is
+	// mst_mb_spin (see LookupMasterRepository.ListMasterOptions) — nil for every
+	// other lookup master.
+	// ~~D30: Dozing is sourced from the retired/contaminated mbs_dozing column
+	// (mixes oil-dozing-rate ~0.03 scale with run_ldr ~3.55 scale across
+	// different MB Heads). Surfaced as-is per explicit product decision; not an
+	// authoritative LDR value.~~
+	// Dozing was withdrawn by explicit user decision on 2026-08-26 (D30
+	// contamination) and replaced by LdrPrsn ("LDR Rencana (%)", from
+	// mbs_ldr_prsn) and RunLdrPct ("LDR Aktual (%)", from mbs_run_ldr_pct) —
+	// both unambiguous, uncontaminated columns.
+	Denier    *float64
+	Filament  *int
+	LdrPrsn   *float64
+	RunLdrPct *float64
 }

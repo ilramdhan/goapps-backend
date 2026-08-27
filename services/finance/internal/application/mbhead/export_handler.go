@@ -15,6 +15,10 @@ import (
 // ExportQuery represents the export MB Heads query.
 type ExportQuery struct {
 	IsActive *bool
+	// IncludeRejected forwards verbatim to mbhead.ExportFilter.IncludeRejected — false
+	// (the zero value) EXCLUDES REJECTED heads from the export. See that field's doc
+	// comment for the pending proto follow-up.
+	IncludeRejected bool
 }
 
 // ExportResult represents the export MB Heads result.
@@ -159,7 +163,10 @@ func writeMBHeadRow(writer *excelWriter, row int, idx int, e *mbhead.Entity) {
 
 // Handle executes the export MB Heads query.
 func (h *ExportHandler) Handle(ctx context.Context, query ExportQuery) (result *ExportResult, err error) {
-	heads, err := h.repo.ListAll(ctx, mbhead.ExportFilter{IsActive: query.IsActive})
+	heads, err := h.repo.ListAll(ctx, mbhead.ExportFilter{
+		IsActive:        query.IsActive,
+		IncludeRejected: query.IncludeRejected,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get mb heads for export: %w", err)
 	}

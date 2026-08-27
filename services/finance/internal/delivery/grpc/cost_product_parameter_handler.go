@@ -498,6 +498,20 @@ func applyEntryValue(out *financev1.RequiredParamEntry, v *cpp.Value) {
 		out.FilledAt = v.FilledAt.Format("2006-01-02T15:04:05Z07:00")
 	}
 	out.FilledBy = v.FilledBy
+	applyEntryMBSpinCandidate(out, v)
+}
+
+// applyEntryMBSpinCandidate copies the read-time MB_SPIN ambiguity indicator
+// (see cpp.Value.MBSpinCandidateCount) onto the proto entry. Kept separate
+// from applyEntryValue to stay under the gocognit complexity budget.
+func applyEntryMBSpinCandidate(out *financev1.RequiredParamEntry, v *cpp.Value) {
+	if v.ValueMBSpinID != nil {
+		out.ValueMbSpinId = v.ValueMBSpinID.String()
+	}
+	if v.MBSpinCandidateCount != nil {
+		out.MbSpinCandidateCount = *v.MBSpinCandidateCount
+		out.HasMbSpinCandidateCount = true
+	}
 }
 
 func valueToProto(v *cpp.Value) *financev1.CostProductParameterValue {

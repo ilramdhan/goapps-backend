@@ -1,0 +1,27 @@
+-- IAM Service Database Migrations
+-- 000090 (down): intentional NO-OP.
+--
+-- HONEST LIMITATION: this migration's up.sql grants SUPER_ADMIN every
+-- permission that exists in mst_permission at the time it runs, via
+-- ON CONFLICT DO NOTHING. Because of that ON CONFLICT, we CANNOT tell, from
+-- role_permissions alone, which rows were newly inserted BY THIS migration
+-- versus rows that already existed beforehand (e.g. every earlier seed
+-- migration from 000011 onward that already grants specific permissions to
+-- SUPER_ADMIN, such as 000089's finance.master.shade.* grants). A blanket
+-- "DELETE FROM role_permissions WHERE role_id = (SUPER_ADMIN) " would also
+-- destroy those pre-existing grants, which is NOT what a rollback of this
+-- specific migration should do.
+--
+-- Since SUPER_ADMIN already bypasses all permission checks in code
+-- (IsSuperAdmin() in the finance auth interceptor) regardless of what rows
+-- exist in role_permissions, leaving these rows in place on rollback has no
+-- functional effect on access control either way — so a no-op down is safe,
+-- not just convenient.
+--
+-- If a true rollback is ever needed, it must be done by hand: diff
+-- role_permissions for SUPER_ADMIN against a pre-000090 snapshot/backup and
+-- delete only the rows that are new, or accept that this grant is effectively
+-- permanent seed data (matching the pattern of "explicit grant, no down"
+-- already used implicitly elsewhere in this migration set).
+
+-- Intentionally no statements.

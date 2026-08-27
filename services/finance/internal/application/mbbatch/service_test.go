@@ -158,7 +158,7 @@ func newTestService(t *testing.T, loader *fakeLoader) (*Service, *fakeResultWrit
 		CostProductID:  loader.parentID,
 		CurrentVersion: 1,
 	}}}
-	svc := NewService(testDB(t), heads, &fakeEdgeReader{}, writer, loader, evaluator.NewCache())
+	svc := NewService(testDB(t), heads, &fakeEdgeReader{}, writer, loader, evaluator.NewCache(), nil, nil)
 	return svc, writer
 }
 

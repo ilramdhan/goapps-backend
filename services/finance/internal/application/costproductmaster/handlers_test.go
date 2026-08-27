@@ -3,12 +3,14 @@ package costproductmaster_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
+	cptdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproducttype"
 )
 
 // =============================================================================
@@ -125,4 +127,106 @@ func TestListHandler_Handle_MapsQueryToFilter(t *testing.T) {
 			assert.Empty(t, res.Items)
 		})
 	}
+}
+
+// =============================================================================
+// CreateHandler — guard E2: MB products are never manually creatable.
+//
+// MB-typed products exist only as the auto-generated output of the MB Recipe
+// workflow (cpm_source = 'MB_RECIPE', written at Validate time). A product-master
+// create of type MB would produce a product with no recipe behind it.
+// =============================================================================
+
+// fakeTypeRepo is an in-memory costproducttype.Repository resolving typeID → typeCode.
+type fakeTypeRepo struct {
+	byID map[int32]string
+}
+
+func (f *fakeTypeRepo) Create(_ context.Context, _ *cptdomain.CostProductType) error { return nil }
+
+func (f *fakeTypeRepo) GetByID(_ context.Context, id int32) (*cptdomain.CostProductType, error) {
+	code, ok := f.byID[id]
+	if !ok {
+		return nil, cptdomain.ErrNotFound
+	}
+	return cptdomain.Reconstruct(id, code, code, true, time.Time{}, time.Time{}), nil
+}
+
+func (f *fakeTypeRepo) GetByCode(_ context.Context, _ string) (*cptdomain.CostProductType, error) {
+	return nil, cptdomain.ErrNotFound
+}
+
+func (f *fakeTypeRepo) Update(_ context.Context, _ *cptdomain.CostProductType) error { return nil }
+
+func (f *fakeTypeRepo) List(_ context.Context, _ cptdomain.Filter) ([]*cptdomain.CostProductType, int64, error) {
+	return nil, 0, nil
+}
+
+func (f *fakeTypeRepo) ListAllActive(_ context.Context) ([]*cptdomain.CostProductType, error) {
+	return nil, nil
+}
+
+var _ cptdomain.Repository = (*fakeTypeRepo)(nil)
+
+// createTrackingRepo records whether Create ever reached the repository.
+type createTrackingRepo struct {
+	fakeRepo
+	createCalled bool
+}
+
+func (r *createTrackingRepo) Create(_ context.Context, _ *domain.CostProductMaster) error {
+	r.createCalled = true
+	return nil
+}
+
+func TestCreateHandler_Handle_RejectsMBProductType(t *testing.T) {
+	const mbTypeID, yarnTypeID = 7, 2
+	types := &fakeTypeRepo{byID: map[int32]string{mbTypeID: "MB", yarnTypeID: "YARN"}}
+
+	t.Run("MB type is refused and never reaches the repository", func(t *testing.T) {
+		repo := &createTrackingRepo{}
+		h := app.NewCreateHandler(repo, types)
+
+		got, err := h.Handle(context.Background(), app.CreateCommand{
+			ProductTypeID: mbTypeID,
+			ProductName:   "MB Red 001",
+			GradeCode:     "AX",
+			ActorUserID:   "admin",
+		})
+
+		require.ErrorIs(t, err, domain.ErrMBProductNotManuallyCreatable)
+		assert.Nil(t, got)
+		assert.False(t, repo.createCalled, "an MB product must never be written")
+	})
+
+	t.Run("a non-MB type still creates normally", func(t *testing.T) {
+		repo := &createTrackingRepo{}
+		h := app.NewCreateHandler(repo, types)
+
+		got, err := h.Handle(context.Background(), app.CreateCommand{
+			ProductTypeID: yarnTypeID,
+			ProductName:   "Yarn 150/48",
+			GradeCode:     "AX",
+			ActorUserID:   "admin",
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.True(t, repo.createCalled)
+	})
+
+	t.Run("an unresolvable type falls through to the normal create path", func(t *testing.T) {
+		repo := &createTrackingRepo{}
+		h := app.NewCreateHandler(repo, types)
+
+		_, err := h.Handle(context.Background(), app.CreateCommand{
+			ProductTypeID: 999,
+			ProductName:   "Unknown type",
+			GradeCode:     "AX",
+			ActorUserID:   "admin",
+		})
+
+		require.NoError(t, err, "an unknown type is the FK's problem, not this guard's")
+		assert.True(t, repo.createCalled)
+	})
 }

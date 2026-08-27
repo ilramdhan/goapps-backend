@@ -3,6 +3,7 @@ package postgres
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -10,6 +11,28 @@ import (
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/lookupmaster"
 )
+
+// mbSpinTableName is the mst_lookup_master table name registered for the
+// MB_SPIN lookup master. ListMasterOptions special-cases it to additionally
+// surface denier/filament/LDR (planned + actual) in the combobox
+// (U-mbspin-lookup-detail),
+// since mst_lookup_master only stores a single code/label column pair and has
+// no generic mechanism for extra display columns.
+const mbSpinTableName = "mst_mb_spin"
+
+// defaultMasterOptionsLimit caps ListMasterOptions results when the caller
+// does not specify a limit (limit == 0). 200 matches the render cap the
+// frontend combobox previously enforced client-side
+// (master-lookup-field.tsx MAX_RENDERED_OPTIONS, now server-enforced instead)
+// — comfortably larger than any lookup master except MB_SPIN (~2700 rows in
+// production), while keeping a single unfiltered fetch cheap.
+//
+// ⭐ DIPERBARUI 2026-08-26 (perf: SP Code dropdown lag, server-side search).
+// A negative limit means "no LIMIT clause at all" — only internal callers
+// that need the complete, authoritative option set (e.g. costimportetl
+// import validation, which must not silently treat rows past the combobox's
+// default page as "invalid") should pass one.
+const defaultMasterOptionsLimit = 200
 
 // LookupMasterRepository implements lookupmaster.Repository against PostgreSQL.
 type LookupMasterRepository struct {
@@ -86,6 +109,35 @@ func (r *LookupMasterRepository) ListColumns(ctx context.Context, masterCode str
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate lookup master columns: %w", err)
+	}
+	return out, nil
+}
+
+// ListAllColumns returns every row of mst_lookup_master_column across all masters.
+// The startup registry-divergence check needs the table as it actually exists in
+// the running database — the UI "Add Column" action writes here directly, so the
+// live contents can differ from anything the migrations declare.
+func (r *LookupMasterRepository) ListAllColumns(ctx context.Context) ([]*lookupmaster.Column, error) {
+	const q = `SELECT lmc_id::text, lmc_master_code, lmc_column_name, lmc_display_name, lmc_data_type, lmc_sort_order
+	           FROM mst_lookup_master_column
+	           ORDER BY lmc_master_code, lmc_sort_order, lmc_column_name`
+
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list all lookup master columns: %w", err)
+	}
+	defer closeRows(rows)
+
+	var out []*lookupmaster.Column
+	for rows.Next() {
+		c := &lookupmaster.Column{}
+		if scanErr := rows.Scan(&c.ID, &c.MasterCode, &c.ColumnName, &c.DisplayName, &c.DataType, &c.SortOrder); scanErr != nil {
+			return nil, fmt.Errorf("scan lookup master column: %w", scanErr)
+		}
+		out = append(out, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate all lookup master columns: %w", err)
 	}
 	return out, nil
 }
@@ -224,7 +276,7 @@ func mapPGTypeToDataType(pgType string) string {
 }
 
 // ListMasterOptions queries the master's registered table and returns code+label rows.
-func (r *LookupMasterRepository) ListMasterOptions(ctx context.Context, masterCode string) ([]lookupmaster.MasterOption, error) {
+func (r *LookupMasterRepository) ListMasterOptions(ctx context.Context, masterCode, search string, limit int) ([]lookupmaster.MasterOption, error) {
 	var tableName, codeField, labelField string
 	err := r.db.QueryRowContext(ctx,
 		`SELECT COALESCE(lm_table_name,''), lm_code_field, lm_label_field
@@ -242,21 +294,79 @@ func (r *LookupMasterRepository) ListMasterOptions(ctx context.Context, masterCo
 	// quoteIdent double-quotes each identifier for safety.
 	// Filter out NULL code-field rows (e.g. mbs_orion_item_code is nullable) to
 	// avoid scan errors and meaningless empty-string options in the validation set.
+	//
+	// ⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): for the MB_SPIN master
+	// (mst_mb_spin table), also select mbs_denier/mbs_filament/mbs_ldr_prsn/
+	// mbs_run_ldr_pct so the combobox can show them alongside the label to
+	// disambiguate similar entries. These four column names are fixed literals
+	// for this one known table, not registry input, so they don't need
+	// quoteIdent.
+	// ~~Previously selected mbs_dozing instead of the two LDR columns, but
+	// mbs_dozing was withdrawn per D30 contamination on explicit user decision
+	// 2026-08-26.~~
+	// ⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail, putaran ke-3): MB Spin
+	// rows created through the application never get an Orion item code (see
+	// mbspin.CreateCommand — it has no OrionItemCode field), so filtering on
+	// "codeField IS NOT NULL" silently hid every app-created spin from this
+	// dropdown. For mst_mb_spin only, the value expression falls back to
+	// mbs_id (its permanent primary key) when mbs_orion_item_code is NULL,
+	// and the NOT NULL filter is dropped so those rows are no longer excluded.
+	// Every other lookup master keeps the original NOT NULL filter unchanged.
+	isMBSpin := tableName == mbSpinTableName
+	extraCols := ""
+	if isMBSpin {
+		extraCols = ", mbs_denier, mbs_filament, mbs_ldr_prsn, mbs_run_ldr_pct"
+	}
+	valueExpr := quoteIdent(codeField)
+	notNullClause := fmt.Sprintf(" AND %s IS NOT NULL", quoteIdent(codeField))
+	if isMBSpin {
+		valueExpr = fmt.Sprintf("COALESCE(%s::text, mbs_id::text)", quoteIdent(codeField))
+		notNullClause = ""
+	}
+	// ⭐ DIPERBARUI 2026-08-26 (perf: SP Code dropdown lag, server-side search):
+	// search (bound as a query parameter — NEVER string-concatenated) matches
+	// against both codeField and labelField so staff can search by either the
+	// master's code or its display name. An empty/whitespace-only search adds
+	// no predicate at all, so the empty-keyword result set is unchanged from
+	// before this change (aside from the new default LIMIT below).
+	var args []any
+	searchClause := ""
+	if trimmed := strings.TrimSpace(search); trimmed != "" {
+		args = append(args, "%"+trimmed+"%")
+		searchClause = fmt.Sprintf(" AND (%s ILIKE $%d OR %s ILIKE $%d)",
+			quoteIdent(codeField), len(args), quoteIdent(labelField), len(args))
+	}
+
+	// limit == 0 (not specified by the caller) falls back to a sane default
+	// rather than returning the whole table; a negative limit (only used by
+	// internal callers, e.g. import validation) means "no LIMIT clause".
+	effectiveLimit := limit
+	if effectiveLimit == 0 {
+		effectiveLimit = defaultMasterOptionsLimit
+	}
+	limitClause := ""
+	if effectiveLimit > 0 {
+		args = append(args, effectiveLimit)
+		limitClause = fmt.Sprintf(" LIMIT $%d", len(args))
+	}
+
 	q := fmt.Sprintf(
-		`SELECT %s::text, COALESCE(%s::text,'') FROM %s WHERE deleted_at IS NULL AND %s IS NOT NULL ORDER BY %s`,
-		quoteIdent(codeField), quoteIdent(labelField),
+		`SELECT %s::text, COALESCE(%s::text,'')%s FROM %s WHERE deleted_at IS NULL%s%s ORDER BY %s%s`,
+		valueExpr, quoteIdent(labelField), extraCols,
 		quoteIdent(tableName),
-		quoteIdent(codeField),
+		notNullClause,
+		searchClause,
 		quoteIdent(labelField),
+		limitClause,
 	)
-	rows, err := r.db.QueryContext(ctx, q)
+	rows, err := r.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list master options for %q: %w", masterCode, err)
 	}
 	var out []lookupmaster.MasterOption
 	for rows.Next() {
-		var opt lookupmaster.MasterOption
-		if scanErr := rows.Scan(&opt.Value, &opt.Label); scanErr != nil {
+		opt, scanErr := scanMasterOptionRow(rows, isMBSpin)
+		if scanErr != nil {
 			if closeErr := rows.Close(); closeErr != nil {
 				return nil, fmt.Errorf("close rows after scan error: %w", closeErr)
 			}
@@ -271,6 +381,30 @@ func (r *LookupMasterRepository) ListMasterOptions(ctx context.Context, masterCo
 		return nil, fmt.Errorf("iterate master options: %w", err)
 	}
 	return out, nil
+}
+
+// scanMasterOptionRow scans one ListMasterOptions row. When includeMBSpinFields
+// is true, it also scans the trailing mbs_denier/mbs_filament/mbs_ldr_prsn/
+// mbs_run_ldr_pct columns (nullable — an absent DB value stays absent as nil,
+// never a synthesized default; D13).
+func scanMasterOptionRow(rows *sql.Rows, includeMBSpinFields bool) (lookupmaster.MasterOption, error) {
+	var opt lookupmaster.MasterOption
+	if !includeMBSpinFields {
+		if err := rows.Scan(&opt.Value, &opt.Label); err != nil {
+			return opt, err
+		}
+		return opt, nil
+	}
+	var denier, ldrPrsn, runLdrPct sql.NullFloat64
+	var filament sql.NullInt64
+	if err := rows.Scan(&opt.Value, &opt.Label, &denier, &filament, &ldrPrsn, &runLdrPct); err != nil {
+		return opt, err
+	}
+	opt.Denier = nullableFloat64Ptr(denier)
+	opt.Filament = nullableIntPtr(filament)
+	opt.LdrPrsn = nullableFloat64Ptr(ldrPrsn)
+	opt.RunLdrPct = nullableFloat64Ptr(runLdrPct)
+	return opt, nil
 }
 
 // quoteIdent double-quotes an SQL identifier for safe use in dynamic queries.

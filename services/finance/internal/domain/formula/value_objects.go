@@ -61,6 +61,11 @@ var (
 	// (migration 000451). Not used by the 7 F_MB_* formulas themselves — those are
 	// RM_LOOKUP/CALCULATION.
 	TypeMBCostLookup = Type{value: "MB_COST_LOOKUP"}
+	// TypeMBXSectionLookup identifies the MB LDR cross-section conversion formula
+	// F_MB_LDR_XSECTION (migration 000480). Like RM_LOOKUP/MB_COST_LOOKUP it needs
+	// dedicated Go code — a master-data lookup into mst_mb_cross_section_factor —
+	// not plain expr-lang evaluation of its stored expression.
+	TypeMBXSectionLookup = Type{value: "MB_XSECTION_LOOKUP"}
 )
 
 // NewType creates a Type from a string.
@@ -91,6 +96,8 @@ func NewType(s string) (Type, error) {
 		return TypeInitialValue, nil
 	case "MB_COST_LOOKUP":
 		return TypeMBCostLookup, nil
+	case "MB_XSECTION_LOOKUP":
+		return TypeMBXSectionLookup, nil
 	default:
 		return Type{}, ErrInvalidFormulaType
 	}

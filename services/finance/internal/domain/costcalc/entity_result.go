@@ -216,9 +216,31 @@ type AuditHistoryEntry struct {
 	NewCostID    int64
 	OldTotal     float64
 	NewTotal     float64
-	VariancePct  float64
+	// VariancePct is the percentage change from OldTotal to NewTotal, stored in
+	// aud_cost_history.ach_variance_pct (a NULLABLE column).
+	//
+	// nil means the variance COULD NOT BE COMPUTED because OldTotal was 0 — dividing
+	// by it is undefined — and is persisted as SQL NULL.
+	// A non-nil 0.0 means the cost genuinely did not change between the two versions.
+	// Before this distinction existed both cases were written as 0.0; rows written by
+	// the older code therefore remain ambiguous and cannot be repaired retroactively,
+	// because the value that would separate them was never stored.
+	VariancePct  *float64
 	OldJobID     int64
 	NewJobID     int64
 	ChangeReason string
 	ChangedBy    string
+}
+
+// VariancePctOrNil computes the percentage change from prevTotal to newTotal for
+// AuditHistoryEntry.VariancePct. It returns nil when prevTotal is 0, so the audit row
+// records SQL NULL ("not computable") rather than a 0.0 that would be indistinguishable
+// from a genuine "no change". Shared by every writer of aud_cost_history so the two
+// meanings stay separated on all paths.
+func VariancePctOrNil(prevTotal, newTotal float64) *float64 {
+	if prevTotal == 0 {
+		return nil
+	}
+	v := ((newTotal - prevTotal) / prevTotal) * 100.0
+	return &v
 }

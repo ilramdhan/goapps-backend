@@ -65,9 +65,6 @@ temp/
 # Vendor (uncomment if not vendoring)
 # vendor/
 
-# Air hot reload
-.air.toml
-
 # Test databases
 *.db
 *.sqlite

@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"slices"
+	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -112,6 +114,18 @@ type FormulaEvalTrace struct {
 	Inputs          map[string]float64 `json:"inputs"`
 	ResultParamCode string             `json:"result_param_code"`
 	Output          float64            `json:"output"`
+	// NonFinite is "" for a normally computed Output, or "nan" / "pos_inf" /
+	// "neg_inf" when the raw evaluation produced a non-finite number that the
+	// evaluator converted to a fabricated 0 (see evaluator.RunWithDiag). It is
+	// omitempty so existing readers of cpc_formula_trace see byte-identical
+	// JSON for every finite evaluation.
+	//
+	// CAVEAT — rows written BEFORE this field existed carry no marker at all.
+	// Absence of "non_finite" on an old cpc_formula_trace row means "unknown",
+	// NOT "was finite". There is no way to backfill it: the raw pre-conversion
+	// result was never persisted. Only rows computed after this change can be
+	// trusted to be marked.
+	NonFinite evaluator.NonFiniteKind `json:"non_finite,omitempty"`
 }
 
 // LevelContribution rolls up contributions per route level.
@@ -350,6 +364,14 @@ func evalFormulaChain(
 		scope[f.ResultParamCode] = t.Output
 		// The result param now holds a real, formula-computed value — it is no
 		// longer a synthetic placeholder even if it started as one.
+		//
+		// NOTE: when t.NonFinite != "" the "real value" is a fabricated 0 from
+		// the NaN/Inf conversion, so this delete does promote a fake zero into
+		// cpc_param_snapshot. That promotion is left exactly as it was — this
+		// change must not move a single costing number. The non-finite marker
+		// lives on the trace entry (t.NonFinite), which is appended above and
+		// is NOT touched by this delete, so the evidence survives into
+		// cpc_formula_trace even though the snapshot cannot express it.
 		delete(zeroFilled, f.ResultParamCode)
 	}
 	return trace, nil
@@ -415,6 +437,14 @@ func evalSingleFormulaStep(
 			Output:          val,
 		}, nil
 	default:
+		// Fail-fast guard (K-22): a formula_type that needs dedicated Go code but has
+		// no implementation here must NOT reach expr-lang, which would silently
+		// produce 0 for it (AllowUndefinedVariables + NaN/Inf->0). See
+		// formulaTypesNeedingGoImpl in formula.go for the full rationale.
+		if reason, unimplemented := formulaTypesNeedingGoImpl[f.FormulaType]; unimplemented {
+			return FormulaEvalTrace{}, fmt.Errorf("%w: formula_code=%s formula_type=%s product=%d: %s",
+				ErrFormulaTypeNotImplemented, f.FormulaCode, f.FormulaType, productSysID, reason)
+		}
 		result, evalErr := evalOneFormula(ctx, cache, f, scope)
 		if evalErr != nil {
 			return FormulaEvalTrace{}, fmt.Errorf("%w: %s for product %d: %w",
@@ -578,17 +608,64 @@ func evalOneFormula(ctx context.Context, cache *evaluator.Cache, f Formula, scop
 	} else {
 		metrics.RecordEvalCacheHit()
 	}
-	out, err := ev.Run(scope)
+	out, nonFinite, err := ev.RunWithDiag(scope)
 	if err != nil {
 		return FormulaEvalTrace{}, err
+	}
+	inputs := pickFormulaInputs(f, scope)
+	if nonFinite != evaluator.NonFiniteNone {
+		observeNonFinite(f, nonFinite, inputs)
 	}
 	return FormulaEvalTrace{
 		FormulaCode:     f.FormulaCode,
 		Expression:      f.Expression,
-		Inputs:          pickFormulaInputs(f, scope),
+		Inputs:          inputs,
 		ResultParamCode: f.ResultParamCode,
 		Output:          out,
+		NonFinite:       nonFinite,
 	}, nil
+}
+
+// nonFiniteLogged throttles the WARN log emitted by observeNonFinite.
+//
+// Throttling scheme: ONE log line per (formula_code, kind) pair per process
+// lifetime, enforced by a sync.Map of *sync.Once. Formula evaluation runs at
+// thousands/sec, so an unthrottled per-occurrence log would drown the log
+// pipeline the moment a single bad divisor appears in a batch — the first
+// occurrence carries all the diagnostic value, and the Prometheus counter
+// (which IS per-occurrence) carries the volume. The key includes the kind so a
+// formula that produces both a NaN and a -Inf reports both, since those are
+// different defects. Nothing resets the map: a repeat in a later batch is
+// intentionally silent in the log and visible only in the counter.
+var nonFiniteLogged sync.Map // map[string]*sync.Once
+
+// observeNonFinite records a swallowed non-finite evaluation: an
+// always-incremented Prometheus counter plus a throttled WARN log carrying the
+// context a counter cannot (expression text and the actual input values).
+//
+// The evaluator has already turned the result into 0 by the time this runs.
+// This function is pure observability — it must never influence the returned
+// number.
+func observeNonFinite(f Formula, kind evaluator.NonFiniteKind, inputs map[string]float64) {
+	metrics.RecordFormulaNonFinite(f.FormulaCode, kind.String())
+
+	key := f.FormulaCode + "|" + kind.String()
+	actual, _ := nonFiniteLogged.LoadOrStore(key, &sync.Once{})
+	once, ok := actual.(*sync.Once)
+	if !ok {
+		return
+	}
+	once.Do(func() {
+		log.Warn().
+			Str("formula_code", f.FormulaCode).
+			Str("expression", f.Expression).
+			Str("non_finite_kind", kind.String()).
+			Str("result_param_code", f.ResultParamCode).
+			Interface("inputs", inputs).
+			Msg("formula produced a non-finite result (NaN/Inf); it was converted to a fabricated 0 — " +
+				"this cost number is not a computed value. Logged once per formula_code+kind per process; " +
+				"see finance_cost_formula_non_finite_total for the true rate.")
+	})
 }
 
 func pickFormulaInputs(f Formula, scope map[string]any) map[string]float64 {
@@ -634,6 +711,16 @@ func toFloat(v any) (float64, bool) {
 // fabricated 0. An absent key is exactly the signal
 // GetRouteCostSheetHandler/the Excel export already use to print "-"
 // (Decision #8), so no new absent/present mechanism is introduced here.
+//
+// Non-finite (NaN/Inf) fabricated zeros are deliberately NOT marked here. The
+// snapshot is a flat map[string]float64 whose keys are param codes; marking a
+// param would mean either widening the value type (a breaking change for every
+// reader of cpc_param_snapshot — GetRouteCostSheetHandler, the Excel export,
+// extractCaptiveDeliveryCosts) or injecting synthetic sentinel keys into the
+// param namespace that those same key-iterating readers would render as if
+// they were real params. Both are worse than the gap. The marker lives in
+// cpc_formula_trace instead, which is already per-formula and carries a
+// struct that can grow a field safely.
 func scopeSnapshot(scope map[string]any, zeroFilled map[string]bool) map[string]float64 {
 	out := make(map[string]float64, len(scope))
 	for k, v := range scope {

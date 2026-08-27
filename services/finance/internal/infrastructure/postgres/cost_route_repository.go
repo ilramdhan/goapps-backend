@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
 
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
 	costroute "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 )
 
@@ -907,6 +908,27 @@ func (r *CostRouteRepository) duplicateProductTx(
 	includeApplicability, includeValues bool,
 	actor string,
 ) (int64, error) {
+	// DuplicateRoute is user-triggered and copies cpm_product_type_id verbatim from the
+	// source, so duplicating an MB-typed product would mint a second MB product master with
+	// no MB Recipe behind it — exactly what CreateHandler.rejectMBType and the bulk importer
+	// refuse. Refuse it here too, at the one funnel both the FG and the upstream copies pass
+	// through (callers at :795 and :807).
+	//
+	// Note this rejects *duplicating an MB product*, not *touching* one: an existing MB product
+	// stays fully editable through UpdateCostProductMaster. The line being drawn is only
+	// "a new row must not come into existence with the MB type".
+	var srcTypeCode string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE(pt.cpt_type_code, '')
+		FROM cost_product_master pm
+		LEFT JOIN cost_product_type pt ON pt.cpt_type_id = pm.cpm_product_type_id
+		WHERE pm.cpm_product_sys_id = $1`, sourceProductSysID).Scan(&srcTypeCode); err != nil {
+		return 0, fmt.Errorf("resolve source product type %d: %w", sourceProductSysID, err)
+	}
+	if srcTypeCode == mbCostProductTypeCode {
+		return 0, fmt.Errorf("duplicate product master %d: %w", sourceProductSysID, costproductmaster.ErrMBProductNotManuallyCreatable)
+	}
+
 	var newSysID int64
 	if err := tx.QueryRowContext(ctx, `
 		INSERT INTO cost_product_master (

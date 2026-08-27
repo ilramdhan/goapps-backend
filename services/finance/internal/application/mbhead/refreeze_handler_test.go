@@ -25,7 +25,7 @@ func TestRefreezeHandler_Handle_AppliesHeadOverridesThenCallsRepo(t *testing.T) 
 	costProduct := mbheaddomain.Reconstruct(
 		entity.ID(), nil, "MB001", nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, true, entity.CreatedAt(), entity.CreatedBy(),
+		nil, nil, nil, true, entity.CreatedAt(), entity.CreatedBy(),
 		nil, nil, nil, nil,
 		mbheaddomain.StatusValidated, false, 1, nil,
 		"", "", "", "", "", "",
@@ -95,7 +95,7 @@ func TestRefreezeHandler_Handle_UsesSameOverrideLogicAsValidate(t *testing.T) {
 	costProduct := mbheaddomain.Reconstruct(
 		entity.ID(), nil, "MB002", nil, nil,
 		nil, nil, nil, nil, nil,
-		nil, nil, true, entity.CreatedAt(), entity.CreatedBy(),
+		nil, nil, nil, true, entity.CreatedAt(), entity.CreatedBy(),
 		nil, nil, nil, nil,
 		mbheaddomain.StatusValidated, false, 1, nil,
 		"", "", "", "", "", "",

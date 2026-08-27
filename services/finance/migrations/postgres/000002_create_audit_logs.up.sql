@@ -1,32 +1,32 @@
--- Create audit_logs table for tracking all data mutations
-CREATE TABLE IF NOT EXISTS audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    
-    -- What was changed
-    table_name VARCHAR(100) NOT NULL,
-    record_id UUID NOT NULL,
-    action VARCHAR(20) NOT NULL,
-    
-    -- Change details
-    old_data JSONB,
-    new_data JSONB,
-    changes JSONB,  -- Only the fields that changed
-    
-    -- Who and when
-    performed_by VARCHAR(100) NOT NULL,
-    performed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Request context
-    request_id VARCHAR(100),
-    ip_address VARCHAR(50),
-    user_agent TEXT,
-    
-    -- Constraints
-    CONSTRAINT audit_logs_action_check CHECK (action IN ('CREATE', 'UPDATE', 'DELETE'))
-);
-
--- Indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_audit_logs_table_record ON audit_logs(table_name, record_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_performed_at ON audit_logs(performed_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_performed_by ON audit_logs(performed_by);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+-- 000002: intentionally a NO-OP.
+--
+-- This migration used to CREATE TABLE audit_logs. It must not, because in
+-- staging and production finance and IAM share ONE database (`goapps`) and ONE
+-- `public` schema -- see goapps-infra/services/{finance,iam}-service/base/
+-- migrate-job.yaml, which both point at /goapps and differ only in
+-- x-migrations-table. `audit_logs` there belongs to IAM
+-- (iam/migrations/postgres/000006_create_audit_tables.up.sql), which owns a
+-- different shape: log_id/event_type/user_id, plus a gRPC AuditService and the
+-- /finance/../iam/audit-logs UI reading it.
+--
+-- Running both definitions in one schema FAILS -- verified in both orders:
+--   iam first  -> this file's `CREATE INDEX ... (performed_by)` errors:
+--                 column "performed_by" does not exist
+--   this first -> iam's `CREATE INDEX ... (event_type)` errors:
+--                 column "event_type" does not exist
+-- The CREATE TABLE is skipped by IF NOT EXISTS, but the indexes after it are
+-- not guarded against a different shape, so one migrate-job dies and its
+-- schema_migrations_* row is left dirty.
+--
+-- Finance's own audit needs are already served by dedicated tables --
+-- `cost_audit_log` (000215), which backs the /finance/audit-logs page via
+-- ListCostAuditLogs, plus aud_cost_history, cost_param_edit_log, bi_audit_log
+-- and others. Nothing in finance reads or writes `audit_logs`: the only code
+-- that did was internal/infrastructure/audit, which `go list` confirmed had
+-- zero importers and was never compiled into the server binary.
+--
+-- The file is emptied rather than renumbered or deleted on purpose. Environments
+-- that already applied it recorded version 2; removing or renumbering the file
+-- would desynchronize golang-migrate's version bookkeeping. Cleanup of rows
+-- already created by the old body is handled forward, in 000491.
+SELECT 1;

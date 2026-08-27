@@ -14,6 +14,7 @@ import (
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costimportjob"
 	cpp "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductparameter"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
 
@@ -23,11 +24,17 @@ const cppImportBatchSize = 5000
 type AsyncImportHandler struct {
 	repo    cpp.Repository
 	jobRepo costimportjob.Repository
+	// mbSpinRepo resolves cpp_value_mb_spin_id for MB_SPIN lookup parameters,
+	// mirroring the interactive Upsert path (Handlers.resolveMBSpinID via
+	// resolveMBSpinValue). Nil-safe: when nil, resolution is skipped entirely
+	// and cpp_value_text is still written exactly as before this column
+	// existed.
+	mbSpinRepo mbspin.Repository
 }
 
 // NewAsyncImportHandler creates a new AsyncImportHandler.
-func NewAsyncImportHandler(repo cpp.Repository, jobRepo costimportjob.Repository) *AsyncImportHandler {
-	return &AsyncImportHandler{repo: repo, jobRepo: jobRepo}
+func NewAsyncImportHandler(repo cpp.Repository, jobRepo costimportjob.Repository, mbSpinRepo mbspin.Repository) *AsyncImportHandler {
+	return &AsyncImportHandler{repo: repo, jobRepo: jobRepo, mbSpinRepo: mbSpinRepo}
 }
 
 // AsyncImportError is a row-level import error.
@@ -68,6 +75,12 @@ func (h *AsyncImportHandler) Handle(ctx context.Context, jobID int64, fileConten
 	productCache := make(map[string]int64)
 	paramCache := make(map[string]string) // param_code → param UUID string
 	paramMetaCache := make(map[string]*cpp.ParamMeta)
+	// mbSpinCache memoizes resolveMBSpinValue by raw incoming text (ORION code
+	// or UUID string): 177 legacy ORION codes are shared by up to 16 rows
+	// each in production, so a wide import file can repeat the same code many
+	// times. A cache hit for "no match" is stored as a present key with a nil
+	// value (checked via comma-ok, not a nil check on the value).
+	mbSpinCache := make(map[string]*uuid.UUID)
 
 	var (
 		totalSuccess int
@@ -83,7 +96,7 @@ func (h *AsyncImportHandler) Handle(ctx context.Context, jobID int64, fileConten
 		}
 		batch := dataRows[batchStart:end]
 
-		batchSuccess, batchFailed, batchSkipped := h.processBatch(ctx, batch, batchStart+2, productCache, paramCache, paramMetaCache)
+		batchSuccess, batchFailed, batchSkipped := h.processBatch(ctx, batch, batchStart+2, productCache, paramCache, paramMetaCache, mbSpinCache)
 		totalSuccess += batchSuccess
 		totalFailed += batchFailed
 		totalSkipped += batchSkipped
@@ -156,6 +169,7 @@ func (h *AsyncImportHandler) processBatch(
 	productCache map[string]int64,
 	paramCache map[string]string,
 	paramMetaCache map[string]*cpp.ParamMeta,
+	mbSpinCache map[string]*uuid.UUID,
 ) (success, failed, skipped int) {
 	for i, row := range rows {
 		rowNum := safeconv.IntToInt32(startRowNum + i)
@@ -202,6 +216,9 @@ func (h *AsyncImportHandler) processBatch(
 			ValueFlag:    valueFlag,
 			FilledBy:     "import",
 			CreatedBy:    "import",
+		}
+		if meta.LookupMasterCode == mbSpinLookupMasterCode {
+			v.ValueMBSpinID = h.resolveMBSpinIDCached(ctx, valueText, mbSpinCache)
 		}
 		if upsertErr := h.repo.Upsert(ctx, v); upsertErr != nil {
 			failed++
@@ -254,6 +271,26 @@ func (h *AsyncImportHandler) resolveParamMeta(ctx context.Context, paramID uuid.
 	}
 	cache[code] = meta
 	return meta, nil
+}
+
+// resolveMBSpinIDCached applies the shared MB_SPIN resolution rule
+// (resolveMBSpinValue, also used by the interactive Handlers.Upsert path) with
+// a per-import cache keyed by the raw incoming text. This avoids one
+// ResolveUniqueByOrionItemCode round-trip per row: 177 legacy ORION codes are
+// shared by up to 16 rows each in production, so a wide import file can repeat
+// the same code many times within a batch. A cache hit for "no match" is
+// stored as a present key with a nil value (checked via comma-ok).
+func (h *AsyncImportHandler) resolveMBSpinIDCached(ctx context.Context, valueText *string, cache map[string]*uuid.UUID) *uuid.UUID {
+	if valueText == nil || *valueText == "" {
+		return nil
+	}
+	key := *valueText
+	if id, ok := cache[key]; ok {
+		return id
+	}
+	id := resolveMBSpinValue(ctx, h.mbSpinRepo, valueText)
+	cache[key] = id
+	return id
 }
 
 // resolveValueShape picks the right value pointer based on the column data and data_type.

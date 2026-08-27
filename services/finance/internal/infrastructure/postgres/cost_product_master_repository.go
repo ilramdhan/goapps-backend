@@ -35,6 +35,11 @@ const cpmColumns = `
 
 // Create inserts the product. product_code is generated atomically via generate_cost_product_code()
 // inside the same INSERT, returning the new sys_id and code.
+//
+// The MB refusal also sits here, not only in CreateHandler.rejectMBType, so a caller wired
+// without the type repo cannot slip an MB product past it. mbAutoGenRepository does NOT use
+// this method — it has its own INSERT inside the push-to-head transaction — so guarding here
+// costs the legitimate MB producer nothing.
 func (r *CostProductMasterRepository) Create(ctx context.Context, p *costproductmaster.CostProductMaster) error {
 	const q = `
 		INSERT INTO cost_product_master (
@@ -46,6 +51,9 @@ func (r *CostProductMasterRepository) Create(ctx context.Context, p *costproduct
 			$6, $7, $8, $7, $8
 		)
 		RETURNING cpm_product_sys_id,cpm_product_code`
+	if err := rejectMBTypeIDs(ctx, r.db, upsertTypeIDSet([]int32{p.ProductTypeID()})); err != nil {
+		return err
+	}
 	var sysID int64
 	var code string
 	if err := r.db.QueryRowContext(ctx, q,
@@ -344,6 +352,17 @@ func (r *CostProductMasterRepository) BulkCreate(ctx context.Context, items []*c
 			cpm_updated_by      = EXCLUDED.cpm_updated_by
 		RETURNING cpm_product_code, cpm_product_sys_id`
 
+	// Defense in depth behind AsyncImportHandler.resolveTypeCode: BulkCreate is a public
+	// repository method that assigns cpm_product_type_id on insert, so it refuses MB-typed
+	// rows on its own rather than trusting every present and future caller to pre-check.
+	typeIDs := make([]int32, 0, len(items))
+	for _, p := range items {
+		typeIDs = append(typeIDs, p.ProductTypeID())
+	}
+	if err := rejectMBTypeIDs(ctx, tx, upsertTypeIDSet(typeIDs)); err != nil {
+		return nil, err
+	}
+
 	result := make(map[string]int64, len(items))
 	now := time.Now().UTC()
 	for _, p := range items {
@@ -424,6 +443,14 @@ func (r *CostProductMasterRepository) BulkUpsertByLegacyID(ctx context.Context, 
 			cpm_updated_by      = EXCLUDED.cpm_updated_by
 		RETURNING cpm_product_sys_id, xmax::text`
 
+	// This upsert both inserts new products and, on conflict, reassigns
+	// cpm_product_type_id — so it is the one bulk path that could flip an existing
+	// non-MB product to MB. It has no application-layer handler in front of it, so the
+	// MB refusal lives here. One query for the whole call, not one per row.
+	if err := rejectMBTypeIDs(ctx, tx, upsertInputTypeIDs(items)); err != nil {
+		return nil, err
+	}
+
 	results := make([]costproductmaster.ProductUpsertResult, 0, len(items))
 	now := time.Now().UTC()
 
@@ -476,6 +503,78 @@ func (r *CostProductMasterRepository) upsertLegacyBatch(
 		})
 	}
 	return results, nil
+}
+
+// upsertInputTypeIDs collects the distinct positive product type ids referenced by a bulk
+// upsert batch.
+func upsertInputTypeIDs(items []costproductmaster.ProductUpsertInput) []int32 {
+	ids := make([]int32, 0, len(items))
+	for _, it := range items {
+		ids = append(ids, it.ProductTypeID)
+	}
+	return upsertTypeIDSet(ids)
+}
+
+// upsertTypeIDSet dedupes a type-id slice and drops non-positive entries (which the FK or
+// domain validation rejects anyway).
+func upsertTypeIDSet(ids []int32) []int32 {
+	seen := make(map[int32]struct{}, len(ids))
+	out := make([]int32, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
+}
+
+// rejectMBTypeIDs returns costproductmaster.ErrMBProductNotManuallyCreatable if any of the
+// given cost_product_type ids is the MB type.
+//
+// ⚠ Scope: this forbids *becoming* MB-typed, not *touching* an MB product. A product that is
+// already MB (there are existing rows born from MB Recipe, plus legacy ones) stays editable
+// through UpdateCostProductMaster — that path never writes cpm_product_type_id, which the
+// domain treats as immutable (proto: "product_code + product_type_id are immutable"). Only
+// writers that assign the type id consult this guard.
+//
+// The legitimate producer of MB products, mbAutoGenRepository.autoGenCostProduct, deliberately
+// does NOT call this: it resolves the MB type itself and inserts inside the push-to-head
+// transaction. The distinction is an explicit call-site decision, never an inference about who
+// the caller is.
+func rejectMBTypeIDs(ctx context.Context, q mbTypeQuerier, typeIDs []int32) error {
+	if len(typeIDs) == 0 {
+		return nil
+	}
+	const sqlText = `
+		SELECT EXISTS (
+		  SELECT 1 FROM cost_product_type
+		  WHERE cpt_type_id = ANY($1) AND cpt_type_code = $2
+		)`
+	ids := make([]int64, 0, len(typeIDs))
+	for _, id := range typeIDs {
+		ids = append(ids, int64(id))
+	}
+	var hasMB bool
+	if err := q.QueryRowContext(ctx, sqlText, pq.Array(ids), mbCostProductTypeCode).Scan(&hasMB); err != nil {
+		return fmt.Errorf("check MB product types: %w", err)
+	}
+	if hasMB {
+		return costproductmaster.ErrMBProductNotManuallyCreatable
+	}
+	return nil
+}
+
+// mbTypeQuerier is satisfied by both *sql.Tx and *DB so the MB guard can run inside an
+// in-flight transaction or standalone. It is deliberately narrower than the existing
+// rowQuerier (mb_composition_repository.go:36), which also demands ExecContext the guard
+// never needs.
+type mbTypeQuerier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 // ListAll returns all products matching the filter with no pagination cap.

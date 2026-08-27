@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -10,6 +11,7 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
+	cptdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproducttype"
 )
 
 // fakeCPMRepo is an in-memory test double for domain.Repository that captures
@@ -58,10 +60,42 @@ func (f *fakeCPMRepo) UnlockWithLog(_ context.Context, _ domain.LockLogInput) er
 
 var _ domain.Repository = (*fakeCPMRepo)(nil)
 
+// fakeCPTRepo is an in-memory costproducttype.Repository whose GetByID resolves
+// byID; unknown ids report ErrNotFound.
+type fakeCPTRepo struct {
+	byID map[int32]string // typeID -> typeCode
+}
+
+func (f *fakeCPTRepo) Create(_ context.Context, _ *cptdomain.CostProductType) error { return nil }
+
+func (f *fakeCPTRepo) GetByID(_ context.Context, id int32) (*cptdomain.CostProductType, error) {
+	code, ok := f.byID[id]
+	if !ok {
+		return nil, cptdomain.ErrNotFound
+	}
+	return cptdomain.Reconstruct(id, code, code, true, time.Time{}, time.Time{}), nil
+}
+
+func (f *fakeCPTRepo) GetByCode(_ context.Context, _ string) (*cptdomain.CostProductType, error) {
+	return nil, cptdomain.ErrNotFound
+}
+
+func (f *fakeCPTRepo) Update(_ context.Context, _ *cptdomain.CostProductType) error { return nil }
+
+func (f *fakeCPTRepo) List(_ context.Context, _ cptdomain.Filter) ([]*cptdomain.CostProductType, int64, error) {
+	return nil, 0, nil
+}
+
+func (f *fakeCPTRepo) ListAllActive(_ context.Context) ([]*cptdomain.CostProductType, error) {
+	return nil, nil
+}
+
+var _ cptdomain.Repository = (*fakeCPTRepo)(nil)
+
 func newCPMHandlerForTest(t *testing.T) (*CostProductMasterHandler, *fakeCPMRepo) {
 	t.Helper()
 	repo := &fakeCPMRepo{}
-	h, err := NewCostProductMasterHandler(repo)
+	h, err := NewCostProductMasterHandler(repo, &fakeCPTRepo{byID: map[int32]string{2: "YARN"}})
 	require.NoError(t, err)
 	return h, repo
 }

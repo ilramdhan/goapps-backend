@@ -77,7 +77,14 @@ type Resolver interface {
 // lookup-masters admin page uses. Satisfied by lookupmaster.Repository.
 type MasterOptionsSource interface {
 	// ListMasterOptions returns the valid code+label options for masterCode.
-	ListMasterOptions(ctx context.Context, masterCode string) ([]lookupmaster.MasterOption, error)
+	//
+	// ⭐ DIPERBARUI 2026-08-26 (perf: SP Code dropdown lag, server-side search):
+	// lookupmaster.Repository.ListMasterOptions gained search/limit parameters
+	// so the combobox can page results server-side. Import validation here
+	// must keep seeing the COMPLETE option set (otherwise valid values past
+	// the combobox's default page would be wrongly rejected as unknown), so
+	// callers pass search="" and a negative limit ("no LIMIT clause").
+	ListMasterOptions(ctx context.Context, masterCode, search string, limit int) ([]lookupmaster.MasterOption, error)
 }
 
 // MasterLookupCandidate is one distinct MASTER_LOOKUP parameter value staged for

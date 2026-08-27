@@ -36,10 +36,15 @@ type Service struct {
 	resultWriter ResultWriter
 	loader       costcalc.ProductLoader
 	evalCache    *evaluator.Cache
+	auditRepo    costcalcdom.AuditHistoryRepository
+	jobReader    JobActorReader
 }
 
-// NewService constructs a Service.
-func NewService(db *postgres.DB, headReader MBHeadReader, edgeReader MBEdgeReader, resultWriter ResultWriter, loader costcalc.ProductLoader, evalCache *evaluator.Cache) *Service {
+// NewService constructs a Service. auditRepo may be nil, which disables aud_cost_history
+// writes for this path (useful in tests); the cost rows are persisted either way.
+// jobReader may also be nil; the audit rows then fall back to the triggeredByMBBatch
+// constant as their actor, exactly as before this lookup existed.
+func NewService(db *postgres.DB, headReader MBHeadReader, edgeReader MBEdgeReader, resultWriter ResultWriter, loader costcalc.ProductLoader, evalCache *evaluator.Cache, auditRepo costcalcdom.AuditHistoryRepository, jobReader JobActorReader) *Service {
 	return &Service{
 		db:           db,
 		headReader:   headReader,
@@ -47,6 +52,8 @@ func NewService(db *postgres.DB, headReader MBHeadReader, edgeReader MBEdgeReade
 		resultWriter: resultWriter,
 		loader:       loader,
 		evalCache:    evalCache,
+		auditRepo:    auditRepo,
+		jobReader:    jobReader,
 	}
 }
 
@@ -89,22 +96,76 @@ func (s *Service) RunMBBatch(ctx context.Context, period string, jobID int64) (*
 	if len(candidates) == 0 {
 		return result, nil
 	}
+	// Audit entries are COLLECTED inside the transaction and WRITTEN after it commits.
+	// They must not travel through tx: aud_cost_history is a history side-channel, and an
+	// audit INSERT failure inside tx would abort the cost rows that already computed
+	// correctly. Losing a history row is strictly better than losing the cost.
+	var audits []*costcalcdom.AuditHistoryEntry
 	err = s.db.Transaction(ctx, func(tx *sql.Tx) error {
-		return s.runBatch(ctx, tx, candidates, period, jobID, result)
+		return s.runBatch(ctx, tx, candidates, period, jobID, result, &audits)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("run mb batch: %w", err)
 	}
+	s.writeAudits(ctx, jobID, period, audits)
 	return result, nil
 }
 
-func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadCandidate, period string, jobID int64, result *BatchResult) error {
+// writeAudits emits the collected aud_cost_history rows AFTER the batch transaction has
+// committed. Failures are logged, never returned: the cost rows are already durable, so an
+// audit failure must not fail RunMBBatch. Unlike costcalc.writeRecomputeAudit — which
+// swallows the error silently — this path logs it, so a systematically broken audit write
+// is discoverable instead of showing up as a permanently empty history table.
+func (s *Service) writeAudits(ctx context.Context, jobID int64, period string, audits []*costcalcdom.AuditHistoryEntry) {
+	if s.auditRepo == nil {
+		return
+	}
+	changedBy := s.resolveActor(ctx, jobID)
+	for _, e := range audits {
+		e.ChangedBy = changedBy
+		if err := s.auditRepo.Write(ctx, e); err != nil {
+			log.Warn().Err(err).
+				Int64("job_id", jobID).
+				Str("period", period).
+				Int64("product_sys_id", e.ProductSysID).
+				Str("calc_type", string(e.CalcType)).
+				Msg("mb batch cost history audit row could not be written: the cost result is committed and unaffected, only the aud_cost_history trail is missing for this row")
+		}
+	}
+}
+
+// resolveActor looks up, ONCE per batch, the human who triggered this run — cal_job's
+// cj_created_by, which the gRPC handler filled from the request's authenticated user — so
+// aud_cost_history.ach_changed_by names a person instead of the triggeredByMBBatch constant.
+//
+// Every failure path falls back to that constant and logs a warning: ach_changed_by is NOT
+// NULL, and a lookup problem must never cost us the audit row (the cost rows are already
+// committed by the time this runs).
+func (s *Service) resolveActor(ctx context.Context, jobID int64) string {
+	if s.jobReader == nil {
+		return triggeredByMBBatch
+	}
+	job, err := s.jobReader.GetByID(ctx, jobID)
+	if err != nil {
+		log.Warn().Err(err).Int64("job_id", jobID).
+			Msg("mb batch could not read cal_job to resolve the triggering user: audit rows fall back to the system actor")
+		return triggeredByMBBatch
+	}
+	if job == nil || job.CreatedBy() == "" {
+		log.Warn().Int64("job_id", jobID).
+			Msg("mb batch cal_job has no cj_created_by value: audit rows fall back to the system actor")
+		return triggeredByMBBatch
+	}
+	return job.CreatedBy()
+}
+
+func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadCandidate, period string, jobID int64, result *BatchResult, audits *[]*costcalcdom.AuditHistoryEntry) error {
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "mb_batch:"+period); err != nil {
 		return fmt.Errorf("acquire mb batch lock for period %s: %w", period, err)
 	}
 	costs := newBatchCosts(candidates)
 	for _, c := range candidates {
-		if err := s.runOneMB(ctx, tx, c, period, jobID, costs); err != nil {
+		if err := s.runOneMB(ctx, tx, c, period, jobID, costs, audits); err != nil {
 			result.Errors = append(result.Errors, BatchError{MBHID: c.MBHID, Error: err.Error()})
 			continue
 		}
@@ -117,12 +178,12 @@ func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadC
 // runOneMB computes and persists all 3 calc-type rows for one MB's auto-gen'd product,
 // isolated in its own savepoint so this MB's failure does not need to abort the whole batch
 // caller's transaction (mirrors mbpush.ExecuteHandler.pushOneMB).
-func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64, costs *batchCosts) error {
+func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64, costs *batchCosts, audits *[]*costcalcdom.AuditHistoryEntry) error {
 	const savepoint = "sp_mb_batch"
 	if _, err := tx.ExecContext(ctx, "SAVEPOINT "+savepoint); err != nil {
 		return fmt.Errorf("savepoint: %w", err)
 	}
-	computed, err := s.computeAndPersist(ctx, tx, c, period, jobID, costs)
+	computed, pending, err := s.computeAndPersist(ctx, tx, c, period, jobID, costs)
 	if err != nil {
 		if _, rbErr := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT "+savepoint); rbErr != nil {
 			return fmt.Errorf("rollback to savepoint after %w: %w", err, rbErr)
@@ -134,27 +195,30 @@ func (s *Service) runOneMB(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, p
 	}
 	// Published only after RELEASE: a rolled-back MB must not feed a value to its parent.
 	costs.publish(c.CostProductID, computed)
+	// Same reason the audit entries are only accepted here: a rolled-back MB wrote no cost
+	// row, so it must not leave a history row claiming it did.
+	*audits = append(*audits, pending...)
 	return nil
 }
 
-func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64, costs *batchCosts) (map[costcalcdom.CalculationType]float64, error) {
+func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCandidate, period string, jobID int64, costs *batchCosts) (map[costcalcdom.CalculationType]float64, []*costcalcdom.AuditHistoryEntry, error) {
 	productSysID := c.CostProductID
 
 	cappByProduct, err := s.loader.LoadCAPP(ctx, []int64{productSysID})
 	if err != nil {
-		return nil, fmt.Errorf("load capp: %w", err)
+		return nil, nil, fmt.Errorf("load capp: %w", err)
 	}
 	formulasByProduct, err := s.loader.LoadFormulas(ctx, []int64{productSysID})
 	if err != nil {
-		return nil, fmt.Errorf("load formulas: %w", err)
+		return nil, nil, fmt.Errorf("load formulas: %w", err)
 	}
 	routesByProduct, err := s.loader.LoadRoutesByProducts(ctx, []int64{productSysID})
 	if err != nil {
-		return nil, fmt.Errorf("load route: %w", err)
+		return nil, nil, fmt.Errorf("load route: %w", err)
 	}
 	route, ok := routesByProduct[productSysID]
 	if !ok || route == nil {
-		return nil, fmt.Errorf("no COMPLETE/LOCKED route found for product %d", productSysID)
+		return nil, nil, fmt.Errorf("no COMPLETE/LOCKED route found for product %d", productSysID)
 	}
 
 	allFormulas := formulasByProduct[productSysID]
@@ -169,7 +233,7 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 	for _, calcType := range mbBatchCalcTypes {
 		rmCosts, err := s.loader.LoadRMCosts(ctx, groupCodes, period, string(calcType))
 		if err != nil {
-			return nil, fmt.Errorf("load rm costs (%s): %w", calcType, err)
+			return nil, nil, fmt.Errorf("load rm costs (%s): %w", calcType, err)
 		}
 		upstream, err := s.loadUpstreamCosts(ctx, upstreamRequest{
 			products: nestedMBProducts,
@@ -180,7 +244,7 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 			costs:    costs,
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		typeCAPP := capp
@@ -203,7 +267,7 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 			EvalCache:     s.evalCache,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("compute %s: %w", calcType, err)
+			return nil, nil, fmt.Errorf("compute %s: %w", calcType, err)
 		}
 		outputs[calcType] = out
 
@@ -212,14 +276,21 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 		}
 	}
 
+	return s.persistAll(ctx, tx, productSysID, period, route.Head.HeadID, jobID, outputs)
+}
+
+// persistAll writes each calc type's cost row and collects the aud_cost_history entries the
+// writes imply, returning the per-calc-type cost per unit alongside them.
+func (s *Service) persistAll(ctx context.Context, tx *sql.Tx, productSysID int64, period string, routeHeadID, jobID int64, outputs map[costcalcdom.CalculationType]*costcalc.ComputeOutput) (map[costcalcdom.CalculationType]float64, []*costcalcdom.AuditHistoryEntry, error) {
 	computed := make(map[costcalcdom.CalculationType]float64, len(outputs))
+	audits := make([]*costcalcdom.AuditHistoryEntry, 0, len(mbBatchCalcTypes))
 	for _, calcType := range mbBatchCalcTypes {
-		if err := s.persistResult(ctx, tx, productSysID, period, calcType, route.Head.HeadID, jobID, outputs[calcType]); err != nil {
-			return nil, fmt.Errorf("persist %s: %w", calcType, err)
+		if err := s.persistResult(ctx, tx, productSysID, period, calcType, routeHeadID, jobID, outputs[calcType], &audits); err != nil {
+			return nil, nil, fmt.Errorf("persist %s: %w", calcType, err)
 		}
 		computed[calcType] = outputs[calcType].CostPerUnit
 	}
-	return computed, nil
+	return computed, audits, nil
 }
 
 // upstreamRequest carries everything loadUpstreamCosts needs, including the parent MB and
@@ -287,13 +358,59 @@ func mergeCAPP(base, sharedVals map[string]float64) map[string]float64 {
 	return out
 }
 
-func (s *Service) persistResult(ctx context.Context, tx *sql.Tx, productSysID int64, period string, calcType costcalcdom.CalculationType, routeHeadID, jobID int64, out *costcalc.ComputeOutput) error {
+// persistResult writes one calc-type cost row through tx and APPENDS the aud_cost_history
+// entry that row implies to audits — it does NOT write the audit itself. The entry is handed
+// back up so RunMBBatch can write it after commit (see writeAudits).
+//
+// Nothing is appended when prevCostID == 0: there is no superseded version, so this is the
+// product's FIRST cost for the period, not a change. Recording a first calculation as a
+// "change" would be a lie in the history table. This mirrors costcalc/process_chunk.go's
+// `if prevID != 0` gate, and is the reason for the mbbatch coverage boundary documented in
+// §11.109-C(ii).
+func (s *Service) persistResult(ctx context.Context, tx *sql.Tx, productSysID int64, period string, calcType costcalcdom.CalculationType, routeHeadID, jobID int64, out *costcalc.ComputeOutput, audits *[]*costcalcdom.AuditHistoryEntry) error {
 	r := newMBResult(productSysID, period, calcType, routeHeadID, jobID, out)
-	_, _, _, _, err := s.resultWriter.UpsertWithSupersedeTx(ctx, tx, r)
+	newCostID, _, prevTotal, prevCostID, err := s.resultWriter.UpsertWithSupersedeTx(ctx, tx, r)
 	if err != nil {
 		return fmt.Errorf("upsert with supersede: %w", err)
 	}
+	if prevCostID == 0 {
+		return nil
+	}
+	*audits = append(*audits, newAuditEntry(productSysID, period, calcType, jobID, newCostID, prevCostID, prevTotal, out.CostPerUnit))
 	return nil
+}
+
+// auditChangeReasonMBBatch is the ach_change_reason stamped on every history row this path
+// produces. It is distinct from costcalc's "CALC_RECALC" (the yarn recompute path) and from
+// "MB_CASCADE" (reserved for P13 nested-MB cascade recompute) so finance can tell, from the
+// history row alone, that the change came from an MB_BATCH orchestration run. 8 chars, well
+// within aud_cost_history.ach_change_reason VARCHAR(50).
+const auditChangeReasonMBBatch = "MB_BATCH"
+
+// newAuditEntry builds the aud_cost_history entry for one superseded MB cost row.
+//
+// VariancePct is nil — persisted as NULL — when prevTotal is 0, because the percentage is
+// then undefined rather than zero. This keeps "not computable" distinguishable from a real
+// 0.0 ("cost unchanged"), and matches costcalc's writeRecomputeAudit, which uses the same
+// domain helper.
+//
+// ChangedBy is seeded with the triggeredByMBBatch constant as a safe default; writeAudits
+// overwrites it with the real actor (cal_job.cj_created_by) before the row is inserted, and
+// falls back to this same constant when that lookup cannot produce one.
+func newAuditEntry(productSysID int64, period string, calcType costcalcdom.CalculationType, jobID, newCostID, prevCostID int64, prevTotal, newTotal float64) *costcalcdom.AuditHistoryEntry {
+	return &costcalcdom.AuditHistoryEntry{
+		ProductSysID: productSysID,
+		Period:       period,
+		CalcType:     calcType,
+		OldCostID:    prevCostID,
+		NewCostID:    newCostID,
+		OldTotal:     prevTotal,
+		NewTotal:     newTotal,
+		VariancePct:  costcalcdom.VariancePctOrNil(prevTotal, newTotal),
+		NewJobID:     jobID,
+		ChangeReason: auditChangeReasonMBBatch,
+		ChangedBy:    triggeredByMBBatch,
+	}
 }
 
 // newMBResult builds the cst_product_cost row for one MB calc-type pass. Pure so the

@@ -34,6 +34,12 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbcompo
 		return nil, err
 	}
 
+	// [K-33] DRAFT gate: the parent id comes from the stored row, never from the
+	// request, so a caller cannot aim the check at some other, still-DRAFT head.
+	if err := ensureParentDraft(ctx, h.repo, existing.MbhID()); err != nil {
+		return nil, err
+	}
+
 	entity := mbcomposition.Reconstruct(
 		existing.ID(), existing.MbhID(), existing.SeqNo(), cmd.GroupHeadID, cmd.CompositionPct,
 		cmd.SourceType, cmd.MbRefMbhID, cmd.IsCarrier, existing.LegacySysID(),
@@ -41,7 +47,20 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbcompo
 		existing.DeletedAt(), existing.DeletedBy(),
 	)
 
-	if err := h.repo.Update(ctx, entity); err != nil {
+	// [G.5] Composition-sum rule (D17): the stored total already contains the
+	// existing row, so the pending change is (new contribution - old contribution),
+	// each counted only when the row is not a carrier. ⭐ G24: the guard runs inside
+	// the update's own transaction, under a lock on the parent head row.
+	newContrib, err := pctDelta(entity.CompositionPct(), entity.IsCarrier())
+	if err != nil {
+		return nil, err
+	}
+	oldContrib, err := pctDelta(existing.CompositionPct(), existing.IsCarrier())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.repo.UpdateWithSumGuard(ctx, entity, sumGuardFor(newContrib-oldContrib)); err != nil {
 		return nil, err
 	}
 

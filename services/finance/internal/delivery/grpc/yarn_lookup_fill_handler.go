@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
@@ -140,6 +141,20 @@ var mbHeadNumericReaders = map[string]func(*mbhead.Entity) (float64, bool){
 		}
 		return 0, false
 	},
+	// D30: mbh_run_ldr_pct is the actual LDR used in production — the correct value for costing.
+	"mbh_run_ldr_pct": func(e *mbhead.Entity) (float64, bool) {
+		if v := e.MBHRunLdrPct(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	// D30: mbh_ldr_prsn is the planned LDR, set while the product is still new.
+	"mbh_ldr_prsn": func(e *mbhead.Entity) (float64, bool) {
+		if v := e.MBHLdrPrsn(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
 }
 
 // mbHeadTextReaders maps lookup_source_column → text value extractor for mst_mb_head entity.
@@ -160,8 +175,29 @@ var mbSpinNumericReaders = map[string]func(*mbspin.Entity) (float64, bool){
 		}
 		return 0, false
 	},
+	// D30: mbs_dozing is the retired, contaminated legacy column. The READER is kept
+	// on purpose until L1 repoints lookup_source_column — removing it now would empty
+	// out the fills that are currently live.
+	// G5 (2026-08-22): it is deliberately NOT registered in mst_lookup_master_column
+	// (pulled back out of 000477), so it is not offered in the "Source Column"
+	// dropdown — its units are mixed across heads (oil-rate vs run_ldr scale). It is a
+	// documented t7Exceptions entry in yarn_lookup_fill_column_registry_test.go.
 	"mbs_dozing": func(e *mbspin.Entity) (float64, bool) {
 		if v := e.Dozing(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	// D30: mbs_run_ldr_pct is the actual LDR used in production — the correct value for costing.
+	"mbs_run_ldr_pct": func(e *mbspin.Entity) (float64, bool) {
+		if v := e.MBSRunLdrPct(); v != nil {
+			return *v, true
+		}
+		return 0, false
+	},
+	// D30: mbs_ldr_prsn is the planned LDR, set while the product is still new.
+	"mbs_ldr_prsn": func(e *mbspin.Entity) (float64, bool) {
+		if v := e.MBSLdrPrsn(); v != nil {
 			return *v, true
 		}
 		return 0, false
@@ -194,6 +230,63 @@ var mbSpinTextReaders = map[string]func(*mbspin.Entity) (string, bool){
 		}
 		return "", false
 	},
+}
+
+// boxBobbinCostColumns mirrors the `case` labels of fillFromBoxBobbinCost, which
+// resolves columns with a literal switch instead of a reader map and therefore
+// cannot be enumerated reflectively. TestBoxBobbinSwitchColumnsMatchSource
+// asserts this slice against the handler source so it cannot drift from the
+// switch it copies.
+var boxBobbinCostColumns = []string{
+	"no_of_bob",
+	"bbcr_bob_rate_mkt",
+	"bbcr_box_rate_mkt",
+}
+
+// LookupReaderColumns returns every lookup_source_column the fill handler can
+// actually resolve, keyed by lookup master code.
+//
+// This is derived from the reader maps above — the single source of truth. It
+// exists so the startup registry-divergence check can compare the live contents
+// of mst_lookup_master_column against the readers without maintaining a second
+// hand-written column list, which is the very duplication that produced the R30
+// drift in the first place.
+func LookupReaderColumns() map[string]map[string]struct{} {
+	out := make(map[string]map[string]struct{}, 6)
+	add := func(master, col string) {
+		if out[master] == nil {
+			out[master] = map[string]struct{}{}
+		}
+		out[master][col] = struct{}{}
+	}
+	for col := range machineNumericReaders {
+		add("MACHINE", col)
+	}
+	for col := range interminglingNumericReaders {
+		add("INTERMINGLING", col)
+	}
+	for col := range productGradeNumericReaders {
+		add("PRODUCT_GRADE", col)
+	}
+	for col := range productGradeTextReaders {
+		add("PRODUCT_GRADE", col)
+	}
+	for col := range mbHeadNumericReaders {
+		add("MB_HEAD", col)
+	}
+	for col := range mbHeadTextReaders {
+		add("MB_HEAD", col)
+	}
+	for col := range mbSpinNumericReaders {
+		add("MB_SPIN", col)
+	}
+	for col := range mbSpinTextReaders {
+		add("MB_SPIN", col)
+	}
+	for _, col := range boxBobbinCostColumns {
+		add("BOX_BOBBIN_COST", col)
+	}
+	return out
 }
 
 // YarnLookupFillHandler implements financev1.YarnLookupFillServiceServer.
@@ -252,6 +345,20 @@ func (h *YarnLookupFillHandler) GetLookupFillValues(ctx context.Context, req *fi
 	}
 }
 
+// warnNoReader reports a lookup_source_column that is registered in
+// mst_lookup_master_column but has no reader in the Go-side reader maps (or no
+// switch case). Such a column is silently skipped and yields an empty fill, so
+// the only trace of the failure is this log line. It stays a warning rather than
+// an error on purpose: registered-but-unreadable columns still exist in the wild
+// and hard-failing would break otherwise working lookups.
+func warnNoReader(ctx context.Context, source, col, paramCode, sourceParamCode string) {
+	log.Ctx(ctx).Warn().
+		Str("lookup_source_column", col).
+		Str("param_code", paramCode).
+		Str("source_param_code", sourceParamCode).
+		Msg(source + " fill: no reader registered for lookup_source_column — value skipped")
+}
+
 func (h *YarnLookupFillHandler) fillFromMachine(ctx context.Context, mcCode, triggerParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
 	mc, err := h.machineRepo.GetByCode(ctx, mcCode)
 	if err != nil {
@@ -265,10 +372,15 @@ func (h *YarnLookupFillHandler) fillFromMachine(ctx context.Context, mcCode, tri
 
 	nums := make(map[string]float64, len(childParams))
 	for _, p := range childParams {
-		if reader, ok := machineNumericReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(mc); hasVal {
-				nums[p.Code().String()] = val
-			}
+		col := p.LookupSourceColumn()
+		numReader, hasNumReader := machineNumericReaders[col]
+		if !hasNumReader {
+			// Machine has no text readers, so an unmapped column is unfillable.
+			warnNoReader(ctx, "Machine", col, p.Code().String(), triggerParamCode)
+			continue
+		}
+		if val, hasVal := numReader(mc); hasVal {
+			nums[p.Code().String()] = val
 		}
 	}
 
@@ -295,10 +407,15 @@ func (h *YarnLookupFillHandler) fillFromIntermingling(ctx context.Context, intmC
 
 	nums := make(map[string]float64, len(childParams))
 	for _, p := range childParams {
-		if reader, ok := interminglingNumericReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(intm); hasVal {
-				nums[p.Code().String()] = val
-			}
+		col := p.LookupSourceColumn()
+		numReader, hasNumReader := interminglingNumericReaders[col]
+		if !hasNumReader {
+			// Intermingling has no text readers, so an unmapped column is unfillable.
+			warnNoReader(ctx, "Intermingling", col, p.Code().String(), triggerParamCode)
+			continue
+		}
+		if val, hasVal := numReader(intm); hasVal {
+			nums[p.Code().String()] = val
 		}
 	}
 
@@ -325,15 +442,21 @@ func (h *YarnLookupFillHandler) fillFromProductGrade(ctx context.Context, pgCode
 	nums := make(map[string]float64, len(childParams))
 	texts := make(map[string]string, len(childParams))
 	for _, p := range childParams {
-		if reader, ok := productGradeNumericReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(grade); hasVal {
+		col := p.LookupSourceColumn()
+		numReader, hasNumReader := productGradeNumericReaders[col]
+		if hasNumReader {
+			if val, hasVal := numReader(grade); hasVal {
 				nums[p.Code().String()] = val
 			}
 		}
-		if reader, ok := productGradeTextReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(grade); hasVal {
+		textReader, hasTextReader := productGradeTextReaders[col]
+		if hasTextReader {
+			if val, hasVal := textReader(grade); hasVal {
 				texts[p.Code().String()] = val
 			}
+		}
+		if !hasNumReader && !hasTextReader {
+			warnNoReader(ctx, "Product grade", col, p.Code().String(), triggerParamCode)
 		}
 	}
 
@@ -361,15 +484,21 @@ func (h *YarnLookupFillHandler) fillFromMBHead(ctx context.Context, mbCosting, t
 	nums := make(map[string]float64, len(childParams))
 	texts := make(map[string]string, len(childParams))
 	for _, p := range childParams {
-		if reader, ok := mbHeadNumericReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(mbh); hasVal {
+		col := p.LookupSourceColumn()
+		numReader, hasNumReader := mbHeadNumericReaders[col]
+		if hasNumReader {
+			if val, hasVal := numReader(mbh); hasVal {
 				nums[p.Code().String()] = val
 			}
 		}
-		if reader, ok := mbHeadTextReaders[p.LookupSourceColumn()]; ok {
-			if val, hasVal := reader(mbh); hasVal {
+		textReader, hasTextReader := mbHeadTextReaders[col]
+		if hasTextReader {
+			if val, hasVal := textReader(mbh); hasVal {
 				texts[p.Code().String()] = val
 			}
+		}
+		if !hasNumReader && !hasTextReader {
+			warnNoReader(ctx, "MB Head", col, p.Code().String(), triggerParamCode)
 		}
 	}
 
@@ -409,10 +538,12 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 
 	nums := make(map[string]float64, len(childParams))
 	for _, p := range childParams {
-		switch p.LookupSourceColumn() {
+		col := p.LookupSourceColumn()
+		switch col {
 		case "no_of_bob":
 			nums[p.Code().String()] = float64(bbc.NoOfBob())
 		case "bbcr_bob_rate_mkt":
+			// A zero/missing rate is a deliberate no-fill, not an unknown column.
 			if latestBobRateMkt > 0 {
 				nums[p.Code().String()] = latestBobRateMkt
 			}
@@ -420,6 +551,8 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 			if latestBoxRateMkt > 0 {
 				nums[p.Code().String()] = latestBoxRateMkt
 			}
+		default:
+			warnNoReader(ctx, "Box bobbin cost", col, p.Code().String(), triggerParamCode)
 		}
 	}
 
@@ -433,16 +566,11 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 }
 
 func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	// Try ORION item code first (product params use CMBS_ORION_ITEM_CODE as key).
-	spin, err := h.mbSpinRepo.GetByOrionItemCode(ctx, selectedKey)
+	spin, err := h.resolveMBSpinForFill(ctx, selectedKey)
 	if err != nil {
-		// Fallback to mb_costing lookup (legacy / direct entry).
-		spin, err = h.mbSpinRepo.GetByMBCosting(ctx, selectedKey)
-		if err != nil {
-			return &financev1.GetLookupFillValuesResponse{
-				Base: domainErrorToBaseResponse(err),
-			}, nil //nolint:nilerr // BaseResponse pattern
-		}
+		return &financev1.GetLookupFillValuesResponse{
+			Base: domainErrorToBaseResponse(err),
+		}, nil //nolint:nilerr // BaseResponse pattern
 	}
 
 	children, err := h.paramRepo.GetByFillGroup(ctx, sourceParamCode)
@@ -454,15 +582,20 @@ func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey,
 	texts := make(map[string]string)
 	for _, p := range children {
 		col := p.LookupSourceColumn()
-		if reader, ok := mbSpinNumericReaders[col]; ok {
-			if val, has := reader(spin); has {
+		numReader, hasNumReader := mbSpinNumericReaders[col]
+		if hasNumReader {
+			if val, has := numReader(spin); has {
 				nums[p.Code().String()] = val
 			}
 		}
-		if reader, ok := mbSpinTextReaders[col]; ok {
-			if val, has := reader(spin); has {
+		textReader, hasTextReader := mbSpinTextReaders[col]
+		if hasTextReader {
+			if val, has := textReader(spin); has {
 				texts[p.Code().String()] = val
 			}
+		}
+		if !hasNumReader && !hasTextReader {
+			warnNoReader(ctx, "MB Spin", col, p.Code().String(), sourceParamCode)
 		}
 	}
 
@@ -473,6 +606,37 @@ func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey,
 		TextFills:    texts,
 		DisplayLabel: label,
 	}, nil
+}
+
+// resolveMBSpinForFill resolves selectedKey to an MB Spin entity for the read
+// (lookup-fill) path.
+//
+// If selectedKey itself is a valid UUID, it is tried FIRST via GetByID — this is
+// the permanent mst_mb_spin.mbs_id, e.g. the value carried by the new companion
+// column cpp_value_mb_spin_id (migration 000494). A permanent-ID lookup is
+// unambiguous by construction (primary key), so it takes priority over the
+// legacy ORION-item-code / mb_costing chain, which can be ambiguous for the 177
+// ORION codes shared by more than one spin. If selectedKey is not a UUID, or the
+// UUID does not resolve, this falls through UNCHANGED to the original chain —
+// existing legacy-row behavior (selectedKey = ORION code or mb_costing text) is
+// not altered in any way.
+func (h *YarnLookupFillHandler) resolveMBSpinForFill(ctx context.Context, selectedKey string) (*mbspin.Entity, error) {
+	if id, parseErr := uuid.Parse(selectedKey); parseErr == nil {
+		if spin, err := h.mbSpinRepo.GetByID(ctx, id); err == nil && spin != nil {
+			return spin, nil
+		}
+	}
+
+	// Try ORION item code first (product params use CMBS_ORION_ITEM_CODE as key).
+	spin, err := h.mbSpinRepo.GetByOrionItemCode(ctx, selectedKey)
+	if err != nil {
+		// Fallback to mb_costing lookup (legacy / direct entry).
+		spin, err = h.mbSpinRepo.GetByMBCosting(ctx, selectedKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return spin, nil
 }
 
 // compile-time interface check.

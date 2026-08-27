@@ -52,12 +52,35 @@ type Value struct {
 	ValueNumeric *string // decimal as string for precision
 	ValueText    *string
 	ValueFlag    *bool
-	FilledAt     time.Time
-	FilledBy     string
-	CreatedAt    time.Time
-	CreatedBy    string
-	UpdatedAt    *time.Time
-	UpdatedBy    *string
+	// ValueMBSpinID is the resolved mst_mb_spin.mbs_id companion for MB_SPIN
+	// lookup parameters (cpp_value_mb_spin_id, migration 000494). It is a
+	// COMPANION to ValueText, never a replacement: ValueText keeps carrying
+	// whatever the user selected (UUID or legacy ORION code) exactly as
+	// before, and this field stays nil unless the value was resolved to
+	// EXACTLY one mst_mb_spin row. Ambiguous (0 or >1 matches) resolutions
+	// leave this nil rather than guessing — see
+	// costproductparameter.Handlers.Upsert.
+	ValueMBSpinID *uuid.UUID
+	// MBSpinCandidateCount is the number of active-or-not mst_mb_spin rows
+	// whose mbs_orion_item_code matches ValueText, computed AT READ TIME by
+	// ListForProduct — never stored. It exists to let the UI tell apart three
+	// states without guessing: (1) already resolved (ValueMBSpinID != nil,
+	// this field is irrelevant), (2) unresolved with >1 candidates ("pick a
+	// variant"), and (3) unresolved with 0 candidates ("code not found, fix
+	// the data"). It is computed at read time rather than stored because
+	// mst_mb_spin can change (variants added/soft-deleted) after the CPP row
+	// was last saved, and a stored count would silently go stale with no
+	// resync mechanism — see docs/superpowers/mbspin-tanda-varian-ganda-rancangan.md
+	// §3 opsi (ii-a) vs (ii-b). Nil means "not applicable" (either this row
+	// isn't an MB_SPIN lookup parameter, or ValueText is empty) — never
+	// conflate nil with zero.
+	MBSpinCandidateCount *int32
+	FilledAt             time.Time
+	FilledBy             string
+	CreatedAt            time.Time
+	CreatedBy            string
+	UpdatedAt            *time.Time
+	UpdatedBy            *string
 }
 
 // ParamMeta is the joined mst_parameter snapshot needed by the form / resolver.

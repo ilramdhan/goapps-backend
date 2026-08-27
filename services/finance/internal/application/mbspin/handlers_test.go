@@ -68,6 +68,32 @@ func (m *MockRepository) GetByOrionItemCode(ctx context.Context, code string) (*
 	return args.Get(0).(*mbspindomain.Entity), args.Error(1)
 }
 
+// --- P8 duplicate/lineage primitives. Not exercised by these tests; present so
+// MockRepository still satisfies the widened mbspin.Repository interface. ---
+
+func (m *MockRepository) DuplicateSpin(ctx context.Context, in mbspindomain.DuplicateInput) (mbspindomain.DuplicateOutput, error) {
+	args := m.Called(ctx, in)
+	out, _ := args.Get(0).(mbspindomain.DuplicateOutput)
+	return out, args.Error(1)
+}
+
+func (m *MockRepository) ListChildren(ctx context.Context, parentID uuid.UUID) ([]*mbspindomain.Entity, error) {
+	args := m.Called(ctx, parentID)
+	items, _ := args.Get(0).([]*mbspindomain.Entity)
+	return items, args.Error(1)
+}
+
+func (m *MockRepository) ExistsByOrionItemCode(ctx context.Context, code string) (bool, error) {
+	args := m.Called(ctx, code)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockRepository) ResolveUniqueByOrionItemCode(ctx context.Context, code string) (uuid.UUID, bool, error) {
+	args := m.Called(ctx, code)
+	id, _ := args.Get(0).(uuid.UUID)
+	return id, args.Bool(1), args.Error(2)
+}
+
 func TestCreateHandler_Handle(t *testing.T) {
 	t.Run("success - creates new MB Spin", func(t *testing.T) {
 		mockRepo := new(MockRepository)
@@ -175,7 +201,7 @@ func TestGetHandler_Handle(t *testing.T) {
 
 		id := uuid.New()
 		headID := uuid.New()
-		expected, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+		expected, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("GetByID", ctx, id).Return(expected, nil)
@@ -228,7 +254,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 
 		id := uuid.New()
 		headID := uuid.New()
-		entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+		entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		newName := "Spin Beta"
@@ -305,9 +331,9 @@ func TestListHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		headID := uuid.New()
-		entity1, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+		entity1, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
-		entity2, err := mbspindomain.New(headID, "Spin Beta", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+		entity2, err := mbspindomain.New(headID, "Spin Beta", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("mbspin.ListFilter")).Return(

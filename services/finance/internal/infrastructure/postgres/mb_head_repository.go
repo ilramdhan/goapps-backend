@@ -39,8 +39,10 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 			mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_final_product, mbh_code,
 			mbh_is_active, created_at, created_by,
 			mbh_is_boughtout, mbh_dev_code, mbh_shade_code, mbh_shade_name,
-			mbh_cross_section, mbh_lusture_code, mbh_machine_id
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+			mbh_cross_section, mbh_lusture_code, mbh_machine_id, mbh_run_ldr_pct,
+			mbh_vs_number, mbh_no_of_process,
+			mbh_check_status_calc
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -49,6 +51,9 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 		entity.Denier(),
 		entity.Filament(),
 		entity.Dozing(),
+		// §11 item 106: structurally always NULL on insert — NewParams no longer carries
+		// a check-status field, so a newly created head has no Oracle import trace. The
+		// column stays in the INSERT only to keep the column/placeholder lists aligned.
 		entity.MBHCheckStatus(),
 		entity.MBHStatus(),
 		entity.MBHLdrPrsn(),
@@ -64,6 +69,12 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 		entity.CrossSection(),
 		entity.LustureCode(),
 		entity.MachineID(),
+		entity.MBHRunLdrPct(),
+		entity.VSNumber(),
+		entity.NoOfProcess(),
+		// Derived column (000487). mbh_check_status above stays a pure passthrough of
+		// whatever the caller supplied — ⛔ this value is NEVER written there (K-1).
+		entity.MBHCheckStatusCalc(),
 	)
 	if err != nil {
 		if isMBHeadUniqueViolation(err) {
@@ -84,10 +95,16 @@ func (r *MBHeadRepository) GetByMBCosting(ctx context.Context, mbCosting string)
 	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbh_mb_costing = $1 AND deleted_at IS NULL`, mbCosting))
 }
 
-// List retrieves MB Heads with filtering and pagination.
-func (r *MBHeadRepository) List(ctx context.Context, filter mbhead.ListFilter) ([]*mbhead.Entity, int64, error) {
-	filter.Validate()
-
+// buildMBHeadListWhere renders the WHERE clause and its positional args for List, kept as
+// a standalone function so a unit test can pin its shape without a live database (same
+// structural-test approach used for the sweep query in mb_head_relock_internal_test.go —
+// this package has no SQL mock and no test database).
+//
+// ⭐ DIPERBARUI 2026-08-26 (R16) — added the optional CostProductID predicate, which lets
+// the product detail page look up its MB Head(s) from the product side. An unset
+// CostProductID (nil) leaves the clause and arg list byte-for-byte identical to before —
+// this filter must never change List's existing behavior when omitted.
+func buildMBHeadListWhere(filter mbhead.ListFilter) (string, []interface{}) {
 	base := whereNotDeleted
 	args := make([]interface{}, 0)
 	idx := 1
@@ -105,6 +122,20 @@ func (r *MBHeadRepository) List(ctx context.Context, filter mbhead.ListFilter) (
 		args = append(args, *filter.IsActive)
 		idx++
 	}
+	if filter.CostProductID != nil {
+		base += fmt.Sprintf(` AND mbh_cost_product_id = $%d`, idx)
+		args = append(args, *filter.CostProductID)
+	}
+
+	return base, args
+}
+
+// List retrieves MB Heads with filtering and pagination.
+func (r *MBHeadRepository) List(ctx context.Context, filter mbhead.ListFilter) ([]*mbhead.Entity, int64, error) {
+	filter.Validate()
+
+	base, args := buildMBHeadListWhere(filter)
+	idx := len(args) + 1
 
 	var total int64
 	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM mst_mb_head "+base, args...).Scan(&total); err != nil {
@@ -162,7 +193,10 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 			mbh_shade_name    = $17,
 			mbh_cross_section = $18,
 			mbh_lusture_code  = $19,
-			mbh_machine_id    = $20
+			mbh_machine_id    = $20,
+			mbh_run_ldr_pct   = $21,
+			mbh_vs_number     = $22,
+			mbh_no_of_process = $23
 		WHERE mbh_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -171,6 +205,12 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 		entity.Denier(),
 		entity.Filament(),
 		entity.Dozing(),
+		// §11 item 106: this is a WRITE-BACK OF THE UNCHANGED STORED VALUE, never a
+		// client-supplied one. The entity came from GetByID and nothing in the domain
+		// can mutate mbhCheckStatus any more (UpdateInput has no such field), so this
+		// rewrites the Oracle trace byte-for-byte. ⛔ Do NOT drop the column from the
+		// UPDATE and do NOT null it out — either would ERASE the trace. Keeping it
+		// here is what keeps it INTACT.
 		entity.MBHCheckStatus(),
 		entity.MBHStatus(),
 		entity.MBHLdrPrsn(),
@@ -185,6 +225,9 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 		entity.CrossSection(),
 		entity.LustureCode(),
 		entity.MachineID(),
+		entity.MBHRunLdrPct(),
+		entity.VSNumber(),
+		entity.NoOfProcess(),
 	)
 	if err != nil {
 		return fmt.Errorf("update mb head: %w", err)
@@ -283,15 +326,37 @@ func (r *MBHeadRepository) ListValidated(ctx context.Context) ([]MBHeadCandidate
 	return out, nil
 }
 
-// ListAll retrieves all non-deleted MB Heads matching filter, unpaginated (for export).
-func (r *MBHeadRepository) ListAll(ctx context.Context, filter mbhead.ExportFilter) ([]*mbhead.Entity, error) {
-	query := r.selectCols() + whereNotDeleted
+// buildMBHeadExportWhere renders the WHERE clause and its positional args for ListAll,
+// kept as a standalone function so a unit test can pin its shape without a live database
+// (same structural-test approach as buildMBHeadListWhere and the sweep query in
+// mb_head_relock_internal_test.go — this package has no SQL mock and no test database).
+//
+// ⭐ DIPERBARUI (§11 item 140) — added the IncludeRejected predicate. Previously this
+// clause filtered only on deleted_at and the optional mbh_is_active, so a head whose
+// workflow status is StatusRejected leaked into every export: mbh_is_active is an
+// INDEPENDENT flag (Reject() never turns it off), so a rejected head stayed exported.
+// Default (IncludeRejected=false) now excludes StatusRejected via a parameterized value
+// — never a string-interpolated literal.
+func buildMBHeadExportWhere(filter mbhead.ExportFilter) (string, []interface{}) {
+	base := whereNotDeleted
 	args := make([]interface{}, 0)
+
 	if filter.IsActive != nil {
-		query += fmt.Sprintf(` AND mbh_is_active = $%d`, len(args)+1)
+		base += fmt.Sprintf(` AND mbh_is_active = $%d`, len(args)+1)
 		args = append(args, *filter.IsActive)
 	}
-	query += ` ORDER BY mbh_mb_costing ASC`
+	if !filter.IncludeRejected {
+		base += fmt.Sprintf(` AND mbh_entry_status != $%d`, len(args)+1)
+		args = append(args, mbhead.StatusRejected)
+	}
+
+	return base, args
+}
+
+// ListAll retrieves all non-deleted MB Heads matching filter, unpaginated (for export).
+func (r *MBHeadRepository) ListAll(ctx context.Context, filter mbhead.ExportFilter) ([]*mbhead.Entity, error) {
+	base, args := buildMBHeadExportWhere(filter)
+	query := r.selectCols() + base + ` ORDER BY mbh_mb_costing ASC`
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -313,28 +378,6 @@ func (r *MBHeadRepository) ListAll(ctx context.Context, filter mbhead.ExportFilt
 	return items, nil
 }
 
-// UpdateEntryStatus persists a state-machine transition (entry_status + optional
-// current_version bump + optional state_reason), used by Submit/Approve/Validate/
-// UnApprove/Revoke application handlers after the domain entity mutates in memory.
-func (r *MBHeadRepository) UpdateEntryStatus(ctx context.Context, id uuid.UUID, entryStatus string, currentVersion int32, stateReason string) error {
-	result, err := r.db.ExecContext(ctx, `
-		UPDATE mst_mb_head
-		SET mbh_entry_status = $2, mbh_current_version = $3, mbh_state_reason = $4, updated_at = NOW()
-		WHERE mbh_id = $1 AND deleted_at IS NULL
-	`, id, entryStatus, currentVersion, stateReason)
-	if err != nil {
-		return fmt.Errorf("update mb head entry status: %w", err)
-	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("rows affected: %w", err)
-	}
-	if rowsAffected == 0 {
-		return mbhead.ErrNotFound
-	}
-	return nil
-}
-
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -343,7 +386,7 @@ func (r *MBHeadRepository) selectCols() string {
 	return `
 		SELECT mbh_id, mbh_oracle_sys_id, mbh_mb_costing, mbh_mgt_name,
 		       mbh_denier, mbh_filament, mbh_dozing,
-		       mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_final_product, mbh_code,
+		       mbh_check_status, mbh_status, mbh_ldr_prsn, mbh_run_ldr_pct, mbh_final_product, mbh_code,
 		       mbh_is_active,
 		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by,
 		       mbh_entry_status, mbh_is_boughtout, mbh_current_version, mbh_machine_fixed_total,
@@ -351,7 +394,22 @@ func (r *MBHeadRepository) selectCols() string {
 		       mbh_lusture_code, mbh_cost_product_id, mbh_cost_generated_at, mbh_cost_generated_by,
 		       mbh_param_waste, mbh_param_quality_loss, mbh_param_efficiency, mbh_param_dev_expense,
 		       mbh_param_packing, mbh_param_mb_prod_per_day, mbh_param_throughput_per_hour,
-		       mbh_param_no_of_process, mbh_machine_id
+		       mbh_param_no_of_process, mbh_machine_id,
+		       mbh_vs_number, mbh_no_of_process,
+		       COALESCE(mbh_is_locked, FALSE), mbh_unlock_requested_at, mbh_unlock_requested_by,
+		       mbh_locked_at, mbh_locked_by, mbh_unlock_reason,
+		       -- P10: which locked state an UNLOCK_REQUESTED head was parked FROM.
+		       -- There is deliberately ⛔ NO COLUMN for this: the workflow log already
+		       -- holds the answer, and a second copy would drift from it. Only the
+		       -- MOST RECENT park is relevant, hence ORDER BY ... DESC LIMIT 1.
+		       -- NULL for every head that is not parked — which is nearly all of them.
+		       (SELECT w.mbwl_from_state
+		          FROM mst_mb_workflow_log w
+		         WHERE w.mbwl_mbh_id = mst_mb_head.mbh_id
+		           AND w.mbwl_to_state = 'UNLOCK_REQUESTED'
+		         ORDER BY w.mbwl_actor_at DESC
+		         LIMIT 1),
+		       mbh_check_status_calc
 		FROM mst_mb_head
 	`
 }
@@ -378,6 +436,7 @@ type mbHeadDTO struct {
 	MBHCheckStatus  sql.NullString
 	MBHStatus       sql.NullString
 	MBHLdrPrsn      sql.NullFloat64
+	MBHRunLdrPct    sql.NullFloat64
 	MBHFinalProduct sql.NullString
 	MBHCode         sql.NullString
 	IsActive        bool
@@ -410,6 +469,27 @@ type mbHeadDTO struct {
 	ParamThroughputPerHour sql.NullString
 	ParamNoOfProcess       sql.NullString
 	MachineID              sql.NullString
+
+	// P5 recipe columns. ⛔ NoOfProcess (mbh_no_of_process, the live user choice) is a
+	// DIFFERENT column from ParamNoOfProcess (mbh_param_no_of_process, the frozen
+	// VALIDATE snapshot). Merging them would rewrite historical cost snapshots.
+	VSNumber    sql.NullString
+	NoOfProcess sql.NullString
+
+	// Lock columns (000485), read-only here — lock BEHAVIOR belongs to P10. IsLocked
+	// arrives through COALESCE(mbh_is_locked, FALSE) because the column is NULLable
+	// without DEFAULT: every legacy row holds NULL, which means "not locked".
+	IsLocked          bool
+	UnlockRequestedAt sql.NullTime
+	UnlockRequestedBy sql.NullString
+	LockedAt          sql.NullTime
+	LockedBy          sql.NullString
+	UnlockReason      sql.NullString
+	// PreUnlockStatus comes from the mst_mb_workflow_log subquery in selectCols, ⛔ not
+	// from a column on mst_mb_head. NULL whenever the head has never been parked.
+	PreUnlockStatus sql.NullString
+	// MBHCheckStatusCalc is the DERIVED column (000487). NULL = never calculated.
+	MBHCheckStatusCalc sql.NullString
 }
 
 func nullTimeToStringPtr(n sql.NullTime) *string {
@@ -421,7 +501,7 @@ func nullTimeToStringPtr(n sql.NullTime) *string {
 }
 
 func (d *mbHeadDTO) toEntity() *mbhead.Entity {
-	return mbhead.Reconstruct(
+	e := mbhead.Reconstruct(
 		d.ID,
 		nullableStringPtr(d.OracleSysID),
 		d.MBCosting,
@@ -432,6 +512,7 @@ func (d *mbHeadDTO) toEntity() *mbhead.Entity {
 		nullableStringPtr(d.MBHCheckStatus),
 		nullableStringPtr(d.MBHStatus),
 		nullableFloat64Ptr(d.MBHLdrPrsn),
+		nullableFloat64Ptr(d.MBHRunLdrPct),
 		nullableStringPtr(d.MBHFinalProduct),
 		nullableStringPtr(d.MBHCode),
 		d.IsActive,
@@ -448,6 +529,19 @@ func (d *mbHeadDTO) toEntity() *mbhead.Entity {
 		d.ParamThroughputPerHour.String, d.ParamNoOfProcess.String,
 		nullableUUIDPtr(d.MachineID),
 	)
+	e.HydrateExtras(mbhead.PersistedExtras{
+		MBHCheckStatusCalc: nullableStringPtr(d.MBHCheckStatusCalc),
+		VSNumber:           nullableStringPtr(d.VSNumber),
+		NoOfProcess:        nullableStringPtr(d.NoOfProcess),
+		IsLocked:           d.IsLocked,
+		UnlockRequestedAt:  nullableTimePtr(d.UnlockRequestedAt),
+		UnlockRequestedBy:  nullableStringPtr(d.UnlockRequestedBy),
+		LockedAt:           nullableTimePtr(d.LockedAt),
+		LockedBy:           nullableStringPtr(d.LockedBy),
+		UnlockReason:       nullableStringPtr(d.UnlockReason),
+		PreUnlockStatus:    d.PreUnlockStatus.String,
+	})
+	return e
 }
 
 func (r *MBHeadRepository) scanOne(row *sql.Row) (*mbhead.Entity, error) {
@@ -455,7 +549,7 @@ func (r *MBHeadRepository) scanOne(row *sql.Row) (*mbhead.Entity, error) {
 	err := row.Scan(
 		&d.ID, &d.OracleSysID, &d.MBCosting, &d.MgtName,
 		&d.Denier, &d.Filament, &d.Dozing,
-		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHFinalProduct, &d.MBHCode,
+		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHRunLdrPct, &d.MBHFinalProduct, &d.MBHCode,
 		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 		&d.EntryStatus, &d.IsBoughtout, &d.CurrentVersion, &d.MachineFixedTotal,
@@ -464,6 +558,10 @@ func (r *MBHeadRepository) scanOne(row *sql.Row) (*mbhead.Entity, error) {
 		&d.ParamWaste, &d.ParamQualityLoss, &d.ParamEfficiency, &d.ParamDevExpense,
 		&d.ParamPacking, &d.ParamMBProdPerDay, &d.ParamThroughputPerHour, &d.ParamNoOfProcess,
 		&d.MachineID,
+		&d.VSNumber, &d.NoOfProcess,
+		&d.IsLocked, &d.UnlockRequestedAt, &d.UnlockRequestedBy,
+		&d.LockedAt, &d.LockedBy, &d.UnlockReason, &d.PreUnlockStatus,
+		&d.MBHCheckStatusCalc,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbhead.ErrNotFound
@@ -479,7 +577,7 @@ func (r *MBHeadRepository) scanRow(rows *sql.Rows) (*mbhead.Entity, error) {
 	err := rows.Scan(
 		&d.ID, &d.OracleSysID, &d.MBCosting, &d.MgtName,
 		&d.Denier, &d.Filament, &d.Dozing,
-		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHFinalProduct, &d.MBHCode,
+		&d.MBHCheckStatus, &d.MBHStatus, &d.MBHLdrPrsn, &d.MBHRunLdrPct, &d.MBHFinalProduct, &d.MBHCode,
 		&d.IsActive,
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 		&d.EntryStatus, &d.IsBoughtout, &d.CurrentVersion, &d.MachineFixedTotal,
@@ -488,6 +586,10 @@ func (r *MBHeadRepository) scanRow(rows *sql.Rows) (*mbhead.Entity, error) {
 		&d.ParamWaste, &d.ParamQualityLoss, &d.ParamEfficiency, &d.ParamDevExpense,
 		&d.ParamPacking, &d.ParamMBProdPerDay, &d.ParamThroughputPerHour, &d.ParamNoOfProcess,
 		&d.MachineID,
+		&d.VSNumber, &d.NoOfProcess,
+		&d.IsLocked, &d.UnlockRequestedAt, &d.UnlockRequestedBy,
+		&d.LockedAt, &d.LockedBy, &d.UnlockReason, &d.PreUnlockStatus,
+		&d.MBHCheckStatusCalc,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan mb head row: %w", err)

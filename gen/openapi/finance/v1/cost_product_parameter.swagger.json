@@ -1043,6 +1043,19 @@
           "type": "string",
           "description": "param_code of the MASTER_LOOKUP trigger param this child belongs to (empty = not a child param)."
         },
+        "valueMbSpinId": {
+          "type": "string",
+          "description": "Resolved mst_mb_spin.mbs_id for MB_SPIN lookup params, when the current\nvalue_text was resolved to EXACTLY one active-or-not spin at save time.\nEmpty = not yet resolved (either not an MB_SPIN param, no value, or the\nresolution was ambiguous/orphaned — see mb_spin_candidate_count)."
+        },
+        "mbSpinCandidateCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of mst_mb_spin rows whose mbs_orion_item_code currently matches\nvalue_text, computed at read time (not stored) using the identical\nmatching rule as the save-time resolver. Only meaningful for MB_SPIN\nlookup params with a non-empty value_text — see\nhas_mb_spin_candidate_count. When value_mb_spin_id is already set this\nfield is not needed to determine state, but is still populated."
+        },
+        "hasMbSpinCandidateCount": {
+          "type": "boolean",
+          "description": "True when mb_spin_candidate_count was actually computed for this row\n(an MB_SPIN lookup param with a non-empty value_text). False means the\ncount is not applicable — do not interpret 0 as \"not applicable\"."
+        },
         "hasValue": {
           "type": "boolean",
           "description": "Existing value (zero/empty when not yet bound)."

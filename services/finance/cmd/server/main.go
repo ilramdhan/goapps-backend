@@ -35,18 +35,22 @@ import (
 	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupregistry"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbpush"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
+	appshade "github.com/mutugading/goapps-backend/services/finance/internal/application/shade"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
 	notifDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costnotification"
+	domainshade "github.com/mutugading/goapps-backend/services/finance/internal/domain/shade"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 	fillnotifierinfra "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/fillnotifier"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamclient"
 	iamnotifier "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamnotifier"
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/mbrelock"
 	oracleinfra "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/oracle"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
@@ -158,6 +162,9 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	mbParamRepo := postgres.NewMBParamRepository(db)
 	mbSpinRepo := postgres.NewMBSpinRepository(db)
 	mbLustureRepo := postgres.NewMBLustureRepository(db)
+	mbCrossSectionRepo := postgres.NewMBCrossSectionRepository(db)
+	mbCrossSectionFactorRepo := postgres.NewMBCrossSectionFactorRepository(db)
+	mbDozingImpactRepo := postgres.NewMBDozingImpactRepository(db)
 	mbPushLogRepo := postgres.NewMBPushLogRepository(db)
 	mbWorkflowLogRepo := postgres.NewMBWorkflowLogRepository(db)
 	cstMBCostRepo := postgres.NewCstMBCostRepository(db)
@@ -166,6 +173,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	spinFixedCostRepo := postgres.NewSpinFixedCostRepository(db)
 	productGradeRepo := postgres.NewProductGradeRepository(db)
 	lookupMasterRepo := postgres.NewLookupMasterRepository(db)
+	shadeRepo := postgres.NewShadeRepository(db)
 	// NOTE: legacy productRepo / prdRequestRepo wired to dropped tables — removed.
 	// Canonical Phase B (cost_product_master, cost_product_order) wiring added in S2.8-S2.10.
 
@@ -218,12 +226,17 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		return err
 	}
 
-	mbHeadHandler, err := grpcdelivery.NewMBHeadHandler(mbHeadRepo, mbParamRepo)
+	mbRecipeFullExportRepo := postgres.NewMBRecipeFullExportRepository(db)
+	mbHeadHandler, err := grpcdelivery.NewMBHeadHandlerWithRecipeFull(mbHeadRepo, mbParamRepo, machineRepo, mbCompositionRepo, mbRecipeFullExportRepo)
 	if err != nil {
 		return err
 	}
 
-	mbSpinHandler, err := grpcdelivery.NewMBSpinHandler(mbSpinRepo)
+	// Full wiring: duplicate spin + child-recalc cascade. mbSpinRepo supplies both
+	// the read side and the recalc write side; mbDozingImpactRepo is READ-ONLY and
+	// only counts the products a change WOULD affect (D24 preview) — ⛔ no yarn
+	// product is recalculated on this path.
+	mbSpinHandler, err := grpcdelivery.NewMBSpinHandlerWithRecalc(mbSpinRepo, mbSpinRepo, mbDozingImpactRepo)
 	if err != nil {
 		return err
 	}
@@ -239,6 +252,23 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	mbLustureHandler, err := grpcdelivery.NewMBLustureHandler(mbLustureRepo)
+	if err != nil {
+		return err
+	}
+
+	mbCrossSectionHandler, err := grpcdelivery.NewMBCrossSectionHandler(mbCrossSectionRepo)
+	if err != nil {
+		return err
+	}
+
+	mbCrossSectionFactorHandler, err := grpcdelivery.NewMBCrossSectionFactorHandler(mbCrossSectionFactorRepo)
+	if err != nil {
+		return err
+	}
+
+	// MB dozing: read-only LDR calculation + impact preview. Reuses the existing
+	// cross-section factor and formula repositories — no second instance.
+	mbDozingHandler, err := grpcdelivery.NewMBDozingHandler(mbCrossSectionFactorRepo, formulaRepo, mbSpinRepo, mbDozingImpactRepo)
 	if err != nil {
 		return err
 	}
@@ -279,6 +309,12 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return fmt.Errorf("new yarn lookup fill handler: %w", err)
 	}
+
+	// R30 — compare the live mst_lookup_master_column rows against the readers
+	// compiled into the fill handler and log any divergence. Deliberately
+	// non-fatal and self-timeboxed: the divergences it reports already exist in
+	// production, and a registry query failure must never block startup.
+	lookupregistry.NewStartupChecker(lookupMasterRepo, grpcdelivery.LookupReaderColumns()).Run(ctx)
 
 	oracleSyncHandler, err := grpcdelivery.NewOracleSyncHandler(
 		triggerHandler, getJobHandler, listJobsHandler,
@@ -376,7 +412,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return err
 	}
-	costProductMasterHandler, err := grpcdelivery.NewCostProductMasterHandler(costProductMasterRepo)
+	costProductMasterHandler, err := grpcdelivery.NewCostProductMasterHandler(costProductMasterRepo, costProductTypeRepo)
 	if err != nil {
 		return err
 	}
@@ -465,9 +501,16 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	cprIAMNotifier := iamnotifier.NewCPRNotifier(iamNotifClient)
+	mbHeadIAMNotifier := iamnotifier.NewMBHeadNotifier(iamNotifClient)
+	// Attach MB recipe lifecycle notifications. Best-effort: with the nop client above
+	// this is inert, and a notification failure never fails a transition.
+	mbHeadHandler = mbHeadHandler.WithNotifier(mbHeadIAMNotifier)
+	// E4/E5 need the requester's UUID, which lives in mst_mb_head_lock_log.mbhl_meta.
+	// The MB head repository is the only thing that can read or write it.
+	mbHeadHandler = mbHeadHandler.WithUnlockActors(mbHeadRepo)
 	fillIAMNotifier := iamnotifier.NewFillNotifier(iamNotifClient)
 
-	costProductParameterApp := cppapp.New(costProductParameterRepo)
+	costProductParameterApp := cppapp.New(costProductParameterRepo, mbSpinRepo)
 	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp).
 		WithParamRepo(parameterRepo).
 		WithFormulaRepo(formulaRepo).
@@ -547,6 +590,13 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if _, addErr := fillCron.AddFunc("30 * * * *", reminderJob.Run); addErr != nil {
 		return fmt.Errorf("register reminder cron: %w", addErr)
 	}
+	// P10 auto-relock (K-57 option (a)): an MB recipe whose granted unlock window has
+	// expired goes back to the state it was unlocked FROM and is locked again. Minute 15
+	// keeps it clear of the hourly (:00) and half-hourly (:30) jobs above.
+	mbRelockJob := mbrelock.NewJob(mbHeadRepo)
+	if _, addErr := fillCron.AddFunc("15 * * * *", mbRelockJob.Run); addErr != nil {
+		return fmt.Errorf("register mb auto-relock cron: %w", addErr)
+	}
 	fillCron.Start()
 	defer fillCron.Stop()
 
@@ -611,6 +661,8 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		mbbatch.NewMBEdgeReaderAdapter(mbCompositionRepo),
 		mbbatch.NewResultWriterAdapter(costResultRepo),
 		calcLoader, calcEvalCache,
+		costAuditHistoryRepo,
+		calcJobRepo,
 	)
 	mbBatchTriggerHandler := mbbatch.NewTriggerHandler(mbBatchSvc, calcJobRepo)
 	mbBatchHandler, err := grpcdelivery.NewMBBatchHandler(mbBatchTriggerHandler)
@@ -670,6 +722,28 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		biETLRunner = bietl.NewMVLoader(biMVRepo, biFactRepo)
 	}
 
+	// Shade master Oracle sync (R8) — same graceful-degradation shape as the BI
+	// ETL runner above: a nil shade.Source makes SyncHandler.Execute return
+	// shade.ErrSyncNotConfigured through the normal error-response path instead
+	// of crashing the service when Oracle credentials are unset.
+	var shadeOracleSource domainshade.Source
+	if oracleErr == nil {
+		shadeOracleSource = oracleinfra.NewShadeRepository(oracleClient)
+	} else {
+		log.Warn().Msg("Oracle unavailable; shade master Sync RPC will report ErrSyncNotConfigured")
+	}
+	shadeSyncHandler := appshade.NewSyncHandler(shadeOracleSource, shadeRepo, log.Logger)
+	shadeHandler, err := grpcdelivery.NewShadeHandler(
+		appshade.NewCreateHandler(shadeRepo),
+		appshade.NewGetHandler(shadeRepo),
+		appshade.NewListHandler(shadeRepo),
+		appshade.NewUpdateHandler(shadeRepo),
+		shadeSyncHandler,
+	)
+	if err != nil {
+		return fmt.Errorf("new shade handler: %w", err)
+	}
+
 	biMVRefresher := &biMVRefresherAdapter{db: db}
 	biJobTriggerHandler := jobapp.NewTriggerHandler(biJobRepo, biMVRefresher, biETLRunner, biChartCache)
 	biJobHandler, err := grpcdelivery.NewBIJobHandler(
@@ -712,8 +786,10 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		boxBobbinCostHandler,
 		mbHeadHandler, mbSpinHandler,
 		mbCompositionHandler, mbParamHandler, mbLustureHandler, mbWorkflowLogHandler, mbPushHandler,
+		mbCrossSectionHandler, mbCrossSectionFactorHandler, mbDozingHandler,
 		mbBatchHandler,
 		machineHandler, interminglingHandler, spinFixedCostHandler, productGradeHandler, lookupMasterHandler, yarnLookupFillHandler,
+		shadeHandler,
 		oracleSyncHandler, rmGroupHandler, rmCostHandler,
 		costProductTypeHandler, costRmTypeHandler, costErpHandler, costProductMasterHandler, costRouteHandler,
 		costMasterLookupHandler,
@@ -836,6 +912,9 @@ func startServers(ctx context.Context, cfg *config.Config,
 	mbLustureHandler *grpcdelivery.MBLustureHandler,
 	mbWorkflowLogHandler *grpcdelivery.MBWorkflowLogHandler,
 	mbPushHandler *grpcdelivery.MBPushHandler,
+	mbCrossSectionHandler *grpcdelivery.MBCrossSectionHandler,
+	mbCrossSectionFactorHandler *grpcdelivery.MBCrossSectionFactorHandler,
+	mbDozingHandler *grpcdelivery.MBDozingHandler,
 	mbBatchHandler *grpcdelivery.MBBatchHandler,
 	machineHandler *grpcdelivery.MachineHandler,
 	interminglingHandler *grpcdelivery.InterminglingHandler,
@@ -843,6 +922,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	productGradeHandler *grpcdelivery.ProductGradeHandler,
 	lookupMasterHandler *grpcdelivery.LookupMasterHandler,
 	yarnLookupFillHandler *grpcdelivery.YarnLookupFillHandler,
+	shadeHandler *grpcdelivery.ShadeHandler,
 	oracleSyncHandler *grpcdelivery.OracleSyncHandler,
 	rmGroupHandler *grpcdelivery.RMGroupHandler,
 	rmCostHandler *grpcdelivery.RMCostHandler,
@@ -890,6 +970,9 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterMbCompositionServiceServer(grpcServer.GRPCServer(), mbCompositionHandler)
 	financev1.RegisterMbParamServiceServer(grpcServer.GRPCServer(), mbParamHandler)
 	financev1.RegisterMbLustureServiceServer(grpcServer.GRPCServer(), mbLustureHandler)
+	financev1.RegisterMbCrossSectionServiceServer(grpcServer.GRPCServer(), mbCrossSectionHandler)
+	financev1.RegisterMbCrossSectionFactorServiceServer(grpcServer.GRPCServer(), mbCrossSectionFactorHandler)
+	financev1.RegisterMBDozingServiceServer(grpcServer.GRPCServer(), mbDozingHandler)
 	financev1.RegisterMbWorkflowLogServiceServer(grpcServer.GRPCServer(), mbWorkflowLogHandler)
 	financev1.RegisterMbPushServiceServer(grpcServer.GRPCServer(), mbPushHandler)
 	financev1.RegisterMbBatchServiceServer(grpcServer.GRPCServer(), mbBatchHandler)
@@ -900,6 +983,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterProductGradeServiceServer(grpcServer.GRPCServer(), productGradeHandler)
 	financev1.RegisterLookupMasterServiceServer(grpcServer.GRPCServer(), lookupMasterHandler)
 	financev1.RegisterYarnLookupFillServiceServer(grpcServer.GRPCServer(), yarnLookupFillHandler)
+	financev1.RegisterShadeServiceServer(grpcServer.GRPCServer(), shadeHandler)
 	financev1.RegisterOracleSyncServiceServer(grpcServer.GRPCServer(), oracleSyncHandler)
 	financev1.RegisterRMGroupServiceServer(grpcServer.GRPCServer(), rmGroupHandler)
 	financev1.RegisterRMCostServiceServer(grpcServer.GRPCServer(), rmCostHandler)

@@ -39,6 +39,15 @@ type MBEdgeReader interface {
 	ListMBEdgesBulk(ctx context.Context, mbhIDs []string, versions []int32) ([]MBEdge, error)
 }
 
+// JobActorReader reads the cal_job row an MB_BATCH run executes under, so the audit trail
+// can be stamped with the human who triggered it (cal_job.cj_created_by) instead of a
+// constant. Deliberately narrower than costcalcdom.JobRepository — only the lookup is
+// needed — while keeping the same method signature, so *postgres.CostCalcJobRepository
+// satisfies it with no adapter.
+type JobActorReader interface {
+	GetByID(ctx context.Context, id int64) (*costcalcdom.Job, error)
+}
+
 // ResultWriter persists cst_product_cost rows for an MB's auto-gen'd product, transaction-scoped
 // so all 3 calc-type rows for one MB share the batch's commit/rollback boundary (design addendum
 // §10.3 step 7), mirroring CostResultRepository.UpsertWithSupersedeTx.

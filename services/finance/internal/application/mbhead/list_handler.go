@@ -16,6 +16,9 @@ type ListQuery struct {
 	IsActive  *bool
 	SortBy    string
 	SortOrder string
+	// CostProductID filters to the head(s) linked to one cost product (R16). Nil means
+	// no filter.
+	CostProductID *int64
 }
 
 // ListResult represents the list MB Heads result.
@@ -40,12 +43,13 @@ func NewListHandler(repo mbhead.Repository) *ListHandler {
 // Handle executes the list MB Heads query.
 func (h *ListHandler) Handle(ctx context.Context, query ListQuery) (*ListResult, error) {
 	filter := mbhead.ListFilter{
-		Search:    query.Search,
-		Page:      query.Page,
-		PageSize:  query.PageSize,
-		SortBy:    query.SortBy,
-		SortOrder: query.SortOrder,
-		IsActive:  query.IsActive,
+		Search:        query.Search,
+		Page:          query.Page,
+		PageSize:      query.PageSize,
+		SortBy:        query.SortBy,
+		SortOrder:     query.SortOrder,
+		IsActive:      query.IsActive,
+		CostProductID: query.CostProductID,
 	}
 	filter.Validate()
 

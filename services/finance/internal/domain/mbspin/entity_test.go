@@ -2,6 +2,7 @@ package mbspin_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,7 @@ import (
 
 func TestNew_Success(t *testing.T) {
 	headID := uuid.New()
-	e, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 	assert.Equal(t, headID, e.HeadID())
 	assert.Equal(t, "MB Spin A", e.MgtName())
@@ -22,25 +23,25 @@ func TestNew_Success(t *testing.T) {
 }
 
 func TestNew_InvalidHeadID(t *testing.T) {
-	_, err := mbspin.New(uuid.Nil, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	_, err := mbspin.New(uuid.Nil, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	assert.ErrorIs(t, err, mbspin.ErrInvalidHeadID)
 }
 
 func TestNew_EmptyMgtName(t *testing.T) {
 	headID := uuid.New()
-	_, err := mbspin.New(headID, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	_, err := mbspin.New(headID, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	assert.ErrorIs(t, err, mbspin.ErrEmptyMgtName)
 }
 
 func TestNew_EmptyCreatedBy(t *testing.T) {
 	headID := uuid.New()
-	_, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
+	_, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
 	assert.ErrorIs(t, err, mbspin.ErrEmptyCreatedBy)
 }
 
 func TestUpdate_Success(t *testing.T) {
 	headID := uuid.New()
-	e, err := mbspin.New(headID, "Old Name", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "Old Name", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 
 	newName := "New Name"
@@ -53,7 +54,7 @@ func TestNew_WithCCAndCostRateMkt(t *testing.T) {
 	headID := uuid.New()
 	cc := "CC-001"
 	rate := 12.5
-	e, err := mbspin.New(headID, "MB Spin B", nil, nil, nil, nil, nil, nil, &cc, &rate, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "MB Spin B", nil, nil, nil, nil, nil, nil, &cc, &rate, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 	require.NotNil(t, e.CC())
 	assert.Equal(t, "CC-001", *e.CC())
@@ -63,7 +64,7 @@ func TestNew_WithCCAndCostRateMkt(t *testing.T) {
 
 func TestUpdate_CCAndCostRateMkt(t *testing.T) {
 	headID := uuid.New()
-	e, err := mbspin.New(headID, "MB Spin C", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "MB Spin C", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 
 	cc := "CC-002"
@@ -78,8 +79,94 @@ func TestUpdate_CCAndCostRateMkt(t *testing.T) {
 
 func TestSoftDelete_AlreadyDeleted(t *testing.T) {
 	headID := uuid.New()
-	e, err := mbspin.New(headID, "Name", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	e, err := mbspin.New(headID, "Name", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
 	require.NoError(t, err)
 	require.NoError(t, e.SoftDelete("admin"))
 	assert.ErrorIs(t, e.SoftDelete("admin"), mbspin.ErrAlreadyDeleted)
+}
+
+// -----------------------------------------------------------------------------
+// P12b — fix/actual markers (recalc rule #3). Migration 000486.
+// -----------------------------------------------------------------------------
+
+func newSpinWithFlags(t *testing.T, ldrFixed, dozingFixed *bool) *mbspin.Entity {
+	t.Helper()
+	e, err := mbspin.New(uuid.New(), "MB Spin Flags", nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, ldrFixed, dozingFixed, "admin")
+	require.NoError(t, err)
+	return e
+}
+
+func boolPtr(b bool) *bool { return &b }
+
+// The four combinations recalc rule #3 must distinguish. The whole point of
+// P12b is that these are INDEPENDENT — a per-row marker cannot express them.
+func TestIsFixed_AllCombinations(t *testing.T) {
+	tests := []struct {
+		name            string
+		ldrFixed        *bool
+		dozingFixed     *bool
+		wantLDRFixed    bool
+		wantDozingFixed bool
+	}{
+		{"ldr actual, dozing computed", boolPtr(true), boolPtr(false), true, false},
+		{"dozing actual, ldr computed", boolPtr(false), boolPtr(true), false, true},
+		{"both actual", boolPtr(true), boolPtr(true), true, true},
+		{"both computed", boolPtr(false), boolPtr(false), false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newSpinWithFlags(t, tt.ldrFixed, tt.dozingFixed)
+			assert.Equal(t, tt.wantLDRFixed, e.IsFixedLDR())
+			assert.Equal(t, tt.wantDozingFixed, e.IsFixedDozing())
+		})
+	}
+}
+
+// nil means "unknown" and MUST be read as FIXED. All ~2699 pre-existing Oracle
+// rows carry NULL; if this flipped, the first P13 recalc run would silently
+// overwrite thousands of human-entered values.
+func TestIsFixed_NilMeansFixed(t *testing.T) {
+	e := newSpinWithFlags(t, nil, nil)
+	assert.Nil(t, e.LDRIsFixed())
+	assert.Nil(t, e.DozingIsFixed())
+	assert.True(t, e.IsFixedLDR(), "nil LDR marker must be treated as fixed")
+	assert.True(t, e.IsFixedDozing(), "nil dozing marker must be treated as fixed")
+}
+
+// Each marker is independent: one nil, one explicit.
+func TestIsFixed_MixedNilAndExplicit(t *testing.T) {
+	e := newSpinWithFlags(t, boolPtr(false), nil)
+	assert.False(t, e.IsFixedLDR())
+	assert.True(t, e.IsFixedDozing())
+}
+
+func TestUpdate_SetsFixedMarkers(t *testing.T) {
+	e := newSpinWithFlags(t, nil, nil)
+	require.NoError(t, e.Update(mbspin.UpdateInput{
+		LDRIsFixed:    boolPtr(false),
+		DozingIsFixed: boolPtr(true),
+	}, "editor"))
+	assert.False(t, e.IsFixedLDR())
+	assert.True(t, e.IsFixedDozing())
+}
+
+// A nil field in UpdateInput must leave the stored marker untouched (D13:
+// absent is not zero).
+func TestUpdate_NilMarkerLeavesStoredValueUntouched(t *testing.T) {
+	e := newSpinWithFlags(t, boolPtr(true), boolPtr(false))
+	require.NoError(t, e.Update(mbspin.UpdateInput{}, "editor"))
+	require.NotNil(t, e.LDRIsFixed())
+	assert.True(t, *e.LDRIsFixed())
+	require.NotNil(t, e.DozingIsFixed())
+	assert.False(t, *e.DozingIsFixed())
+}
+
+func TestReconstruct_RoundTripsFixedMarkers(t *testing.T) {
+	e := mbspin.Reconstruct(uuid.New(), nil, nil, uuid.New(), "MB Spin R",
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		boolPtr(true), boolPtr(false),
+		true, time.Now(), "admin", nil, nil, nil, nil)
+	assert.True(t, e.IsFixedLDR())
+	assert.False(t, e.IsFixedDozing())
 }

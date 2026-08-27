@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -22,7 +23,9 @@ func NewCostAuditHistoryRepository(db *DB) *CostAuditHistoryRepository {
 var _ costcalc.AuditHistoryRepository = (*CostAuditHistoryRepository)(nil)
 
 // Write inserts a single aud_cost_history row. Zero IDs are stored as NULL
-// (e.g. the first cost result has no previous cost id).
+// (e.g. the first cost result has no previous cost id). A nil
+// AuditHistoryEntry.VariancePct is likewise stored as NULL, meaning the variance was not
+// computable (the previous total was 0); a stored 0.0 means the cost truly did not change.
 func (r *CostAuditHistoryRepository) Write(ctx context.Context, e *costcalc.AuditHistoryEntry) error {
 	start := time.Now()
 	defer func() {
@@ -48,7 +51,7 @@ func (r *CostAuditHistoryRepository) Write(ctx context.Context, e *costcalc.Audi
 	if _, err := r.db.ExecContext(ctx, q,
 		e.ProductSysID, e.Period, string(e.CalcType),
 		e.OldCostID, e.NewCostID,
-		e.OldTotal, e.NewTotal, e.VariancePct,
+		e.OldTotal, e.NewTotal, variancePctArg(e.VariancePct),
 		e.OldJobID, e.NewJobID,
 		e.ChangeReason, e.ChangedBy,
 	); err != nil {
@@ -56,4 +59,14 @@ func (r *CostAuditHistoryRepository) Write(ctx context.Context, e *costcalc.Audi
 	}
 	metrics.AuditWritesTotal.Inc()
 	return nil
+}
+
+// variancePctArg converts the optional variance into a driver argument: nil becomes a
+// typed NULL, a value becomes that value. database/sql already maps a nil *float64 to
+// NULL, but going through sql.NullFloat64 states the intent at the call site.
+func variancePctArg(v *float64) sql.NullFloat64 {
+	if v == nil {
+		return sql.NullFloat64{}
+	}
+	return sql.NullFloat64{Float64: *v, Valid: true}
 }

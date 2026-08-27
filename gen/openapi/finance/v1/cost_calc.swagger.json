@@ -2237,6 +2237,31 @@
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
     },
+    "v1ProcessChunkInternalResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "successCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of products that computed + persisted successfully."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of products that failed with non-recoverable errors."
+        },
+        "blockedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of products that were BLOCKED (missing CAPP, missing RM cost, etc.)."
+        }
+      },
+      "description": "ProcessChunkInternalResponse summarizes per-status counts."
+    },
     "v1ProductCostSheetDownloadInfo": {
       "type": "object",
       "properties": {

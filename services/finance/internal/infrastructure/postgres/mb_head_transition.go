@@ -4,6 +4,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -13,18 +14,21 @@ import (
 
 // Transition atomically persists a workflow-state change: updates mst_mb_head's
 // entry_status/current_version/state_reason (and, when params is non-nil, the frozen
-// mbh_param_* snapshot columns), inserts a mst_mb_workflow_log audit row, and — only when
-// toState is StatusValidated — snapshots the current composition into
+// mbh_param_* snapshot columns), inserts a mst_mb_workflow_log audit row, and — when
+// snapshotOnTransition says so — snapshots the current composition into
 // mst_mb_composition_version. All writes commit or roll back together.
 func (r *MBHeadRepository) Transition(ctx context.Context, id uuid.UUID, fromState, toState string, currentVersion int32, stateReason, actorUserID string, params *mbhead.ParamSnapshot) error {
 	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
-		if err := r.updateEntryStatusTx(ctx, tx, id, toState, currentVersion, stateReason, params); err != nil {
+		if err := r.updateEntryStatusTx(ctx, tx, id, fromState, toState, currentVersion, stateReason, actorUserID, params); err != nil {
 			return err
 		}
 		if err := r.insertWorkflowLogTx(ctx, tx, id, fromState, toState, actorUserID, stateReason, currentVersion); err != nil {
 			return err
 		}
-		if toState == mbhead.StatusValidated {
+		if err := r.writeLockLogTx(ctx, tx, id, fromState, toState, actorUserID, stateReason); err != nil {
+			return err
+		}
+		if snapshotOnTransition(fromState, toState) {
 			if err := r.compositionRepo.SnapshotVersion(ctx, tx, id.String(), currentVersion, actorUserID); err != nil {
 				return err
 			}
@@ -33,7 +37,64 @@ func (r *MBHeadRepository) Transition(ctx context.Context, id uuid.UUID, fromSta
 	})
 }
 
-func (r *MBHeadRepository) updateEntryStatusTx(ctx context.Context, tx *sql.Tx, id uuid.UUID, toState string, currentVersion int32, stateReason string, params *mbhead.ParamSnapshot) error {
+// snapshotOnTransition decides whether this transition must write a composition
+// snapshot into mst_mb_composition_version.
+//
+// 🔴 K-55 BUG FIX. The rule used to be "toState == VALIDATED", full stop. That is wrong
+// for exactly one transition: UNLOCK_REQUESTED → VALIDATED, i.e. RejectUnlock putting a
+// VALIDATED-origin head back where it came from. RejectUnlock deliberately does ⛔ NOT
+// bump the version (nothing was edited — the unlock was refused), so the version being
+// re-snapshotted is the very one the ORIGINAL Validate already snapshotted. That trips
+// uq_mbcv_seq (000440:16) and rolls back the WHOLE transaction, so refusing an unlock on
+// a VALIDATED-origin head fails outright. APPROVED-origin refusals never hit it because
+// APPROVED is not a snapshotting state.
+//
+// 🔴 WHY option (a) — narrow the condition — and ⛔ NOT option (b), ON CONFLICT DO
+// NOTHING on SnapshotVersion. (b) would cure every re-entry path at once, including ones
+// nobody has found yet — but that is precisely its cost: a duplicate snapshot is a
+// SYMPTOM, and the only two ways to produce one are "a version was re-validated without
+// being bumped" (a bug) or this one transition (a known, understood, non-bug). Silencing
+// the constraint would turn any FUTURE version-bump bug into a snapshot that silently
+// does not happen, leaving mst_mb_composition_version quietly stale against the recipe it
+// claims to freeze — unnoticeable until someone costs from it. The unique constraint
+// stays loud; this one legitimate re-entry is named and excluded by name.
+//
+// CONSEQUENCE, stated plainly: this closes ONE path. Any other future transition that
+// re-enters VALIDATED without bumping the version will still fail on uq_mbcv_seq. That is
+// intended — it will fail loudly, at the transition, rather than corrupt the snapshot
+// trail. Add the case here deliberately if such a path is ever introduced.
+//
+// Normal validation (DRAFT → VALIDATED, and any other origin) still snapshots exactly as
+// before: ⛔ this must never disable a legitimate snapshot.
+func snapshotOnTransition(fromState, toState string) bool {
+	if toState != mbhead.StatusValidated {
+		return false
+	}
+	return fromState != mbhead.StatusUnlockRequested
+}
+
+// writeLockLogTx appends the mst_mb_head_lock_log row for a lock-related transition,
+// or does nothing when the transition touches nothing lock-related.
+//
+// 🔴 Same transaction as the status update and the workflow log — one commit for the
+// whole transition, ⛔ never a second commit for the lock side of it.
+func (r *MBHeadRepository) writeLockLogTx(
+	ctx context.Context, tx *sql.Tx, id uuid.UUID, fromState, toState, actorUserID, reason string,
+) error {
+	effect := mbhead.DeriveLockEffect(fromState, toState)
+	if effect.Event == "" {
+		return nil
+	}
+	return insertLockLogTx(ctx, tx, id, effect, actorUserID, reason)
+}
+
+//nolint:revive // Many parameters — one per persisted transition field, mirrors Transition's shape.
+func (r *MBHeadRepository) updateEntryStatusTx(ctx context.Context, tx *sql.Tx, id uuid.UUID, fromState, toState string, currentVersion int32, stateReason, actorUserID string, params *mbhead.ParamSnapshot) error {
+	calc, err := r.deriveCheckStatusCalcTx(ctx, tx, id, toState)
+	if err != nil {
+		return err
+	}
+
 	q := `
 		UPDATE mst_mb_head
 		SET mbh_entry_status = $2, mbh_current_version = $3, mbh_state_reason = NULLIF($4, ''), updated_at = NOW()`
@@ -47,6 +108,23 @@ func (r *MBHeadRepository) updateEntryStatusTx(ctx context.Context, tx *sql.Tx, 
 		args = append(args, params.Waste, params.QualityLoss, params.Efficiency, params.DevExpense,
 			params.Packing, params.MBProdPerDay, params.ThroughputPerHour, params.NoOfProcess)
 	}
+	// Derived check status (000487). Appended LAST so it never disturbs the fixed
+	// $5..$12 numbering the params block above depends on. When calc is nil the
+	// clause is omitted entirely: an undecided state leaves the stored value alone
+	// rather than erasing it.
+	if calc != nil {
+		args = append(args, *calc)
+		q += fmt.Sprintf(`,
+		    mbh_check_status_calc = $%d`, len(args))
+	}
+
+	// P10 lock columns. Appended AFTER the calc clause for the same reason it was
+	// appended last: the placeholder numbers are derived from len(args), so the fixed
+	// $5..$12 numbering the params block relies on is never disturbed. When the
+	// transition is not lock-related the fragment is empty and no lock column moves.
+	lockFrag, args := lockClauses(mbhead.DeriveLockEffect(fromState, toState), actorUserID, stateReason, args)
+	q += lockFrag
+
 	q += ` WHERE mbh_id = $1 AND deleted_at IS NULL`
 
 	result, err := tx.ExecContext(ctx, q, args...)
@@ -61,6 +139,31 @@ func (r *MBHeadRepository) updateEntryStatusTx(ctx context.Context, tx *sql.Tx, 
 		return mbhead.ErrNotFound
 	}
 	return nil
+}
+
+// deriveCheckStatusCalcTx computes the value mbh_check_status_calc should take once
+// the row has moved to toState. The bought-out flag is read inside the SAME
+// transaction so the derivation sees exactly the row being written.
+//
+// 🔴 The rules live in ONE place only — mbhead.DeriveCheckStatus, a pure Go function.
+// ⛔ They are deliberately NOT expressed as a SQL CASE here: a second implementation
+// of the same rules would drift from the first, and the only question would be when.
+//
+// A nil result means "this state has no decided mapping yet" — the caller then omits
+// the column from the UPDATE. ⛔ It never writes mbh_check_status, which stays frozen
+// as the Oracle import trace (user decision K-1, option 2).
+func (r *MBHeadRepository) deriveCheckStatusCalcTx(ctx context.Context, tx *sql.Tx, id uuid.UUID, toState string) (*string, error) {
+	var isBoughtout bool
+	err := tx.QueryRowContext(ctx,
+		`SELECT mbh_is_boughtout FROM mst_mb_head WHERE mbh_id = $1 AND deleted_at IS NULL`, id,
+	).Scan(&isBoughtout)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, mbhead.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("mb_head_transition: read boughtout flag: %w", err)
+	}
+	return mbhead.DeriveCheckStatus(toState, isBoughtout), nil
 }
 
 // RefreezeCostParams updates the frozen mbh_param_* columns on mst_mb_head and re-runs the CPP

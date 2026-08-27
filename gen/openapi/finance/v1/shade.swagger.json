@@ -1,0 +1,590 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/shade.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ShadeService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/shades": {
+      "get": {
+        "summary": "ListShades lists shades with search, filter, and pagination.",
+        "operationId": "ShadeService_ListShades",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListShadesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Full-text search across code, name, and short name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sourceFilter",
+            "description": "Filter by provenance. Empty = both.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ShadeService"
+        ]
+      },
+      "post": {
+        "summary": "CreateShade creates a hand-authored (MANUAL) shade.",
+        "operationId": "ShadeService_CreateShade",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateShadeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateShadeRequest creates a hand-authored (MANUAL) shade.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateShadeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ShadeService"
+        ]
+      }
+    },
+    "/api/v1/finance/shades/sync": {
+      "post": {
+        "summary": "SyncShades pulls the latest shade master from Oracle and upserts it into\ncost_erp_shade, skipping rows a finance user owns manually.",
+        "operationId": "ShadeService_SyncShades",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncShadesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "SyncShadesRequest triggers an Oracle-to-Postgres shade master sync. It\nfetches the full shade master from MGTDAT.OM_GRADE_CODE_2 and upserts into\ncost_erp_shade, keyed on shade_code. Rows a finance user created or edited\nby hand (source MANUAL) are never overwritten — see decideUpsertAction in\nthe Postgres repository. Runs synchronously; there is no background job or\npolling — the RPC returns once the sync completes.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SyncShadesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ShadeService"
+        ]
+      }
+    },
+    "/api/v1/finance/shades/{shadeId}": {
+      "get": {
+        "summary": "GetShade retrieves a Shade by id.",
+        "operationId": "ShadeService_GetShade",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetShadeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "shadeId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ShadeService"
+        ]
+      },
+      "delete": {
+        "summary": "DeactivateShade soft-deactivates a Shade (ces_is_active = false). Not a\nhard delete — the row and its history are retained.",
+        "operationId": "ShadeService_DeactivateShade",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeactivateShadeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "shadeId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ShadeService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateShade updates a Shade's name, short name, and/or active status.",
+        "operationId": "ShadeService_UpdateShade",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateShadeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "shadeId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ShadeServiceUpdateShadeBody"
+            }
+          }
+        ],
+        "tags": [
+          "ShadeService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ShadeServiceUpdateShadeBody": {
+      "type": "object",
+      "properties": {
+        "shadeName": {
+          "type": "string",
+          "description": "Updated display name (max 300 chars)."
+        },
+        "shadeShortName": {
+          "type": "string",
+          "description": "Updated short name (max 60 chars)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateShadeRequest updates a Shade. The code is immutable — it is the key\nthe Oracle sync upserts on. Setting is_active=false is also the manual\ndeactivate path (equivalent to DeactivateShade)."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateShadeRequest": {
+      "type": "object",
+      "properties": {
+        "shadeCode": {
+          "type": "string",
+          "description": "Unique code (max 60 chars). Normalized to upper case server-side."
+        },
+        "shadeName": {
+          "type": "string",
+          "description": "Display name (max 300 chars)."
+        },
+        "shadeShortName": {
+          "type": "string",
+          "description": "Optional short name (max 60 chars)."
+        }
+      },
+      "description": "CreateShadeRequest creates a hand-authored (MANUAL) shade."
+    },
+    "v1CreateShadeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Shade"
+        }
+      },
+      "description": "CreateShadeResponse is the response for creating a Shade."
+    },
+    "v1DeactivateShadeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Shade"
+        }
+      },
+      "description": "DeactivateShadeResponse is the response for deactivating a Shade."
+    },
+    "v1GetShadeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Shade"
+        }
+      },
+      "description": "GetShadeResponse is the response for retrieving a Shade."
+    },
+    "v1ListShadesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Shade"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      },
+      "description": "ListShadesResponse is the response for listing Shades."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1Shade": {
+      "type": "object",
+      "properties": {
+        "shadeId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Numeric primary key (ces_shade_id)."
+        },
+        "shadeCode": {
+          "type": "string",
+          "description": "Natural key, normalized upper-case (ces_shade_code). Immutable after creation."
+        },
+        "shadeName": {
+          "type": "string",
+          "description": "Display name (ces_shade_name)."
+        },
+        "shadeShortName": {
+          "type": "string",
+          "description": "Optional short name (ces_shade_short_name)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the shade is active (not frozen in Orion)."
+        },
+        "shadeSource": {
+          "type": "string",
+          "description": "Provenance: \"ORACLE\" (synced) or \"MANUAL\" (hand-authored)."
+        },
+        "sourceCreatedAt": {
+          "type": "string",
+          "description": "Oracle-side creation timestamp (ISO 8601), empty if unknown or MANUAL."
+        },
+        "sourceUpdatedAt": {
+          "type": "string",
+          "description": "Oracle-side update timestamp (ISO 8601), empty if unknown or MANUAL."
+        },
+        "sourceCreatedBy": {
+          "type": "string",
+          "description": "Oracle-side creator user id, empty if unknown or MANUAL."
+        },
+        "sourceUpdatedBy": {
+          "type": "string",
+          "description": "Oracle-side updater user id, empty if unknown or MANUAL."
+        },
+        "syncedAt": {
+          "type": "string",
+          "description": "Timestamp of the last successful Oracle sync (ISO 8601), empty if never synced."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "Shade represents one row of the shade master (cost_erp_shade)."
+    },
+    "v1SyncShadesRequest": {
+      "type": "object",
+      "description": "SyncShadesRequest triggers an Oracle-to-Postgres shade master sync. It\nfetches the full shade master from MGTDAT.OM_GRADE_CODE_2 and upserts into\ncost_erp_shade, keyed on shade_code. Rows a finance user created or edited\nby hand (source MANUAL) are never overwritten — see decideUpsertAction in\nthe Postgres repository. Runs synchronously; there is no background job or\npolling — the RPC returns once the sync completes."
+    },
+    "v1SyncShadesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "totalRows": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total rows read from Oracle."
+        },
+        "inserted": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows newly inserted."
+        },
+        "updated": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows refreshed from Oracle."
+        },
+        "skipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows left untouched (MANUAL-owned, or an empty code)."
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64",
+          "description": "Wall-clock duration of the sync, in milliseconds."
+        }
+      },
+      "description": "SyncShadesResponse reports the outcome of one sync run."
+    },
+    "v1UpdateShadeResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1Shade"
+        }
+      },
+      "description": "UpdateShadeResponse is the response for updating a Shade."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

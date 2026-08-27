@@ -325,7 +325,7 @@ func (s *CostCalcReposSuite) TestAuditHistory_Write() {
 		NewCostID:    0,
 		OldTotal:     0,
 		NewTotal:     100.0,
-		VariancePct:  0,
+		VariancePct:  nil, // prev total is 0, so the variance is not computable -> NULL
 		OldJobID:     0,
 		NewJobID:     job.ID(),
 		ChangeReason: "INITIAL_CALC",

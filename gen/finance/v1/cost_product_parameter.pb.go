@@ -238,6 +238,22 @@ type RequiredParamEntry struct {
 	DisplayGroup         string                 `protobuf:"bytes,12,opt,name=display_group,json=displayGroup,proto3" json:"display_group,omitempty"`
 	// param_code of the MASTER_LOOKUP trigger param this child belongs to (empty = not a child param).
 	LookupFillGroupCode string `protobuf:"bytes,13,opt,name=lookup_fill_group_code,json=lookupFillGroupCode,proto3" json:"lookup_fill_group_code,omitempty"`
+	// Resolved mst_mb_spin.mbs_id for MB_SPIN lookup params, when the current
+	// value_text was resolved to EXACTLY one active-or-not spin at save time.
+	// Empty = not yet resolved (either not an MB_SPIN param, no value, or the
+	// resolution was ambiguous/orphaned — see mb_spin_candidate_count).
+	ValueMbSpinId string `protobuf:"bytes,14,opt,name=value_mb_spin_id,json=valueMbSpinId,proto3" json:"value_mb_spin_id,omitempty"`
+	// Number of mst_mb_spin rows whose mbs_orion_item_code currently matches
+	// value_text, computed at read time (not stored) using the identical
+	// matching rule as the save-time resolver. Only meaningful for MB_SPIN
+	// lookup params with a non-empty value_text — see
+	// has_mb_spin_candidate_count. When value_mb_spin_id is already set this
+	// field is not needed to determine state, but is still populated.
+	MbSpinCandidateCount int32 `protobuf:"varint,15,opt,name=mb_spin_candidate_count,json=mbSpinCandidateCount,proto3" json:"mb_spin_candidate_count,omitempty"`
+	// True when mb_spin_candidate_count was actually computed for this row
+	// (an MB_SPIN lookup param with a non-empty value_text). False means the
+	// count is not applicable — do not interpret 0 as "not applicable".
+	HasMbSpinCandidateCount bool `protobuf:"varint,16,opt,name=has_mb_spin_candidate_count,json=hasMbSpinCandidateCount,proto3" json:"has_mb_spin_candidate_count,omitempty"`
 	// Existing value (zero/empty when not yet bound).
 	HasValue      bool   `protobuf:"varint,20,opt,name=has_value,json=hasValue,proto3" json:"has_value,omitempty"`
 	ValueNumeric  string `protobuf:"bytes,21,opt,name=value_numeric,json=valueNumeric,proto3" json:"value_numeric,omitempty"`
@@ -368,6 +384,27 @@ func (x *RequiredParamEntry) GetLookupFillGroupCode() string {
 		return x.LookupFillGroupCode
 	}
 	return ""
+}
+
+func (x *RequiredParamEntry) GetValueMbSpinId() string {
+	if x != nil {
+		return x.ValueMbSpinId
+	}
+	return ""
+}
+
+func (x *RequiredParamEntry) GetMbSpinCandidateCount() int32 {
+	if x != nil {
+		return x.MbSpinCandidateCount
+	}
+	return 0
+}
+
+func (x *RequiredParamEntry) GetHasMbSpinCandidateCount() bool {
+	if x != nil {
+		return x.HasMbSpinCandidateCount
+	}
+	return false
 }
 
 func (x *RequiredParamEntry) GetHasValue() bool {
@@ -2407,7 +2444,7 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\n" +
 	"value_flag\x18\x16 \x01(\bR\tvalueFlag\x12\x1b\n" +
 	"\tfilled_at\x18\x1e \x01(\tR\bfilledAt\x12\x1b\n" +
-	"\tfilled_by\x18\x1f \x01(\tR\bfilledBy\"\xbf\x05\n" +
+	"\tfilled_by\x18\x1f \x01(\tR\bfilledBy\"\xdd\x06\n" +
 	"\x12RequiredParamEntry\x12\x19\n" +
 	"\bparam_id\x18\x01 \x01(\tR\aparamId\x12\x1d\n" +
 	"\n" +
@@ -2424,7 +2461,10 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	" \x01(\tR\x10lookupMasterCode\x12#\n" +
 	"\rdisplay_order\x18\v \x01(\x05R\fdisplayOrder\x12#\n" +
 	"\rdisplay_group\x18\f \x01(\tR\fdisplayGroup\x123\n" +
-	"\x16lookup_fill_group_code\x18\r \x01(\tR\x13lookupFillGroupCode\x12\x1b\n" +
+	"\x16lookup_fill_group_code\x18\r \x01(\tR\x13lookupFillGroupCode\x12'\n" +
+	"\x10value_mb_spin_id\x18\x0e \x01(\tR\rvalueMbSpinId\x125\n" +
+	"\x17mb_spin_candidate_count\x18\x0f \x01(\x05R\x14mbSpinCandidateCount\x12<\n" +
+	"\x1bhas_mb_spin_candidate_count\x18\x10 \x01(\bR\x17hasMbSpinCandidateCount\x12\x1b\n" +
 	"\thas_value\x18\x14 \x01(\bR\bhasValue\x12#\n" +
 	"\rvalue_numeric\x18\x15 \x01(\tR\fvalueNumeric\x12\x1d\n" +
 	"\n" +

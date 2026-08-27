@@ -426,14 +426,12 @@ func (s *Service) persistResult(ctx context.Context, in ProcessChunkInput, pid i
 }
 
 // writeRecomputeAudit emits the aud_cost_history row for a recompute. Errors
-// are swallowed: the cost row already supersedes the previous successfully and
-// blocking on audit failure would be worse than losing a history row.
+// are swallowed (not returned/failed): the cost row already supersedes the
+// previous successfully and blocking on audit failure would be worse than
+// losing a history row. They are still logged so a failing audit sink is
+// observable instead of silently dropped.
 func (s *Service) writeRecomputeAudit(ctx context.Context, in ProcessChunkInput, pid, newID int64, prevVer int, prevTotal float64, prevID int64, newTotal float64) {
 	_ = prevVer
-	variance := 0.0
-	if prevTotal != 0 {
-		variance = ((newTotal - prevTotal) / prevTotal) * 100.0
-	}
 	if e := s.auditRepo.Write(ctx, &costcalcdom.AuditHistoryEntry{
 		ProductSysID: pid,
 		Period:       in.Period,
@@ -442,12 +440,13 @@ func (s *Service) writeRecomputeAudit(ctx context.Context, in ProcessChunkInput,
 		NewCostID:    newID,
 		OldTotal:     prevTotal,
 		NewTotal:     newTotal,
-		VariancePct:  variance,
+		VariancePct:  costcalcdom.VariancePctOrNil(prevTotal, newTotal),
 		NewJobID:     in.JobID,
 		ChangeReason: "CALC_RECALC",
 		ChangedBy:    in.Actor,
 	}); e != nil {
-		_ = e
+		log.Warn().Err(e).Int64("job_id", in.JobID).Int64("product_sys_id", pid).Int64("new_cost_id", newID).
+			Msg("write recompute audit failed (non-fatal; cost row already superseded)")
 	}
 }
 

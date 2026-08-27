@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -57,6 +58,10 @@ func (h *ImportHandler) Handle(ctx context.Context, cmd ImportCommand) (result *
 	rows, err := h.parseExcelFile(cmd.FileContent, cmd.FileName)
 	if err != nil {
 		return nil, err
+	}
+
+	if headerErr := validateMBHeadImportHeader(rows); headerErr != nil {
+		return nil, headerErr
 	}
 
 	if len(rows) <= 1 {
@@ -298,13 +303,23 @@ func (h *ImportHandler) createMBHead(
 	ctx context.Context, data mbHeadRowData, denier *float64, filament *int, dozing *float64,
 	isBoughtout bool, rowNum int32, createdBy string, result *ImportResult,
 ) {
-	entity, err := mbhead.New(
-		data.mbCosting, nil, strPtrOrNil(data.mgtName),
-		denier, filament, dozing,
-		nil, nil, nil, nil, nil,
-		createdBy, isBoughtout, data.devCode, data.shadeCode, data.shadeName,
-		data.crossSection, data.lustureCode, nil,
-	)
+	// ⚠ Minimal mechanical port to NewParams (K-5). No new Excel columns are wired
+	// here on purpose: the MB Head template gains VS Number / No of Process / Shade
+	// 2-3 only in P4 (plan §407), so the template is not rewritten twice.
+	entity, err := mbhead.New(mbhead.NewParams{
+		MBCosting:    data.mbCosting,
+		MgtName:      strPtrOrNil(data.mgtName),
+		Denier:       denier,
+		Filament:     filament,
+		Dozing:       dozing,
+		CreatedBy:    createdBy,
+		IsBoughtout:  isBoughtout,
+		DevCode:      data.devCode,
+		ShadeCode:    data.shadeCode,
+		ShadeName:    data.shadeName,
+		CrossSection: data.crossSection,
+		LustureCode:  data.lustureCode,
+	})
 	if err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{
@@ -334,4 +349,124 @@ func strPtrOrNil(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Import header validation — plan §11 item 108, OPTION 1 (user decision).
+//
+// parseMBHeadRow reads FIXED indices 0..10 and never consults any header list.
+// Before this guard the importer skipped rows[0] blindly, so ANY file whose
+// first row happened to be a header was accepted and its columns were read
+// positionally — a file with shuffled or foreign columns imported silently
+// wrong values. The most common instance: an EXPORTED MB Head file fed straight
+// back in, whose leading "No" column made mb_costing receive a row counter.
+//
+// ⚠ ACCEPTED CONSEQUENCE (explicit user decision, 2026-08-23): this REJECTS old
+// files that previously "imported successfully". That is the point — those
+// imports were silently wrong. No bypass flag is provided on purpose.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// headerErrPrefix prefixes every header rejection. It contains "invalid" on
+// purpose: domainErrorToBaseResponse maps "invalid" to HTTP 400 rather than 500.
+const headerErrPrefix = "invalid header row: "
+
+// headerWhitespaceRun matches any run of whitespace inside a header cell.
+var headerWhitespaceRun = regexp.MustCompile(`\s+`)
+
+// normalizeHeaderCell makes header comparison tolerant of exactly two
+// differences and no others: surrounding / repeated whitespace, and letter case.
+//
+// WHY THIS EXACT STRICTNESS (decision, 2026-08-23): Excel and human editors
+// insert stray spaces and re-case text constantly, so rejecting "Denier " or
+// "DENIER" would be a false rejection — users would learn to distrust the check
+// and ask for it to be turned off. Everything else stays strict: a renamed,
+// reordered, missing, or extra column is precisely the silent corruption this
+// validation exists to catch, so no fuzzy/partial matching is done.
+func normalizeHeaderCell(s string) string {
+	return strings.ToLower(headerWhitespaceRun.ReplaceAllString(strings.TrimSpace(s), " "))
+}
+
+// trimTrailingEmptyCells drops trailing blank cells from a header row.
+// excelize may return styled-but-empty trailing cells; a blank trailing cell
+// carries no data, so it is not treated as an "extra column". A trailing cell
+// with actual text IS an extra column and is rejected below.
+func trimTrailingEmptyCells(row []string) []string {
+	end := len(row)
+	for end > 0 && strings.TrimSpace(row[end-1]) == "" {
+		end--
+	}
+	return row[:end]
+}
+
+// headersMatch reports whether got equals want after normalization.
+func headersMatch(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range want {
+		if normalizeHeaderCell(got[i]) != normalizeHeaderCell(want[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// looksLikeExportFile reports whether the header row came from the MB Head
+// EXPORT (mbHeadExportHeaders) rather than the import template. Detected
+// specially because it is by far the most common and most confusing rejection:
+// the user just exported and is importing the same file back.
+func looksLikeExportFile(got []string) bool {
+	if headersMatch(got, mbHeadExportHeaders) {
+		return true
+	}
+	// A partially edited export still betrays itself by the leading "No"
+	// counter column, which the import template never has.
+	return len(got) > 0 && normalizeHeaderCell(got[0]) == normalizeHeaderCell(mbHeadExportHeaders[0])
+}
+
+// describeHeaderMismatch reports, per position, what was found vs what was
+// expected. ⚠ A bare "invalid header" is useless to the person hitting this;
+// the point of the message is that they can fix the file without support.
+func describeHeaderMismatch(got, want []string) string {
+	maxLen := max(len(got), len(want))
+	diffs := make([]string, 0, maxLen)
+	for i := range maxLen {
+		switch {
+		case i >= len(got):
+			diffs = append(diffs, fmt.Sprintf("column %d is missing, expected %q", i+1, want[i]))
+		case i >= len(want):
+			diffs = append(diffs, fmt.Sprintf("column %d is an unexpected extra column %q", i+1, got[i]))
+		case normalizeHeaderCell(got[i]) != normalizeHeaderCell(want[i]):
+			diffs = append(diffs, fmt.Sprintf("column %d is %q, expected %q", i+1, got[i], want[i]))
+		}
+	}
+	return fmt.Sprintf("%s. The import template has exactly %d columns, in this order: %s. Download the import template and copy your data into it.",
+		strings.Join(diffs, "; "), len(want), strings.Join(want, ", "))
+}
+
+// validateMBHeadImportHeader rejects the WHOLE file when rows[0] does not match
+// mbHeadTemplateHeaders. No row is processed on failure — a partial import of a
+// misaligned file is worse than no import at all.
+func validateMBHeadImportHeader(rows [][]string) error {
+	if len(rows) == 0 {
+		return fmt.Errorf("%sthe file contains no rows at all. Download the MB Head import template and fill it in", headerErrPrefix)
+	}
+
+	got := trimTrailingEmptyCells(rows[0])
+	if headersMatch(got, mbHeadTemplateHeaders) {
+		return nil
+	}
+
+	if looksLikeExportFile(got) {
+		return fmt.Errorf("%sthis is an EXPORTED MB Head file, not the import template. "+
+			"The export adds a leading %q column and trailing %q / %q / %q columns, so every value would land in the wrong field "+
+			"(%q would receive the row number). Download the import template first and copy your data into it. "+
+			"The template has exactly %d columns, in this order: %s",
+			headerErrPrefix,
+			mbHeadExportHeaders[0], "Active", "Created At", "Created By",
+			mbHeadTemplateHeaders[0],
+			len(mbHeadTemplateHeaders), strings.Join(mbHeadTemplateHeaders, ", "))
+	}
+
+	return fmt.Errorf("%s%s", headerErrPrefix, describeHeaderMismatch(got, mbHeadTemplateHeaders))
 }

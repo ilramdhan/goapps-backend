@@ -100,14 +100,24 @@ func (r *CostImportStagingRepository) resolveLayer(ctx context.Context, jobID in
 // generated). Rows whose product_type_code is unknown are captured into
 // stg_import_error. Mirrors BulkUpsertByLegacyID.
 func (r *CostImportStagingRepository) ResolveLayer1Products(ctx context.Context, jobID int64, actor string) (int, error) {
+	// Two rejection reasons share one pass: an unknown product_type_code, and the MB type.
+	// The MB arm is the set-based twin of CreateHandler.rejectMBType and the Excel importer's
+	// resolveTypeCode guard — this ETL path writes cost_product_master directly in SQL, so a
+	// Go-level check upstream would not cover it. MB products may only be born from the MB
+	// Recipe auto-generation (mb_autogen_repository.go), never from an uploaded workbook.
 	const errSQL = `
 INSERT INTO stg_import_error (job_id, sheet, row_num, key_info, error_message)
 SELECT s.job_id, '` + errSheetProductMaster + `', s.row_num, s.legacy_oracle_sys_id,
-       'product_type_code tidak dikenal: ' || COALESCE(s.product_type_code, '')
+       CASE
+         WHEN pt.cpt_type_code = '` + mbCostProductTypeCode + `'
+           THEN 'produk bertipe ` + mbCostProductTypeCode + ` tidak boleh dibuat lewat import; produk ` + mbCostProductTypeCode + ` hanya dihasilkan otomatis oleh MB Recipe'
+         ELSE 'product_type_code tidak dikenal: ' || COALESCE(s.product_type_code, '')
+       END
 FROM stg_import_product_master s
 LEFT JOIN cost_product_type pt
        ON pt.cpt_type_code = s.product_type_code AND pt.cpt_is_active = TRUE
-WHERE s.job_id = $1 AND pt.cpt_type_id IS NULL`
+WHERE s.job_id = $1
+  AND (pt.cpt_type_id IS NULL OR pt.cpt_type_code = '` + mbCostProductTypeCode + `')`
 
 	const upsertSQL = `
 INSERT INTO cost_product_master (
@@ -146,6 +156,10 @@ FROM stg_import_product_master s
 JOIN cost_product_type pt
      ON pt.cpt_type_code = s.product_type_code AND pt.cpt_is_active = TRUE
 WHERE s.job_id = $1
+  -- MB rows were already turned into stg_import_error rows above; skip them here so the
+  -- upsert can neither insert a new MB product nor flip an existing product's type to MB
+  -- (the ON CONFLICT branch below assigns cpm_product_type_id).
+  AND pt.cpt_type_code <> '` + mbCostProductTypeCode + `'
 ON CONFLICT (cpm_product_code) DO UPDATE SET
     cpm_product_type_id = EXCLUDED.cpm_product_type_id,
     cpm_product_name    = EXCLUDED.cpm_product_name,
@@ -198,10 +212,48 @@ WHERE s.job_id = $1
      OR (NULLIF(btrim(s.value_numeric), '') IS NOT NULL AND btrim(s.value_numeric) !~ '^-?[0-9]+(\.[0-9]+)?$')
       )`
 
+	// mbSpinIDExpr resolves the cpp_value_mb_spin_id companion column
+	// (migration 000494) for MB_SPIN lookup parameters (mst_parameter.lookup_master_code
+	// = 'MB_SPIN', reached via the same p.param_code join already used above —
+	// mst_parameter.id is gen_random_uuid()-generated, never a hardcoded
+	// literal, so the join can only ever go through param_code). It mirrors,
+	// set-based, the exact resolution order used
+	// by the interactive save path (costproductparameter.resolveMBSpinValue /
+	// mbspin.Repository.ResolveUniqueByOrionItemCode):
+	//   1. s.value_text is a UUID that is itself a live mst_mb_spin PK — a
+	//      primary-key equality match can only ever be 0 or 1 rows, so no
+	//      ambiguity guard is needed for this arm.
+	//   2. otherwise, s.value_text matches mst_mb_spin.mbs_orion_item_code —
+	//      guarded by "GROUP BY ... HAVING COUNT(*) = 1" so a code shared by
+	//      zero or by more than one non-deleted spin (177 legacy codes are
+	//      shared by up to 16 rows each in production) resolves to NULL
+	//      instead of guessing. Deliberately NOT LIMIT 1 / ORDER BY ... LIMIT 1
+	//      / DISTINCT ON — any of those would silently pick an arbitrary
+	//      winner among duplicates and lock the product to the wrong MB Spin
+	//      in downstream cost calculations. The outer (array_agg(m2.mbs_id))[1]
+	//      (mbs_id is UUID, which has no MIN/MAX aggregate in Postgres) is
+	//      only there to satisfy Postgres' GROUP BY projection rule; it never
+	//      picks among duplicates because HAVING COUNT(*) = 1 already
+	//      guarantees the group has exactly one row by this point.
+	// Every other lookup master (and every non-lookup TEXT/NUMBER/BOOLEAN
+	// param) leaves this NULL — cpp_value_text keeps carrying the raw import
+	// value completely unchanged regardless of what this resolves to.
+	const mbSpinIDExpr = `
+    CASE WHEN p.lookup_master_code = 'MB_SPIN' THEN
+        COALESCE(
+            (SELECT m.mbs_id FROM mst_mb_spin m
+               WHERE m.mbs_id::text = s.value_text AND m.deleted_at IS NULL),
+            (SELECT (array_agg(m2.mbs_id))[1] FROM mst_mb_spin m2
+               WHERE m2.mbs_orion_item_code = s.value_text AND m2.deleted_at IS NULL
+               GROUP BY m2.mbs_orion_item_code
+               HAVING COUNT(*) = 1)
+        )
+    ELSE NULL END`
+
 	const upsertSQL = `
 INSERT INTO cost_product_parameter (
     cpp_product_sys_id, cpp_param_id,
-    cpp_value_numeric, cpp_value_text, cpp_value_flag,
+    cpp_value_numeric, cpp_value_text, cpp_value_flag, cpp_value_mb_spin_id,
     cpp_filled_at, cpp_filled_by,
     cpp_created_at, cpp_created_by, cpp_updated_at, cpp_updated_by
 )
@@ -211,7 +263,7 @@ SELECT
     NULLIF(s.value_text, ''),
     CASE WHEN NULLIF(btrim(s.value_flag), '') IS NOT NULL
          THEN (lower(btrim(s.value_flag)) IN ('true', '1', 'y', 'yes'))
-         ELSE NULL END,
+         ELSE NULL END,` + mbSpinIDExpr + `,
     now(), $2,
     now(), $2, now(), $2
 FROM stg_import_product_parameter s
@@ -227,13 +279,14 @@ WHERE s.job_id = $1
       ) = 1
   AND (NULLIF(btrim(s.value_numeric), '') IS NULL OR btrim(s.value_numeric) ~ '^-?[0-9]+(\.[0-9]+)?$')
 ON CONFLICT (cpp_product_sys_id, cpp_param_id) DO UPDATE SET
-    cpp_value_numeric = EXCLUDED.cpp_value_numeric,
-    cpp_value_text    = EXCLUDED.cpp_value_text,
-    cpp_value_flag    = EXCLUDED.cpp_value_flag,
-    cpp_filled_at     = EXCLUDED.cpp_filled_at,
-    cpp_filled_by     = EXCLUDED.cpp_filled_by,
-    cpp_updated_at    = EXCLUDED.cpp_updated_at,
-    cpp_updated_by    = EXCLUDED.cpp_updated_by`
+    cpp_value_numeric    = EXCLUDED.cpp_value_numeric,
+    cpp_value_text       = EXCLUDED.cpp_value_text,
+    cpp_value_flag       = EXCLUDED.cpp_value_flag,
+    cpp_value_mb_spin_id = EXCLUDED.cpp_value_mb_spin_id,
+    cpp_filled_at        = EXCLUDED.cpp_filled_at,
+    cpp_filled_by        = EXCLUDED.cpp_filled_by,
+    cpp_updated_at       = EXCLUDED.cpp_updated_at,
+    cpp_updated_by       = EXCLUDED.cpp_updated_by`
 
 	return r.resolveLayer(ctx, jobID, actor, errSheetProductParam, errSQL, upsertSQL)
 }

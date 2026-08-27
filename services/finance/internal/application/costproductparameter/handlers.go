@@ -8,16 +8,27 @@ import (
 	"github.com/google/uuid"
 
 	cpp "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductparameter"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 )
+
+// mbSpinLookupMasterCode is the mst_parameter.lookup_master_code value that
+// marks a parameter as an MB_SPIN lookup, the trigger for resolving
+// cpp_value_mb_spin_id in Upsert.
+const mbSpinLookupMasterCode = "MB_SPIN"
 
 // Handlers is the bundled application layer.
 type Handlers struct {
 	repo cpp.Repository
+	// mbSpinRepo resolves cpp_value_mb_spin_id for MB_SPIN lookup parameters.
+	// Nil-safe: when nil, Upsert skips resolution entirely and behaves exactly
+	// as before this field existed (ValueMBSpinID stays nil, cpp_value_text is
+	// still written as usual).
+	mbSpinRepo mbspin.Repository
 }
 
 // New wires the handlers.
-func New(repo cpp.Repository) *Handlers {
-	return &Handlers{repo: repo}
+func New(repo cpp.Repository, mbSpinRepo mbspin.Repository) *Handlers {
+	return &Handlers{repo: repo, mbSpinRepo: mbSpinRepo}
 }
 
 // ListProductRequiredParams returns the parameter form contents for a product.
@@ -79,10 +90,57 @@ func (h *Handlers) Upsert(ctx context.Context, cmd UpsertCommand) (*cpp.Value, e
 		FilledBy:     cmd.FilledBy,
 		CreatedBy:    cmd.FilledBy,
 	}
+	if meta.LookupMasterCode == mbSpinLookupMasterCode {
+		v.ValueMBSpinID = h.resolveMBSpinID(ctx, cmd.ValueText)
+	}
 	if err := h.repo.Upsert(ctx, v); err != nil {
 		return nil, fmt.Errorf("upsert cpp: %w", err)
 	}
 	return v, nil
+}
+
+// resolveMBSpinID resolves an MB_SPIN lookup parameter's incoming text value to
+// its permanent mst_mb_spin.mbs_id via resolveMBSpinValue, using this
+// Handlers' configured mbSpinRepo.
+func (h *Handlers) resolveMBSpinID(ctx context.Context, valueText *string) *uuid.UUID {
+	return resolveMBSpinValue(ctx, h.mbSpinRepo, valueText)
+}
+
+// resolveMBSpinValue resolves an MB_SPIN lookup parameter's incoming text
+// value to its permanent mst_mb_spin.mbs_id, for the companion
+// cpp_value_mb_spin_id column. cpp_value_text keeps carrying the raw value
+// unchanged regardless of what this returns — this is purely an additive
+// companion resolution.
+//
+// Shared by both write paths that populate cpp_value_mb_spin_id: the
+// interactive Upsert (Handlers.resolveMBSpinID) and the Excel bulk import
+// (AsyncImportHandler.processBatch) — so both apply the identical
+// ambiguity-safe rule.
+//
+// Resolution order: a valid UUID that matches exactly one spin wins outright
+// (PK uniqueness — no ambiguity possible); otherwise an ORION item code that
+// matches EXACTLY ONE spin wins. Any other case (empty value, unresolvable
+// UUID, zero or multiple ORION code matches, or no resolver configured)
+// returns nil rather than guessing — never an error, since the save must
+// proceed via ValueText exactly as it did before this column existed.
+func resolveMBSpinValue(ctx context.Context, repo mbspin.Repository, valueText *string) *uuid.UUID {
+	if repo == nil || valueText == nil || *valueText == "" {
+		return nil
+	}
+	raw := *valueText
+
+	if parsed, parseErr := uuid.Parse(raw); parseErr == nil {
+		if exists, err := repo.ExistsByID(ctx, parsed); err == nil && exists {
+			return &parsed
+		}
+		return nil
+	}
+
+	id, ok, err := repo.ResolveUniqueByOrionItemCode(ctx, raw)
+	if err != nil || !ok {
+		return nil
+	}
+	return &id
 }
 
 // BatchResult summarizes a batch upsert.

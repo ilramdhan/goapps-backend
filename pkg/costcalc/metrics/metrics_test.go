@@ -22,6 +22,7 @@ func TestCollectorsRegistered(t *testing.T) {
 	ProductsTotal.WithLabelValues("SUCCESS", "").Inc()
 	RecomputeTotal.Inc()
 	AuditWritesTotal.Inc()
+	FormulaNonFiniteTotal.WithLabelValues("F1", "nan").Inc()
 
 	ChunkDurationSeconds.WithLabelValues("0").Observe(0.05)
 	ProductComputeSeconds.Observe(0.05)
@@ -53,6 +54,7 @@ func TestCollectorsRegistered(t *testing.T) {
 		"finance_cost_products_total",
 		"finance_cost_recompute_total",
 		"finance_cost_audit_writes_total",
+		"finance_cost_formula_non_finite_total",
 		"finance_cost_chunk_duration_seconds",
 		"finance_cost_product_compute_duration_seconds",
 		"finance_cost_formula_eval_duration_seconds",
@@ -74,7 +76,7 @@ func TestCollectorsRegistered(t *testing.T) {
 	if len(missing) > 0 {
 		t.Fatalf("missing collectors: %s", strings.Join(missing, ", "))
 	}
-	if len(want) < 16 {
-		t.Fatalf("expected at least 16 finance_cost_* series, taxonomy: %d", len(want))
+	if len(want) < 17 {
+		t.Fatalf("expected at least 17 finance_cost_* series, taxonomy: %d", len(want))
 	}
 }
