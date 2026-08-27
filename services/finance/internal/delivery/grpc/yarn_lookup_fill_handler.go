@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
@@ -174,9 +175,13 @@ var mbSpinNumericReaders = map[string]func(*mbspin.Entity) (float64, bool){
 		}
 		return 0, false
 	},
-	// D30: mbs_dozing is the retired, contaminated legacy column. Kept registered on
-	// purpose until L1 repoints lookup_source_column — removing it now would empty out
-	// the fills that are currently live.
+	// D30: mbs_dozing is the retired, contaminated legacy column. The READER is kept
+	// on purpose until L1 repoints lookup_source_column — removing it now would empty
+	// out the fills that are currently live.
+	// G5 (2026-08-22): it is deliberately NOT registered in mst_lookup_master_column
+	// (pulled back out of 000477), so it is not offered in the "Source Column"
+	// dropdown — its units are mixed across heads (oil-rate vs run_ldr scale). It is a
+	// documented t7Exceptions entry in yarn_lookup_fill_column_registry_test.go.
 	"mbs_dozing": func(e *mbspin.Entity) (float64, bool) {
 		if v := e.Dozing(); v != nil {
 			return *v, true
@@ -561,16 +566,11 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 }
 
 func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	// Try ORION item code first (product params use CMBS_ORION_ITEM_CODE as key).
-	spin, err := h.mbSpinRepo.GetByOrionItemCode(ctx, selectedKey)
+	spin, err := h.resolveMBSpinForFill(ctx, selectedKey)
 	if err != nil {
-		// Fallback to mb_costing lookup (legacy / direct entry).
-		spin, err = h.mbSpinRepo.GetByMBCosting(ctx, selectedKey)
-		if err != nil {
-			return &financev1.GetLookupFillValuesResponse{
-				Base: domainErrorToBaseResponse(err),
-			}, nil //nolint:nilerr // BaseResponse pattern
-		}
+		return &financev1.GetLookupFillValuesResponse{
+			Base: domainErrorToBaseResponse(err),
+		}, nil //nolint:nilerr // BaseResponse pattern
 	}
 
 	children, err := h.paramRepo.GetByFillGroup(ctx, sourceParamCode)
@@ -606,6 +606,37 @@ func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey,
 		TextFills:    texts,
 		DisplayLabel: label,
 	}, nil
+}
+
+// resolveMBSpinForFill resolves selectedKey to an MB Spin entity for the read
+// (lookup-fill) path.
+//
+// If selectedKey itself is a valid UUID, it is tried FIRST via GetByID — this is
+// the permanent mst_mb_spin.mbs_id, e.g. the value carried by the new companion
+// column cpp_value_mb_spin_id (migration 000494). A permanent-ID lookup is
+// unambiguous by construction (primary key), so it takes priority over the
+// legacy ORION-item-code / mb_costing chain, which can be ambiguous for the 177
+// ORION codes shared by more than one spin. If selectedKey is not a UUID, or the
+// UUID does not resolve, this falls through UNCHANGED to the original chain —
+// existing legacy-row behavior (selectedKey = ORION code or mb_costing text) is
+// not altered in any way.
+func (h *YarnLookupFillHandler) resolveMBSpinForFill(ctx context.Context, selectedKey string) (*mbspin.Entity, error) {
+	if id, parseErr := uuid.Parse(selectedKey); parseErr == nil {
+		if spin, err := h.mbSpinRepo.GetByID(ctx, id); err == nil && spin != nil {
+			return spin, nil
+		}
+	}
+
+	// Try ORION item code first (product params use CMBS_ORION_ITEM_CODE as key).
+	spin, err := h.mbSpinRepo.GetByOrionItemCode(ctx, selectedKey)
+	if err != nil {
+		// Fallback to mb_costing lookup (legacy / direct entry).
+		spin, err = h.mbSpinRepo.GetByMBCosting(ctx, selectedKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return spin, nil
 }
 
 // compile-time interface check.

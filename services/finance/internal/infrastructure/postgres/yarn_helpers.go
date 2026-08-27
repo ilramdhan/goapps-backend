@@ -25,6 +25,25 @@ func nullableIntPtr(n sql.NullInt64) *int {
 	return &v
 }
 
+// nullableInt64Ptr converts sql.NullInt64 to *int64, preserving the full width
+// (unlike nullableIntPtr, which narrows to int).
+func nullableInt64Ptr(n sql.NullInt64) *int64 {
+	if !n.Valid {
+		return nil
+	}
+	v := n.Int64
+	return &v
+}
+
+// nullableBoolPtr converts sql.NullBool to *bool.
+func nullableBoolPtr(n sql.NullBool) *bool {
+	if !n.Valid {
+		return nil
+	}
+	v := n.Bool
+	return &v
+}
+
 // nullableTimePtr converts sql.NullTime to *time.Time.
 func nullableTimePtr(n sql.NullTime) *time.Time {
 	if !n.Valid {

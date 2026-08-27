@@ -108,12 +108,21 @@ var t6Exceptions = map[masterColumn]string{
 
 // t7Exceptions: a Go reader exists, deliberately not registered by any migration.
 var t7Exceptions = map[masterColumn]string{
-	// The original T7 finding — mbs_denier, mbs_dozing, mbs_mgt_name, mbs_filament,
-	// plus the D30 planned-LDR reader mbs_ldr_prsn — was RESOLVED by migration
-	// 000477, which registers all five in mst_lookup_master_column. Its MB_HEAD
-	// twin mbh_ldr_prsn was RESOLVED the same way by 000478. None of them is an
+	// The original T7 finding — mbs_denier, mbs_mgt_name, mbs_filament, plus the
+	// D30 planned-LDR reader mbs_ldr_prsn — was RESOLVED by migration 000477,
+	// which registers those four in mst_lookup_master_column. Its MB_HEAD twin
+	// mbh_ldr_prsn was RESOLVED the same way by 000478. None of those is an
 	// exception any more and they must not be listed here;
 	// TestLookupColumnExceptionsAreLive fails on a stale entry.
+	//
+	// G5 (2026-08-22): mbs_dozing was pulled back OUT of 000477 and is once again a
+	// live-reader-but-unregistered column, so it is an exception again. Its units are
+	// mixed across the 121 heads (65 oil-rate scale, 21 run_ldr scale) and the
+	// "(legacy)" label did not convey that, so offering it in the "Source Column"
+	// dropdown would mislead. The reader stays (000407 params still point at it and
+	// removing it would empty live fills); only the dropdown offer is withheld,
+	// until a NEW migration re-registers it once the units are reconciled.
+	{"MB_SPIN", "mbs_dozing"}: "G5: reader kept live for 000407-wired params, but deliberately unregistered — mixed units (oil-rate vs run_ldr scale) would mislead in the dropdown; re-register via a new migration once units are reconciled",
 
 	// fillFromBoxBobbinCost still switches on these two, but migration 000412
 	// DELETEd them ("columns never existed") in favour of bobin_cost/box_cost.

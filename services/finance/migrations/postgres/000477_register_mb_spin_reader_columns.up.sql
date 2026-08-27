@@ -1,7 +1,7 @@
--- 000477: Register the five MB_SPIN columns that have a live Go reader but were
+-- 000477: Register the four MB_SPIN columns that have a live Go reader but were
 -- never inserted into mst_lookup_master_column (R30 divergence, direction T7).
 --
--- yarn_lookup_fill_handler.go resolves all five today via mbSpinNumericReaders /
+-- yarn_lookup_fill_handler.go resolves all of them today via mbSpinNumericReaders /
 -- mbSpinTextReaders, and 000407 already wires several of them as
 -- lookup_source_column on real params — so they are actively filling values.
 -- But because no migration ever registered them, they are invisible to the
@@ -13,9 +13,13 @@
 --
 --   mbs_denier    NUMERIC(10,2) (000389) → NUMBER
 --   mbs_filament  INTEGER       (000389) → NUMBER
---   mbs_dozing    NUMERIC(10,4) (000389) → NUMBER
 --   mbs_ldr_prsn  NUMERIC(10,4) (000418) → NUMBER
 --   mbs_mgt_name  VARCHAR(100)  (000389) → TEXT
+--
+-- G5 (2026-08-22): mbs_dozing is deliberately NOT registered here. Its units are
+-- mixed across the 121 heads (65 oil-rate scale, 21 run_ldr scale), so offering it
+-- in the dropdown would be actively misleading. Re-register via a NEW migration
+-- once the units are reconciled. The physical column is untouched.
 --
 -- Sort orders continue from 110, the highest currently used for MB_SPIN
 -- (50/60 from 000404, 70-110 from 000414), so nothing collides or reorders.
@@ -28,7 +32,6 @@ VALUES
   ('MB_SPIN', 'mbs_denier',   'Denier',                'NUMBER', 120),
   ('MB_SPIN', 'mbs_filament', 'Filament',              'NUMBER', 130),
   ('MB_SPIN', 'mbs_ldr_prsn', 'Planned LDR (%)',       'NUMBER', 140),
-  ('MB_SPIN', 'mbs_dozing',   'MB Dozing (%, legacy)', 'NUMBER', 150),
   ('MB_SPIN', 'mbs_mgt_name', 'MB Management Name',    'TEXT',   160)
 ON CONFLICT (lmc_master_code, lmc_column_name) DO NOTHING;
 

@@ -12,11 +12,12 @@ import (
 // newMBHeadWithLDR builds a minimal MB Head carrying both LDR values.
 func newMBHeadWithLDR(t *testing.T, ldrPrsn, runLdrPct *float64) *mbhead.Entity {
 	t.Helper()
-	e, err := mbhead.New(
-		"MB001", nil, nil, nil, nil, nil,
-		nil, nil, ldrPrsn, runLdrPct, nil, nil,
-		"admin", false, "", "", "", "", "", nil,
-	)
+	e, err := mbhead.New(mbhead.NewParams{
+		MBCosting:    "MB001",
+		MBHLdrPrsn:   ldrPrsn,
+		MBHRunLdrPct: runLdrPct,
+		CreatedBy:    "admin",
+	})
 	require.NoError(t, err)
 	return e
 }
