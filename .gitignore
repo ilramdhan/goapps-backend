@@ -102,3 +102,6 @@ htmlcov/
 
 # Gemini brain artifacts (local only)
 .gemini/
+
+# Production data pulled by scripts/local-mirror/sync-from-prod.sh -- never commit
+scripts/local-mirror/dumps/

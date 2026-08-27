@@ -302,14 +302,25 @@ Receives external requests, maps to application commands/queries, returns respon
 | `grpc/server.go` | gRPC server setup (keepalive, 10MB max message size) |
 | `grpc/*_handler.go` | Maps proto requests to application commands, domain entities to proto responses |
 | `grpc/interceptors.go` | Interceptor chain setup |
-| `grpc/error_response.go` | `StructuredErrorInterceptor` -- catches all errors, wraps in BaseResponse |
+| `grpc/error_response.go` | ~~`StructuredErrorInterceptor` -- catches all errors, wraps in BaseResponse~~ |
 | `grpc/auth_interceptor.go` | JWT validation, extracts user context (IAM) |
 | `grpc/permission_interceptor.go` | RBAC permission checking per RPC (IAM) |
 | `grpc/rate_limiter.go` | Token bucket rate limiting |
 | `grpc/metrics.go` | Prometheus metrics interceptor |
 | `httpdelivery/gateway.go` | gRPC-Gateway REST proxy + CORS + Swagger UI |
 
+⭐ **DIPERBARUI 2026-08-27** — "catches all errors" pada baris `grpc/error_response.go` di atas **tidak akurat**. Dibuktikan ulang dengan membaca `services/finance/internal/delivery/grpc/error_response.go:23-27`:
+```go
+resp, err := handler(ctx, req)
+if err == nil {
+    return resp, nil
+}
+```
+`StructuredErrorInterceptor` hanya bereaksi ketika `handler(ctx, req)` mengembalikan `err != nil` sebagai **error gRPC sungguhan**. Banyak RPC (mis. `services/finance/internal/delivery/grpc/mb_head_unlock_handlers.go:75-103`, lihat pola `return &financev1.RequestUnlockMBHeadResponse{Base: ...}, nil`) selalu mengembalikan `nil` untuk `err` dan melipat kondisi error ke dalam field `Base` di response body — sehingga interceptor ini **tidak pernah tereksekusi** untuk jalur tersebut, dan apa pun yang ditaruh di `Base.Message` (termasuk pesan mentah) diteruskan apa adanya ke klien tanpa sanitasi. Lihat juga catatan pada §6 di bawah untuk detail dan gerbang keputusan terkait.
+
 **Interceptor chain order**: StructuredError -> RequestID -> Timeout(30s) -> Logging -> RateLimit -> Auth(JWT) -> Permission(RBAC) -> Metrics -> Handler
+
+⭐ **DIPERBARUI 2026-08-27** — Urutan chain di atas tetap akurat sebagai fakta struktural (StructuredError memang interceptor pertama), namun jangan disalahartikan sebagai jaminan bahwa "posisi pertama" = "selalu menyanitasi". Interceptor ini hanya efektif untuk RPC yang benar-benar mengembalikan `error` gRPC ke pemanggilnya; RPC dengan pola `return resp, nil` (error dilipat ke `Base`) melewati seluruh chain sanitasi tanpa tersentuh, sekalipun StructuredError berada paling depan. Lihat §6 untuk detail.
 
 ---
 
@@ -328,13 +339,21 @@ Receives external requests, maps to application commands/queries, returns respon
    if pgErr.Code == "23505" { return uom.ErrAlreadyExists }
    ```
 
-3. **Delivery**: `StructuredErrorInterceptor` catches all errors, maps domain errors to gRPC codes, wraps in `BaseResponse`
+3. **Delivery**: ~~`StructuredErrorInterceptor` catches all errors, maps domain errors to gRPC codes, wraps in `BaseResponse`~~
+
+   ⭐ **DIPERBARUI 2026-08-27** — Ini hanya benar untuk RPC yang mengembalikan error gRPC sungguhan (`return nil, err` / `status.Error(...)`). Verifikasi ulang: banyak handler delivery (contoh terkonfirmasi: `services/finance/internal/delivery/grpc/mb_head_unlock_handlers.go:94-97`, `:126-129`, dst.) menangani error domain secara manual lewat helper seperti `mbHeadLockErrToBase(err)` lalu **selalu** `return resp, nil` — pola `//nolint:nilerr // BaseResponse pattern: error returned in response body` di baris 81 & 120 berkas yang sama mengonfirmasi ini disengaja. Untuk RPC berpola ini, `StructuredErrorInterceptor` tidak pernah menerima `err != nil` (lihat `error_response.go:24-27`, `if err == nil { return resp, nil }`), sehingga ia tidak pernah memetakan atau menyanitasi apa pun — pemetaan kode/sanitasi sepenuhnya bergantung pada helper manual di masing-masing handler, bukan pada interceptor.
 
 ### Rules
 
 - Always use `errors.Is()` / `errors.As()` -- **never** type assertions for error checking
 - Always wrap errors with context: `fmt.Errorf("failed to create UOM: %w", err)`
-- Never expose internal errors to clients (interceptor sanitizes to "internal server error")
+- ~~Never expose internal errors to clients (interceptor sanitizes to "internal server error")~~
+
+  ⭐ **DIPERBARUI 2026-08-27** — Klaim ini TIDAK BENAR sebagai jaminan umum. Terverifikasi ulang di putaran 81 dan dikonfirmasi ulang di sini dengan membaca kode langsung (bukan mengarang):
+  - `services/finance/internal/delivery/grpc/error_response.go:23-27` — `StructuredErrorInterceptor` hanya menyanitasi ketika `handler(ctx, req)` mengembalikan `err != nil` sebagai error gRPC. Bila `err == nil`, interceptor langsung `return resp, nil` tanpa menyentuh apa pun di dalam `resp`.
+  - `services/finance/internal/delivery/grpc/mb_head_unlock_handlers.go:72-131` (`RequestUnlockMBHead`, `GrantUnlockMBHead`, dan pola serupa) — error domain/validasi selalu dilipat ke field `Base` lalu `return resp, nil` yang dikembalikan, bukan `return nil, err`. Baris 81 & 120 bahkan memuat komentar eksplisit `//nolint:nilerr // BaseResponse pattern: error returned in response body`, menandakan pola ini disengaja di seluruh basis kode, bukan bug lokal satu file.
+  - Akibatnya: untuk RPC berpola "fold-error-into-Base" ini, `StructuredErrorInterceptor` **tidak pernah tercapai/tereksekusi** untuk kondisi error tersebut, sehingga pesan error apa pun yang ditaruh ke `Base.Message` oleh handler (termasuk pesan mentah/internal bila handler tidak berhati-hati) diteruskan ke klien **tanpa** lapisan sanitasi interceptor.
+  - **Gerbang keputusan terbuka (belum diputuskan, jangan dianggap final)**: `U-sanitasi-err-lintas-service` — apakah pola fold-into-`Base` ini SEHARUSNYA disanitasi juga (mis. lewat helper sanitasi eksplisit di setiap handler, atau perubahan arsitektur error handling lintas service), dan bagaimana caranya, masih menunggu keputusan user. Dokumen ini TIDAK merekomendasikan solusi apa pun untuk gerbang tersebut.
 - Every error must be handled -- never `result, _ := someFunc()`
 
 ---
