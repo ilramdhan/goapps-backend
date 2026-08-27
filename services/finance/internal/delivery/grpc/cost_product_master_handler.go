@@ -14,6 +14,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costauditlog"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costimportjob"
 	domain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
+	cptdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproducttype"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/storage"
 )
@@ -37,14 +38,15 @@ type CostProductMasterHandler struct {
 	auditRepo         costauditlog.Repository // optional; nil means no audit
 }
 
-// NewCostProductMasterHandler constructs the handler.
-func NewCostProductMasterHandler(repo domain.Repository) (*CostProductMasterHandler, error) {
+// NewCostProductMasterHandler constructs the handler. typeRepo is used by the create path
+// to reject MB-typed products (guard E2).
+func NewCostProductMasterHandler(repo domain.Repository, typeRepo cptdomain.Repository) (*CostProductMasterHandler, error) {
 	v, err := NewValidationHelper()
 	if err != nil {
 		return nil, err
 	}
 	return &CostProductMasterHandler{
-		createHandler:     app.NewCreateHandler(repo),
+		createHandler:     app.NewCreateHandler(repo, typeRepo),
 		getHandler:        app.NewGetHandler(repo),
 		updateHandler:     app.NewUpdateHandler(repo),
 		linkErpHandler:    app.NewLinkErpHandler(repo),
@@ -377,6 +379,13 @@ func productMasterErrToBase(err error) *commonv1.BaseResponse {
 	case errors.Is(err, domain.ErrInvalidProductName),
 		errors.Is(err, domain.ErrInvalidGradeCode),
 		errors.Is(err, domain.ErrInactive):
+		return ErrorResponse("400", err.Error())
+	// ErrMBProductNotManuallyCreatable → 400: the caller asked for a product type that is
+	// not addressable through this API at all. Without this arm it fell through to
+	// InternalErrorResponse, which told the client nothing actionable. Mirrors the
+	// mbHeadLockErrToBase pattern (mb_head_unlock_handlers.go:33) — an explicit arm per
+	// sentinel, unknown errors still deferring to the generic mapper.
+	case errors.Is(err, domain.ErrMBProductNotManuallyCreatable):
 		return ErrorResponse("400", err.Error())
 	default:
 		return InternalErrorResponse(err.Error())

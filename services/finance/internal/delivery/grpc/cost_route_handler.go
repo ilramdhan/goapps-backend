@@ -10,6 +10,7 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	app "github.com/mutugading/goapps-backend/services/finance/internal/application/costroute"
+	cpmDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
 	cprDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
 	costroute "github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 )
@@ -406,6 +407,10 @@ func routeErrToBase(err error) *commonv1.BaseResponse {
 		return ErrorResponse("400", "invalid status transition")
 	case errors.Is(err, costroute.ErrParamIncomplete):
 		return ErrorResponse("422", err.Error())
+	// DuplicateRoute refuses to clone an MB-typed product master (see duplicateProductTx).
+	// Mapped explicitly so the client sees the reason instead of a generic 500.
+	case errors.Is(err, cpmDomain.ErrMBProductNotManuallyCreatable):
+		return ErrorResponse("400", err.Error())
 	case errors.Is(err, costroute.ErrLevelOneMismatch),
 		errors.Is(err, costroute.ErrLevelOneMissing),
 		errors.Is(err, costroute.ErrUpstreamMissing),

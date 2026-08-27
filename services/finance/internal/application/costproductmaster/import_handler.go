@@ -239,9 +239,22 @@ func (h *AsyncImportHandler) processBatch(
 }
 
 // resolveTypeCode looks up the product type code, using typeCache to avoid redundant DB calls.
+//
+// The bulk importer is a manual, user-triggered mass side door into cost_product_master, so
+// it enforces the same MB rule as CreateHandler.rejectMBType: a row asking for the MB type is
+// refused here, before the aggregate is built, and surfaces as a row-level import error
+// (field product_type_code) rather than failing the whole job. MB products exist only as the
+// auto-generated output of the MB Recipe workflow (mb_autogen_repository.go), which writes
+// through its own transaction and never through this handler.
+//
+// The comparison is on the code the spreadsheet supplied, so no extra query is needed — and it
+// fires even when the cache already holds the id.
 func (h *AsyncImportHandler) resolveTypeCode(ctx context.Context, typeCode string, cache map[string]int32) (int32, error) {
 	if typeCode == "" {
 		return 0, fmt.Errorf("product_type_code cannot be empty")
+	}
+	if strings.EqualFold(strings.TrimSpace(typeCode), mbTypeCode) {
+		return 0, domain.ErrMBProductNotManuallyCreatable
 	}
 	if id, ok := cache[typeCode]; ok {
 		return id, nil
@@ -249,6 +262,11 @@ func (h *AsyncImportHandler) resolveTypeCode(ctx context.Context, typeCode strin
 	pt, err := h.typeRepo.GetByCode(ctx, typeCode)
 	if err != nil {
 		return 0, fmt.Errorf("product type '%s' not found", typeCode)
+	}
+	// Second belt: the spreadsheet string may not be the canonical code (alias/whitespace
+	// the repo tolerates), so re-check what actually resolved before caching it.
+	if pt.TypeCode() == mbTypeCode {
+		return 0, domain.ErrMBProductNotManuallyCreatable
 	}
 	cache[typeCode] = pt.TypeID()
 	return pt.TypeID(), nil

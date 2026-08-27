@@ -18,6 +18,11 @@ var (
 	ErrInvalidGradeCode = errors.New("invalid grade_code (must be 1..20 chars)")
 	// ErrInactive is returned when attempting to modify a deactivated product.
 	ErrInactive = errors.New("product master is inactive")
+	// ErrMBProductNotManuallyCreatable is returned when a product of type MB is created through
+	// the product-master API. MB products are born only from the MB Recipe workflow
+	// (cpm_source = 'MB_RECIPE', auto-generated at Validate time); a manually created one would
+	// have no recipe behind it and would silently break MB costing.
+	ErrMBProductNotManuallyCreatable = errors.New("invalid product type: MB products are created by the MB Recipe workflow, not manually")
 )
 
 // CostProductMaster is the product identity aggregate.
