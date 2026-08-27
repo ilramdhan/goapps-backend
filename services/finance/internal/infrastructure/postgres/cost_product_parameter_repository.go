@@ -41,6 +41,33 @@ SELECT
     COALESCE(p.display_group, '') AS display_group,
     COALESCE(p.lookup_fill_group_code, '') AS lookup_fill_group_code,
     c.cpp_value_id, c.cpp_value_numeric::text, c.cpp_value_text, c.cpp_value_flag,
+    -- ⚠ DEPLOY-ORDER WARNING: cpp_value_mb_spin_id (migration 000494) is not
+    -- yet applied in production as of 2026-08-27. Selecting it unconditionally
+    -- means this read query fails with Postgres 42703 ("column does not
+    -- exist") if this binary ships before that migration runs there. This is
+    -- an accepted, already-documented risk, not an oversight — see
+    -- docs/superpowers/urutan-deploy-kolom-belum-ada-di-produksi.md.
+    c.cpp_value_mb_spin_id,
+    -- mb_spin_candidate_count mirrors mb_spin_repository.go's
+    -- ResolveUniqueByOrionItemCode matching rule EXACTLY (mbs_orion_item_code
+    -- = <raw cpp_value_text>, deleted_at IS NULL only — deliberately no
+    -- mbs_is_active filter, no TRIM/UPPER; see the D20/M2a comments in that
+    -- file). Counting with a different rule than the save-time resolver would
+    -- show an "ambiguous" count that doesn't match what Upsert would actually
+    -- resolve to on save, which is worse than showing no indicator at all.
+    -- Scoped to MB_SPIN lookup params only (via the CASE) so non-MB_SPIN rows
+    -- never pay for the correlated subquery.
+    CASE
+        WHEN p.lookup_master_code = 'MB_SPIN'
+             AND c.cpp_value_text IS NOT NULL
+             AND c.cpp_value_text <> ''
+        THEN (
+            SELECT COUNT(*) FROM mst_mb_spin s
+            WHERE s.mbs_orion_item_code = c.cpp_value_text
+              AND s.deleted_at IS NULL
+        )
+        ELSE NULL
+    END AS mb_spin_candidate_count,
     c.cpp_filled_at, c.cpp_filled_by,
     c.cpp_created_at, c.cpp_created_by, c.cpp_updated_at, c.cpp_updated_by
 FROM cost_product_applicable_param a
@@ -90,17 +117,19 @@ func (r *CostProductParameterRepository) ListForProduct(ctx context.Context, pro
 
 func scanRequiredEntry(rows *sql.Rows, productSysID int64) (cpp.RequiredEntry, error) {
 	var (
-		meta         cpp.ParamMeta
-		valueID      sql.NullInt64
-		valueNumeric sql.NullString
-		valueText    sql.NullString
-		valueFlag    sql.NullBool
-		filledAt     sql.NullTime
-		filledBy     sql.NullString
-		createdAt    sql.NullTime
-		createdBy    sql.NullString
-		updatedAt    sql.NullTime
-		updatedBy    sql.NullString
+		meta                 cpp.ParamMeta
+		valueID              sql.NullInt64
+		valueNumeric         sql.NullString
+		valueText            sql.NullString
+		valueFlag            sql.NullBool
+		valueMBSpinID        uuid.NullUUID
+		mbSpinCandidateCount sql.NullInt32
+		filledAt             sql.NullTime
+		filledBy             sql.NullString
+		createdAt            sql.NullTime
+		createdBy            sql.NullString
+		updatedAt            sql.NullTime
+		updatedBy            sql.NullString
 	)
 	if err := rows.Scan(
 		&meta.ParamID, &meta.ParamCode, &meta.ParamName, &meta.ParamShortName,
@@ -110,6 +139,7 @@ func scanRequiredEntry(rows *sql.Rows, productSysID int64) (cpp.RequiredEntry, e
 		&meta.LookupMasterCode, &meta.DisplayOrder, &meta.DisplayGroup,
 		&meta.LookupFillGroupCode,
 		&valueID, &valueNumeric, &valueText, &valueFlag,
+		&valueMBSpinID, &mbSpinCandidateCount,
 		&filledAt, &filledBy,
 		&createdAt, &createdBy, &updatedAt, &updatedBy,
 	); err != nil {
@@ -139,6 +169,11 @@ func scanRequiredEntry(rows *sql.Rows, productSysID int64) (cpp.RequiredEntry, e
 	if valueFlag.Valid {
 		b := valueFlag.Bool
 		v.ValueFlag = &b
+	}
+	v.ValueMBSpinID = nullUUIDPtr(valueMBSpinID)
+	if mbSpinCandidateCount.Valid {
+		n := mbSpinCandidateCount.Int32
+		v.MBSpinCandidateCount = &n
 	}
 	if filledAt.Valid {
 		v.FilledAt = filledAt.Time
@@ -235,18 +270,19 @@ WHERE capp_product_sys_id = $1 AND capp_param_id = $2
 	const q = `
 INSERT INTO cost_product_parameter (
     cpp_product_sys_id, cpp_param_id,
-    cpp_value_numeric, cpp_value_text, cpp_value_flag,
+    cpp_value_numeric, cpp_value_text, cpp_value_flag, cpp_value_mb_spin_id,
     cpp_filled_at, cpp_filled_by,
     cpp_created_at, cpp_created_by
-) VALUES ($1, $2, $3::numeric, $4, $5, $6, $7, $6, $7)
+) VALUES ($1, $2, $3::numeric, $4, $5, $6, $7, $8, $7, $8)
 ON CONFLICT (cpp_product_sys_id, cpp_param_id) DO UPDATE SET
-    cpp_value_numeric = EXCLUDED.cpp_value_numeric,
-    cpp_value_text    = EXCLUDED.cpp_value_text,
-    cpp_value_flag    = EXCLUDED.cpp_value_flag,
-    cpp_filled_at     = EXCLUDED.cpp_filled_at,
-    cpp_filled_by     = EXCLUDED.cpp_filled_by,
-    cpp_updated_at    = EXCLUDED.cpp_filled_at,
-    cpp_updated_by    = EXCLUDED.cpp_filled_by
+    cpp_value_numeric    = EXCLUDED.cpp_value_numeric,
+    cpp_value_text       = EXCLUDED.cpp_value_text,
+    cpp_value_flag       = EXCLUDED.cpp_value_flag,
+    cpp_value_mb_spin_id = EXCLUDED.cpp_value_mb_spin_id,
+    cpp_filled_at        = EXCLUDED.cpp_filled_at,
+    cpp_filled_by        = EXCLUDED.cpp_filled_by,
+    cpp_updated_at       = EXCLUDED.cpp_filled_at,
+    cpp_updated_by       = EXCLUDED.cpp_filled_by
 RETURNING cpp_value_id
 `
 	now := time.Now()
@@ -259,6 +295,7 @@ RETURNING cpp_value_id
 		stringPtrOrNil(v.ValueNumeric),
 		stringPtrOrNil(v.ValueText),
 		boolPtrOrNil(v.ValueFlag),
+		nullUUID(v.ValueMBSpinID),
 		v.FilledAt,
 		v.FilledBy,
 	).Scan(&v.ValueID)
