@@ -5829,6 +5829,145 @@ func (x *DownloadProductGradeTemplateResponse) GetFileName() string {
 	return ""
 }
 
+// MBHeadShade is one additional shade of an MB recipe (max 2 per recipe).
+// Mirrors mst_mb_head_shade (migration 000483): mbhs_shade_code is NOT NULL,
+// mbhs_shade_name is nullable, and mbhs_seq_no is constrained to (1, 2).
+type MBHeadShade struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// UUID primary key (mbhs_id).
+	MbhsId string `protobuf:"bytes,1,opt,name=mbhs_id,json=mbhsId,proto3" json:"mbhs_id,omitempty"`
+	// Sequence number of the additional shade. 1 or 2.
+	MbhsSeqNo int32 `protobuf:"varint,2,opt,name=mbhs_seq_no,json=mbhsSeqNo,proto3" json:"mbhs_seq_no,omitempty"`
+	// Shade code. Always present (NOT NULL in DB).
+	MbhsShadeCode string `protobuf:"bytes,3,opt,name=mbhs_shade_code,json=mbhsShadeCode,proto3" json:"mbhs_shade_code,omitempty"`
+	// Shade name. May be empty — column is nullable in DB.
+	MbhsShadeName string `protobuf:"bytes,4,opt,name=mbhs_shade_name,json=mbhsShadeName,proto3" json:"mbhs_shade_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MBHeadShade) Reset() {
+	*x = MBHeadShade{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MBHeadShade) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MBHeadShade) ProtoMessage() {}
+
+func (x *MBHeadShade) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MBHeadShade.ProtoReflect.Descriptor instead.
+func (*MBHeadShade) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *MBHeadShade) GetMbhsId() string {
+	if x != nil {
+		return x.MbhsId
+	}
+	return ""
+}
+
+func (x *MBHeadShade) GetMbhsSeqNo() int32 {
+	if x != nil {
+		return x.MbhsSeqNo
+	}
+	return 0
+}
+
+func (x *MBHeadShade) GetMbhsShadeCode() string {
+	if x != nil {
+		return x.MbhsShadeCode
+	}
+	return ""
+}
+
+func (x *MBHeadShade) GetMbhsShadeName() string {
+	if x != nil {
+		return x.MbhsShadeName
+	}
+	return ""
+}
+
+// MBHeadShadeInput is an additional-shade row supplied on create/update.
+type MBHeadShadeInput struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Sequence number of the additional shade. 1 or 2 (DB CHECK mbhs_seq_no IN (1, 2)).
+	MbhsSeqNo int32 `protobuf:"varint,1,opt,name=mbhs_seq_no,json=mbhsSeqNo,proto3" json:"mbhs_seq_no,omitempty"`
+	// Shade code (max 20 chars). Required — NOT NULL in DB.
+	MbhsShadeCode string `protobuf:"bytes,2,opt,name=mbhs_shade_code,json=mbhsShadeCode,proto3" json:"mbhs_shade_code,omitempty"`
+	// Shade name (max 100 chars). Optional — nullable in DB.
+	MbhsShadeName *string `protobuf:"bytes,3,opt,name=mbhs_shade_name,json=mbhsShadeName,proto3,oneof" json:"mbhs_shade_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MBHeadShadeInput) Reset() {
+	*x = MBHeadShadeInput{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MBHeadShadeInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MBHeadShadeInput) ProtoMessage() {}
+
+func (x *MBHeadShadeInput) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MBHeadShadeInput.ProtoReflect.Descriptor instead.
+func (*MBHeadShadeInput) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *MBHeadShadeInput) GetMbhsSeqNo() int32 {
+	if x != nil {
+		return x.MbhsSeqNo
+	}
+	return 0
+}
+
+func (x *MBHeadShadeInput) GetMbhsShadeCode() string {
+	if x != nil {
+		return x.MbhsShadeCode
+	}
+	return ""
+}
+
+func (x *MBHeadShadeInput) GetMbhsShadeName() string {
+	if x != nil && x.MbhsShadeName != nil {
+		return *x.MbhsShadeName
+	}
+	return ""
+}
+
 // MBHead represents a Melange Batch head master record (MEL yarn type only).
 type MBHead struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -5860,7 +5999,7 @@ type MBHead struct {
 	MbhFinalProduct *string `protobuf:"bytes,12,opt,name=mbh_final_product,json=mbhFinalProduct,proto3,oneof" json:"mbh_final_product,omitempty"`
 	// Optional Oracle CMBH_CODE — product code.
 	MbhCode *string `protobuf:"bytes,13,opt,name=mbh_code,json=mbhCode,proto3,oneof" json:"mbh_code,omitempty"`
-	// MB Costing Suite workflow state (mbh_entry_status). One of DRAFT/SUBMITTED/APPROVED/VALIDATED/UN_APPROVED/REVOKED.
+	// MB Costing Suite workflow state (mbh_entry_status). One of DRAFT/SUBMITTED/APPROVED/VALIDATED/UN_APPROVED/REVOKED/REJECTED (REJECTED added by user decision K-2).
 	EntryStatus string `protobuf:"bytes,14,opt,name=entry_status,json=entryStatus,proto3" json:"entry_status,omitempty"`
 	// Whether this MB is a bought-out item (no internal spinning cost).
 	IsBoughtout bool `protobuf:"varint,15,opt,name=is_boughtout,json=isBoughtout,proto3" json:"is_boughtout,omitempty"`
@@ -5905,14 +6044,50 @@ type MBHead struct {
 	// Frozen param snapshot at VALIDATED — number of process; stores option code, e.g. "D".
 	ParamNoOfProcess string `protobuf:"bytes,35,opt,name=param_no_of_process,json=paramNoOfProcess,proto3" json:"param_no_of_process,omitempty"`
 	// Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id). Optional.
-	MachineId     *string `protobuf:"bytes,36,opt,name=machine_id,json=machineId,proto3,oneof" json:"machine_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MachineId *string `protobuf:"bytes,36,opt,name=machine_id,json=machineId,proto3,oneof" json:"machine_id,omitempty"`
+	// Optional VS number (free text, e.g. "NA"). Wired from existing column mbh_vs_number.
+	MbhVsNumber *string `protobuf:"bytes,38,opt,name=mbh_vs_number,json=mbhVsNumber,proto3,oneof" json:"mbh_vs_number,omitempty"`
+	// Optional number-of-process option code: "S", "D" or "T". No default is implied — absent means NULL.
+	MbhNoOfProcess *string `protobuf:"bytes,39,opt,name=mbh_no_of_process,json=mbhNoOfProcess,proto3,oneof" json:"mbh_no_of_process,omitempty"`
+	// Additional shades (max 2). Combined with the header shade this yields up to 3 shades per recipe.
+	AdditionalShades []*MBHeadShade `protobuf:"bytes,40,rep,name=additional_shades,json=additionalShades,proto3" json:"additional_shades,omitempty"`
+	// Whether the record is locked. Field only — lock/unlock BEHAVIOUR is out of scope here (P10).
+	MbhIsLocked *bool `protobuf:"varint,41,opt,name=mbh_is_locked,json=mbhIsLocked,proto3,oneof" json:"mbh_is_locked,omitempty"`
+	// Timestamp when an unlock was requested (RFC3339). Field only — behaviour is P10.
+	MbhUnlockRequestedAt *string `protobuf:"bytes,42,opt,name=mbh_unlock_requested_at,json=mbhUnlockRequestedAt,proto3,oneof" json:"mbh_unlock_requested_at,omitempty"`
+	// User who requested the unlock. Field only — behaviour is P10.
+	MbhUnlockRequestedBy *string `protobuf:"bytes,43,opt,name=mbh_unlock_requested_by,json=mbhUnlockRequestedBy,proto3,oneof" json:"mbh_unlock_requested_by,omitempty"`
+	// DERIVED check status (mbh_check_status_calc), computed by the backend from
+	// mbh_entry_status + mbh_is_boughtout. User decision K-1 option 2: the legacy
+	// mbh_check_status (field 9) stays FROZEN as the Oracle import trace and is never
+	// written by the application; THIS field is the computed one.
+	// ABSENT means "never calculated by the application" — 207 legacy heads keep it
+	// absent permanently, there is no backfill. Clients MUST render that explicitly
+	// (e.g. "Belum dihitung"); they MUST NOT coerce it to "" or to a placeholder that
+	// reads as a stored value, and they MUST NOT compute it themselves.
+	MbhCheckStatusCalc *string `protobuf:"bytes,44,opt,name=mbh_check_status_calc,json=mbhCheckStatusCalc,proto3,oneof" json:"mbh_check_status_calc,omitempty"`
+	// Reason WRITTEN BY THE REQUESTER when calling RequestUnlockMBHead, i.e. the
+	// free-text justification for why the locked recipe needs to be reopened.
+	// Persisted in mst_mb_head.mbh_unlock_reason.
+	//
+	// ABSENT means no unlock request has ever been recorded for this head. It is
+	// deliberately NOT cleared when an unlock is granted or rejected — the trail of
+	// why the unlock was asked for must survive the decision.
+	//
+	// Rendered next to mbh_unlock_requested_by (43) and mbh_unlock_requested_at (42)
+	// so the approver sees WHO asked, WHEN, and WHY before deciding.
+	//
+	// ⛔ This is NOT state_reason. state_reason carries the reason of the PREVIOUS
+	// workflow step (principle U-2) and is left untouched by RequestUnlockMBHead —
+	// never substitute one for the other.
+	MbhUnlockReason *string `protobuf:"bytes,45,opt,name=mbh_unlock_reason,json=mbhUnlockReason,proto3,oneof" json:"mbh_unlock_reason,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MBHead) Reset() {
 	*x = MBHead{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[73]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5924,7 +6099,7 @@ func (x *MBHead) String() string {
 func (*MBHead) ProtoMessage() {}
 
 func (x *MBHead) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[73]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5937,7 +6112,7 @@ func (x *MBHead) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MBHead.ProtoReflect.Descriptor instead.
 func (*MBHead) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{73}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *MBHead) GetMbhId() string {
@@ -6199,6 +6374,62 @@ func (x *MBHead) GetMachineId() string {
 	return ""
 }
 
+func (x *MBHead) GetMbhVsNumber() string {
+	if x != nil && x.MbhVsNumber != nil {
+		return *x.MbhVsNumber
+	}
+	return ""
+}
+
+func (x *MBHead) GetMbhNoOfProcess() string {
+	if x != nil && x.MbhNoOfProcess != nil {
+		return *x.MbhNoOfProcess
+	}
+	return ""
+}
+
+func (x *MBHead) GetAdditionalShades() []*MBHeadShade {
+	if x != nil {
+		return x.AdditionalShades
+	}
+	return nil
+}
+
+func (x *MBHead) GetMbhIsLocked() bool {
+	if x != nil && x.MbhIsLocked != nil {
+		return *x.MbhIsLocked
+	}
+	return false
+}
+
+func (x *MBHead) GetMbhUnlockRequestedAt() string {
+	if x != nil && x.MbhUnlockRequestedAt != nil {
+		return *x.MbhUnlockRequestedAt
+	}
+	return ""
+}
+
+func (x *MBHead) GetMbhUnlockRequestedBy() string {
+	if x != nil && x.MbhUnlockRequestedBy != nil {
+		return *x.MbhUnlockRequestedBy
+	}
+	return ""
+}
+
+func (x *MBHead) GetMbhCheckStatusCalc() string {
+	if x != nil && x.MbhCheckStatusCalc != nil {
+		return *x.MbhCheckStatusCalc
+	}
+	return ""
+}
+
+func (x *MBHead) GetMbhUnlockReason() string {
+	if x != nil && x.MbhUnlockReason != nil {
+		return *x.MbhUnlockReason
+	}
+	return ""
+}
+
 // CreateMBHeadRequest is the request for creating an MB Head record.
 type CreateMBHeadRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -6236,17 +6467,27 @@ type CreateMBHeadRequest struct {
 	MbhCrossSection *string `protobuf:"bytes,16,opt,name=mbh_cross_section,json=mbhCrossSection,proto3,oneof" json:"mbh_cross_section,omitempty"`
 	// Lusture code, references MbLusture.code (max 10 chars).
 	MbhLustureCode *string `protobuf:"bytes,17,opt,name=mbh_lusture_code,json=mbhLustureCode,proto3,oneof" json:"mbh_lusture_code,omitempty"`
+	// DEPRECATED (A5) — removed from the UI; the backend ignores this value and always resolves
+	// the "MB" machine. Retained in the contract because removing a field would be breaking.
+	// (Intentionally not using the Go "Deprecated:" doc marker: it would propagate into the
+	// generated code and trip staticcheck SA1019 in existing handwritten handlers.)
 	// Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id).
 	MbhMachineId *string `protobuf:"bytes,18,opt,name=mbh_machine_id,json=mbhMachineId,proto3,oneof" json:"mbh_machine_id,omitempty"`
 	// Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage (≥ 0).
-	MbhRunLdrPct  *float64 `protobuf:"fixed64,19,opt,name=mbh_run_ldr_pct,json=mbhRunLdrPct,proto3,oneof" json:"mbh_run_ldr_pct,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MbhRunLdrPct *float64 `protobuf:"fixed64,19,opt,name=mbh_run_ldr_pct,json=mbhRunLdrPct,proto3,oneof" json:"mbh_run_ldr_pct,omitempty"`
+	// Optional VS number (free text, max 50 chars). No pattern, no uniqueness — literal "NA" is valid.
+	MbhVsNumber *string `protobuf:"bytes,20,opt,name=mbh_vs_number,json=mbhVsNumber,proto3,oneof" json:"mbh_vs_number,omitempty"`
+	// Optional number-of-process option code: "S", "D" or "T". No default is implied — absent means NULL.
+	MbhNoOfProcess *string `protobuf:"bytes,21,opt,name=mbh_no_of_process,json=mbhNoOfProcess,proto3,oneof" json:"mbh_no_of_process,omitempty"`
+	// Additional shades (max 2).
+	AdditionalShades []*MBHeadShadeInput `protobuf:"bytes,22,rep,name=additional_shades,json=additionalShades,proto3" json:"additional_shades,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CreateMBHeadRequest) Reset() {
 	*x = CreateMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[74]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6258,7 +6499,7 @@ func (x *CreateMBHeadRequest) String() string {
 func (*CreateMBHeadRequest) ProtoMessage() {}
 
 func (x *CreateMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[74]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6271,7 +6512,7 @@ func (x *CreateMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*CreateMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{74}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *CreateMBHeadRequest) GetMbhMbCosting() string {
@@ -6407,6 +6648,27 @@ func (x *CreateMBHeadRequest) GetMbhRunLdrPct() float64 {
 	return 0
 }
 
+func (x *CreateMBHeadRequest) GetMbhVsNumber() string {
+	if x != nil && x.MbhVsNumber != nil {
+		return *x.MbhVsNumber
+	}
+	return ""
+}
+
+func (x *CreateMBHeadRequest) GetMbhNoOfProcess() string {
+	if x != nil && x.MbhNoOfProcess != nil {
+		return *x.MbhNoOfProcess
+	}
+	return ""
+}
+
+func (x *CreateMBHeadRequest) GetAdditionalShades() []*MBHeadShadeInput {
+	if x != nil {
+		return x.AdditionalShades
+	}
+	return nil
+}
+
 // CreateMBHeadResponse is the response for creating an MB Head record.
 type CreateMBHeadResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -6420,7 +6682,7 @@ type CreateMBHeadResponse struct {
 
 func (x *CreateMBHeadResponse) Reset() {
 	*x = CreateMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[75]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6432,7 +6694,7 @@ func (x *CreateMBHeadResponse) String() string {
 func (*CreateMBHeadResponse) ProtoMessage() {}
 
 func (x *CreateMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[75]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6445,7 +6707,7 @@ func (x *CreateMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*CreateMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{75}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *CreateMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -6473,7 +6735,7 @@ type GetMBHeadRequest struct {
 
 func (x *GetMBHeadRequest) Reset() {
 	*x = GetMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[76]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6485,7 +6747,7 @@ func (x *GetMBHeadRequest) String() string {
 func (*GetMBHeadRequest) ProtoMessage() {}
 
 func (x *GetMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[76]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6498,7 +6760,7 @@ func (x *GetMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*GetMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{76}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *GetMBHeadRequest) GetMbhId() string {
@@ -6521,7 +6783,7 @@ type GetMBHeadResponse struct {
 
 func (x *GetMBHeadResponse) Reset() {
 	*x = GetMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[77]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6533,7 +6795,7 @@ func (x *GetMBHeadResponse) String() string {
 func (*GetMBHeadResponse) ProtoMessage() {}
 
 func (x *GetMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[77]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6546,7 +6808,7 @@ func (x *GetMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*GetMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{77}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *GetMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -6600,17 +6862,30 @@ type UpdateMBHeadRequest struct {
 	MbhCrossSection *string `protobuf:"bytes,16,opt,name=mbh_cross_section,json=mbhCrossSection,proto3,oneof" json:"mbh_cross_section,omitempty"`
 	// Lusture code, references MbLusture.code (max 10 chars).
 	MbhLustureCode *string `protobuf:"bytes,17,opt,name=mbh_lusture_code,json=mbhLustureCode,proto3,oneof" json:"mbh_lusture_code,omitempty"`
+	// DEPRECATED (A5) — removed from the UI; the backend ignores this value and always resolves
+	// the "MB" machine. Retained in the contract because removing a field would be breaking.
+	// (Intentionally not using the Go "Deprecated:" doc marker: it would propagate into the
+	// generated code and trip staticcheck SA1019 in existing handwritten handlers.)
 	// Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id).
 	MbhMachineId *string `protobuf:"bytes,18,opt,name=mbh_machine_id,json=mbhMachineId,proto3,oneof" json:"mbh_machine_id,omitempty"`
 	// Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage (≥ 0).
-	MbhRunLdrPct  *float64 `protobuf:"fixed64,19,opt,name=mbh_run_ldr_pct,json=mbhRunLdrPct,proto3,oneof" json:"mbh_run_ldr_pct,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MbhRunLdrPct *float64 `protobuf:"fixed64,19,opt,name=mbh_run_ldr_pct,json=mbhRunLdrPct,proto3,oneof" json:"mbh_run_ldr_pct,omitempty"`
+	// Optional VS number (free text, max 50 chars). No pattern, no uniqueness — literal "NA" is valid.
+	MbhVsNumber *string `protobuf:"bytes,20,opt,name=mbh_vs_number,json=mbhVsNumber,proto3,oneof" json:"mbh_vs_number,omitempty"`
+	// Optional number-of-process option code: "S", "D" or "T". No default is implied — absent means NULL.
+	MbhNoOfProcess *string `protobuf:"bytes,21,opt,name=mbh_no_of_process,json=mbhNoOfProcess,proto3,oneof" json:"mbh_no_of_process,omitempty"`
+	// Additional shades (max 2).
+	AdditionalShades []*MBHeadShadeInput `protobuf:"bytes,22,rep,name=additional_shades,json=additionalShades,proto3" json:"additional_shades,omitempty"`
+	// Whether additional_shades should replace the stored shade list. Only when true is the
+	// list rewritten. Legacy forms omit this flag, so their updates never wipe existing shades.
+	ReplaceAdditionalShades *bool `protobuf:"varint,23,opt,name=replace_additional_shades,json=replaceAdditionalShades,proto3,oneof" json:"replace_additional_shades,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *UpdateMBHeadRequest) Reset() {
 	*x = UpdateMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[78]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6622,7 +6897,7 @@ func (x *UpdateMBHeadRequest) String() string {
 func (*UpdateMBHeadRequest) ProtoMessage() {}
 
 func (x *UpdateMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[78]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6635,7 +6910,7 @@ func (x *UpdateMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{78}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *UpdateMBHeadRequest) GetMbhId() string {
@@ -6771,6 +7046,34 @@ func (x *UpdateMBHeadRequest) GetMbhRunLdrPct() float64 {
 	return 0
 }
 
+func (x *UpdateMBHeadRequest) GetMbhVsNumber() string {
+	if x != nil && x.MbhVsNumber != nil {
+		return *x.MbhVsNumber
+	}
+	return ""
+}
+
+func (x *UpdateMBHeadRequest) GetMbhNoOfProcess() string {
+	if x != nil && x.MbhNoOfProcess != nil {
+		return *x.MbhNoOfProcess
+	}
+	return ""
+}
+
+func (x *UpdateMBHeadRequest) GetAdditionalShades() []*MBHeadShadeInput {
+	if x != nil {
+		return x.AdditionalShades
+	}
+	return nil
+}
+
+func (x *UpdateMBHeadRequest) GetReplaceAdditionalShades() bool {
+	if x != nil && x.ReplaceAdditionalShades != nil {
+		return *x.ReplaceAdditionalShades
+	}
+	return false
+}
+
 // UpdateMBHeadResponse is the response for updating an MB Head record.
 type UpdateMBHeadResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -6784,7 +7087,7 @@ type UpdateMBHeadResponse struct {
 
 func (x *UpdateMBHeadResponse) Reset() {
 	*x = UpdateMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[79]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6796,7 +7099,7 @@ func (x *UpdateMBHeadResponse) String() string {
 func (*UpdateMBHeadResponse) ProtoMessage() {}
 
 func (x *UpdateMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[79]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6809,7 +7112,7 @@ func (x *UpdateMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{79}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *UpdateMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -6837,7 +7140,7 @@ type DeleteMBHeadRequest struct {
 
 func (x *DeleteMBHeadRequest) Reset() {
 	*x = DeleteMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[80]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6849,7 +7152,7 @@ func (x *DeleteMBHeadRequest) String() string {
 func (*DeleteMBHeadRequest) ProtoMessage() {}
 
 func (x *DeleteMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[80]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6862,7 +7165,7 @@ func (x *DeleteMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{80}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *DeleteMBHeadRequest) GetMbhId() string {
@@ -6883,7 +7186,7 @@ type DeleteMBHeadResponse struct {
 
 func (x *DeleteMBHeadResponse) Reset() {
 	*x = DeleteMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[81]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6895,7 +7198,7 @@ func (x *DeleteMBHeadResponse) String() string {
 func (*DeleteMBHeadResponse) ProtoMessage() {}
 
 func (x *DeleteMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[81]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6908,7 +7211,7 @@ func (x *DeleteMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{81}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *DeleteMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -6932,14 +7235,21 @@ type ListMBHeadsRequest struct {
 	// Sort field.
 	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
 	// Sort direction.
-	SortOrder     string `protobuf:"bytes,6,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	SortOrder string `protobuf:"bytes,6,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	// ⭐ DIPERBARUI 2026-08-26 (R16) — Filter by linked cost product (mst_mb_head.mbh_cost_product_id).
+	// Optional; 0 (unset) means no filter, matching the existing product_type_id convention in
+	// ListCostProductMastersRequest. Lets the product detail page look up its MB Head(s) from the
+	// product side — mbh_cost_product_id is the only direction this FK exists in; CostProductMaster
+	// has no column pointing back to MB. NOTE: this column is only populated when a head reaches
+	// VALIDATED (mb_autogen_repository.go), so a still-DRAFT head will not be found by this filter.
+	CostProductId int64 `protobuf:"varint,7,opt,name=cost_product_id,json=costProductId,proto3" json:"cost_product_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListMBHeadsRequest) Reset() {
 	*x = ListMBHeadsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[82]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6951,7 +7261,7 @@ func (x *ListMBHeadsRequest) String() string {
 func (*ListMBHeadsRequest) ProtoMessage() {}
 
 func (x *ListMBHeadsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[82]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6964,7 +7274,7 @@ func (x *ListMBHeadsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMBHeadsRequest.ProtoReflect.Descriptor instead.
 func (*ListMBHeadsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{82}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *ListMBHeadsRequest) GetPage() int32 {
@@ -7009,6 +7319,13 @@ func (x *ListMBHeadsRequest) GetSortOrder() string {
 	return ""
 }
 
+func (x *ListMBHeadsRequest) GetCostProductId() int64 {
+	if x != nil {
+		return x.CostProductId
+	}
+	return 0
+}
+
 // ListMBHeadsResponse is the response for listing MB Head records.
 type ListMBHeadsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -7024,7 +7341,7 @@ type ListMBHeadsResponse struct {
 
 func (x *ListMBHeadsResponse) Reset() {
 	*x = ListMBHeadsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[83]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7036,7 +7353,7 @@ func (x *ListMBHeadsResponse) String() string {
 func (*ListMBHeadsResponse) ProtoMessage() {}
 
 func (x *ListMBHeadsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[83]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7049,7 +7366,7 @@ func (x *ListMBHeadsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMBHeadsResponse.ProtoReflect.Descriptor instead.
 func (*ListMBHeadsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{83}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *ListMBHeadsResponse) GetBase() *v1.BaseResponse {
@@ -7077,14 +7394,20 @@ func (x *ListMBHeadsResponse) GetPagination() *v1.PaginationResponse {
 type ExportMBHeadsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Filter by active status.
-	ActiveFilter  ActiveFilter `protobuf:"varint,1,opt,name=active_filter,json=activeFilter,proto3,enum=finance.v1.ActiveFilter" json:"active_filter,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ActiveFilter ActiveFilter `protobuf:"varint,1,opt,name=active_filter,json=activeFilter,proto3,enum=finance.v1.ActiveFilter" json:"active_filter,omitempty"`
+	// Whether to include REJECTED documents in the export.
+	//
+	// Default false (proto3 zero value) EXCLUDES rejected documents, keeping this
+	// export byte-for-byte identical to its behaviour before this field existed.
+	// Set to true to include them (audit use case).
+	IncludeRejected bool `protobuf:"varint,2,opt,name=include_rejected,json=includeRejected,proto3" json:"include_rejected,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ExportMBHeadsRequest) Reset() {
 	*x = ExportMBHeadsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[84]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7096,7 +7419,7 @@ func (x *ExportMBHeadsRequest) String() string {
 func (*ExportMBHeadsRequest) ProtoMessage() {}
 
 func (x *ExportMBHeadsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[84]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7109,7 +7432,7 @@ func (x *ExportMBHeadsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportMBHeadsRequest.ProtoReflect.Descriptor instead.
 func (*ExportMBHeadsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{84}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *ExportMBHeadsRequest) GetActiveFilter() ActiveFilter {
@@ -7117,6 +7440,13 @@ func (x *ExportMBHeadsRequest) GetActiveFilter() ActiveFilter {
 		return x.ActiveFilter
 	}
 	return ActiveFilter_ACTIVE_FILTER_UNSPECIFIED
+}
+
+func (x *ExportMBHeadsRequest) GetIncludeRejected() bool {
+	if x != nil {
+		return x.IncludeRejected
+	}
+	return false
 }
 
 // ExportMBHeadsResponse is the response for exporting MB Head records.
@@ -7134,7 +7464,7 @@ type ExportMBHeadsResponse struct {
 
 func (x *ExportMBHeadsResponse) Reset() {
 	*x = ExportMBHeadsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[85]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7146,7 +7476,7 @@ func (x *ExportMBHeadsResponse) String() string {
 func (*ExportMBHeadsResponse) ProtoMessage() {}
 
 func (x *ExportMBHeadsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[85]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7159,7 +7489,7 @@ func (x *ExportMBHeadsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportMBHeadsResponse.ProtoReflect.Descriptor instead.
 func (*ExportMBHeadsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{85}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *ExportMBHeadsResponse) GetBase() *v1.BaseResponse {
@@ -7183,6 +7513,173 @@ func (x *ExportMBHeadsResponse) GetFileName() string {
 	return ""
 }
 
+// ExportMBRecipeFullRequest is the request for the denormalized full recipe export
+// (P12 / items C1 + C2): one Excel row per composition line, with the MB cost block
+// joined in. Read-only — it never writes to cst_mb_cost or cst_product_cost.
+type ExportMBRecipeFullRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Filter by active status of the MB head.
+	ActiveFilter ActiveFilter `protobuf:"varint,1,opt,name=active_filter,json=activeFilter,proto3,enum=finance.v1.ActiveFilter" json:"active_filter,omitempty"`
+	// Cost period YYYYMM. Empty means "latest period per head".
+	Period string `protobuf:"bytes,2,opt,name=period,proto3" json:"period,omitempty"`
+	// Cost type to include. Empty defaults to ACTUAL, which keeps the row count
+	// bounded to one cost row per composition line.
+	CostType string `protobuf:"bytes,3,opt,name=cost_type,json=costType,proto3" json:"cost_type,omitempty"`
+	// Filter by the DERIVED check status (mst_mb_head.mbh_check_status_calc, P10).
+	//
+	// Empty means ALL ROWS, including heads whose derived status is still NULL — so
+	// leaving this unset keeps the export byte-for-byte identical to its behaviour
+	// before this filter existed. A non-empty value keeps only heads carrying exactly
+	// that value, which necessarily EXCLUDES the NULL ("Belum dihitung") heads.
+	//
+	// The six accepted values are the six allowed by the CHECK constraint
+	// chk_mbh_check_status_calc (migration 000487). ⚠ Only THREE of them are produced
+	// by DeriveCheckStatus today — "Boughtout", "Approved", "Waiting". Filtering by
+	// "Current", "Outdated" or "Rejected" is therefore VALID but returns ZERO ROWS
+	// until the corresponding user gates are decided. ⛔ Not a bug.
+	//
+	// ⛔ There is deliberately NO sentinel for "only the NULL heads" — that semantic
+	// has not been decided by the user.
+	CheckStatusCalc string `protobuf:"bytes,4,opt,name=check_status_calc,json=checkStatusCalc,proto3" json:"check_status_calc,omitempty"`
+	// Whether to include REJECTED documents in the export.
+	//
+	// Default false (proto3 zero value) EXCLUDES rejected documents, keeping this
+	// export byte-for-byte identical to its behaviour before this field existed.
+	// Set to true to include them (audit use case).
+	IncludeRejected bool `protobuf:"varint,5,opt,name=include_rejected,json=includeRejected,proto3" json:"include_rejected,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ExportMBRecipeFullRequest) Reset() {
+	*x = ExportMBRecipeFullRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[88]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportMBRecipeFullRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportMBRecipeFullRequest) ProtoMessage() {}
+
+func (x *ExportMBRecipeFullRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[88]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportMBRecipeFullRequest.ProtoReflect.Descriptor instead.
+func (*ExportMBRecipeFullRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{88}
+}
+
+func (x *ExportMBRecipeFullRequest) GetActiveFilter() ActiveFilter {
+	if x != nil {
+		return x.ActiveFilter
+	}
+	return ActiveFilter_ACTIVE_FILTER_UNSPECIFIED
+}
+
+func (x *ExportMBRecipeFullRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+func (x *ExportMBRecipeFullRequest) GetCostType() string {
+	if x != nil {
+		return x.CostType
+	}
+	return ""
+}
+
+func (x *ExportMBRecipeFullRequest) GetCheckStatusCalc() string {
+	if x != nil {
+		return x.CheckStatusCalc
+	}
+	return ""
+}
+
+func (x *ExportMBRecipeFullRequest) GetIncludeRejected() bool {
+	if x != nil {
+		return x.IncludeRejected
+	}
+	return false
+}
+
+// ExportMBRecipeFullResponse carries the full-recipe Excel workbook bytes.
+type ExportMBRecipeFullResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Excel file content.
+	FileContent []byte `protobuf:"bytes,2,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"`
+	// Excel file name.
+	FileName      string `protobuf:"bytes,3,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportMBRecipeFullResponse) Reset() {
+	*x = ExportMBRecipeFullResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[89]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportMBRecipeFullResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportMBRecipeFullResponse) ProtoMessage() {}
+
+func (x *ExportMBRecipeFullResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[89]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportMBRecipeFullResponse.ProtoReflect.Descriptor instead.
+func (*ExportMBRecipeFullResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{89}
+}
+
+func (x *ExportMBRecipeFullResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ExportMBRecipeFullResponse) GetFileContent() []byte {
+	if x != nil {
+		return x.FileContent
+	}
+	return nil
+}
+
+func (x *ExportMBRecipeFullResponse) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
 // ImportMBHeadsRequest is the request for importing MB Head records from Excel.
 type ImportMBHeadsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -7198,7 +7695,7 @@ type ImportMBHeadsRequest struct {
 
 func (x *ImportMBHeadsRequest) Reset() {
 	*x = ImportMBHeadsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[86]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7210,7 +7707,7 @@ func (x *ImportMBHeadsRequest) String() string {
 func (*ImportMBHeadsRequest) ProtoMessage() {}
 
 func (x *ImportMBHeadsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[86]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7223,7 +7720,7 @@ func (x *ImportMBHeadsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportMBHeadsRequest.ProtoReflect.Descriptor instead.
 func (*ImportMBHeadsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{86}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *ImportMBHeadsRequest) GetFileContent() []byte {
@@ -7266,7 +7763,7 @@ type ImportMBHeadsResponse struct {
 
 func (x *ImportMBHeadsResponse) Reset() {
 	*x = ImportMBHeadsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[87]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7278,7 +7775,7 @@ func (x *ImportMBHeadsResponse) String() string {
 func (*ImportMBHeadsResponse) ProtoMessage() {}
 
 func (x *ImportMBHeadsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[87]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7291,7 +7788,7 @@ func (x *ImportMBHeadsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportMBHeadsResponse.ProtoReflect.Descriptor instead.
 func (*ImportMBHeadsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{87}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *ImportMBHeadsResponse) GetBase() *v1.BaseResponse {
@@ -7338,7 +7835,7 @@ type DownloadMBHeadTemplateRequest struct {
 
 func (x *DownloadMBHeadTemplateRequest) Reset() {
 	*x = DownloadMBHeadTemplateRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[88]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7350,7 +7847,7 @@ func (x *DownloadMBHeadTemplateRequest) String() string {
 func (*DownloadMBHeadTemplateRequest) ProtoMessage() {}
 
 func (x *DownloadMBHeadTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[88]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7363,7 +7860,7 @@ func (x *DownloadMBHeadTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadMBHeadTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DownloadMBHeadTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{88}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{92}
 }
 
 // DownloadMBHeadTemplateResponse is the response for downloading the import template.
@@ -7381,7 +7878,7 @@ type DownloadMBHeadTemplateResponse struct {
 
 func (x *DownloadMBHeadTemplateResponse) Reset() {
 	*x = DownloadMBHeadTemplateResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[89]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7393,7 +7890,7 @@ func (x *DownloadMBHeadTemplateResponse) String() string {
 func (*DownloadMBHeadTemplateResponse) ProtoMessage() {}
 
 func (x *DownloadMBHeadTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[89]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7406,7 +7903,7 @@ func (x *DownloadMBHeadTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadMBHeadTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DownloadMBHeadTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{89}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *DownloadMBHeadTemplateResponse) GetBase() *v1.BaseResponse {
@@ -7441,7 +7938,7 @@ type SubmitMBHeadRequest struct {
 
 func (x *SubmitMBHeadRequest) Reset() {
 	*x = SubmitMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[90]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7453,7 +7950,7 @@ func (x *SubmitMBHeadRequest) String() string {
 func (*SubmitMBHeadRequest) ProtoMessage() {}
 
 func (x *SubmitMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[90]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7466,7 +7963,7 @@ func (x *SubmitMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*SubmitMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{90}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *SubmitMBHeadRequest) GetMbhId() string {
@@ -7489,7 +7986,7 @@ type SubmitMBHeadResponse struct {
 
 func (x *SubmitMBHeadResponse) Reset() {
 	*x = SubmitMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[91]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7501,7 +7998,7 @@ func (x *SubmitMBHeadResponse) String() string {
 func (*SubmitMBHeadResponse) ProtoMessage() {}
 
 func (x *SubmitMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[91]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7514,7 +8011,7 @@ func (x *SubmitMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*SubmitMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{91}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *SubmitMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -7542,7 +8039,7 @@ type ApproveMBHeadRequest struct {
 
 func (x *ApproveMBHeadRequest) Reset() {
 	*x = ApproveMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[92]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7554,7 +8051,7 @@ func (x *ApproveMBHeadRequest) String() string {
 func (*ApproveMBHeadRequest) ProtoMessage() {}
 
 func (x *ApproveMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[92]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7567,7 +8064,7 @@ func (x *ApproveMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*ApproveMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{92}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *ApproveMBHeadRequest) GetMbhId() string {
@@ -7590,7 +8087,7 @@ type ApproveMBHeadResponse struct {
 
 func (x *ApproveMBHeadResponse) Reset() {
 	*x = ApproveMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[93]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7602,7 +8099,7 @@ func (x *ApproveMBHeadResponse) String() string {
 func (*ApproveMBHeadResponse) ProtoMessage() {}
 
 func (x *ApproveMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[93]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7615,7 +8112,7 @@ func (x *ApproveMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*ApproveMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{93}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *ApproveMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -7643,7 +8140,7 @@ type ValidateMBHeadRequest struct {
 
 func (x *ValidateMBHeadRequest) Reset() {
 	*x = ValidateMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[94]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7655,7 +8152,7 @@ func (x *ValidateMBHeadRequest) String() string {
 func (*ValidateMBHeadRequest) ProtoMessage() {}
 
 func (x *ValidateMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[94]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7668,7 +8165,7 @@ func (x *ValidateMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*ValidateMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{94}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *ValidateMBHeadRequest) GetMbhId() string {
@@ -7691,7 +8188,7 @@ type ValidateMBHeadResponse struct {
 
 func (x *ValidateMBHeadResponse) Reset() {
 	*x = ValidateMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[95]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7703,7 +8200,7 @@ func (x *ValidateMBHeadResponse) String() string {
 func (*ValidateMBHeadResponse) ProtoMessage() {}
 
 func (x *ValidateMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[95]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7716,7 +8213,7 @@ func (x *ValidateMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*ValidateMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{95}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *ValidateMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -7746,7 +8243,7 @@ type UnApproveMBHeadRequest struct {
 
 func (x *UnApproveMBHeadRequest) Reset() {
 	*x = UnApproveMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[96]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7758,7 +8255,7 @@ func (x *UnApproveMBHeadRequest) String() string {
 func (*UnApproveMBHeadRequest) ProtoMessage() {}
 
 func (x *UnApproveMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[96]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7771,7 +8268,7 @@ func (x *UnApproveMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnApproveMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*UnApproveMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{96}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *UnApproveMBHeadRequest) GetMbhId() string {
@@ -7801,7 +8298,7 @@ type UnApproveMBHeadResponse struct {
 
 func (x *UnApproveMBHeadResponse) Reset() {
 	*x = UnApproveMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[97]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7813,7 +8310,7 @@ func (x *UnApproveMBHeadResponse) String() string {
 func (*UnApproveMBHeadResponse) ProtoMessage() {}
 
 func (x *UnApproveMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[97]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7826,7 +8323,7 @@ func (x *UnApproveMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnApproveMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*UnApproveMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{97}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *UnApproveMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -7856,7 +8353,7 @@ type RevokeMBHeadRequest struct {
 
 func (x *RevokeMBHeadRequest) Reset() {
 	*x = RevokeMBHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[98]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7868,7 +8365,7 @@ func (x *RevokeMBHeadRequest) String() string {
 func (*RevokeMBHeadRequest) ProtoMessage() {}
 
 func (x *RevokeMBHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[98]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7881,7 +8378,7 @@ func (x *RevokeMBHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeMBHeadRequest.ProtoReflect.Descriptor instead.
 func (*RevokeMBHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{98}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *RevokeMBHeadRequest) GetMbhId() string {
@@ -7911,7 +8408,7 @@ type RevokeMBHeadResponse struct {
 
 func (x *RevokeMBHeadResponse) Reset() {
 	*x = RevokeMBHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[99]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7923,7 +8420,7 @@ func (x *RevokeMBHeadResponse) String() string {
 func (*RevokeMBHeadResponse) ProtoMessage() {}
 
 func (x *RevokeMBHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[99]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7936,7 +8433,7 @@ func (x *RevokeMBHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeMBHeadResponse.ProtoReflect.Descriptor instead.
 func (*RevokeMBHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{99}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *RevokeMBHeadResponse) GetBase() *v1.BaseResponse {
@@ -7947,6 +8444,549 @@ func (x *RevokeMBHeadResponse) GetBase() *v1.BaseResponse {
 }
 
 func (x *RevokeMBHeadResponse) GetData() *MBHead {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// RejectMBHeadRequest is the request for rejecting a submitted MB Head (K-2).
+type RejectMBHeadRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// MB Head UUID.
+	MbhId string `protobuf:"bytes,1,opt,name=mbh_id,json=mbhId,proto3" json:"mbh_id,omitempty"`
+	// Reason for rejecting. Required (K-2).
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectMBHeadRequest) Reset() {
+	*x = RejectMBHeadRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[104]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectMBHeadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectMBHeadRequest) ProtoMessage() {}
+
+func (x *RejectMBHeadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[104]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectMBHeadRequest.ProtoReflect.Descriptor instead.
+func (*RejectMBHeadRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{104}
+}
+
+func (x *RejectMBHeadRequest) GetMbhId() string {
+	if x != nil {
+		return x.MbhId
+	}
+	return ""
+}
+
+func (x *RejectMBHeadRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// RejectMBHeadResponse is the response for rejecting an MB Head.
+type RejectMBHeadResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Updated MB Head data.
+	Data          *MBHead `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectMBHeadResponse) Reset() {
+	*x = RejectMBHeadResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[105]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectMBHeadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectMBHeadResponse) ProtoMessage() {}
+
+func (x *RejectMBHeadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[105]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectMBHeadResponse.ProtoReflect.Descriptor instead.
+func (*RejectMBHeadResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{105}
+}
+
+func (x *RejectMBHeadResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *RejectMBHeadResponse) GetData() *MBHead {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// ReturnMBHeadToDraftRequest is the request for returning a rejected MB Head back to draft (K-29).
+type ReturnMBHeadToDraftRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// MB Head UUID.
+	MbhId string `protobuf:"bytes,1,opt,name=mbh_id,json=mbhId,proto3" json:"mbh_id,omitempty"`
+	// Reason for returning to draft. Optional (K-29); when empty the existing state_reason is preserved.
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReturnMBHeadToDraftRequest) Reset() {
+	*x = ReturnMBHeadToDraftRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[106]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnMBHeadToDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnMBHeadToDraftRequest) ProtoMessage() {}
+
+func (x *ReturnMBHeadToDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[106]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnMBHeadToDraftRequest.ProtoReflect.Descriptor instead.
+func (*ReturnMBHeadToDraftRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{106}
+}
+
+func (x *ReturnMBHeadToDraftRequest) GetMbhId() string {
+	if x != nil {
+		return x.MbhId
+	}
+	return ""
+}
+
+func (x *ReturnMBHeadToDraftRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// ReturnMBHeadToDraftResponse is the response for returning an MB Head to draft.
+type ReturnMBHeadToDraftResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Updated MB Head data.
+	Data          *MBHead `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReturnMBHeadToDraftResponse) Reset() {
+	*x = ReturnMBHeadToDraftResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[107]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnMBHeadToDraftResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnMBHeadToDraftResponse) ProtoMessage() {}
+
+func (x *ReturnMBHeadToDraftResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[107]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnMBHeadToDraftResponse.ProtoReflect.Descriptor instead.
+func (*ReturnMBHeadToDraftResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{107}
+}
+
+func (x *ReturnMBHeadToDraftResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ReturnMBHeadToDraftResponse) GetData() *MBHead {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// RequestUnlockMBHeadRequest is the request for asking that a locked MB Head be unlocked (P10).
+type RequestUnlockMBHeadRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// MB Head UUID.
+	MbhId string `protobuf:"bytes,1,opt,name=mbh_id,json=mbhId,proto3" json:"mbh_id,omitempty"`
+	// Reason for requesting the unlock. Required — the domain rejects an empty or
+	// whitespace-only reason with ErrReasonRequired.
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestUnlockMBHeadRequest) Reset() {
+	*x = RequestUnlockMBHeadRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[108]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestUnlockMBHeadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestUnlockMBHeadRequest) ProtoMessage() {}
+
+func (x *RequestUnlockMBHeadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[108]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestUnlockMBHeadRequest.ProtoReflect.Descriptor instead.
+func (*RequestUnlockMBHeadRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{108}
+}
+
+func (x *RequestUnlockMBHeadRequest) GetMbhId() string {
+	if x != nil {
+		return x.MbhId
+	}
+	return ""
+}
+
+func (x *RequestUnlockMBHeadRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// RequestUnlockMBHeadResponse is the response for requesting an MB Head unlock.
+type RequestUnlockMBHeadResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Updated MB Head data.
+	Data          *MBHead `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestUnlockMBHeadResponse) Reset() {
+	*x = RequestUnlockMBHeadResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[109]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestUnlockMBHeadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestUnlockMBHeadResponse) ProtoMessage() {}
+
+func (x *RequestUnlockMBHeadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[109]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestUnlockMBHeadResponse.ProtoReflect.Descriptor instead.
+func (*RequestUnlockMBHeadResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{109}
+}
+
+func (x *RequestUnlockMBHeadResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *RequestUnlockMBHeadResponse) GetData() *MBHead {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// GrantUnlockMBHeadRequest is the request for approving a pending MB Head unlock (P10).
+type GrantUnlockMBHeadRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// MB Head UUID.
+	MbhId         string `protobuf:"bytes,1,opt,name=mbh_id,json=mbhId,proto3" json:"mbh_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GrantUnlockMBHeadRequest) Reset() {
+	*x = GrantUnlockMBHeadRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[110]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GrantUnlockMBHeadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GrantUnlockMBHeadRequest) ProtoMessage() {}
+
+func (x *GrantUnlockMBHeadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[110]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GrantUnlockMBHeadRequest.ProtoReflect.Descriptor instead.
+func (*GrantUnlockMBHeadRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{110}
+}
+
+func (x *GrantUnlockMBHeadRequest) GetMbhId() string {
+	if x != nil {
+		return x.MbhId
+	}
+	return ""
+}
+
+// GrantUnlockMBHeadResponse is the response for granting an MB Head unlock.
+type GrantUnlockMBHeadResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Updated MB Head data.
+	Data          *MBHead `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GrantUnlockMBHeadResponse) Reset() {
+	*x = GrantUnlockMBHeadResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[111]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GrantUnlockMBHeadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GrantUnlockMBHeadResponse) ProtoMessage() {}
+
+func (x *GrantUnlockMBHeadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[111]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GrantUnlockMBHeadResponse.ProtoReflect.Descriptor instead.
+func (*GrantUnlockMBHeadResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{111}
+}
+
+func (x *GrantUnlockMBHeadResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GrantUnlockMBHeadResponse) GetData() *MBHead {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// RejectUnlockMBHeadRequest is the request for refusing a pending MB Head unlock (P10, K-52).
+type RejectUnlockMBHeadRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// MB Head UUID.
+	MbhId string `protobuf:"bytes,1,opt,name=mbh_id,json=mbhId,proto3" json:"mbh_id,omitempty"`
+	// Reason for refusing the unlock. Required — consistent with every other refusing
+	// transition on this service.
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectUnlockMBHeadRequest) Reset() {
+	*x = RejectUnlockMBHeadRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[112]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectUnlockMBHeadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectUnlockMBHeadRequest) ProtoMessage() {}
+
+func (x *RejectUnlockMBHeadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[112]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectUnlockMBHeadRequest.ProtoReflect.Descriptor instead.
+func (*RejectUnlockMBHeadRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{112}
+}
+
+func (x *RejectUnlockMBHeadRequest) GetMbhId() string {
+	if x != nil {
+		return x.MbhId
+	}
+	return ""
+}
+
+func (x *RejectUnlockMBHeadRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// RejectUnlockMBHeadResponse is the response for refusing an MB Head unlock.
+type RejectUnlockMBHeadResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Updated MB Head data.
+	Data          *MBHead `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectUnlockMBHeadResponse) Reset() {
+	*x = RejectUnlockMBHeadResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[113]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectUnlockMBHeadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectUnlockMBHeadResponse) ProtoMessage() {}
+
+func (x *RejectUnlockMBHeadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[113]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectUnlockMBHeadResponse.ProtoReflect.Descriptor instead.
+func (*RejectUnlockMBHeadResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{113}
+}
+
+func (x *RejectUnlockMBHeadResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *RejectUnlockMBHeadResponse) GetData() *MBHead {
 	if x != nil {
 		return x.Data
 	}
@@ -7987,14 +9027,20 @@ type MBSpin struct {
 	// Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage used in production (D30: authoritative LDR for costing).
 	MbsRunLdrPct *float64 `protobuf:"fixed64,15,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
 	// Audit metadata.
-	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Audit *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	// Fix/actual marker for the LDR value. Absent means "unknown", which the
+	// domain treats as FIXED (recalc-safe). true = fixed, false = computed.
+	MbsLdrIsFixed *bool `protobuf:"varint,17,opt,name=mbs_ldr_is_fixed,json=mbsLdrIsFixed,proto3,oneof" json:"mbs_ldr_is_fixed,omitempty"`
+	// Fix/actual marker for the dozing value. Absent means "unknown", which the
+	// domain treats as FIXED (recalc-safe). true = fixed, false = computed.
+	MbsDozingIsFixed *bool `protobuf:"varint,18,opt,name=mbs_dozing_is_fixed,json=mbsDozingIsFixed,proto3,oneof" json:"mbs_dozing_is_fixed,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *MBSpin) Reset() {
 	*x = MBSpin{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[100]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8006,7 +9052,7 @@ func (x *MBSpin) String() string {
 func (*MBSpin) ProtoMessage() {}
 
 func (x *MBSpin) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[100]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8019,7 +9065,7 @@ func (x *MBSpin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MBSpin.ProtoReflect.Descriptor instead.
 func (*MBSpin) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{100}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *MBSpin) GetMbsId() string {
@@ -8134,6 +9180,20 @@ func (x *MBSpin) GetAudit() *v1.AuditInfo {
 	return nil
 }
 
+func (x *MBSpin) GetMbsLdrIsFixed() bool {
+	if x != nil && x.MbsLdrIsFixed != nil {
+		return *x.MbsLdrIsFixed
+	}
+	return false
+}
+
+func (x *MBSpin) GetMbsDozingIsFixed() bool {
+	if x != nil && x.MbsDozingIsFixed != nil {
+		return *x.MbsDozingIsFixed
+	}
+	return false
+}
+
 // CreateMBSpinRequest is the request for creating an MB Spin record.
 type CreateMBSpinRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -8162,14 +9222,18 @@ type CreateMBSpinRequest struct {
 	// Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars).
 	MbsFinalProduct *string `protobuf:"bytes,12,opt,name=mbs_final_product,json=mbsFinalProduct,proto3,oneof" json:"mbs_final_product,omitempty"`
 	// Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage (≥ 0).
-	MbsRunLdrPct  *float64 `protobuf:"fixed64,13,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MbsRunLdrPct *float64 `protobuf:"fixed64,13,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
+	// Optional fix/actual marker for LDR. Absent = unknown (treated as fixed).
+	MbsLdrIsFixed *bool `protobuf:"varint,14,opt,name=mbs_ldr_is_fixed,json=mbsLdrIsFixed,proto3,oneof" json:"mbs_ldr_is_fixed,omitempty"`
+	// Optional fix/actual marker for dozing. Absent = unknown (treated as fixed).
+	MbsDozingIsFixed *bool `protobuf:"varint,15,opt,name=mbs_dozing_is_fixed,json=mbsDozingIsFixed,proto3,oneof" json:"mbs_dozing_is_fixed,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CreateMBSpinRequest) Reset() {
 	*x = CreateMBSpinRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[101]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8181,7 +9245,7 @@ func (x *CreateMBSpinRequest) String() string {
 func (*CreateMBSpinRequest) ProtoMessage() {}
 
 func (x *CreateMBSpinRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[101]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8194,7 +9258,7 @@ func (x *CreateMBSpinRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMBSpinRequest.ProtoReflect.Descriptor instead.
 func (*CreateMBSpinRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{101}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *CreateMBSpinRequest) GetMbhId() string {
@@ -8288,6 +9352,20 @@ func (x *CreateMBSpinRequest) GetMbsRunLdrPct() float64 {
 	return 0
 }
 
+func (x *CreateMBSpinRequest) GetMbsLdrIsFixed() bool {
+	if x != nil && x.MbsLdrIsFixed != nil {
+		return *x.MbsLdrIsFixed
+	}
+	return false
+}
+
+func (x *CreateMBSpinRequest) GetMbsDozingIsFixed() bool {
+	if x != nil && x.MbsDozingIsFixed != nil {
+		return *x.MbsDozingIsFixed
+	}
+	return false
+}
+
 // CreateMBSpinResponse is the response for creating an MB Spin record.
 type CreateMBSpinResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -8301,7 +9379,7 @@ type CreateMBSpinResponse struct {
 
 func (x *CreateMBSpinResponse) Reset() {
 	*x = CreateMBSpinResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[102]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8313,7 +9391,7 @@ func (x *CreateMBSpinResponse) String() string {
 func (*CreateMBSpinResponse) ProtoMessage() {}
 
 func (x *CreateMBSpinResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[102]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8326,7 +9404,7 @@ func (x *CreateMBSpinResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMBSpinResponse.ProtoReflect.Descriptor instead.
 func (*CreateMBSpinResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{102}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *CreateMBSpinResponse) GetBase() *v1.BaseResponse {
@@ -8356,7 +9434,7 @@ type GetMBSpinRequest struct {
 
 func (x *GetMBSpinRequest) Reset() {
 	*x = GetMBSpinRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[103]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8368,7 +9446,7 @@ func (x *GetMBSpinRequest) String() string {
 func (*GetMBSpinRequest) ProtoMessage() {}
 
 func (x *GetMBSpinRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[103]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8381,7 +9459,7 @@ func (x *GetMBSpinRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMBSpinRequest.ProtoReflect.Descriptor instead.
 func (*GetMBSpinRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{103}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *GetMBSpinRequest) GetMbhId() string {
@@ -8411,7 +9489,7 @@ type GetMBSpinResponse struct {
 
 func (x *GetMBSpinResponse) Reset() {
 	*x = GetMBSpinResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[104]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8423,7 +9501,7 @@ func (x *GetMBSpinResponse) String() string {
 func (*GetMBSpinResponse) ProtoMessage() {}
 
 func (x *GetMBSpinResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[104]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8436,7 +9514,7 @@ func (x *GetMBSpinResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMBSpinResponse.ProtoReflect.Descriptor instead.
 func (*GetMBSpinResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{104}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *GetMBSpinResponse) GetBase() *v1.BaseResponse {
@@ -8483,14 +9561,18 @@ type UpdateMBSpinRequest struct {
 	// Optional Oracle CMBS_FINAL_PRODUCT (max 200 chars).
 	MbsFinalProduct *string `protobuf:"bytes,13,opt,name=mbs_final_product,json=mbsFinalProduct,proto3,oneof" json:"mbs_final_product,omitempty"`
 	// Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage (≥ 0).
-	MbsRunLdrPct  *float64 `protobuf:"fixed64,14,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MbsRunLdrPct *float64 `protobuf:"fixed64,14,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
+	// Optional fix/actual marker for LDR. Absent = leave unchanged.
+	MbsLdrIsFixed *bool `protobuf:"varint,15,opt,name=mbs_ldr_is_fixed,json=mbsLdrIsFixed,proto3,oneof" json:"mbs_ldr_is_fixed,omitempty"`
+	// Optional fix/actual marker for dozing. Absent = leave unchanged.
+	MbsDozingIsFixed *bool `protobuf:"varint,16,opt,name=mbs_dozing_is_fixed,json=mbsDozingIsFixed,proto3,oneof" json:"mbs_dozing_is_fixed,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *UpdateMBSpinRequest) Reset() {
 	*x = UpdateMBSpinRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[105]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[119]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8502,7 +9584,7 @@ func (x *UpdateMBSpinRequest) String() string {
 func (*UpdateMBSpinRequest) ProtoMessage() {}
 
 func (x *UpdateMBSpinRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[105]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[119]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8515,7 +9597,7 @@ func (x *UpdateMBSpinRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMBSpinRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMBSpinRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{105}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *UpdateMBSpinRequest) GetMbhId() string {
@@ -8616,6 +9698,20 @@ func (x *UpdateMBSpinRequest) GetMbsRunLdrPct() float64 {
 	return 0
 }
 
+func (x *UpdateMBSpinRequest) GetMbsLdrIsFixed() bool {
+	if x != nil && x.MbsLdrIsFixed != nil {
+		return *x.MbsLdrIsFixed
+	}
+	return false
+}
+
+func (x *UpdateMBSpinRequest) GetMbsDozingIsFixed() bool {
+	if x != nil && x.MbsDozingIsFixed != nil {
+		return *x.MbsDozingIsFixed
+	}
+	return false
+}
+
 // UpdateMBSpinResponse is the response for updating an MB Spin record.
 type UpdateMBSpinResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -8629,7 +9725,7 @@ type UpdateMBSpinResponse struct {
 
 func (x *UpdateMBSpinResponse) Reset() {
 	*x = UpdateMBSpinResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[106]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8641,7 +9737,7 @@ func (x *UpdateMBSpinResponse) String() string {
 func (*UpdateMBSpinResponse) ProtoMessage() {}
 
 func (x *UpdateMBSpinResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[106]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8654,7 +9750,7 @@ func (x *UpdateMBSpinResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMBSpinResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMBSpinResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{106}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *UpdateMBSpinResponse) GetBase() *v1.BaseResponse {
@@ -8684,7 +9780,7 @@ type DeleteMBSpinRequest struct {
 
 func (x *DeleteMBSpinRequest) Reset() {
 	*x = DeleteMBSpinRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[107]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8696,7 +9792,7 @@ func (x *DeleteMBSpinRequest) String() string {
 func (*DeleteMBSpinRequest) ProtoMessage() {}
 
 func (x *DeleteMBSpinRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[107]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8709,7 +9805,7 @@ func (x *DeleteMBSpinRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMBSpinRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMBSpinRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{107}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *DeleteMBSpinRequest) GetMbhId() string {
@@ -8737,7 +9833,7 @@ type DeleteMBSpinResponse struct {
 
 func (x *DeleteMBSpinResponse) Reset() {
 	*x = DeleteMBSpinResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[108]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[122]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8749,7 +9845,7 @@ func (x *DeleteMBSpinResponse) String() string {
 func (*DeleteMBSpinResponse) ProtoMessage() {}
 
 func (x *DeleteMBSpinResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[108]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[122]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8762,7 +9858,7 @@ func (x *DeleteMBSpinResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMBSpinResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMBSpinResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{108}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *DeleteMBSpinResponse) GetBase() *v1.BaseResponse {
@@ -8795,7 +9891,7 @@ type ListMBSpinsRequest struct {
 
 func (x *ListMBSpinsRequest) Reset() {
 	*x = ListMBSpinsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[109]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[123]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8807,7 +9903,7 @@ func (x *ListMBSpinsRequest) String() string {
 func (*ListMBSpinsRequest) ProtoMessage() {}
 
 func (x *ListMBSpinsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[109]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[123]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8820,7 +9916,7 @@ func (x *ListMBSpinsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMBSpinsRequest.ProtoReflect.Descriptor instead.
 func (*ListMBSpinsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{109}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *ListMBSpinsRequest) GetMbhId() string {
@@ -8887,7 +9983,7 @@ type ListMBSpinsResponse struct {
 
 func (x *ListMBSpinsResponse) Reset() {
 	*x = ListMBSpinsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[110]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[124]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8899,7 +9995,7 @@ func (x *ListMBSpinsResponse) String() string {
 func (*ListMBSpinsResponse) ProtoMessage() {}
 
 func (x *ListMBSpinsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[110]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[124]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8912,7 +10008,7 @@ func (x *ListMBSpinsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMBSpinsResponse.ProtoReflect.Descriptor instead.
 func (*ListMBSpinsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{110}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *ListMBSpinsResponse) GetBase() *v1.BaseResponse {
@@ -8947,7 +10043,7 @@ type ExportMBSpinsRequest struct {
 
 func (x *ExportMBSpinsRequest) Reset() {
 	*x = ExportMBSpinsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[111]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[125]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8959,7 +10055,7 @@ func (x *ExportMBSpinsRequest) String() string {
 func (*ExportMBSpinsRequest) ProtoMessage() {}
 
 func (x *ExportMBSpinsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[111]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[125]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8972,7 +10068,7 @@ func (x *ExportMBSpinsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportMBSpinsRequest.ProtoReflect.Descriptor instead.
 func (*ExportMBSpinsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{111}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *ExportMBSpinsRequest) GetMbhId() string {
@@ -8997,7 +10093,7 @@ type ExportMBSpinsResponse struct {
 
 func (x *ExportMBSpinsResponse) Reset() {
 	*x = ExportMBSpinsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[112]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[126]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9009,7 +10105,7 @@ func (x *ExportMBSpinsResponse) String() string {
 func (*ExportMBSpinsResponse) ProtoMessage() {}
 
 func (x *ExportMBSpinsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[112]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[126]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9022,7 +10118,7 @@ func (x *ExportMBSpinsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportMBSpinsResponse.ProtoReflect.Descriptor instead.
 func (*ExportMBSpinsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{112}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *ExportMBSpinsResponse) GetBase() *v1.BaseResponse {
@@ -9063,7 +10159,7 @@ type ImportMBSpinsRequest struct {
 
 func (x *ImportMBSpinsRequest) Reset() {
 	*x = ImportMBSpinsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[113]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[127]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9075,7 +10171,7 @@ func (x *ImportMBSpinsRequest) String() string {
 func (*ImportMBSpinsRequest) ProtoMessage() {}
 
 func (x *ImportMBSpinsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[113]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[127]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9088,7 +10184,7 @@ func (x *ImportMBSpinsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportMBSpinsRequest.ProtoReflect.Descriptor instead.
 func (*ImportMBSpinsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{113}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *ImportMBSpinsRequest) GetMbhId() string {
@@ -9138,7 +10234,7 @@ type ImportMBSpinsResponse struct {
 
 func (x *ImportMBSpinsResponse) Reset() {
 	*x = ImportMBSpinsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[114]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9150,7 +10246,7 @@ func (x *ImportMBSpinsResponse) String() string {
 func (*ImportMBSpinsResponse) ProtoMessage() {}
 
 func (x *ImportMBSpinsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[114]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9163,7 +10259,7 @@ func (x *ImportMBSpinsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportMBSpinsResponse.ProtoReflect.Descriptor instead.
 func (*ImportMBSpinsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{114}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *ImportMBSpinsResponse) GetBase() *v1.BaseResponse {
@@ -9212,7 +10308,7 @@ type DownloadMBSpinTemplateRequest struct {
 
 func (x *DownloadMBSpinTemplateRequest) Reset() {
 	*x = DownloadMBSpinTemplateRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[115]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9224,7 +10320,7 @@ func (x *DownloadMBSpinTemplateRequest) String() string {
 func (*DownloadMBSpinTemplateRequest) ProtoMessage() {}
 
 func (x *DownloadMBSpinTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[115]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9237,7 +10333,7 @@ func (x *DownloadMBSpinTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadMBSpinTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DownloadMBSpinTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{115}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *DownloadMBSpinTemplateRequest) GetMbhId() string {
@@ -9262,7 +10358,7 @@ type DownloadMBSpinTemplateResponse struct {
 
 func (x *DownloadMBSpinTemplateResponse) Reset() {
 	*x = DownloadMBSpinTemplateResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[116]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9274,7 +10370,7 @@ func (x *DownloadMBSpinTemplateResponse) String() string {
 func (*DownloadMBSpinTemplateResponse) ProtoMessage() {}
 
 func (x *DownloadMBSpinTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[116]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9287,7 +10383,7 @@ func (x *DownloadMBSpinTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadMBSpinTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DownloadMBSpinTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{116}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *DownloadMBSpinTemplateResponse) GetBase() *v1.BaseResponse {
@@ -9311,6 +10407,302 @@ func (x *DownloadMBSpinTemplateResponse) GetFileName() string {
 	return ""
 }
 
+// DuplicateMBSpinRequest is the request for duplicating an MB Spin record.
+//
+// Shape follows design §3.7. mbs_oracle_sys_id, mbs_orion_item_code and
+// mbs_mb_costing are DELIBERATELY ABSENT: decision D19 requires all three to be
+// NULL on the clone, so there is no field to carry them. The user fills them in
+// afterwards via UpdateMBSpin.
+type DuplicateMBSpinRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Parent MB Head UUID.
+	MbhId string `protobuf:"bytes,1,opt,name=mbh_id,json=mbhId,proto3" json:"mbh_id,omitempty"`
+	// Source MB Spin UUID — the record being duplicated.
+	MbsId string `protobuf:"bytes,2,opt,name=mbs_id,json=mbsId,proto3" json:"mbs_id,omitempty"`
+	// Optional override for the clone's management display name (max 100 chars).
+	// Absent means the server derives it as "<source name> (copy)".
+	MbsMgtName *string `protobuf:"bytes,3,opt,name=mbs_mgt_name,json=mbsMgtName,proto3,oneof" json:"mbs_mgt_name,omitempty"`
+	// Optional override for the clone's denier, strictly greater than zero.
+	// Absent means the source value is copied as-is.
+	//
+	// NOTE — the > 0 rule is INTENTIONALLY STRICTER than CreateMBSpinRequest /
+	// UpdateMBSpinRequest, which accept any double. This field is never a
+	// passthrough of stored legacy data: it exists only to carry a value a user
+	// just typed into the duplicate dialog, and a zero/negative denier there is
+	// always a mistake. Legacy rows keep flowing through Create/Update untouched.
+	MbsDenier *float64 `protobuf:"fixed64,4,opt,name=mbs_denier,json=mbsDenier,proto3,oneof" json:"mbs_denier,omitempty"`
+	// Optional override for the clone's filament count, strictly greater than
+	// zero. Absent means the source value is copied as-is. Same stricter-than-
+	// Create/Update reasoning as mbs_denier above.
+	MbsFilament   *int32 `protobuf:"varint,5,opt,name=mbs_filament,json=mbsFilament,proto3,oneof" json:"mbs_filament,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DuplicateMBSpinRequest) Reset() {
+	*x = DuplicateMBSpinRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[131]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DuplicateMBSpinRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DuplicateMBSpinRequest) ProtoMessage() {}
+
+func (x *DuplicateMBSpinRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[131]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DuplicateMBSpinRequest.ProtoReflect.Descriptor instead.
+func (*DuplicateMBSpinRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{131}
+}
+
+func (x *DuplicateMBSpinRequest) GetMbhId() string {
+	if x != nil {
+		return x.MbhId
+	}
+	return ""
+}
+
+func (x *DuplicateMBSpinRequest) GetMbsId() string {
+	if x != nil {
+		return x.MbsId
+	}
+	return ""
+}
+
+func (x *DuplicateMBSpinRequest) GetMbsMgtName() string {
+	if x != nil && x.MbsMgtName != nil {
+		return *x.MbsMgtName
+	}
+	return ""
+}
+
+func (x *DuplicateMBSpinRequest) GetMbsDenier() float64 {
+	if x != nil && x.MbsDenier != nil {
+		return *x.MbsDenier
+	}
+	return 0
+}
+
+func (x *DuplicateMBSpinRequest) GetMbsFilament() int32 {
+	if x != nil && x.MbsFilament != nil {
+		return *x.MbsFilament
+	}
+	return 0
+}
+
+// MBSpinRecalcSkipped is one child spin that the duplicate/recalc pass did NOT
+// touch (rule A7).
+//
+// Children are recalculated only when mbs_status = 'R and D'. A child in
+// 'Spinning' or 'Boughtout', or one whose status is absent, carries an actual
+// production value that must never be overwritten by a derived one — it is
+// skipped and reported here so the UI can say WHICH children were left alone
+// and why, instead of silently doing less than the user expected.
+type MBSpinRecalcSkipped struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Skipped child spin UUID.
+	MbsId string `protobuf:"bytes,1,opt,name=mbs_id,json=mbsId,proto3" json:"mbs_id,omitempty"`
+	// Skipped child spin management display name, for display without a refetch.
+	MbsMgtName string `protobuf:"bytes,2,opt,name=mbs_mgt_name,json=mbsMgtName,proto3" json:"mbs_mgt_name,omitempty"`
+	// Status that caused the skip. Absent = the child has no status at all, which
+	// is itself a skip reason (an absent status is treated as non-recalculable).
+	MbsStatus *string `protobuf:"bytes,3,opt,name=mbs_status,json=mbsStatus,proto3,oneof" json:"mbs_status,omitempty"`
+	// Machine-readable skip reason, e.g. STATUS_NOT_RND or STATUS_ABSENT.
+	Reason        string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MBSpinRecalcSkipped) Reset() {
+	*x = MBSpinRecalcSkipped{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[132]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MBSpinRecalcSkipped) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MBSpinRecalcSkipped) ProtoMessage() {}
+
+func (x *MBSpinRecalcSkipped) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[132]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MBSpinRecalcSkipped.ProtoReflect.Descriptor instead.
+func (*MBSpinRecalcSkipped) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{132}
+}
+
+func (x *MBSpinRecalcSkipped) GetMbsId() string {
+	if x != nil {
+		return x.MbsId
+	}
+	return ""
+}
+
+func (x *MBSpinRecalcSkipped) GetMbsMgtName() string {
+	if x != nil {
+		return x.MbsMgtName
+	}
+	return ""
+}
+
+func (x *MBSpinRecalcSkipped) GetMbsStatus() string {
+	if x != nil && x.MbsStatus != nil {
+		return *x.MbsStatus
+	}
+	return ""
+}
+
+func (x *MBSpinRecalcSkipped) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// DuplicateMBSpinResponse is the response for duplicating an MB Spin record.
+//
+// ⚠ The impact_* fields are a PREVIEW ONLY (decision D24). Nothing in this
+// response is the result of a yarn-product recalculation: duplicating a spin
+// NEVER recalculates yarn products. The rows only tell the user which products
+// would be affected, so they can decide what to do next.
+type DuplicateMBSpinResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// The newly created clone.
+	Data *MBSpin `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	// Child spins deliberately left untouched by the recalc pass (rule A7).
+	// Empty when every candidate child was recalculated.
+	Skipped []*MBSpinRecalcSkipped `protobuf:"bytes,3,rep,name=skipped,proto3" json:"skipped,omitempty"`
+	// Number of skipped child spins. Equals len(skipped) — sent explicitly so a
+	// caller that ignores the detail rows still gets the count.
+	SkippedCount int32 `protobuf:"varint,4,opt,name=skipped_count,json=skippedCount,proto3" json:"skipped_count,omitempty"`
+	// Products that WOULD be affected, Top-N. ⛔ NOT a recalculation result (D24).
+	// Reuses DozingImpactRow, the same row type PreviewDozingImpact returns, so
+	// the UI can render both with one component.
+	ImpactPreview []*DozingImpactRow `protobuf:"bytes,5,rep,name=impact_preview,json=impactPreview,proto3" json:"impact_preview,omitempty"`
+	// Total number of affected products, before truncation.
+	ImpactTotalAffected int32 `protobuf:"varint,6,opt,name=impact_total_affected,json=impactTotalAffected,proto3" json:"impact_total_affected,omitempty"`
+	// Number of affected products whose costing is locked.
+	ImpactTotalLocked int32 `protobuf:"varint,7,opt,name=impact_total_locked,json=impactTotalLocked,proto3" json:"impact_total_locked,omitempty"`
+	// True when impact_preview was truncated by the server's row cap.
+	ImpactTruncated bool `protobuf:"varint,8,opt,name=impact_truncated,json=impactTruncated,proto3" json:"impact_truncated,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *DuplicateMBSpinResponse) Reset() {
+	*x = DuplicateMBSpinResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[133]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DuplicateMBSpinResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DuplicateMBSpinResponse) ProtoMessage() {}
+
+func (x *DuplicateMBSpinResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[133]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DuplicateMBSpinResponse.ProtoReflect.Descriptor instead.
+func (*DuplicateMBSpinResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{133}
+}
+
+func (x *DuplicateMBSpinResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *DuplicateMBSpinResponse) GetData() *MBSpin {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *DuplicateMBSpinResponse) GetSkipped() []*MBSpinRecalcSkipped {
+	if x != nil {
+		return x.Skipped
+	}
+	return nil
+}
+
+func (x *DuplicateMBSpinResponse) GetSkippedCount() int32 {
+	if x != nil {
+		return x.SkippedCount
+	}
+	return 0
+}
+
+func (x *DuplicateMBSpinResponse) GetImpactPreview() []*DozingImpactRow {
+	if x != nil {
+		return x.ImpactPreview
+	}
+	return nil
+}
+
+func (x *DuplicateMBSpinResponse) GetImpactTotalAffected() int32 {
+	if x != nil {
+		return x.ImpactTotalAffected
+	}
+	return 0
+}
+
+func (x *DuplicateMBSpinResponse) GetImpactTotalLocked() int32 {
+	if x != nil {
+		return x.ImpactTotalLocked
+	}
+	return 0
+}
+
+func (x *DuplicateMBSpinResponse) GetImpactTruncated() bool {
+	if x != nil {
+		return x.ImpactTruncated
+	}
+	return false
+}
+
 // GetLookupFillValuesRequest requests auto-fill values from a master lookup selection.
 type GetLookupFillValuesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -9328,7 +10720,7 @@ type GetLookupFillValuesRequest struct {
 
 func (x *GetLookupFillValuesRequest) Reset() {
 	*x = GetLookupFillValuesRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[117]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9340,7 +10732,7 @@ func (x *GetLookupFillValuesRequest) String() string {
 func (*GetLookupFillValuesRequest) ProtoMessage() {}
 
 func (x *GetLookupFillValuesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[117]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9353,7 +10745,7 @@ func (x *GetLookupFillValuesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLookupFillValuesRequest.ProtoReflect.Descriptor instead.
 func (*GetLookupFillValuesRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{117}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *GetLookupFillValuesRequest) GetLookupMasterCode() string {
@@ -9393,7 +10785,7 @@ type GetLookupFillValuesResponse struct {
 
 func (x *GetLookupFillValuesResponse) Reset() {
 	*x = GetLookupFillValuesResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[118]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9405,7 +10797,7 @@ func (x *GetLookupFillValuesResponse) String() string {
 func (*GetLookupFillValuesResponse) ProtoMessage() {}
 
 func (x *GetLookupFillValuesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[118]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9418,7 +10810,7 @@ func (x *GetLookupFillValuesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLookupFillValuesResponse.ProtoReflect.Descriptor instead.
 func (*GetLookupFillValuesResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{118}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *GetLookupFillValuesResponse) GetBase() *v1.BaseResponse {
@@ -9466,7 +10858,7 @@ type LookupMaster struct {
 
 func (x *LookupMaster) Reset() {
 	*x = LookupMaster{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[119]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[136]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9478,7 +10870,7 @@ func (x *LookupMaster) String() string {
 func (*LookupMaster) ProtoMessage() {}
 
 func (x *LookupMaster) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[119]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[136]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9491,7 +10883,7 @@ func (x *LookupMaster) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LookupMaster.ProtoReflect.Descriptor instead.
 func (*LookupMaster) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{119}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *LookupMaster) GetLmCode() string {
@@ -9553,7 +10945,7 @@ type ListLookupMastersRequest struct {
 
 func (x *ListLookupMastersRequest) Reset() {
 	*x = ListLookupMastersRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[120]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[137]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9565,7 +10957,7 @@ func (x *ListLookupMastersRequest) String() string {
 func (*ListLookupMastersRequest) ProtoMessage() {}
 
 func (x *ListLookupMastersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[120]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[137]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9578,7 +10970,7 @@ func (x *ListLookupMastersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListLookupMastersRequest.ProtoReflect.Descriptor instead.
 func (*ListLookupMastersRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{120}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *ListLookupMastersRequest) GetActiveOnly() bool {
@@ -9599,7 +10991,7 @@ type ListLookupMastersResponse struct {
 
 func (x *ListLookupMastersResponse) Reset() {
 	*x = ListLookupMastersResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[121]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[138]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9611,7 +11003,7 @@ func (x *ListLookupMastersResponse) String() string {
 func (*ListLookupMastersResponse) ProtoMessage() {}
 
 func (x *ListLookupMastersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[121]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[138]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9624,7 +11016,7 @@ func (x *ListLookupMastersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListLookupMastersResponse.ProtoReflect.Descriptor instead.
 func (*ListLookupMastersResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{121}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *ListLookupMastersResponse) GetBase() *v1.BaseResponse {
@@ -9657,7 +11049,7 @@ type LookupMasterColumn struct {
 
 func (x *LookupMasterColumn) Reset() {
 	*x = LookupMasterColumn{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[122]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9669,7 +11061,7 @@ func (x *LookupMasterColumn) String() string {
 func (*LookupMasterColumn) ProtoMessage() {}
 
 func (x *LookupMasterColumn) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[122]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9682,7 +11074,7 @@ func (x *LookupMasterColumn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LookupMasterColumn.ProtoReflect.Descriptor instead.
 func (*LookupMasterColumn) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{122}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *LookupMasterColumn) GetLmcMasterCode() string {
@@ -9737,7 +11129,7 @@ type ListLookupMasterColumnsRequest struct {
 
 func (x *ListLookupMasterColumnsRequest) Reset() {
 	*x = ListLookupMasterColumnsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[123]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[140]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9749,7 +11141,7 @@ func (x *ListLookupMasterColumnsRequest) String() string {
 func (*ListLookupMasterColumnsRequest) ProtoMessage() {}
 
 func (x *ListLookupMasterColumnsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[123]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[140]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9762,7 +11154,7 @@ func (x *ListLookupMasterColumnsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListLookupMasterColumnsRequest.ProtoReflect.Descriptor instead.
 func (*ListLookupMasterColumnsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{123}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *ListLookupMasterColumnsRequest) GetMasterCode() string {
@@ -9783,7 +11175,7 @@ type ListLookupMasterColumnsResponse struct {
 
 func (x *ListLookupMasterColumnsResponse) Reset() {
 	*x = ListLookupMasterColumnsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[124]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[141]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9795,7 +11187,7 @@ func (x *ListLookupMasterColumnsResponse) String() string {
 func (*ListLookupMasterColumnsResponse) ProtoMessage() {}
 
 func (x *ListLookupMasterColumnsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[124]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[141]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9808,7 +11200,7 @@ func (x *ListLookupMasterColumnsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListLookupMasterColumnsResponse.ProtoReflect.Descriptor instead.
 func (*ListLookupMasterColumnsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{124}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{141}
 }
 
 func (x *ListLookupMasterColumnsResponse) GetBase() *v1.BaseResponse {
@@ -9844,7 +11236,7 @@ type CreateLookupMasterRequest struct {
 
 func (x *CreateLookupMasterRequest) Reset() {
 	*x = CreateLookupMasterRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[125]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[142]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9856,7 +11248,7 @@ func (x *CreateLookupMasterRequest) String() string {
 func (*CreateLookupMasterRequest) ProtoMessage() {}
 
 func (x *CreateLookupMasterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[125]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[142]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9869,7 +11261,7 @@ func (x *CreateLookupMasterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateLookupMasterRequest.ProtoReflect.Descriptor instead.
 func (*CreateLookupMasterRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{125}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{142}
 }
 
 func (x *CreateLookupMasterRequest) GetLmCode() string {
@@ -9925,7 +11317,7 @@ type CreateLookupMasterResponse struct {
 
 func (x *CreateLookupMasterResponse) Reset() {
 	*x = CreateLookupMasterResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[126]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[143]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9937,7 +11329,7 @@ func (x *CreateLookupMasterResponse) String() string {
 func (*CreateLookupMasterResponse) ProtoMessage() {}
 
 func (x *CreateLookupMasterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[126]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[143]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9950,7 +11342,7 @@ func (x *CreateLookupMasterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateLookupMasterResponse.ProtoReflect.Descriptor instead.
 func (*CreateLookupMasterResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{126}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{143}
 }
 
 func (x *CreateLookupMasterResponse) GetBase() *v1.BaseResponse {
@@ -9977,7 +11369,7 @@ type DeleteLookupMasterRequest struct {
 
 func (x *DeleteLookupMasterRequest) Reset() {
 	*x = DeleteLookupMasterRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[127]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[144]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9989,7 +11381,7 @@ func (x *DeleteLookupMasterRequest) String() string {
 func (*DeleteLookupMasterRequest) ProtoMessage() {}
 
 func (x *DeleteLookupMasterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[127]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[144]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10002,7 +11394,7 @@ func (x *DeleteLookupMasterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteLookupMasterRequest.ProtoReflect.Descriptor instead.
 func (*DeleteLookupMasterRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{127}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{144}
 }
 
 func (x *DeleteLookupMasterRequest) GetLmCode() string {
@@ -10022,7 +11414,7 @@ type DeleteLookupMasterResponse struct {
 
 func (x *DeleteLookupMasterResponse) Reset() {
 	*x = DeleteLookupMasterResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[128]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[145]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10034,7 +11426,7 @@ func (x *DeleteLookupMasterResponse) String() string {
 func (*DeleteLookupMasterResponse) ProtoMessage() {}
 
 func (x *DeleteLookupMasterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[128]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[145]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10047,7 +11439,7 @@ func (x *DeleteLookupMasterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteLookupMasterResponse.ProtoReflect.Descriptor instead.
 func (*DeleteLookupMasterResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{128}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{145}
 }
 
 func (x *DeleteLookupMasterResponse) GetBase() *v1.BaseResponse {
@@ -10071,7 +11463,7 @@ type CreateLookupMasterColumnRequest struct {
 
 func (x *CreateLookupMasterColumnRequest) Reset() {
 	*x = CreateLookupMasterColumnRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[129]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[146]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10083,7 +11475,7 @@ func (x *CreateLookupMasterColumnRequest) String() string {
 func (*CreateLookupMasterColumnRequest) ProtoMessage() {}
 
 func (x *CreateLookupMasterColumnRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[129]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[146]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10096,7 +11488,7 @@ func (x *CreateLookupMasterColumnRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateLookupMasterColumnRequest.ProtoReflect.Descriptor instead.
 func (*CreateLookupMasterColumnRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{129}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{146}
 }
 
 func (x *CreateLookupMasterColumnRequest) GetLmcMasterCode() string {
@@ -10145,7 +11537,7 @@ type CreateLookupMasterColumnResponse struct {
 
 func (x *CreateLookupMasterColumnResponse) Reset() {
 	*x = CreateLookupMasterColumnResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[130]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[147]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10157,7 +11549,7 @@ func (x *CreateLookupMasterColumnResponse) String() string {
 func (*CreateLookupMasterColumnResponse) ProtoMessage() {}
 
 func (x *CreateLookupMasterColumnResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[130]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[147]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10170,7 +11562,7 @@ func (x *CreateLookupMasterColumnResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateLookupMasterColumnResponse.ProtoReflect.Descriptor instead.
 func (*CreateLookupMasterColumnResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{130}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{147}
 }
 
 func (x *CreateLookupMasterColumnResponse) GetBase() *v1.BaseResponse {
@@ -10197,7 +11589,7 @@ type DeleteLookupMasterColumnRequest struct {
 
 func (x *DeleteLookupMasterColumnRequest) Reset() {
 	*x = DeleteLookupMasterColumnRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[131]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[148]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10209,7 +11601,7 @@ func (x *DeleteLookupMasterColumnRequest) String() string {
 func (*DeleteLookupMasterColumnRequest) ProtoMessage() {}
 
 func (x *DeleteLookupMasterColumnRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[131]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[148]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10222,7 +11614,7 @@ func (x *DeleteLookupMasterColumnRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteLookupMasterColumnRequest.ProtoReflect.Descriptor instead.
 func (*DeleteLookupMasterColumnRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{131}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{148}
 }
 
 func (x *DeleteLookupMasterColumnRequest) GetLmcId() string {
@@ -10242,7 +11634,7 @@ type DeleteLookupMasterColumnResponse struct {
 
 func (x *DeleteLookupMasterColumnResponse) Reset() {
 	*x = DeleteLookupMasterColumnResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[132]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[149]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10254,7 +11646,7 @@ func (x *DeleteLookupMasterColumnResponse) String() string {
 func (*DeleteLookupMasterColumnResponse) ProtoMessage() {}
 
 func (x *DeleteLookupMasterColumnResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[132]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[149]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10267,7 +11659,7 @@ func (x *DeleteLookupMasterColumnResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteLookupMasterColumnResponse.ProtoReflect.Descriptor instead.
 func (*DeleteLookupMasterColumnResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{132}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{149}
 }
 
 func (x *DeleteLookupMasterColumnResponse) GetBase() *v1.BaseResponse {
@@ -10290,7 +11682,7 @@ type UpdateLookupMasterRequest struct {
 
 func (x *UpdateLookupMasterRequest) Reset() {
 	*x = UpdateLookupMasterRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[133]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[150]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10302,7 +11694,7 @@ func (x *UpdateLookupMasterRequest) String() string {
 func (*UpdateLookupMasterRequest) ProtoMessage() {}
 
 func (x *UpdateLookupMasterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[133]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[150]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10315,7 +11707,7 @@ func (x *UpdateLookupMasterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateLookupMasterRequest.ProtoReflect.Descriptor instead.
 func (*UpdateLookupMasterRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{133}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{150}
 }
 
 func (x *UpdateLookupMasterRequest) GetLmCode() string {
@@ -10357,7 +11749,7 @@ type UpdateLookupMasterResponse struct {
 
 func (x *UpdateLookupMasterResponse) Reset() {
 	*x = UpdateLookupMasterResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[134]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[151]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10369,7 +11761,7 @@ func (x *UpdateLookupMasterResponse) String() string {
 func (*UpdateLookupMasterResponse) ProtoMessage() {}
 
 func (x *UpdateLookupMasterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[134]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[151]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10382,7 +11774,7 @@ func (x *UpdateLookupMasterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateLookupMasterResponse.ProtoReflect.Descriptor instead.
 func (*UpdateLookupMasterResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{134}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{151}
 }
 
 func (x *UpdateLookupMasterResponse) GetBase() *v1.BaseResponse {
@@ -10416,7 +11808,7 @@ type TableColumn struct {
 
 func (x *TableColumn) Reset() {
 	*x = TableColumn{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[135]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[152]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10428,7 +11820,7 @@ func (x *TableColumn) String() string {
 func (*TableColumn) ProtoMessage() {}
 
 func (x *TableColumn) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[135]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[152]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10441,7 +11833,7 @@ func (x *TableColumn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TableColumn.ProtoReflect.Descriptor instead.
 func (*TableColumn) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{135}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{152}
 }
 
 func (x *TableColumn) GetColumnName() string {
@@ -10483,7 +11875,7 @@ type ListTableColumnsRequest struct {
 
 func (x *ListTableColumnsRequest) Reset() {
 	*x = ListTableColumnsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[136]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[153]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10495,7 +11887,7 @@ func (x *ListTableColumnsRequest) String() string {
 func (*ListTableColumnsRequest) ProtoMessage() {}
 
 func (x *ListTableColumnsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[136]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[153]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10508,7 +11900,7 @@ func (x *ListTableColumnsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTableColumnsRequest.ProtoReflect.Descriptor instead.
 func (*ListTableColumnsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{136}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{153}
 }
 
 func (x *ListTableColumnsRequest) GetTableName() string {
@@ -10529,7 +11921,7 @@ type ListTableColumnsResponse struct {
 
 func (x *ListTableColumnsResponse) Reset() {
 	*x = ListTableColumnsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[137]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[154]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10541,7 +11933,7 @@ func (x *ListTableColumnsResponse) String() string {
 func (*ListTableColumnsResponse) ProtoMessage() {}
 
 func (x *ListTableColumnsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[137]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[154]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10554,7 +11946,7 @@ func (x *ListTableColumnsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTableColumnsResponse.ProtoReflect.Descriptor instead.
 func (*ListTableColumnsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{137}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{154}
 }
 
 func (x *ListTableColumnsResponse) GetBase() *v1.BaseResponse {
@@ -10577,14 +11969,30 @@ type MasterOption struct {
 	// The "code" field value stored as the param's text value.
 	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 	// The "label" field value displayed to the user.
-	Label         string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	// ⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): spin denier (dtex).
+	// Currently only populated for the MB_SPIN lookup master, so users can tell
+	// visually-similar MB Spin entries apart. Unset for every other lookup master.
+	Denier *float64 `protobuf:"fixed64,3,opt,name=denier,proto3,oneof" json:"denier,omitempty"`
+	// ⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): number of filaments.
+	// Currently only populated for the MB_SPIN lookup master. Unset otherwise.
+	Filament *int32 `protobuf:"varint,4,opt,name=filament,proto3,oneof" json:"filament,omitempty"`
+	// ⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): planned LDR percentage
+	// (mst_mb_spin.mbs_ldr_prsn, "LDR Rencana (%)"). Only populated for the
+	// MB_SPIN lookup master. Unset otherwise.
+	LdrPrsn *float64 `protobuf:"fixed64,6,opt,name=ldr_prsn,json=ldrPrsn,proto3,oneof" json:"ldr_prsn,omitempty"`
+	// ⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): actual/run LDR
+	// percentage used in cost calculation (mst_mb_spin.mbs_run_ldr_pct,
+	// "LDR Aktual (%)"). Only populated for the MB_SPIN lookup master. Unset
+	// otherwise.
+	RunLdrPct     *float64 `protobuf:"fixed64,7,opt,name=run_ldr_pct,json=runLdrPct,proto3,oneof" json:"run_ldr_pct,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MasterOption) Reset() {
 	*x = MasterOption{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[138]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[155]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10596,7 +12004,7 @@ func (x *MasterOption) String() string {
 func (*MasterOption) ProtoMessage() {}
 
 func (x *MasterOption) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[138]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[155]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10609,7 +12017,7 @@ func (x *MasterOption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MasterOption.ProtoReflect.Descriptor instead.
 func (*MasterOption) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{138}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{155}
 }
 
 func (x *MasterOption) GetValue() string {
@@ -10626,18 +12034,57 @@ func (x *MasterOption) GetLabel() string {
 	return ""
 }
 
+func (x *MasterOption) GetDenier() float64 {
+	if x != nil && x.Denier != nil {
+		return *x.Denier
+	}
+	return 0
+}
+
+func (x *MasterOption) GetFilament() int32 {
+	if x != nil && x.Filament != nil {
+		return *x.Filament
+	}
+	return 0
+}
+
+func (x *MasterOption) GetLdrPrsn() float64 {
+	if x != nil && x.LdrPrsn != nil {
+		return *x.LdrPrsn
+	}
+	return 0
+}
+
+func (x *MasterOption) GetRunLdrPct() float64 {
+	if x != nil && x.RunLdrPct != nil {
+		return *x.RunLdrPct
+	}
+	return 0
+}
+
 // ListMasterOptionsRequest queries the registered table to populate a combobox.
 type ListMasterOptionsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// lookup_master_code (e.g., "MACHINE") — used to resolve table_name + code/label fields.
-	MasterCode    string `protobuf:"bytes,1,opt,name=master_code,json=masterCode,proto3" json:"master_code,omitempty"`
+	MasterCode string `protobuf:"bytes,1,opt,name=master_code,json=masterCode,proto3" json:"master_code,omitempty"`
+	// ⭐ DIPERBARUI 2026-08-26 (perf: SP Code dropdown lag, server-side search) —
+	// optional search keyword, matched (case-insensitive) against both the
+	// master's code column and its label column. Empty/absent means no search
+	// predicate (returns the same rows as before, subject to the new limit
+	// below).
+	Search *string `protobuf:"bytes,2,opt,name=search,proto3,oneof" json:"search,omitempty"`
+	// ⭐ DIPERBARUI 2026-08-26 (perf: SP Code dropdown lag, server-side search) —
+	// optional max rows to return. Absent or 0 falls back to a server-side
+	// default (200 — see LookupMasterRepository.ListMasterOptions) instead of
+	// returning the whole table.
+	Limit         *int32 `protobuf:"varint,3,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListMasterOptionsRequest) Reset() {
 	*x = ListMasterOptionsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[139]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[156]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10649,7 +12096,7 @@ func (x *ListMasterOptionsRequest) String() string {
 func (*ListMasterOptionsRequest) ProtoMessage() {}
 
 func (x *ListMasterOptionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[139]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[156]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10662,7 +12109,7 @@ func (x *ListMasterOptionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMasterOptionsRequest.ProtoReflect.Descriptor instead.
 func (*ListMasterOptionsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{139}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{156}
 }
 
 func (x *ListMasterOptionsRequest) GetMasterCode() string {
@@ -10670,6 +12117,20 @@ func (x *ListMasterOptionsRequest) GetMasterCode() string {
 		return x.MasterCode
 	}
 	return ""
+}
+
+func (x *ListMasterOptionsRequest) GetSearch() string {
+	if x != nil && x.Search != nil {
+		return *x.Search
+	}
+	return ""
+}
+
+func (x *ListMasterOptionsRequest) GetLimit() int32 {
+	if x != nil && x.Limit != nil {
+		return *x.Limit
+	}
+	return 0
 }
 
 // ListMasterOptionsResponse is the response for ListMasterOptions.
@@ -10683,7 +12144,7 @@ type ListMasterOptionsResponse struct {
 
 func (x *ListMasterOptionsResponse) Reset() {
 	*x = ListMasterOptionsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[140]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[157]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10695,7 +12156,7 @@ func (x *ListMasterOptionsResponse) String() string {
 func (*ListMasterOptionsResponse) ProtoMessage() {}
 
 func (x *ListMasterOptionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[140]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[157]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10708,7 +12169,7 @@ func (x *ListMasterOptionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMasterOptionsResponse.ProtoReflect.Descriptor instead.
 func (*ListMasterOptionsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{140}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{157}
 }
 
 func (x *ListMasterOptionsResponse) GetBase() *v1.BaseResponse {
@@ -10734,7 +12195,7 @@ type ExportLookupMastersRequest struct {
 
 func (x *ExportLookupMastersRequest) Reset() {
 	*x = ExportLookupMastersRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[141]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[158]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10746,7 +12207,7 @@ func (x *ExportLookupMastersRequest) String() string {
 func (*ExportLookupMastersRequest) ProtoMessage() {}
 
 func (x *ExportLookupMastersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[141]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[158]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10759,7 +12220,7 @@ func (x *ExportLookupMastersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportLookupMastersRequest.ProtoReflect.Descriptor instead.
 func (*ExportLookupMastersRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{141}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{158}
 }
 
 // ExportLookupMastersResponse carries the Excel workbook bytes.
@@ -10774,7 +12235,7 @@ type ExportLookupMastersResponse struct {
 
 func (x *ExportLookupMastersResponse) Reset() {
 	*x = ExportLookupMastersResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[142]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[159]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10786,7 +12247,7 @@ func (x *ExportLookupMastersResponse) String() string {
 func (*ExportLookupMastersResponse) ProtoMessage() {}
 
 func (x *ExportLookupMastersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[142]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[159]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10799,7 +12260,7 @@ func (x *ExportLookupMastersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportLookupMastersResponse.ProtoReflect.Descriptor instead.
 func (*ExportLookupMastersResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{142}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{159}
 }
 
 func (x *ExportLookupMastersResponse) GetBase() *v1.BaseResponse {
@@ -10834,7 +12295,7 @@ type ImportLookupMastersRequest struct {
 
 func (x *ImportLookupMastersRequest) Reset() {
 	*x = ImportLookupMastersRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[143]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[160]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10846,7 +12307,7 @@ func (x *ImportLookupMastersRequest) String() string {
 func (*ImportLookupMastersRequest) ProtoMessage() {}
 
 func (x *ImportLookupMastersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[143]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[160]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10859,7 +12320,7 @@ func (x *ImportLookupMastersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportLookupMastersRequest.ProtoReflect.Descriptor instead.
 func (*ImportLookupMastersRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{143}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{160}
 }
 
 func (x *ImportLookupMastersRequest) GetFileContent() []byte {
@@ -10890,7 +12351,7 @@ type ImportLookupMastersResponse struct {
 
 func (x *ImportLookupMastersResponse) Reset() {
 	*x = ImportLookupMastersResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[144]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[161]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10902,7 +12363,7 @@ func (x *ImportLookupMastersResponse) String() string {
 func (*ImportLookupMastersResponse) ProtoMessage() {}
 
 func (x *ImportLookupMastersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[144]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[161]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10915,7 +12376,7 @@ func (x *ImportLookupMastersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportLookupMastersResponse.ProtoReflect.Descriptor instead.
 func (*ImportLookupMastersResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{144}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{161}
 }
 
 func (x *ImportLookupMastersResponse) GetBase() *v1.BaseResponse {
@@ -10982,7 +12443,7 @@ type MbComposition struct {
 
 func (x *MbComposition) Reset() {
 	*x = MbComposition{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[145]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[162]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10994,7 +12455,7 @@ func (x *MbComposition) String() string {
 func (*MbComposition) ProtoMessage() {}
 
 func (x *MbComposition) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[145]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[162]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11007,7 +12468,7 @@ func (x *MbComposition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbComposition.ProtoReflect.Descriptor instead.
 func (*MbComposition) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{145}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{162}
 }
 
 func (x *MbComposition) GetMbcmId() string {
@@ -11111,7 +12572,7 @@ type MbCompositionVersion struct {
 
 func (x *MbCompositionVersion) Reset() {
 	*x = MbCompositionVersion{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[146]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[163]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11123,7 +12584,7 @@ func (x *MbCompositionVersion) String() string {
 func (*MbCompositionVersion) ProtoMessage() {}
 
 func (x *MbCompositionVersion) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[146]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[163]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11136,7 +12597,7 @@ func (x *MbCompositionVersion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbCompositionVersion.ProtoReflect.Descriptor instead.
 func (*MbCompositionVersion) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{146}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{163}
 }
 
 func (x *MbCompositionVersion) GetMbcvId() string {
@@ -11241,7 +12702,7 @@ type MbLusture struct {
 
 func (x *MbLusture) Reset() {
 	*x = MbLusture{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[147]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[164]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11253,7 +12714,7 @@ func (x *MbLusture) String() string {
 func (*MbLusture) ProtoMessage() {}
 
 func (x *MbLusture) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[147]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[164]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11266,7 +12727,7 @@ func (x *MbLusture) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbLusture.ProtoReflect.Descriptor instead.
 func (*MbLusture) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{147}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{164}
 }
 
 func (x *MbLusture) GetMblId() string {
@@ -11358,7 +12819,7 @@ type MbParam struct {
 
 func (x *MbParam) Reset() {
 	*x = MbParam{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[148]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[165]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11370,7 +12831,7 @@ func (x *MbParam) String() string {
 func (*MbParam) ProtoMessage() {}
 
 func (x *MbParam) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[148]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[165]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11383,7 +12844,7 @@ func (x *MbParam) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbParam.ProtoReflect.Descriptor instead.
 func (*MbParam) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{148}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{165}
 }
 
 func (x *MbParam) GetMbpId() string {
@@ -11493,7 +12954,7 @@ type MbParamOption struct {
 
 func (x *MbParamOption) Reset() {
 	*x = MbParamOption{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[149]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[166]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11505,7 +12966,7 @@ func (x *MbParamOption) String() string {
 func (*MbParamOption) ProtoMessage() {}
 
 func (x *MbParamOption) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[149]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[166]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11518,7 +12979,7 @@ func (x *MbParamOption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbParamOption.ProtoReflect.Descriptor instead.
 func (*MbParamOption) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{149}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{166}
 }
 
 func (x *MbParamOption) GetMbpoId() string {
@@ -11597,7 +13058,7 @@ type MbCost struct {
 
 func (x *MbCost) Reset() {
 	*x = MbCost{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[150]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[167]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11609,7 +13070,7 @@ func (x *MbCost) String() string {
 func (*MbCost) ProtoMessage() {}
 
 func (x *MbCost) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[150]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[167]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11622,7 +13083,7 @@ func (x *MbCost) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbCost.ProtoReflect.Descriptor instead.
 func (*MbCost) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{150}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{167}
 }
 
 func (x *MbCost) GetMbcId() string {
@@ -11715,7 +13176,7 @@ type MbPushLog struct {
 
 func (x *MbPushLog) Reset() {
 	*x = MbPushLog{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[151]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[168]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11727,7 +13188,7 @@ func (x *MbPushLog) String() string {
 func (*MbPushLog) ProtoMessage() {}
 
 func (x *MbPushLog) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[151]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[168]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11740,7 +13201,7 @@ func (x *MbPushLog) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbPushLog.ProtoReflect.Descriptor instead.
 func (*MbPushLog) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{151}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{168}
 }
 
 func (x *MbPushLog) GetMbplId() string {
@@ -11831,7 +13292,7 @@ type MbWorkflowLog struct {
 
 func (x *MbWorkflowLog) Reset() {
 	*x = MbWorkflowLog{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[152]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[169]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11843,7 +13304,7 @@ func (x *MbWorkflowLog) String() string {
 func (*MbWorkflowLog) ProtoMessage() {}
 
 func (x *MbWorkflowLog) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[152]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[169]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11856,7 +13317,7 @@ func (x *MbWorkflowLog) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbWorkflowLog.ProtoReflect.Descriptor instead.
 func (*MbWorkflowLog) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{152}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{169}
 }
 
 func (x *MbWorkflowLog) GetMbwlId() string {
@@ -11938,7 +13399,7 @@ type CreateMbCompositionRequest struct {
 
 func (x *CreateMbCompositionRequest) Reset() {
 	*x = CreateMbCompositionRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[153]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[170]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11950,7 +13411,7 @@ func (x *CreateMbCompositionRequest) String() string {
 func (*CreateMbCompositionRequest) ProtoMessage() {}
 
 func (x *CreateMbCompositionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[153]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[170]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11963,7 +13424,7 @@ func (x *CreateMbCompositionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMbCompositionRequest.ProtoReflect.Descriptor instead.
 func (*CreateMbCompositionRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{153}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{170}
 }
 
 func (x *CreateMbCompositionRequest) GetMbhId() string {
@@ -12028,7 +13489,7 @@ type CreateMbCompositionResponse struct {
 
 func (x *CreateMbCompositionResponse) Reset() {
 	*x = CreateMbCompositionResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[154]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[171]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12040,7 +13501,7 @@ func (x *CreateMbCompositionResponse) String() string {
 func (*CreateMbCompositionResponse) ProtoMessage() {}
 
 func (x *CreateMbCompositionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[154]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[171]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12053,7 +13514,7 @@ func (x *CreateMbCompositionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMbCompositionResponse.ProtoReflect.Descriptor instead.
 func (*CreateMbCompositionResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{154}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{171}
 }
 
 func (x *CreateMbCompositionResponse) GetBase() *v1.BaseResponse {
@@ -12091,7 +13552,7 @@ type UpdateMbCompositionRequest struct {
 
 func (x *UpdateMbCompositionRequest) Reset() {
 	*x = UpdateMbCompositionRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[155]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[172]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12103,7 +13564,7 @@ func (x *UpdateMbCompositionRequest) String() string {
 func (*UpdateMbCompositionRequest) ProtoMessage() {}
 
 func (x *UpdateMbCompositionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[155]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[172]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12116,7 +13577,7 @@ func (x *UpdateMbCompositionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMbCompositionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMbCompositionRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{155}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{172}
 }
 
 func (x *UpdateMbCompositionRequest) GetMbcmId() string {
@@ -12174,7 +13635,7 @@ type UpdateMbCompositionResponse struct {
 
 func (x *UpdateMbCompositionResponse) Reset() {
 	*x = UpdateMbCompositionResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[156]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[173]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12186,7 +13647,7 @@ func (x *UpdateMbCompositionResponse) String() string {
 func (*UpdateMbCompositionResponse) ProtoMessage() {}
 
 func (x *UpdateMbCompositionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[156]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[173]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12199,7 +13660,7 @@ func (x *UpdateMbCompositionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMbCompositionResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMbCompositionResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{156}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{173}
 }
 
 func (x *UpdateMbCompositionResponse) GetBase() *v1.BaseResponse {
@@ -12227,7 +13688,7 @@ type DeleteMbCompositionRequest struct {
 
 func (x *DeleteMbCompositionRequest) Reset() {
 	*x = DeleteMbCompositionRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[157]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[174]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12239,7 +13700,7 @@ func (x *DeleteMbCompositionRequest) String() string {
 func (*DeleteMbCompositionRequest) ProtoMessage() {}
 
 func (x *DeleteMbCompositionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[157]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[174]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12252,7 +13713,7 @@ func (x *DeleteMbCompositionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMbCompositionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMbCompositionRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{157}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{174}
 }
 
 func (x *DeleteMbCompositionRequest) GetMbcmId() string {
@@ -12273,7 +13734,7 @@ type DeleteMbCompositionResponse struct {
 
 func (x *DeleteMbCompositionResponse) Reset() {
 	*x = DeleteMbCompositionResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[158]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[175]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12285,7 +13746,7 @@ func (x *DeleteMbCompositionResponse) String() string {
 func (*DeleteMbCompositionResponse) ProtoMessage() {}
 
 func (x *DeleteMbCompositionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[158]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[175]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12298,7 +13759,7 @@ func (x *DeleteMbCompositionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMbCompositionResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMbCompositionResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{158}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{175}
 }
 
 func (x *DeleteMbCompositionResponse) GetBase() *v1.BaseResponse {
@@ -12319,7 +13780,7 @@ type ListMbCompositionsRequest struct {
 
 func (x *ListMbCompositionsRequest) Reset() {
 	*x = ListMbCompositionsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[159]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[176]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12331,7 +13792,7 @@ func (x *ListMbCompositionsRequest) String() string {
 func (*ListMbCompositionsRequest) ProtoMessage() {}
 
 func (x *ListMbCompositionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[159]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[176]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12344,7 +13805,7 @@ func (x *ListMbCompositionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbCompositionsRequest.ProtoReflect.Descriptor instead.
 func (*ListMbCompositionsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{159}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{176}
 }
 
 func (x *ListMbCompositionsRequest) GetMbhId() string {
@@ -12367,7 +13828,7 @@ type ListMbCompositionsResponse struct {
 
 func (x *ListMbCompositionsResponse) Reset() {
 	*x = ListMbCompositionsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[160]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[177]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12379,7 +13840,7 @@ func (x *ListMbCompositionsResponse) String() string {
 func (*ListMbCompositionsResponse) ProtoMessage() {}
 
 func (x *ListMbCompositionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[160]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[177]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12392,7 +13853,7 @@ func (x *ListMbCompositionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbCompositionsResponse.ProtoReflect.Descriptor instead.
 func (*ListMbCompositionsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{160}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{177}
 }
 
 func (x *ListMbCompositionsResponse) GetBase() *v1.BaseResponse {
@@ -12422,7 +13883,7 @@ type ListMbCompositionVersionsRequest struct {
 
 func (x *ListMbCompositionVersionsRequest) Reset() {
 	*x = ListMbCompositionVersionsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[161]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[178]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12434,7 +13895,7 @@ func (x *ListMbCompositionVersionsRequest) String() string {
 func (*ListMbCompositionVersionsRequest) ProtoMessage() {}
 
 func (x *ListMbCompositionVersionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[161]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[178]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12447,7 +13908,7 @@ func (x *ListMbCompositionVersionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbCompositionVersionsRequest.ProtoReflect.Descriptor instead.
 func (*ListMbCompositionVersionsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{161}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{178}
 }
 
 func (x *ListMbCompositionVersionsRequest) GetMbhId() string {
@@ -12477,7 +13938,7 @@ type ListMbCompositionVersionsResponse struct {
 
 func (x *ListMbCompositionVersionsResponse) Reset() {
 	*x = ListMbCompositionVersionsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[162]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[179]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12489,7 +13950,7 @@ func (x *ListMbCompositionVersionsResponse) String() string {
 func (*ListMbCompositionVersionsResponse) ProtoMessage() {}
 
 func (x *ListMbCompositionVersionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[162]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[179]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12502,7 +13963,7 @@ func (x *ListMbCompositionVersionsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListMbCompositionVersionsResponse.ProtoReflect.Descriptor instead.
 func (*ListMbCompositionVersionsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{162}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{179}
 }
 
 func (x *ListMbCompositionVersionsResponse) GetBase() *v1.BaseResponse {
@@ -12540,7 +14001,7 @@ type CreateMbLustureRequest struct {
 
 func (x *CreateMbLustureRequest) Reset() {
 	*x = CreateMbLustureRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[163]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[180]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12552,7 +14013,7 @@ func (x *CreateMbLustureRequest) String() string {
 func (*CreateMbLustureRequest) ProtoMessage() {}
 
 func (x *CreateMbLustureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[163]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[180]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12565,7 +14026,7 @@ func (x *CreateMbLustureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMbLustureRequest.ProtoReflect.Descriptor instead.
 func (*CreateMbLustureRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{163}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{180}
 }
 
 func (x *CreateMbLustureRequest) GetCode() string {
@@ -12623,7 +14084,7 @@ type CreateMbLustureResponse struct {
 
 func (x *CreateMbLustureResponse) Reset() {
 	*x = CreateMbLustureResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[164]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[181]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12635,7 +14096,7 @@ func (x *CreateMbLustureResponse) String() string {
 func (*CreateMbLustureResponse) ProtoMessage() {}
 
 func (x *CreateMbLustureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[164]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[181]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12648,7 +14109,7 @@ func (x *CreateMbLustureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMbLustureResponse.ProtoReflect.Descriptor instead.
 func (*CreateMbLustureResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{164}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{181}
 }
 
 func (x *CreateMbLustureResponse) GetBase() *v1.BaseResponse {
@@ -12686,7 +14147,7 @@ type UpdateMbLustureRequest struct {
 
 func (x *UpdateMbLustureRequest) Reset() {
 	*x = UpdateMbLustureRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[165]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[182]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12698,7 +14159,7 @@ func (x *UpdateMbLustureRequest) String() string {
 func (*UpdateMbLustureRequest) ProtoMessage() {}
 
 func (x *UpdateMbLustureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[165]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[182]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12711,7 +14172,7 @@ func (x *UpdateMbLustureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMbLustureRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMbLustureRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{165}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{182}
 }
 
 func (x *UpdateMbLustureRequest) GetMblId() string {
@@ -12769,7 +14230,7 @@ type UpdateMbLustureResponse struct {
 
 func (x *UpdateMbLustureResponse) Reset() {
 	*x = UpdateMbLustureResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[166]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[183]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12781,7 +14242,7 @@ func (x *UpdateMbLustureResponse) String() string {
 func (*UpdateMbLustureResponse) ProtoMessage() {}
 
 func (x *UpdateMbLustureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[166]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[183]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12794,7 +14255,7 @@ func (x *UpdateMbLustureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMbLustureResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMbLustureResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{166}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{183}
 }
 
 func (x *UpdateMbLustureResponse) GetBase() *v1.BaseResponse {
@@ -12822,7 +14283,7 @@ type DeleteMbLustureRequest struct {
 
 func (x *DeleteMbLustureRequest) Reset() {
 	*x = DeleteMbLustureRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[167]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[184]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12834,7 +14295,7 @@ func (x *DeleteMbLustureRequest) String() string {
 func (*DeleteMbLustureRequest) ProtoMessage() {}
 
 func (x *DeleteMbLustureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[167]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[184]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12847,7 +14308,7 @@ func (x *DeleteMbLustureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMbLustureRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMbLustureRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{167}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{184}
 }
 
 func (x *DeleteMbLustureRequest) GetMblId() string {
@@ -12868,7 +14329,7 @@ type DeleteMbLustureResponse struct {
 
 func (x *DeleteMbLustureResponse) Reset() {
 	*x = DeleteMbLustureResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[168]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[185]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12880,7 +14341,7 @@ func (x *DeleteMbLustureResponse) String() string {
 func (*DeleteMbLustureResponse) ProtoMessage() {}
 
 func (x *DeleteMbLustureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[168]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[185]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12893,7 +14354,7 @@ func (x *DeleteMbLustureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMbLustureResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMbLustureResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{168}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{185}
 }
 
 func (x *DeleteMbLustureResponse) GetBase() *v1.BaseResponse {
@@ -12914,7 +14375,7 @@ type GetMbLustureRequest struct {
 
 func (x *GetMbLustureRequest) Reset() {
 	*x = GetMbLustureRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[169]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[186]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12926,7 +14387,7 @@ func (x *GetMbLustureRequest) String() string {
 func (*GetMbLustureRequest) ProtoMessage() {}
 
 func (x *GetMbLustureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[169]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[186]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12939,7 +14400,7 @@ func (x *GetMbLustureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMbLustureRequest.ProtoReflect.Descriptor instead.
 func (*GetMbLustureRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{169}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{186}
 }
 
 func (x *GetMbLustureRequest) GetMblId() string {
@@ -12962,7 +14423,7 @@ type GetMbLustureResponse struct {
 
 func (x *GetMbLustureResponse) Reset() {
 	*x = GetMbLustureResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[170]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[187]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12974,7 +14435,7 @@ func (x *GetMbLustureResponse) String() string {
 func (*GetMbLustureResponse) ProtoMessage() {}
 
 func (x *GetMbLustureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[170]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[187]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12987,7 +14448,7 @@ func (x *GetMbLustureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMbLustureResponse.ProtoReflect.Descriptor instead.
 func (*GetMbLustureResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{170}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{187}
 }
 
 func (x *GetMbLustureResponse) GetBase() *v1.BaseResponse {
@@ -13025,7 +14486,7 @@ type ListMbLustureRequest struct {
 
 func (x *ListMbLustureRequest) Reset() {
 	*x = ListMbLustureRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[171]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[188]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13037,7 +14498,7 @@ func (x *ListMbLustureRequest) String() string {
 func (*ListMbLustureRequest) ProtoMessage() {}
 
 func (x *ListMbLustureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[171]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[188]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13050,7 +14511,7 @@ func (x *ListMbLustureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbLustureRequest.ProtoReflect.Descriptor instead.
 func (*ListMbLustureRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{171}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{188}
 }
 
 func (x *ListMbLustureRequest) GetPage() int32 {
@@ -13110,7 +14571,7 @@ type ListMbLustureResponse struct {
 
 func (x *ListMbLustureResponse) Reset() {
 	*x = ListMbLustureResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[172]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[189]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13122,7 +14583,7 @@ func (x *ListMbLustureResponse) String() string {
 func (*ListMbLustureResponse) ProtoMessage() {}
 
 func (x *ListMbLustureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[172]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[189]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13135,7 +14596,7 @@ func (x *ListMbLustureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbLustureResponse.ProtoReflect.Descriptor instead.
 func (*ListMbLustureResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{172}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{189}
 }
 
 func (x *ListMbLustureResponse) GetBase() *v1.BaseResponse {
@@ -13170,7 +14631,7 @@ type ExportMbLustureRequest struct {
 
 func (x *ExportMbLustureRequest) Reset() {
 	*x = ExportMbLustureRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[173]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[190]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13182,7 +14643,7 @@ func (x *ExportMbLustureRequest) String() string {
 func (*ExportMbLustureRequest) ProtoMessage() {}
 
 func (x *ExportMbLustureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[173]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[190]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13195,7 +14656,7 @@ func (x *ExportMbLustureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportMbLustureRequest.ProtoReflect.Descriptor instead.
 func (*ExportMbLustureRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{173}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{190}
 }
 
 func (x *ExportMbLustureRequest) GetActiveFilter() ActiveFilter {
@@ -13220,7 +14681,7 @@ type ExportMbLustureResponse struct {
 
 func (x *ExportMbLustureResponse) Reset() {
 	*x = ExportMbLustureResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[174]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[191]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13232,7 +14693,7 @@ func (x *ExportMbLustureResponse) String() string {
 func (*ExportMbLustureResponse) ProtoMessage() {}
 
 func (x *ExportMbLustureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[174]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[191]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13245,7 +14706,7 @@ func (x *ExportMbLustureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportMbLustureResponse.ProtoReflect.Descriptor instead.
 func (*ExportMbLustureResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{174}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{191}
 }
 
 func (x *ExportMbLustureResponse) GetBase() *v1.BaseResponse {
@@ -13284,7 +14745,7 @@ type ImportMbLustureRequest struct {
 
 func (x *ImportMbLustureRequest) Reset() {
 	*x = ImportMbLustureRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[175]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[192]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13296,7 +14757,7 @@ func (x *ImportMbLustureRequest) String() string {
 func (*ImportMbLustureRequest) ProtoMessage() {}
 
 func (x *ImportMbLustureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[175]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[192]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13309,7 +14770,7 @@ func (x *ImportMbLustureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportMbLustureRequest.ProtoReflect.Descriptor instead.
 func (*ImportMbLustureRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{175}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{192}
 }
 
 func (x *ImportMbLustureRequest) GetFileContent() []byte {
@@ -13352,7 +14813,7 @@ type ImportMbLustureResponse struct {
 
 func (x *ImportMbLustureResponse) Reset() {
 	*x = ImportMbLustureResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[176]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[193]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13364,7 +14825,7 @@ func (x *ImportMbLustureResponse) String() string {
 func (*ImportMbLustureResponse) ProtoMessage() {}
 
 func (x *ImportMbLustureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[176]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[193]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13377,7 +14838,7 @@ func (x *ImportMbLustureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportMbLustureResponse.ProtoReflect.Descriptor instead.
 func (*ImportMbLustureResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{176}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{193}
 }
 
 func (x *ImportMbLustureResponse) GetBase() *v1.BaseResponse {
@@ -13424,7 +14885,7 @@ type DownloadMbLustureTemplateRequest struct {
 
 func (x *DownloadMbLustureTemplateRequest) Reset() {
 	*x = DownloadMbLustureTemplateRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[177]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[194]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13436,7 +14897,7 @@ func (x *DownloadMbLustureTemplateRequest) String() string {
 func (*DownloadMbLustureTemplateRequest) ProtoMessage() {}
 
 func (x *DownloadMbLustureTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[177]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[194]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13449,7 +14910,7 @@ func (x *DownloadMbLustureTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadMbLustureTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DownloadMbLustureTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{177}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{194}
 }
 
 // DownloadMbLustureTemplateResponse is the response for downloading the import template.
@@ -13467,7 +14928,7 @@ type DownloadMbLustureTemplateResponse struct {
 
 func (x *DownloadMbLustureTemplateResponse) Reset() {
 	*x = DownloadMbLustureTemplateResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[178]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[195]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13479,7 +14940,7 @@ func (x *DownloadMbLustureTemplateResponse) String() string {
 func (*DownloadMbLustureTemplateResponse) ProtoMessage() {}
 
 func (x *DownloadMbLustureTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[178]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[195]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13492,7 +14953,7 @@ func (x *DownloadMbLustureTemplateResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use DownloadMbLustureTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DownloadMbLustureTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{178}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{195}
 }
 
 func (x *DownloadMbLustureTemplateResponse) GetBase() *v1.BaseResponse {
@@ -13543,7 +15004,7 @@ type CreateMbParamRequest struct {
 
 func (x *CreateMbParamRequest) Reset() {
 	*x = CreateMbParamRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[179]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[196]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13555,7 +15016,7 @@ func (x *CreateMbParamRequest) String() string {
 func (*CreateMbParamRequest) ProtoMessage() {}
 
 func (x *CreateMbParamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[179]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[196]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13568,7 +15029,7 @@ func (x *CreateMbParamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMbParamRequest.ProtoReflect.Descriptor instead.
 func (*CreateMbParamRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{179}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{196}
 }
 
 func (x *CreateMbParamRequest) GetCode() string {
@@ -13647,7 +15108,7 @@ type CreateMbParamResponse struct {
 
 func (x *CreateMbParamResponse) Reset() {
 	*x = CreateMbParamResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[180]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[197]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13659,7 +15120,7 @@ func (x *CreateMbParamResponse) String() string {
 func (*CreateMbParamResponse) ProtoMessage() {}
 
 func (x *CreateMbParamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[180]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[197]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13672,7 +15133,7 @@ func (x *CreateMbParamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMbParamResponse.ProtoReflect.Descriptor instead.
 func (*CreateMbParamResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{180}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{197}
 }
 
 func (x *CreateMbParamResponse) GetBase() *v1.BaseResponse {
@@ -13714,7 +15175,7 @@ type UpdateMbParamRequest struct {
 
 func (x *UpdateMbParamRequest) Reset() {
 	*x = UpdateMbParamRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[181]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[198]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13726,7 +15187,7 @@ func (x *UpdateMbParamRequest) String() string {
 func (*UpdateMbParamRequest) ProtoMessage() {}
 
 func (x *UpdateMbParamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[181]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[198]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13739,7 +15200,7 @@ func (x *UpdateMbParamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMbParamRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMbParamRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{181}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{198}
 }
 
 func (x *UpdateMbParamRequest) GetMbpId() string {
@@ -13811,7 +15272,7 @@ type UpdateMbParamResponse struct {
 
 func (x *UpdateMbParamResponse) Reset() {
 	*x = UpdateMbParamResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[182]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[199]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13823,7 +15284,7 @@ func (x *UpdateMbParamResponse) String() string {
 func (*UpdateMbParamResponse) ProtoMessage() {}
 
 func (x *UpdateMbParamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[182]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[199]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13836,7 +15297,7 @@ func (x *UpdateMbParamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMbParamResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMbParamResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{182}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{199}
 }
 
 func (x *UpdateMbParamResponse) GetBase() *v1.BaseResponse {
@@ -13864,7 +15325,7 @@ type DeleteMbParamRequest struct {
 
 func (x *DeleteMbParamRequest) Reset() {
 	*x = DeleteMbParamRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[183]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[200]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13876,7 +15337,7 @@ func (x *DeleteMbParamRequest) String() string {
 func (*DeleteMbParamRequest) ProtoMessage() {}
 
 func (x *DeleteMbParamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[183]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[200]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13889,7 +15350,7 @@ func (x *DeleteMbParamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMbParamRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMbParamRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{183}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{200}
 }
 
 func (x *DeleteMbParamRequest) GetMbpId() string {
@@ -13910,7 +15371,7 @@ type DeleteMbParamResponse struct {
 
 func (x *DeleteMbParamResponse) Reset() {
 	*x = DeleteMbParamResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[184]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[201]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13922,7 +15383,7 @@ func (x *DeleteMbParamResponse) String() string {
 func (*DeleteMbParamResponse) ProtoMessage() {}
 
 func (x *DeleteMbParamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[184]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[201]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13935,7 +15396,7 @@ func (x *DeleteMbParamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMbParamResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMbParamResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{184}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{201}
 }
 
 func (x *DeleteMbParamResponse) GetBase() *v1.BaseResponse {
@@ -13966,7 +15427,7 @@ type ListMbParamsRequest struct {
 
 func (x *ListMbParamsRequest) Reset() {
 	*x = ListMbParamsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[185]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[202]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13978,7 +15439,7 @@ func (x *ListMbParamsRequest) String() string {
 func (*ListMbParamsRequest) ProtoMessage() {}
 
 func (x *ListMbParamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[185]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[202]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13991,7 +15452,7 @@ func (x *ListMbParamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbParamsRequest.ProtoReflect.Descriptor instead.
 func (*ListMbParamsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{185}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{202}
 }
 
 func (x *ListMbParamsRequest) GetPage() int32 {
@@ -14051,7 +15512,7 @@ type ListMbParamsResponse struct {
 
 func (x *ListMbParamsResponse) Reset() {
 	*x = ListMbParamsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[186]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[203]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14063,7 +15524,7 @@ func (x *ListMbParamsResponse) String() string {
 func (*ListMbParamsResponse) ProtoMessage() {}
 
 func (x *ListMbParamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[186]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[203]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14076,7 +15537,7 @@ func (x *ListMbParamsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbParamsResponse.ProtoReflect.Descriptor instead.
 func (*ListMbParamsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{186}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{203}
 }
 
 func (x *ListMbParamsResponse) GetBase() *v1.BaseResponse {
@@ -14111,7 +15572,7 @@ type ExportMbParamsRequest struct {
 
 func (x *ExportMbParamsRequest) Reset() {
 	*x = ExportMbParamsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[187]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[204]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14123,7 +15584,7 @@ func (x *ExportMbParamsRequest) String() string {
 func (*ExportMbParamsRequest) ProtoMessage() {}
 
 func (x *ExportMbParamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[187]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[204]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14136,7 +15597,7 @@ func (x *ExportMbParamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportMbParamsRequest.ProtoReflect.Descriptor instead.
 func (*ExportMbParamsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{187}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{204}
 }
 
 func (x *ExportMbParamsRequest) GetActiveFilter() ActiveFilter {
@@ -14161,7 +15622,7 @@ type ExportMbParamsResponse struct {
 
 func (x *ExportMbParamsResponse) Reset() {
 	*x = ExportMbParamsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[188]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[205]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14173,7 +15634,7 @@ func (x *ExportMbParamsResponse) String() string {
 func (*ExportMbParamsResponse) ProtoMessage() {}
 
 func (x *ExportMbParamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[188]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[205]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14186,7 +15647,7 @@ func (x *ExportMbParamsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportMbParamsResponse.ProtoReflect.Descriptor instead.
 func (*ExportMbParamsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{188}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{205}
 }
 
 func (x *ExportMbParamsResponse) GetBase() *v1.BaseResponse {
@@ -14225,7 +15686,7 @@ type ImportMbParamsRequest struct {
 
 func (x *ImportMbParamsRequest) Reset() {
 	*x = ImportMbParamsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[189]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[206]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14237,7 +15698,7 @@ func (x *ImportMbParamsRequest) String() string {
 func (*ImportMbParamsRequest) ProtoMessage() {}
 
 func (x *ImportMbParamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[189]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[206]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14250,7 +15711,7 @@ func (x *ImportMbParamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportMbParamsRequest.ProtoReflect.Descriptor instead.
 func (*ImportMbParamsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{189}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{206}
 }
 
 func (x *ImportMbParamsRequest) GetFileContent() []byte {
@@ -14293,7 +15754,7 @@ type ImportMbParamsResponse struct {
 
 func (x *ImportMbParamsResponse) Reset() {
 	*x = ImportMbParamsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[190]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[207]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14305,7 +15766,7 @@ func (x *ImportMbParamsResponse) String() string {
 func (*ImportMbParamsResponse) ProtoMessage() {}
 
 func (x *ImportMbParamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[190]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[207]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14318,7 +15779,7 @@ func (x *ImportMbParamsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportMbParamsResponse.ProtoReflect.Descriptor instead.
 func (*ImportMbParamsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{190}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{207}
 }
 
 func (x *ImportMbParamsResponse) GetBase() *v1.BaseResponse {
@@ -14365,7 +15826,7 @@ type DownloadMbParamTemplateRequest struct {
 
 func (x *DownloadMbParamTemplateRequest) Reset() {
 	*x = DownloadMbParamTemplateRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[191]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[208]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14377,7 +15838,7 @@ func (x *DownloadMbParamTemplateRequest) String() string {
 func (*DownloadMbParamTemplateRequest) ProtoMessage() {}
 
 func (x *DownloadMbParamTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[191]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[208]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14390,7 +15851,7 @@ func (x *DownloadMbParamTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadMbParamTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DownloadMbParamTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{191}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{208}
 }
 
 // DownloadMbParamTemplateResponse is the response for downloading the import template.
@@ -14408,7 +15869,7 @@ type DownloadMbParamTemplateResponse struct {
 
 func (x *DownloadMbParamTemplateResponse) Reset() {
 	*x = DownloadMbParamTemplateResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[192]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[209]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14420,7 +15881,7 @@ func (x *DownloadMbParamTemplateResponse) String() string {
 func (*DownloadMbParamTemplateResponse) ProtoMessage() {}
 
 func (x *DownloadMbParamTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[192]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[209]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14433,7 +15894,7 @@ func (x *DownloadMbParamTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadMbParamTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DownloadMbParamTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{192}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{209}
 }
 
 func (x *DownloadMbParamTemplateResponse) GetBase() *v1.BaseResponse {
@@ -14478,7 +15939,7 @@ type CreateMbParamOptionRequest struct {
 
 func (x *CreateMbParamOptionRequest) Reset() {
 	*x = CreateMbParamOptionRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[193]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[210]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14490,7 +15951,7 @@ func (x *CreateMbParamOptionRequest) String() string {
 func (*CreateMbParamOptionRequest) ProtoMessage() {}
 
 func (x *CreateMbParamOptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[193]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[210]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14503,7 +15964,7 @@ func (x *CreateMbParamOptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMbParamOptionRequest.ProtoReflect.Descriptor instead.
 func (*CreateMbParamOptionRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{193}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{210}
 }
 
 func (x *CreateMbParamOptionRequest) GetMbpCode() string {
@@ -14561,7 +16022,7 @@ type CreateMbParamOptionResponse struct {
 
 func (x *CreateMbParamOptionResponse) Reset() {
 	*x = CreateMbParamOptionResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[194]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[211]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14573,7 +16034,7 @@ func (x *CreateMbParamOptionResponse) String() string {
 func (*CreateMbParamOptionResponse) ProtoMessage() {}
 
 func (x *CreateMbParamOptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[194]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[211]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14586,7 +16047,7 @@ func (x *CreateMbParamOptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMbParamOptionResponse.ProtoReflect.Descriptor instead.
 func (*CreateMbParamOptionResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{194}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{211}
 }
 
 func (x *CreateMbParamOptionResponse) GetBase() *v1.BaseResponse {
@@ -14622,7 +16083,7 @@ type UpdateMbParamOptionRequest struct {
 
 func (x *UpdateMbParamOptionRequest) Reset() {
 	*x = UpdateMbParamOptionRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[195]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[212]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14634,7 +16095,7 @@ func (x *UpdateMbParamOptionRequest) String() string {
 func (*UpdateMbParamOptionRequest) ProtoMessage() {}
 
 func (x *UpdateMbParamOptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[195]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[212]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14647,7 +16108,7 @@ func (x *UpdateMbParamOptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMbParamOptionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMbParamOptionRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{195}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{212}
 }
 
 func (x *UpdateMbParamOptionRequest) GetMbpoId() string {
@@ -14698,7 +16159,7 @@ type UpdateMbParamOptionResponse struct {
 
 func (x *UpdateMbParamOptionResponse) Reset() {
 	*x = UpdateMbParamOptionResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[196]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[213]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14710,7 +16171,7 @@ func (x *UpdateMbParamOptionResponse) String() string {
 func (*UpdateMbParamOptionResponse) ProtoMessage() {}
 
 func (x *UpdateMbParamOptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[196]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[213]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14723,7 +16184,7 @@ func (x *UpdateMbParamOptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMbParamOptionResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMbParamOptionResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{196}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{213}
 }
 
 func (x *UpdateMbParamOptionResponse) GetBase() *v1.BaseResponse {
@@ -14751,7 +16212,7 @@ type DeleteMbParamOptionRequest struct {
 
 func (x *DeleteMbParamOptionRequest) Reset() {
 	*x = DeleteMbParamOptionRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[197]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[214]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14763,7 +16224,7 @@ func (x *DeleteMbParamOptionRequest) String() string {
 func (*DeleteMbParamOptionRequest) ProtoMessage() {}
 
 func (x *DeleteMbParamOptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[197]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[214]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14776,7 +16237,7 @@ func (x *DeleteMbParamOptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMbParamOptionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMbParamOptionRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{197}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{214}
 }
 
 func (x *DeleteMbParamOptionRequest) GetMbpoId() string {
@@ -14797,7 +16258,7 @@ type DeleteMbParamOptionResponse struct {
 
 func (x *DeleteMbParamOptionResponse) Reset() {
 	*x = DeleteMbParamOptionResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[198]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[215]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14809,7 +16270,7 @@ func (x *DeleteMbParamOptionResponse) String() string {
 func (*DeleteMbParamOptionResponse) ProtoMessage() {}
 
 func (x *DeleteMbParamOptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[198]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[215]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14822,7 +16283,7 @@ func (x *DeleteMbParamOptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMbParamOptionResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMbParamOptionResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{198}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{215}
 }
 
 func (x *DeleteMbParamOptionResponse) GetBase() *v1.BaseResponse {
@@ -14843,7 +16304,7 @@ type PreviewPushToHeadRequest struct {
 
 func (x *PreviewPushToHeadRequest) Reset() {
 	*x = PreviewPushToHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[199]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[216]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14855,7 +16316,7 @@ func (x *PreviewPushToHeadRequest) String() string {
 func (*PreviewPushToHeadRequest) ProtoMessage() {}
 
 func (x *PreviewPushToHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[199]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[216]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14868,7 +16329,7 @@ func (x *PreviewPushToHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewPushToHeadRequest.ProtoReflect.Descriptor instead.
 func (*PreviewPushToHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{199}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{216}
 }
 
 func (x *PreviewPushToHeadRequest) GetPeriod() string {
@@ -14904,7 +16365,7 @@ type PushableMbHead struct {
 
 func (x *PushableMbHead) Reset() {
 	*x = PushableMbHead{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[200]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[217]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14916,7 +16377,7 @@ func (x *PushableMbHead) String() string {
 func (*PushableMbHead) ProtoMessage() {}
 
 func (x *PushableMbHead) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[200]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[217]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14929,7 +16390,7 @@ func (x *PushableMbHead) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PushableMbHead.ProtoReflect.Descriptor instead.
 func (*PushableMbHead) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{200}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{217}
 }
 
 func (x *PushableMbHead) GetMbhId() string {
@@ -14998,7 +16459,7 @@ type SkippedMbHead struct {
 
 func (x *SkippedMbHead) Reset() {
 	*x = SkippedMbHead{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[201]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[218]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15010,7 +16471,7 @@ func (x *SkippedMbHead) String() string {
 func (*SkippedMbHead) ProtoMessage() {}
 
 func (x *SkippedMbHead) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[201]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[218]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15023,7 +16484,7 @@ func (x *SkippedMbHead) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkippedMbHead.ProtoReflect.Descriptor instead.
 func (*SkippedMbHead) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{201}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{218}
 }
 
 func (x *SkippedMbHead) GetMbhId() string {
@@ -15072,7 +16533,7 @@ type PreviewPushToHeadResponse struct {
 
 func (x *PreviewPushToHeadResponse) Reset() {
 	*x = PreviewPushToHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[202]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[219]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15084,7 +16545,7 @@ func (x *PreviewPushToHeadResponse) String() string {
 func (*PreviewPushToHeadResponse) ProtoMessage() {}
 
 func (x *PreviewPushToHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[202]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[219]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15097,7 +16558,7 @@ func (x *PreviewPushToHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewPushToHeadResponse.ProtoReflect.Descriptor instead.
 func (*PreviewPushToHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{202}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{219}
 }
 
 func (x *PreviewPushToHeadResponse) GetBase() *v1.BaseResponse {
@@ -15141,7 +16602,7 @@ type ExecutePushToHeadRequest struct {
 
 func (x *ExecutePushToHeadRequest) Reset() {
 	*x = ExecutePushToHeadRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[203]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[220]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15153,7 +16614,7 @@ func (x *ExecutePushToHeadRequest) String() string {
 func (*ExecutePushToHeadRequest) ProtoMessage() {}
 
 func (x *ExecutePushToHeadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[203]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[220]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15166,7 +16627,7 @@ func (x *ExecutePushToHeadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutePushToHeadRequest.ProtoReflect.Descriptor instead.
 func (*ExecutePushToHeadRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{203}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{220}
 }
 
 func (x *ExecutePushToHeadRequest) GetPeriod() string {
@@ -15196,7 +16657,7 @@ type ExecutePushToHeadResponse struct {
 
 func (x *ExecutePushToHeadResponse) Reset() {
 	*x = ExecutePushToHeadResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[204]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[221]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15208,7 +16669,7 @@ func (x *ExecutePushToHeadResponse) String() string {
 func (*ExecutePushToHeadResponse) ProtoMessage() {}
 
 func (x *ExecutePushToHeadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[204]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[221]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15221,7 +16682,7 @@ func (x *ExecutePushToHeadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutePushToHeadResponse.ProtoReflect.Descriptor instead.
 func (*ExecutePushToHeadResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{204}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{221}
 }
 
 func (x *ExecutePushToHeadResponse) GetBase() *v1.BaseResponse {
@@ -15253,7 +16714,7 @@ type ListMbPushLogsRequest struct {
 
 func (x *ListMbPushLogsRequest) Reset() {
 	*x = ListMbPushLogsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[205]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[222]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15265,7 +16726,7 @@ func (x *ListMbPushLogsRequest) String() string {
 func (*ListMbPushLogsRequest) ProtoMessage() {}
 
 func (x *ListMbPushLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[205]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[222]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15278,7 +16739,7 @@ func (x *ListMbPushLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbPushLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListMbPushLogsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{205}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{222}
 }
 
 func (x *ListMbPushLogsRequest) GetPage() int32 {
@@ -15317,7 +16778,7 @@ type ListMbPushLogsResponse struct {
 
 func (x *ListMbPushLogsResponse) Reset() {
 	*x = ListMbPushLogsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[206]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[223]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15329,7 +16790,7 @@ func (x *ListMbPushLogsResponse) String() string {
 func (*ListMbPushLogsResponse) ProtoMessage() {}
 
 func (x *ListMbPushLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[206]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[223]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15342,7 +16803,7 @@ func (x *ListMbPushLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbPushLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListMbPushLogsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{206}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{223}
 }
 
 func (x *ListMbPushLogsResponse) GetBase() *v1.BaseResponse {
@@ -15377,7 +16838,7 @@ type ListMbWorkflowLogsRequest struct {
 
 func (x *ListMbWorkflowLogsRequest) Reset() {
 	*x = ListMbWorkflowLogsRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[207]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[224]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15389,7 +16850,7 @@ func (x *ListMbWorkflowLogsRequest) String() string {
 func (*ListMbWorkflowLogsRequest) ProtoMessage() {}
 
 func (x *ListMbWorkflowLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[207]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[224]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15402,7 +16863,7 @@ func (x *ListMbWorkflowLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbWorkflowLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListMbWorkflowLogsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{207}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{224}
 }
 
 func (x *ListMbWorkflowLogsRequest) GetMbhId() string {
@@ -15425,7 +16886,7 @@ type ListMbWorkflowLogsResponse struct {
 
 func (x *ListMbWorkflowLogsResponse) Reset() {
 	*x = ListMbWorkflowLogsResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[208]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[225]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15437,7 +16898,7 @@ func (x *ListMbWorkflowLogsResponse) String() string {
 func (*ListMbWorkflowLogsResponse) ProtoMessage() {}
 
 func (x *ListMbWorkflowLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[208]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[225]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15450,7 +16911,7 @@ func (x *ListMbWorkflowLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMbWorkflowLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListMbWorkflowLogsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{208}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{225}
 }
 
 func (x *ListMbWorkflowLogsResponse) GetBase() *v1.BaseResponse {
@@ -15479,7 +16940,7 @@ type TriggerMbBatchRequest struct {
 
 func (x *TriggerMbBatchRequest) Reset() {
 	*x = TriggerMbBatchRequest{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[209]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[226]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15491,7 +16952,7 @@ func (x *TriggerMbBatchRequest) String() string {
 func (*TriggerMbBatchRequest) ProtoMessage() {}
 
 func (x *TriggerMbBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[209]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[226]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15504,7 +16965,7 @@ func (x *TriggerMbBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TriggerMbBatchRequest.ProtoReflect.Descriptor instead.
 func (*TriggerMbBatchRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{209}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{226}
 }
 
 func (x *TriggerMbBatchRequest) GetPeriod() string {
@@ -15527,7 +16988,7 @@ type MbBatchError struct {
 
 func (x *MbBatchError) Reset() {
 	*x = MbBatchError{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[210]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[227]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15539,7 +17000,7 @@ func (x *MbBatchError) String() string {
 func (*MbBatchError) ProtoMessage() {}
 
 func (x *MbBatchError) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[210]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[227]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15552,7 +17013,7 @@ func (x *MbBatchError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MbBatchError.ProtoReflect.Descriptor instead.
 func (*MbBatchError) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{210}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{227}
 }
 
 func (x *MbBatchError) GetMbhId() string {
@@ -15594,7 +17055,7 @@ type TriggerMbBatchResponse struct {
 
 func (x *TriggerMbBatchResponse) Reset() {
 	*x = TriggerMbBatchResponse{}
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[211]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[228]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15606,7 +17067,7 @@ func (x *TriggerMbBatchResponse) String() string {
 func (*TriggerMbBatchResponse) ProtoMessage() {}
 
 func (x *TriggerMbBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_yarn_master_proto_msgTypes[211]
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[228]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15619,7 +17080,7 @@ func (x *TriggerMbBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TriggerMbBatchResponse.ProtoReflect.Descriptor instead.
 func (*TriggerMbBatchResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{211}
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{228}
 }
 
 func (x *TriggerMbBatchResponse) GetBase() *v1.BaseResponse {
@@ -15676,6 +17137,1935 @@ func (x *TriggerMbBatchResponse) GetErrors() []*MbBatchError {
 		return x.Errors
 	}
 	return nil
+}
+
+// MbCrossSection is a master lookup entry for MB cross-section codes
+// (mst_mb_cross_section).
+type MbCrossSection struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// UUID primary key (mbcs_id).
+	MbcsId string `protobuf:"bytes,1,opt,name=mbcs_id,json=mbcsId,proto3" json:"mbcs_id,omitempty"`
+	// Unique cross-section code (mbcs_code, max 10 chars), e.g. RND / TBL / RSD.
+	Code string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	// Display name (mbcs_display_name).
+	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Free-text description (mbcs_description).
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// Whether the record is active (mbcs_is_active).
+	IsActive bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// Display ordering hint (mbcs_display_order).
+	DisplayOrder int32 `protobuf:"varint,6,opt,name=display_order,json=displayOrder,proto3" json:"display_order,omitempty"`
+	// Audit metadata.
+	Audit         *v1.AuditInfo `protobuf:"bytes,7,opt,name=audit,proto3" json:"audit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MbCrossSection) Reset() {
+	*x = MbCrossSection{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[229]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MbCrossSection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MbCrossSection) ProtoMessage() {}
+
+func (x *MbCrossSection) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[229]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MbCrossSection.ProtoReflect.Descriptor instead.
+func (*MbCrossSection) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{229}
+}
+
+func (x *MbCrossSection) GetMbcsId() string {
+	if x != nil {
+		return x.MbcsId
+	}
+	return ""
+}
+
+func (x *MbCrossSection) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *MbCrossSection) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *MbCrossSection) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *MbCrossSection) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *MbCrossSection) GetDisplayOrder() int32 {
+	if x != nil {
+		return x.DisplayOrder
+	}
+	return 0
+}
+
+func (x *MbCrossSection) GetAudit() *v1.AuditInfo {
+	if x != nil {
+		return x.Audit
+	}
+	return nil
+}
+
+// MbCrossSectionFactor is one ORDERED (from_code -> to_code) LDR conversion
+// factor (mst_mb_cross_section_factor). The operation carries the direction of
+// the arithmetic and is not derivable from the factor alone.
+type MbCrossSectionFactor struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// UUID primary key (mbcf_id).
+	MbcfId string `protobuf:"bytes,1,opt,name=mbcf_id,json=mbcfId,proto3" json:"mbcf_id,omitempty"`
+	// Source cross-section code (mbcf_from_code).
+	FromCode string `protobuf:"bytes,2,opt,name=from_code,json=fromCode,proto3" json:"from_code,omitempty"`
+	// Target cross-section code (mbcf_to_code).
+	ToCode string `protobuf:"bytes,3,opt,name=to_code,json=toCode,proto3" json:"to_code,omitempty"`
+	// Conversion factor (mbcf_factor), strictly greater than zero.
+	Factor float64 `protobuf:"fixed64,4,opt,name=factor,proto3" json:"factor,omitempty"`
+	// Arithmetic direction (mbcf_operation): MULTIPLY or DIVIDE.
+	Operation string `protobuf:"bytes,5,opt,name=operation,proto3" json:"operation,omitempty"`
+	// Free-text note (mbcf_note).
+	Note string `protobuf:"bytes,6,opt,name=note,proto3" json:"note,omitempty"`
+	// Whether the record is active (mbcf_is_active).
+	IsActive bool `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// Audit metadata.
+	Audit         *v1.AuditInfo `protobuf:"bytes,8,opt,name=audit,proto3" json:"audit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MbCrossSectionFactor) Reset() {
+	*x = MbCrossSectionFactor{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[230]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MbCrossSectionFactor) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MbCrossSectionFactor) ProtoMessage() {}
+
+func (x *MbCrossSectionFactor) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[230]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MbCrossSectionFactor.ProtoReflect.Descriptor instead.
+func (*MbCrossSectionFactor) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{230}
+}
+
+func (x *MbCrossSectionFactor) GetMbcfId() string {
+	if x != nil {
+		return x.MbcfId
+	}
+	return ""
+}
+
+func (x *MbCrossSectionFactor) GetFromCode() string {
+	if x != nil {
+		return x.FromCode
+	}
+	return ""
+}
+
+func (x *MbCrossSectionFactor) GetToCode() string {
+	if x != nil {
+		return x.ToCode
+	}
+	return ""
+}
+
+func (x *MbCrossSectionFactor) GetFactor() float64 {
+	if x != nil {
+		return x.Factor
+	}
+	return 0
+}
+
+func (x *MbCrossSectionFactor) GetOperation() string {
+	if x != nil {
+		return x.Operation
+	}
+	return ""
+}
+
+func (x *MbCrossSectionFactor) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *MbCrossSectionFactor) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *MbCrossSectionFactor) GetAudit() *v1.AuditInfo {
+	if x != nil {
+		return x.Audit
+	}
+	return nil
+}
+
+// CreateMbCrossSectionRequest is the request for creating an MB cross-section master record.
+type CreateMbCrossSectionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique cross-section code (1-10 chars).
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// Display name.
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Free-text description.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Whether the record is active.
+	IsActive bool `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// Display ordering hint.
+	DisplayOrder  int32 `protobuf:"varint,5,opt,name=display_order,json=displayOrder,proto3" json:"display_order,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateMbCrossSectionRequest) Reset() {
+	*x = CreateMbCrossSectionRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[231]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateMbCrossSectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateMbCrossSectionRequest) ProtoMessage() {}
+
+func (x *CreateMbCrossSectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[231]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateMbCrossSectionRequest.ProtoReflect.Descriptor instead.
+func (*CreateMbCrossSectionRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{231}
+}
+
+func (x *CreateMbCrossSectionRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *CreateMbCrossSectionRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *CreateMbCrossSectionRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateMbCrossSectionRequest) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *CreateMbCrossSectionRequest) GetDisplayOrder() int32 {
+	if x != nil {
+		return x.DisplayOrder
+	}
+	return 0
+}
+
+// CreateMbCrossSectionResponse is the response for creating an MB cross-section master record.
+type CreateMbCrossSectionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Created cross-section record.
+	Data          *MbCrossSection `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateMbCrossSectionResponse) Reset() {
+	*x = CreateMbCrossSectionResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[232]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateMbCrossSectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateMbCrossSectionResponse) ProtoMessage() {}
+
+func (x *CreateMbCrossSectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[232]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateMbCrossSectionResponse.ProtoReflect.Descriptor instead.
+func (*CreateMbCrossSectionResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{232}
+}
+
+func (x *CreateMbCrossSectionResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *CreateMbCrossSectionResponse) GetData() *MbCrossSection {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// GetMbCrossSectionRequest is the request for retrieving an MB cross-section master record by ID.
+type GetMbCrossSectionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Cross-section UUID.
+	MbcsId        string `protobuf:"bytes,1,opt,name=mbcs_id,json=mbcsId,proto3" json:"mbcs_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMbCrossSectionRequest) Reset() {
+	*x = GetMbCrossSectionRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[233]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMbCrossSectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMbCrossSectionRequest) ProtoMessage() {}
+
+func (x *GetMbCrossSectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[233]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMbCrossSectionRequest.ProtoReflect.Descriptor instead.
+func (*GetMbCrossSectionRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{233}
+}
+
+func (x *GetMbCrossSectionRequest) GetMbcsId() string {
+	if x != nil {
+		return x.MbcsId
+	}
+	return ""
+}
+
+// GetMbCrossSectionResponse is the response for retrieving an MB cross-section master record.
+type GetMbCrossSectionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Cross-section record.
+	Data          *MbCrossSection `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMbCrossSectionResponse) Reset() {
+	*x = GetMbCrossSectionResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[234]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMbCrossSectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMbCrossSectionResponse) ProtoMessage() {}
+
+func (x *GetMbCrossSectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[234]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMbCrossSectionResponse.ProtoReflect.Descriptor instead.
+func (*GetMbCrossSectionResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{234}
+}
+
+func (x *GetMbCrossSectionResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetMbCrossSectionResponse) GetData() *MbCrossSection {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// ListMbCrossSectionRequest is the request for listing MB cross-section master records.
+type ListMbCrossSectionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Page number (>= 1).
+	Page int32 `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size (1-100).
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Search across code and display_name.
+	Search string `protobuf:"bytes,3,opt,name=search,proto3" json:"search,omitempty"`
+	// Sort field.
+	SortBy string `protobuf:"bytes,4,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// Sort direction.
+	SortDir string `protobuf:"bytes,5,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	// Filter by active status.
+	ActiveFilter  ActiveFilter `protobuf:"varint,6,opt,name=active_filter,json=activeFilter,proto3,enum=finance.v1.ActiveFilter" json:"active_filter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMbCrossSectionRequest) Reset() {
+	*x = ListMbCrossSectionRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[235]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMbCrossSectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMbCrossSectionRequest) ProtoMessage() {}
+
+func (x *ListMbCrossSectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[235]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMbCrossSectionRequest.ProtoReflect.Descriptor instead.
+func (*ListMbCrossSectionRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{235}
+}
+
+func (x *ListMbCrossSectionRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListMbCrossSectionRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListMbCrossSectionRequest) GetSearch() string {
+	if x != nil {
+		return x.Search
+	}
+	return ""
+}
+
+func (x *ListMbCrossSectionRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListMbCrossSectionRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListMbCrossSectionRequest) GetActiveFilter() ActiveFilter {
+	if x != nil {
+		return x.ActiveFilter
+	}
+	return ActiveFilter_ACTIVE_FILTER_UNSPECIFIED
+}
+
+// ListMbCrossSectionResponse is the response for listing MB cross-section master records.
+type ListMbCrossSectionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Cross-section records.
+	Data []*MbCrossSection `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+	// Pagination metadata.
+	Pagination    *v1.PaginationResponse `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMbCrossSectionResponse) Reset() {
+	*x = ListMbCrossSectionResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[236]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMbCrossSectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMbCrossSectionResponse) ProtoMessage() {}
+
+func (x *ListMbCrossSectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[236]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMbCrossSectionResponse.ProtoReflect.Descriptor instead.
+func (*ListMbCrossSectionResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{236}
+}
+
+func (x *ListMbCrossSectionResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ListMbCrossSectionResponse) GetData() []*MbCrossSection {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *ListMbCrossSectionResponse) GetPagination() *v1.PaginationResponse {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+// UpdateMbCrossSectionRequest is the request for updating an MB cross-section master record.
+type UpdateMbCrossSectionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Cross-section UUID.
+	MbcsId string `protobuf:"bytes,1,opt,name=mbcs_id,json=mbcsId,proto3" json:"mbcs_id,omitempty"`
+	// Updated display name.
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Updated description.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Updated active status.
+	IsActive bool `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// Updated display ordering hint.
+	DisplayOrder  int32 `protobuf:"varint,5,opt,name=display_order,json=displayOrder,proto3" json:"display_order,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMbCrossSectionRequest) Reset() {
+	*x = UpdateMbCrossSectionRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[237]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMbCrossSectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMbCrossSectionRequest) ProtoMessage() {}
+
+func (x *UpdateMbCrossSectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[237]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMbCrossSectionRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMbCrossSectionRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{237}
+}
+
+func (x *UpdateMbCrossSectionRequest) GetMbcsId() string {
+	if x != nil {
+		return x.MbcsId
+	}
+	return ""
+}
+
+func (x *UpdateMbCrossSectionRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *UpdateMbCrossSectionRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *UpdateMbCrossSectionRequest) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *UpdateMbCrossSectionRequest) GetDisplayOrder() int32 {
+	if x != nil {
+		return x.DisplayOrder
+	}
+	return 0
+}
+
+// UpdateMbCrossSectionResponse is the response for updating an MB cross-section master record.
+type UpdateMbCrossSectionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Updated cross-section record.
+	Data          *MbCrossSection `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMbCrossSectionResponse) Reset() {
+	*x = UpdateMbCrossSectionResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[238]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMbCrossSectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMbCrossSectionResponse) ProtoMessage() {}
+
+func (x *UpdateMbCrossSectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[238]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMbCrossSectionResponse.ProtoReflect.Descriptor instead.
+func (*UpdateMbCrossSectionResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{238}
+}
+
+func (x *UpdateMbCrossSectionResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *UpdateMbCrossSectionResponse) GetData() *MbCrossSection {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// DeleteMbCrossSectionRequest is the request for deleting an MB cross-section master record.
+type DeleteMbCrossSectionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Cross-section UUID.
+	MbcsId        string `protobuf:"bytes,1,opt,name=mbcs_id,json=mbcsId,proto3" json:"mbcs_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMbCrossSectionRequest) Reset() {
+	*x = DeleteMbCrossSectionRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[239]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMbCrossSectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMbCrossSectionRequest) ProtoMessage() {}
+
+func (x *DeleteMbCrossSectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[239]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMbCrossSectionRequest.ProtoReflect.Descriptor instead.
+func (*DeleteMbCrossSectionRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{239}
+}
+
+func (x *DeleteMbCrossSectionRequest) GetMbcsId() string {
+	if x != nil {
+		return x.MbcsId
+	}
+	return ""
+}
+
+// DeleteMbCrossSectionResponse is the response for deleting an MB cross-section master record.
+type DeleteMbCrossSectionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base          *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMbCrossSectionResponse) Reset() {
+	*x = DeleteMbCrossSectionResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[240]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMbCrossSectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMbCrossSectionResponse) ProtoMessage() {}
+
+func (x *DeleteMbCrossSectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[240]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMbCrossSectionResponse.ProtoReflect.Descriptor instead.
+func (*DeleteMbCrossSectionResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{240}
+}
+
+func (x *DeleteMbCrossSectionResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+// CreateMbCrossSectionFactorRequest is the request for creating a cross-section conversion factor.
+type CreateMbCrossSectionFactorRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Source cross-section code (1-10 chars).
+	FromCode string `protobuf:"bytes,1,opt,name=from_code,json=fromCode,proto3" json:"from_code,omitempty"`
+	// Target cross-section code (1-10 chars).
+	ToCode string `protobuf:"bytes,2,opt,name=to_code,json=toCode,proto3" json:"to_code,omitempty"`
+	// Conversion factor, strictly greater than zero.
+	Factor float64 `protobuf:"fixed64,3,opt,name=factor,proto3" json:"factor,omitempty"`
+	// Arithmetic direction: MULTIPLY or DIVIDE.
+	Operation string `protobuf:"bytes,4,opt,name=operation,proto3" json:"operation,omitempty"`
+	// Free-text note.
+	Note string `protobuf:"bytes,5,opt,name=note,proto3" json:"note,omitempty"`
+	// Whether the record is active.
+	IsActive      bool `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateMbCrossSectionFactorRequest) Reset() {
+	*x = CreateMbCrossSectionFactorRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[241]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateMbCrossSectionFactorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateMbCrossSectionFactorRequest) ProtoMessage() {}
+
+func (x *CreateMbCrossSectionFactorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[241]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateMbCrossSectionFactorRequest.ProtoReflect.Descriptor instead.
+func (*CreateMbCrossSectionFactorRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{241}
+}
+
+func (x *CreateMbCrossSectionFactorRequest) GetFromCode() string {
+	if x != nil {
+		return x.FromCode
+	}
+	return ""
+}
+
+func (x *CreateMbCrossSectionFactorRequest) GetToCode() string {
+	if x != nil {
+		return x.ToCode
+	}
+	return ""
+}
+
+func (x *CreateMbCrossSectionFactorRequest) GetFactor() float64 {
+	if x != nil {
+		return x.Factor
+	}
+	return 0
+}
+
+func (x *CreateMbCrossSectionFactorRequest) GetOperation() string {
+	if x != nil {
+		return x.Operation
+	}
+	return ""
+}
+
+func (x *CreateMbCrossSectionFactorRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *CreateMbCrossSectionFactorRequest) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+// CreateMbCrossSectionFactorResponse is the response for creating a cross-section conversion factor.
+type CreateMbCrossSectionFactorResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Created factor record.
+	Data          *MbCrossSectionFactor `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateMbCrossSectionFactorResponse) Reset() {
+	*x = CreateMbCrossSectionFactorResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[242]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateMbCrossSectionFactorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateMbCrossSectionFactorResponse) ProtoMessage() {}
+
+func (x *CreateMbCrossSectionFactorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[242]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateMbCrossSectionFactorResponse.ProtoReflect.Descriptor instead.
+func (*CreateMbCrossSectionFactorResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{242}
+}
+
+func (x *CreateMbCrossSectionFactorResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *CreateMbCrossSectionFactorResponse) GetData() *MbCrossSectionFactor {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// GetMbCrossSectionFactorRequest is the request for retrieving a cross-section conversion factor by ID.
+type GetMbCrossSectionFactorRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Factor UUID.
+	MbcfId        string `protobuf:"bytes,1,opt,name=mbcf_id,json=mbcfId,proto3" json:"mbcf_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMbCrossSectionFactorRequest) Reset() {
+	*x = GetMbCrossSectionFactorRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[243]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMbCrossSectionFactorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMbCrossSectionFactorRequest) ProtoMessage() {}
+
+func (x *GetMbCrossSectionFactorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[243]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMbCrossSectionFactorRequest.ProtoReflect.Descriptor instead.
+func (*GetMbCrossSectionFactorRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{243}
+}
+
+func (x *GetMbCrossSectionFactorRequest) GetMbcfId() string {
+	if x != nil {
+		return x.MbcfId
+	}
+	return ""
+}
+
+// GetMbCrossSectionFactorResponse is the response for retrieving a cross-section conversion factor.
+type GetMbCrossSectionFactorResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Factor record.
+	Data          *MbCrossSectionFactor `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMbCrossSectionFactorResponse) Reset() {
+	*x = GetMbCrossSectionFactorResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[244]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMbCrossSectionFactorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMbCrossSectionFactorResponse) ProtoMessage() {}
+
+func (x *GetMbCrossSectionFactorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[244]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMbCrossSectionFactorResponse.ProtoReflect.Descriptor instead.
+func (*GetMbCrossSectionFactorResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{244}
+}
+
+func (x *GetMbCrossSectionFactorResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetMbCrossSectionFactorResponse) GetData() *MbCrossSectionFactor {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// ListMbCrossSectionFactorRequest is the request for listing cross-section conversion factors.
+type ListMbCrossSectionFactorRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Page number (>= 1).
+	Page int32 `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size (1-100).
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Search across from_code and to_code.
+	Search string `protobuf:"bytes,3,opt,name=search,proto3" json:"search,omitempty"`
+	// Sort field.
+	SortBy string `protobuf:"bytes,4,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// Sort direction.
+	SortDir string `protobuf:"bytes,5,opt,name=sort_dir,json=sortDir,proto3" json:"sort_dir,omitempty"`
+	// Filter by active status.
+	ActiveFilter ActiveFilter `protobuf:"varint,6,opt,name=active_filter,json=activeFilter,proto3,enum=finance.v1.ActiveFilter" json:"active_filter,omitempty"`
+	// Optional exact filter on the source cross-section code.
+	FromCode string `protobuf:"bytes,7,opt,name=from_code,json=fromCode,proto3" json:"from_code,omitempty"`
+	// Optional exact filter on the target cross-section code.
+	ToCode        string `protobuf:"bytes,8,opt,name=to_code,json=toCode,proto3" json:"to_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMbCrossSectionFactorRequest) Reset() {
+	*x = ListMbCrossSectionFactorRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[245]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMbCrossSectionFactorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMbCrossSectionFactorRequest) ProtoMessage() {}
+
+func (x *ListMbCrossSectionFactorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[245]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMbCrossSectionFactorRequest.ProtoReflect.Descriptor instead.
+func (*ListMbCrossSectionFactorRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{245}
+}
+
+func (x *ListMbCrossSectionFactorRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListMbCrossSectionFactorRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListMbCrossSectionFactorRequest) GetSearch() string {
+	if x != nil {
+		return x.Search
+	}
+	return ""
+}
+
+func (x *ListMbCrossSectionFactorRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListMbCrossSectionFactorRequest) GetSortDir() string {
+	if x != nil {
+		return x.SortDir
+	}
+	return ""
+}
+
+func (x *ListMbCrossSectionFactorRequest) GetActiveFilter() ActiveFilter {
+	if x != nil {
+		return x.ActiveFilter
+	}
+	return ActiveFilter_ACTIVE_FILTER_UNSPECIFIED
+}
+
+func (x *ListMbCrossSectionFactorRequest) GetFromCode() string {
+	if x != nil {
+		return x.FromCode
+	}
+	return ""
+}
+
+func (x *ListMbCrossSectionFactorRequest) GetToCode() string {
+	if x != nil {
+		return x.ToCode
+	}
+	return ""
+}
+
+// ListMbCrossSectionFactorResponse is the response for listing cross-section conversion factors.
+type ListMbCrossSectionFactorResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Factor records.
+	Data []*MbCrossSectionFactor `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+	// Pagination metadata.
+	Pagination    *v1.PaginationResponse `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMbCrossSectionFactorResponse) Reset() {
+	*x = ListMbCrossSectionFactorResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[246]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMbCrossSectionFactorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMbCrossSectionFactorResponse) ProtoMessage() {}
+
+func (x *ListMbCrossSectionFactorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[246]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMbCrossSectionFactorResponse.ProtoReflect.Descriptor instead.
+func (*ListMbCrossSectionFactorResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{246}
+}
+
+func (x *ListMbCrossSectionFactorResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ListMbCrossSectionFactorResponse) GetData() []*MbCrossSectionFactor {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *ListMbCrossSectionFactorResponse) GetPagination() *v1.PaginationResponse {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+// UpdateMbCrossSectionFactorRequest is the request for updating a cross-section conversion factor.
+type UpdateMbCrossSectionFactorRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Factor UUID.
+	MbcfId string `protobuf:"bytes,1,opt,name=mbcf_id,json=mbcfId,proto3" json:"mbcf_id,omitempty"`
+	// Updated conversion factor, strictly greater than zero.
+	Factor float64 `protobuf:"fixed64,2,opt,name=factor,proto3" json:"factor,omitempty"`
+	// Updated arithmetic direction: MULTIPLY or DIVIDE.
+	Operation string `protobuf:"bytes,3,opt,name=operation,proto3" json:"operation,omitempty"`
+	// Updated note.
+	Note string `protobuf:"bytes,4,opt,name=note,proto3" json:"note,omitempty"`
+	// Updated active status.
+	IsActive      bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMbCrossSectionFactorRequest) Reset() {
+	*x = UpdateMbCrossSectionFactorRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[247]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMbCrossSectionFactorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMbCrossSectionFactorRequest) ProtoMessage() {}
+
+func (x *UpdateMbCrossSectionFactorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[247]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMbCrossSectionFactorRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMbCrossSectionFactorRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{247}
+}
+
+func (x *UpdateMbCrossSectionFactorRequest) GetMbcfId() string {
+	if x != nil {
+		return x.MbcfId
+	}
+	return ""
+}
+
+func (x *UpdateMbCrossSectionFactorRequest) GetFactor() float64 {
+	if x != nil {
+		return x.Factor
+	}
+	return 0
+}
+
+func (x *UpdateMbCrossSectionFactorRequest) GetOperation() string {
+	if x != nil {
+		return x.Operation
+	}
+	return ""
+}
+
+func (x *UpdateMbCrossSectionFactorRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *UpdateMbCrossSectionFactorRequest) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+// UpdateMbCrossSectionFactorResponse is the response for updating a cross-section conversion factor.
+type UpdateMbCrossSectionFactorResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Updated factor record.
+	Data          *MbCrossSectionFactor `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMbCrossSectionFactorResponse) Reset() {
+	*x = UpdateMbCrossSectionFactorResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[248]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMbCrossSectionFactorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMbCrossSectionFactorResponse) ProtoMessage() {}
+
+func (x *UpdateMbCrossSectionFactorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[248]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMbCrossSectionFactorResponse.ProtoReflect.Descriptor instead.
+func (*UpdateMbCrossSectionFactorResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{248}
+}
+
+func (x *UpdateMbCrossSectionFactorResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *UpdateMbCrossSectionFactorResponse) GetData() *MbCrossSectionFactor {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// DeleteMbCrossSectionFactorRequest is the request for deleting a cross-section conversion factor.
+type DeleteMbCrossSectionFactorRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Factor UUID.
+	MbcfId        string `protobuf:"bytes,1,opt,name=mbcf_id,json=mbcfId,proto3" json:"mbcf_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMbCrossSectionFactorRequest) Reset() {
+	*x = DeleteMbCrossSectionFactorRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[249]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMbCrossSectionFactorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMbCrossSectionFactorRequest) ProtoMessage() {}
+
+func (x *DeleteMbCrossSectionFactorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[249]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMbCrossSectionFactorRequest.ProtoReflect.Descriptor instead.
+func (*DeleteMbCrossSectionFactorRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{249}
+}
+
+func (x *DeleteMbCrossSectionFactorRequest) GetMbcfId() string {
+	if x != nil {
+		return x.MbcfId
+	}
+	return ""
+}
+
+// DeleteMbCrossSectionFactorResponse is the response for deleting a cross-section conversion factor.
+type DeleteMbCrossSectionFactorResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base          *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMbCrossSectionFactorResponse) Reset() {
+	*x = DeleteMbCrossSectionFactorResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[250]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMbCrossSectionFactorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMbCrossSectionFactorResponse) ProtoMessage() {}
+
+func (x *DeleteMbCrossSectionFactorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[250]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMbCrossSectionFactorResponse.ProtoReflect.Descriptor instead.
+func (*DeleteMbCrossSectionFactorResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{250}
+}
+
+func (x *DeleteMbCrossSectionFactorResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+// CalculateDozingRequest is the request for the stateless dozing (LDR) calculator.
+//
+// Modes: SCALE and XSECTION only.
+//
+// NOTE — STRENGTH mode is INTENTIONALLY ABSENT from the `in:` rule below even
+// though the consolidated design (§3.7) lists three modes. Decision gate G6-C3
+// put STRENGTH on hold: its formula/direction semantics are not yet settled, so
+// accepting the literal here would expose an RPC surface the backend cannot
+// honor. This is a DELIBERATE DIVERGENCE from the design document. Field
+// numbers 10, 11 and 12 are reserved below so STRENGTH can be added later
+// without renumbering.
+//
+// NOTE — mode SCALE is computed in pure Go (math.Sqrt); mst_formula is read
+// ONLY to populate formula_code and calculation_trace (decision K-16 / G19-SQRT).
+type CalculateDozingRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Calculation mode: SCALE or XSECTION.
+	Mode string `protobuf:"bytes,1,opt,name=mode,proto3" json:"mode,omitempty"`
+	// Mode SCALE — reference LDR (dozing percentage) of the source recipe.
+	LdrRef *float64 `protobuf:"fixed64,2,opt,name=ldr_ref,json=ldrRef,proto3,oneof" json:"ldr_ref,omitempty"`
+	// Mode SCALE — reference denier, strictly greater than zero.
+	DenierRef *float64 `protobuf:"fixed64,3,opt,name=denier_ref,json=denierRef,proto3,oneof" json:"denier_ref,omitempty"`
+	// Mode SCALE — reference filament count, strictly greater than zero.
+	// Enforced here as well as in the domain layer (ErrZeroFilament).
+	FilamentRef *int32 `protobuf:"varint,4,opt,name=filament_ref,json=filamentRef,proto3,oneof" json:"filament_ref,omitempty"`
+	// Mode SCALE — target denier, strictly greater than zero.
+	DenierTarget *float64 `protobuf:"fixed64,5,opt,name=denier_target,json=denierTarget,proto3,oneof" json:"denier_target,omitempty"`
+	// Mode SCALE — target filament count, strictly greater than zero.
+	// Enforced here as well as in the domain layer (ErrZeroFilament).
+	FilamentTarget *int32 `protobuf:"varint,6,opt,name=filament_target,json=filamentTarget,proto3,oneof" json:"filament_target,omitempty"`
+	// Mode XSECTION — source LDR (dozing percentage).
+	LdrSource *float64 `protobuf:"fixed64,7,opt,name=ldr_source,json=ldrSource,proto3,oneof" json:"ldr_source,omitempty"`
+	// Mode XSECTION — source cross-section code (mst_mb_cross_section.mbcs_code).
+	FromCrossSection *string `protobuf:"bytes,8,opt,name=from_cross_section,json=fromCrossSection,proto3,oneof" json:"from_cross_section,omitempty"`
+	// Mode XSECTION — target cross-section code (mst_mb_cross_section.mbcs_code).
+	ToCrossSection *string `protobuf:"bytes,9,opt,name=to_cross_section,json=toCrossSection,proto3,oneof" json:"to_cross_section,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CalculateDozingRequest) Reset() {
+	*x = CalculateDozingRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[251]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalculateDozingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalculateDozingRequest) ProtoMessage() {}
+
+func (x *CalculateDozingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[251]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalculateDozingRequest.ProtoReflect.Descriptor instead.
+func (*CalculateDozingRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{251}
+}
+
+func (x *CalculateDozingRequest) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *CalculateDozingRequest) GetLdrRef() float64 {
+	if x != nil && x.LdrRef != nil {
+		return *x.LdrRef
+	}
+	return 0
+}
+
+func (x *CalculateDozingRequest) GetDenierRef() float64 {
+	if x != nil && x.DenierRef != nil {
+		return *x.DenierRef
+	}
+	return 0
+}
+
+func (x *CalculateDozingRequest) GetFilamentRef() int32 {
+	if x != nil && x.FilamentRef != nil {
+		return *x.FilamentRef
+	}
+	return 0
+}
+
+func (x *CalculateDozingRequest) GetDenierTarget() float64 {
+	if x != nil && x.DenierTarget != nil {
+		return *x.DenierTarget
+	}
+	return 0
+}
+
+func (x *CalculateDozingRequest) GetFilamentTarget() int32 {
+	if x != nil && x.FilamentTarget != nil {
+		return *x.FilamentTarget
+	}
+	return 0
+}
+
+func (x *CalculateDozingRequest) GetLdrSource() float64 {
+	if x != nil && x.LdrSource != nil {
+		return *x.LdrSource
+	}
+	return 0
+}
+
+func (x *CalculateDozingRequest) GetFromCrossSection() string {
+	if x != nil && x.FromCrossSection != nil {
+		return *x.FromCrossSection
+	}
+	return ""
+}
+
+func (x *CalculateDozingRequest) GetToCrossSection() string {
+	if x != nil && x.ToCrossSection != nil {
+		return *x.ToCrossSection
+	}
+	return ""
+}
+
+// CalculateDozingResponse is the response for the dozing (LDR) calculator.
+type CalculateDozingResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Resulting LDR. LEFT UNSET when the conversion factor is absent
+	// (factor_available = false). A 1.0 fallback is explicitly forbidden.
+	ResultLdr *float64 `protobuf:"fixed64,2,opt,name=result_ldr,json=resultLdr,proto3,oneof" json:"result_ldr,omitempty"`
+	// Formula identifier, e.g. F_MB_LDR_SCALE or F_MB_LDR_XSECTION.
+	FormulaCode string `protobuf:"bytes,3,opt,name=formula_code,json=formulaCode,proto3" json:"formula_code,omitempty"`
+	// Human-readable substituted expression, for calculation transparency.
+	CalculationTrace string `protobuf:"bytes,4,opt,name=calculation_trace,json=calculationTrace,proto3" json:"calculation_trace,omitempty"`
+	// False when no conversion factor exists for the requested pair; the UI must
+	// disable the apply action and show an explicit message.
+	FactorAvailable bool `protobuf:"varint,5,opt,name=factor_available,json=factorAvailable,proto3" json:"factor_available,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CalculateDozingResponse) Reset() {
+	*x = CalculateDozingResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[252]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalculateDozingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalculateDozingResponse) ProtoMessage() {}
+
+func (x *CalculateDozingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[252]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalculateDozingResponse.ProtoReflect.Descriptor instead.
+func (*CalculateDozingResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{252}
+}
+
+func (x *CalculateDozingResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *CalculateDozingResponse) GetResultLdr() float64 {
+	if x != nil && x.ResultLdr != nil {
+		return *x.ResultLdr
+	}
+	return 0
+}
+
+func (x *CalculateDozingResponse) GetFormulaCode() string {
+	if x != nil {
+		return x.FormulaCode
+	}
+	return ""
+}
+
+func (x *CalculateDozingResponse) GetCalculationTrace() string {
+	if x != nil {
+		return x.CalculationTrace
+	}
+	return ""
+}
+
+func (x *CalculateDozingResponse) GetFactorAvailable() bool {
+	if x != nil {
+		return x.FactorAvailable
+	}
+	return false
+}
+
+// PreviewDozingImpactRequest is the request for previewing products affected by
+// a dozing change. Spin path only.
+type PreviewDozingImpactRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// MB spin UUID. Required.
+	MbsId string `protobuf:"bytes,2,opt,name=mbs_id,json=mbsId,proto3" json:"mbs_id,omitempty"`
+	// Maximum number of rows to return. 0 means the server default (20).
+	Limit         int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PreviewDozingImpactRequest) Reset() {
+	*x = PreviewDozingImpactRequest{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[253]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreviewDozingImpactRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreviewDozingImpactRequest) ProtoMessage() {}
+
+func (x *PreviewDozingImpactRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[253]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreviewDozingImpactRequest.ProtoReflect.Descriptor instead.
+func (*PreviewDozingImpactRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{253}
+}
+
+func (x *PreviewDozingImpactRequest) GetMbsId() string {
+	if x != nil {
+		return x.MbsId
+	}
+	return ""
+}
+
+func (x *PreviewDozingImpactRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+// DozingImpactRow is a single product affected by a dozing change.
+type DozingImpactRow struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product system ID.
+	CpmProductSysId int64 `protobuf:"varint,1,opt,name=cpm_product_sys_id,json=cpmProductSysId,proto3" json:"cpm_product_sys_id,omitempty"`
+	// Product code.
+	CpmProductCode string `protobuf:"bytes,2,opt,name=cpm_product_code,json=cpmProductCode,proto3" json:"cpm_product_code,omitempty"`
+	// Product name.
+	CpmProductName string `protobuf:"bytes,3,opt,name=cpm_product_name,json=cpmProductName,proto3" json:"cpm_product_name,omitempty"`
+	// Whether the product costing is locked.
+	CpmIsLocked bool `protobuf:"varint,4,opt,name=cpm_is_locked,json=cpmIsLocked,proto3" json:"cpm_is_locked,omitempty"`
+	// Dozing value frozen on the product, when present.
+	FrozenDozing  *float64 `protobuf:"fixed64,6,opt,name=frozen_dozing,json=frozenDozing,proto3,oneof" json:"frozen_dozing,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DozingImpactRow) Reset() {
+	*x = DozingImpactRow{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[254]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DozingImpactRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DozingImpactRow) ProtoMessage() {}
+
+func (x *DozingImpactRow) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[254]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DozingImpactRow.ProtoReflect.Descriptor instead.
+func (*DozingImpactRow) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{254}
+}
+
+func (x *DozingImpactRow) GetCpmProductSysId() int64 {
+	if x != nil {
+		return x.CpmProductSysId
+	}
+	return 0
+}
+
+func (x *DozingImpactRow) GetCpmProductCode() string {
+	if x != nil {
+		return x.CpmProductCode
+	}
+	return ""
+}
+
+func (x *DozingImpactRow) GetCpmProductName() string {
+	if x != nil {
+		return x.CpmProductName
+	}
+	return ""
+}
+
+func (x *DozingImpactRow) GetCpmIsLocked() bool {
+	if x != nil {
+		return x.CpmIsLocked
+	}
+	return false
+}
+
+func (x *DozingImpactRow) GetFrozenDozing() float64 {
+	if x != nil && x.FrozenDozing != nil {
+		return *x.FrozenDozing
+	}
+	return 0
+}
+
+// PreviewDozingImpactResponse is the response for the dozing impact preview.
+type PreviewDozingImpactResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Affected product rows (Top-N, capped by the request limit).
+	Data []*DozingImpactRow `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+	// Total number of affected products, before truncation.
+	TotalAffected int32 `protobuf:"varint,3,opt,name=total_affected,json=totalAffected,proto3" json:"total_affected,omitempty"`
+	// Number of affected products that are locked.
+	TotalLocked int32 `protobuf:"varint,4,opt,name=total_locked,json=totalLocked,proto3" json:"total_locked,omitempty"`
+	// True when data was truncated by the limit.
+	Truncated bool `protobuf:"varint,5,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	// Free-form note used to report data anomalies detected while resolving impact.
+	Note          string `protobuf:"bytes,6,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PreviewDozingImpactResponse) Reset() {
+	*x = PreviewDozingImpactResponse{}
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[255]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreviewDozingImpactResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreviewDozingImpactResponse) ProtoMessage() {}
+
+func (x *PreviewDozingImpactResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_master_proto_msgTypes[255]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreviewDozingImpactResponse.ProtoReflect.Descriptor instead.
+func (*PreviewDozingImpactResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_master_proto_rawDescGZIP(), []int{255}
+}
+
+func (x *PreviewDozingImpactResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *PreviewDozingImpactResponse) GetData() []*DozingImpactRow {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *PreviewDozingImpactResponse) GetTotalAffected() int32 {
+	if x != nil {
+		return x.TotalAffected
+	}
+	return 0
+}
+
+func (x *PreviewDozingImpactResponse) GetTotalLocked() int32 {
+	if x != nil {
+		return x.TotalLocked
+	}
+	return 0
+}
+
+func (x *PreviewDozingImpactResponse) GetTruncated() bool {
+	if x != nil {
+		return x.Truncated
+	}
+	return false
+}
+
+func (x *PreviewDozingImpactResponse) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
 }
 
 var File_finance_v1_yarn_master_proto protoreflect.FileDescriptor
@@ -16299,7 +19689,17 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"$DownloadProductGradeTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xeb\f\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\x96\x01\n" +
+	"\vMBHeadShade\x12\x17\n" +
+	"\ambhs_id\x18\x01 \x01(\tR\x06mbhsId\x12\x1e\n" +
+	"\vmbhs_seq_no\x18\x02 \x01(\x05R\tmbhsSeqNo\x12&\n" +
+	"\x0fmbhs_shade_code\x18\x03 \x01(\tR\rmbhsShadeCode\x12&\n" +
+	"\x0fmbhs_shade_name\x18\x04 \x01(\tR\rmbhsShadeName\"\xba\x01\n" +
+	"\x10MBHeadShadeInput\x12)\n" +
+	"\vmbhs_seq_no\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x02(\x01R\tmbhsSeqNo\x121\n" +
+	"\x0fmbhs_shade_code\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\rmbhsShadeCode\x124\n" +
+	"\x0fmbhs_shade_name\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18dH\x00R\rmbhsShadeName\x88\x01\x01B\x12\n" +
+	"\x10_mbhs_shade_name\"\xb6\x11\n" +
 	"\x06MBHead\x12\x15\n" +
 	"\x06mbh_id\x18\x01 \x01(\tR\x05mbhId\x12)\n" +
 	"\x11mbh_oracle_sys_id\x18\x02 \x01(\tR\x0embhOracleSysId\x12$\n" +
@@ -16347,7 +19747,16 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x19param_throughput_per_hour\x18\" \x01(\tR\x16paramThroughputPerHour\x12-\n" +
 	"\x13param_no_of_process\x18# \x01(\tR\x10paramNoOfProcess\x12,\n" +
 	"\n" +
-	"machine_id\x18$ \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\tR\tmachineId\x88\x01\x01B\r\n" +
+	"machine_id\x18$ \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\tR\tmachineId\x88\x01\x01\x12'\n" +
+	"\rmbh_vs_number\x18& \x01(\tH\n" +
+	"R\vmbhVsNumber\x88\x01\x01\x12.\n" +
+	"\x11mbh_no_of_process\x18' \x01(\tH\vR\x0embhNoOfProcess\x88\x01\x01\x12D\n" +
+	"\x11additional_shades\x18( \x03(\v2\x17.finance.v1.MBHeadShadeR\x10additionalShades\x12'\n" +
+	"\rmbh_is_locked\x18) \x01(\bH\fR\vmbhIsLocked\x88\x01\x01\x12:\n" +
+	"\x17mbh_unlock_requested_at\x18* \x01(\tH\rR\x14mbhUnlockRequestedAt\x88\x01\x01\x12:\n" +
+	"\x17mbh_unlock_requested_by\x18+ \x01(\tH\x0eR\x14mbhUnlockRequestedBy\x88\x01\x01\x126\n" +
+	"\x15mbh_check_status_calc\x18, \x01(\tH\x0fR\x12mbhCheckStatusCalc\x88\x01\x01\x12/\n" +
+	"\x11mbh_unlock_reason\x18- \x01(\tH\x10R\x0fmbhUnlockReason\x88\x01\x01B\r\n" +
 	"\v_mbh_denierB\x0f\n" +
 	"\r_mbh_filamentB\r\n" +
 	"\v_mbh_dozingB\x13\n" +
@@ -16357,7 +19766,14 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x10_mbh_run_ldr_pctB\x14\n" +
 	"\x12_mbh_final_productB\v\n" +
 	"\t_mbh_codeB\r\n" +
-	"\v_machine_id\"\xfb\t\n" +
+	"\v_machine_idB\x10\n" +
+	"\x0e_mbh_vs_numberB\x14\n" +
+	"\x12_mbh_no_of_processB\x10\n" +
+	"\x0e_mbh_is_lockedB\x1a\n" +
+	"\x18_mbh_unlock_requested_atB\x1a\n" +
+	"\x18_mbh_unlock_requested_byB\x18\n" +
+	"\x16_mbh_check_status_calcB\x14\n" +
+	"\x12_mbh_unlock_reason\"\xec\v\n" +
 	"\x13CreateMBHeadRequest\x12/\n" +
 	"\x0embh_mb_costing\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\fmbhMbCosting\x127\n" +
 	"\x11mbh_oracle_sys_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x1eH\x00R\x0embhOracleSysId\x88\x01\x01\x12.\n" +
@@ -16386,7 +19802,10 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x10mbh_lusture_code\x18\x11 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
 	"H\x0eR\x0embhLustureCode\x88\x01\x01\x123\n" +
 	"\x0embh_machine_id\x18\x12 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x0fR\fmbhMachineId\x88\x01\x01\x12:\n" +
-	"\x0fmbh_run_ldr_pct\x18\x13 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x10R\fmbhRunLdrPct\x88\x01\x01B\x14\n" +
+	"\x0fmbh_run_ldr_pct\x18\x13 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x10R\fmbhRunLdrPct\x88\x01\x01\x120\n" +
+	"\rmbh_vs_number\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x182H\x11R\vmbhVsNumber\x88\x01\x01\x12@\n" +
+	"\x11mbh_no_of_process\x18\x15 \x01(\tB\x10\xbaH\rr\vR\x00R\x01SR\x01DR\x01TH\x12R\x0embhNoOfProcess\x88\x01\x01\x12S\n" +
+	"\x11additional_shades\x18\x16 \x03(\v2\x1c.finance.v1.MBHeadShadeInputB\b\xbaH\x05\x92\x01\x02\x10\x02R\x10additionalShadesB\x14\n" +
 	"\x12_mbh_oracle_sys_idB\x0f\n" +
 	"\r_mbh_mgt_nameB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
@@ -16403,7 +19822,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x12_mbh_cross_sectionB\x13\n" +
 	"\x11_mbh_lusture_codeB\x11\n" +
 	"\x0f_mbh_machine_idB\x12\n" +
-	"\x10_mbh_run_ldr_pct\"k\n" +
+	"\x10_mbh_run_ldr_pctB\x10\n" +
+	"\x0e_mbh_vs_numberB\x14\n" +
+	"\x12_mbh_no_of_process\"k\n" +
 	"\x14CreateMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"3\n" +
@@ -16411,7 +19832,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\"h\n" +
 	"\x11GetMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xf6\t\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xc6\f\n" +
 	"\x13UpdateMBHeadRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x124\n" +
 	"\x0embh_mb_costing\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dH\x00R\fmbhMbCosting\x88\x01\x01\x12.\n" +
@@ -16440,7 +19861,11 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x10mbh_lusture_code\x18\x11 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
 	"H\x0fR\x0embhLustureCode\x88\x01\x01\x123\n" +
 	"\x0embh_machine_id\x18\x12 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x10R\fmbhMachineId\x88\x01\x01\x12:\n" +
-	"\x0fmbh_run_ldr_pct\x18\x13 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x11R\fmbhRunLdrPct\x88\x01\x01B\x11\n" +
+	"\x0fmbh_run_ldr_pct\x18\x13 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x11R\fmbhRunLdrPct\x88\x01\x01\x120\n" +
+	"\rmbh_vs_number\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x182H\x12R\vmbhVsNumber\x88\x01\x01\x12@\n" +
+	"\x11mbh_no_of_process\x18\x15 \x01(\tB\x10\xbaH\rr\vR\x00R\x01SR\x01DR\x01TH\x13R\x0embhNoOfProcess\x88\x01\x01\x12S\n" +
+	"\x11additional_shades\x18\x16 \x03(\v2\x1c.finance.v1.MBHeadShadeInputB\b\xbaH\x05\x92\x01\x02\x10\x02R\x10additionalShades\x12?\n" +
+	"\x19replace_additional_shades\x18\x17 \x01(\bH\x14R\x17replaceAdditionalShades\x88\x01\x01B\x11\n" +
 	"\x0f_mbh_mb_costingB\x0f\n" +
 	"\r_mbh_mgt_nameB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
@@ -16458,14 +19883,17 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x12_mbh_cross_sectionB\x13\n" +
 	"\x11_mbh_lusture_codeB\x11\n" +
 	"\x0f_mbh_machine_idB\x12\n" +
-	"\x10_mbh_run_ldr_pct\"k\n" +
+	"\x10_mbh_run_ldr_pctB\x10\n" +
+	"\x0e_mbh_vs_numberB\x14\n" +
+	"\x12_mbh_no_of_processB\x1c\n" +
+	"\x1a_replace_additional_shades\"k\n" +
 	"\x14UpdateMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"6\n" +
 	"\x13DeleteMBHeadRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\"C\n" +
 	"\x14DeleteMBHeadResponse\x12+\n" +
-	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xc4\x02\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xec\x02\n" +
 	"\x12ListMBHeadsRequest\x12\x1b\n" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\x12\x1f\n" +
@@ -16475,16 +19903,28 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"mbh_denierR\n" +
 	"created_atR\x06sortBy\x121\n" +
 	"\n" +
-	"sort_order\x18\x06 \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\"\xa9\x01\n" +
+	"sort_order\x18\x06 \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\x12&\n" +
+	"\x0fcost_product_id\x18\a \x01(\x03R\rcostProductId\"\xa9\x01\n" +
 	"\x13ListMBHeadsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x03(\v2\x12.finance.v1.MBHeadR\x04data\x12=\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"U\n" +
+	"pagination\"\x80\x01\n" +
 	"\x14ExportMBHeadsRequest\x12=\n" +
-	"\ractive_filter\x18\x01 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\"\x84\x01\n" +
+	"\ractive_filter\x18\x01 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\x12)\n" +
+	"\x10include_rejected\x18\x02 \x01(\bR\x0fincludeRejected\"\x84\x01\n" +
 	"\x15ExportMBHeadsResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
+	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xe4\x02\n" +
+	"\x19ExportMBRecipeFullRequest\x12=\n" +
+	"\ractive_filter\x18\x01 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\x12,\n" +
+	"\x06period\x18\x02 \x01(\tB\x14\xbaH\x11r\x0f2\r^$|^[0-9]{6}$R\x06period\x12?\n" +
+	"\tcost_type\x18\x03 \x01(\tB\"\xbaH\x1fr\x1dR\x00R\x06ACTUALR\aSELLINGR\bFORECASTR\bcostType\x12n\n" +
+	"\x11check_status_calc\x18\x04 \x01(\tBB\xbaH?r=R\x00R\aWaitingR\aCurrentR\tBoughtoutR\bApprovedR\bOutdatedR\bRejectedR\x0fcheckStatusCalc\x12)\n" +
+	"\x10include_rejected\x18\x05 \x01(\bR\x0fincludeRejected\"\x89\x01\n" +
+	"\x1aExportMBRecipeFullResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
 	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xb7\x01\n" +
@@ -16530,7 +19970,36 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06reason\"k\n" +
 	"\x14RevokeMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xfe\x05\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"W\n" +
+	"\x13RejectMBHeadRequest\x12\x1f\n" +
+	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
+	"\x06reason\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06reason\"k\n" +
+	"\x14RejectMBHeadResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"U\n" +
+	"\x1aReturnMBHeadToDraftRequest\x12\x1f\n" +
+	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"r\n" +
+	"\x1bReturnMBHeadToDraftResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"^\n" +
+	"\x1aRequestUnlockMBHeadRequest\x12\x1f\n" +
+	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
+	"\x06reason\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06reason\"r\n" +
+	"\x1bRequestUnlockMBHeadResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\";\n" +
+	"\x18GrantUnlockMBHeadRequest\x12\x1f\n" +
+	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\"p\n" +
+	"\x19GrantUnlockMBHeadResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"]\n" +
+	"\x19RejectUnlockMBHeadRequest\x12\x1f\n" +
+	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
+	"\x06reason\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06reason\"q\n" +
+	"\x1aRejectUnlockMBHeadResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\x8d\a\n" +
 	"\x06MBSpin\x12\x15\n" +
 	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12)\n" +
 	"\x11mbs_oracle_sys_id\x18\x02 \x01(\tR\x0embsOracleSysId\x12\x1c\n" +
@@ -16554,7 +20023,10 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"mbsLdrPrsn\x88\x01\x01\x12/\n" +
 	"\x11mbs_final_product\x18\x0e \x01(\tH\aR\x0fmbsFinalProduct\x88\x01\x01\x12*\n" +
 	"\x0fmbs_run_ldr_pct\x18\x0f \x01(\x01H\bR\fmbsRunLdrPct\x88\x01\x01\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05auditB\r\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12,\n" +
+	"\x10mbs_ldr_is_fixed\x18\x11 \x01(\bH\tR\rmbsLdrIsFixed\x88\x01\x01\x122\n" +
+	"\x13mbs_dozing_is_fixed\x18\x12 \x01(\bH\n" +
+	"R\x10mbsDozingIsFixed\x88\x01\x01B\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
 	"\v_mbs_dozingB\t\n" +
@@ -16563,7 +20035,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\v_mbs_statusB\x0f\n" +
 	"\r_mbs_ldr_prsnB\x14\n" +
 	"\x12_mbs_final_productB\x12\n" +
-	"\x10_mbs_run_ldr_pct\"\xb3\x06\n" +
+	"\x10_mbs_run_ldr_pctB\x13\n" +
+	"\x11_mbs_ldr_is_fixedB\x16\n" +
+	"\x14_mbs_dozing_is_fixed\"\xc2\a\n" +
 	"\x13CreateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12+\n" +
 	"\fmbs_mgt_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\n" +
@@ -16584,7 +20058,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"mbsLdrPrsn\x88\x01\x01\x129\n" +
 	"\x11mbs_final_product\x18\f \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\tR\x0fmbsFinalProduct\x88\x01\x01\x12:\n" +
 	"\x0fmbs_run_ldr_pct\x18\r \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\n" +
-	"R\fmbsRunLdrPct\x88\x01\x01B\x14\n" +
+	"R\fmbsRunLdrPct\x88\x01\x01\x12,\n" +
+	"\x10mbs_ldr_is_fixed\x18\x0e \x01(\bH\vR\rmbsLdrIsFixed\x88\x01\x01\x122\n" +
+	"\x13mbs_dozing_is_fixed\x18\x0f \x01(\bH\fR\x10mbsDozingIsFixed\x88\x01\x01B\x14\n" +
 	"\x12_mbs_oracle_sys_idB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
@@ -16595,7 +20071,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\v_mbs_statusB\x0f\n" +
 	"\r_mbs_ldr_prsnB\x14\n" +
 	"\x12_mbs_final_productB\x12\n" +
-	"\x10_mbs_run_ldr_pct\"k\n" +
+	"\x10_mbs_run_ldr_pctB\x13\n" +
+	"\x11_mbs_ldr_is_fixedB\x16\n" +
+	"\x14_mbs_dozing_is_fixed\"k\n" +
 	"\x14CreateMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"T\n" +
@@ -16604,7 +20082,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\"h\n" +
 	"\x11GetMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"\xd6\x06\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"\xe5\a\n" +
 	"\x13UpdateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\x120\n" +
@@ -16626,7 +20104,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"mbsLdrPrsn\x88\x01\x01\x129\n" +
 	"\x11mbs_final_product\x18\r \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\n" +
 	"R\x0fmbsFinalProduct\x88\x01\x01\x12:\n" +
-	"\x0fmbs_run_ldr_pct\x18\x0e \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\vR\fmbsRunLdrPct\x88\x01\x01B\x0f\n" +
+	"\x0fmbs_run_ldr_pct\x18\x0e \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\vR\fmbsRunLdrPct\x88\x01\x01\x12,\n" +
+	"\x10mbs_ldr_is_fixed\x18\x0f \x01(\bH\fR\rmbsLdrIsFixed\x88\x01\x01\x122\n" +
+	"\x13mbs_dozing_is_fixed\x18\x10 \x01(\bH\rR\x10mbsDozingIsFixed\x88\x01\x01B\x0f\n" +
 	"\r_mbs_mgt_nameB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
@@ -16638,7 +20118,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\v_mbs_statusB\x0f\n" +
 	"\r_mbs_ldr_prsnB\x14\n" +
 	"\x12_mbs_final_productB\x12\n" +
-	"\x10_mbs_run_ldr_pct\"k\n" +
+	"\x10_mbs_run_ldr_pctB\x13\n" +
+	"\x11_mbs_ldr_is_fixedB\x16\n" +
+	"\x14_mbs_dozing_is_fixed\"k\n" +
 	"\x14UpdateMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"W\n" +
@@ -16687,7 +20169,35 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x1eDownloadMBSpinTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xab\x01\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xa2\x02\n" +
+	"\x16DuplicateMBSpinRequest\x12\x1f\n" +
+	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
+	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\x120\n" +
+	"\fmbs_mgt_name\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dH\x00R\n" +
+	"mbsMgtName\x88\x01\x01\x122\n" +
+	"\n" +
+	"mbs_denier\x18\x04 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00H\x01R\tmbsDenier\x88\x01\x01\x12/\n" +
+	"\fmbs_filament\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00H\x02R\vmbsFilament\x88\x01\x01B\x0f\n" +
+	"\r_mbs_mgt_nameB\r\n" +
+	"\v_mbs_denierB\x0f\n" +
+	"\r_mbs_filament\"\x99\x01\n" +
+	"\x13MBSpinRecalcSkipped\x12\x15\n" +
+	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12 \n" +
+	"\fmbs_mgt_name\x18\x02 \x01(\tR\n" +
+	"mbsMgtName\x12\"\n" +
+	"\n" +
+	"mbs_status\x18\x03 \x01(\tH\x00R\tmbsStatus\x88\x01\x01\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reasonB\r\n" +
+	"\v_mbs_status\"\xa1\x03\n" +
+	"\x17DuplicateMBSpinResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\x129\n" +
+	"\askipped\x18\x03 \x03(\v2\x1f.finance.v1.MBSpinRecalcSkippedR\askipped\x12#\n" +
+	"\rskipped_count\x18\x04 \x01(\x05R\fskippedCount\x12B\n" +
+	"\x0eimpact_preview\x18\x05 \x03(\v2\x1b.finance.v1.DozingImpactRowR\rimpactPreview\x122\n" +
+	"\x15impact_total_affected\x18\x06 \x01(\x05R\x13impactTotalAffected\x12.\n" +
+	"\x13impact_total_locked\x18\a \x01(\x05R\x11impactTotalLocked\x12)\n" +
+	"\x10impact_truncated\x18\b \x01(\bR\x0fimpactTruncated\"\xab\x01\n" +
 	"\x1aGetLookupFillValuesRequest\x125\n" +
 	"\x12lookup_master_code\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x10lookupMasterCode\x12*\n" +
 	"\fselected_key\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vselectedKey\x12*\n" +
@@ -16783,13 +20293,26 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"table_name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\ttableName\"t\n" +
 	"\x18ListTableColumnsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
-	"\x04data\x18\x02 \x03(\v2\x17.finance.v1.TableColumnR\x04data\":\n" +
+	"\x04data\x18\x02 \x03(\v2\x17.finance.v1.TableColumnR\x04data\"\x80\x02\n" +
 	"\fMasterOption\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x14\n" +
-	"\x05label\x18\x02 \x01(\tR\x05label\"D\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12\x1b\n" +
+	"\x06denier\x18\x03 \x01(\x01H\x00R\x06denier\x88\x01\x01\x12\x1f\n" +
+	"\bfilament\x18\x04 \x01(\x05H\x01R\bfilament\x88\x01\x01\x12\x1e\n" +
+	"\bldr_prsn\x18\x06 \x01(\x01H\x02R\aldrPrsn\x88\x01\x01\x12#\n" +
+	"\vrun_ldr_pct\x18\a \x01(\x01H\x03R\trunLdrPct\x88\x01\x01B\t\n" +
+	"\a_denierB\v\n" +
+	"\t_filamentB\v\n" +
+	"\t_ldr_prsnB\x0e\n" +
+	"\f_run_ldr_pctJ\x04\b\x05\x10\x06R\x06dozing\"\xa6\x01\n" +
 	"\x18ListMasterOptionsRequest\x12(\n" +
 	"\vmaster_code\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\n" +
-	"masterCode\"v\n" +
+	"masterCode\x12$\n" +
+	"\x06search\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dH\x00R\x06search\x88\x01\x01\x12%\n" +
+	"\x05limit\x18\x03 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xf4\x03(\x00H\x01R\x05limit\x88\x01\x01B\t\n" +
+	"\a_searchB\b\n" +
+	"\x06_limit\"v\n" +
 	"\x19ListMasterOptionsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x04data\x18\x02 \x03(\v2\x18.finance.v1.MasterOptionR\x04data\"\x1c\n" +
@@ -17161,7 +20684,164 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\rrows_inserted\x18\x06 \x01(\x05R\frowsInserted\x12\x1f\n" +
 	"\vduration_ms\x18\a \x01(\x03R\n" +
 	"durationMs\x120\n" +
-	"\x06errors\x18\b \x03(\v2\x18.finance.v1.MbBatchErrorR\x06errors*\xbe\x01\n" +
+	"\x06errors\x18\b \x03(\v2\x18.finance.v1.MbBatchErrorR\x06errors\"\xf0\x01\n" +
+	"\x0eMbCrossSection\x12\x17\n" +
+	"\ambcs_id\x18\x01 \x01(\tR\x06mbcsId\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1b\n" +
+	"\tis_active\x18\x05 \x01(\bR\bisActive\x12#\n" +
+	"\rdisplay_order\x18\x06 \x01(\x05R\fdisplayOrder\x12*\n" +
+	"\x05audit\x18\a \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xf8\x01\n" +
+	"\x14MbCrossSectionFactor\x12\x17\n" +
+	"\ambcf_id\x18\x01 \x01(\tR\x06mbcfId\x12\x1b\n" +
+	"\tfrom_code\x18\x02 \x01(\tR\bfromCode\x12\x17\n" +
+	"\ato_code\x18\x03 \x01(\tR\x06toCode\x12\x16\n" +
+	"\x06factor\x18\x04 \x01(\x01R\x06factor\x12\x1c\n" +
+	"\toperation\x18\x05 \x01(\tR\toperation\x12\x12\n" +
+	"\x04note\x18\x06 \x01(\tR\x04note\x12\x1b\n" +
+	"\tis_active\x18\a \x01(\bR\bisActive\x12*\n" +
+	"\x05audit\x18\b \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xd6\x01\n" +
+	"\x1bCreateMbCrossSectionRequest\x12\x1d\n" +
+	"\x04code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\n" +
+	"R\x04code\x12*\n" +
+	"\fdisplay_name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x182R\vdisplayName\x12*\n" +
+	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\vdescription\x12\x1b\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\x12#\n" +
+	"\rdisplay_order\x18\x05 \x01(\x05R\fdisplayOrder\"{\n" +
+	"\x1cCreateMbCrossSectionResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
+	"\x04data\x18\x02 \x01(\v2\x1a.finance.v1.MbCrossSectionR\x04data\"=\n" +
+	"\x18GetMbCrossSectionRequest\x12!\n" +
+	"\ambcs_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06mbcsId\"x\n" +
+	"\x19GetMbCrossSectionResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
+	"\x04data\x18\x02 \x01(\v2\x1a.finance.v1.MbCrossSectionR\x04data\"\xc0\x02\n" +
+	"\x19ListMbCrossSectionRequest\x12\x1b\n" +
+	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\x12\x1f\n" +
+	"\x06search\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06search\x12O\n" +
+	"\asort_by\x18\x04 \x01(\tB6\xbaH3r1R\x00R\x04codeR\fdisplay_nameR\rdisplay_orderR\n" +
+	"created_atR\x06sortBy\x12-\n" +
+	"\bsort_dir\x18\x05 \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\asortDir\x12=\n" +
+	"\ractive_filter\x18\x06 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\"\xb8\x01\n" +
+	"\x1aListMbCrossSectionResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
+	"\x04data\x18\x02 \x03(\v2\x1a.finance.v1.MbCrossSectionR\x04data\x12=\n" +
+	"\n" +
+	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
+	"pagination\"\xda\x01\n" +
+	"\x1bUpdateMbCrossSectionRequest\x12!\n" +
+	"\ambcs_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06mbcsId\x12*\n" +
+	"\fdisplay_name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x182R\vdisplayName\x12*\n" +
+	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\vdescription\x12\x1b\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\x12#\n" +
+	"\rdisplay_order\x18\x05 \x01(\x05R\fdisplayOrder\"{\n" +
+	"\x1cUpdateMbCrossSectionResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
+	"\x04data\x18\x02 \x01(\v2\x1a.finance.v1.MbCrossSectionR\x04data\"@\n" +
+	"\x1bDeleteMbCrossSectionRequest\x12!\n" +
+	"\ambcs_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06mbcsId\"K\n" +
+	"\x1cDeleteMbCrossSectionResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\x89\x02\n" +
+	"!CreateMbCrossSectionFactorRequest\x12&\n" +
+	"\tfrom_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\n" +
+	"R\bfromCode\x12\"\n" +
+	"\ato_code\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\n" +
+	"R\x06toCode\x12&\n" +
+	"\x06factor\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06factor\x125\n" +
+	"\toperation\x18\x04 \x01(\tB\x17\xbaH\x14r\x12R\bMULTIPLYR\x06DIVIDER\toperation\x12\x1c\n" +
+	"\x04note\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x04note\x12\x1b\n" +
+	"\tis_active\x18\x06 \x01(\bR\bisActive\"\x87\x01\n" +
+	"\"CreateMbCrossSectionFactorResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x124\n" +
+	"\x04data\x18\x02 \x01(\v2 .finance.v1.MbCrossSectionFactorR\x04data\"C\n" +
+	"\x1eGetMbCrossSectionFactorRequest\x12!\n" +
+	"\ambcf_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06mbcfId\"\x84\x01\n" +
+	"\x1fGetMbCrossSectionFactorResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x124\n" +
+	"\x04data\x18\x02 \x01(\v2 .finance.v1.MbCrossSectionFactorR\x04data\"\x87\x03\n" +
+	"\x1fListMbCrossSectionFactorRequest\x12\x1b\n" +
+	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\x12\x1f\n" +
+	"\x06search\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06search\x12H\n" +
+	"\asort_by\x18\x04 \x01(\tB/\xbaH,r*R\x00R\tfrom_codeR\ato_codeR\x06factorR\n" +
+	"created_atR\x06sortBy\x12-\n" +
+	"\bsort_dir\x18\x05 \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\asortDir\x12=\n" +
+	"\ractive_filter\x18\x06 \x01(\x0e2\x18.finance.v1.ActiveFilterR\factiveFilter\x12$\n" +
+	"\tfrom_code\x18\a \x01(\tB\a\xbaH\x04r\x02\x18\n" +
+	"R\bfromCode\x12 \n" +
+	"\ato_code\x18\b \x01(\tB\a\xbaH\x04r\x02\x18\n" +
+	"R\x06toCode\"\xc4\x01\n" +
+	" ListMbCrossSectionFactorResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x124\n" +
+	"\x04data\x18\x02 \x03(\v2 .finance.v1.MbCrossSectionFactorR\x04data\x12=\n" +
+	"\n" +
+	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
+	"pagination\"\xe0\x01\n" +
+	"!UpdateMbCrossSectionFactorRequest\x12!\n" +
+	"\ambcf_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06mbcfId\x12&\n" +
+	"\x06factor\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06factor\x125\n" +
+	"\toperation\x18\x03 \x01(\tB\x17\xbaH\x14r\x12R\bMULTIPLYR\x06DIVIDER\toperation\x12\x1c\n" +
+	"\x04note\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x04note\x12\x1b\n" +
+	"\tis_active\x18\x05 \x01(\bR\bisActive\"\x87\x01\n" +
+	"\"UpdateMbCrossSectionFactorResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x124\n" +
+	"\x04data\x18\x02 \x01(\v2 .finance.v1.MbCrossSectionFactorR\x04data\"F\n" +
+	"!DeleteMbCrossSectionFactorRequest\x12!\n" +
+	"\ambcf_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06mbcfId\"Q\n" +
+	"\"DeleteMbCrossSectionFactorResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xef\x04\n" +
+	"\x16CalculateDozingRequest\x12*\n" +
+	"\x04mode\x18\x01 \x01(\tB\x16\xbaH\x13r\x11R\x05SCALER\bXSECTIONR\x04mode\x12\x1c\n" +
+	"\aldr_ref\x18\x02 \x01(\x01H\x00R\x06ldrRef\x88\x01\x01\x122\n" +
+	"\n" +
+	"denier_ref\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00H\x01R\tdenierRef\x88\x01\x01\x12/\n" +
+	"\ffilament_ref\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00H\x02R\vfilamentRef\x88\x01\x01\x128\n" +
+	"\rdenier_target\x18\x05 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00H\x03R\fdenierTarget\x88\x01\x01\x125\n" +
+	"\x0ffilament_target\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00H\x04R\x0efilamentTarget\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"ldr_source\x18\a \x01(\x01H\x05R\tldrSource\x88\x01\x01\x12:\n" +
+	"\x12from_cross_section\x18\b \x01(\tB\a\xbaH\x04r\x02\x18\n" +
+	"H\x06R\x10fromCrossSection\x88\x01\x01\x126\n" +
+	"\x10to_cross_section\x18\t \x01(\tB\a\xbaH\x04r\x02\x18\n" +
+	"H\aR\x0etoCrossSection\x88\x01\x01B\n" +
+	"\n" +
+	"\b_ldr_refB\r\n" +
+	"\v_denier_refB\x0f\n" +
+	"\r_filament_refB\x10\n" +
+	"\x0e_denier_targetB\x12\n" +
+	"\x10_filament_targetB\r\n" +
+	"\v_ldr_sourceB\x15\n" +
+	"\x13_from_cross_sectionB\x13\n" +
+	"\x11_to_cross_sectionJ\x04\b\n" +
+	"\x10\vJ\x04\b\v\x10\fJ\x04\b\f\x10\r\"\xf4\x01\n" +
+	"\x17CalculateDozingResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\"\n" +
+	"\n" +
+	"result_ldr\x18\x02 \x01(\x01H\x00R\tresultLdr\x88\x01\x01\x12!\n" +
+	"\fformula_code\x18\x03 \x01(\tR\vformulaCode\x12+\n" +
+	"\x11calculation_trace\x18\x04 \x01(\tR\x10calculationTrace\x12)\n" +
+	"\x10factor_available\x18\x05 \x01(\bR\x0ffactorAvailableB\r\n" +
+	"\v_result_ldr\"m\n" +
+	"\x1aPreviewDozingImpactRequest\x12\x1f\n" +
+	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\x12 \n" +
+	"\x05limit\x18\x03 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\x05limitJ\x04\b\x01\x10\x02R\x06mbh_id\"\x88\x02\n" +
+	"\x0fDozingImpactRow\x12+\n" +
+	"\x12cpm_product_sys_id\x18\x01 \x01(\x03R\x0fcpmProductSysId\x12(\n" +
+	"\x10cpm_product_code\x18\x02 \x01(\tR\x0ecpmProductCode\x12(\n" +
+	"\x10cpm_product_name\x18\x03 \x01(\tR\x0ecpmProductName\x12\"\n" +
+	"\rcpm_is_locked\x18\x04 \x01(\bR\vcpmIsLocked\x12(\n" +
+	"\rfrozen_dozing\x18\x06 \x01(\x01H\x00R\ffrozenDozing\x88\x01\x01B\x10\n" +
+	"\x0e_frozen_dozingJ\x04\b\x05\x10\x06R\x0evia_param_code\"\xf7\x01\n" +
+	"\x1bPreviewDozingImpactResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12/\n" +
+	"\x04data\x18\x02 \x03(\v2\x1b.finance.v1.DozingImpactRowR\x04data\x12%\n" +
+	"\x0etotal_affected\x18\x03 \x01(\x05R\rtotalAffected\x12!\n" +
+	"\ftotal_locked\x18\x04 \x01(\x05R\vtotalLocked\x12\x1c\n" +
+	"\ttruncated\x18\x05 \x01(\bR\ttruncated\x12\x12\n" +
+	"\x04note\x18\x06 \x01(\tR\x04note*\xbe\x01\n" +
 	"\fMCTypeFilter\x12\x1e\n" +
 	"\x1aMC_TYPE_FILTER_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12MC_TYPE_FILTER_DTY\x10\x01\x12\x16\n" +
@@ -17208,21 +20888,28 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x12DeleteProductGrade\x12%.finance.v1.DeleteProductGradeRequest\x1a&.finance.v1.DeleteProductGradeResponse\".\x82\xd3\xe4\x93\x02(*&/api/v1/finance/product-grades/{pg_id}\x12\x95\x01\n" +
 	"\x13ExportProductGrades\x12&.finance.v1.ExportProductGradesRequest\x1a'.finance.v1.ExportProductGradesResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/finance/product-grades/export\x12\x98\x01\n" +
 	"\x13ImportProductGrades\x12&.finance.v1.ImportProductGradesRequest\x1a'.finance.v1.ImportProductGradesResponse\"0\x82\xd3\xe4\x93\x02*:\x01*\"%/api/v1/finance/product-grades/import\x12\xb2\x01\n" +
-	"\x1cDownloadProductGradeTemplate\x12/.finance.v1.DownloadProductGradeTemplateRequest\x1a0.finance.v1.DownloadProductGradeTemplateResponse\"/\x82\xd3\xe4\x93\x02)\x12'/api/v1/finance/product-grades/template2\xd1\r\n" +
+	"\x1cDownloadProductGradeTemplate\x12/.finance.v1.DownloadProductGradeTemplateRequest\x1a0.finance.v1.DownloadProductGradeTemplateResponse\"/\x82\xd3\xe4\x93\x02)\x12'/api/v1/finance/product-grades/template2\xfb\x14\n" +
 	"\rMBHeadService\x12v\n" +
 	"\fCreateMBHead\x12\x1f.finance.v1.CreateMBHeadRequest\x1a .finance.v1.CreateMBHeadResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/finance/mb-heads\x12s\n" +
 	"\tGetMBHead\x12\x1c.finance.v1.GetMBHeadRequest\x1a\x1d.finance.v1.GetMBHeadResponse\")\x82\xd3\xe4\x93\x02#\x12!/api/v1/finance/mb-heads/{mbh_id}\x12p\n" +
 	"\vListMBHeads\x12\x1e.finance.v1.ListMBHeadsRequest\x1a\x1f.finance.v1.ListMBHeadsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/v1/finance/mb-heads\x12\x7f\n" +
 	"\fUpdateMBHead\x12\x1f.finance.v1.UpdateMBHeadRequest\x1a .finance.v1.UpdateMBHeadResponse\",\x82\xd3\xe4\x93\x02&:\x01*\x1a!/api/v1/finance/mb-heads/{mbh_id}\x12|\n" +
 	"\fDeleteMBHead\x12\x1f.finance.v1.DeleteMBHeadRequest\x1a .finance.v1.DeleteMBHeadResponse\")\x82\xd3\xe4\x93\x02#*!/api/v1/finance/mb-heads/{mbh_id}\x12}\n" +
-	"\rExportMBHeads\x12 .finance.v1.ExportMBHeadsRequest\x1a!.finance.v1.ExportMBHeadsResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/finance/mb-heads/export\x12\x80\x01\n" +
+	"\rExportMBHeads\x12 .finance.v1.ExportMBHeadsRequest\x1a!.finance.v1.ExportMBHeadsResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/finance/mb-heads/export\x12\x91\x01\n" +
+	"\x12ExportMBRecipeFull\x12%.finance.v1.ExportMBRecipeFullRequest\x1a&.finance.v1.ExportMBRecipeFullResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/finance/mb-heads/export-full\x12\x80\x01\n" +
 	"\rImportMBHeads\x12 .finance.v1.ImportMBHeadsRequest\x1a!.finance.v1.ImportMBHeadsResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/finance/mb-heads/import\x12\x9a\x01\n" +
 	"\x16DownloadMBHeadTemplate\x12).finance.v1.DownloadMBHeadTemplateRequest\x1a*.finance.v1.DownloadMBHeadTemplateResponse\")\x82\xd3\xe4\x93\x02#\x12!/api/v1/finance/mb-heads/template\x12\x86\x01\n" +
 	"\fSubmitMBHead\x12\x1f.finance.v1.SubmitMBHeadRequest\x1a .finance.v1.SubmitMBHeadResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/finance/mb-heads/{mbh_id}/submit\x12\x8a\x01\n" +
 	"\rApproveMBHead\x12 .finance.v1.ApproveMBHeadRequest\x1a!.finance.v1.ApproveMBHeadResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/finance/mb-heads/{mbh_id}/approve\x12\x8e\x01\n" +
 	"\x0eValidateMBHead\x12!.finance.v1.ValidateMBHeadRequest\x1a\".finance.v1.ValidateMBHeadResponse\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/api/v1/finance/mb-heads/{mbh_id}/validate\x12\x92\x01\n" +
 	"\x0fUnApproveMBHead\x12\".finance.v1.UnApproveMBHeadRequest\x1a#.finance.v1.UnApproveMBHeadResponse\"6\x82\xd3\xe4\x93\x020:\x01*\"+/api/v1/finance/mb-heads/{mbh_id}/unapprove\x12\x86\x01\n" +
-	"\fRevokeMBHead\x12\x1f.finance.v1.RevokeMBHeadRequest\x1a .finance.v1.RevokeMBHeadResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/finance/mb-heads/{mbh_id}/revoke2\x89\t\n" +
+	"\fRevokeMBHead\x12\x1f.finance.v1.RevokeMBHeadRequest\x1a .finance.v1.RevokeMBHeadResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/finance/mb-heads/{mbh_id}/revoke\x12\x86\x01\n" +
+	"\fRejectMBHead\x12\x1f.finance.v1.RejectMBHeadRequest\x1a .finance.v1.RejectMBHeadResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/finance/mb-heads/{mbh_id}/reject\x12\xa4\x01\n" +
+	"\x13ReturnMBHeadToDraft\x12&.finance.v1.ReturnMBHeadToDraftRequest\x1a'.finance.v1.ReturnMBHeadToDraftResponse\"<\x82\xd3\xe4\x93\x026:\x01*\"1/api/v1/finance/mb-heads/{mbh_id}/return-to-draft\x12\xa3\x01\n" +
+	"\x13RequestUnlockMBHead\x12&.finance.v1.RequestUnlockMBHeadRequest\x1a'.finance.v1.RequestUnlockMBHeadResponse\";\x82\xd3\xe4\x93\x025:\x01*\"0/api/v1/finance/mb-heads/{mbh_id}/request-unlock\x12\x9b\x01\n" +
+	"\x11GrantUnlockMBHead\x12$.finance.v1.GrantUnlockMBHeadRequest\x1a%.finance.v1.GrantUnlockMBHeadResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/finance/mb-heads/{mbh_id}/grant-unlock\x12\x9f\x01\n" +
+	"\x12RejectUnlockMBHead\x12%.finance.v1.RejectUnlockMBHeadRequest\x1a&.finance.v1.RejectUnlockMBHeadResponse\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/finance/mb-heads/{mbh_id}/reject-unlock2\xad\n" +
+	"\n" +
 	"\rMBSpinService\x12\x85\x01\n" +
 	"\fCreateMBSpin\x12\x1f.finance.v1.CreateMBSpinRequest\x1a .finance.v1.CreateMBSpinResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/v1/finance/mb-heads/{mbh_id}/spins\x12\x82\x01\n" +
 	"\tGetMBSpin\x12\x1c.finance.v1.GetMBSpinRequest\x1a\x1d.finance.v1.GetMBSpinResponse\"8\x82\xd3\xe4\x93\x022\x120/api/v1/finance/mb-heads/{mbh_id}/spins/{mbs_id}\x12\x7f\n" +
@@ -17231,7 +20918,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\fDeleteMBSpin\x12\x1f.finance.v1.DeleteMBSpinRequest\x1a .finance.v1.DeleteMBSpinResponse\"8\x82\xd3\xe4\x93\x022*0/api/v1/finance/mb-heads/{mbh_id}/spins/{mbs_id}\x12\x8c\x01\n" +
 	"\rExportMBSpins\x12 .finance.v1.ExportMBSpinsRequest\x1a!.finance.v1.ExportMBSpinsResponse\"6\x82\xd3\xe4\x93\x020\x12./api/v1/finance/mb-heads/{mbh_id}/spins/export\x12\x8f\x01\n" +
 	"\rImportMBSpins\x12 .finance.v1.ImportMBSpinsRequest\x1a!.finance.v1.ImportMBSpinsResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/finance/mb-heads/{mbh_id}/spins/import\x12\xa9\x01\n" +
-	"\x16DownloadMBSpinTemplate\x12).finance.v1.DownloadMBSpinTemplateRequest\x1a*.finance.v1.DownloadMBSpinTemplateResponse\"8\x82\xd3\xe4\x93\x022\x120/api/v1/finance/mb-heads/{mbh_id}/spins/template2\xbc\r\n" +
+	"\x16DownloadMBSpinTemplate\x12).finance.v1.DownloadMBSpinTemplateRequest\x1a*.finance.v1.DownloadMBSpinTemplateResponse\"8\x82\xd3\xe4\x93\x022\x120/api/v1/finance/mb-heads/{mbh_id}/spins/template\x12\xa1\x01\n" +
+	"\x0fDuplicateMBSpin\x12\".finance.v1.DuplicateMBSpinRequest\x1a#.finance.v1.DuplicateMBSpinResponse\"E\x82\xd3\xe4\x93\x02?:\x01*\":/api/v1/finance/mb-heads/{mbh_id}/spins/{mbs_id}/duplicate2\xbc\r\n" +
 	"\x13LookupMasterService\x12\x88\x01\n" +
 	"\x11ListLookupMasters\x12$.finance.v1.ListLookupMastersRequest\x1a%.finance.v1.ListLookupMastersResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/finance/lookup-masters\x12\xa1\x01\n" +
 	"\x17ListLookupMasterColumns\x12*.finance.v1.ListLookupMasterColumnsRequest\x1a+.finance.v1.ListLookupMasterColumnsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/finance/lookup-master-columns\x12\x8e\x01\n" +
@@ -17279,7 +20967,22 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x14MbWorkflowLogService\x12\x9c\x01\n" +
 	"\x12ListMbWorkflowLogs\x12%.finance.v1.ListMbWorkflowLogsRequest\x1a&.finance.v1.ListMbWorkflowLogsResponse\"7\x82\xd3\xe4\x93\x021\x12//api/v1/finance/mb-heads/{mbh_id}/workflow-logs2\x97\x01\n" +
 	"\x0eMbBatchService\x12\x84\x01\n" +
-	"\x0eTriggerMbBatch\x12!.finance.v1.TriggerMbBatchRequest\x1a\".finance.v1.TriggerMbBatchResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /api/v1/finance/mb-batch/triggerB\xa9\x01\n" +
+	"\x0eTriggerMbBatch\x12!.finance.v1.TriggerMbBatchRequest\x1a\".finance.v1.TriggerMbBatchResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /api/v1/finance/mb-batch/trigger2\xc2\x06\n" +
+	"\x15MbCrossSectionService\x12\x9e\x01\n" +
+	"\x14CreateMbCrossSection\x12'.finance.v1.CreateMbCrossSectionRequest\x1a(.finance.v1.CreateMbCrossSectionResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/finance/master/mb-cross-sections\x12\x9c\x01\n" +
+	"\x11GetMbCrossSection\x12$.finance.v1.GetMbCrossSectionRequest\x1a%.finance.v1.GetMbCrossSectionResponse\":\x82\xd3\xe4\x93\x024\x122/api/v1/finance/master/mb-cross-sections/{mbcs_id}\x12\x95\x01\n" +
+	"\x12ListMbCrossSection\x12%.finance.v1.ListMbCrossSectionRequest\x1a&.finance.v1.ListMbCrossSectionResponse\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/finance/master/mb-cross-sections\x12\xa8\x01\n" +
+	"\x14UpdateMbCrossSection\x12'.finance.v1.UpdateMbCrossSectionRequest\x1a(.finance.v1.UpdateMbCrossSectionResponse\"=\x82\xd3\xe4\x93\x027:\x01*\x1a2/api/v1/finance/master/mb-cross-sections/{mbcs_id}\x12\xa5\x01\n" +
+	"\x14DeleteMbCrossSection\x12'.finance.v1.DeleteMbCrossSectionRequest\x1a(.finance.v1.DeleteMbCrossSectionResponse\":\x82\xd3\xe4\x93\x024*2/api/v1/finance/master/mb-cross-sections/{mbcs_id}2\xc5\a\n" +
+	"\x1bMbCrossSectionFactorService\x12\xb7\x01\n" +
+	"\x1aCreateMbCrossSectionFactor\x12-.finance.v1.CreateMbCrossSectionFactorRequest\x1a..finance.v1.CreateMbCrossSectionFactorResponse\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/finance/master/mb-cross-section-factors\x12\xb5\x01\n" +
+	"\x17GetMbCrossSectionFactor\x12*.finance.v1.GetMbCrossSectionFactorRequest\x1a+.finance.v1.GetMbCrossSectionFactorResponse\"A\x82\xd3\xe4\x93\x02;\x129/api/v1/finance/master/mb-cross-section-factors/{mbcf_id}\x12\xae\x01\n" +
+	"\x18ListMbCrossSectionFactor\x12+.finance.v1.ListMbCrossSectionFactorRequest\x1a,.finance.v1.ListMbCrossSectionFactorResponse\"7\x82\xd3\xe4\x93\x021\x12//api/v1/finance/master/mb-cross-section-factors\x12\xc1\x01\n" +
+	"\x1aUpdateMbCrossSectionFactor\x12-.finance.v1.UpdateMbCrossSectionFactorRequest\x1a..finance.v1.UpdateMbCrossSectionFactorResponse\"D\x82\xd3\xe4\x93\x02>:\x01*\x1a9/api/v1/finance/master/mb-cross-section-factors/{mbcf_id}\x12\xbe\x01\n" +
+	"\x1aDeleteMbCrossSectionFactor\x12-.finance.v1.DeleteMbCrossSectionFactorRequest\x1a..finance.v1.DeleteMbCrossSectionFactorResponse\"A\x82\xd3\xe4\x93\x02;*9/api/v1/finance/master/mb-cross-section-factors/{mbcf_id}2\xbc\x02\n" +
+	"\x0fMBDozingService\x12\x8a\x01\n" +
+	"\x0fCalculateDozing\x12\".finance.v1.CalculateDozingRequest\x1a#.finance.v1.CalculateDozingResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/api/v1/finance/mb-dozing/calculate\x12\x9b\x01\n" +
+	"\x13PreviewDozingImpact\x12&.finance.v1.PreviewDozingImpactRequest\x1a'.finance.v1.PreviewDozingImpactResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/finance/mb-dozing/impact-previewB\xa9\x01\n" +
 	"\x0ecom.finance.v1B\x0fYarnMasterProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
 	"Finance.V1\xca\x02\n" +
 	"Finance\\V1\xe2\x02\x16Finance\\V1\\GPBMetadata\xea\x02\vFinance::V1b\x06proto3"
@@ -17297,7 +21000,7 @@ func file_finance_v1_yarn_master_proto_rawDescGZIP() []byte {
 }
 
 var file_finance_v1_yarn_master_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_finance_v1_yarn_master_proto_msgTypes = make([]protoimpl.MessageInfo, 214)
+var file_finance_v1_yarn_master_proto_msgTypes = make([]protoimpl.MessageInfo, 258)
 var file_finance_v1_yarn_master_proto_goTypes = []any{
 	(MCTypeFilter)(0),                             // 0: finance.v1.MCTypeFilter
 	(*Machine)(nil),                               // 1: finance.v1.Machine
@@ -17373,546 +21076,674 @@ var file_finance_v1_yarn_master_proto_goTypes = []any{
 	(*ImportProductGradesResponse)(nil),           // 71: finance.v1.ImportProductGradesResponse
 	(*DownloadProductGradeTemplateRequest)(nil),   // 72: finance.v1.DownloadProductGradeTemplateRequest
 	(*DownloadProductGradeTemplateResponse)(nil),  // 73: finance.v1.DownloadProductGradeTemplateResponse
-	(*MBHead)(nil),                                // 74: finance.v1.MBHead
-	(*CreateMBHeadRequest)(nil),                   // 75: finance.v1.CreateMBHeadRequest
-	(*CreateMBHeadResponse)(nil),                  // 76: finance.v1.CreateMBHeadResponse
-	(*GetMBHeadRequest)(nil),                      // 77: finance.v1.GetMBHeadRequest
-	(*GetMBHeadResponse)(nil),                     // 78: finance.v1.GetMBHeadResponse
-	(*UpdateMBHeadRequest)(nil),                   // 79: finance.v1.UpdateMBHeadRequest
-	(*UpdateMBHeadResponse)(nil),                  // 80: finance.v1.UpdateMBHeadResponse
-	(*DeleteMBHeadRequest)(nil),                   // 81: finance.v1.DeleteMBHeadRequest
-	(*DeleteMBHeadResponse)(nil),                  // 82: finance.v1.DeleteMBHeadResponse
-	(*ListMBHeadsRequest)(nil),                    // 83: finance.v1.ListMBHeadsRequest
-	(*ListMBHeadsResponse)(nil),                   // 84: finance.v1.ListMBHeadsResponse
-	(*ExportMBHeadsRequest)(nil),                  // 85: finance.v1.ExportMBHeadsRequest
-	(*ExportMBHeadsResponse)(nil),                 // 86: finance.v1.ExportMBHeadsResponse
-	(*ImportMBHeadsRequest)(nil),                  // 87: finance.v1.ImportMBHeadsRequest
-	(*ImportMBHeadsResponse)(nil),                 // 88: finance.v1.ImportMBHeadsResponse
-	(*DownloadMBHeadTemplateRequest)(nil),         // 89: finance.v1.DownloadMBHeadTemplateRequest
-	(*DownloadMBHeadTemplateResponse)(nil),        // 90: finance.v1.DownloadMBHeadTemplateResponse
-	(*SubmitMBHeadRequest)(nil),                   // 91: finance.v1.SubmitMBHeadRequest
-	(*SubmitMBHeadResponse)(nil),                  // 92: finance.v1.SubmitMBHeadResponse
-	(*ApproveMBHeadRequest)(nil),                  // 93: finance.v1.ApproveMBHeadRequest
-	(*ApproveMBHeadResponse)(nil),                 // 94: finance.v1.ApproveMBHeadResponse
-	(*ValidateMBHeadRequest)(nil),                 // 95: finance.v1.ValidateMBHeadRequest
-	(*ValidateMBHeadResponse)(nil),                // 96: finance.v1.ValidateMBHeadResponse
-	(*UnApproveMBHeadRequest)(nil),                // 97: finance.v1.UnApproveMBHeadRequest
-	(*UnApproveMBHeadResponse)(nil),               // 98: finance.v1.UnApproveMBHeadResponse
-	(*RevokeMBHeadRequest)(nil),                   // 99: finance.v1.RevokeMBHeadRequest
-	(*RevokeMBHeadResponse)(nil),                  // 100: finance.v1.RevokeMBHeadResponse
-	(*MBSpin)(nil),                                // 101: finance.v1.MBSpin
-	(*CreateMBSpinRequest)(nil),                   // 102: finance.v1.CreateMBSpinRequest
-	(*CreateMBSpinResponse)(nil),                  // 103: finance.v1.CreateMBSpinResponse
-	(*GetMBSpinRequest)(nil),                      // 104: finance.v1.GetMBSpinRequest
-	(*GetMBSpinResponse)(nil),                     // 105: finance.v1.GetMBSpinResponse
-	(*UpdateMBSpinRequest)(nil),                   // 106: finance.v1.UpdateMBSpinRequest
-	(*UpdateMBSpinResponse)(nil),                  // 107: finance.v1.UpdateMBSpinResponse
-	(*DeleteMBSpinRequest)(nil),                   // 108: finance.v1.DeleteMBSpinRequest
-	(*DeleteMBSpinResponse)(nil),                  // 109: finance.v1.DeleteMBSpinResponse
-	(*ListMBSpinsRequest)(nil),                    // 110: finance.v1.ListMBSpinsRequest
-	(*ListMBSpinsResponse)(nil),                   // 111: finance.v1.ListMBSpinsResponse
-	(*ExportMBSpinsRequest)(nil),                  // 112: finance.v1.ExportMBSpinsRequest
-	(*ExportMBSpinsResponse)(nil),                 // 113: finance.v1.ExportMBSpinsResponse
-	(*ImportMBSpinsRequest)(nil),                  // 114: finance.v1.ImportMBSpinsRequest
-	(*ImportMBSpinsResponse)(nil),                 // 115: finance.v1.ImportMBSpinsResponse
-	(*DownloadMBSpinTemplateRequest)(nil),         // 116: finance.v1.DownloadMBSpinTemplateRequest
-	(*DownloadMBSpinTemplateResponse)(nil),        // 117: finance.v1.DownloadMBSpinTemplateResponse
-	(*GetLookupFillValuesRequest)(nil),            // 118: finance.v1.GetLookupFillValuesRequest
-	(*GetLookupFillValuesResponse)(nil),           // 119: finance.v1.GetLookupFillValuesResponse
-	(*LookupMaster)(nil),                          // 120: finance.v1.LookupMaster
-	(*ListLookupMastersRequest)(nil),              // 121: finance.v1.ListLookupMastersRequest
-	(*ListLookupMastersResponse)(nil),             // 122: finance.v1.ListLookupMastersResponse
-	(*LookupMasterColumn)(nil),                    // 123: finance.v1.LookupMasterColumn
-	(*ListLookupMasterColumnsRequest)(nil),        // 124: finance.v1.ListLookupMasterColumnsRequest
-	(*ListLookupMasterColumnsResponse)(nil),       // 125: finance.v1.ListLookupMasterColumnsResponse
-	(*CreateLookupMasterRequest)(nil),             // 126: finance.v1.CreateLookupMasterRequest
-	(*CreateLookupMasterResponse)(nil),            // 127: finance.v1.CreateLookupMasterResponse
-	(*DeleteLookupMasterRequest)(nil),             // 128: finance.v1.DeleteLookupMasterRequest
-	(*DeleteLookupMasterResponse)(nil),            // 129: finance.v1.DeleteLookupMasterResponse
-	(*CreateLookupMasterColumnRequest)(nil),       // 130: finance.v1.CreateLookupMasterColumnRequest
-	(*CreateLookupMasterColumnResponse)(nil),      // 131: finance.v1.CreateLookupMasterColumnResponse
-	(*DeleteLookupMasterColumnRequest)(nil),       // 132: finance.v1.DeleteLookupMasterColumnRequest
-	(*DeleteLookupMasterColumnResponse)(nil),      // 133: finance.v1.DeleteLookupMasterColumnResponse
-	(*UpdateLookupMasterRequest)(nil),             // 134: finance.v1.UpdateLookupMasterRequest
-	(*UpdateLookupMasterResponse)(nil),            // 135: finance.v1.UpdateLookupMasterResponse
-	(*TableColumn)(nil),                           // 136: finance.v1.TableColumn
-	(*ListTableColumnsRequest)(nil),               // 137: finance.v1.ListTableColumnsRequest
-	(*ListTableColumnsResponse)(nil),              // 138: finance.v1.ListTableColumnsResponse
-	(*MasterOption)(nil),                          // 139: finance.v1.MasterOption
-	(*ListMasterOptionsRequest)(nil),              // 140: finance.v1.ListMasterOptionsRequest
-	(*ListMasterOptionsResponse)(nil),             // 141: finance.v1.ListMasterOptionsResponse
-	(*ExportLookupMastersRequest)(nil),            // 142: finance.v1.ExportLookupMastersRequest
-	(*ExportLookupMastersResponse)(nil),           // 143: finance.v1.ExportLookupMastersResponse
-	(*ImportLookupMastersRequest)(nil),            // 144: finance.v1.ImportLookupMastersRequest
-	(*ImportLookupMastersResponse)(nil),           // 145: finance.v1.ImportLookupMastersResponse
-	(*MbComposition)(nil),                         // 146: finance.v1.MbComposition
-	(*MbCompositionVersion)(nil),                  // 147: finance.v1.MbCompositionVersion
-	(*MbLusture)(nil),                             // 148: finance.v1.MbLusture
-	(*MbParam)(nil),                               // 149: finance.v1.MbParam
-	(*MbParamOption)(nil),                         // 150: finance.v1.MbParamOption
-	(*MbCost)(nil),                                // 151: finance.v1.MbCost
-	(*MbPushLog)(nil),                             // 152: finance.v1.MbPushLog
-	(*MbWorkflowLog)(nil),                         // 153: finance.v1.MbWorkflowLog
-	(*CreateMbCompositionRequest)(nil),            // 154: finance.v1.CreateMbCompositionRequest
-	(*CreateMbCompositionResponse)(nil),           // 155: finance.v1.CreateMbCompositionResponse
-	(*UpdateMbCompositionRequest)(nil),            // 156: finance.v1.UpdateMbCompositionRequest
-	(*UpdateMbCompositionResponse)(nil),           // 157: finance.v1.UpdateMbCompositionResponse
-	(*DeleteMbCompositionRequest)(nil),            // 158: finance.v1.DeleteMbCompositionRequest
-	(*DeleteMbCompositionResponse)(nil),           // 159: finance.v1.DeleteMbCompositionResponse
-	(*ListMbCompositionsRequest)(nil),             // 160: finance.v1.ListMbCompositionsRequest
-	(*ListMbCompositionsResponse)(nil),            // 161: finance.v1.ListMbCompositionsResponse
-	(*ListMbCompositionVersionsRequest)(nil),      // 162: finance.v1.ListMbCompositionVersionsRequest
-	(*ListMbCompositionVersionsResponse)(nil),     // 163: finance.v1.ListMbCompositionVersionsResponse
-	(*CreateMbLustureRequest)(nil),                // 164: finance.v1.CreateMbLustureRequest
-	(*CreateMbLustureResponse)(nil),               // 165: finance.v1.CreateMbLustureResponse
-	(*UpdateMbLustureRequest)(nil),                // 166: finance.v1.UpdateMbLustureRequest
-	(*UpdateMbLustureResponse)(nil),               // 167: finance.v1.UpdateMbLustureResponse
-	(*DeleteMbLustureRequest)(nil),                // 168: finance.v1.DeleteMbLustureRequest
-	(*DeleteMbLustureResponse)(nil),               // 169: finance.v1.DeleteMbLustureResponse
-	(*GetMbLustureRequest)(nil),                   // 170: finance.v1.GetMbLustureRequest
-	(*GetMbLustureResponse)(nil),                  // 171: finance.v1.GetMbLustureResponse
-	(*ListMbLustureRequest)(nil),                  // 172: finance.v1.ListMbLustureRequest
-	(*ListMbLustureResponse)(nil),                 // 173: finance.v1.ListMbLustureResponse
-	(*ExportMbLustureRequest)(nil),                // 174: finance.v1.ExportMbLustureRequest
-	(*ExportMbLustureResponse)(nil),               // 175: finance.v1.ExportMbLustureResponse
-	(*ImportMbLustureRequest)(nil),                // 176: finance.v1.ImportMbLustureRequest
-	(*ImportMbLustureResponse)(nil),               // 177: finance.v1.ImportMbLustureResponse
-	(*DownloadMbLustureTemplateRequest)(nil),      // 178: finance.v1.DownloadMbLustureTemplateRequest
-	(*DownloadMbLustureTemplateResponse)(nil),     // 179: finance.v1.DownloadMbLustureTemplateResponse
-	(*CreateMbParamRequest)(nil),                  // 180: finance.v1.CreateMbParamRequest
-	(*CreateMbParamResponse)(nil),                 // 181: finance.v1.CreateMbParamResponse
-	(*UpdateMbParamRequest)(nil),                  // 182: finance.v1.UpdateMbParamRequest
-	(*UpdateMbParamResponse)(nil),                 // 183: finance.v1.UpdateMbParamResponse
-	(*DeleteMbParamRequest)(nil),                  // 184: finance.v1.DeleteMbParamRequest
-	(*DeleteMbParamResponse)(nil),                 // 185: finance.v1.DeleteMbParamResponse
-	(*ListMbParamsRequest)(nil),                   // 186: finance.v1.ListMbParamsRequest
-	(*ListMbParamsResponse)(nil),                  // 187: finance.v1.ListMbParamsResponse
-	(*ExportMbParamsRequest)(nil),                 // 188: finance.v1.ExportMbParamsRequest
-	(*ExportMbParamsResponse)(nil),                // 189: finance.v1.ExportMbParamsResponse
-	(*ImportMbParamsRequest)(nil),                 // 190: finance.v1.ImportMbParamsRequest
-	(*ImportMbParamsResponse)(nil),                // 191: finance.v1.ImportMbParamsResponse
-	(*DownloadMbParamTemplateRequest)(nil),        // 192: finance.v1.DownloadMbParamTemplateRequest
-	(*DownloadMbParamTemplateResponse)(nil),       // 193: finance.v1.DownloadMbParamTemplateResponse
-	(*CreateMbParamOptionRequest)(nil),            // 194: finance.v1.CreateMbParamOptionRequest
-	(*CreateMbParamOptionResponse)(nil),           // 195: finance.v1.CreateMbParamOptionResponse
-	(*UpdateMbParamOptionRequest)(nil),            // 196: finance.v1.UpdateMbParamOptionRequest
-	(*UpdateMbParamOptionResponse)(nil),           // 197: finance.v1.UpdateMbParamOptionResponse
-	(*DeleteMbParamOptionRequest)(nil),            // 198: finance.v1.DeleteMbParamOptionRequest
-	(*DeleteMbParamOptionResponse)(nil),           // 199: finance.v1.DeleteMbParamOptionResponse
-	(*PreviewPushToHeadRequest)(nil),              // 200: finance.v1.PreviewPushToHeadRequest
-	(*PushableMbHead)(nil),                        // 201: finance.v1.PushableMbHead
-	(*SkippedMbHead)(nil),                         // 202: finance.v1.SkippedMbHead
-	(*PreviewPushToHeadResponse)(nil),             // 203: finance.v1.PreviewPushToHeadResponse
-	(*ExecutePushToHeadRequest)(nil),              // 204: finance.v1.ExecutePushToHeadRequest
-	(*ExecutePushToHeadResponse)(nil),             // 205: finance.v1.ExecutePushToHeadResponse
-	(*ListMbPushLogsRequest)(nil),                 // 206: finance.v1.ListMbPushLogsRequest
-	(*ListMbPushLogsResponse)(nil),                // 207: finance.v1.ListMbPushLogsResponse
-	(*ListMbWorkflowLogsRequest)(nil),             // 208: finance.v1.ListMbWorkflowLogsRequest
-	(*ListMbWorkflowLogsResponse)(nil),            // 209: finance.v1.ListMbWorkflowLogsResponse
-	(*TriggerMbBatchRequest)(nil),                 // 210: finance.v1.TriggerMbBatchRequest
-	(*MbBatchError)(nil),                          // 211: finance.v1.MbBatchError
-	(*TriggerMbBatchResponse)(nil),                // 212: finance.v1.TriggerMbBatchResponse
-	nil,                                           // 213: finance.v1.GetLookupFillValuesResponse.NumericFillsEntry
-	nil,                                           // 214: finance.v1.GetLookupFillValuesResponse.TextFillsEntry
-	(*v1.AuditInfo)(nil),                          // 215: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),                       // 216: common.v1.BaseResponse
-	(ActiveFilter)(0),                             // 217: finance.v1.ActiveFilter
-	(*v1.PaginationResponse)(nil),                 // 218: common.v1.PaginationResponse
-	(*ImportError)(nil),                           // 219: finance.v1.ImportError
+	(*MBHeadShade)(nil),                           // 74: finance.v1.MBHeadShade
+	(*MBHeadShadeInput)(nil),                      // 75: finance.v1.MBHeadShadeInput
+	(*MBHead)(nil),                                // 76: finance.v1.MBHead
+	(*CreateMBHeadRequest)(nil),                   // 77: finance.v1.CreateMBHeadRequest
+	(*CreateMBHeadResponse)(nil),                  // 78: finance.v1.CreateMBHeadResponse
+	(*GetMBHeadRequest)(nil),                      // 79: finance.v1.GetMBHeadRequest
+	(*GetMBHeadResponse)(nil),                     // 80: finance.v1.GetMBHeadResponse
+	(*UpdateMBHeadRequest)(nil),                   // 81: finance.v1.UpdateMBHeadRequest
+	(*UpdateMBHeadResponse)(nil),                  // 82: finance.v1.UpdateMBHeadResponse
+	(*DeleteMBHeadRequest)(nil),                   // 83: finance.v1.DeleteMBHeadRequest
+	(*DeleteMBHeadResponse)(nil),                  // 84: finance.v1.DeleteMBHeadResponse
+	(*ListMBHeadsRequest)(nil),                    // 85: finance.v1.ListMBHeadsRequest
+	(*ListMBHeadsResponse)(nil),                   // 86: finance.v1.ListMBHeadsResponse
+	(*ExportMBHeadsRequest)(nil),                  // 87: finance.v1.ExportMBHeadsRequest
+	(*ExportMBHeadsResponse)(nil),                 // 88: finance.v1.ExportMBHeadsResponse
+	(*ExportMBRecipeFullRequest)(nil),             // 89: finance.v1.ExportMBRecipeFullRequest
+	(*ExportMBRecipeFullResponse)(nil),            // 90: finance.v1.ExportMBRecipeFullResponse
+	(*ImportMBHeadsRequest)(nil),                  // 91: finance.v1.ImportMBHeadsRequest
+	(*ImportMBHeadsResponse)(nil),                 // 92: finance.v1.ImportMBHeadsResponse
+	(*DownloadMBHeadTemplateRequest)(nil),         // 93: finance.v1.DownloadMBHeadTemplateRequest
+	(*DownloadMBHeadTemplateResponse)(nil),        // 94: finance.v1.DownloadMBHeadTemplateResponse
+	(*SubmitMBHeadRequest)(nil),                   // 95: finance.v1.SubmitMBHeadRequest
+	(*SubmitMBHeadResponse)(nil),                  // 96: finance.v1.SubmitMBHeadResponse
+	(*ApproveMBHeadRequest)(nil),                  // 97: finance.v1.ApproveMBHeadRequest
+	(*ApproveMBHeadResponse)(nil),                 // 98: finance.v1.ApproveMBHeadResponse
+	(*ValidateMBHeadRequest)(nil),                 // 99: finance.v1.ValidateMBHeadRequest
+	(*ValidateMBHeadResponse)(nil),                // 100: finance.v1.ValidateMBHeadResponse
+	(*UnApproveMBHeadRequest)(nil),                // 101: finance.v1.UnApproveMBHeadRequest
+	(*UnApproveMBHeadResponse)(nil),               // 102: finance.v1.UnApproveMBHeadResponse
+	(*RevokeMBHeadRequest)(nil),                   // 103: finance.v1.RevokeMBHeadRequest
+	(*RevokeMBHeadResponse)(nil),                  // 104: finance.v1.RevokeMBHeadResponse
+	(*RejectMBHeadRequest)(nil),                   // 105: finance.v1.RejectMBHeadRequest
+	(*RejectMBHeadResponse)(nil),                  // 106: finance.v1.RejectMBHeadResponse
+	(*ReturnMBHeadToDraftRequest)(nil),            // 107: finance.v1.ReturnMBHeadToDraftRequest
+	(*ReturnMBHeadToDraftResponse)(nil),           // 108: finance.v1.ReturnMBHeadToDraftResponse
+	(*RequestUnlockMBHeadRequest)(nil),            // 109: finance.v1.RequestUnlockMBHeadRequest
+	(*RequestUnlockMBHeadResponse)(nil),           // 110: finance.v1.RequestUnlockMBHeadResponse
+	(*GrantUnlockMBHeadRequest)(nil),              // 111: finance.v1.GrantUnlockMBHeadRequest
+	(*GrantUnlockMBHeadResponse)(nil),             // 112: finance.v1.GrantUnlockMBHeadResponse
+	(*RejectUnlockMBHeadRequest)(nil),             // 113: finance.v1.RejectUnlockMBHeadRequest
+	(*RejectUnlockMBHeadResponse)(nil),            // 114: finance.v1.RejectUnlockMBHeadResponse
+	(*MBSpin)(nil),                                // 115: finance.v1.MBSpin
+	(*CreateMBSpinRequest)(nil),                   // 116: finance.v1.CreateMBSpinRequest
+	(*CreateMBSpinResponse)(nil),                  // 117: finance.v1.CreateMBSpinResponse
+	(*GetMBSpinRequest)(nil),                      // 118: finance.v1.GetMBSpinRequest
+	(*GetMBSpinResponse)(nil),                     // 119: finance.v1.GetMBSpinResponse
+	(*UpdateMBSpinRequest)(nil),                   // 120: finance.v1.UpdateMBSpinRequest
+	(*UpdateMBSpinResponse)(nil),                  // 121: finance.v1.UpdateMBSpinResponse
+	(*DeleteMBSpinRequest)(nil),                   // 122: finance.v1.DeleteMBSpinRequest
+	(*DeleteMBSpinResponse)(nil),                  // 123: finance.v1.DeleteMBSpinResponse
+	(*ListMBSpinsRequest)(nil),                    // 124: finance.v1.ListMBSpinsRequest
+	(*ListMBSpinsResponse)(nil),                   // 125: finance.v1.ListMBSpinsResponse
+	(*ExportMBSpinsRequest)(nil),                  // 126: finance.v1.ExportMBSpinsRequest
+	(*ExportMBSpinsResponse)(nil),                 // 127: finance.v1.ExportMBSpinsResponse
+	(*ImportMBSpinsRequest)(nil),                  // 128: finance.v1.ImportMBSpinsRequest
+	(*ImportMBSpinsResponse)(nil),                 // 129: finance.v1.ImportMBSpinsResponse
+	(*DownloadMBSpinTemplateRequest)(nil),         // 130: finance.v1.DownloadMBSpinTemplateRequest
+	(*DownloadMBSpinTemplateResponse)(nil),        // 131: finance.v1.DownloadMBSpinTemplateResponse
+	(*DuplicateMBSpinRequest)(nil),                // 132: finance.v1.DuplicateMBSpinRequest
+	(*MBSpinRecalcSkipped)(nil),                   // 133: finance.v1.MBSpinRecalcSkipped
+	(*DuplicateMBSpinResponse)(nil),               // 134: finance.v1.DuplicateMBSpinResponse
+	(*GetLookupFillValuesRequest)(nil),            // 135: finance.v1.GetLookupFillValuesRequest
+	(*GetLookupFillValuesResponse)(nil),           // 136: finance.v1.GetLookupFillValuesResponse
+	(*LookupMaster)(nil),                          // 137: finance.v1.LookupMaster
+	(*ListLookupMastersRequest)(nil),              // 138: finance.v1.ListLookupMastersRequest
+	(*ListLookupMastersResponse)(nil),             // 139: finance.v1.ListLookupMastersResponse
+	(*LookupMasterColumn)(nil),                    // 140: finance.v1.LookupMasterColumn
+	(*ListLookupMasterColumnsRequest)(nil),        // 141: finance.v1.ListLookupMasterColumnsRequest
+	(*ListLookupMasterColumnsResponse)(nil),       // 142: finance.v1.ListLookupMasterColumnsResponse
+	(*CreateLookupMasterRequest)(nil),             // 143: finance.v1.CreateLookupMasterRequest
+	(*CreateLookupMasterResponse)(nil),            // 144: finance.v1.CreateLookupMasterResponse
+	(*DeleteLookupMasterRequest)(nil),             // 145: finance.v1.DeleteLookupMasterRequest
+	(*DeleteLookupMasterResponse)(nil),            // 146: finance.v1.DeleteLookupMasterResponse
+	(*CreateLookupMasterColumnRequest)(nil),       // 147: finance.v1.CreateLookupMasterColumnRequest
+	(*CreateLookupMasterColumnResponse)(nil),      // 148: finance.v1.CreateLookupMasterColumnResponse
+	(*DeleteLookupMasterColumnRequest)(nil),       // 149: finance.v1.DeleteLookupMasterColumnRequest
+	(*DeleteLookupMasterColumnResponse)(nil),      // 150: finance.v1.DeleteLookupMasterColumnResponse
+	(*UpdateLookupMasterRequest)(nil),             // 151: finance.v1.UpdateLookupMasterRequest
+	(*UpdateLookupMasterResponse)(nil),            // 152: finance.v1.UpdateLookupMasterResponse
+	(*TableColumn)(nil),                           // 153: finance.v1.TableColumn
+	(*ListTableColumnsRequest)(nil),               // 154: finance.v1.ListTableColumnsRequest
+	(*ListTableColumnsResponse)(nil),              // 155: finance.v1.ListTableColumnsResponse
+	(*MasterOption)(nil),                          // 156: finance.v1.MasterOption
+	(*ListMasterOptionsRequest)(nil),              // 157: finance.v1.ListMasterOptionsRequest
+	(*ListMasterOptionsResponse)(nil),             // 158: finance.v1.ListMasterOptionsResponse
+	(*ExportLookupMastersRequest)(nil),            // 159: finance.v1.ExportLookupMastersRequest
+	(*ExportLookupMastersResponse)(nil),           // 160: finance.v1.ExportLookupMastersResponse
+	(*ImportLookupMastersRequest)(nil),            // 161: finance.v1.ImportLookupMastersRequest
+	(*ImportLookupMastersResponse)(nil),           // 162: finance.v1.ImportLookupMastersResponse
+	(*MbComposition)(nil),                         // 163: finance.v1.MbComposition
+	(*MbCompositionVersion)(nil),                  // 164: finance.v1.MbCompositionVersion
+	(*MbLusture)(nil),                             // 165: finance.v1.MbLusture
+	(*MbParam)(nil),                               // 166: finance.v1.MbParam
+	(*MbParamOption)(nil),                         // 167: finance.v1.MbParamOption
+	(*MbCost)(nil),                                // 168: finance.v1.MbCost
+	(*MbPushLog)(nil),                             // 169: finance.v1.MbPushLog
+	(*MbWorkflowLog)(nil),                         // 170: finance.v1.MbWorkflowLog
+	(*CreateMbCompositionRequest)(nil),            // 171: finance.v1.CreateMbCompositionRequest
+	(*CreateMbCompositionResponse)(nil),           // 172: finance.v1.CreateMbCompositionResponse
+	(*UpdateMbCompositionRequest)(nil),            // 173: finance.v1.UpdateMbCompositionRequest
+	(*UpdateMbCompositionResponse)(nil),           // 174: finance.v1.UpdateMbCompositionResponse
+	(*DeleteMbCompositionRequest)(nil),            // 175: finance.v1.DeleteMbCompositionRequest
+	(*DeleteMbCompositionResponse)(nil),           // 176: finance.v1.DeleteMbCompositionResponse
+	(*ListMbCompositionsRequest)(nil),             // 177: finance.v1.ListMbCompositionsRequest
+	(*ListMbCompositionsResponse)(nil),            // 178: finance.v1.ListMbCompositionsResponse
+	(*ListMbCompositionVersionsRequest)(nil),      // 179: finance.v1.ListMbCompositionVersionsRequest
+	(*ListMbCompositionVersionsResponse)(nil),     // 180: finance.v1.ListMbCompositionVersionsResponse
+	(*CreateMbLustureRequest)(nil),                // 181: finance.v1.CreateMbLustureRequest
+	(*CreateMbLustureResponse)(nil),               // 182: finance.v1.CreateMbLustureResponse
+	(*UpdateMbLustureRequest)(nil),                // 183: finance.v1.UpdateMbLustureRequest
+	(*UpdateMbLustureResponse)(nil),               // 184: finance.v1.UpdateMbLustureResponse
+	(*DeleteMbLustureRequest)(nil),                // 185: finance.v1.DeleteMbLustureRequest
+	(*DeleteMbLustureResponse)(nil),               // 186: finance.v1.DeleteMbLustureResponse
+	(*GetMbLustureRequest)(nil),                   // 187: finance.v1.GetMbLustureRequest
+	(*GetMbLustureResponse)(nil),                  // 188: finance.v1.GetMbLustureResponse
+	(*ListMbLustureRequest)(nil),                  // 189: finance.v1.ListMbLustureRequest
+	(*ListMbLustureResponse)(nil),                 // 190: finance.v1.ListMbLustureResponse
+	(*ExportMbLustureRequest)(nil),                // 191: finance.v1.ExportMbLustureRequest
+	(*ExportMbLustureResponse)(nil),               // 192: finance.v1.ExportMbLustureResponse
+	(*ImportMbLustureRequest)(nil),                // 193: finance.v1.ImportMbLustureRequest
+	(*ImportMbLustureResponse)(nil),               // 194: finance.v1.ImportMbLustureResponse
+	(*DownloadMbLustureTemplateRequest)(nil),      // 195: finance.v1.DownloadMbLustureTemplateRequest
+	(*DownloadMbLustureTemplateResponse)(nil),     // 196: finance.v1.DownloadMbLustureTemplateResponse
+	(*CreateMbParamRequest)(nil),                  // 197: finance.v1.CreateMbParamRequest
+	(*CreateMbParamResponse)(nil),                 // 198: finance.v1.CreateMbParamResponse
+	(*UpdateMbParamRequest)(nil),                  // 199: finance.v1.UpdateMbParamRequest
+	(*UpdateMbParamResponse)(nil),                 // 200: finance.v1.UpdateMbParamResponse
+	(*DeleteMbParamRequest)(nil),                  // 201: finance.v1.DeleteMbParamRequest
+	(*DeleteMbParamResponse)(nil),                 // 202: finance.v1.DeleteMbParamResponse
+	(*ListMbParamsRequest)(nil),                   // 203: finance.v1.ListMbParamsRequest
+	(*ListMbParamsResponse)(nil),                  // 204: finance.v1.ListMbParamsResponse
+	(*ExportMbParamsRequest)(nil),                 // 205: finance.v1.ExportMbParamsRequest
+	(*ExportMbParamsResponse)(nil),                // 206: finance.v1.ExportMbParamsResponse
+	(*ImportMbParamsRequest)(nil),                 // 207: finance.v1.ImportMbParamsRequest
+	(*ImportMbParamsResponse)(nil),                // 208: finance.v1.ImportMbParamsResponse
+	(*DownloadMbParamTemplateRequest)(nil),        // 209: finance.v1.DownloadMbParamTemplateRequest
+	(*DownloadMbParamTemplateResponse)(nil),       // 210: finance.v1.DownloadMbParamTemplateResponse
+	(*CreateMbParamOptionRequest)(nil),            // 211: finance.v1.CreateMbParamOptionRequest
+	(*CreateMbParamOptionResponse)(nil),           // 212: finance.v1.CreateMbParamOptionResponse
+	(*UpdateMbParamOptionRequest)(nil),            // 213: finance.v1.UpdateMbParamOptionRequest
+	(*UpdateMbParamOptionResponse)(nil),           // 214: finance.v1.UpdateMbParamOptionResponse
+	(*DeleteMbParamOptionRequest)(nil),            // 215: finance.v1.DeleteMbParamOptionRequest
+	(*DeleteMbParamOptionResponse)(nil),           // 216: finance.v1.DeleteMbParamOptionResponse
+	(*PreviewPushToHeadRequest)(nil),              // 217: finance.v1.PreviewPushToHeadRequest
+	(*PushableMbHead)(nil),                        // 218: finance.v1.PushableMbHead
+	(*SkippedMbHead)(nil),                         // 219: finance.v1.SkippedMbHead
+	(*PreviewPushToHeadResponse)(nil),             // 220: finance.v1.PreviewPushToHeadResponse
+	(*ExecutePushToHeadRequest)(nil),              // 221: finance.v1.ExecutePushToHeadRequest
+	(*ExecutePushToHeadResponse)(nil),             // 222: finance.v1.ExecutePushToHeadResponse
+	(*ListMbPushLogsRequest)(nil),                 // 223: finance.v1.ListMbPushLogsRequest
+	(*ListMbPushLogsResponse)(nil),                // 224: finance.v1.ListMbPushLogsResponse
+	(*ListMbWorkflowLogsRequest)(nil),             // 225: finance.v1.ListMbWorkflowLogsRequest
+	(*ListMbWorkflowLogsResponse)(nil),            // 226: finance.v1.ListMbWorkflowLogsResponse
+	(*TriggerMbBatchRequest)(nil),                 // 227: finance.v1.TriggerMbBatchRequest
+	(*MbBatchError)(nil),                          // 228: finance.v1.MbBatchError
+	(*TriggerMbBatchResponse)(nil),                // 229: finance.v1.TriggerMbBatchResponse
+	(*MbCrossSection)(nil),                        // 230: finance.v1.MbCrossSection
+	(*MbCrossSectionFactor)(nil),                  // 231: finance.v1.MbCrossSectionFactor
+	(*CreateMbCrossSectionRequest)(nil),           // 232: finance.v1.CreateMbCrossSectionRequest
+	(*CreateMbCrossSectionResponse)(nil),          // 233: finance.v1.CreateMbCrossSectionResponse
+	(*GetMbCrossSectionRequest)(nil),              // 234: finance.v1.GetMbCrossSectionRequest
+	(*GetMbCrossSectionResponse)(nil),             // 235: finance.v1.GetMbCrossSectionResponse
+	(*ListMbCrossSectionRequest)(nil),             // 236: finance.v1.ListMbCrossSectionRequest
+	(*ListMbCrossSectionResponse)(nil),            // 237: finance.v1.ListMbCrossSectionResponse
+	(*UpdateMbCrossSectionRequest)(nil),           // 238: finance.v1.UpdateMbCrossSectionRequest
+	(*UpdateMbCrossSectionResponse)(nil),          // 239: finance.v1.UpdateMbCrossSectionResponse
+	(*DeleteMbCrossSectionRequest)(nil),           // 240: finance.v1.DeleteMbCrossSectionRequest
+	(*DeleteMbCrossSectionResponse)(nil),          // 241: finance.v1.DeleteMbCrossSectionResponse
+	(*CreateMbCrossSectionFactorRequest)(nil),     // 242: finance.v1.CreateMbCrossSectionFactorRequest
+	(*CreateMbCrossSectionFactorResponse)(nil),    // 243: finance.v1.CreateMbCrossSectionFactorResponse
+	(*GetMbCrossSectionFactorRequest)(nil),        // 244: finance.v1.GetMbCrossSectionFactorRequest
+	(*GetMbCrossSectionFactorResponse)(nil),       // 245: finance.v1.GetMbCrossSectionFactorResponse
+	(*ListMbCrossSectionFactorRequest)(nil),       // 246: finance.v1.ListMbCrossSectionFactorRequest
+	(*ListMbCrossSectionFactorResponse)(nil),      // 247: finance.v1.ListMbCrossSectionFactorResponse
+	(*UpdateMbCrossSectionFactorRequest)(nil),     // 248: finance.v1.UpdateMbCrossSectionFactorRequest
+	(*UpdateMbCrossSectionFactorResponse)(nil),    // 249: finance.v1.UpdateMbCrossSectionFactorResponse
+	(*DeleteMbCrossSectionFactorRequest)(nil),     // 250: finance.v1.DeleteMbCrossSectionFactorRequest
+	(*DeleteMbCrossSectionFactorResponse)(nil),    // 251: finance.v1.DeleteMbCrossSectionFactorResponse
+	(*CalculateDozingRequest)(nil),                // 252: finance.v1.CalculateDozingRequest
+	(*CalculateDozingResponse)(nil),               // 253: finance.v1.CalculateDozingResponse
+	(*PreviewDozingImpactRequest)(nil),            // 254: finance.v1.PreviewDozingImpactRequest
+	(*DozingImpactRow)(nil),                       // 255: finance.v1.DozingImpactRow
+	(*PreviewDozingImpactResponse)(nil),           // 256: finance.v1.PreviewDozingImpactResponse
+	nil,                                           // 257: finance.v1.GetLookupFillValuesResponse.NumericFillsEntry
+	nil,                                           // 258: finance.v1.GetLookupFillValuesResponse.TextFillsEntry
+	(*v1.AuditInfo)(nil),                          // 259: common.v1.AuditInfo
+	(*v1.BaseResponse)(nil),                       // 260: common.v1.BaseResponse
+	(ActiveFilter)(0),                             // 261: finance.v1.ActiveFilter
+	(*v1.PaginationResponse)(nil),                 // 262: common.v1.PaginationResponse
+	(*ImportError)(nil),                           // 263: finance.v1.ImportError
 }
 var file_finance_v1_yarn_master_proto_depIdxs = []int32{
-	215, // 0: finance.v1.Machine.audit:type_name -> common.v1.AuditInfo
-	216, // 1: finance.v1.CreateMachineResponse.base:type_name -> common.v1.BaseResponse
+	259, // 0: finance.v1.Machine.audit:type_name -> common.v1.AuditInfo
+	260, // 1: finance.v1.CreateMachineResponse.base:type_name -> common.v1.BaseResponse
 	1,   // 2: finance.v1.CreateMachineResponse.data:type_name -> finance.v1.Machine
-	216, // 3: finance.v1.GetMachineResponse.base:type_name -> common.v1.BaseResponse
+	260, // 3: finance.v1.GetMachineResponse.base:type_name -> common.v1.BaseResponse
 	1,   // 4: finance.v1.GetMachineResponse.data:type_name -> finance.v1.Machine
-	216, // 5: finance.v1.UpdateMachineResponse.base:type_name -> common.v1.BaseResponse
+	260, // 5: finance.v1.UpdateMachineResponse.base:type_name -> common.v1.BaseResponse
 	1,   // 6: finance.v1.UpdateMachineResponse.data:type_name -> finance.v1.Machine
-	216, // 7: finance.v1.DeleteMachineResponse.base:type_name -> common.v1.BaseResponse
-	217, // 8: finance.v1.ListMachinesRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 9: finance.v1.ListMachinesResponse.base:type_name -> common.v1.BaseResponse
+	260, // 7: finance.v1.DeleteMachineResponse.base:type_name -> common.v1.BaseResponse
+	261, // 8: finance.v1.ListMachinesRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 9: finance.v1.ListMachinesResponse.base:type_name -> common.v1.BaseResponse
 	1,   // 10: finance.v1.ListMachinesResponse.data:type_name -> finance.v1.Machine
-	218, // 11: finance.v1.ListMachinesResponse.pagination:type_name -> common.v1.PaginationResponse
-	217, // 12: finance.v1.ExportMachinesRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 13: finance.v1.ExportMachinesResponse.base:type_name -> common.v1.BaseResponse
-	216, // 14: finance.v1.ImportMachinesResponse.base:type_name -> common.v1.BaseResponse
-	219, // 15: finance.v1.ImportMachinesResponse.errors:type_name -> finance.v1.ImportError
-	216, // 16: finance.v1.DownloadMachineTemplateResponse.base:type_name -> common.v1.BaseResponse
-	215, // 17: finance.v1.BoxBobbinCostRate.audit:type_name -> common.v1.AuditInfo
+	262, // 11: finance.v1.ListMachinesResponse.pagination:type_name -> common.v1.PaginationResponse
+	261, // 12: finance.v1.ExportMachinesRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 13: finance.v1.ExportMachinesResponse.base:type_name -> common.v1.BaseResponse
+	260, // 14: finance.v1.ImportMachinesResponse.base:type_name -> common.v1.BaseResponse
+	263, // 15: finance.v1.ImportMachinesResponse.errors:type_name -> finance.v1.ImportError
+	260, // 16: finance.v1.DownloadMachineTemplateResponse.base:type_name -> common.v1.BaseResponse
+	259, // 17: finance.v1.BoxBobbinCostRate.audit:type_name -> common.v1.AuditInfo
 	18,  // 18: finance.v1.BoxBobbinCost.rates:type_name -> finance.v1.BoxBobbinCostRate
-	215, // 19: finance.v1.BoxBobbinCost.audit:type_name -> common.v1.AuditInfo
-	216, // 20: finance.v1.CreateBoxBobbinCostResponse.base:type_name -> common.v1.BaseResponse
+	259, // 19: finance.v1.BoxBobbinCost.audit:type_name -> common.v1.AuditInfo
+	260, // 20: finance.v1.CreateBoxBobbinCostResponse.base:type_name -> common.v1.BaseResponse
 	19,  // 21: finance.v1.CreateBoxBobbinCostResponse.data:type_name -> finance.v1.BoxBobbinCost
-	216, // 22: finance.v1.GetBoxBobbinCostResponse.base:type_name -> common.v1.BaseResponse
+	260, // 22: finance.v1.GetBoxBobbinCostResponse.base:type_name -> common.v1.BaseResponse
 	19,  // 23: finance.v1.GetBoxBobbinCostResponse.data:type_name -> finance.v1.BoxBobbinCost
-	216, // 24: finance.v1.UpdateBoxBobbinCostResponse.base:type_name -> common.v1.BaseResponse
+	260, // 24: finance.v1.UpdateBoxBobbinCostResponse.base:type_name -> common.v1.BaseResponse
 	19,  // 25: finance.v1.UpdateBoxBobbinCostResponse.data:type_name -> finance.v1.BoxBobbinCost
-	216, // 26: finance.v1.DeleteBoxBobbinCostResponse.base:type_name -> common.v1.BaseResponse
-	217, // 27: finance.v1.ListBoxBobbinCostsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 28: finance.v1.ListBoxBobbinCostsResponse.base:type_name -> common.v1.BaseResponse
+	260, // 26: finance.v1.DeleteBoxBobbinCostResponse.base:type_name -> common.v1.BaseResponse
+	261, // 27: finance.v1.ListBoxBobbinCostsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 28: finance.v1.ListBoxBobbinCostsResponse.base:type_name -> common.v1.BaseResponse
 	19,  // 29: finance.v1.ListBoxBobbinCostsResponse.data:type_name -> finance.v1.BoxBobbinCost
-	218, // 30: finance.v1.ListBoxBobbinCostsResponse.pagination:type_name -> common.v1.PaginationResponse
-	216, // 31: finance.v1.CreateBoxBobbinCostRateResponse.base:type_name -> common.v1.BaseResponse
+	262, // 30: finance.v1.ListBoxBobbinCostsResponse.pagination:type_name -> common.v1.PaginationResponse
+	260, // 31: finance.v1.CreateBoxBobbinCostRateResponse.base:type_name -> common.v1.BaseResponse
 	18,  // 32: finance.v1.CreateBoxBobbinCostRateResponse.data:type_name -> finance.v1.BoxBobbinCostRate
-	216, // 33: finance.v1.DeleteBoxBobbinCostRateResponse.base:type_name -> common.v1.BaseResponse
-	217, // 34: finance.v1.ExportBoxBobbinCostsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 35: finance.v1.ExportBoxBobbinCostsResponse.base:type_name -> common.v1.BaseResponse
-	216, // 36: finance.v1.ImportBoxBobbinCostsResponse.base:type_name -> common.v1.BaseResponse
-	219, // 37: finance.v1.ImportBoxBobbinCostsResponse.errors:type_name -> finance.v1.ImportError
-	216, // 38: finance.v1.DownloadBoxBobbinCostTemplateResponse.base:type_name -> common.v1.BaseResponse
-	215, // 39: finance.v1.Intermingling.audit:type_name -> common.v1.AuditInfo
-	216, // 40: finance.v1.CreateInterminglingResponse.base:type_name -> common.v1.BaseResponse
+	260, // 33: finance.v1.DeleteBoxBobbinCostRateResponse.base:type_name -> common.v1.BaseResponse
+	261, // 34: finance.v1.ExportBoxBobbinCostsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 35: finance.v1.ExportBoxBobbinCostsResponse.base:type_name -> common.v1.BaseResponse
+	260, // 36: finance.v1.ImportBoxBobbinCostsResponse.base:type_name -> common.v1.BaseResponse
+	263, // 37: finance.v1.ImportBoxBobbinCostsResponse.errors:type_name -> finance.v1.ImportError
+	260, // 38: finance.v1.DownloadBoxBobbinCostTemplateResponse.base:type_name -> common.v1.BaseResponse
+	259, // 39: finance.v1.Intermingling.audit:type_name -> common.v1.AuditInfo
+	260, // 40: finance.v1.CreateInterminglingResponse.base:type_name -> common.v1.BaseResponse
 	40,  // 41: finance.v1.CreateInterminglingResponse.data:type_name -> finance.v1.Intermingling
-	216, // 42: finance.v1.GetInterminglingResponse.base:type_name -> common.v1.BaseResponse
+	260, // 42: finance.v1.GetInterminglingResponse.base:type_name -> common.v1.BaseResponse
 	40,  // 43: finance.v1.GetInterminglingResponse.data:type_name -> finance.v1.Intermingling
-	216, // 44: finance.v1.UpdateInterminglingResponse.base:type_name -> common.v1.BaseResponse
+	260, // 44: finance.v1.UpdateInterminglingResponse.base:type_name -> common.v1.BaseResponse
 	40,  // 45: finance.v1.UpdateInterminglingResponse.data:type_name -> finance.v1.Intermingling
-	216, // 46: finance.v1.DeleteInterminglingResponse.base:type_name -> common.v1.BaseResponse
-	217, // 47: finance.v1.ListInterminglingsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 48: finance.v1.ListInterminglingsResponse.base:type_name -> common.v1.BaseResponse
+	260, // 46: finance.v1.DeleteInterminglingResponse.base:type_name -> common.v1.BaseResponse
+	261, // 47: finance.v1.ListInterminglingsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 48: finance.v1.ListInterminglingsResponse.base:type_name -> common.v1.BaseResponse
 	40,  // 49: finance.v1.ListInterminglingsResponse.data:type_name -> finance.v1.Intermingling
-	218, // 50: finance.v1.ListInterminglingsResponse.pagination:type_name -> common.v1.PaginationResponse
-	217, // 51: finance.v1.ExportInterminglingsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 52: finance.v1.ExportInterminglingsResponse.base:type_name -> common.v1.BaseResponse
-	216, // 53: finance.v1.ImportInterminglingsResponse.base:type_name -> common.v1.BaseResponse
-	219, // 54: finance.v1.ImportInterminglingsResponse.errors:type_name -> finance.v1.ImportError
-	216, // 55: finance.v1.DownloadInterminglingTemplateResponse.base:type_name -> common.v1.BaseResponse
-	215, // 56: finance.v1.ProductGrade.audit:type_name -> common.v1.AuditInfo
-	216, // 57: finance.v1.CreateProductGradeResponse.base:type_name -> common.v1.BaseResponse
+	262, // 50: finance.v1.ListInterminglingsResponse.pagination:type_name -> common.v1.PaginationResponse
+	261, // 51: finance.v1.ExportInterminglingsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 52: finance.v1.ExportInterminglingsResponse.base:type_name -> common.v1.BaseResponse
+	260, // 53: finance.v1.ImportInterminglingsResponse.base:type_name -> common.v1.BaseResponse
+	263, // 54: finance.v1.ImportInterminglingsResponse.errors:type_name -> finance.v1.ImportError
+	260, // 55: finance.v1.DownloadInterminglingTemplateResponse.base:type_name -> common.v1.BaseResponse
+	259, // 56: finance.v1.ProductGrade.audit:type_name -> common.v1.AuditInfo
+	260, // 57: finance.v1.CreateProductGradeResponse.base:type_name -> common.v1.BaseResponse
 	57,  // 58: finance.v1.CreateProductGradeResponse.data:type_name -> finance.v1.ProductGrade
-	216, // 59: finance.v1.GetProductGradeResponse.base:type_name -> common.v1.BaseResponse
+	260, // 59: finance.v1.GetProductGradeResponse.base:type_name -> common.v1.BaseResponse
 	57,  // 60: finance.v1.GetProductGradeResponse.data:type_name -> finance.v1.ProductGrade
-	216, // 61: finance.v1.UpdateProductGradeResponse.base:type_name -> common.v1.BaseResponse
+	260, // 61: finance.v1.UpdateProductGradeResponse.base:type_name -> common.v1.BaseResponse
 	57,  // 62: finance.v1.UpdateProductGradeResponse.data:type_name -> finance.v1.ProductGrade
-	216, // 63: finance.v1.DeleteProductGradeResponse.base:type_name -> common.v1.BaseResponse
-	217, // 64: finance.v1.ListProductGradesRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 65: finance.v1.ListProductGradesResponse.base:type_name -> common.v1.BaseResponse
+	260, // 63: finance.v1.DeleteProductGradeResponse.base:type_name -> common.v1.BaseResponse
+	261, // 64: finance.v1.ListProductGradesRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 65: finance.v1.ListProductGradesResponse.base:type_name -> common.v1.BaseResponse
 	57,  // 66: finance.v1.ListProductGradesResponse.data:type_name -> finance.v1.ProductGrade
-	218, // 67: finance.v1.ListProductGradesResponse.pagination:type_name -> common.v1.PaginationResponse
-	217, // 68: finance.v1.ExportProductGradesRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 69: finance.v1.ExportProductGradesResponse.base:type_name -> common.v1.BaseResponse
-	216, // 70: finance.v1.ImportProductGradesResponse.base:type_name -> common.v1.BaseResponse
-	219, // 71: finance.v1.ImportProductGradesResponse.errors:type_name -> finance.v1.ImportError
-	216, // 72: finance.v1.DownloadProductGradeTemplateResponse.base:type_name -> common.v1.BaseResponse
-	215, // 73: finance.v1.MBHead.audit:type_name -> common.v1.AuditInfo
-	216, // 74: finance.v1.CreateMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 75: finance.v1.CreateMBHeadResponse.data:type_name -> finance.v1.MBHead
-	216, // 76: finance.v1.GetMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 77: finance.v1.GetMBHeadResponse.data:type_name -> finance.v1.MBHead
-	216, // 78: finance.v1.UpdateMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 79: finance.v1.UpdateMBHeadResponse.data:type_name -> finance.v1.MBHead
-	216, // 80: finance.v1.DeleteMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	217, // 81: finance.v1.ListMBHeadsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 82: finance.v1.ListMBHeadsResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 83: finance.v1.ListMBHeadsResponse.data:type_name -> finance.v1.MBHead
-	218, // 84: finance.v1.ListMBHeadsResponse.pagination:type_name -> common.v1.PaginationResponse
-	217, // 85: finance.v1.ExportMBHeadsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 86: finance.v1.ExportMBHeadsResponse.base:type_name -> common.v1.BaseResponse
-	216, // 87: finance.v1.ImportMBHeadsResponse.base:type_name -> common.v1.BaseResponse
-	219, // 88: finance.v1.ImportMBHeadsResponse.errors:type_name -> finance.v1.ImportError
-	216, // 89: finance.v1.DownloadMBHeadTemplateResponse.base:type_name -> common.v1.BaseResponse
-	216, // 90: finance.v1.SubmitMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 91: finance.v1.SubmitMBHeadResponse.data:type_name -> finance.v1.MBHead
-	216, // 92: finance.v1.ApproveMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 93: finance.v1.ApproveMBHeadResponse.data:type_name -> finance.v1.MBHead
-	216, // 94: finance.v1.ValidateMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 95: finance.v1.ValidateMBHeadResponse.data:type_name -> finance.v1.MBHead
-	216, // 96: finance.v1.UnApproveMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 97: finance.v1.UnApproveMBHeadResponse.data:type_name -> finance.v1.MBHead
-	216, // 98: finance.v1.RevokeMBHeadResponse.base:type_name -> common.v1.BaseResponse
-	74,  // 99: finance.v1.RevokeMBHeadResponse.data:type_name -> finance.v1.MBHead
-	215, // 100: finance.v1.MBSpin.audit:type_name -> common.v1.AuditInfo
-	216, // 101: finance.v1.CreateMBSpinResponse.base:type_name -> common.v1.BaseResponse
-	101, // 102: finance.v1.CreateMBSpinResponse.data:type_name -> finance.v1.MBSpin
-	216, // 103: finance.v1.GetMBSpinResponse.base:type_name -> common.v1.BaseResponse
-	101, // 104: finance.v1.GetMBSpinResponse.data:type_name -> finance.v1.MBSpin
-	216, // 105: finance.v1.UpdateMBSpinResponse.base:type_name -> common.v1.BaseResponse
-	101, // 106: finance.v1.UpdateMBSpinResponse.data:type_name -> finance.v1.MBSpin
-	216, // 107: finance.v1.DeleteMBSpinResponse.base:type_name -> common.v1.BaseResponse
-	217, // 108: finance.v1.ListMBSpinsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 109: finance.v1.ListMBSpinsResponse.base:type_name -> common.v1.BaseResponse
-	101, // 110: finance.v1.ListMBSpinsResponse.data:type_name -> finance.v1.MBSpin
-	218, // 111: finance.v1.ListMBSpinsResponse.pagination:type_name -> common.v1.PaginationResponse
-	216, // 112: finance.v1.ExportMBSpinsResponse.base:type_name -> common.v1.BaseResponse
-	216, // 113: finance.v1.ImportMBSpinsResponse.base:type_name -> common.v1.BaseResponse
-	219, // 114: finance.v1.ImportMBSpinsResponse.errors:type_name -> finance.v1.ImportError
-	216, // 115: finance.v1.DownloadMBSpinTemplateResponse.base:type_name -> common.v1.BaseResponse
-	216, // 116: finance.v1.GetLookupFillValuesResponse.base:type_name -> common.v1.BaseResponse
-	213, // 117: finance.v1.GetLookupFillValuesResponse.numeric_fills:type_name -> finance.v1.GetLookupFillValuesResponse.NumericFillsEntry
-	214, // 118: finance.v1.GetLookupFillValuesResponse.text_fills:type_name -> finance.v1.GetLookupFillValuesResponse.TextFillsEntry
-	216, // 119: finance.v1.ListLookupMastersResponse.base:type_name -> common.v1.BaseResponse
-	120, // 120: finance.v1.ListLookupMastersResponse.data:type_name -> finance.v1.LookupMaster
-	216, // 121: finance.v1.ListLookupMasterColumnsResponse.base:type_name -> common.v1.BaseResponse
-	123, // 122: finance.v1.ListLookupMasterColumnsResponse.data:type_name -> finance.v1.LookupMasterColumn
-	216, // 123: finance.v1.CreateLookupMasterResponse.base:type_name -> common.v1.BaseResponse
-	120, // 124: finance.v1.CreateLookupMasterResponse.data:type_name -> finance.v1.LookupMaster
-	216, // 125: finance.v1.DeleteLookupMasterResponse.base:type_name -> common.v1.BaseResponse
-	216, // 126: finance.v1.CreateLookupMasterColumnResponse.base:type_name -> common.v1.BaseResponse
-	123, // 127: finance.v1.CreateLookupMasterColumnResponse.data:type_name -> finance.v1.LookupMasterColumn
-	216, // 128: finance.v1.DeleteLookupMasterColumnResponse.base:type_name -> common.v1.BaseResponse
-	216, // 129: finance.v1.UpdateLookupMasterResponse.base:type_name -> common.v1.BaseResponse
-	120, // 130: finance.v1.UpdateLookupMasterResponse.data:type_name -> finance.v1.LookupMaster
-	216, // 131: finance.v1.ListTableColumnsResponse.base:type_name -> common.v1.BaseResponse
-	136, // 132: finance.v1.ListTableColumnsResponse.data:type_name -> finance.v1.TableColumn
-	216, // 133: finance.v1.ListMasterOptionsResponse.base:type_name -> common.v1.BaseResponse
-	139, // 134: finance.v1.ListMasterOptionsResponse.data:type_name -> finance.v1.MasterOption
-	216, // 135: finance.v1.ExportLookupMastersResponse.base:type_name -> common.v1.BaseResponse
-	216, // 136: finance.v1.ImportLookupMastersResponse.base:type_name -> common.v1.BaseResponse
-	215, // 137: finance.v1.MbComposition.audit:type_name -> common.v1.AuditInfo
-	215, // 138: finance.v1.MbLusture.audit:type_name -> common.v1.AuditInfo
-	215, // 139: finance.v1.MbParam.audit:type_name -> common.v1.AuditInfo
-	150, // 140: finance.v1.MbParam.options:type_name -> finance.v1.MbParamOption
-	216, // 141: finance.v1.CreateMbCompositionResponse.base:type_name -> common.v1.BaseResponse
-	146, // 142: finance.v1.CreateMbCompositionResponse.data:type_name -> finance.v1.MbComposition
-	216, // 143: finance.v1.UpdateMbCompositionResponse.base:type_name -> common.v1.BaseResponse
-	146, // 144: finance.v1.UpdateMbCompositionResponse.data:type_name -> finance.v1.MbComposition
-	216, // 145: finance.v1.DeleteMbCompositionResponse.base:type_name -> common.v1.BaseResponse
-	216, // 146: finance.v1.ListMbCompositionsResponse.base:type_name -> common.v1.BaseResponse
-	146, // 147: finance.v1.ListMbCompositionsResponse.data:type_name -> finance.v1.MbComposition
-	216, // 148: finance.v1.ListMbCompositionVersionsResponse.base:type_name -> common.v1.BaseResponse
-	147, // 149: finance.v1.ListMbCompositionVersionsResponse.data:type_name -> finance.v1.MbCompositionVersion
-	216, // 150: finance.v1.CreateMbLustureResponse.base:type_name -> common.v1.BaseResponse
-	148, // 151: finance.v1.CreateMbLustureResponse.data:type_name -> finance.v1.MbLusture
-	216, // 152: finance.v1.UpdateMbLustureResponse.base:type_name -> common.v1.BaseResponse
-	148, // 153: finance.v1.UpdateMbLustureResponse.data:type_name -> finance.v1.MbLusture
-	216, // 154: finance.v1.DeleteMbLustureResponse.base:type_name -> common.v1.BaseResponse
-	216, // 155: finance.v1.GetMbLustureResponse.base:type_name -> common.v1.BaseResponse
-	148, // 156: finance.v1.GetMbLustureResponse.data:type_name -> finance.v1.MbLusture
-	217, // 157: finance.v1.ListMbLustureRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 158: finance.v1.ListMbLustureResponse.base:type_name -> common.v1.BaseResponse
-	148, // 159: finance.v1.ListMbLustureResponse.data:type_name -> finance.v1.MbLusture
-	218, // 160: finance.v1.ListMbLustureResponse.pagination:type_name -> common.v1.PaginationResponse
-	217, // 161: finance.v1.ExportMbLustureRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 162: finance.v1.ExportMbLustureResponse.base:type_name -> common.v1.BaseResponse
-	216, // 163: finance.v1.ImportMbLustureResponse.base:type_name -> common.v1.BaseResponse
-	219, // 164: finance.v1.ImportMbLustureResponse.errors:type_name -> finance.v1.ImportError
-	216, // 165: finance.v1.DownloadMbLustureTemplateResponse.base:type_name -> common.v1.BaseResponse
-	216, // 166: finance.v1.CreateMbParamResponse.base:type_name -> common.v1.BaseResponse
-	149, // 167: finance.v1.CreateMbParamResponse.data:type_name -> finance.v1.MbParam
-	216, // 168: finance.v1.UpdateMbParamResponse.base:type_name -> common.v1.BaseResponse
-	149, // 169: finance.v1.UpdateMbParamResponse.data:type_name -> finance.v1.MbParam
-	216, // 170: finance.v1.DeleteMbParamResponse.base:type_name -> common.v1.BaseResponse
-	217, // 171: finance.v1.ListMbParamsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 172: finance.v1.ListMbParamsResponse.base:type_name -> common.v1.BaseResponse
-	149, // 173: finance.v1.ListMbParamsResponse.data:type_name -> finance.v1.MbParam
-	218, // 174: finance.v1.ListMbParamsResponse.pagination:type_name -> common.v1.PaginationResponse
-	217, // 175: finance.v1.ExportMbParamsRequest.active_filter:type_name -> finance.v1.ActiveFilter
-	216, // 176: finance.v1.ExportMbParamsResponse.base:type_name -> common.v1.BaseResponse
-	216, // 177: finance.v1.ImportMbParamsResponse.base:type_name -> common.v1.BaseResponse
-	219, // 178: finance.v1.ImportMbParamsResponse.errors:type_name -> finance.v1.ImportError
-	216, // 179: finance.v1.DownloadMbParamTemplateResponse.base:type_name -> common.v1.BaseResponse
-	216, // 180: finance.v1.CreateMbParamOptionResponse.base:type_name -> common.v1.BaseResponse
-	150, // 181: finance.v1.CreateMbParamOptionResponse.data:type_name -> finance.v1.MbParamOption
-	216, // 182: finance.v1.UpdateMbParamOptionResponse.base:type_name -> common.v1.BaseResponse
-	150, // 183: finance.v1.UpdateMbParamOptionResponse.data:type_name -> finance.v1.MbParamOption
-	216, // 184: finance.v1.DeleteMbParamOptionResponse.base:type_name -> common.v1.BaseResponse
-	216, // 185: finance.v1.PreviewPushToHeadResponse.base:type_name -> common.v1.BaseResponse
-	201, // 186: finance.v1.PreviewPushToHeadResponse.pushable:type_name -> finance.v1.PushableMbHead
-	202, // 187: finance.v1.PreviewPushToHeadResponse.skipped:type_name -> finance.v1.SkippedMbHead
-	216, // 188: finance.v1.ExecutePushToHeadResponse.base:type_name -> common.v1.BaseResponse
-	152, // 189: finance.v1.ExecutePushToHeadResponse.data:type_name -> finance.v1.MbPushLog
-	216, // 190: finance.v1.ListMbPushLogsResponse.base:type_name -> common.v1.BaseResponse
-	152, // 191: finance.v1.ListMbPushLogsResponse.data:type_name -> finance.v1.MbPushLog
-	218, // 192: finance.v1.ListMbPushLogsResponse.pagination:type_name -> common.v1.PaginationResponse
-	216, // 193: finance.v1.ListMbWorkflowLogsResponse.base:type_name -> common.v1.BaseResponse
-	153, // 194: finance.v1.ListMbWorkflowLogsResponse.data:type_name -> finance.v1.MbWorkflowLog
-	216, // 195: finance.v1.TriggerMbBatchResponse.base:type_name -> common.v1.BaseResponse
-	211, // 196: finance.v1.TriggerMbBatchResponse.errors:type_name -> finance.v1.MbBatchError
-	2,   // 197: finance.v1.MachineService.CreateMachine:input_type -> finance.v1.CreateMachineRequest
-	4,   // 198: finance.v1.MachineService.GetMachine:input_type -> finance.v1.GetMachineRequest
-	10,  // 199: finance.v1.MachineService.ListMachines:input_type -> finance.v1.ListMachinesRequest
-	6,   // 200: finance.v1.MachineService.UpdateMachine:input_type -> finance.v1.UpdateMachineRequest
-	8,   // 201: finance.v1.MachineService.DeleteMachine:input_type -> finance.v1.DeleteMachineRequest
-	12,  // 202: finance.v1.MachineService.ExportMachines:input_type -> finance.v1.ExportMachinesRequest
-	14,  // 203: finance.v1.MachineService.ImportMachines:input_type -> finance.v1.ImportMachinesRequest
-	16,  // 204: finance.v1.MachineService.DownloadMachineTemplate:input_type -> finance.v1.DownloadMachineTemplateRequest
-	20,  // 205: finance.v1.BoxBobbinCostService.CreateBoxBobbinCost:input_type -> finance.v1.CreateBoxBobbinCostRequest
-	22,  // 206: finance.v1.BoxBobbinCostService.GetBoxBobbinCost:input_type -> finance.v1.GetBoxBobbinCostRequest
-	28,  // 207: finance.v1.BoxBobbinCostService.ListBoxBobbinCosts:input_type -> finance.v1.ListBoxBobbinCostsRequest
-	24,  // 208: finance.v1.BoxBobbinCostService.UpdateBoxBobbinCost:input_type -> finance.v1.UpdateBoxBobbinCostRequest
-	26,  // 209: finance.v1.BoxBobbinCostService.DeleteBoxBobbinCost:input_type -> finance.v1.DeleteBoxBobbinCostRequest
-	30,  // 210: finance.v1.BoxBobbinCostService.CreateBoxBobbinCostRate:input_type -> finance.v1.CreateBoxBobbinCostRateRequest
-	32,  // 211: finance.v1.BoxBobbinCostService.DeleteBoxBobbinCostRate:input_type -> finance.v1.DeleteBoxBobbinCostRateRequest
-	34,  // 212: finance.v1.BoxBobbinCostService.ExportBoxBobbinCosts:input_type -> finance.v1.ExportBoxBobbinCostsRequest
-	36,  // 213: finance.v1.BoxBobbinCostService.ImportBoxBobbinCosts:input_type -> finance.v1.ImportBoxBobbinCostsRequest
-	38,  // 214: finance.v1.BoxBobbinCostService.DownloadBoxBobbinCostTemplate:input_type -> finance.v1.DownloadBoxBobbinCostTemplateRequest
-	41,  // 215: finance.v1.InterminglingService.CreateIntermingling:input_type -> finance.v1.CreateInterminglingRequest
-	43,  // 216: finance.v1.InterminglingService.GetIntermingling:input_type -> finance.v1.GetInterminglingRequest
-	49,  // 217: finance.v1.InterminglingService.ListInterminglings:input_type -> finance.v1.ListInterminglingsRequest
-	45,  // 218: finance.v1.InterminglingService.UpdateIntermingling:input_type -> finance.v1.UpdateInterminglingRequest
-	47,  // 219: finance.v1.InterminglingService.DeleteIntermingling:input_type -> finance.v1.DeleteInterminglingRequest
-	51,  // 220: finance.v1.InterminglingService.ExportInterminglings:input_type -> finance.v1.ExportInterminglingsRequest
-	53,  // 221: finance.v1.InterminglingService.ImportInterminglings:input_type -> finance.v1.ImportInterminglingsRequest
-	55,  // 222: finance.v1.InterminglingService.DownloadInterminglingTemplate:input_type -> finance.v1.DownloadInterminglingTemplateRequest
-	58,  // 223: finance.v1.ProductGradeService.CreateProductGrade:input_type -> finance.v1.CreateProductGradeRequest
-	60,  // 224: finance.v1.ProductGradeService.GetProductGrade:input_type -> finance.v1.GetProductGradeRequest
-	66,  // 225: finance.v1.ProductGradeService.ListProductGrades:input_type -> finance.v1.ListProductGradesRequest
-	62,  // 226: finance.v1.ProductGradeService.UpdateProductGrade:input_type -> finance.v1.UpdateProductGradeRequest
-	64,  // 227: finance.v1.ProductGradeService.DeleteProductGrade:input_type -> finance.v1.DeleteProductGradeRequest
-	68,  // 228: finance.v1.ProductGradeService.ExportProductGrades:input_type -> finance.v1.ExportProductGradesRequest
-	70,  // 229: finance.v1.ProductGradeService.ImportProductGrades:input_type -> finance.v1.ImportProductGradesRequest
-	72,  // 230: finance.v1.ProductGradeService.DownloadProductGradeTemplate:input_type -> finance.v1.DownloadProductGradeTemplateRequest
-	75,  // 231: finance.v1.MBHeadService.CreateMBHead:input_type -> finance.v1.CreateMBHeadRequest
-	77,  // 232: finance.v1.MBHeadService.GetMBHead:input_type -> finance.v1.GetMBHeadRequest
-	83,  // 233: finance.v1.MBHeadService.ListMBHeads:input_type -> finance.v1.ListMBHeadsRequest
-	79,  // 234: finance.v1.MBHeadService.UpdateMBHead:input_type -> finance.v1.UpdateMBHeadRequest
-	81,  // 235: finance.v1.MBHeadService.DeleteMBHead:input_type -> finance.v1.DeleteMBHeadRequest
-	85,  // 236: finance.v1.MBHeadService.ExportMBHeads:input_type -> finance.v1.ExportMBHeadsRequest
-	87,  // 237: finance.v1.MBHeadService.ImportMBHeads:input_type -> finance.v1.ImportMBHeadsRequest
-	89,  // 238: finance.v1.MBHeadService.DownloadMBHeadTemplate:input_type -> finance.v1.DownloadMBHeadTemplateRequest
-	91,  // 239: finance.v1.MBHeadService.SubmitMBHead:input_type -> finance.v1.SubmitMBHeadRequest
-	93,  // 240: finance.v1.MBHeadService.ApproveMBHead:input_type -> finance.v1.ApproveMBHeadRequest
-	95,  // 241: finance.v1.MBHeadService.ValidateMBHead:input_type -> finance.v1.ValidateMBHeadRequest
-	97,  // 242: finance.v1.MBHeadService.UnApproveMBHead:input_type -> finance.v1.UnApproveMBHeadRequest
-	99,  // 243: finance.v1.MBHeadService.RevokeMBHead:input_type -> finance.v1.RevokeMBHeadRequest
-	102, // 244: finance.v1.MBSpinService.CreateMBSpin:input_type -> finance.v1.CreateMBSpinRequest
-	104, // 245: finance.v1.MBSpinService.GetMBSpin:input_type -> finance.v1.GetMBSpinRequest
-	110, // 246: finance.v1.MBSpinService.ListMBSpins:input_type -> finance.v1.ListMBSpinsRequest
-	106, // 247: finance.v1.MBSpinService.UpdateMBSpin:input_type -> finance.v1.UpdateMBSpinRequest
-	108, // 248: finance.v1.MBSpinService.DeleteMBSpin:input_type -> finance.v1.DeleteMBSpinRequest
-	112, // 249: finance.v1.MBSpinService.ExportMBSpins:input_type -> finance.v1.ExportMBSpinsRequest
-	114, // 250: finance.v1.MBSpinService.ImportMBSpins:input_type -> finance.v1.ImportMBSpinsRequest
-	116, // 251: finance.v1.MBSpinService.DownloadMBSpinTemplate:input_type -> finance.v1.DownloadMBSpinTemplateRequest
-	121, // 252: finance.v1.LookupMasterService.ListLookupMasters:input_type -> finance.v1.ListLookupMastersRequest
-	124, // 253: finance.v1.LookupMasterService.ListLookupMasterColumns:input_type -> finance.v1.ListLookupMasterColumnsRequest
-	126, // 254: finance.v1.LookupMasterService.CreateLookupMaster:input_type -> finance.v1.CreateLookupMasterRequest
-	128, // 255: finance.v1.LookupMasterService.DeleteLookupMaster:input_type -> finance.v1.DeleteLookupMasterRequest
-	130, // 256: finance.v1.LookupMasterService.CreateLookupMasterColumn:input_type -> finance.v1.CreateLookupMasterColumnRequest
-	132, // 257: finance.v1.LookupMasterService.DeleteLookupMasterColumn:input_type -> finance.v1.DeleteLookupMasterColumnRequest
-	134, // 258: finance.v1.LookupMasterService.UpdateLookupMaster:input_type -> finance.v1.UpdateLookupMasterRequest
-	137, // 259: finance.v1.LookupMasterService.ListTableColumns:input_type -> finance.v1.ListTableColumnsRequest
-	140, // 260: finance.v1.LookupMasterService.ListMasterOptions:input_type -> finance.v1.ListMasterOptionsRequest
-	142, // 261: finance.v1.LookupMasterService.ExportLookupMasters:input_type -> finance.v1.ExportLookupMastersRequest
-	144, // 262: finance.v1.LookupMasterService.ImportLookupMasters:input_type -> finance.v1.ImportLookupMastersRequest
-	118, // 263: finance.v1.YarnLookupFillService.GetLookupFillValues:input_type -> finance.v1.GetLookupFillValuesRequest
-	154, // 264: finance.v1.MbCompositionService.CreateMbComposition:input_type -> finance.v1.CreateMbCompositionRequest
-	156, // 265: finance.v1.MbCompositionService.UpdateMbComposition:input_type -> finance.v1.UpdateMbCompositionRequest
-	158, // 266: finance.v1.MbCompositionService.DeleteMbComposition:input_type -> finance.v1.DeleteMbCompositionRequest
-	160, // 267: finance.v1.MbCompositionService.ListMbCompositions:input_type -> finance.v1.ListMbCompositionsRequest
-	162, // 268: finance.v1.MbCompositionService.ListMbCompositionVersions:input_type -> finance.v1.ListMbCompositionVersionsRequest
-	164, // 269: finance.v1.MbLustureService.CreateMbLusture:input_type -> finance.v1.CreateMbLustureRequest
-	166, // 270: finance.v1.MbLustureService.UpdateMbLusture:input_type -> finance.v1.UpdateMbLustureRequest
-	168, // 271: finance.v1.MbLustureService.DeleteMbLusture:input_type -> finance.v1.DeleteMbLustureRequest
-	170, // 272: finance.v1.MbLustureService.GetMbLusture:input_type -> finance.v1.GetMbLustureRequest
-	172, // 273: finance.v1.MbLustureService.ListMbLusture:input_type -> finance.v1.ListMbLustureRequest
-	174, // 274: finance.v1.MbLustureService.ExportMbLusture:input_type -> finance.v1.ExportMbLustureRequest
-	176, // 275: finance.v1.MbLustureService.ImportMbLusture:input_type -> finance.v1.ImportMbLustureRequest
-	178, // 276: finance.v1.MbLustureService.DownloadMbLustureTemplate:input_type -> finance.v1.DownloadMbLustureTemplateRequest
-	180, // 277: finance.v1.MbParamService.CreateMbParam:input_type -> finance.v1.CreateMbParamRequest
-	182, // 278: finance.v1.MbParamService.UpdateMbParam:input_type -> finance.v1.UpdateMbParamRequest
-	184, // 279: finance.v1.MbParamService.DeleteMbParam:input_type -> finance.v1.DeleteMbParamRequest
-	186, // 280: finance.v1.MbParamService.ListMbParams:input_type -> finance.v1.ListMbParamsRequest
-	194, // 281: finance.v1.MbParamService.CreateMbParamOption:input_type -> finance.v1.CreateMbParamOptionRequest
-	196, // 282: finance.v1.MbParamService.UpdateMbParamOption:input_type -> finance.v1.UpdateMbParamOptionRequest
-	198, // 283: finance.v1.MbParamService.DeleteMbParamOption:input_type -> finance.v1.DeleteMbParamOptionRequest
-	188, // 284: finance.v1.MbParamService.ExportMbParams:input_type -> finance.v1.ExportMbParamsRequest
-	190, // 285: finance.v1.MbParamService.ImportMbParams:input_type -> finance.v1.ImportMbParamsRequest
-	192, // 286: finance.v1.MbParamService.DownloadMbParamTemplate:input_type -> finance.v1.DownloadMbParamTemplateRequest
-	200, // 287: finance.v1.MbPushService.PreviewPushToHead:input_type -> finance.v1.PreviewPushToHeadRequest
-	204, // 288: finance.v1.MbPushService.ExecutePushToHead:input_type -> finance.v1.ExecutePushToHeadRequest
-	206, // 289: finance.v1.MbPushService.ListMbPushLogs:input_type -> finance.v1.ListMbPushLogsRequest
-	208, // 290: finance.v1.MbWorkflowLogService.ListMbWorkflowLogs:input_type -> finance.v1.ListMbWorkflowLogsRequest
-	210, // 291: finance.v1.MbBatchService.TriggerMbBatch:input_type -> finance.v1.TriggerMbBatchRequest
-	3,   // 292: finance.v1.MachineService.CreateMachine:output_type -> finance.v1.CreateMachineResponse
-	5,   // 293: finance.v1.MachineService.GetMachine:output_type -> finance.v1.GetMachineResponse
-	11,  // 294: finance.v1.MachineService.ListMachines:output_type -> finance.v1.ListMachinesResponse
-	7,   // 295: finance.v1.MachineService.UpdateMachine:output_type -> finance.v1.UpdateMachineResponse
-	9,   // 296: finance.v1.MachineService.DeleteMachine:output_type -> finance.v1.DeleteMachineResponse
-	13,  // 297: finance.v1.MachineService.ExportMachines:output_type -> finance.v1.ExportMachinesResponse
-	15,  // 298: finance.v1.MachineService.ImportMachines:output_type -> finance.v1.ImportMachinesResponse
-	17,  // 299: finance.v1.MachineService.DownloadMachineTemplate:output_type -> finance.v1.DownloadMachineTemplateResponse
-	21,  // 300: finance.v1.BoxBobbinCostService.CreateBoxBobbinCost:output_type -> finance.v1.CreateBoxBobbinCostResponse
-	23,  // 301: finance.v1.BoxBobbinCostService.GetBoxBobbinCost:output_type -> finance.v1.GetBoxBobbinCostResponse
-	29,  // 302: finance.v1.BoxBobbinCostService.ListBoxBobbinCosts:output_type -> finance.v1.ListBoxBobbinCostsResponse
-	25,  // 303: finance.v1.BoxBobbinCostService.UpdateBoxBobbinCost:output_type -> finance.v1.UpdateBoxBobbinCostResponse
-	27,  // 304: finance.v1.BoxBobbinCostService.DeleteBoxBobbinCost:output_type -> finance.v1.DeleteBoxBobbinCostResponse
-	31,  // 305: finance.v1.BoxBobbinCostService.CreateBoxBobbinCostRate:output_type -> finance.v1.CreateBoxBobbinCostRateResponse
-	33,  // 306: finance.v1.BoxBobbinCostService.DeleteBoxBobbinCostRate:output_type -> finance.v1.DeleteBoxBobbinCostRateResponse
-	35,  // 307: finance.v1.BoxBobbinCostService.ExportBoxBobbinCosts:output_type -> finance.v1.ExportBoxBobbinCostsResponse
-	37,  // 308: finance.v1.BoxBobbinCostService.ImportBoxBobbinCosts:output_type -> finance.v1.ImportBoxBobbinCostsResponse
-	39,  // 309: finance.v1.BoxBobbinCostService.DownloadBoxBobbinCostTemplate:output_type -> finance.v1.DownloadBoxBobbinCostTemplateResponse
-	42,  // 310: finance.v1.InterminglingService.CreateIntermingling:output_type -> finance.v1.CreateInterminglingResponse
-	44,  // 311: finance.v1.InterminglingService.GetIntermingling:output_type -> finance.v1.GetInterminglingResponse
-	50,  // 312: finance.v1.InterminglingService.ListInterminglings:output_type -> finance.v1.ListInterminglingsResponse
-	46,  // 313: finance.v1.InterminglingService.UpdateIntermingling:output_type -> finance.v1.UpdateInterminglingResponse
-	48,  // 314: finance.v1.InterminglingService.DeleteIntermingling:output_type -> finance.v1.DeleteInterminglingResponse
-	52,  // 315: finance.v1.InterminglingService.ExportInterminglings:output_type -> finance.v1.ExportInterminglingsResponse
-	54,  // 316: finance.v1.InterminglingService.ImportInterminglings:output_type -> finance.v1.ImportInterminglingsResponse
-	56,  // 317: finance.v1.InterminglingService.DownloadInterminglingTemplate:output_type -> finance.v1.DownloadInterminglingTemplateResponse
-	59,  // 318: finance.v1.ProductGradeService.CreateProductGrade:output_type -> finance.v1.CreateProductGradeResponse
-	61,  // 319: finance.v1.ProductGradeService.GetProductGrade:output_type -> finance.v1.GetProductGradeResponse
-	67,  // 320: finance.v1.ProductGradeService.ListProductGrades:output_type -> finance.v1.ListProductGradesResponse
-	63,  // 321: finance.v1.ProductGradeService.UpdateProductGrade:output_type -> finance.v1.UpdateProductGradeResponse
-	65,  // 322: finance.v1.ProductGradeService.DeleteProductGrade:output_type -> finance.v1.DeleteProductGradeResponse
-	69,  // 323: finance.v1.ProductGradeService.ExportProductGrades:output_type -> finance.v1.ExportProductGradesResponse
-	71,  // 324: finance.v1.ProductGradeService.ImportProductGrades:output_type -> finance.v1.ImportProductGradesResponse
-	73,  // 325: finance.v1.ProductGradeService.DownloadProductGradeTemplate:output_type -> finance.v1.DownloadProductGradeTemplateResponse
-	76,  // 326: finance.v1.MBHeadService.CreateMBHead:output_type -> finance.v1.CreateMBHeadResponse
-	78,  // 327: finance.v1.MBHeadService.GetMBHead:output_type -> finance.v1.GetMBHeadResponse
-	84,  // 328: finance.v1.MBHeadService.ListMBHeads:output_type -> finance.v1.ListMBHeadsResponse
-	80,  // 329: finance.v1.MBHeadService.UpdateMBHead:output_type -> finance.v1.UpdateMBHeadResponse
-	82,  // 330: finance.v1.MBHeadService.DeleteMBHead:output_type -> finance.v1.DeleteMBHeadResponse
-	86,  // 331: finance.v1.MBHeadService.ExportMBHeads:output_type -> finance.v1.ExportMBHeadsResponse
-	88,  // 332: finance.v1.MBHeadService.ImportMBHeads:output_type -> finance.v1.ImportMBHeadsResponse
-	90,  // 333: finance.v1.MBHeadService.DownloadMBHeadTemplate:output_type -> finance.v1.DownloadMBHeadTemplateResponse
-	92,  // 334: finance.v1.MBHeadService.SubmitMBHead:output_type -> finance.v1.SubmitMBHeadResponse
-	94,  // 335: finance.v1.MBHeadService.ApproveMBHead:output_type -> finance.v1.ApproveMBHeadResponse
-	96,  // 336: finance.v1.MBHeadService.ValidateMBHead:output_type -> finance.v1.ValidateMBHeadResponse
-	98,  // 337: finance.v1.MBHeadService.UnApproveMBHead:output_type -> finance.v1.UnApproveMBHeadResponse
-	100, // 338: finance.v1.MBHeadService.RevokeMBHead:output_type -> finance.v1.RevokeMBHeadResponse
-	103, // 339: finance.v1.MBSpinService.CreateMBSpin:output_type -> finance.v1.CreateMBSpinResponse
-	105, // 340: finance.v1.MBSpinService.GetMBSpin:output_type -> finance.v1.GetMBSpinResponse
-	111, // 341: finance.v1.MBSpinService.ListMBSpins:output_type -> finance.v1.ListMBSpinsResponse
-	107, // 342: finance.v1.MBSpinService.UpdateMBSpin:output_type -> finance.v1.UpdateMBSpinResponse
-	109, // 343: finance.v1.MBSpinService.DeleteMBSpin:output_type -> finance.v1.DeleteMBSpinResponse
-	113, // 344: finance.v1.MBSpinService.ExportMBSpins:output_type -> finance.v1.ExportMBSpinsResponse
-	115, // 345: finance.v1.MBSpinService.ImportMBSpins:output_type -> finance.v1.ImportMBSpinsResponse
-	117, // 346: finance.v1.MBSpinService.DownloadMBSpinTemplate:output_type -> finance.v1.DownloadMBSpinTemplateResponse
-	122, // 347: finance.v1.LookupMasterService.ListLookupMasters:output_type -> finance.v1.ListLookupMastersResponse
-	125, // 348: finance.v1.LookupMasterService.ListLookupMasterColumns:output_type -> finance.v1.ListLookupMasterColumnsResponse
-	127, // 349: finance.v1.LookupMasterService.CreateLookupMaster:output_type -> finance.v1.CreateLookupMasterResponse
-	129, // 350: finance.v1.LookupMasterService.DeleteLookupMaster:output_type -> finance.v1.DeleteLookupMasterResponse
-	131, // 351: finance.v1.LookupMasterService.CreateLookupMasterColumn:output_type -> finance.v1.CreateLookupMasterColumnResponse
-	133, // 352: finance.v1.LookupMasterService.DeleteLookupMasterColumn:output_type -> finance.v1.DeleteLookupMasterColumnResponse
-	135, // 353: finance.v1.LookupMasterService.UpdateLookupMaster:output_type -> finance.v1.UpdateLookupMasterResponse
-	138, // 354: finance.v1.LookupMasterService.ListTableColumns:output_type -> finance.v1.ListTableColumnsResponse
-	141, // 355: finance.v1.LookupMasterService.ListMasterOptions:output_type -> finance.v1.ListMasterOptionsResponse
-	143, // 356: finance.v1.LookupMasterService.ExportLookupMasters:output_type -> finance.v1.ExportLookupMastersResponse
-	145, // 357: finance.v1.LookupMasterService.ImportLookupMasters:output_type -> finance.v1.ImportLookupMastersResponse
-	119, // 358: finance.v1.YarnLookupFillService.GetLookupFillValues:output_type -> finance.v1.GetLookupFillValuesResponse
-	155, // 359: finance.v1.MbCompositionService.CreateMbComposition:output_type -> finance.v1.CreateMbCompositionResponse
-	157, // 360: finance.v1.MbCompositionService.UpdateMbComposition:output_type -> finance.v1.UpdateMbCompositionResponse
-	159, // 361: finance.v1.MbCompositionService.DeleteMbComposition:output_type -> finance.v1.DeleteMbCompositionResponse
-	161, // 362: finance.v1.MbCompositionService.ListMbCompositions:output_type -> finance.v1.ListMbCompositionsResponse
-	163, // 363: finance.v1.MbCompositionService.ListMbCompositionVersions:output_type -> finance.v1.ListMbCompositionVersionsResponse
-	165, // 364: finance.v1.MbLustureService.CreateMbLusture:output_type -> finance.v1.CreateMbLustureResponse
-	167, // 365: finance.v1.MbLustureService.UpdateMbLusture:output_type -> finance.v1.UpdateMbLustureResponse
-	169, // 366: finance.v1.MbLustureService.DeleteMbLusture:output_type -> finance.v1.DeleteMbLustureResponse
-	171, // 367: finance.v1.MbLustureService.GetMbLusture:output_type -> finance.v1.GetMbLustureResponse
-	173, // 368: finance.v1.MbLustureService.ListMbLusture:output_type -> finance.v1.ListMbLustureResponse
-	175, // 369: finance.v1.MbLustureService.ExportMbLusture:output_type -> finance.v1.ExportMbLustureResponse
-	177, // 370: finance.v1.MbLustureService.ImportMbLusture:output_type -> finance.v1.ImportMbLustureResponse
-	179, // 371: finance.v1.MbLustureService.DownloadMbLustureTemplate:output_type -> finance.v1.DownloadMbLustureTemplateResponse
-	181, // 372: finance.v1.MbParamService.CreateMbParam:output_type -> finance.v1.CreateMbParamResponse
-	183, // 373: finance.v1.MbParamService.UpdateMbParam:output_type -> finance.v1.UpdateMbParamResponse
-	185, // 374: finance.v1.MbParamService.DeleteMbParam:output_type -> finance.v1.DeleteMbParamResponse
-	187, // 375: finance.v1.MbParamService.ListMbParams:output_type -> finance.v1.ListMbParamsResponse
-	195, // 376: finance.v1.MbParamService.CreateMbParamOption:output_type -> finance.v1.CreateMbParamOptionResponse
-	197, // 377: finance.v1.MbParamService.UpdateMbParamOption:output_type -> finance.v1.UpdateMbParamOptionResponse
-	199, // 378: finance.v1.MbParamService.DeleteMbParamOption:output_type -> finance.v1.DeleteMbParamOptionResponse
-	189, // 379: finance.v1.MbParamService.ExportMbParams:output_type -> finance.v1.ExportMbParamsResponse
-	191, // 380: finance.v1.MbParamService.ImportMbParams:output_type -> finance.v1.ImportMbParamsResponse
-	193, // 381: finance.v1.MbParamService.DownloadMbParamTemplate:output_type -> finance.v1.DownloadMbParamTemplateResponse
-	203, // 382: finance.v1.MbPushService.PreviewPushToHead:output_type -> finance.v1.PreviewPushToHeadResponse
-	205, // 383: finance.v1.MbPushService.ExecutePushToHead:output_type -> finance.v1.ExecutePushToHeadResponse
-	207, // 384: finance.v1.MbPushService.ListMbPushLogs:output_type -> finance.v1.ListMbPushLogsResponse
-	209, // 385: finance.v1.MbWorkflowLogService.ListMbWorkflowLogs:output_type -> finance.v1.ListMbWorkflowLogsResponse
-	212, // 386: finance.v1.MbBatchService.TriggerMbBatch:output_type -> finance.v1.TriggerMbBatchResponse
-	292, // [292:387] is the sub-list for method output_type
-	197, // [197:292] is the sub-list for method input_type
-	197, // [197:197] is the sub-list for extension type_name
-	197, // [197:197] is the sub-list for extension extendee
-	0,   // [0:197] is the sub-list for field type_name
+	262, // 67: finance.v1.ListProductGradesResponse.pagination:type_name -> common.v1.PaginationResponse
+	261, // 68: finance.v1.ExportProductGradesRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 69: finance.v1.ExportProductGradesResponse.base:type_name -> common.v1.BaseResponse
+	260, // 70: finance.v1.ImportProductGradesResponse.base:type_name -> common.v1.BaseResponse
+	263, // 71: finance.v1.ImportProductGradesResponse.errors:type_name -> finance.v1.ImportError
+	260, // 72: finance.v1.DownloadProductGradeTemplateResponse.base:type_name -> common.v1.BaseResponse
+	259, // 73: finance.v1.MBHead.audit:type_name -> common.v1.AuditInfo
+	74,  // 74: finance.v1.MBHead.additional_shades:type_name -> finance.v1.MBHeadShade
+	75,  // 75: finance.v1.CreateMBHeadRequest.additional_shades:type_name -> finance.v1.MBHeadShadeInput
+	260, // 76: finance.v1.CreateMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 77: finance.v1.CreateMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 78: finance.v1.GetMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 79: finance.v1.GetMBHeadResponse.data:type_name -> finance.v1.MBHead
+	75,  // 80: finance.v1.UpdateMBHeadRequest.additional_shades:type_name -> finance.v1.MBHeadShadeInput
+	260, // 81: finance.v1.UpdateMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 82: finance.v1.UpdateMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 83: finance.v1.DeleteMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	261, // 84: finance.v1.ListMBHeadsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 85: finance.v1.ListMBHeadsResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 86: finance.v1.ListMBHeadsResponse.data:type_name -> finance.v1.MBHead
+	262, // 87: finance.v1.ListMBHeadsResponse.pagination:type_name -> common.v1.PaginationResponse
+	261, // 88: finance.v1.ExportMBHeadsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 89: finance.v1.ExportMBHeadsResponse.base:type_name -> common.v1.BaseResponse
+	261, // 90: finance.v1.ExportMBRecipeFullRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 91: finance.v1.ExportMBRecipeFullResponse.base:type_name -> common.v1.BaseResponse
+	260, // 92: finance.v1.ImportMBHeadsResponse.base:type_name -> common.v1.BaseResponse
+	263, // 93: finance.v1.ImportMBHeadsResponse.errors:type_name -> finance.v1.ImportError
+	260, // 94: finance.v1.DownloadMBHeadTemplateResponse.base:type_name -> common.v1.BaseResponse
+	260, // 95: finance.v1.SubmitMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 96: finance.v1.SubmitMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 97: finance.v1.ApproveMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 98: finance.v1.ApproveMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 99: finance.v1.ValidateMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 100: finance.v1.ValidateMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 101: finance.v1.UnApproveMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 102: finance.v1.UnApproveMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 103: finance.v1.RevokeMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 104: finance.v1.RevokeMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 105: finance.v1.RejectMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 106: finance.v1.RejectMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 107: finance.v1.ReturnMBHeadToDraftResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 108: finance.v1.ReturnMBHeadToDraftResponse.data:type_name -> finance.v1.MBHead
+	260, // 109: finance.v1.RequestUnlockMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 110: finance.v1.RequestUnlockMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 111: finance.v1.GrantUnlockMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 112: finance.v1.GrantUnlockMBHeadResponse.data:type_name -> finance.v1.MBHead
+	260, // 113: finance.v1.RejectUnlockMBHeadResponse.base:type_name -> common.v1.BaseResponse
+	76,  // 114: finance.v1.RejectUnlockMBHeadResponse.data:type_name -> finance.v1.MBHead
+	259, // 115: finance.v1.MBSpin.audit:type_name -> common.v1.AuditInfo
+	260, // 116: finance.v1.CreateMBSpinResponse.base:type_name -> common.v1.BaseResponse
+	115, // 117: finance.v1.CreateMBSpinResponse.data:type_name -> finance.v1.MBSpin
+	260, // 118: finance.v1.GetMBSpinResponse.base:type_name -> common.v1.BaseResponse
+	115, // 119: finance.v1.GetMBSpinResponse.data:type_name -> finance.v1.MBSpin
+	260, // 120: finance.v1.UpdateMBSpinResponse.base:type_name -> common.v1.BaseResponse
+	115, // 121: finance.v1.UpdateMBSpinResponse.data:type_name -> finance.v1.MBSpin
+	260, // 122: finance.v1.DeleteMBSpinResponse.base:type_name -> common.v1.BaseResponse
+	261, // 123: finance.v1.ListMBSpinsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 124: finance.v1.ListMBSpinsResponse.base:type_name -> common.v1.BaseResponse
+	115, // 125: finance.v1.ListMBSpinsResponse.data:type_name -> finance.v1.MBSpin
+	262, // 126: finance.v1.ListMBSpinsResponse.pagination:type_name -> common.v1.PaginationResponse
+	260, // 127: finance.v1.ExportMBSpinsResponse.base:type_name -> common.v1.BaseResponse
+	260, // 128: finance.v1.ImportMBSpinsResponse.base:type_name -> common.v1.BaseResponse
+	263, // 129: finance.v1.ImportMBSpinsResponse.errors:type_name -> finance.v1.ImportError
+	260, // 130: finance.v1.DownloadMBSpinTemplateResponse.base:type_name -> common.v1.BaseResponse
+	260, // 131: finance.v1.DuplicateMBSpinResponse.base:type_name -> common.v1.BaseResponse
+	115, // 132: finance.v1.DuplicateMBSpinResponse.data:type_name -> finance.v1.MBSpin
+	133, // 133: finance.v1.DuplicateMBSpinResponse.skipped:type_name -> finance.v1.MBSpinRecalcSkipped
+	255, // 134: finance.v1.DuplicateMBSpinResponse.impact_preview:type_name -> finance.v1.DozingImpactRow
+	260, // 135: finance.v1.GetLookupFillValuesResponse.base:type_name -> common.v1.BaseResponse
+	257, // 136: finance.v1.GetLookupFillValuesResponse.numeric_fills:type_name -> finance.v1.GetLookupFillValuesResponse.NumericFillsEntry
+	258, // 137: finance.v1.GetLookupFillValuesResponse.text_fills:type_name -> finance.v1.GetLookupFillValuesResponse.TextFillsEntry
+	260, // 138: finance.v1.ListLookupMastersResponse.base:type_name -> common.v1.BaseResponse
+	137, // 139: finance.v1.ListLookupMastersResponse.data:type_name -> finance.v1.LookupMaster
+	260, // 140: finance.v1.ListLookupMasterColumnsResponse.base:type_name -> common.v1.BaseResponse
+	140, // 141: finance.v1.ListLookupMasterColumnsResponse.data:type_name -> finance.v1.LookupMasterColumn
+	260, // 142: finance.v1.CreateLookupMasterResponse.base:type_name -> common.v1.BaseResponse
+	137, // 143: finance.v1.CreateLookupMasterResponse.data:type_name -> finance.v1.LookupMaster
+	260, // 144: finance.v1.DeleteLookupMasterResponse.base:type_name -> common.v1.BaseResponse
+	260, // 145: finance.v1.CreateLookupMasterColumnResponse.base:type_name -> common.v1.BaseResponse
+	140, // 146: finance.v1.CreateLookupMasterColumnResponse.data:type_name -> finance.v1.LookupMasterColumn
+	260, // 147: finance.v1.DeleteLookupMasterColumnResponse.base:type_name -> common.v1.BaseResponse
+	260, // 148: finance.v1.UpdateLookupMasterResponse.base:type_name -> common.v1.BaseResponse
+	137, // 149: finance.v1.UpdateLookupMasterResponse.data:type_name -> finance.v1.LookupMaster
+	260, // 150: finance.v1.ListTableColumnsResponse.base:type_name -> common.v1.BaseResponse
+	153, // 151: finance.v1.ListTableColumnsResponse.data:type_name -> finance.v1.TableColumn
+	260, // 152: finance.v1.ListMasterOptionsResponse.base:type_name -> common.v1.BaseResponse
+	156, // 153: finance.v1.ListMasterOptionsResponse.data:type_name -> finance.v1.MasterOption
+	260, // 154: finance.v1.ExportLookupMastersResponse.base:type_name -> common.v1.BaseResponse
+	260, // 155: finance.v1.ImportLookupMastersResponse.base:type_name -> common.v1.BaseResponse
+	259, // 156: finance.v1.MbComposition.audit:type_name -> common.v1.AuditInfo
+	259, // 157: finance.v1.MbLusture.audit:type_name -> common.v1.AuditInfo
+	259, // 158: finance.v1.MbParam.audit:type_name -> common.v1.AuditInfo
+	167, // 159: finance.v1.MbParam.options:type_name -> finance.v1.MbParamOption
+	260, // 160: finance.v1.CreateMbCompositionResponse.base:type_name -> common.v1.BaseResponse
+	163, // 161: finance.v1.CreateMbCompositionResponse.data:type_name -> finance.v1.MbComposition
+	260, // 162: finance.v1.UpdateMbCompositionResponse.base:type_name -> common.v1.BaseResponse
+	163, // 163: finance.v1.UpdateMbCompositionResponse.data:type_name -> finance.v1.MbComposition
+	260, // 164: finance.v1.DeleteMbCompositionResponse.base:type_name -> common.v1.BaseResponse
+	260, // 165: finance.v1.ListMbCompositionsResponse.base:type_name -> common.v1.BaseResponse
+	163, // 166: finance.v1.ListMbCompositionsResponse.data:type_name -> finance.v1.MbComposition
+	260, // 167: finance.v1.ListMbCompositionVersionsResponse.base:type_name -> common.v1.BaseResponse
+	164, // 168: finance.v1.ListMbCompositionVersionsResponse.data:type_name -> finance.v1.MbCompositionVersion
+	260, // 169: finance.v1.CreateMbLustureResponse.base:type_name -> common.v1.BaseResponse
+	165, // 170: finance.v1.CreateMbLustureResponse.data:type_name -> finance.v1.MbLusture
+	260, // 171: finance.v1.UpdateMbLustureResponse.base:type_name -> common.v1.BaseResponse
+	165, // 172: finance.v1.UpdateMbLustureResponse.data:type_name -> finance.v1.MbLusture
+	260, // 173: finance.v1.DeleteMbLustureResponse.base:type_name -> common.v1.BaseResponse
+	260, // 174: finance.v1.GetMbLustureResponse.base:type_name -> common.v1.BaseResponse
+	165, // 175: finance.v1.GetMbLustureResponse.data:type_name -> finance.v1.MbLusture
+	261, // 176: finance.v1.ListMbLustureRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 177: finance.v1.ListMbLustureResponse.base:type_name -> common.v1.BaseResponse
+	165, // 178: finance.v1.ListMbLustureResponse.data:type_name -> finance.v1.MbLusture
+	262, // 179: finance.v1.ListMbLustureResponse.pagination:type_name -> common.v1.PaginationResponse
+	261, // 180: finance.v1.ExportMbLustureRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 181: finance.v1.ExportMbLustureResponse.base:type_name -> common.v1.BaseResponse
+	260, // 182: finance.v1.ImportMbLustureResponse.base:type_name -> common.v1.BaseResponse
+	263, // 183: finance.v1.ImportMbLustureResponse.errors:type_name -> finance.v1.ImportError
+	260, // 184: finance.v1.DownloadMbLustureTemplateResponse.base:type_name -> common.v1.BaseResponse
+	260, // 185: finance.v1.CreateMbParamResponse.base:type_name -> common.v1.BaseResponse
+	166, // 186: finance.v1.CreateMbParamResponse.data:type_name -> finance.v1.MbParam
+	260, // 187: finance.v1.UpdateMbParamResponse.base:type_name -> common.v1.BaseResponse
+	166, // 188: finance.v1.UpdateMbParamResponse.data:type_name -> finance.v1.MbParam
+	260, // 189: finance.v1.DeleteMbParamResponse.base:type_name -> common.v1.BaseResponse
+	261, // 190: finance.v1.ListMbParamsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 191: finance.v1.ListMbParamsResponse.base:type_name -> common.v1.BaseResponse
+	166, // 192: finance.v1.ListMbParamsResponse.data:type_name -> finance.v1.MbParam
+	262, // 193: finance.v1.ListMbParamsResponse.pagination:type_name -> common.v1.PaginationResponse
+	261, // 194: finance.v1.ExportMbParamsRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 195: finance.v1.ExportMbParamsResponse.base:type_name -> common.v1.BaseResponse
+	260, // 196: finance.v1.ImportMbParamsResponse.base:type_name -> common.v1.BaseResponse
+	263, // 197: finance.v1.ImportMbParamsResponse.errors:type_name -> finance.v1.ImportError
+	260, // 198: finance.v1.DownloadMbParamTemplateResponse.base:type_name -> common.v1.BaseResponse
+	260, // 199: finance.v1.CreateMbParamOptionResponse.base:type_name -> common.v1.BaseResponse
+	167, // 200: finance.v1.CreateMbParamOptionResponse.data:type_name -> finance.v1.MbParamOption
+	260, // 201: finance.v1.UpdateMbParamOptionResponse.base:type_name -> common.v1.BaseResponse
+	167, // 202: finance.v1.UpdateMbParamOptionResponse.data:type_name -> finance.v1.MbParamOption
+	260, // 203: finance.v1.DeleteMbParamOptionResponse.base:type_name -> common.v1.BaseResponse
+	260, // 204: finance.v1.PreviewPushToHeadResponse.base:type_name -> common.v1.BaseResponse
+	218, // 205: finance.v1.PreviewPushToHeadResponse.pushable:type_name -> finance.v1.PushableMbHead
+	219, // 206: finance.v1.PreviewPushToHeadResponse.skipped:type_name -> finance.v1.SkippedMbHead
+	260, // 207: finance.v1.ExecutePushToHeadResponse.base:type_name -> common.v1.BaseResponse
+	169, // 208: finance.v1.ExecutePushToHeadResponse.data:type_name -> finance.v1.MbPushLog
+	260, // 209: finance.v1.ListMbPushLogsResponse.base:type_name -> common.v1.BaseResponse
+	169, // 210: finance.v1.ListMbPushLogsResponse.data:type_name -> finance.v1.MbPushLog
+	262, // 211: finance.v1.ListMbPushLogsResponse.pagination:type_name -> common.v1.PaginationResponse
+	260, // 212: finance.v1.ListMbWorkflowLogsResponse.base:type_name -> common.v1.BaseResponse
+	170, // 213: finance.v1.ListMbWorkflowLogsResponse.data:type_name -> finance.v1.MbWorkflowLog
+	260, // 214: finance.v1.TriggerMbBatchResponse.base:type_name -> common.v1.BaseResponse
+	228, // 215: finance.v1.TriggerMbBatchResponse.errors:type_name -> finance.v1.MbBatchError
+	259, // 216: finance.v1.MbCrossSection.audit:type_name -> common.v1.AuditInfo
+	259, // 217: finance.v1.MbCrossSectionFactor.audit:type_name -> common.v1.AuditInfo
+	260, // 218: finance.v1.CreateMbCrossSectionResponse.base:type_name -> common.v1.BaseResponse
+	230, // 219: finance.v1.CreateMbCrossSectionResponse.data:type_name -> finance.v1.MbCrossSection
+	260, // 220: finance.v1.GetMbCrossSectionResponse.base:type_name -> common.v1.BaseResponse
+	230, // 221: finance.v1.GetMbCrossSectionResponse.data:type_name -> finance.v1.MbCrossSection
+	261, // 222: finance.v1.ListMbCrossSectionRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 223: finance.v1.ListMbCrossSectionResponse.base:type_name -> common.v1.BaseResponse
+	230, // 224: finance.v1.ListMbCrossSectionResponse.data:type_name -> finance.v1.MbCrossSection
+	262, // 225: finance.v1.ListMbCrossSectionResponse.pagination:type_name -> common.v1.PaginationResponse
+	260, // 226: finance.v1.UpdateMbCrossSectionResponse.base:type_name -> common.v1.BaseResponse
+	230, // 227: finance.v1.UpdateMbCrossSectionResponse.data:type_name -> finance.v1.MbCrossSection
+	260, // 228: finance.v1.DeleteMbCrossSectionResponse.base:type_name -> common.v1.BaseResponse
+	260, // 229: finance.v1.CreateMbCrossSectionFactorResponse.base:type_name -> common.v1.BaseResponse
+	231, // 230: finance.v1.CreateMbCrossSectionFactorResponse.data:type_name -> finance.v1.MbCrossSectionFactor
+	260, // 231: finance.v1.GetMbCrossSectionFactorResponse.base:type_name -> common.v1.BaseResponse
+	231, // 232: finance.v1.GetMbCrossSectionFactorResponse.data:type_name -> finance.v1.MbCrossSectionFactor
+	261, // 233: finance.v1.ListMbCrossSectionFactorRequest.active_filter:type_name -> finance.v1.ActiveFilter
+	260, // 234: finance.v1.ListMbCrossSectionFactorResponse.base:type_name -> common.v1.BaseResponse
+	231, // 235: finance.v1.ListMbCrossSectionFactorResponse.data:type_name -> finance.v1.MbCrossSectionFactor
+	262, // 236: finance.v1.ListMbCrossSectionFactorResponse.pagination:type_name -> common.v1.PaginationResponse
+	260, // 237: finance.v1.UpdateMbCrossSectionFactorResponse.base:type_name -> common.v1.BaseResponse
+	231, // 238: finance.v1.UpdateMbCrossSectionFactorResponse.data:type_name -> finance.v1.MbCrossSectionFactor
+	260, // 239: finance.v1.DeleteMbCrossSectionFactorResponse.base:type_name -> common.v1.BaseResponse
+	260, // 240: finance.v1.CalculateDozingResponse.base:type_name -> common.v1.BaseResponse
+	260, // 241: finance.v1.PreviewDozingImpactResponse.base:type_name -> common.v1.BaseResponse
+	255, // 242: finance.v1.PreviewDozingImpactResponse.data:type_name -> finance.v1.DozingImpactRow
+	2,   // 243: finance.v1.MachineService.CreateMachine:input_type -> finance.v1.CreateMachineRequest
+	4,   // 244: finance.v1.MachineService.GetMachine:input_type -> finance.v1.GetMachineRequest
+	10,  // 245: finance.v1.MachineService.ListMachines:input_type -> finance.v1.ListMachinesRequest
+	6,   // 246: finance.v1.MachineService.UpdateMachine:input_type -> finance.v1.UpdateMachineRequest
+	8,   // 247: finance.v1.MachineService.DeleteMachine:input_type -> finance.v1.DeleteMachineRequest
+	12,  // 248: finance.v1.MachineService.ExportMachines:input_type -> finance.v1.ExportMachinesRequest
+	14,  // 249: finance.v1.MachineService.ImportMachines:input_type -> finance.v1.ImportMachinesRequest
+	16,  // 250: finance.v1.MachineService.DownloadMachineTemplate:input_type -> finance.v1.DownloadMachineTemplateRequest
+	20,  // 251: finance.v1.BoxBobbinCostService.CreateBoxBobbinCost:input_type -> finance.v1.CreateBoxBobbinCostRequest
+	22,  // 252: finance.v1.BoxBobbinCostService.GetBoxBobbinCost:input_type -> finance.v1.GetBoxBobbinCostRequest
+	28,  // 253: finance.v1.BoxBobbinCostService.ListBoxBobbinCosts:input_type -> finance.v1.ListBoxBobbinCostsRequest
+	24,  // 254: finance.v1.BoxBobbinCostService.UpdateBoxBobbinCost:input_type -> finance.v1.UpdateBoxBobbinCostRequest
+	26,  // 255: finance.v1.BoxBobbinCostService.DeleteBoxBobbinCost:input_type -> finance.v1.DeleteBoxBobbinCostRequest
+	30,  // 256: finance.v1.BoxBobbinCostService.CreateBoxBobbinCostRate:input_type -> finance.v1.CreateBoxBobbinCostRateRequest
+	32,  // 257: finance.v1.BoxBobbinCostService.DeleteBoxBobbinCostRate:input_type -> finance.v1.DeleteBoxBobbinCostRateRequest
+	34,  // 258: finance.v1.BoxBobbinCostService.ExportBoxBobbinCosts:input_type -> finance.v1.ExportBoxBobbinCostsRequest
+	36,  // 259: finance.v1.BoxBobbinCostService.ImportBoxBobbinCosts:input_type -> finance.v1.ImportBoxBobbinCostsRequest
+	38,  // 260: finance.v1.BoxBobbinCostService.DownloadBoxBobbinCostTemplate:input_type -> finance.v1.DownloadBoxBobbinCostTemplateRequest
+	41,  // 261: finance.v1.InterminglingService.CreateIntermingling:input_type -> finance.v1.CreateInterminglingRequest
+	43,  // 262: finance.v1.InterminglingService.GetIntermingling:input_type -> finance.v1.GetInterminglingRequest
+	49,  // 263: finance.v1.InterminglingService.ListInterminglings:input_type -> finance.v1.ListInterminglingsRequest
+	45,  // 264: finance.v1.InterminglingService.UpdateIntermingling:input_type -> finance.v1.UpdateInterminglingRequest
+	47,  // 265: finance.v1.InterminglingService.DeleteIntermingling:input_type -> finance.v1.DeleteInterminglingRequest
+	51,  // 266: finance.v1.InterminglingService.ExportInterminglings:input_type -> finance.v1.ExportInterminglingsRequest
+	53,  // 267: finance.v1.InterminglingService.ImportInterminglings:input_type -> finance.v1.ImportInterminglingsRequest
+	55,  // 268: finance.v1.InterminglingService.DownloadInterminglingTemplate:input_type -> finance.v1.DownloadInterminglingTemplateRequest
+	58,  // 269: finance.v1.ProductGradeService.CreateProductGrade:input_type -> finance.v1.CreateProductGradeRequest
+	60,  // 270: finance.v1.ProductGradeService.GetProductGrade:input_type -> finance.v1.GetProductGradeRequest
+	66,  // 271: finance.v1.ProductGradeService.ListProductGrades:input_type -> finance.v1.ListProductGradesRequest
+	62,  // 272: finance.v1.ProductGradeService.UpdateProductGrade:input_type -> finance.v1.UpdateProductGradeRequest
+	64,  // 273: finance.v1.ProductGradeService.DeleteProductGrade:input_type -> finance.v1.DeleteProductGradeRequest
+	68,  // 274: finance.v1.ProductGradeService.ExportProductGrades:input_type -> finance.v1.ExportProductGradesRequest
+	70,  // 275: finance.v1.ProductGradeService.ImportProductGrades:input_type -> finance.v1.ImportProductGradesRequest
+	72,  // 276: finance.v1.ProductGradeService.DownloadProductGradeTemplate:input_type -> finance.v1.DownloadProductGradeTemplateRequest
+	77,  // 277: finance.v1.MBHeadService.CreateMBHead:input_type -> finance.v1.CreateMBHeadRequest
+	79,  // 278: finance.v1.MBHeadService.GetMBHead:input_type -> finance.v1.GetMBHeadRequest
+	85,  // 279: finance.v1.MBHeadService.ListMBHeads:input_type -> finance.v1.ListMBHeadsRequest
+	81,  // 280: finance.v1.MBHeadService.UpdateMBHead:input_type -> finance.v1.UpdateMBHeadRequest
+	83,  // 281: finance.v1.MBHeadService.DeleteMBHead:input_type -> finance.v1.DeleteMBHeadRequest
+	87,  // 282: finance.v1.MBHeadService.ExportMBHeads:input_type -> finance.v1.ExportMBHeadsRequest
+	89,  // 283: finance.v1.MBHeadService.ExportMBRecipeFull:input_type -> finance.v1.ExportMBRecipeFullRequest
+	91,  // 284: finance.v1.MBHeadService.ImportMBHeads:input_type -> finance.v1.ImportMBHeadsRequest
+	93,  // 285: finance.v1.MBHeadService.DownloadMBHeadTemplate:input_type -> finance.v1.DownloadMBHeadTemplateRequest
+	95,  // 286: finance.v1.MBHeadService.SubmitMBHead:input_type -> finance.v1.SubmitMBHeadRequest
+	97,  // 287: finance.v1.MBHeadService.ApproveMBHead:input_type -> finance.v1.ApproveMBHeadRequest
+	99,  // 288: finance.v1.MBHeadService.ValidateMBHead:input_type -> finance.v1.ValidateMBHeadRequest
+	101, // 289: finance.v1.MBHeadService.UnApproveMBHead:input_type -> finance.v1.UnApproveMBHeadRequest
+	103, // 290: finance.v1.MBHeadService.RevokeMBHead:input_type -> finance.v1.RevokeMBHeadRequest
+	105, // 291: finance.v1.MBHeadService.RejectMBHead:input_type -> finance.v1.RejectMBHeadRequest
+	107, // 292: finance.v1.MBHeadService.ReturnMBHeadToDraft:input_type -> finance.v1.ReturnMBHeadToDraftRequest
+	109, // 293: finance.v1.MBHeadService.RequestUnlockMBHead:input_type -> finance.v1.RequestUnlockMBHeadRequest
+	111, // 294: finance.v1.MBHeadService.GrantUnlockMBHead:input_type -> finance.v1.GrantUnlockMBHeadRequest
+	113, // 295: finance.v1.MBHeadService.RejectUnlockMBHead:input_type -> finance.v1.RejectUnlockMBHeadRequest
+	116, // 296: finance.v1.MBSpinService.CreateMBSpin:input_type -> finance.v1.CreateMBSpinRequest
+	118, // 297: finance.v1.MBSpinService.GetMBSpin:input_type -> finance.v1.GetMBSpinRequest
+	124, // 298: finance.v1.MBSpinService.ListMBSpins:input_type -> finance.v1.ListMBSpinsRequest
+	120, // 299: finance.v1.MBSpinService.UpdateMBSpin:input_type -> finance.v1.UpdateMBSpinRequest
+	122, // 300: finance.v1.MBSpinService.DeleteMBSpin:input_type -> finance.v1.DeleteMBSpinRequest
+	126, // 301: finance.v1.MBSpinService.ExportMBSpins:input_type -> finance.v1.ExportMBSpinsRequest
+	128, // 302: finance.v1.MBSpinService.ImportMBSpins:input_type -> finance.v1.ImportMBSpinsRequest
+	130, // 303: finance.v1.MBSpinService.DownloadMBSpinTemplate:input_type -> finance.v1.DownloadMBSpinTemplateRequest
+	132, // 304: finance.v1.MBSpinService.DuplicateMBSpin:input_type -> finance.v1.DuplicateMBSpinRequest
+	138, // 305: finance.v1.LookupMasterService.ListLookupMasters:input_type -> finance.v1.ListLookupMastersRequest
+	141, // 306: finance.v1.LookupMasterService.ListLookupMasterColumns:input_type -> finance.v1.ListLookupMasterColumnsRequest
+	143, // 307: finance.v1.LookupMasterService.CreateLookupMaster:input_type -> finance.v1.CreateLookupMasterRequest
+	145, // 308: finance.v1.LookupMasterService.DeleteLookupMaster:input_type -> finance.v1.DeleteLookupMasterRequest
+	147, // 309: finance.v1.LookupMasterService.CreateLookupMasterColumn:input_type -> finance.v1.CreateLookupMasterColumnRequest
+	149, // 310: finance.v1.LookupMasterService.DeleteLookupMasterColumn:input_type -> finance.v1.DeleteLookupMasterColumnRequest
+	151, // 311: finance.v1.LookupMasterService.UpdateLookupMaster:input_type -> finance.v1.UpdateLookupMasterRequest
+	154, // 312: finance.v1.LookupMasterService.ListTableColumns:input_type -> finance.v1.ListTableColumnsRequest
+	157, // 313: finance.v1.LookupMasterService.ListMasterOptions:input_type -> finance.v1.ListMasterOptionsRequest
+	159, // 314: finance.v1.LookupMasterService.ExportLookupMasters:input_type -> finance.v1.ExportLookupMastersRequest
+	161, // 315: finance.v1.LookupMasterService.ImportLookupMasters:input_type -> finance.v1.ImportLookupMastersRequest
+	135, // 316: finance.v1.YarnLookupFillService.GetLookupFillValues:input_type -> finance.v1.GetLookupFillValuesRequest
+	171, // 317: finance.v1.MbCompositionService.CreateMbComposition:input_type -> finance.v1.CreateMbCompositionRequest
+	173, // 318: finance.v1.MbCompositionService.UpdateMbComposition:input_type -> finance.v1.UpdateMbCompositionRequest
+	175, // 319: finance.v1.MbCompositionService.DeleteMbComposition:input_type -> finance.v1.DeleteMbCompositionRequest
+	177, // 320: finance.v1.MbCompositionService.ListMbCompositions:input_type -> finance.v1.ListMbCompositionsRequest
+	179, // 321: finance.v1.MbCompositionService.ListMbCompositionVersions:input_type -> finance.v1.ListMbCompositionVersionsRequest
+	181, // 322: finance.v1.MbLustureService.CreateMbLusture:input_type -> finance.v1.CreateMbLustureRequest
+	183, // 323: finance.v1.MbLustureService.UpdateMbLusture:input_type -> finance.v1.UpdateMbLustureRequest
+	185, // 324: finance.v1.MbLustureService.DeleteMbLusture:input_type -> finance.v1.DeleteMbLustureRequest
+	187, // 325: finance.v1.MbLustureService.GetMbLusture:input_type -> finance.v1.GetMbLustureRequest
+	189, // 326: finance.v1.MbLustureService.ListMbLusture:input_type -> finance.v1.ListMbLustureRequest
+	191, // 327: finance.v1.MbLustureService.ExportMbLusture:input_type -> finance.v1.ExportMbLustureRequest
+	193, // 328: finance.v1.MbLustureService.ImportMbLusture:input_type -> finance.v1.ImportMbLustureRequest
+	195, // 329: finance.v1.MbLustureService.DownloadMbLustureTemplate:input_type -> finance.v1.DownloadMbLustureTemplateRequest
+	197, // 330: finance.v1.MbParamService.CreateMbParam:input_type -> finance.v1.CreateMbParamRequest
+	199, // 331: finance.v1.MbParamService.UpdateMbParam:input_type -> finance.v1.UpdateMbParamRequest
+	201, // 332: finance.v1.MbParamService.DeleteMbParam:input_type -> finance.v1.DeleteMbParamRequest
+	203, // 333: finance.v1.MbParamService.ListMbParams:input_type -> finance.v1.ListMbParamsRequest
+	211, // 334: finance.v1.MbParamService.CreateMbParamOption:input_type -> finance.v1.CreateMbParamOptionRequest
+	213, // 335: finance.v1.MbParamService.UpdateMbParamOption:input_type -> finance.v1.UpdateMbParamOptionRequest
+	215, // 336: finance.v1.MbParamService.DeleteMbParamOption:input_type -> finance.v1.DeleteMbParamOptionRequest
+	205, // 337: finance.v1.MbParamService.ExportMbParams:input_type -> finance.v1.ExportMbParamsRequest
+	207, // 338: finance.v1.MbParamService.ImportMbParams:input_type -> finance.v1.ImportMbParamsRequest
+	209, // 339: finance.v1.MbParamService.DownloadMbParamTemplate:input_type -> finance.v1.DownloadMbParamTemplateRequest
+	217, // 340: finance.v1.MbPushService.PreviewPushToHead:input_type -> finance.v1.PreviewPushToHeadRequest
+	221, // 341: finance.v1.MbPushService.ExecutePushToHead:input_type -> finance.v1.ExecutePushToHeadRequest
+	223, // 342: finance.v1.MbPushService.ListMbPushLogs:input_type -> finance.v1.ListMbPushLogsRequest
+	225, // 343: finance.v1.MbWorkflowLogService.ListMbWorkflowLogs:input_type -> finance.v1.ListMbWorkflowLogsRequest
+	227, // 344: finance.v1.MbBatchService.TriggerMbBatch:input_type -> finance.v1.TriggerMbBatchRequest
+	232, // 345: finance.v1.MbCrossSectionService.CreateMbCrossSection:input_type -> finance.v1.CreateMbCrossSectionRequest
+	234, // 346: finance.v1.MbCrossSectionService.GetMbCrossSection:input_type -> finance.v1.GetMbCrossSectionRequest
+	236, // 347: finance.v1.MbCrossSectionService.ListMbCrossSection:input_type -> finance.v1.ListMbCrossSectionRequest
+	238, // 348: finance.v1.MbCrossSectionService.UpdateMbCrossSection:input_type -> finance.v1.UpdateMbCrossSectionRequest
+	240, // 349: finance.v1.MbCrossSectionService.DeleteMbCrossSection:input_type -> finance.v1.DeleteMbCrossSectionRequest
+	242, // 350: finance.v1.MbCrossSectionFactorService.CreateMbCrossSectionFactor:input_type -> finance.v1.CreateMbCrossSectionFactorRequest
+	244, // 351: finance.v1.MbCrossSectionFactorService.GetMbCrossSectionFactor:input_type -> finance.v1.GetMbCrossSectionFactorRequest
+	246, // 352: finance.v1.MbCrossSectionFactorService.ListMbCrossSectionFactor:input_type -> finance.v1.ListMbCrossSectionFactorRequest
+	248, // 353: finance.v1.MbCrossSectionFactorService.UpdateMbCrossSectionFactor:input_type -> finance.v1.UpdateMbCrossSectionFactorRequest
+	250, // 354: finance.v1.MbCrossSectionFactorService.DeleteMbCrossSectionFactor:input_type -> finance.v1.DeleteMbCrossSectionFactorRequest
+	252, // 355: finance.v1.MBDozingService.CalculateDozing:input_type -> finance.v1.CalculateDozingRequest
+	254, // 356: finance.v1.MBDozingService.PreviewDozingImpact:input_type -> finance.v1.PreviewDozingImpactRequest
+	3,   // 357: finance.v1.MachineService.CreateMachine:output_type -> finance.v1.CreateMachineResponse
+	5,   // 358: finance.v1.MachineService.GetMachine:output_type -> finance.v1.GetMachineResponse
+	11,  // 359: finance.v1.MachineService.ListMachines:output_type -> finance.v1.ListMachinesResponse
+	7,   // 360: finance.v1.MachineService.UpdateMachine:output_type -> finance.v1.UpdateMachineResponse
+	9,   // 361: finance.v1.MachineService.DeleteMachine:output_type -> finance.v1.DeleteMachineResponse
+	13,  // 362: finance.v1.MachineService.ExportMachines:output_type -> finance.v1.ExportMachinesResponse
+	15,  // 363: finance.v1.MachineService.ImportMachines:output_type -> finance.v1.ImportMachinesResponse
+	17,  // 364: finance.v1.MachineService.DownloadMachineTemplate:output_type -> finance.v1.DownloadMachineTemplateResponse
+	21,  // 365: finance.v1.BoxBobbinCostService.CreateBoxBobbinCost:output_type -> finance.v1.CreateBoxBobbinCostResponse
+	23,  // 366: finance.v1.BoxBobbinCostService.GetBoxBobbinCost:output_type -> finance.v1.GetBoxBobbinCostResponse
+	29,  // 367: finance.v1.BoxBobbinCostService.ListBoxBobbinCosts:output_type -> finance.v1.ListBoxBobbinCostsResponse
+	25,  // 368: finance.v1.BoxBobbinCostService.UpdateBoxBobbinCost:output_type -> finance.v1.UpdateBoxBobbinCostResponse
+	27,  // 369: finance.v1.BoxBobbinCostService.DeleteBoxBobbinCost:output_type -> finance.v1.DeleteBoxBobbinCostResponse
+	31,  // 370: finance.v1.BoxBobbinCostService.CreateBoxBobbinCostRate:output_type -> finance.v1.CreateBoxBobbinCostRateResponse
+	33,  // 371: finance.v1.BoxBobbinCostService.DeleteBoxBobbinCostRate:output_type -> finance.v1.DeleteBoxBobbinCostRateResponse
+	35,  // 372: finance.v1.BoxBobbinCostService.ExportBoxBobbinCosts:output_type -> finance.v1.ExportBoxBobbinCostsResponse
+	37,  // 373: finance.v1.BoxBobbinCostService.ImportBoxBobbinCosts:output_type -> finance.v1.ImportBoxBobbinCostsResponse
+	39,  // 374: finance.v1.BoxBobbinCostService.DownloadBoxBobbinCostTemplate:output_type -> finance.v1.DownloadBoxBobbinCostTemplateResponse
+	42,  // 375: finance.v1.InterminglingService.CreateIntermingling:output_type -> finance.v1.CreateInterminglingResponse
+	44,  // 376: finance.v1.InterminglingService.GetIntermingling:output_type -> finance.v1.GetInterminglingResponse
+	50,  // 377: finance.v1.InterminglingService.ListInterminglings:output_type -> finance.v1.ListInterminglingsResponse
+	46,  // 378: finance.v1.InterminglingService.UpdateIntermingling:output_type -> finance.v1.UpdateInterminglingResponse
+	48,  // 379: finance.v1.InterminglingService.DeleteIntermingling:output_type -> finance.v1.DeleteInterminglingResponse
+	52,  // 380: finance.v1.InterminglingService.ExportInterminglings:output_type -> finance.v1.ExportInterminglingsResponse
+	54,  // 381: finance.v1.InterminglingService.ImportInterminglings:output_type -> finance.v1.ImportInterminglingsResponse
+	56,  // 382: finance.v1.InterminglingService.DownloadInterminglingTemplate:output_type -> finance.v1.DownloadInterminglingTemplateResponse
+	59,  // 383: finance.v1.ProductGradeService.CreateProductGrade:output_type -> finance.v1.CreateProductGradeResponse
+	61,  // 384: finance.v1.ProductGradeService.GetProductGrade:output_type -> finance.v1.GetProductGradeResponse
+	67,  // 385: finance.v1.ProductGradeService.ListProductGrades:output_type -> finance.v1.ListProductGradesResponse
+	63,  // 386: finance.v1.ProductGradeService.UpdateProductGrade:output_type -> finance.v1.UpdateProductGradeResponse
+	65,  // 387: finance.v1.ProductGradeService.DeleteProductGrade:output_type -> finance.v1.DeleteProductGradeResponse
+	69,  // 388: finance.v1.ProductGradeService.ExportProductGrades:output_type -> finance.v1.ExportProductGradesResponse
+	71,  // 389: finance.v1.ProductGradeService.ImportProductGrades:output_type -> finance.v1.ImportProductGradesResponse
+	73,  // 390: finance.v1.ProductGradeService.DownloadProductGradeTemplate:output_type -> finance.v1.DownloadProductGradeTemplateResponse
+	78,  // 391: finance.v1.MBHeadService.CreateMBHead:output_type -> finance.v1.CreateMBHeadResponse
+	80,  // 392: finance.v1.MBHeadService.GetMBHead:output_type -> finance.v1.GetMBHeadResponse
+	86,  // 393: finance.v1.MBHeadService.ListMBHeads:output_type -> finance.v1.ListMBHeadsResponse
+	82,  // 394: finance.v1.MBHeadService.UpdateMBHead:output_type -> finance.v1.UpdateMBHeadResponse
+	84,  // 395: finance.v1.MBHeadService.DeleteMBHead:output_type -> finance.v1.DeleteMBHeadResponse
+	88,  // 396: finance.v1.MBHeadService.ExportMBHeads:output_type -> finance.v1.ExportMBHeadsResponse
+	90,  // 397: finance.v1.MBHeadService.ExportMBRecipeFull:output_type -> finance.v1.ExportMBRecipeFullResponse
+	92,  // 398: finance.v1.MBHeadService.ImportMBHeads:output_type -> finance.v1.ImportMBHeadsResponse
+	94,  // 399: finance.v1.MBHeadService.DownloadMBHeadTemplate:output_type -> finance.v1.DownloadMBHeadTemplateResponse
+	96,  // 400: finance.v1.MBHeadService.SubmitMBHead:output_type -> finance.v1.SubmitMBHeadResponse
+	98,  // 401: finance.v1.MBHeadService.ApproveMBHead:output_type -> finance.v1.ApproveMBHeadResponse
+	100, // 402: finance.v1.MBHeadService.ValidateMBHead:output_type -> finance.v1.ValidateMBHeadResponse
+	102, // 403: finance.v1.MBHeadService.UnApproveMBHead:output_type -> finance.v1.UnApproveMBHeadResponse
+	104, // 404: finance.v1.MBHeadService.RevokeMBHead:output_type -> finance.v1.RevokeMBHeadResponse
+	106, // 405: finance.v1.MBHeadService.RejectMBHead:output_type -> finance.v1.RejectMBHeadResponse
+	108, // 406: finance.v1.MBHeadService.ReturnMBHeadToDraft:output_type -> finance.v1.ReturnMBHeadToDraftResponse
+	110, // 407: finance.v1.MBHeadService.RequestUnlockMBHead:output_type -> finance.v1.RequestUnlockMBHeadResponse
+	112, // 408: finance.v1.MBHeadService.GrantUnlockMBHead:output_type -> finance.v1.GrantUnlockMBHeadResponse
+	114, // 409: finance.v1.MBHeadService.RejectUnlockMBHead:output_type -> finance.v1.RejectUnlockMBHeadResponse
+	117, // 410: finance.v1.MBSpinService.CreateMBSpin:output_type -> finance.v1.CreateMBSpinResponse
+	119, // 411: finance.v1.MBSpinService.GetMBSpin:output_type -> finance.v1.GetMBSpinResponse
+	125, // 412: finance.v1.MBSpinService.ListMBSpins:output_type -> finance.v1.ListMBSpinsResponse
+	121, // 413: finance.v1.MBSpinService.UpdateMBSpin:output_type -> finance.v1.UpdateMBSpinResponse
+	123, // 414: finance.v1.MBSpinService.DeleteMBSpin:output_type -> finance.v1.DeleteMBSpinResponse
+	127, // 415: finance.v1.MBSpinService.ExportMBSpins:output_type -> finance.v1.ExportMBSpinsResponse
+	129, // 416: finance.v1.MBSpinService.ImportMBSpins:output_type -> finance.v1.ImportMBSpinsResponse
+	131, // 417: finance.v1.MBSpinService.DownloadMBSpinTemplate:output_type -> finance.v1.DownloadMBSpinTemplateResponse
+	134, // 418: finance.v1.MBSpinService.DuplicateMBSpin:output_type -> finance.v1.DuplicateMBSpinResponse
+	139, // 419: finance.v1.LookupMasterService.ListLookupMasters:output_type -> finance.v1.ListLookupMastersResponse
+	142, // 420: finance.v1.LookupMasterService.ListLookupMasterColumns:output_type -> finance.v1.ListLookupMasterColumnsResponse
+	144, // 421: finance.v1.LookupMasterService.CreateLookupMaster:output_type -> finance.v1.CreateLookupMasterResponse
+	146, // 422: finance.v1.LookupMasterService.DeleteLookupMaster:output_type -> finance.v1.DeleteLookupMasterResponse
+	148, // 423: finance.v1.LookupMasterService.CreateLookupMasterColumn:output_type -> finance.v1.CreateLookupMasterColumnResponse
+	150, // 424: finance.v1.LookupMasterService.DeleteLookupMasterColumn:output_type -> finance.v1.DeleteLookupMasterColumnResponse
+	152, // 425: finance.v1.LookupMasterService.UpdateLookupMaster:output_type -> finance.v1.UpdateLookupMasterResponse
+	155, // 426: finance.v1.LookupMasterService.ListTableColumns:output_type -> finance.v1.ListTableColumnsResponse
+	158, // 427: finance.v1.LookupMasterService.ListMasterOptions:output_type -> finance.v1.ListMasterOptionsResponse
+	160, // 428: finance.v1.LookupMasterService.ExportLookupMasters:output_type -> finance.v1.ExportLookupMastersResponse
+	162, // 429: finance.v1.LookupMasterService.ImportLookupMasters:output_type -> finance.v1.ImportLookupMastersResponse
+	136, // 430: finance.v1.YarnLookupFillService.GetLookupFillValues:output_type -> finance.v1.GetLookupFillValuesResponse
+	172, // 431: finance.v1.MbCompositionService.CreateMbComposition:output_type -> finance.v1.CreateMbCompositionResponse
+	174, // 432: finance.v1.MbCompositionService.UpdateMbComposition:output_type -> finance.v1.UpdateMbCompositionResponse
+	176, // 433: finance.v1.MbCompositionService.DeleteMbComposition:output_type -> finance.v1.DeleteMbCompositionResponse
+	178, // 434: finance.v1.MbCompositionService.ListMbCompositions:output_type -> finance.v1.ListMbCompositionsResponse
+	180, // 435: finance.v1.MbCompositionService.ListMbCompositionVersions:output_type -> finance.v1.ListMbCompositionVersionsResponse
+	182, // 436: finance.v1.MbLustureService.CreateMbLusture:output_type -> finance.v1.CreateMbLustureResponse
+	184, // 437: finance.v1.MbLustureService.UpdateMbLusture:output_type -> finance.v1.UpdateMbLustureResponse
+	186, // 438: finance.v1.MbLustureService.DeleteMbLusture:output_type -> finance.v1.DeleteMbLustureResponse
+	188, // 439: finance.v1.MbLustureService.GetMbLusture:output_type -> finance.v1.GetMbLustureResponse
+	190, // 440: finance.v1.MbLustureService.ListMbLusture:output_type -> finance.v1.ListMbLustureResponse
+	192, // 441: finance.v1.MbLustureService.ExportMbLusture:output_type -> finance.v1.ExportMbLustureResponse
+	194, // 442: finance.v1.MbLustureService.ImportMbLusture:output_type -> finance.v1.ImportMbLustureResponse
+	196, // 443: finance.v1.MbLustureService.DownloadMbLustureTemplate:output_type -> finance.v1.DownloadMbLustureTemplateResponse
+	198, // 444: finance.v1.MbParamService.CreateMbParam:output_type -> finance.v1.CreateMbParamResponse
+	200, // 445: finance.v1.MbParamService.UpdateMbParam:output_type -> finance.v1.UpdateMbParamResponse
+	202, // 446: finance.v1.MbParamService.DeleteMbParam:output_type -> finance.v1.DeleteMbParamResponse
+	204, // 447: finance.v1.MbParamService.ListMbParams:output_type -> finance.v1.ListMbParamsResponse
+	212, // 448: finance.v1.MbParamService.CreateMbParamOption:output_type -> finance.v1.CreateMbParamOptionResponse
+	214, // 449: finance.v1.MbParamService.UpdateMbParamOption:output_type -> finance.v1.UpdateMbParamOptionResponse
+	216, // 450: finance.v1.MbParamService.DeleteMbParamOption:output_type -> finance.v1.DeleteMbParamOptionResponse
+	206, // 451: finance.v1.MbParamService.ExportMbParams:output_type -> finance.v1.ExportMbParamsResponse
+	208, // 452: finance.v1.MbParamService.ImportMbParams:output_type -> finance.v1.ImportMbParamsResponse
+	210, // 453: finance.v1.MbParamService.DownloadMbParamTemplate:output_type -> finance.v1.DownloadMbParamTemplateResponse
+	220, // 454: finance.v1.MbPushService.PreviewPushToHead:output_type -> finance.v1.PreviewPushToHeadResponse
+	222, // 455: finance.v1.MbPushService.ExecutePushToHead:output_type -> finance.v1.ExecutePushToHeadResponse
+	224, // 456: finance.v1.MbPushService.ListMbPushLogs:output_type -> finance.v1.ListMbPushLogsResponse
+	226, // 457: finance.v1.MbWorkflowLogService.ListMbWorkflowLogs:output_type -> finance.v1.ListMbWorkflowLogsResponse
+	229, // 458: finance.v1.MbBatchService.TriggerMbBatch:output_type -> finance.v1.TriggerMbBatchResponse
+	233, // 459: finance.v1.MbCrossSectionService.CreateMbCrossSection:output_type -> finance.v1.CreateMbCrossSectionResponse
+	235, // 460: finance.v1.MbCrossSectionService.GetMbCrossSection:output_type -> finance.v1.GetMbCrossSectionResponse
+	237, // 461: finance.v1.MbCrossSectionService.ListMbCrossSection:output_type -> finance.v1.ListMbCrossSectionResponse
+	239, // 462: finance.v1.MbCrossSectionService.UpdateMbCrossSection:output_type -> finance.v1.UpdateMbCrossSectionResponse
+	241, // 463: finance.v1.MbCrossSectionService.DeleteMbCrossSection:output_type -> finance.v1.DeleteMbCrossSectionResponse
+	243, // 464: finance.v1.MbCrossSectionFactorService.CreateMbCrossSectionFactor:output_type -> finance.v1.CreateMbCrossSectionFactorResponse
+	245, // 465: finance.v1.MbCrossSectionFactorService.GetMbCrossSectionFactor:output_type -> finance.v1.GetMbCrossSectionFactorResponse
+	247, // 466: finance.v1.MbCrossSectionFactorService.ListMbCrossSectionFactor:output_type -> finance.v1.ListMbCrossSectionFactorResponse
+	249, // 467: finance.v1.MbCrossSectionFactorService.UpdateMbCrossSectionFactor:output_type -> finance.v1.UpdateMbCrossSectionFactorResponse
+	251, // 468: finance.v1.MbCrossSectionFactorService.DeleteMbCrossSectionFactor:output_type -> finance.v1.DeleteMbCrossSectionFactorResponse
+	253, // 469: finance.v1.MBDozingService.CalculateDozing:output_type -> finance.v1.CalculateDozingResponse
+	256, // 470: finance.v1.MBDozingService.PreviewDozingImpact:output_type -> finance.v1.PreviewDozingImpactResponse
+	357, // [357:471] is the sub-list for method output_type
+	243, // [243:357] is the sub-list for method input_type
+	243, // [243:243] is the sub-list for extension type_name
+	243, // [243:243] is the sub-list for extension extendee
+	0,   // [0:243] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_yarn_master_proto_init() }
@@ -17933,23 +21764,31 @@ func file_finance_v1_yarn_master_proto_init() {
 	file_finance_v1_yarn_master_proto_msgTypes[56].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[57].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[61].OneofWrappers = []any{}
-	file_finance_v1_yarn_master_proto_msgTypes[73].OneofWrappers = []any{}
 	file_finance_v1_yarn_master_proto_msgTypes[74].OneofWrappers = []any{}
-	file_finance_v1_yarn_master_proto_msgTypes[78].OneofWrappers = []any{}
-	file_finance_v1_yarn_master_proto_msgTypes[100].OneofWrappers = []any{}
-	file_finance_v1_yarn_master_proto_msgTypes[101].OneofWrappers = []any{}
-	file_finance_v1_yarn_master_proto_msgTypes[105].OneofWrappers = []any{}
-	file_finance_v1_yarn_master_proto_msgTypes[125].OneofWrappers = []any{}
-	file_finance_v1_yarn_master_proto_msgTypes[133].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[75].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[76].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[80].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[114].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[115].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[119].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[131].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[132].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[142].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[150].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[155].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[156].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[251].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[252].OneofWrappers = []any{}
+	file_finance_v1_yarn_master_proto_msgTypes[254].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_yarn_master_proto_rawDesc), len(file_finance_v1_yarn_master_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   214,
+			NumMessages:   258,
 			NumExtensions: 0,
-			NumServices:   14,
+			NumServices:   17,
 		},
 		GoTypes:           file_finance_v1_yarn_master_proto_goTypes,
 		DependencyIndexes: file_finance_v1_yarn_master_proto_depIdxs,

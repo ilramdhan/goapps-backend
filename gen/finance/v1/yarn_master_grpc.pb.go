@@ -1657,6 +1657,7 @@ const (
 	MBHeadService_UpdateMBHead_FullMethodName           = "/finance.v1.MBHeadService/UpdateMBHead"
 	MBHeadService_DeleteMBHead_FullMethodName           = "/finance.v1.MBHeadService/DeleteMBHead"
 	MBHeadService_ExportMBHeads_FullMethodName          = "/finance.v1.MBHeadService/ExportMBHeads"
+	MBHeadService_ExportMBRecipeFull_FullMethodName     = "/finance.v1.MBHeadService/ExportMBRecipeFull"
 	MBHeadService_ImportMBHeads_FullMethodName          = "/finance.v1.MBHeadService/ImportMBHeads"
 	MBHeadService_DownloadMBHeadTemplate_FullMethodName = "/finance.v1.MBHeadService/DownloadMBHeadTemplate"
 	MBHeadService_SubmitMBHead_FullMethodName           = "/finance.v1.MBHeadService/SubmitMBHead"
@@ -1664,6 +1665,11 @@ const (
 	MBHeadService_ValidateMBHead_FullMethodName         = "/finance.v1.MBHeadService/ValidateMBHead"
 	MBHeadService_UnApproveMBHead_FullMethodName        = "/finance.v1.MBHeadService/UnApproveMBHead"
 	MBHeadService_RevokeMBHead_FullMethodName           = "/finance.v1.MBHeadService/RevokeMBHead"
+	MBHeadService_RejectMBHead_FullMethodName           = "/finance.v1.MBHeadService/RejectMBHead"
+	MBHeadService_ReturnMBHeadToDraft_FullMethodName    = "/finance.v1.MBHeadService/ReturnMBHeadToDraft"
+	MBHeadService_RequestUnlockMBHead_FullMethodName    = "/finance.v1.MBHeadService/RequestUnlockMBHead"
+	MBHeadService_GrantUnlockMBHead_FullMethodName      = "/finance.v1.MBHeadService/GrantUnlockMBHead"
+	MBHeadService_RejectUnlockMBHead_FullMethodName     = "/finance.v1.MBHeadService/RejectUnlockMBHead"
 )
 
 // MBHeadServiceClient is the client API for MBHeadService service.
@@ -1684,6 +1690,9 @@ type MBHeadServiceClient interface {
 	DeleteMBHead(ctx context.Context, in *DeleteMBHeadRequest, opts ...grpc.CallOption) (*DeleteMBHeadResponse, error)
 	// ExportMBHeads exports MB Head records to Excel.
 	ExportMBHeads(ctx context.Context, in *ExportMBHeadsRequest, opts ...grpc.CallOption) (*ExportMBHeadsResponse, error)
+	// ExportMBRecipeFull exports the denormalized full MB recipe (recipe + composition
+	// + MB cost) to Excel, one row per composition line.
+	ExportMBRecipeFull(ctx context.Context, in *ExportMBRecipeFullRequest, opts ...grpc.CallOption) (*ExportMBRecipeFullResponse, error)
 	// ImportMBHeads imports MB Head records from Excel.
 	ImportMBHeads(ctx context.Context, in *ImportMBHeadsRequest, opts ...grpc.CallOption) (*ImportMBHeadsResponse, error)
 	// DownloadMBHeadTemplate downloads the Excel import template.
@@ -1698,6 +1707,20 @@ type MBHeadServiceClient interface {
 	UnApproveMBHead(ctx context.Context, in *UnApproveMBHeadRequest, opts ...grpc.CallOption) (*UnApproveMBHeadResponse, error)
 	// RevokeMBHead revokes an MB Head.
 	RevokeMBHead(ctx context.Context, in *RevokeMBHeadRequest, opts ...grpc.CallOption) (*RevokeMBHeadResponse, error)
+	// RejectMBHead rejects a submitted MB Head (K-2). Reason is required.
+	RejectMBHead(ctx context.Context, in *RejectMBHeadRequest, opts ...grpc.CallOption) (*RejectMBHeadResponse, error)
+	// ReturnMBHeadToDraft returns a rejected MB Head back to draft (K-29). Reason is optional; when empty the existing state_reason is preserved.
+	ReturnMBHeadToDraft(ctx context.Context, in *ReturnMBHeadToDraftRequest, opts ...grpc.CallOption) (*ReturnMBHeadToDraftResponse, error)
+	// RequestUnlockMBHead parks a locked MB Head (APPROVED/VALIDATED) in UNLOCK_REQUESTED
+	// so an approver can decide (P10). Reason is REQUIRED — an unlock reopens content that
+	// was already approved, so the record must say why.
+	RequestUnlockMBHead(ctx context.Context, in *RequestUnlockMBHeadRequest, opts ...grpc.CallOption) (*RequestUnlockMBHeadResponse, error)
+	// GrantUnlockMBHead approves a pending unlock request: the MB Head is unlocked and
+	// returns to DRAFT for editing (P10).
+	GrantUnlockMBHead(ctx context.Context, in *GrantUnlockMBHeadRequest, opts ...grpc.CallOption) (*GrantUnlockMBHeadResponse, error)
+	// RejectUnlockMBHead refuses a pending unlock request: the MB Head stays locked and
+	// returns to the state it was parked from (P10, K-52). Reason is REQUIRED.
+	RejectUnlockMBHead(ctx context.Context, in *RejectUnlockMBHeadRequest, opts ...grpc.CallOption) (*RejectUnlockMBHeadResponse, error)
 }
 
 type mBHeadServiceClient struct {
@@ -1762,6 +1785,16 @@ func (c *mBHeadServiceClient) ExportMBHeads(ctx context.Context, in *ExportMBHea
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ExportMBHeadsResponse)
 	err := c.cc.Invoke(ctx, MBHeadService_ExportMBHeads_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) ExportMBRecipeFull(ctx context.Context, in *ExportMBRecipeFullRequest, opts ...grpc.CallOption) (*ExportMBRecipeFullResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportMBRecipeFullResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_ExportMBRecipeFull_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1838,6 +1871,56 @@ func (c *mBHeadServiceClient) RevokeMBHead(ctx context.Context, in *RevokeMBHead
 	return out, nil
 }
 
+func (c *mBHeadServiceClient) RejectMBHead(ctx context.Context, in *RejectMBHeadRequest, opts ...grpc.CallOption) (*RejectMBHeadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RejectMBHeadResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_RejectMBHead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) ReturnMBHeadToDraft(ctx context.Context, in *ReturnMBHeadToDraftRequest, opts ...grpc.CallOption) (*ReturnMBHeadToDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReturnMBHeadToDraftResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_ReturnMBHeadToDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) RequestUnlockMBHead(ctx context.Context, in *RequestUnlockMBHeadRequest, opts ...grpc.CallOption) (*RequestUnlockMBHeadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestUnlockMBHeadResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_RequestUnlockMBHead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) GrantUnlockMBHead(ctx context.Context, in *GrantUnlockMBHeadRequest, opts ...grpc.CallOption) (*GrantUnlockMBHeadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GrantUnlockMBHeadResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_GrantUnlockMBHead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) RejectUnlockMBHead(ctx context.Context, in *RejectUnlockMBHeadRequest, opts ...grpc.CallOption) (*RejectUnlockMBHeadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RejectUnlockMBHeadResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_RejectUnlockMBHead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MBHeadServiceServer is the server API for MBHeadService service.
 // All implementations must embed UnimplementedMBHeadServiceServer
 // for forward compatibility.
@@ -1856,6 +1939,9 @@ type MBHeadServiceServer interface {
 	DeleteMBHead(context.Context, *DeleteMBHeadRequest) (*DeleteMBHeadResponse, error)
 	// ExportMBHeads exports MB Head records to Excel.
 	ExportMBHeads(context.Context, *ExportMBHeadsRequest) (*ExportMBHeadsResponse, error)
+	// ExportMBRecipeFull exports the denormalized full MB recipe (recipe + composition
+	// + MB cost) to Excel, one row per composition line.
+	ExportMBRecipeFull(context.Context, *ExportMBRecipeFullRequest) (*ExportMBRecipeFullResponse, error)
 	// ImportMBHeads imports MB Head records from Excel.
 	ImportMBHeads(context.Context, *ImportMBHeadsRequest) (*ImportMBHeadsResponse, error)
 	// DownloadMBHeadTemplate downloads the Excel import template.
@@ -1870,6 +1956,20 @@ type MBHeadServiceServer interface {
 	UnApproveMBHead(context.Context, *UnApproveMBHeadRequest) (*UnApproveMBHeadResponse, error)
 	// RevokeMBHead revokes an MB Head.
 	RevokeMBHead(context.Context, *RevokeMBHeadRequest) (*RevokeMBHeadResponse, error)
+	// RejectMBHead rejects a submitted MB Head (K-2). Reason is required.
+	RejectMBHead(context.Context, *RejectMBHeadRequest) (*RejectMBHeadResponse, error)
+	// ReturnMBHeadToDraft returns a rejected MB Head back to draft (K-29). Reason is optional; when empty the existing state_reason is preserved.
+	ReturnMBHeadToDraft(context.Context, *ReturnMBHeadToDraftRequest) (*ReturnMBHeadToDraftResponse, error)
+	// RequestUnlockMBHead parks a locked MB Head (APPROVED/VALIDATED) in UNLOCK_REQUESTED
+	// so an approver can decide (P10). Reason is REQUIRED — an unlock reopens content that
+	// was already approved, so the record must say why.
+	RequestUnlockMBHead(context.Context, *RequestUnlockMBHeadRequest) (*RequestUnlockMBHeadResponse, error)
+	// GrantUnlockMBHead approves a pending unlock request: the MB Head is unlocked and
+	// returns to DRAFT for editing (P10).
+	GrantUnlockMBHead(context.Context, *GrantUnlockMBHeadRequest) (*GrantUnlockMBHeadResponse, error)
+	// RejectUnlockMBHead refuses a pending unlock request: the MB Head stays locked and
+	// returns to the state it was parked from (P10, K-52). Reason is REQUIRED.
+	RejectUnlockMBHead(context.Context, *RejectUnlockMBHeadRequest) (*RejectUnlockMBHeadResponse, error)
 	mustEmbedUnimplementedMBHeadServiceServer()
 }
 
@@ -1898,6 +1998,9 @@ func (UnimplementedMBHeadServiceServer) DeleteMBHead(context.Context, *DeleteMBH
 func (UnimplementedMBHeadServiceServer) ExportMBHeads(context.Context, *ExportMBHeadsRequest) (*ExportMBHeadsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportMBHeads not implemented")
 }
+func (UnimplementedMBHeadServiceServer) ExportMBRecipeFull(context.Context, *ExportMBRecipeFullRequest) (*ExportMBRecipeFullResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportMBRecipeFull not implemented")
+}
 func (UnimplementedMBHeadServiceServer) ImportMBHeads(context.Context, *ImportMBHeadsRequest) (*ImportMBHeadsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ImportMBHeads not implemented")
 }
@@ -1918,6 +2021,21 @@ func (UnimplementedMBHeadServiceServer) UnApproveMBHead(context.Context, *UnAppr
 }
 func (UnimplementedMBHeadServiceServer) RevokeMBHead(context.Context, *RevokeMBHeadRequest) (*RevokeMBHeadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeMBHead not implemented")
+}
+func (UnimplementedMBHeadServiceServer) RejectMBHead(context.Context, *RejectMBHeadRequest) (*RejectMBHeadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RejectMBHead not implemented")
+}
+func (UnimplementedMBHeadServiceServer) ReturnMBHeadToDraft(context.Context, *ReturnMBHeadToDraftRequest) (*ReturnMBHeadToDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReturnMBHeadToDraft not implemented")
+}
+func (UnimplementedMBHeadServiceServer) RequestUnlockMBHead(context.Context, *RequestUnlockMBHeadRequest) (*RequestUnlockMBHeadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RequestUnlockMBHead not implemented")
+}
+func (UnimplementedMBHeadServiceServer) GrantUnlockMBHead(context.Context, *GrantUnlockMBHeadRequest) (*GrantUnlockMBHeadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GrantUnlockMBHead not implemented")
+}
+func (UnimplementedMBHeadServiceServer) RejectUnlockMBHead(context.Context, *RejectUnlockMBHeadRequest) (*RejectUnlockMBHeadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RejectUnlockMBHead not implemented")
 }
 func (UnimplementedMBHeadServiceServer) mustEmbedUnimplementedMBHeadServiceServer() {}
 func (UnimplementedMBHeadServiceServer) testEmbeddedByValue()                       {}
@@ -2048,6 +2166,24 @@ func _MBHeadService_ExportMBHeads_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MBHeadService_ExportMBRecipeFull_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportMBRecipeFullRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).ExportMBRecipeFull(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_ExportMBRecipeFull_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).ExportMBRecipeFull(ctx, req.(*ExportMBRecipeFullRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _MBHeadService_ImportMBHeads_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ImportMBHeadsRequest)
 	if err := dec(in); err != nil {
@@ -2174,6 +2310,96 @@ func _MBHeadService_RevokeMBHead_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MBHeadService_RejectMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RejectMBHeadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).RejectMBHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_RejectMBHead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).RejectMBHead(ctx, req.(*RejectMBHeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_ReturnMBHeadToDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReturnMBHeadToDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).ReturnMBHeadToDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_ReturnMBHeadToDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).ReturnMBHeadToDraft(ctx, req.(*ReturnMBHeadToDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_RequestUnlockMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestUnlockMBHeadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).RequestUnlockMBHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_RequestUnlockMBHead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).RequestUnlockMBHead(ctx, req.(*RequestUnlockMBHeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_GrantUnlockMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantUnlockMBHeadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).GrantUnlockMBHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_GrantUnlockMBHead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).GrantUnlockMBHead(ctx, req.(*GrantUnlockMBHeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_RejectUnlockMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RejectUnlockMBHeadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).RejectUnlockMBHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_RejectUnlockMBHead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).RejectUnlockMBHead(ctx, req.(*RejectUnlockMBHeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MBHeadService_ServiceDesc is the grpc.ServiceDesc for MBHeadService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2206,6 +2432,10 @@ var MBHeadService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MBHeadService_ExportMBHeads_Handler,
 		},
 		{
+			MethodName: "ExportMBRecipeFull",
+			Handler:    _MBHeadService_ExportMBRecipeFull_Handler,
+		},
+		{
 			MethodName: "ImportMBHeads",
 			Handler:    _MBHeadService_ImportMBHeads_Handler,
 		},
@@ -2233,6 +2463,26 @@ var MBHeadService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "RevokeMBHead",
 			Handler:    _MBHeadService_RevokeMBHead_Handler,
 		},
+		{
+			MethodName: "RejectMBHead",
+			Handler:    _MBHeadService_RejectMBHead_Handler,
+		},
+		{
+			MethodName: "ReturnMBHeadToDraft",
+			Handler:    _MBHeadService_ReturnMBHeadToDraft_Handler,
+		},
+		{
+			MethodName: "RequestUnlockMBHead",
+			Handler:    _MBHeadService_RequestUnlockMBHead_Handler,
+		},
+		{
+			MethodName: "GrantUnlockMBHead",
+			Handler:    _MBHeadService_GrantUnlockMBHead_Handler,
+		},
+		{
+			MethodName: "RejectUnlockMBHead",
+			Handler:    _MBHeadService_RejectUnlockMBHead_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "finance/v1/yarn_master.proto",
@@ -2247,6 +2497,7 @@ const (
 	MBSpinService_ExportMBSpins_FullMethodName          = "/finance.v1.MBSpinService/ExportMBSpins"
 	MBSpinService_ImportMBSpins_FullMethodName          = "/finance.v1.MBSpinService/ImportMBSpins"
 	MBSpinService_DownloadMBSpinTemplate_FullMethodName = "/finance.v1.MBSpinService/DownloadMBSpinTemplate"
+	MBSpinService_DuplicateMBSpin_FullMethodName        = "/finance.v1.MBSpinService/DuplicateMBSpin"
 )
 
 // MBSpinServiceClient is the client API for MBSpinService service.
@@ -2271,6 +2522,12 @@ type MBSpinServiceClient interface {
 	ImportMBSpins(ctx context.Context, in *ImportMBSpinsRequest, opts ...grpc.CallOption) (*ImportMBSpinsResponse, error)
 	// DownloadMBSpinTemplate downloads the Excel import template.
 	DownloadMBSpinTemplate(ctx context.Context, in *DownloadMBSpinTemplateRequest, opts ...grpc.CallOption) (*DownloadMBSpinTemplateResponse, error)
+	// DuplicateMBSpin clones an MB Spin under the same head (decision D19: the
+	// clone is born with mbs_oracle_sys_id, mbs_orion_item_code and
+	// mbs_mb_costing NULL, and mbs_status = 'R and D'). Recalculates eligible
+	// child spins one level deep and reports the skipped ones; it does NOT
+	// recalculate yarn products (D24) — the response carries a preview only.
+	DuplicateMBSpin(ctx context.Context, in *DuplicateMBSpinRequest, opts ...grpc.CallOption) (*DuplicateMBSpinResponse, error)
 }
 
 type mBSpinServiceClient struct {
@@ -2361,6 +2618,16 @@ func (c *mBSpinServiceClient) DownloadMBSpinTemplate(ctx context.Context, in *Do
 	return out, nil
 }
 
+func (c *mBSpinServiceClient) DuplicateMBSpin(ctx context.Context, in *DuplicateMBSpinRequest, opts ...grpc.CallOption) (*DuplicateMBSpinResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DuplicateMBSpinResponse)
+	err := c.cc.Invoke(ctx, MBSpinService_DuplicateMBSpin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MBSpinServiceServer is the server API for MBSpinService service.
 // All implementations must embed UnimplementedMBSpinServiceServer
 // for forward compatibility.
@@ -2383,6 +2650,12 @@ type MBSpinServiceServer interface {
 	ImportMBSpins(context.Context, *ImportMBSpinsRequest) (*ImportMBSpinsResponse, error)
 	// DownloadMBSpinTemplate downloads the Excel import template.
 	DownloadMBSpinTemplate(context.Context, *DownloadMBSpinTemplateRequest) (*DownloadMBSpinTemplateResponse, error)
+	// DuplicateMBSpin clones an MB Spin under the same head (decision D19: the
+	// clone is born with mbs_oracle_sys_id, mbs_orion_item_code and
+	// mbs_mb_costing NULL, and mbs_status = 'R and D'). Recalculates eligible
+	// child spins one level deep and reports the skipped ones; it does NOT
+	// recalculate yarn products (D24) — the response carries a preview only.
+	DuplicateMBSpin(context.Context, *DuplicateMBSpinRequest) (*DuplicateMBSpinResponse, error)
 	mustEmbedUnimplementedMBSpinServiceServer()
 }
 
@@ -2416,6 +2689,9 @@ func (UnimplementedMBSpinServiceServer) ImportMBSpins(context.Context, *ImportMB
 }
 func (UnimplementedMBSpinServiceServer) DownloadMBSpinTemplate(context.Context, *DownloadMBSpinTemplateRequest) (*DownloadMBSpinTemplateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DownloadMBSpinTemplate not implemented")
+}
+func (UnimplementedMBSpinServiceServer) DuplicateMBSpin(context.Context, *DuplicateMBSpinRequest) (*DuplicateMBSpinResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DuplicateMBSpin not implemented")
 }
 func (UnimplementedMBSpinServiceServer) mustEmbedUnimplementedMBSpinServiceServer() {}
 func (UnimplementedMBSpinServiceServer) testEmbeddedByValue()                       {}
@@ -2582,6 +2858,24 @@ func _MBSpinService_DownloadMBSpinTemplate_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MBSpinService_DuplicateMBSpin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DuplicateMBSpinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBSpinServiceServer).DuplicateMBSpin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBSpinService_DuplicateMBSpin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBSpinServiceServer).DuplicateMBSpin(ctx, req.(*DuplicateMBSpinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MBSpinService_ServiceDesc is the grpc.ServiceDesc for MBSpinService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2620,6 +2914,10 @@ var MBSpinService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DownloadMBSpinTemplate",
 			Handler:    _MBSpinService_DownloadMBSpinTemplate_Handler,
+		},
+		{
+			MethodName: "DuplicateMBSpin",
+			Handler:    _MBSpinService_DuplicateMBSpin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -4768,6 +5066,693 @@ var MbBatchService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TriggerMbBatch",
 			Handler:    _MbBatchService_TriggerMbBatch_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "finance/v1/yarn_master.proto",
+}
+
+const (
+	MbCrossSectionService_CreateMbCrossSection_FullMethodName = "/finance.v1.MbCrossSectionService/CreateMbCrossSection"
+	MbCrossSectionService_GetMbCrossSection_FullMethodName    = "/finance.v1.MbCrossSectionService/GetMbCrossSection"
+	MbCrossSectionService_ListMbCrossSection_FullMethodName   = "/finance.v1.MbCrossSectionService/ListMbCrossSection"
+	MbCrossSectionService_UpdateMbCrossSection_FullMethodName = "/finance.v1.MbCrossSectionService/UpdateMbCrossSection"
+	MbCrossSectionService_DeleteMbCrossSection_FullMethodName = "/finance.v1.MbCrossSectionService/DeleteMbCrossSection"
+)
+
+// MbCrossSectionServiceClient is the client API for MbCrossSectionService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// MbCrossSectionService manages MB cross-section master data.
+type MbCrossSectionServiceClient interface {
+	// CreateMbCrossSection creates a new MB cross-section master record.
+	CreateMbCrossSection(ctx context.Context, in *CreateMbCrossSectionRequest, opts ...grpc.CallOption) (*CreateMbCrossSectionResponse, error)
+	// GetMbCrossSection retrieves an MB cross-section master record by ID.
+	GetMbCrossSection(ctx context.Context, in *GetMbCrossSectionRequest, opts ...grpc.CallOption) (*GetMbCrossSectionResponse, error)
+	// ListMbCrossSection lists MB cross-section master records with search and pagination.
+	ListMbCrossSection(ctx context.Context, in *ListMbCrossSectionRequest, opts ...grpc.CallOption) (*ListMbCrossSectionResponse, error)
+	// UpdateMbCrossSection updates an existing MB cross-section master record.
+	UpdateMbCrossSection(ctx context.Context, in *UpdateMbCrossSectionRequest, opts ...grpc.CallOption) (*UpdateMbCrossSectionResponse, error)
+	// DeleteMbCrossSection deletes an MB cross-section master record.
+	DeleteMbCrossSection(ctx context.Context, in *DeleteMbCrossSectionRequest, opts ...grpc.CallOption) (*DeleteMbCrossSectionResponse, error)
+}
+
+type mbCrossSectionServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMbCrossSectionServiceClient(cc grpc.ClientConnInterface) MbCrossSectionServiceClient {
+	return &mbCrossSectionServiceClient{cc}
+}
+
+func (c *mbCrossSectionServiceClient) CreateMbCrossSection(ctx context.Context, in *CreateMbCrossSectionRequest, opts ...grpc.CallOption) (*CreateMbCrossSectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateMbCrossSectionResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionService_CreateMbCrossSection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mbCrossSectionServiceClient) GetMbCrossSection(ctx context.Context, in *GetMbCrossSectionRequest, opts ...grpc.CallOption) (*GetMbCrossSectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMbCrossSectionResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionService_GetMbCrossSection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mbCrossSectionServiceClient) ListMbCrossSection(ctx context.Context, in *ListMbCrossSectionRequest, opts ...grpc.CallOption) (*ListMbCrossSectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMbCrossSectionResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionService_ListMbCrossSection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mbCrossSectionServiceClient) UpdateMbCrossSection(ctx context.Context, in *UpdateMbCrossSectionRequest, opts ...grpc.CallOption) (*UpdateMbCrossSectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateMbCrossSectionResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionService_UpdateMbCrossSection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mbCrossSectionServiceClient) DeleteMbCrossSection(ctx context.Context, in *DeleteMbCrossSectionRequest, opts ...grpc.CallOption) (*DeleteMbCrossSectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteMbCrossSectionResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionService_DeleteMbCrossSection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MbCrossSectionServiceServer is the server API for MbCrossSectionService service.
+// All implementations must embed UnimplementedMbCrossSectionServiceServer
+// for forward compatibility.
+//
+// MbCrossSectionService manages MB cross-section master data.
+type MbCrossSectionServiceServer interface {
+	// CreateMbCrossSection creates a new MB cross-section master record.
+	CreateMbCrossSection(context.Context, *CreateMbCrossSectionRequest) (*CreateMbCrossSectionResponse, error)
+	// GetMbCrossSection retrieves an MB cross-section master record by ID.
+	GetMbCrossSection(context.Context, *GetMbCrossSectionRequest) (*GetMbCrossSectionResponse, error)
+	// ListMbCrossSection lists MB cross-section master records with search and pagination.
+	ListMbCrossSection(context.Context, *ListMbCrossSectionRequest) (*ListMbCrossSectionResponse, error)
+	// UpdateMbCrossSection updates an existing MB cross-section master record.
+	UpdateMbCrossSection(context.Context, *UpdateMbCrossSectionRequest) (*UpdateMbCrossSectionResponse, error)
+	// DeleteMbCrossSection deletes an MB cross-section master record.
+	DeleteMbCrossSection(context.Context, *DeleteMbCrossSectionRequest) (*DeleteMbCrossSectionResponse, error)
+	mustEmbedUnimplementedMbCrossSectionServiceServer()
+}
+
+// UnimplementedMbCrossSectionServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedMbCrossSectionServiceServer struct{}
+
+func (UnimplementedMbCrossSectionServiceServer) CreateMbCrossSection(context.Context, *CreateMbCrossSectionRequest) (*CreateMbCrossSectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateMbCrossSection not implemented")
+}
+func (UnimplementedMbCrossSectionServiceServer) GetMbCrossSection(context.Context, *GetMbCrossSectionRequest) (*GetMbCrossSectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMbCrossSection not implemented")
+}
+func (UnimplementedMbCrossSectionServiceServer) ListMbCrossSection(context.Context, *ListMbCrossSectionRequest) (*ListMbCrossSectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMbCrossSection not implemented")
+}
+func (UnimplementedMbCrossSectionServiceServer) UpdateMbCrossSection(context.Context, *UpdateMbCrossSectionRequest) (*UpdateMbCrossSectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateMbCrossSection not implemented")
+}
+func (UnimplementedMbCrossSectionServiceServer) DeleteMbCrossSection(context.Context, *DeleteMbCrossSectionRequest) (*DeleteMbCrossSectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteMbCrossSection not implemented")
+}
+func (UnimplementedMbCrossSectionServiceServer) mustEmbedUnimplementedMbCrossSectionServiceServer() {}
+func (UnimplementedMbCrossSectionServiceServer) testEmbeddedByValue()                               {}
+
+// UnsafeMbCrossSectionServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MbCrossSectionServiceServer will
+// result in compilation errors.
+type UnsafeMbCrossSectionServiceServer interface {
+	mustEmbedUnimplementedMbCrossSectionServiceServer()
+}
+
+func RegisterMbCrossSectionServiceServer(s grpc.ServiceRegistrar, srv MbCrossSectionServiceServer) {
+	// If the following call panics, it indicates UnimplementedMbCrossSectionServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&MbCrossSectionService_ServiceDesc, srv)
+}
+
+func _MbCrossSectionService_CreateMbCrossSection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateMbCrossSectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionServiceServer).CreateMbCrossSection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionService_CreateMbCrossSection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionServiceServer).CreateMbCrossSection(ctx, req.(*CreateMbCrossSectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MbCrossSectionService_GetMbCrossSection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMbCrossSectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionServiceServer).GetMbCrossSection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionService_GetMbCrossSection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionServiceServer).GetMbCrossSection(ctx, req.(*GetMbCrossSectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MbCrossSectionService_ListMbCrossSection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMbCrossSectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionServiceServer).ListMbCrossSection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionService_ListMbCrossSection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionServiceServer).ListMbCrossSection(ctx, req.(*ListMbCrossSectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MbCrossSectionService_UpdateMbCrossSection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMbCrossSectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionServiceServer).UpdateMbCrossSection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionService_UpdateMbCrossSection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionServiceServer).UpdateMbCrossSection(ctx, req.(*UpdateMbCrossSectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MbCrossSectionService_DeleteMbCrossSection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteMbCrossSectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionServiceServer).DeleteMbCrossSection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionService_DeleteMbCrossSection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionServiceServer).DeleteMbCrossSection(ctx, req.(*DeleteMbCrossSectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MbCrossSectionService_ServiceDesc is the grpc.ServiceDesc for MbCrossSectionService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var MbCrossSectionService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "finance.v1.MbCrossSectionService",
+	HandlerType: (*MbCrossSectionServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateMbCrossSection",
+			Handler:    _MbCrossSectionService_CreateMbCrossSection_Handler,
+		},
+		{
+			MethodName: "GetMbCrossSection",
+			Handler:    _MbCrossSectionService_GetMbCrossSection_Handler,
+		},
+		{
+			MethodName: "ListMbCrossSection",
+			Handler:    _MbCrossSectionService_ListMbCrossSection_Handler,
+		},
+		{
+			MethodName: "UpdateMbCrossSection",
+			Handler:    _MbCrossSectionService_UpdateMbCrossSection_Handler,
+		},
+		{
+			MethodName: "DeleteMbCrossSection",
+			Handler:    _MbCrossSectionService_DeleteMbCrossSection_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "finance/v1/yarn_master.proto",
+}
+
+const (
+	MbCrossSectionFactorService_CreateMbCrossSectionFactor_FullMethodName = "/finance.v1.MbCrossSectionFactorService/CreateMbCrossSectionFactor"
+	MbCrossSectionFactorService_GetMbCrossSectionFactor_FullMethodName    = "/finance.v1.MbCrossSectionFactorService/GetMbCrossSectionFactor"
+	MbCrossSectionFactorService_ListMbCrossSectionFactor_FullMethodName   = "/finance.v1.MbCrossSectionFactorService/ListMbCrossSectionFactor"
+	MbCrossSectionFactorService_UpdateMbCrossSectionFactor_FullMethodName = "/finance.v1.MbCrossSectionFactorService/UpdateMbCrossSectionFactor"
+	MbCrossSectionFactorService_DeleteMbCrossSectionFactor_FullMethodName = "/finance.v1.MbCrossSectionFactorService/DeleteMbCrossSectionFactor"
+)
+
+// MbCrossSectionFactorServiceClient is the client API for MbCrossSectionFactorService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// MbCrossSectionFactorService manages MB cross-section conversion factors.
+type MbCrossSectionFactorServiceClient interface {
+	// CreateMbCrossSectionFactor creates a new cross-section conversion factor.
+	CreateMbCrossSectionFactor(ctx context.Context, in *CreateMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*CreateMbCrossSectionFactorResponse, error)
+	// GetMbCrossSectionFactor retrieves a cross-section conversion factor by ID.
+	GetMbCrossSectionFactor(ctx context.Context, in *GetMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*GetMbCrossSectionFactorResponse, error)
+	// ListMbCrossSectionFactor lists cross-section conversion factors with search and pagination.
+	ListMbCrossSectionFactor(ctx context.Context, in *ListMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*ListMbCrossSectionFactorResponse, error)
+	// UpdateMbCrossSectionFactor updates an existing cross-section conversion factor.
+	UpdateMbCrossSectionFactor(ctx context.Context, in *UpdateMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*UpdateMbCrossSectionFactorResponse, error)
+	// DeleteMbCrossSectionFactor deletes a cross-section conversion factor.
+	DeleteMbCrossSectionFactor(ctx context.Context, in *DeleteMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*DeleteMbCrossSectionFactorResponse, error)
+}
+
+type mbCrossSectionFactorServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMbCrossSectionFactorServiceClient(cc grpc.ClientConnInterface) MbCrossSectionFactorServiceClient {
+	return &mbCrossSectionFactorServiceClient{cc}
+}
+
+func (c *mbCrossSectionFactorServiceClient) CreateMbCrossSectionFactor(ctx context.Context, in *CreateMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*CreateMbCrossSectionFactorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateMbCrossSectionFactorResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionFactorService_CreateMbCrossSectionFactor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mbCrossSectionFactorServiceClient) GetMbCrossSectionFactor(ctx context.Context, in *GetMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*GetMbCrossSectionFactorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMbCrossSectionFactorResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionFactorService_GetMbCrossSectionFactor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mbCrossSectionFactorServiceClient) ListMbCrossSectionFactor(ctx context.Context, in *ListMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*ListMbCrossSectionFactorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMbCrossSectionFactorResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionFactorService_ListMbCrossSectionFactor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mbCrossSectionFactorServiceClient) UpdateMbCrossSectionFactor(ctx context.Context, in *UpdateMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*UpdateMbCrossSectionFactorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateMbCrossSectionFactorResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionFactorService_UpdateMbCrossSectionFactor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mbCrossSectionFactorServiceClient) DeleteMbCrossSectionFactor(ctx context.Context, in *DeleteMbCrossSectionFactorRequest, opts ...grpc.CallOption) (*DeleteMbCrossSectionFactorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteMbCrossSectionFactorResponse)
+	err := c.cc.Invoke(ctx, MbCrossSectionFactorService_DeleteMbCrossSectionFactor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MbCrossSectionFactorServiceServer is the server API for MbCrossSectionFactorService service.
+// All implementations must embed UnimplementedMbCrossSectionFactorServiceServer
+// for forward compatibility.
+//
+// MbCrossSectionFactorService manages MB cross-section conversion factors.
+type MbCrossSectionFactorServiceServer interface {
+	// CreateMbCrossSectionFactor creates a new cross-section conversion factor.
+	CreateMbCrossSectionFactor(context.Context, *CreateMbCrossSectionFactorRequest) (*CreateMbCrossSectionFactorResponse, error)
+	// GetMbCrossSectionFactor retrieves a cross-section conversion factor by ID.
+	GetMbCrossSectionFactor(context.Context, *GetMbCrossSectionFactorRequest) (*GetMbCrossSectionFactorResponse, error)
+	// ListMbCrossSectionFactor lists cross-section conversion factors with search and pagination.
+	ListMbCrossSectionFactor(context.Context, *ListMbCrossSectionFactorRequest) (*ListMbCrossSectionFactorResponse, error)
+	// UpdateMbCrossSectionFactor updates an existing cross-section conversion factor.
+	UpdateMbCrossSectionFactor(context.Context, *UpdateMbCrossSectionFactorRequest) (*UpdateMbCrossSectionFactorResponse, error)
+	// DeleteMbCrossSectionFactor deletes a cross-section conversion factor.
+	DeleteMbCrossSectionFactor(context.Context, *DeleteMbCrossSectionFactorRequest) (*DeleteMbCrossSectionFactorResponse, error)
+	mustEmbedUnimplementedMbCrossSectionFactorServiceServer()
+}
+
+// UnimplementedMbCrossSectionFactorServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedMbCrossSectionFactorServiceServer struct{}
+
+func (UnimplementedMbCrossSectionFactorServiceServer) CreateMbCrossSectionFactor(context.Context, *CreateMbCrossSectionFactorRequest) (*CreateMbCrossSectionFactorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateMbCrossSectionFactor not implemented")
+}
+func (UnimplementedMbCrossSectionFactorServiceServer) GetMbCrossSectionFactor(context.Context, *GetMbCrossSectionFactorRequest) (*GetMbCrossSectionFactorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMbCrossSectionFactor not implemented")
+}
+func (UnimplementedMbCrossSectionFactorServiceServer) ListMbCrossSectionFactor(context.Context, *ListMbCrossSectionFactorRequest) (*ListMbCrossSectionFactorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMbCrossSectionFactor not implemented")
+}
+func (UnimplementedMbCrossSectionFactorServiceServer) UpdateMbCrossSectionFactor(context.Context, *UpdateMbCrossSectionFactorRequest) (*UpdateMbCrossSectionFactorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateMbCrossSectionFactor not implemented")
+}
+func (UnimplementedMbCrossSectionFactorServiceServer) DeleteMbCrossSectionFactor(context.Context, *DeleteMbCrossSectionFactorRequest) (*DeleteMbCrossSectionFactorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteMbCrossSectionFactor not implemented")
+}
+func (UnimplementedMbCrossSectionFactorServiceServer) mustEmbedUnimplementedMbCrossSectionFactorServiceServer() {
+}
+func (UnimplementedMbCrossSectionFactorServiceServer) testEmbeddedByValue() {}
+
+// UnsafeMbCrossSectionFactorServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MbCrossSectionFactorServiceServer will
+// result in compilation errors.
+type UnsafeMbCrossSectionFactorServiceServer interface {
+	mustEmbedUnimplementedMbCrossSectionFactorServiceServer()
+}
+
+func RegisterMbCrossSectionFactorServiceServer(s grpc.ServiceRegistrar, srv MbCrossSectionFactorServiceServer) {
+	// If the following call panics, it indicates UnimplementedMbCrossSectionFactorServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&MbCrossSectionFactorService_ServiceDesc, srv)
+}
+
+func _MbCrossSectionFactorService_CreateMbCrossSectionFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateMbCrossSectionFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionFactorServiceServer).CreateMbCrossSectionFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionFactorService_CreateMbCrossSectionFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionFactorServiceServer).CreateMbCrossSectionFactor(ctx, req.(*CreateMbCrossSectionFactorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MbCrossSectionFactorService_GetMbCrossSectionFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMbCrossSectionFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionFactorServiceServer).GetMbCrossSectionFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionFactorService_GetMbCrossSectionFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionFactorServiceServer).GetMbCrossSectionFactor(ctx, req.(*GetMbCrossSectionFactorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MbCrossSectionFactorService_ListMbCrossSectionFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMbCrossSectionFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionFactorServiceServer).ListMbCrossSectionFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionFactorService_ListMbCrossSectionFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionFactorServiceServer).ListMbCrossSectionFactor(ctx, req.(*ListMbCrossSectionFactorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MbCrossSectionFactorService_UpdateMbCrossSectionFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMbCrossSectionFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionFactorServiceServer).UpdateMbCrossSectionFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionFactorService_UpdateMbCrossSectionFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionFactorServiceServer).UpdateMbCrossSectionFactor(ctx, req.(*UpdateMbCrossSectionFactorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MbCrossSectionFactorService_DeleteMbCrossSectionFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteMbCrossSectionFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MbCrossSectionFactorServiceServer).DeleteMbCrossSectionFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MbCrossSectionFactorService_DeleteMbCrossSectionFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MbCrossSectionFactorServiceServer).DeleteMbCrossSectionFactor(ctx, req.(*DeleteMbCrossSectionFactorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MbCrossSectionFactorService_ServiceDesc is the grpc.ServiceDesc for MbCrossSectionFactorService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var MbCrossSectionFactorService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "finance.v1.MbCrossSectionFactorService",
+	HandlerType: (*MbCrossSectionFactorServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateMbCrossSectionFactor",
+			Handler:    _MbCrossSectionFactorService_CreateMbCrossSectionFactor_Handler,
+		},
+		{
+			MethodName: "GetMbCrossSectionFactor",
+			Handler:    _MbCrossSectionFactorService_GetMbCrossSectionFactor_Handler,
+		},
+		{
+			MethodName: "ListMbCrossSectionFactor",
+			Handler:    _MbCrossSectionFactorService_ListMbCrossSectionFactor_Handler,
+		},
+		{
+			MethodName: "UpdateMbCrossSectionFactor",
+			Handler:    _MbCrossSectionFactorService_UpdateMbCrossSectionFactor_Handler,
+		},
+		{
+			MethodName: "DeleteMbCrossSectionFactor",
+			Handler:    _MbCrossSectionFactorService_DeleteMbCrossSectionFactor_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "finance/v1/yarn_master.proto",
+}
+
+const (
+	MBDozingService_CalculateDozing_FullMethodName     = "/finance.v1.MBDozingService/CalculateDozing"
+	MBDozingService_PreviewDozingImpact_FullMethodName = "/finance.v1.MBDozingService/PreviewDozingImpact"
+)
+
+// MBDozingServiceClient is the client API for MBDozingService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// MBDozingService provides read-only MB dozing (LDR) calculation and impact
+// preview. No RPC in this service persists anything.
+type MBDozingServiceClient interface {
+	// CalculateDozing computes a target LDR without persisting anything.
+	CalculateDozing(ctx context.Context, in *CalculateDozingRequest, opts ...grpc.CallOption) (*CalculateDozingResponse, error)
+	// PreviewDozingImpact lists products that would be affected by a dozing change.
+	PreviewDozingImpact(ctx context.Context, in *PreviewDozingImpactRequest, opts ...grpc.CallOption) (*PreviewDozingImpactResponse, error)
+}
+
+type mBDozingServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMBDozingServiceClient(cc grpc.ClientConnInterface) MBDozingServiceClient {
+	return &mBDozingServiceClient{cc}
+}
+
+func (c *mBDozingServiceClient) CalculateDozing(ctx context.Context, in *CalculateDozingRequest, opts ...grpc.CallOption) (*CalculateDozingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CalculateDozingResponse)
+	err := c.cc.Invoke(ctx, MBDozingService_CalculateDozing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBDozingServiceClient) PreviewDozingImpact(ctx context.Context, in *PreviewDozingImpactRequest, opts ...grpc.CallOption) (*PreviewDozingImpactResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PreviewDozingImpactResponse)
+	err := c.cc.Invoke(ctx, MBDozingService_PreviewDozingImpact_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MBDozingServiceServer is the server API for MBDozingService service.
+// All implementations must embed UnimplementedMBDozingServiceServer
+// for forward compatibility.
+//
+// MBDozingService provides read-only MB dozing (LDR) calculation and impact
+// preview. No RPC in this service persists anything.
+type MBDozingServiceServer interface {
+	// CalculateDozing computes a target LDR without persisting anything.
+	CalculateDozing(context.Context, *CalculateDozingRequest) (*CalculateDozingResponse, error)
+	// PreviewDozingImpact lists products that would be affected by a dozing change.
+	PreviewDozingImpact(context.Context, *PreviewDozingImpactRequest) (*PreviewDozingImpactResponse, error)
+	mustEmbedUnimplementedMBDozingServiceServer()
+}
+
+// UnimplementedMBDozingServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedMBDozingServiceServer struct{}
+
+func (UnimplementedMBDozingServiceServer) CalculateDozing(context.Context, *CalculateDozingRequest) (*CalculateDozingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CalculateDozing not implemented")
+}
+func (UnimplementedMBDozingServiceServer) PreviewDozingImpact(context.Context, *PreviewDozingImpactRequest) (*PreviewDozingImpactResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PreviewDozingImpact not implemented")
+}
+func (UnimplementedMBDozingServiceServer) mustEmbedUnimplementedMBDozingServiceServer() {}
+func (UnimplementedMBDozingServiceServer) testEmbeddedByValue()                         {}
+
+// UnsafeMBDozingServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MBDozingServiceServer will
+// result in compilation errors.
+type UnsafeMBDozingServiceServer interface {
+	mustEmbedUnimplementedMBDozingServiceServer()
+}
+
+func RegisterMBDozingServiceServer(s grpc.ServiceRegistrar, srv MBDozingServiceServer) {
+	// If the following call panics, it indicates UnimplementedMBDozingServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&MBDozingService_ServiceDesc, srv)
+}
+
+func _MBDozingService_CalculateDozing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CalculateDozingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBDozingServiceServer).CalculateDozing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBDozingService_CalculateDozing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBDozingServiceServer).CalculateDozing(ctx, req.(*CalculateDozingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBDozingService_PreviewDozingImpact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreviewDozingImpactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBDozingServiceServer).PreviewDozingImpact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBDozingService_PreviewDozingImpact_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBDozingServiceServer).PreviewDozingImpact(ctx, req.(*PreviewDozingImpactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MBDozingService_ServiceDesc is the grpc.ServiceDesc for MBDozingService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var MBDozingService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "finance.v1.MBDozingService",
+	HandlerType: (*MBDozingServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CalculateDozing",
+			Handler:    _MBDozingService_CalculateDozing_Handler,
+		},
+		{
+			MethodName: "PreviewDozingImpact",
+			Handler:    _MBDozingService_PreviewDozingImpact_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

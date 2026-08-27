@@ -46,6 +46,15 @@
     },
     {
       "name": "MbBatchService"
+    },
+    {
+      "name": "MbCrossSectionService"
+    },
+    {
+      "name": "MbCrossSectionFactorService"
+    },
+    {
+      "name": "MBDozingService"
     }
   ],
   "consumes": [
@@ -910,6 +919,21 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "search",
+            "description": "⭐ DIPERBARUI 2026-08-26 (perf: SP Code dropdown lag, server-side search) —\noptional search keyword, matched (case-insensitive) against both the\nmaster's code column and its label column. Empty/absent means no search\npredicate (returns the same rows as before, subject to the new limit\nbelow).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "⭐ DIPERBARUI 2026-08-26 (perf: SP Code dropdown lag, server-side search) —\noptional max rows to return. Absent or 0 falls back to a server-side\ndefault (200 — see LookupMasterRepository.ListMasterOptions) instead of\nreturning the whole table.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
           }
         ],
         "tags": [
@@ -1443,6 +1467,434 @@
         ],
         "tags": [
           "MachineService"
+        ]
+      }
+    },
+    "/api/v1/finance/master/mb-cross-section-factors": {
+      "get": {
+        "summary": "ListMbCrossSectionFactor lists cross-section conversion factors with search and pagination.",
+        "operationId": "MbCrossSectionFactorService_ListMbCrossSectionFactor",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMbCrossSectionFactorResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (\u003e= 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search across from_code and to_code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortDir",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "fromCode",
+            "description": "Optional exact filter on the source cross-section code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "toCode",
+            "description": "Optional exact filter on the target cross-section code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MbCrossSectionFactorService"
+        ]
+      },
+      "post": {
+        "summary": "CreateMbCrossSectionFactor creates a new cross-section conversion factor.",
+        "operationId": "MbCrossSectionFactorService_CreateMbCrossSectionFactor",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateMbCrossSectionFactorResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateMbCrossSectionFactorRequest is the request for creating a cross-section conversion factor.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateMbCrossSectionFactorRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MbCrossSectionFactorService"
+        ]
+      }
+    },
+    "/api/v1/finance/master/mb-cross-section-factors/{mbcfId}": {
+      "get": {
+        "summary": "GetMbCrossSectionFactor retrieves a cross-section conversion factor by ID.",
+        "operationId": "MbCrossSectionFactorService_GetMbCrossSectionFactor",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMbCrossSectionFactorResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbcfId",
+            "description": "Factor UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MbCrossSectionFactorService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteMbCrossSectionFactor deletes a cross-section conversion factor.",
+        "operationId": "MbCrossSectionFactorService_DeleteMbCrossSectionFactor",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteMbCrossSectionFactorResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbcfId",
+            "description": "Factor UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MbCrossSectionFactorService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateMbCrossSectionFactor updates an existing cross-section conversion factor.",
+        "operationId": "MbCrossSectionFactorService_UpdateMbCrossSectionFactor",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateMbCrossSectionFactorResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbcfId",
+            "description": "Factor UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MbCrossSectionFactorServiceUpdateMbCrossSectionFactorBody"
+            }
+          }
+        ],
+        "tags": [
+          "MbCrossSectionFactorService"
+        ]
+      }
+    },
+    "/api/v1/finance/master/mb-cross-sections": {
+      "get": {
+        "summary": "ListMbCrossSection lists MB cross-section master records with search and pagination.",
+        "operationId": "MbCrossSectionService_ListMbCrossSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMbCrossSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (\u003e= 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Page size (1-100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search across code and display_name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortDir",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "MbCrossSectionService"
+        ]
+      },
+      "post": {
+        "summary": "CreateMbCrossSection creates a new MB cross-section master record.",
+        "operationId": "MbCrossSectionService_CreateMbCrossSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateMbCrossSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateMbCrossSectionRequest is the request for creating an MB cross-section master record.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateMbCrossSectionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MbCrossSectionService"
+        ]
+      }
+    },
+    "/api/v1/finance/master/mb-cross-sections/{mbcsId}": {
+      "get": {
+        "summary": "GetMbCrossSection retrieves an MB cross-section master record by ID.",
+        "operationId": "MbCrossSectionService_GetMbCrossSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMbCrossSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbcsId",
+            "description": "Cross-section UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MbCrossSectionService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteMbCrossSection deletes an MB cross-section master record.",
+        "operationId": "MbCrossSectionService_DeleteMbCrossSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteMbCrossSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbcsId",
+            "description": "Cross-section UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MbCrossSectionService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateMbCrossSection updates an existing MB cross-section master record.",
+        "operationId": "MbCrossSectionService_UpdateMbCrossSection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateMbCrossSectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbcsId",
+            "description": "Cross-section UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MbCrossSectionServiceUpdateMbCrossSectionBody"
+            }
+          }
+        ],
+        "tags": [
+          "MbCrossSectionService"
         ]
       }
     },
@@ -2332,6 +2784,74 @@
         ]
       }
     },
+    "/api/v1/finance/mb-dozing/calculate": {
+      "post": {
+        "summary": "CalculateDozing computes a target LDR without persisting anything.",
+        "operationId": "MBDozingService_CalculateDozing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CalculateDozingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CalculateDozingRequest is the request for the stateless dozing (LDR) calculator.\n\nModes: SCALE and XSECTION only.\n\nNOTE — STRENGTH mode is INTENTIONALLY ABSENT from the `in:` rule below even\nthough the consolidated design (§3.7) lists three modes. Decision gate G6-C3\nput STRENGTH on hold: its formula/direction semantics are not yet settled, so\naccepting the literal here would expose an RPC surface the backend cannot\nhonor. This is a DELIBERATE DIVERGENCE from the design document. Field\nnumbers 10, 11 and 12 are reserved below so STRENGTH can be added later\nwithout renumbering.\n\nNOTE — mode SCALE is computed in pure Go (math.Sqrt); mst_formula is read\nONLY to populate formula_code and calculation_trace (decision K-16 / G19-SQRT).",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CalculateDozingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MBDozingService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-dozing/impact-preview": {
+      "post": {
+        "summary": "PreviewDozingImpact lists products that would be affected by a dozing change.",
+        "operationId": "MBDozingService_PreviewDozingImpact",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PreviewDozingImpactResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "PreviewDozingImpactRequest is the request for previewing products affected by\na dozing change. Spin path only.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1PreviewDozingImpactRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MBDozingService"
+        ]
+      }
+    },
     "/api/v1/finance/mb-heads": {
       "get": {
         "summary": "ListMBHeads lists MB Head records with search, filter, and pagination.",
@@ -2400,6 +2920,14 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "costProductId",
+            "description": "⭐ DIPERBARUI 2026-08-26 (R16) — Filter by linked cost product (mst_mb_head.mbh_cost_product_id).\nOptional; 0 (unset) means no filter, matching the existing product_type_id convention in\nListCostProductMastersRequest. Lets the product detail page look up its MB Head(s) from the\nproduct side — mbh_cost_product_id is the only direction this FK exists in; CostProductMaster\nhas no column pointing back to MB. NOTE: this column is only populated when a head reaches\nVALIDATED (mb_autogen_repository.go), so a still-DRAFT head will not be found by this filter.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -2470,6 +2998,79 @@
               "ACTIVE_FILTER_INACTIVE"
             ],
             "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "includeRejected",
+            "description": "Whether to include REJECTED documents in the export.\n\nDefault false (proto3 zero value) EXCLUDES rejected documents, keeping this\nexport byte-for-byte identical to its behaviour before this field existed.\nSet to true to include them (audit use case).",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/export-full": {
+      "get": {
+        "summary": "ExportMBRecipeFull exports the denormalized full MB recipe (recipe + composition\n+ MB cost) to Excel, one row per composition line.",
+        "operationId": "MBHeadService_ExportMBRecipeFull",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportMBRecipeFullResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status of the MB head.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "period",
+            "description": "Cost period YYYYMM. Empty means \"latest period per head\".",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "costType",
+            "description": "Cost type to include. Empty defaults to ACTUAL, which keeps the row count\nbounded to one cost row per composition line.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "checkStatusCalc",
+            "description": "Filter by the DERIVED check status (mst_mb_head.mbh_check_status_calc, P10).\n\nEmpty means ALL ROWS, including heads whose derived status is still NULL — so\nleaving this unset keeps the export byte-for-byte identical to its behaviour\nbefore this filter existed. A non-empty value keeps only heads carrying exactly\nthat value, which necessarily EXCLUDES the NULL (\"Belum dihitung\") heads.\n\nThe six accepted values are the six allowed by the CHECK constraint\nchk_mbh_check_status_calc (migration 000487). ⚠ Only THREE of them are produced\nby DeriveCheckStatus today — \"Boughtout\", \"Approved\", \"Waiting\". Filtering by\n\"Current\", \"Outdated\" or \"Rejected\" is therefore VALID but returns ZERO ROWS\nuntil the corresponding user gates are decided. ⛔ Not a bug.\n\n⛔ There is deliberately NO sentinel for \"only the NULL heads\" — that semantic\nhas not been decided by the user.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "includeRejected",
+            "description": "Whether to include REJECTED documents in the export.\n\nDefault false (proto3 zero value) EXCLUDES rejected documents, keeping this\nexport byte-for-byte identical to its behaviour before this field existed.\nSet to true to include them (audit use case).",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -2666,6 +3267,206 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/MBHeadServiceApproveMBHeadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/grant-unlock": {
+      "post": {
+        "summary": "GrantUnlockMBHead approves a pending unlock request: the MB Head is unlocked and\nreturns to DRAFT for editing (P10).",
+        "operationId": "MBHeadService_GrantUnlockMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GrantUnlockMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBHeadServiceGrantUnlockMBHeadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/reject": {
+      "post": {
+        "summary": "RejectMBHead rejects a submitted MB Head (K-2). Reason is required.",
+        "operationId": "MBHeadService_RejectMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RejectMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBHeadServiceRejectMBHeadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/reject-unlock": {
+      "post": {
+        "summary": "RejectUnlockMBHead refuses a pending unlock request: the MB Head stays locked and\nreturns to the state it was parked from (P10, K-52). Reason is REQUIRED.",
+        "operationId": "MBHeadService_RejectUnlockMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RejectUnlockMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBHeadServiceRejectUnlockMBHeadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/request-unlock": {
+      "post": {
+        "summary": "RequestUnlockMBHead parks a locked MB Head (APPROVED/VALIDATED) in UNLOCK_REQUESTED\nso an approver can decide (P10). Reason is REQUIRED — an unlock reopens content that\nwas already approved, so the record must say why.",
+        "operationId": "MBHeadService_RequestUnlockMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RequestUnlockMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBHeadServiceRequestUnlockMBHeadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/return-to-draft": {
+      "post": {
+        "summary": "ReturnMBHeadToDraft returns a rejected MB Head back to draft (K-29). Reason is optional; when empty the existing state_reason is preserved.",
+        "operationId": "MBHeadService_ReturnMBHeadToDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReturnMBHeadToDraftResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBHeadServiceReturnMBHeadToDraftBody"
             }
           }
         ],
@@ -3051,6 +3852,53 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/MBSpinServiceUpdateMBSpinBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBSpinService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/{mbhId}/spins/{mbsId}/duplicate": {
+      "post": {
+        "summary": "DuplicateMBSpin clones an MB Spin under the same head (decision D19: the\nclone is born with mbs_oracle_sys_id, mbs_orion_item_code and\nmbs_mb_costing NULL, and mbs_status = 'R and D'). Recalculates eligible\nchild spins one level deep and reports the skipped ones; it does NOT\nrecalculate yarn products (D24) — the response carries a preview only.",
+        "operationId": "MBSpinService_DuplicateMBSpin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DuplicateMBSpinResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "Parent MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "mbsId",
+            "description": "Source MB Spin UUID — the record being duplicated.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBSpinServiceDuplicateMBSpinBody"
             }
           }
         ],
@@ -3768,6 +4616,50 @@
       "type": "object",
       "description": "ApproveMBHeadRequest is the request for approving an MB Head."
     },
+    "MBHeadServiceGrantUnlockMBHeadBody": {
+      "type": "object",
+      "description": "GrantUnlockMBHeadRequest is the request for approving a pending MB Head unlock (P10)."
+    },
+    "MBHeadServiceRejectMBHeadBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for rejecting. Required (K-2)."
+        }
+      },
+      "description": "RejectMBHeadRequest is the request for rejecting a submitted MB Head (K-2)."
+    },
+    "MBHeadServiceRejectUnlockMBHeadBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for refusing the unlock. Required — consistent with every other refusing\ntransition on this service."
+        }
+      },
+      "description": "RejectUnlockMBHeadRequest is the request for refusing a pending MB Head unlock (P10, K-52)."
+    },
+    "MBHeadServiceRequestUnlockMBHeadBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for requesting the unlock. Required — the domain rejects an empty or\nwhitespace-only reason with ErrReasonRequired."
+        }
+      },
+      "description": "RequestUnlockMBHeadRequest is the request for asking that a locked MB Head be unlocked (P10)."
+    },
+    "MBHeadServiceReturnMBHeadToDraftBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for returning to draft. Optional (K-29); when empty the existing state_reason is preserved."
+        }
+      },
+      "description": "ReturnMBHeadToDraftRequest is the request for returning a rejected MB Head back to draft (K-29)."
+    },
     "MBHeadServiceRevokeMBHeadBody": {
       "type": "object",
       "properties": {
@@ -3865,12 +4757,32 @@
         },
         "mbhMachineId": {
           "type": "string",
-          "description": "Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id)."
+          "description": "DEPRECATED (A5) — removed from the UI; the backend ignores this value and always resolves\nthe \"MB\" machine. Retained in the contract because removing a field would be breaking.\n(Intentionally not using the Go \"Deprecated:\" doc marker: it would propagate into the\ngenerated code and trip staticcheck SA1019 in existing handwritten handlers.)\nMachine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id)."
         },
         "mbhRunLdrPct": {
           "type": "number",
           "format": "double",
           "description": "Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage (≥ 0)."
+        },
+        "mbhVsNumber": {
+          "type": "string",
+          "description": "Optional VS number (free text, max 50 chars). No pattern, no uniqueness — literal \"NA\" is valid."
+        },
+        "mbhNoOfProcess": {
+          "type": "string",
+          "description": "Optional number-of-process option code: \"S\", \"D\" or \"T\". No default is implied — absent means NULL."
+        },
+        "additionalShades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBHeadShadeInput"
+          },
+          "description": "Additional shades (max 2)."
+        },
+        "replaceAdditionalShades": {
+          "type": "boolean",
+          "description": "Whether additional_shades should replace the stored shade list. Only when true is the\nlist rewritten. Legacy forms omit this flag, so their updates never wipe existing shades."
         }
       },
       "description": "UpdateMBHeadRequest is the request for updating an MB Head record."
@@ -3935,9 +4847,37 @@
           "type": "number",
           "format": "double",
           "description": "Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage (≥ 0)."
+        },
+        "mbsLdrIsFixed": {
+          "type": "boolean",
+          "description": "Optional fix/actual marker for LDR. Absent = unknown (treated as fixed)."
+        },
+        "mbsDozingIsFixed": {
+          "type": "boolean",
+          "description": "Optional fix/actual marker for dozing. Absent = unknown (treated as fixed)."
         }
       },
       "description": "CreateMBSpinRequest is the request for creating an MB Spin record."
+    },
+    "MBSpinServiceDuplicateMBSpinBody": {
+      "type": "object",
+      "properties": {
+        "mbsMgtName": {
+          "type": "string",
+          "description": "Optional override for the clone's management display name (max 100 chars).\nAbsent means the server derives it as \"\u003csource name\u003e (copy)\"."
+        },
+        "mbsDenier": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional override for the clone's denier, strictly greater than zero.\nAbsent means the source value is copied as-is.\n\nNOTE — the \u003e 0 rule is INTENTIONALLY STRICTER than CreateMBSpinRequest /\nUpdateMBSpinRequest, which accept any double. This field is never a\npassthrough of stored legacy data: it exists only to carry a value a user\njust typed into the duplicate dialog, and a zero/negative denier there is\nalways a mistake. Legacy rows keep flowing through Create/Update untouched."
+        },
+        "mbsFilament": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional override for the clone's filament count, strictly greater than\nzero. Absent means the source value is copied as-is. Same stricter-than-\nCreate/Update reasoning as mbs_denier above."
+        }
+      },
+      "description": "DuplicateMBSpinRequest is the request for duplicating an MB Spin record.\n\nShape follows design §3.7. mbs_oracle_sys_id, mbs_orion_item_code and\nmbs_mb_costing are DELIBERATELY ABSENT: decision D19 requires all three to be\nNULL on the clone, so there is no field to carry them. The user fills them in\nafterwards via UpdateMBSpin."
     },
     "MBSpinServiceImportMBSpinsBody": {
       "type": "object",
@@ -4014,6 +4954,14 @@
           "type": "number",
           "format": "double",
           "description": "Optional Oracle CMBS_RUN_LDR_PRSN — actual LDR percentage (≥ 0)."
+        },
+        "mbsLdrIsFixed": {
+          "type": "boolean",
+          "description": "Optional fix/actual marker for LDR. Absent = leave unchanged."
+        },
+        "mbsDozingIsFixed": {
+          "type": "boolean",
+          "description": "Optional fix/actual marker for dozing. Absent = leave unchanged."
         }
       },
       "description": "UpdateMBSpinRequest is the request for updating an MB Spin record."
@@ -4174,6 +5122,52 @@
         }
       },
       "description": "UpdateMbCompositionRequest is the request for updating an MB composition line."
+    },
+    "MbCrossSectionFactorServiceUpdateMbCrossSectionFactorBody": {
+      "type": "object",
+      "properties": {
+        "factor": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated conversion factor, strictly greater than zero."
+        },
+        "operation": {
+          "type": "string",
+          "description": "Updated arithmetic direction: MULTIPLY or DIVIDE."
+        },
+        "note": {
+          "type": "string",
+          "description": "Updated note."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateMbCrossSectionFactorRequest is the request for updating a cross-section conversion factor."
+    },
+    "MbCrossSectionServiceUpdateMbCrossSectionBody": {
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "Updated display name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Updated description."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Updated display ordering hint."
+        }
+      },
+      "description": "UpdateMbCrossSectionRequest is the request for updating an MB cross-section master record."
     },
     "MbLustureServiceUpdateMbLustureBody": {
       "type": "object",
@@ -4554,6 +5548,81 @@
       },
       "description": "BoxBobbinCostRate represents a period-specific rate for a Box Bobbin Cost config."
     },
+    "v1CalculateDozingRequest": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "description": "Calculation mode: SCALE or XSECTION."
+        },
+        "ldrRef": {
+          "type": "number",
+          "format": "double",
+          "description": "Mode SCALE — reference LDR (dozing percentage) of the source recipe."
+        },
+        "denierRef": {
+          "type": "number",
+          "format": "double",
+          "description": "Mode SCALE — reference denier, strictly greater than zero."
+        },
+        "filamentRef": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Mode SCALE — reference filament count, strictly greater than zero.\nEnforced here as well as in the domain layer (ErrZeroFilament)."
+        },
+        "denierTarget": {
+          "type": "number",
+          "format": "double",
+          "description": "Mode SCALE — target denier, strictly greater than zero."
+        },
+        "filamentTarget": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Mode SCALE — target filament count, strictly greater than zero.\nEnforced here as well as in the domain layer (ErrZeroFilament)."
+        },
+        "ldrSource": {
+          "type": "number",
+          "format": "double",
+          "description": "Mode XSECTION — source LDR (dozing percentage)."
+        },
+        "fromCrossSection": {
+          "type": "string",
+          "description": "Mode XSECTION — source cross-section code (mst_mb_cross_section.mbcs_code)."
+        },
+        "toCrossSection": {
+          "type": "string",
+          "description": "Mode XSECTION — target cross-section code (mst_mb_cross_section.mbcs_code)."
+        }
+      },
+      "description": "CalculateDozingRequest is the request for the stateless dozing (LDR) calculator.\n\nModes: SCALE and XSECTION only.\n\nNOTE — STRENGTH mode is INTENTIONALLY ABSENT from the `in:` rule below even\nthough the consolidated design (§3.7) lists three modes. Decision gate G6-C3\nput STRENGTH on hold: its formula/direction semantics are not yet settled, so\naccepting the literal here would expose an RPC surface the backend cannot\nhonor. This is a DELIBERATE DIVERGENCE from the design document. Field\nnumbers 10, 11 and 12 are reserved below so STRENGTH can be added later\nwithout renumbering.\n\nNOTE — mode SCALE is computed in pure Go (math.Sqrt); mst_formula is read\nONLY to populate formula_code and calculation_trace (decision K-16 / G19-SQRT)."
+    },
+    "v1CalculateDozingResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "resultLdr": {
+          "type": "number",
+          "format": "double",
+          "description": "Resulting LDR. LEFT UNSET when the conversion factor is absent\n(factor_available = false). A 1.0 fallback is explicitly forbidden."
+        },
+        "formulaCode": {
+          "type": "string",
+          "description": "Formula identifier, e.g. F_MB_LDR_SCALE or F_MB_LDR_XSECTION."
+        },
+        "calculationTrace": {
+          "type": "string",
+          "description": "Human-readable substituted expression, for calculation transparency."
+        },
+        "factorAvailable": {
+          "type": "boolean",
+          "description": "False when no conversion factor exists for the requested pair; the UI must\ndisable the apply action and show an explicit message."
+        }
+      },
+      "description": "CalculateDozingResponse is the response for the dozing (LDR) calculator."
+    },
     "v1CreateBoxBobbinCostRateResponse": {
       "type": "object",
       "properties": {
@@ -4837,12 +5906,28 @@
         },
         "mbhMachineId": {
           "type": "string",
-          "description": "Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id)."
+          "description": "DEPRECATED (A5) — removed from the UI; the backend ignores this value and always resolves\nthe \"MB\" machine. Retained in the contract because removing a field would be breaking.\n(Intentionally not using the Go \"Deprecated:\" doc marker: it would propagate into the\ngenerated code and trip staticcheck SA1019 in existing handwritten handlers.)\nMachine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id)."
         },
         "mbhRunLdrPct": {
           "type": "number",
           "format": "double",
           "description": "Optional Oracle CMBH_RUN_LDR_PRSN — actual LDR percentage (≥ 0)."
+        },
+        "mbhVsNumber": {
+          "type": "string",
+          "description": "Optional VS number (free text, max 50 chars). No pattern, no uniqueness — literal \"NA\" is valid."
+        },
+        "mbhNoOfProcess": {
+          "type": "string",
+          "description": "Optional number-of-process option code: \"S\", \"D\" or \"T\". No default is implied — absent means NULL."
+        },
+        "additionalShades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBHeadShadeInput"
+          },
+          "description": "Additional shades (max 2)."
         }
       },
       "description": "CreateMBHeadRequest is the request for creating an MB Head record."
@@ -5068,6 +6153,92 @@
         }
       },
       "description": "CreateMbCompositionResponse is the response for creating an MB composition line."
+    },
+    "v1CreateMbCrossSectionFactorRequest": {
+      "type": "object",
+      "properties": {
+        "fromCode": {
+          "type": "string",
+          "description": "Source cross-section code (1-10 chars)."
+        },
+        "toCode": {
+          "type": "string",
+          "description": "Target cross-section code (1-10 chars)."
+        },
+        "factor": {
+          "type": "number",
+          "format": "double",
+          "description": "Conversion factor, strictly greater than zero."
+        },
+        "operation": {
+          "type": "string",
+          "description": "Arithmetic direction: MULTIPLY or DIVIDE."
+        },
+        "note": {
+          "type": "string",
+          "description": "Free-text note."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        }
+      },
+      "description": "CreateMbCrossSectionFactorRequest is the request for creating a cross-section conversion factor."
+    },
+    "v1CreateMbCrossSectionFactorResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MbCrossSectionFactor",
+          "description": "Created factor record."
+        }
+      },
+      "description": "CreateMbCrossSectionFactorResponse is the response for creating a cross-section conversion factor."
+    },
+    "v1CreateMbCrossSectionRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Unique cross-section code (1-10 chars)."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Free-text description."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active."
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display ordering hint."
+        }
+      },
+      "description": "CreateMbCrossSectionRequest is the request for creating an MB cross-section master record."
+    },
+    "v1CreateMbCrossSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MbCrossSection",
+          "description": "Created cross-section record."
+        }
+      },
+      "description": "CreateMbCrossSectionResponse is the response for creating an MB cross-section master record."
     },
     "v1CreateMbLustureRequest": {
       "type": "object",
@@ -5383,6 +6554,26 @@
       },
       "description": "DeleteMbCompositionResponse is the response for deleting an MB composition line."
     },
+    "v1DeleteMbCrossSectionFactorResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteMbCrossSectionFactorResponse is the response for deleting a cross-section conversion factor."
+    },
+    "v1DeleteMbCrossSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteMbCrossSectionResponse is the response for deleting an MB cross-section master record."
+    },
     "v1DeleteMbLustureResponse": {
       "type": "object",
       "properties": {
@@ -5575,6 +6766,83 @@
       },
       "description": "DownloadProductGradeTemplateResponse is the response for downloading the import template."
     },
+    "v1DozingImpactRow": {
+      "type": "object",
+      "properties": {
+        "cpmProductSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Product system ID."
+        },
+        "cpmProductCode": {
+          "type": "string",
+          "description": "Product code."
+        },
+        "cpmProductName": {
+          "type": "string",
+          "description": "Product name."
+        },
+        "cpmIsLocked": {
+          "type": "boolean",
+          "description": "Whether the product costing is locked."
+        },
+        "frozenDozing": {
+          "type": "number",
+          "format": "double",
+          "description": "Dozing value frozen on the product, when present."
+        }
+      },
+      "description": "DozingImpactRow is a single product affected by a dozing change."
+    },
+    "v1DuplicateMBSpinResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBSpin",
+          "description": "The newly created clone."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBSpinRecalcSkipped"
+          },
+          "description": "Child spins deliberately left untouched by the recalc pass (rule A7).\nEmpty when every candidate child was recalculated."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped child spins. Equals len(skipped) — sent explicitly so a\ncaller that ignores the detail rows still gets the count."
+        },
+        "impactPreview": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DozingImpactRow"
+          },
+          "description": "Products that WOULD be affected, Top-N. ⛔ NOT a recalculation result (D24).\nReuses DozingImpactRow, the same row type PreviewDozingImpact returns, so\nthe UI can render both with one component."
+        },
+        "impactTotalAffected": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of affected products, before truncation."
+        },
+        "impactTotalLocked": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of affected products whose costing is locked."
+        },
+        "impactTruncated": {
+          "type": "boolean",
+          "description": "True when impact_preview was truncated by the server's row cap."
+        }
+      },
+      "description": "DuplicateMBSpinResponse is the response for duplicating an MB Spin record.\n\n⚠ The impact_* fields are a PREVIEW ONLY (decision D24). Nothing in this\nresponse is the result of a yarn-product recalculation: duplicating a spin\nNEVER recalculates yarn products. The rows only tell the user which products\nwould be affected, so they can decide what to do next."
+    },
     "v1ExecutePushToHeadRequest": {
       "type": "object",
       "properties": {
@@ -5678,6 +6946,25 @@
         }
       },
       "description": "ExportMBHeadsResponse is the response for exporting MB Head records."
+    },
+    "v1ExportMBRecipeFullResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "ExportMBRecipeFullResponse carries the full-recipe Excel workbook bytes."
     },
     "v1ExportMBSpinsResponse": {
       "type": "object",
@@ -5872,6 +7159,34 @@
       },
       "description": "GetMachineResponse is the response for retrieving a machine."
     },
+    "v1GetMbCrossSectionFactorResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MbCrossSectionFactor",
+          "description": "Factor record."
+        }
+      },
+      "description": "GetMbCrossSectionFactorResponse is the response for retrieving a cross-section conversion factor."
+    },
+    "v1GetMbCrossSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MbCrossSection",
+          "description": "Cross-section record."
+        }
+      },
+      "description": "GetMbCrossSectionResponse is the response for retrieving an MB cross-section master record."
+    },
     "v1GetMbLustureResponse": {
       "type": "object",
       "properties": {
@@ -5899,6 +7214,20 @@
         }
       },
       "description": "GetProductGradeResponse is the response for retrieving a Product Grade."
+    },
+    "v1GrantUnlockMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "Updated MB Head data."
+        }
+      },
+      "description": "GrantUnlockMBHeadResponse is the response for granting an MB Head unlock."
     },
     "v1ImportBoxBobbinCostsRequest": {
       "type": "object",
@@ -6585,6 +7914,50 @@
       },
       "description": "ListMbCompositionsResponse is the response for listing composition lines."
     },
+    "v1ListMbCrossSectionFactorResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MbCrossSectionFactor"
+          },
+          "description": "Factor records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListMbCrossSectionFactorResponse is the response for listing cross-section conversion factors."
+    },
+    "v1ListMbCrossSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MbCrossSection"
+          },
+          "description": "Cross-section records."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListMbCrossSectionResponse is the response for listing MB cross-section master records."
+    },
     "v1ListMbLustureResponse": {
       "type": "object",
       "properties": {
@@ -6827,7 +8200,7 @@
         },
         "entryStatus": {
           "type": "string",
-          "description": "MB Costing Suite workflow state (mbh_entry_status). One of DRAFT/SUBMITTED/APPROVED/VALIDATED/UN_APPROVED/REVOKED."
+          "description": "MB Costing Suite workflow state (mbh_entry_status). One of DRAFT/SUBMITTED/APPROVED/VALIDATED/UN_APPROVED/REVOKED/REJECTED (REJECTED added by user decision K-2)."
         },
         "isBoughtout": {
           "type": "boolean",
@@ -6918,9 +8291,87 @@
         "machineId": {
           "type": "string",
           "description": "Machine assigned for MACHINE_MB_FIXED_TOTAL cost resolution (references mst_machine.mc_id). Optional."
+        },
+        "mbhVsNumber": {
+          "type": "string",
+          "description": "Optional VS number (free text, e.g. \"NA\"). Wired from existing column mbh_vs_number."
+        },
+        "mbhNoOfProcess": {
+          "type": "string",
+          "description": "Optional number-of-process option code: \"S\", \"D\" or \"T\". No default is implied — absent means NULL."
+        },
+        "additionalShades": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBHeadShade"
+          },
+          "description": "Additional shades (max 2). Combined with the header shade this yields up to 3 shades per recipe."
+        },
+        "mbhIsLocked": {
+          "type": "boolean",
+          "description": "Whether the record is locked. Field only — lock/unlock BEHAVIOUR is out of scope here (P10)."
+        },
+        "mbhUnlockRequestedAt": {
+          "type": "string",
+          "description": "Timestamp when an unlock was requested (RFC3339). Field only — behaviour is P10."
+        },
+        "mbhUnlockRequestedBy": {
+          "type": "string",
+          "description": "User who requested the unlock. Field only — behaviour is P10."
+        },
+        "mbhCheckStatusCalc": {
+          "type": "string",
+          "description": "DERIVED check status (mbh_check_status_calc), computed by the backend from\nmbh_entry_status + mbh_is_boughtout. User decision K-1 option 2: the legacy\nmbh_check_status (field 9) stays FROZEN as the Oracle import trace and is never\nwritten by the application; THIS field is the computed one.\nABSENT means \"never calculated by the application\" — 207 legacy heads keep it\nabsent permanently, there is no backfill. Clients MUST render that explicitly\n(e.g. \"Belum dihitung\"); they MUST NOT coerce it to \"\" or to a placeholder that\nreads as a stored value, and they MUST NOT compute it themselves."
+        },
+        "mbhUnlockReason": {
+          "type": "string",
+          "description": "Reason WRITTEN BY THE REQUESTER when calling RequestUnlockMBHead, i.e. the\nfree-text justification for why the locked recipe needs to be reopened.\nPersisted in mst_mb_head.mbh_unlock_reason.\n\nABSENT means no unlock request has ever been recorded for this head. It is\ndeliberately NOT cleared when an unlock is granted or rejected — the trail of\nwhy the unlock was asked for must survive the decision.\n\nRendered next to mbh_unlock_requested_by (43) and mbh_unlock_requested_at (42)\nso the approver sees WHO asked, WHEN, and WHY before deciding.\n\n⛔ This is NOT state_reason. state_reason carries the reason of the PREVIOUS\nworkflow step (principle U-2) and is left untouched by RequestUnlockMBHead —\nnever substitute one for the other."
         }
       },
       "description": "MBHead represents a Melange Batch head master record (MEL yarn type only)."
+    },
+    "v1MBHeadShade": {
+      "type": "object",
+      "properties": {
+        "mbhsId": {
+          "type": "string",
+          "description": "UUID primary key (mbhs_id)."
+        },
+        "mbhsSeqNo": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Sequence number of the additional shade. 1 or 2."
+        },
+        "mbhsShadeCode": {
+          "type": "string",
+          "description": "Shade code. Always present (NOT NULL in DB)."
+        },
+        "mbhsShadeName": {
+          "type": "string",
+          "description": "Shade name. May be empty — column is nullable in DB."
+        }
+      },
+      "description": "MBHeadShade is one additional shade of an MB recipe (max 2 per recipe).\nMirrors mst_mb_head_shade (migration 000483): mbhs_shade_code is NOT NULL,\nmbhs_shade_name is nullable, and mbhs_seq_no is constrained to (1, 2)."
+    },
+    "v1MBHeadShadeInput": {
+      "type": "object",
+      "properties": {
+        "mbhsSeqNo": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Sequence number of the additional shade. 1 or 2 (DB CHECK mbhs_seq_no IN (1, 2))."
+        },
+        "mbhsShadeCode": {
+          "type": "string",
+          "description": "Shade code (max 20 chars). Required — NOT NULL in DB."
+        },
+        "mbhsShadeName": {
+          "type": "string",
+          "description": "Shade name (max 100 chars). Optional — nullable in DB."
+        }
+      },
+      "description": "MBHeadShadeInput is an additional-shade row supplied on create/update."
     },
     "v1MBSpin": {
       "type": "object",
@@ -6994,9 +8445,39 @@
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."
+        },
+        "mbsLdrIsFixed": {
+          "type": "boolean",
+          "description": "Fix/actual marker for the LDR value. Absent means \"unknown\", which the\ndomain treats as FIXED (recalc-safe). true = fixed, false = computed."
+        },
+        "mbsDozingIsFixed": {
+          "type": "boolean",
+          "description": "Fix/actual marker for the dozing value. Absent means \"unknown\", which the\ndomain treats as FIXED (recalc-safe). true = fixed, false = computed."
         }
       },
       "description": "MBSpin represents a Melange Batch spin detail record (child of MBHead)."
+    },
+    "v1MBSpinRecalcSkipped": {
+      "type": "object",
+      "properties": {
+        "mbsId": {
+          "type": "string",
+          "description": "Skipped child spin UUID."
+        },
+        "mbsMgtName": {
+          "type": "string",
+          "description": "Skipped child spin management display name, for display without a refetch."
+        },
+        "mbsStatus": {
+          "type": "string",
+          "description": "Status that caused the skip. Absent = the child has no status at all, which\nis itself a skip reason (an absent status is treated as non-recalculable)."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Machine-readable skip reason, e.g. STATUS_NOT_RND or STATUS_ABSENT."
+        }
+      },
+      "description": "MBSpinRecalcSkipped is one child spin that the duplicate/recalc pass did NOT\ntouch (rule A7).\n\nChildren are recalculated only when mbs_status = 'R and D'. A child in\n'Spinning' or 'Boughtout', or one whose status is absent, carries an actual\nproduction value that must never be overwritten by a derived one — it is\nskipped and reported here so the UI can say WHICH children were left alone\nand why, instead of silently doing less than the user expected."
     },
     "v1Machine": {
       "type": "object",
@@ -7151,6 +8632,26 @@
         "label": {
           "type": "string",
           "description": "The \"label\" field value displayed to the user."
+        },
+        "denier": {
+          "type": "number",
+          "format": "double",
+          "description": "⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): spin denier (dtex).\nCurrently only populated for the MB_SPIN lookup master, so users can tell\nvisually-similar MB Spin entries apart. Unset for every other lookup master."
+        },
+        "filament": {
+          "type": "integer",
+          "format": "int32",
+          "description": "⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): number of filaments.\nCurrently only populated for the MB_SPIN lookup master. Unset otherwise."
+        },
+        "ldrPrsn": {
+          "type": "number",
+          "format": "double",
+          "description": "⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): planned LDR percentage\n(mst_mb_spin.mbs_ldr_prsn, \"LDR Rencana (%)\"). Only populated for the\nMB_SPIN lookup master. Unset otherwise."
+        },
+        "runLdrPct": {
+          "type": "number",
+          "format": "double",
+          "description": "⭐ DIPERBARUI 2026-08-26 (U-mbspin-lookup-detail): actual/run LDR\npercentage used in cost calculation (mst_mb_spin.mbs_run_ldr_pct,\n\"LDR Aktual (%)\"). Only populated for the MB_SPIN lookup master. Unset\notherwise."
         }
       },
       "description": "MasterOption is one combobox entry (code + label) for the MasterLookupField dropdown."
@@ -7267,6 +8768,80 @@
         }
       },
       "description": "MbCompositionVersion is a frozen snapshot of a composition line captured at validation time."
+    },
+    "v1MbCrossSection": {
+      "type": "object",
+      "properties": {
+        "mbcsId": {
+          "type": "string",
+          "description": "UUID primary key (mbcs_id)."
+        },
+        "code": {
+          "type": "string",
+          "description": "Unique cross-section code (mbcs_code, max 10 chars), e.g. RND / TBL / RSD."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name (mbcs_display_name)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Free-text description (mbcs_description)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active (mbcs_is_active)."
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Display ordering hint (mbcs_display_order)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "MbCrossSection is a master lookup entry for MB cross-section codes\n(mst_mb_cross_section)."
+    },
+    "v1MbCrossSectionFactor": {
+      "type": "object",
+      "properties": {
+        "mbcfId": {
+          "type": "string",
+          "description": "UUID primary key (mbcf_id)."
+        },
+        "fromCode": {
+          "type": "string",
+          "description": "Source cross-section code (mbcf_from_code)."
+        },
+        "toCode": {
+          "type": "string",
+          "description": "Target cross-section code (mbcf_to_code)."
+        },
+        "factor": {
+          "type": "number",
+          "format": "double",
+          "description": "Conversion factor (mbcf_factor), strictly greater than zero."
+        },
+        "operation": {
+          "type": "string",
+          "description": "Arithmetic direction (mbcf_operation): MULTIPLY or DIVIDE."
+        },
+        "note": {
+          "type": "string",
+          "description": "Free-text note (mbcf_note)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the record is active (mbcf_is_active)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "MbCrossSectionFactor is one ORDERED (from_code -\u003e to_code) LDR conversion\nfactor (mst_mb_cross_section_factor). The operation carries the direction of\nthe arithmetic and is not derivable from the factor alone."
     },
     "v1MbLusture": {
       "type": "object",
@@ -7510,6 +9085,57 @@
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
     },
+    "v1PreviewDozingImpactRequest": {
+      "type": "object",
+      "properties": {
+        "mbsId": {
+          "type": "string",
+          "description": "MB spin UUID. Required."
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Maximum number of rows to return. 0 means the server default (20)."
+        }
+      },
+      "description": "PreviewDozingImpactRequest is the request for previewing products affected by\na dozing change. Spin path only."
+    },
+    "v1PreviewDozingImpactResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DozingImpactRow"
+          },
+          "description": "Affected product rows (Top-N, capped by the request limit)."
+        },
+        "totalAffected": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of affected products, before truncation."
+        },
+        "totalLocked": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of affected products that are locked."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when data was truncated by the limit."
+        },
+        "note": {
+          "type": "string",
+          "description": "Free-form note used to report data anomalies detected while resolving impact."
+        }
+      },
+      "description": "PreviewDozingImpactResponse is the response for the dozing impact preview."
+    },
     "v1PreviewPushToHeadResponse": {
       "type": "object",
       "properties": {
@@ -7651,6 +9277,62 @@
         }
       },
       "description": "PushableMbHead describes an MB Head eligible to receive pushed costs for the previewed period."
+    },
+    "v1RejectMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "Updated MB Head data."
+        }
+      },
+      "description": "RejectMBHeadResponse is the response for rejecting an MB Head."
+    },
+    "v1RejectUnlockMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "Updated MB Head data."
+        }
+      },
+      "description": "RejectUnlockMBHeadResponse is the response for refusing an MB Head unlock."
+    },
+    "v1RequestUnlockMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "Updated MB Head data."
+        }
+      },
+      "description": "RequestUnlockMBHeadResponse is the response for requesting an MB Head unlock."
+    },
+    "v1ReturnMBHeadToDraftResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "Updated MB Head data."
+        }
+      },
+      "description": "ReturnMBHeadToDraftResponse is the response for returning an MB Head to draft."
     },
     "v1RevokeMBHeadResponse": {
       "type": "object",
@@ -7891,6 +9573,34 @@
         }
       },
       "description": "UpdateMbCompositionResponse is the response for updating an MB composition line."
+    },
+    "v1UpdateMbCrossSectionFactorResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MbCrossSectionFactor",
+          "description": "Updated factor record."
+        }
+      },
+      "description": "UpdateMbCrossSectionFactorResponse is the response for updating a cross-section conversion factor."
+    },
+    "v1UpdateMbCrossSectionResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MbCrossSection",
+          "description": "Updated cross-section record."
+        }
+      },
+      "description": "UpdateMbCrossSectionResponse is the response for updating an MB cross-section master record."
     },
     "v1UpdateMbLustureResponse": {
       "type": "object",
