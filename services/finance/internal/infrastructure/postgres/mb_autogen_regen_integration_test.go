@@ -144,7 +144,9 @@ func (s *MBAutoGenRegenSuite) seedFixtures() {
 		s.groupHeadID, mbRegenFixturePrefix+"GRP")
 	require.NoError(s.T(), err)
 
-	code := mbRegenFixturePrefix + uuid.NewString()[:8]
+	// cpm_product_code is VARCHAR(20); mbRegenFixturePrefix (14 chars) + a 6-char
+	// suffix fits exactly, unlike the 8-char suffix used for wider columns below.
+	code := mbRegenFixturePrefix + uuid.NewString()[:6]
 	err = s.db.QueryRowContext(s.ctx, `
 		INSERT INTO cost_product_master (cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_source, cpm_is_locked, cpm_created_by, cpm_updated_by)
 		VALUES ($1, $2, 'itest MB product', 'MB_RECIPE', TRUE, 'itest', 'itest')
@@ -229,13 +231,17 @@ func (s *MBAutoGenRegenSuite) TestRegenerate_UpdatesRecipe_AndIsIdempotent() {
 
 	ratios := s.routeRMRatios()
 	require.Len(s.T(), ratios, 1, "must replace, not append, the recipe row")
-	require.Equal(s.T(), "0.75", ratios[0])
+	// crm_route_rm_ratio is NUMERIC(10,6); Postgres always renders a numeric's
+	// ::text cast with the column's full declared scale, so 0.75 reads back as
+	// "0.750000" (verified directly: SELECT (0.75::numeric(10,6))::text ->
+	// '0.750000'), never the trimmed "0.75".
+	require.Equal(s.T(), "0.750000", ratios[0])
 
 	// Run again with the same version — must not duplicate.
 	s.runRegen(2)
 	ratios = s.routeRMRatios()
 	require.Len(s.T(), ratios, 1, "re-running the regeneration must not duplicate rows")
-	require.Equal(s.T(), "0.75", ratios[0])
+	require.Equal(s.T(), "0.750000", ratios[0])
 }
 
 // (ii): cpm_product_sys_id (and therefore mbh_cost_product_id) must never change across a regen.
