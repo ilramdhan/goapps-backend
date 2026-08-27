@@ -48,15 +48,20 @@ const (
 )
 
 // TransitionWithAutoGen performs the same work as Transition, then — only when toState is
-// StatusValidated and entity's cost product has not already been generated — auto-generates the
-// linked cost_product_master/cost_route_*/CAPP/CPP rows per design addendum §10.2. All writes
-// (transition + auto-gen) commit or roll back together.
+// StatusValidated — either auto-generates the linked cost_product_master/cost_route_*/CAPP/CPP
+// rows per design addendum §10.2 (first validate) or, when the cost product already exists,
+// regenerates only its cost_route_rm recipe rows from the latest composition version (a later
+// re-validate after an edit) so MB Batch never keeps costing off a stale, first-ever-approved
+// recipe. All writes (transition + auto-gen/regen) commit or roll back together.
 func (r *MBHeadRepository) TransitionWithAutoGen(ctx context.Context, id uuid.UUID, fromState, toState string, currentVersion int32, stateReason, actorUserID string, params *mbhead.ParamSnapshot, entity *mbhead.Entity) error {
 	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
-		if err := r.updateEntryStatusTx(ctx, tx, id, toState, currentVersion, stateReason, params); err != nil {
+		if err := r.updateEntryStatusTx(ctx, tx, id, fromState, toState, currentVersion, stateReason, actorUserID, params); err != nil {
 			return err
 		}
 		if err := r.insertWorkflowLogTx(ctx, tx, id, fromState, toState, actorUserID, stateReason, currentVersion); err != nil {
+			return err
+		}
+		if err := r.writeLockLogTx(ctx, tx, id, fromState, toState, actorUserID, stateReason); err != nil {
 			return err
 		}
 		if toState != mbhead.StatusValidated {
@@ -66,10 +71,56 @@ func (r *MBHeadRepository) TransitionWithAutoGen(ctx context.Context, id uuid.UU
 			return err
 		}
 		if entity.CostProductID() != 0 {
-			return nil
+			return r.regenerateCostProductRMs(ctx, tx, id, currentVersion, actorUserID, entity.CostProductID())
 		}
 		return r.autoGenCostProduct(ctx, tx, id, currentVersion, actorUserID, entity)
 	})
+}
+
+// regenerateCostProductRMs refreshes the cost_route_rm rows under the MB's existing cost product
+// route/seq when a recipe (mbhead) is re-validated after an edit. Before this fix, the linked
+// cost_product_master/cost_route_head/cost_route_seq (and therefore mbh_cost_product_id) were
+// generated exactly once and never touched again, so MB Batch kept costing off the FIRST approved
+// composition forever, silently ignoring later edits. cost_product_master stays the same row (no
+// new product, no re-linking mbh_cost_product_id) — only the recipe lines are deleted and
+// re-inserted from the latest composition version, mirroring the delete-then-reinsert pattern
+// already used by BulkReplaceRMs (cost_route_repository.go). mbWriteBackCostProduct's
+// mbh_cost_generated_at/_by columns are refreshed too, so there is always a visible trail of when
+// the copy was last regenerated instead of the number silently drifting.
+func (r *MBHeadRepository) regenerateCostProductRMs(ctx context.Context, tx *sql.Tx, id uuid.UUID, version int32, actorUserID string, productSysID int64) error {
+	seqID, err := mbResolveExistingRouteSeqID(ctx, tx, productSysID)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM cost_route_rm WHERE crm_seq_id = $1`, seqID); err != nil {
+		return fmt.Errorf("mb_autogen: delete stale cost_route_rm: %w", err)
+	}
+	rows, err := r.compositionRepo.ListVersionByMbhIDAndVersion(ctx, tx, id.String(), version)
+	if err != nil {
+		return err
+	}
+	if err := mbInsertRouteRMs(ctx, tx, seqID, productSysID, rows, actorUserID); err != nil {
+		return err
+	}
+	return mbWriteBackCostProduct(ctx, tx, id, productSysID, actorUserID)
+}
+
+// mbResolveExistingRouteSeqID finds the single route/seq (level 1, seq 1 — the only shape
+// autoGenCostProduct ever creates) under an MB's already-generated cost product, so a re-validate
+// can replace its cost_route_rm rows without creating a second route or a second product.
+func mbResolveExistingRouteSeqID(ctx context.Context, tx *sql.Tx, productSysID int64) (int64, error) {
+	const q = `
+		SELECT crs.crs_seq_id
+		FROM cost_route_seq crs
+		JOIN cost_route_head crh ON crh.crh_head_id = crs.crs_head_id
+		WHERE crh.crh_product_sys_id = $1
+		ORDER BY crs.crs_seq_id
+		LIMIT 1`
+	var seqID int64
+	if err := tx.QueryRowContext(ctx, q, productSysID).Scan(&seqID); err != nil {
+		return 0, fmt.Errorf("mb_autogen: resolve existing cost_route_seq for product %d: %w", productSysID, err)
+	}
+	return seqID, nil
 }
 
 // autoGenCostProduct runs the 6-step auto-gen write sequence (design addendum §10.2) inside the
