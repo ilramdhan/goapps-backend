@@ -144,7 +144,7 @@ func (r *MBLustureRepository) ListAll(ctx context.Context, filter mblusture.Expo
 
 // List returns paginated active lusture rows, optionally filtered by a search term matched
 // against code and display name.
-func (r *MBLustureRepository) List(ctx context.Context, filter mblusture.ListFilter) ([]*mblusture.Entity, int64, error) {
+func (r *MBLustureRepository) List(ctx context.Context, filter mblusture.ListFilter) ([]*mblusture.Entity, int64, error) { //nolint:dupl // Mirrors MBCrossSectionRepository.List — different table/types prevent shared code.
 	filter.Validate()
 
 	where := whereNotDeleted
