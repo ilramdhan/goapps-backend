@@ -4855,6 +4855,10 @@
         "mbsDozingIsFixed": {
           "type": "boolean",
           "description": "Optional fix/actual marker for dozing. Absent = unknown (treated as fixed)."
+        },
+        "mbsVsNumber": {
+          "type": "string",
+          "description": "Optional VS reference number (free text, e.g. \"NA\")."
         }
       },
       "description": "CreateMBSpinRequest is the request for creating an MB Spin record."
@@ -4971,6 +4975,10 @@
         "mbsLdrLockActual": {
           "type": "boolean",
           "description": "Optional lock/unlock instruction for LDR Actual status. true = lock as\nActual, false = unlock. Absent = no-op (leave the lock state untouched)."
+        },
+        "mbsVsNumber": {
+          "type": "string",
+          "description": "Optional VS reference number. Absent = leave unchanged."
         }
       },
       "description": "UpdateMBSpinRequest is the request for updating an MB Spin record."
@@ -8480,6 +8488,10 @@
         "mbsLdrIsActual": {
           "type": "boolean",
           "description": "True when the LDR is locked to an actual/manual value (mbs_ldr_type is then ACTUAL). Mirrors mbs_ldr_is_actual."
+        },
+        "mbsVsNumber": {
+          "type": "string",
+          "description": "Optional Oracle CMBS_VS_NUMBER — VS reference number, copied from the parent MB Head's mbh_vs_number."
         }
       },
       "description": "MBSpin represents a Melange Batch spin detail record (child of MBHead)."
