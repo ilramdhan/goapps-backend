@@ -171,17 +171,24 @@ func (r *MBHeadRepository) autoGenCostProduct(ctx context.Context, tx *sql.Tx, i
 
 // mbAutoGenSpin creates the single MB Spin row that must exist alongside every
 // first-ever-generated Master Product MB (business decision, see autoGenCostProduct's call
-// site comment above — never fires on re-validate). Shade/cross-section are copied down from
-// the parent MB Head's identity fields; mbs_ldr_type starts at its NOT_CALCULATED default
-// (mirrors the mst_mb_spin column default) rather than being eagerly computed here; mbs_status
-// starts at mbspin.StatusRnD, the same default used for manually-created MB Spin rows today;
-// and the new row's cost-product linkage is set via the same HydrateLineage/CostProductID path
-// the repository already uses to read that column back from storage (migration 000490).
+// site comment above — never fires on re-validate). Shade/cross-section and (putaran 83
+// stakeholder decision) Denier/Filament/Dozing/MB Costing/VS Number are copied down from the
+// parent MB Head's identity fields; mbs_ldr_type starts at its NOT_CALCULATED default (mirrors
+// the mst_mb_spin column default) rather than being eagerly computed here — the LDR fields are
+// deliberately LEFT BLANK rather than copied, per the same stakeholder decision, so the
+// separate LDR calculation/locking process (Task E) is never bypassed; mbs_status starts at
+// mbspin.StatusRnD, the same default used for manually-created MB Spin rows today; and the new
+// row's cost-product linkage is set via the same HydrateLineage/CostProductID path the
+// repository already uses to read that column back from storage (migration 000490).
 func mbAutoGenSpin(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mbhead.Entity, productSysID int64, actorUserID string) error {
 	mgtName := mbSpinAutoGenMgtName(entity)
 	rndStatus := mbspin.StatusRnD
+	mbCosting := mbEmptyStringToPtr(entity.MBCosting())
 
-	spin, err := mbspin.New(headID, mgtName, nil, nil, nil, nil, nil, nil, nil, nil, &rndStatus, nil, nil, nil, nil, nil, actorUserID)
+	// Stakeholder decision (putaran 83): Denier/Filament/Dozing/MB Costing carry
+	// straight over from the parent MB Head — they are plain identity/spec fields with
+	// no separate recalculation process, unlike the LDR fields below.
+	spin, err := mbspin.New(headID, mgtName, nil, nil, entity.Denier(), entity.Filament(), entity.Dozing(), mbCosting, nil, nil, &rndStatus, nil, nil, nil, nil, nil, actorUserID)
 	if err != nil {
 		return fmt.Errorf("mb_autogen: construct auto-generated mb spin: %w", err)
 	}
@@ -193,6 +200,7 @@ func mbAutoGenSpin(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mb
 		LDRType:      mbspin.LDRTypeNotCalculated,
 		LDRIsActual:  false,
 	})
+	spin.HydrateVSNumber(entity.VSNumber())
 	spin.HydrateLineage(mbspin.Lineage{CostProductID: &productSysID})
 
 	if err := createSpinOn(ctx, tx, spin); err != nil {

@@ -42,7 +42,9 @@ type UpdateCommand struct {
 	// exists on this path from the start rather than being retrofitted the day
 	// the proto field appears.
 	OrionItemCode *string
-	UpdatedBy     string
+	// VSNumber sets the VS reference number. nil leaves it unchanged.
+	VSNumber  *string
+	UpdatedBy string
 }
 
 // UpdateHandler handles the UpdateMBSpin command.
@@ -125,6 +127,7 @@ func (h *UpdateHandler) HandleWithRecalc(ctx context.Context, cmd UpdateCommand)
 		LDRIsFixed:      cmd.LDRIsFixed,
 		DozingIsFixed:   cmd.DozingIsFixed,
 		IsActive:        cmd.IsActive,
+		VSNumber:        cmd.VSNumber,
 	}, cmd.UpdatedBy); err != nil {
 		return nil, err
 	}

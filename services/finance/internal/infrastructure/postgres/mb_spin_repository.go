@@ -47,8 +47,9 @@ func createSpinOn(ctx context.Context, q rowQuerier, entity *mbspin.Entity) erro
 			mbs_ldr_is_fixed, mbs_dozing_is_fixed,
 			mbs_shade_code, mbs_shade_name, mbs_cross_section,
 			mbs_ldr_type, mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct, mbs_ldr_is_actual,
+			mbs_vs_number,
 			mbs_is_active, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -74,6 +75,7 @@ func createSpinOn(ctx context.Context, q rowQuerier, entity *mbspin.Entity) erro
 		entity.LDRCalculatedPct(),
 		entity.LDRAdjustmentPct(),
 		entity.LDRIsActual(),
+		entity.VSNumber(),
 		entity.IsActive(),
 		entity.CreatedAt(),
 		entity.CreatedBy(),
@@ -174,9 +176,10 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 			mbs_ldr_calculated_pct   = $19,
 			mbs_ldr_adjustment_pct   = $20,
 			mbs_ldr_is_actual        = $21,
-			mbs_is_active     = $22,
-			updated_at        = $23,
-			updated_by        = $24
+			mbs_vs_number     = $22,
+			mbs_is_active     = $23,
+			updated_at        = $24,
+			updated_by        = $25
 		WHERE mbs_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -200,6 +203,7 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 		entity.LDRCalculatedPct(),
 		entity.LDRAdjustmentPct(),
 		entity.LDRIsActual(),
+		entity.VSNumber(),
 		entity.IsActive(),
 		entity.UpdatedAt(),
 		entity.UpdatedBy(),
@@ -341,7 +345,8 @@ func (r *MBSpinRepository) selectCols() string {
 		       mbs_parent_spin_id, mbs_duplicated_at, mbs_duplicated_by,
 		       mbs_last_recalc_at, mbs_last_recalc_by, mbs_cost_product_id,
 		       mbs_shade_code, mbs_shade_name, mbs_cross_section,
-		       mbs_ldr_type, mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct, mbs_ldr_is_actual
+		       mbs_ldr_type, mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct, mbs_ldr_is_actual,
+		       mbs_vs_number
 		FROM mst_mb_spin
 	`
 }
@@ -401,6 +406,9 @@ type mbSpinDTO struct {
 	LDRCalculatedPct sql.NullFloat64
 	LDRAdjustmentPct sql.NullFloat64
 	LDRIsActual      bool
+	// VSNumber is the VS reference number copied down from the parent MB Head
+	// at MB Spin auto-generation time (migration 000414).
+	VSNumber sql.NullString
 }
 
 func (d *mbSpinDTO) toEntity() *mbspin.Entity {
@@ -422,6 +430,7 @@ func (d *mbSpinDTO) toEntity() *mbspin.Entity {
 		LDRAdjustmentPct: nullableFloat64Ptr(d.LDRAdjustmentPct),
 		LDRIsActual:      d.LDRIsActual,
 	})
+	e.HydrateVSNumber(nullableStringPtr(d.VSNumber))
 	return e
 }
 
@@ -467,6 +476,7 @@ func (r *MBSpinRepository) scanOne(row *sql.Row) (*mbspin.Entity, error) {
 		&d.LastRecalcAt, &d.LastRecalcBy, &d.CostProductID,
 		&d.ShadeCode, &d.ShadeName, &d.CrossSection,
 		&d.LDRType, &d.LDRCalculatedPct, &d.LDRAdjustmentPct, &d.LDRIsActual,
+		&d.VSNumber,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbspin.ErrNotFound
@@ -491,6 +501,7 @@ func (r *MBSpinRepository) scanRow(rows *sql.Rows) (*mbspin.Entity, error) {
 		&d.LastRecalcAt, &d.LastRecalcBy, &d.CostProductID,
 		&d.ShadeCode, &d.ShadeName, &d.CrossSection,
 		&d.LDRType, &d.LDRCalculatedPct, &d.LDRAdjustmentPct, &d.LDRIsActual,
+		&d.VSNumber,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan mb spin row: %w", err)
