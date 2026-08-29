@@ -407,13 +407,11 @@ var knownFailOpen = map[string]struct{}{
 	"/finance.v1.DataSourceService/GetFactDistincts":                            {},
 	"/finance.v1.DataSourceService/ListDataSources":                             {},
 	"/finance.v1.FormulaService/CreateFormula":                                  {},
-	"/finance.v1.FormulaService/DeleteFormula":                                  {},
 	"/finance.v1.FormulaService/DownloadFormulaTemplate":                        {},
 	"/finance.v1.FormulaService/ExportFormulas":                                 {},
 	"/finance.v1.FormulaService/GetFormula":                                     {},
 	"/finance.v1.FormulaService/ImportFormulas":                                 {},
 	"/finance.v1.FormulaService/ListFormulas":                                   {},
-	"/finance.v1.FormulaService/UpdateFormula":                                  {},
 	"/finance.v1.InterminglingService/CreateIntermingling":                      {},
 	"/finance.v1.InterminglingService/DeleteIntermingling":                      {},
 	"/finance.v1.InterminglingService/DownloadInterminglingTemplate":            {},
@@ -424,7 +422,6 @@ var knownFailOpen = map[string]struct{}{
 	"/finance.v1.InterminglingService/UpdateIntermingling":                      {},
 	"/finance.v1.LookupMasterService/CreateLookupMaster":                        {},
 	"/finance.v1.LookupMasterService/CreateLookupMasterColumn":                  {},
-	"/finance.v1.LookupMasterService/DeleteLookupMaster":                        {},
 	"/finance.v1.LookupMasterService/DeleteLookupMasterColumn":                  {},
 	"/finance.v1.LookupMasterService/ExportLookupMasters":                       {},
 	"/finance.v1.LookupMasterService/ImportLookupMasters":                       {},
@@ -432,15 +429,12 @@ var knownFailOpen = map[string]struct{}{
 	"/finance.v1.LookupMasterService/ListLookupMasters":                         {},
 	"/finance.v1.LookupMasterService/ListMasterOptions":                         {},
 	"/finance.v1.LookupMasterService/ListTableColumns":                          {},
-	"/finance.v1.LookupMasterService/UpdateLookupMaster":                        {},
 	"/finance.v1.MachineService/CreateMachine":                                  {},
-	"/finance.v1.MachineService/DeleteMachine":                                  {},
 	"/finance.v1.MachineService/DownloadMachineTemplate":                        {},
 	"/finance.v1.MachineService/ExportMachines":                                 {},
 	"/finance.v1.MachineService/GetMachine":                                     {},
 	"/finance.v1.MachineService/ImportMachines":                                 {},
 	"/finance.v1.MachineService/ListMachines":                                   {},
-	"/finance.v1.MachineService/UpdateMachine":                                  {},
 	"/finance.v1.MbLustureService/DownloadMbLustureTemplate":                    {},
 	"/finance.v1.MbLustureService/ExportMbLusture":                              {},
 	"/finance.v1.MbLustureService/ImportMbLusture":                              {},
@@ -454,21 +448,17 @@ var knownFailOpen = map[string]struct{}{
 	"/finance.v1.OracleSyncService/ListSyncPeriods":                             {},
 	"/finance.v1.OracleSyncService/TriggerSync":                                 {},
 	"/finance.v1.ParameterService/CreateParameter":                              {},
-	"/finance.v1.ParameterService/DeleteParameter":                              {},
 	"/finance.v1.ParameterService/DownloadParameterTemplate":                    {},
 	"/finance.v1.ParameterService/ExportParameters":                             {},
 	"/finance.v1.ParameterService/GetParameter":                                 {},
 	"/finance.v1.ParameterService/ImportParameters":                             {},
 	"/finance.v1.ParameterService/ListParameters":                               {},
-	"/finance.v1.ParameterService/UpdateParameter":                              {},
 	"/finance.v1.ProductGradeService/CreateProductGrade":                        {},
-	"/finance.v1.ProductGradeService/DeleteProductGrade":                        {},
 	"/finance.v1.ProductGradeService/DownloadProductGradeTemplate":              {},
 	"/finance.v1.ProductGradeService/ExportProductGrades":                       {},
 	"/finance.v1.ProductGradeService/GetProductGrade":                           {},
 	"/finance.v1.ProductGradeService/ImportProductGrades":                       {},
 	"/finance.v1.ProductGradeService/ListProductGrades":                         {},
-	"/finance.v1.ProductGradeService/UpdateProductGrade":                        {},
 	"/finance.v1.RMCostService/ExportRMCosts":                                   {},
 	"/finance.v1.RMCostService/GetExportDownloadURL":                            {},
 	"/finance.v1.RMCostService/GetRMCost":                                       {},
@@ -482,7 +472,6 @@ var knownFailOpen = map[string]struct{}{
 	"/finance.v1.RMCostService/UpdateRMCostInputs":                              {},
 	"/finance.v1.RMGroupService/AddItems":                                       {},
 	"/finance.v1.RMGroupService/CreateRMGroup":                                  {},
-	"/finance.v1.RMGroupService/DeleteRMGroup":                                  {},
 	"/finance.v1.RMGroupService/DownloadGroupItemsTemplate":                     {},
 	"/finance.v1.RMGroupService/DownloadRMGroupTemplate":                        {},
 	"/finance.v1.RMGroupService/ExportRMGroups":                                 {},
@@ -510,13 +499,11 @@ var knownFailOpen = map[string]struct{}{
 	"/finance.v1.SpinFixedCostService/ListSpinFixedCosts":        {},
 	"/finance.v1.SpinFixedCostService/UpdateSpinFixedCost":       {},
 	"/finance.v1.UOMCategoryService/CreateUOMCategory":           {},
-	"/finance.v1.UOMCategoryService/DeleteUOMCategory":           {},
 	"/finance.v1.UOMCategoryService/DownloadUOMCategoryTemplate": {},
 	"/finance.v1.UOMCategoryService/ExportUOMCategories":         {},
 	"/finance.v1.UOMCategoryService/GetUOMCategory":              {},
 	"/finance.v1.UOMCategoryService/ImportUOMCategories":         {},
 	"/finance.v1.UOMCategoryService/ListUOMCategories":           {},
-	"/finance.v1.UOMCategoryService/UpdateUOMCategory":           {},
 	"/finance.v1.UOMService/DownloadTemplate":                    {},
 	"/finance.v1.YarnLookupFillService/GetLookupFillValues":      {},
 }
@@ -717,11 +704,17 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// (di-seed iam migrasi 000089); ShadeService juga baru ditambahkan ke
 	// registeredServiceDescs() di atas, jadi ini bukan sekadar pemetaan baru
 	// tapi juga RPC yang baru pertama kali terlihat oleh test ini.
-	assert.Equal(t, 145, guarded, "number of properly guarded RPCs changed")
+	// 145 -> 158: tiga belas RPC Update/Delete dipetakan ke kode izin yang SUDAH
+	// di-seed di IAM: UOMCategoryService (Update/Delete), ParameterService
+	// (Update/Delete), FormulaService (Update/Delete), MachineService
+	// (Update/Delete), LookupMasterService (Update/Delete), ProductGradeService
+	// (Update/Delete), RMGroupService (DeleteRMGroup) — 2+2+2+2+2+2+1 = 13.
+	assert.Equal(t, 158, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43
-	assert.Lenf(t, knownFailOpen, 232,
+	// 232 -> 219: tiga belas RPC di atas keluar dari baseline karena kini terjaga.
+	assert.Lenf(t, knownFailOpen, 219,
 		"fail-open debt changed. If it went DOWN, great — update this number. "+
 			"If it went UP, revert: knownFailOpen must never grow.")
 }

@@ -617,6 +617,40 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.ShadeService/DeactivateShade": "finance.master.shade.delete",
 		"/finance.v1.ShadeService/ListShades":      "finance.master.shade.view",
 		"/finance.v1.ShadeService/SyncShades":      "finance.master.shade.sync",
+
+		// UOMCategoryService — mutating RPCs guarded with the pre-seeded
+		// finance.master.uomcategory.* codes (K-34 fail-open closure).
+		"/finance.v1.UOMCategoryService/UpdateUOMCategory": "finance.master.uomcategory.update",
+		"/finance.v1.UOMCategoryService/DeleteUOMCategory": "finance.master.uomcategory.delete",
+
+		// ParameterService — mutating RPCs guarded with the pre-seeded
+		// finance.master.parameter.* codes (K-34 fail-open closure).
+		"/finance.v1.ParameterService/UpdateParameter": "finance.master.parameter.update",
+		"/finance.v1.ParameterService/DeleteParameter": "finance.master.parameter.delete",
+
+		// FormulaService — mutating RPCs guarded with the pre-seeded
+		// finance.master.formula.* codes (K-34 fail-open closure).
+		"/finance.v1.FormulaService/UpdateFormula": "finance.master.formula.update",
+		"/finance.v1.FormulaService/DeleteFormula": "finance.master.formula.delete",
+
+		// MachineService — mutating RPCs guarded with the pre-seeded
+		// finance.yarnmaster.machine.* codes (K-34 fail-open closure).
+		"/finance.v1.MachineService/UpdateMachine": "finance.yarnmaster.machine.update",
+		"/finance.v1.MachineService/DeleteMachine": "finance.yarnmaster.machine.delete",
+
+		// LookupMasterService — mutating RPCs guarded with the pre-seeded
+		// finance.yarnmaster.lookupmaster.* codes (K-34 fail-open closure).
+		"/finance.v1.LookupMasterService/UpdateLookupMaster": "finance.yarnmaster.lookupmaster.update",
+		"/finance.v1.LookupMasterService/DeleteLookupMaster": "finance.yarnmaster.lookupmaster.delete",
+
+		// ProductGradeService — mutating RPCs guarded with the pre-seeded
+		// finance.yarnmaster.productgrade.* codes (K-34 fail-open closure).
+		"/finance.v1.ProductGradeService/UpdateProductGrade": "finance.yarnmaster.productgrade.update",
+		"/finance.v1.ProductGradeService/DeleteProductGrade": "finance.yarnmaster.productgrade.delete",
+
+		// RMGroupService — DeleteRMGroup guarded with the pre-seeded
+		// finance.rmpricing.grouphead.delete code (K-34 fail-open closure).
+		"/finance.v1.RMGroupService/DeleteRMGroup": "finance.rmpricing.grouphead.delete",
 	}
 
 	return permissions[fullMethod]
