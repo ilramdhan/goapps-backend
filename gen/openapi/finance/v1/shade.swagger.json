@@ -515,6 +515,11 @@
           "type": "string",
           "description": "Timestamp of the last successful Oracle sync (ISO 8601), empty if never synced."
         },
+        "usageCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Count of rows referencing this shade's code across mst_mb_head, mst_mb_head_shade,\nand mst_mb_spin (soft-delete excluded). Read-only, derived — not settable."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo",
           "description": "Audit metadata."

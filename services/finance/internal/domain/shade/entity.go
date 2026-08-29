@@ -45,6 +45,7 @@ type Shade struct {
 	createdBy       string
 	updatedAt       *time.Time
 	updatedBy       *string
+	usageCount      int32
 }
 
 // NewParams carries the inputs for creating a shade by hand.
@@ -102,6 +103,10 @@ type ReconstructParams struct {
 	CreatedBy       string
 	UpdatedAt       *time.Time
 	UpdatedBy       *string
+	// UsageCount is derived data: the number of mst_mb_head / mst_mb_head_shade /
+	// mst_mb_spin rows referencing this shade's code. Only ever populated by the
+	// repository via Reconstruct — never settable through New() or Update().
+	UsageCount int32
 }
 
 // Reconstruct rebuilds a Shade from persistence without validation.
@@ -122,6 +127,7 @@ func Reconstruct(p ReconstructParams) *Shade {
 		createdBy:       p.CreatedBy,
 		updatedAt:       p.UpdatedAt,
 		updatedBy:       p.UpdatedBy,
+		usageCount:      p.UsageCount,
 	}
 }
 
@@ -172,6 +178,11 @@ func (s *Shade) UpdatedAt() *time.Time { return s.updatedAt }
 
 // UpdatedBy returns the last updater.
 func (s *Shade) UpdatedBy() *string { return s.updatedBy }
+
+// UsageCount returns the number of mst_mb_head / mst_mb_head_shade / mst_mb_spin
+// rows referencing this shade's code. Derived, read-only data — only populated
+// via Reconstruct, never settable through New() or Update().
+func (s *Shade) UsageCount() int32 { return s.usageCount }
 
 // UpdateParams carries the optional field changes for an edit. The code is not
 // mutable: it is the key the Oracle sync upserts on, so renaming it would orphan
