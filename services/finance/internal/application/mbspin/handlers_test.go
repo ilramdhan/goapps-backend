@@ -94,6 +94,12 @@ func (m *MockRepository) ResolveUniqueByOrionItemCode(ctx context.Context, code 
 	return id, args.Bool(1), args.Error(2)
 }
 
+func (m *MockRepository) ListByOrionItemCode(ctx context.Context, code string) ([]*mbspindomain.Entity, error) {
+	args := m.Called(ctx, code)
+	items, _ := args.Get(0).([]*mbspindomain.Entity)
+	return items, args.Error(1)
+}
+
 func TestCreateHandler_Handle(t *testing.T) {
 	t.Run("success - creates new MB Spin", func(t *testing.T) {
 		mockRepo := new(MockRepository)
@@ -373,4 +379,114 @@ func TestListHandler_Handle(t *testing.T) {
 		assert.Equal(t, int32(0), result.TotalPages)
 		mockRepo.AssertExpectations(t)
 	})
+}
+
+// TestUpdateHandler_LDRAdjustmentAndLock_DoesNotTriggerRecalc is the regression
+// test for Task E business rule 3: the three new LDR mutations (set-adjustment /
+// lock / unlock) must stay isolated from the recalc cascade trigger.
+// recalcTriggered only reacts to Denier/Filament/Dozing, so a command that ONLY
+// carries LDRAdjustmentPct/LDRLockActual must leave UpdateResult.Recalc nil even
+// on a handler that IS wired for recalc.
+func TestUpdateHandler_LDRAdjustmentAndLock_DoesNotTriggerRecalc(t *testing.T) {
+	mockRepo := new(MockRepository)
+	ctx := context.Background()
+
+	id := uuid.New()
+	headID := uuid.New()
+	entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	require.NoError(t, err)
+
+	rr := &fakeRecalcRepo{}
+	svc := mbspin.NewRecalcService(mockRepo, rr, nil, nil)
+	handler := mbspin.NewUpdateHandlerWithRecalc(mockRepo, svc)
+
+	// Adjustment-only: the spin starts unlocked, so this is a legal mutation on
+	// its own (rule 4 — adjustment freezes only while locked — does not apply
+	// here since LDRLockActual is absent/no-op).
+	adj := 1.5
+	cmd := mbspin.UpdateCommand{
+		ID:               id,
+		LDRAdjustmentPct: &adj,
+		UpdatedBy:        "admin",
+	}
+
+	mockRepo.On("GetByID", ctx, id).Return(entity, nil)
+	mockRepo.On("Update", ctx, mock.AnythingOfType("*mbspin.Entity")).Return(nil)
+
+	res, err := handler.HandleWithRecalc(ctx, cmd)
+
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.Nil(t, res.Recalc, "LDR-only changes must never arm the recalc cascade")
+	assert.Empty(t, rr.readParents, "recalc must not even read children when the trigger did not fire")
+	require.NotNil(t, res.Entity.LDRAdjustmentPct())
+	assert.InDelta(t, 1.5, *res.Entity.LDRAdjustmentPct(), 0.001)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestUpdateHandler_LDRLockActual_DoesNotTriggerRecalc covers the lock/unlock
+// half of business rule 3 separately from the adjustment half above: locking
+// alone (no denier/filament/dozing change) must also leave Recalc nil.
+func TestUpdateHandler_LDRLockActual_DoesNotTriggerRecalc(t *testing.T) {
+	mockRepo := new(MockRepository)
+	ctx := context.Background()
+
+	id := uuid.New()
+	headID := uuid.New()
+	entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	require.NoError(t, err)
+
+	rr := &fakeRecalcRepo{}
+	svc := mbspin.NewRecalcService(mockRepo, rr, nil, nil)
+	handler := mbspin.NewUpdateHandlerWithRecalc(mockRepo, svc)
+
+	lock := true
+	cmd := mbspin.UpdateCommand{
+		ID:            id,
+		LDRLockActual: &lock,
+		UpdatedBy:     "admin",
+	}
+
+	mockRepo.On("GetByID", ctx, id).Return(entity, nil)
+	mockRepo.On("Update", ctx, mock.AnythingOfType("*mbspin.Entity")).Return(nil)
+
+	res, err := handler.HandleWithRecalc(ctx, cmd)
+
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.Nil(t, res.Recalc, "LDR-only changes must never arm the recalc cascade")
+	assert.Empty(t, rr.readParents, "recalc must not even read children when the trigger did not fire")
+	assert.True(t, res.Entity.LDRIsActual())
+	mockRepo.AssertExpectations(t)
+}
+
+// TestUpdateHandler_SetLDRAdjustment_RejectedWhenLocked proves the domain
+// rejection (ErrLDRLockedActual) propagates as a real error out of
+// HandleWithRecalc/Handle instead of being swallowed, and that the repository's
+// Update is never reached once the domain mutation fails.
+func TestUpdateHandler_SetLDRAdjustment_RejectedWhenLocked(t *testing.T) {
+	mockRepo := new(MockRepository)
+	handler := mbspin.NewUpdateHandler(mockRepo)
+	ctx := context.Background()
+
+	id := uuid.New()
+	headID := uuid.New()
+	entity, err := mbspindomain.New(headID, "Spin Alpha", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	require.NoError(t, err)
+	entity.LockLDRActual()
+
+	adj := 2.5
+	cmd := mbspin.UpdateCommand{
+		ID:               id,
+		LDRAdjustmentPct: &adj,
+		UpdatedBy:        "admin",
+	}
+
+	mockRepo.On("GetByID", ctx, id).Return(entity, nil)
+
+	result, err := handler.Handle(ctx, cmd)
+
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, mbspindomain.ErrLDRLockedActual)
+	mockRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
 }

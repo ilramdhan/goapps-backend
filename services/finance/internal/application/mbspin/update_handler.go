@@ -28,6 +28,13 @@ type UpdateCommand struct {
 	LDRIsFixed    *bool
 	DozingIsFixed *bool
 	IsActive      *bool
+	// LDRAdjustmentPct sets the manual LDR adjustment. nil leaves it unchanged.
+	// Rejected by the domain (ErrLDRLockedActual) if the spin is locked as Actual.
+	LDRAdjustmentPct *float64
+	// LDRLockActual is a lock/unlock instruction: true locks as Actual, false
+	// unlocks, nil is a no-op. Applied BEFORE LDRAdjustmentPct in the same call,
+	// so a single request may unlock and then set a new adjustment together.
+	LDRLockActual *bool
 	// OrionItemCode is a NEW ERP item code for this spin.
 	//
 	// ⚠ Today it is always nil: UpdateMBSpinRequest carries no such field, so the
@@ -120,6 +127,23 @@ func (h *UpdateHandler) HandleWithRecalc(ctx context.Context, cmd UpdateCommand)
 		IsActive:        cmd.IsActive,
 	}, cmd.UpdatedBy); err != nil {
 		return nil, err
+	}
+
+	// Lock/unlock is applied BEFORE the adjustment value on purpose: a single
+	// request may carry both an unlock instruction and a new adjustment, and
+	// unlocking first is what makes SetLDRAdjustment accept the new value in
+	// the same call instead of rejecting it with ErrLDRLockedActual.
+	if cmd.LDRLockActual != nil {
+		if *cmd.LDRLockActual {
+			entity.LockLDRActual()
+		} else {
+			entity.UnlockLDRActual()
+		}
+	}
+	if cmd.LDRAdjustmentPct != nil {
+		if err := entity.SetLDRAdjustment(cmd.LDRAdjustmentPct); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := h.repo.Update(ctx, entity); err != nil {

@@ -170,3 +170,77 @@ func TestReconstruct_RoundTripsFixedMarkers(t *testing.T) {
 	assert.True(t, e.IsFixedLDR())
 	assert.False(t, e.IsFixedDozing())
 }
+
+// =============================================================================
+// LDR adjustment / lock mutators (Task E)
+// =============================================================================
+
+func newSpinForLDR(t *testing.T) *mbspin.Entity {
+	t.Helper()
+	headID := uuid.New()
+	e, err := mbspin.New(headID, "MB Spin LDR", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	require.NoError(t, err)
+	return e
+}
+
+func TestSetLDRAdjustment_SucceedsWhenUnlocked(t *testing.T) {
+	e := newSpinForLDR(t)
+	adj := 1.5
+	require.NoError(t, e.SetLDRAdjustment(&adj))
+	require.NotNil(t, e.LDRAdjustmentPct())
+	assert.InDelta(t, 1.5, *e.LDRAdjustmentPct(), 0.001)
+}
+
+func TestSetLDRAdjustment_RejectedWhenLockedActual(t *testing.T) {
+	e := newSpinForLDR(t)
+	e.LockLDRActual()
+	adj := 2.5
+	err := e.SetLDRAdjustment(&adj)
+	assert.ErrorIs(t, err, mbspin.ErrLDRLockedActual)
+}
+
+func TestSetLDRAdjustment_ClearRejectedWhenLockedActual(t *testing.T) {
+	e := newSpinForLDR(t)
+	e.LockLDRActual()
+	err := e.SetLDRAdjustment(nil)
+	assert.ErrorIs(t, err, mbspin.ErrLDRLockedActual)
+}
+
+func TestLockLDRActual_SetsBothFields(t *testing.T) {
+	e := newSpinForLDR(t)
+	e.LockLDRActual()
+	assert.True(t, e.LDRIsActual())
+	assert.Equal(t, mbspin.LDRTypeActual, e.LDRType())
+}
+
+func TestUnlockLDRActual_RevertsToCalculated_WhenCalculatedPctPresent(t *testing.T) {
+	e := newSpinForLDR(t)
+	calc := 3.5
+	e.HydrateShadeAndLDR(mbspin.ShadeAndLDR{LDRType: mbspin.LDRTypeNotCalculated, LDRCalculatedPct: &calc})
+	e.LockLDRActual()
+	require.True(t, e.LDRIsActual())
+
+	e.UnlockLDRActual()
+	assert.False(t, e.LDRIsActual())
+	assert.Equal(t, mbspin.LDRTypeCalculated, e.LDRType())
+}
+
+func TestUnlockLDRActual_RevertsToNotCalculated_WhenCalculatedPctAbsent(t *testing.T) {
+	e := newSpinForLDR(t)
+	e.LockLDRActual()
+	require.True(t, e.LDRIsActual())
+
+	e.UnlockLDRActual()
+	assert.False(t, e.LDRIsActual())
+	assert.Equal(t, mbspin.LDRTypeNotCalculated, e.LDRType())
+}
+
+func TestUnlockLDRActual_ThenSetLDRAdjustment_Succeeds(t *testing.T) {
+	e := newSpinForLDR(t)
+	e.LockLDRActual()
+	e.UnlockLDRActual()
+	adj := 4.0
+	require.NoError(t, e.SetLDRAdjustment(&adj))
+	require.NotNil(t, e.LDRAdjustmentPct())
+	assert.InDelta(t, 4.0, *e.LDRAdjustmentPct(), 0.001)
+}

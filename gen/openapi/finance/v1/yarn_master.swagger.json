@@ -4962,6 +4962,15 @@
         "mbsDozingIsFixed": {
           "type": "boolean",
           "description": "Optional fix/actual marker for dozing. Absent = leave unchanged."
+        },
+        "mbsLdrAdjustmentPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional new LDR adjustment percentage. Absent = leave unchanged. Rejected by\nthe domain if the spin's LDR is currently locked as Actual — unlock first."
+        },
+        "mbsLdrLockActual": {
+          "type": "boolean",
+          "description": "Optional lock/unlock instruction for LDR Actual status. true = lock as\nActual, false = unlock. Absent = no-op (leave the lock state untouched)."
         }
       },
       "description": "UpdateMBSpinRequest is the request for updating an MB Spin record."
@@ -8453,6 +8462,24 @@
         "mbsDozingIsFixed": {
           "type": "boolean",
           "description": "Fix/actual marker for the dozing value. Absent means \"unknown\", which the\ndomain treats as FIXED (recalc-safe). true = fixed, false = computed."
+        },
+        "mbsLdrType": {
+          "type": "string",
+          "description": "Current LDR provenance: NOT_CALCULATED, CALCULATED, or ACTUAL. Mirrors mbs_ldr_type."
+        },
+        "mbsLdrCalculatedPct": {
+          "type": "number",
+          "format": "double",
+          "description": "System-calculated LDR percentage, before any manual adjustment. Mirrors mbs_ldr_calculated_pct."
+        },
+        "mbsLdrAdjustmentPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Manual adjustment added on top of the calculated LDR. Mirrors mbs_ldr_adjustment_pct."
+        },
+        "mbsLdrIsActual": {
+          "type": "boolean",
+          "description": "True when the LDR is locked to an actual/manual value (mbs_ldr_type is then ACTUAL). Mirrors mbs_ldr_is_actual."
         }
       },
       "description": "MBSpin represents a Melange Batch spin detail record (child of MBHead)."

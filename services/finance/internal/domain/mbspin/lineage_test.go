@@ -255,4 +255,68 @@ func TestCloneFixedMarkers_ExplicitFalseIsNotFixed(t *testing.T) {
 	assert.True(t, nulled.IsFixedDozing())
 }
 
+// =============================================================================
+// Shade / cross-section + LDR provenance hydration (migration 000496)
+// =============================================================================
+
+// A freshly-New-ed entity (no HydrateShadeAndLDR call) must already carry the
+// same defaults the mst_mb_spin column DEFAULTs give a fresh DB row: LDRType
+// NOT_CALCULATED and LDRIsActual false. Shade/cross-section/calculated/
+// adjustment stay nil since the DB columns are plain nullable with no default.
+func TestNew_ShadeAndLDRDefaults(t *testing.T) {
+	e := newBareSpin(t)
+
+	assert.Nil(t, e.ShadeCode())
+	assert.Nil(t, e.ShadeName())
+	assert.Nil(t, e.CrossSection())
+	assert.Equal(t, mbspin.LDRTypeNotCalculated, e.LDRType())
+	assert.Nil(t, e.LDRCalculatedPct())
+	assert.Nil(t, e.LDRAdjustmentPct())
+	assert.False(t, e.LDRIsActual())
+}
+
+// A legacy row hydrated with a zero-value ShadeAndLDR (e.g. a bug that forgot
+// to populate it) would incorrectly report LDRTypeNotCalculated/false — this
+// locks in that HydrateShadeAndLDR round-trips every field the caller
+// actually supplies, including the ACTUAL / locked state.
+func TestHydrateShadeAndLDR_RoundTripsAllSevenColumns(t *testing.T) {
+	shadeCode := "SH-01"
+	shadeName := "Sky Blue"
+	crossSection := "ROUND"
+	calculated := 12.3456
+	adjustment := -0.5
+
+	e := newBareSpin(t)
+	e.HydrateShadeAndLDR(mbspin.ShadeAndLDR{
+		ShadeCode:        &shadeCode,
+		ShadeName:        &shadeName,
+		CrossSection:     &crossSection,
+		LDRType:          mbspin.LDRTypeActual,
+		LDRCalculatedPct: &calculated,
+		LDRAdjustmentPct: &adjustment,
+		LDRIsActual:      true,
+	})
+
+	require.NotNil(t, e.ShadeCode())
+	assert.Equal(t, shadeCode, *e.ShadeCode())
+	require.NotNil(t, e.ShadeName())
+	assert.Equal(t, shadeName, *e.ShadeName())
+	require.NotNil(t, e.CrossSection())
+	assert.Equal(t, crossSection, *e.CrossSection())
+	assert.Equal(t, mbspin.LDRTypeActual, e.LDRType())
+	require.NotNil(t, e.LDRCalculatedPct())
+	assert.InDelta(t, calculated, *e.LDRCalculatedPct(), 0.0001)
+	require.NotNil(t, e.LDRAdjustmentPct())
+	assert.InDelta(t, adjustment, *e.LDRAdjustmentPct(), 0.0001)
+	assert.True(t, e.LDRIsActual())
+}
+
+// The three LDR-type constants must stay byte-identical to the CHECK
+// constraint added by migration 000496 (chk_mbs_ldr_type).
+func TestLDRTypeConstants_MatchCheckConstraint(t *testing.T) {
+	assert.Equal(t, "NOT_CALCULATED", mbspin.LDRTypeNotCalculated)
+	assert.Equal(t, "CALCULATED", mbspin.LDRTypeCalculated)
+	assert.Equal(t, "ACTUAL", mbspin.LDRTypeActual)
+}
+
 func ptr[T any](v T) *T { return &v }

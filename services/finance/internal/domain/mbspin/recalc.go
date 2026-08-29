@@ -51,10 +51,33 @@ type ChildRecalcUpdate struct {
 	NewDozing float64
 }
 
+// ChildLDRRecalcUpdate is one child spin whose LDR the recalc pass recomputed
+// (Task D — the LDR cascade that runs alongside the existing dozing cascade
+// above, in the same operation/pass, not a separately triggered action).
+//
+// It mirrors ChildRecalcUpdate but for the LDR value rather than dozing: same
+// SpinID identity, same "child spin only" isolation (D24) applies. Writing this
+// update ALWAYS sets mbs_ldr_type = LDRTypeCalculated on the target row — the
+// provenance flip is implicit in the existence of the update, not a separate
+// field, because a value only ever lands here via the calculated formula path
+// (Task D, business rule 6): mbs_ldr_adjustment_pct and mbs_ldr_is_actual are
+// never touched by this update.
+type ChildLDRRecalcUpdate struct {
+	// SpinID is the child spin being written.
+	SpinID uuid.UUID
+	// NewLDRCalculatedPct is the value produced by scaling the parent's
+	// effective LDR (mbdozing.ScaleLDR) and, when applicable, converting it
+	// across cross-section codes (mbdozing.ConvertCrossSection).
+	NewLDRCalculatedPct float64
+}
+
 // RecalcApplyInput is the payload of one recalc OPERATION.
 //
 // One call == one operation == ONE mst_mb_workflow_log row (plan §P8 "Jejak"),
-// ⛔ never one row per child, however many children Updates carries.
+// ⛔ never one row per child, however many children Updates/LDRUpdates carry.
+// Task D: dozing (Updates) and LDR (LDRUpdates) are independent outputs of the
+// SAME pass — a child may appear in one, the other, both, or neither list, and
+// the operation still writes exactly one audit row regardless.
 type RecalcApplyInput struct {
 	// ParentSpinID is the spin whose change triggered the pass. Recorded for the
 	// audit row; the parent's own dozing is written by the normal Update path.
@@ -68,10 +91,14 @@ type RecalcApplyInput struct {
 	// At is the single timestamp stamped on every touched row, so one operation
 	// is identifiable by one instant.
 	At time.Time
-	// Updates are the children to write. May be empty: an operation that
-	// recalculated nothing still writes its audit row, because "nothing was
-	// eligible" is itself the fact worth keeping.
+	// Updates are the children whose dozing is written. May be empty: an
+	// operation that recalculated nothing still writes its audit row, because
+	// "nothing was eligible" is itself the fact worth keeping.
 	Updates []ChildRecalcUpdate
+	// LDRUpdates are the children whose LDR is written (Task D). Independent of
+	// Updates — may be empty, non-empty while Updates is empty, or overlap the
+	// same SpinIDs as Updates when both outputs were computed for a child.
+	LDRUpdates []ChildLDRRecalcUpdate
 	// LogReason is the human-readable mbwl_reason text.
 	LogReason string
 	// LogMeta is the mbwl_meta JSONB document, already marshaled. Empty means
@@ -97,7 +124,9 @@ type RecalcRepository interface {
 	ListAllChildren(ctx context.Context, parentID uuid.UUID) ([]*Entity, error)
 
 	// ApplyChildRecalc writes one recalc operation transactionally: the new
-	// dozing plus mbs_last_recalc_at/by on each child in Updates, and exactly ONE
-	// mst_mb_workflow_log row for the whole operation.
+	// dozing plus mbs_last_recalc_at/by on each child in Updates, the new LDR
+	// (plus mbs_ldr_type = CALCULATED and the same audit trail) on each child in
+	// LDRUpdates (Task D), and exactly ONE mst_mb_workflow_log row for the whole
+	// operation.
 	ApplyChildRecalc(ctx context.Context, in RecalcApplyInput) error
 }

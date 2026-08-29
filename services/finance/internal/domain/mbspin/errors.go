@@ -44,4 +44,10 @@ var (
 	// children (largest observed head carries 15 spins); the caller is expected
 	// to fall back to a manual recalc.
 	ErrTooManyChildren = errors.New("mb spin has too many children for automatic recalc")
+
+	// --- LDR adjustment / lock (Task E) ---
+
+	// ErrLDRLockedActual is returned when SetLDRAdjustment is called while the
+	// spin's LDR is locked as Actual. Unlock first via UnlockLDRActual.
+	ErrLDRLockedActual = errors.New("mb spin ldr is locked as actual; unlock before changing adjustment")
 )
