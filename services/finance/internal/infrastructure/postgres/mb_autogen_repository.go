@@ -13,6 +13,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcomposition"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 )
 
 // mbCostProductTypeCode is the cost_product_type.cpt_type_code seeded (migration 000450) for
@@ -152,7 +153,77 @@ func (r *MBHeadRepository) autoGenCostProduct(ctx context.Context, tx *sql.Tx, i
 	if err := mbFreezeCostParams(ctx, tx, productSysID, entity, actorUserID); err != nil {
 		return err
 	}
-	return mbWriteBackCostProduct(ctx, tx, id, productSysID, actorUserID)
+	if err := mbWriteBackCostProduct(ctx, tx, id, productSysID, actorUserID); err != nil {
+		return err
+	}
+	// Business-decision-driven auto-generation (confirmed by the stakeholder, not guessed):
+	// right after a brand-new Master Product MB is created — first-ever Validate ONLY,
+	// never on re-validate; TransitionWithAutoGen only reaches autoGenCostProduct when
+	// entity.CostProductID() == 0, so this never runs a second time for the same head —
+	// the system must also auto-create exactly one new MB Spin row referencing the
+	// just-created product. MB Spin must NEVER be created before its Master Product MB
+	// relation exists (it needs that product's ID), so this call sits strictly AFTER
+	// mbWriteBackCostProduct has succeeded above, and it runs inside the SAME tx as every
+	// other write in this function/TransitionWithAutoGen, so a failure here rolls back the
+	// whole Lock/Validate transaction together — including the cost product and route rows.
+	return mbAutoGenSpin(ctx, tx, id, entity, productSysID, actorUserID)
+}
+
+// mbAutoGenSpin creates the single MB Spin row that must exist alongside every
+// first-ever-generated Master Product MB (business decision, see autoGenCostProduct's call
+// site comment above — never fires on re-validate). Shade/cross-section are copied down from
+// the parent MB Head's identity fields; mbs_ldr_type starts at its NOT_CALCULATED default
+// (mirrors the mst_mb_spin column default) rather than being eagerly computed here; mbs_status
+// starts at mbspin.StatusRnD, the same default used for manually-created MB Spin rows today;
+// and the new row's cost-product linkage is set via the same HydrateLineage/CostProductID path
+// the repository already uses to read that column back from storage (migration 000490).
+func mbAutoGenSpin(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mbhead.Entity, productSysID int64, actorUserID string) error {
+	mgtName := mbSpinAutoGenMgtName(entity)
+	rndStatus := mbspin.StatusRnD
+
+	spin, err := mbspin.New(headID, mgtName, nil, nil, nil, nil, nil, nil, nil, nil, &rndStatus, nil, nil, nil, nil, nil, actorUserID)
+	if err != nil {
+		return fmt.Errorf("mb_autogen: construct auto-generated mb spin: %w", err)
+	}
+
+	spin.HydrateShadeAndLDR(mbspin.ShadeAndLDR{
+		ShadeCode:    mbEmptyStringToPtr(entity.ShadeCode()),
+		ShadeName:    mbEmptyStringToPtr(entity.ShadeName()),
+		CrossSection: mbEmptyStringToPtr(entity.CrossSection()),
+		LDRType:      mbspin.LDRTypeNotCalculated,
+		LDRIsActual:  false,
+	})
+	spin.HydrateLineage(mbspin.Lineage{CostProductID: &productSysID})
+
+	if err := createSpinOn(ctx, tx, spin); err != nil {
+		return fmt.Errorf("mb_autogen: insert auto-generated mb spin: %w", err)
+	}
+	return nil
+}
+
+// mbSpinAutoGenMgtName picks the source field for the auto-generated MB Spin's required
+// mbs_mgt_name. The MB Head's own management name (MgtName) is the most sensible source —
+// it is the human-facing display name for the recipe this spin is generated from — but it is
+// optional (*string, may be nil or "" on legacy/partial heads), and mbspin.New rejects an
+// empty mgtName. MBCosting is used as the fallback: unlike MgtName it is validated non-empty
+// by mbhead.New/mbhead's own constructor, so it is always a safe, real (not fabricated) value
+// to fall back to, and it is still a readable identifier for the recipe.
+func mbSpinAutoGenMgtName(entity *mbhead.Entity) string {
+	if entity.MgtName() != nil && *entity.MgtName() != "" {
+		return *entity.MgtName()
+	}
+	return entity.MBCosting()
+}
+
+// mbEmptyStringToPtr converts one of mbhead.Entity's plain-string identity getters
+// (ShadeCode/ShadeName/CrossSection) into the *string shape mbspin.ShadeAndLDR expects,
+// treating an empty string as "unset" (nil) rather than as a legitimate empty value — the
+// same convention already used across this file for other optional identity fields.
+func mbEmptyStringToPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 func mbResolveCostProductTypeID(ctx context.Context, tx *sql.Tx) (int32, error) {
