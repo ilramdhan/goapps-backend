@@ -27,6 +27,11 @@ type Entity struct {
 	ldrIsFixed      *bool
 	dozingIsFixed   *bool
 	isActive        bool
+	// VS reference number — migration 000414, wired putaran 83. Copied from the
+	// parent MB Head's mbh_vs_number at auto-generation time. Populated via
+	// HydrateVSNumber, deliberately NOT a parameter of New/Reconstruct (both
+	// already oversized) — same rationale as the Shade/cross-section block below.
+	vsNumber *string
 	// Shade/cross-section copy-down + LDR provenance tracking — migration 000496.
 	// Populated via HydrateShadeAndLDR, deliberately NOT parameters of New/Reconstruct
 	// (both already oversized) — same rationale as the Lineage block below.
@@ -206,6 +211,18 @@ func (e *Entity) LDRAdjustmentPct() *float64 { return e.ldrAdjustmentPct }
 // must not be merged with this one.
 func (e *Entity) LDRIsActual() bool { return e.ldrIsActual }
 
+// VSNumber returns the optional VS reference number copied down from the
+// parent MB Head at MB Spin auto-generation time (migration 000414).
+func (e *Entity) VSNumber() *string { return e.vsNumber }
+
+// HydrateVSNumber applies the persisted mbs_vs_number column (migration 000414,
+// wired putaran 83) onto a New-ed or Reconstruct-ed entity. Unvalidated on
+// purpose, same rationale as HydrateShadeAndLDR — it's free text copied from
+// the parent MB Head, no format rule to enforce.
+func (e *Entity) HydrateVSNumber(vsNumber *string) {
+	e.vsNumber = vsNumber
+}
+
 // IsActive returns whether the spin is active.
 func (e *Entity) IsActive() bool { return e.isActive }
 
@@ -246,6 +263,7 @@ type UpdateInput struct {
 	LDRIsFixed      *bool
 	DozingIsFixed   *bool
 	IsActive        *bool
+	VSNumber        *string
 }
 
 // Update applies optional field changes to the entity.
@@ -328,6 +346,9 @@ func (e *Entity) applyOptionalFields(in UpdateInput) {
 	}
 	if in.IsActive != nil {
 		e.isActive = *in.IsActive
+	}
+	if in.VSNumber != nil {
+		e.vsNumber = in.VSNumber
 	}
 }
 

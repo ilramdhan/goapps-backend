@@ -122,6 +122,7 @@ func (h *MBSpinHandler) CreateMBSpin(ctx context.Context, req *financev1.CreateM
 		MBSFinalProduct: req.MbsFinalProduct,
 		LDRIsFixed:      req.MbsLdrIsFixed,
 		DozingIsFixed:   req.MbsDozingIsFixed,
+		VSNumber:        req.MbsVsNumber,
 		CreatedBy:       getUserFromContext(ctx),
 	})
 	if err != nil {
@@ -199,6 +200,7 @@ func (h *MBSpinHandler) UpdateMBSpin(ctx context.Context, req *financev1.UpdateM
 		IsActive:         req.MbsIsActive,
 		LDRAdjustmentPct: req.MbsLdrAdjustmentPct,
 		LDRLockActual:    req.MbsLdrLockActual,
+		VSNumber:         req.MbsVsNumber,
 		UpdatedBy:        getUserFromContext(ctx),
 	})
 	if err != nil {
@@ -352,6 +354,7 @@ func mbSpinEntityToProto(e *mbspin.Entity) *financev1.MBSpin {
 	p.MbsLdrCalculatedPct = e.LDRCalculatedPct()
 	p.MbsLdrAdjustmentPct = e.LDRAdjustmentPct()
 	p.MbsLdrIsActual = e.LDRIsActual()
+	p.MbsVsNumber = e.VSNumber()
 	if e.UpdatedAt() != nil {
 		p.Audit.UpdatedAt = e.UpdatedAt().Format(time.RFC3339)
 	}

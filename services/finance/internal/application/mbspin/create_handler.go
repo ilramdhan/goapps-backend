@@ -29,7 +29,9 @@ type CreateCommand struct {
 	// The duplicate-spin path must pass an explicit false so the copy can be recalculated.
 	LDRIsFixed    *bool
 	DozingIsFixed *bool
-	CreatedBy     string
+	// VSNumber is the optional VS reference number (free text, e.g. "NA").
+	VSNumber  *string
+	CreatedBy string
 }
 
 // CreateHandler handles the CreateMBSpin command.
@@ -55,6 +57,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbspin.
 	if err != nil {
 		return nil, err
 	}
+	entity.HydrateVSNumber(cmd.VSNumber)
 
 	if err := h.repo.Create(ctx, entity); err != nil {
 		return nil, err
