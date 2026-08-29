@@ -232,6 +232,7 @@ func shadeEntityToProto(e *shade.Shade) *financev1.Shade {
 		ShadeName:   e.Name(),
 		ShadeSource: e.Source(),
 		IsActive:    e.IsActive(),
+		UsageCount:  e.UsageCount(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: e.CreatedAt().Format(time.RFC3339),
 			CreatedBy: e.CreatedBy(),

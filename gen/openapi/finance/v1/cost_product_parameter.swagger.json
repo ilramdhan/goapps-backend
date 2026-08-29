@@ -863,6 +863,44 @@
         }
       }
     },
+    "v1MBSpinCandidate": {
+      "type": "object",
+      "properties": {
+        "mbsId": {
+          "type": "string",
+          "description": "Permanent mst_mb_spin.mbs_id UUID — this is what gets saved as\nmb_spin_id_override when the user picks this candidate, never the\n(possibly ambiguous) ORION item code."
+        },
+        "orionItemCode": {
+          "type": "string"
+        },
+        "mgtName": {
+          "type": "string"
+        },
+        "denier": {
+          "type": "string",
+          "description": "Denier as a decimal string; empty = not set."
+        },
+        "filament": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "hasFilament": {
+          "type": "boolean"
+        },
+        "ldrPrsn": {
+          "type": "string",
+          "description": "\"LDR Rencana\" — planned LDR, as a decimal string; empty = not set."
+        },
+        "runLdrPct": {
+          "type": "string",
+          "description": "\"LDR Aktual\" — authoritative actual LDR (see mbs_run_ldr_pct), as a\ndecimal string; empty = not set."
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "description": "MBSpinCandidate is one possible mst_mb_spin match behind an ambiguous\nMB_SPIN lookup value_text (an ORION item code shared by more than one\nmst_mb_spin row). Carries just enough disambiguating detail — mirrors the\ncolumns already shown in the MB_SPIN combobox extra-detail row — for the\nuser to tell the candidates apart before picking one."
+    },
     "v1MissingParam": {
       "type": "object",
       "properties": {
@@ -1056,6 +1094,14 @@
           "type": "boolean",
           "description": "True when mb_spin_candidate_count was actually computed for this row\n(an MB_SPIN lookup param with a non-empty value_text). False means the\ncount is not applicable — do not interpret 0 as \"not applicable\"."
         },
+        "mbSpinCandidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBSpinCandidate"
+          },
+          "description": "Full candidate list backing mb_spin_candidate_count, populated ONLY when\nthe row is actually ambiguous (has_mb_spin_candidate_count is true and\nmb_spin_candidate_count \u003e 1). Empty in every other case — including the\n\"already resolved\" and \"zero matches\" states — so callers should gate on\nthe count fields above rather than on this list's emptiness alone."
+        },
         "hasValue": {
           "type": "boolean",
           "description": "Existing value (zero/empty when not yet bound)."
@@ -1128,6 +1174,10 @@
         },
         "hasValueFlag": {
           "type": "boolean"
+        },
+        "mbSpinIdOverride": {
+          "type": "string",
+          "description": "Explicit mst_mb_spin.mbs_id UUID chosen by the user from the\nMBSpinCandidate list for an ambiguous MB_SPIN lookup value. When set,\nthis is written directly to cpp_value_mb_spin_id and the normal\nORION-code ambiguity resolver (which requires an exact single match) is\nskipped entirely — the user's explicit pick always wins. value_text is\nstill saved as-is alongside it (companion column, see\ncpp_value_mb_spin_id / migration 000494)."
         }
       }
     },

@@ -13,6 +13,7 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	appmbspin "github.com/mutugading/goapps-backend/services/finance/internal/application/mbspin"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcrosssection"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbdozing"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
@@ -36,28 +37,35 @@ type MBSpinHandler struct {
 // NewMBSpinHandler constructs an MBSpinHandler without the duplicate/recalc
 // collaborators. DuplicateMBSpin is unavailable on such a handler.
 func NewMBSpinHandler(repo mbspin.Repository) (*MBSpinHandler, error) {
-	return newMBSpinHandler(repo, nil, nil)
+	return newMBSpinHandler(repo, nil, nil, nil)
 }
 
 // NewMBSpinHandlerWithRecalc constructs the full MBSpinHandler: duplicate spin
-// plus the child-recalc cascade on update.
+// plus the child-recalc cascade (dozing AND, Task D, LDR) on update.
 //
-// ⛔ Neither collaborator is a costing engine. recalcRepo writes spin rows and
-// ONE audit row; impactRepo is READ-ONLY and merely counts the cost products
-// bound to a spin. Recalculation stops at the child spin (D24) — ⛔ no yarn
-// product is ever recomputed from here.
+// ⛔ None of the collaborators is a costing engine. recalcRepo writes spin rows
+// and ONE audit row; impactRepo is READ-ONLY and merely counts the cost
+// products bound to a spin; factorRepo (Task D) is READ-ONLY too — it only
+// looks up a cross-section conversion factor, it never writes one.
+// Recalculation stops at the child spin (D24) — ⛔ no yarn product is ever
+// recomputed from here. factorRepo must be non-nil for the LDR cascade to be
+// able to compute anything past the Scale step: RecalcService.NewRecalcService
+// treats a nil factorRepo the same way recalcRepo is treated — never nil in
+// practice — because GetByPair would otherwise be called on a nil interface.
 func NewMBSpinHandlerWithRecalc(
 	repo mbspin.Repository,
 	recalcRepo mbspin.RecalcRepository,
 	impactRepo mbdozing.ImpactRepository,
+	factorRepo mbcrosssection.FactorRepository,
 ) (*MBSpinHandler, error) {
-	return newMBSpinHandler(repo, recalcRepo, impactRepo)
+	return newMBSpinHandler(repo, recalcRepo, impactRepo, factorRepo)
 }
 
 func newMBSpinHandler(
 	repo mbspin.Repository,
 	recalcRepo mbspin.RecalcRepository,
 	impactRepo mbdozing.ImpactRepository,
+	factorRepo mbcrosssection.FactorRepository,
 ) (*MBSpinHandler, error) {
 	v, err := NewValidationHelper()
 	if err != nil {
@@ -72,7 +80,7 @@ func newMBSpinHandler(
 		validation:    v,
 	}
 	if recalcRepo != nil {
-		svc := appmbspin.NewRecalcService(repo, recalcRepo, impactRepo)
+		svc := appmbspin.NewRecalcService(repo, recalcRepo, impactRepo, factorRepo)
 		h.updateHandler = appmbspin.NewUpdateHandlerWithRecalc(repo, svc)
 		h.duplicateHandler = appmbspin.NewDuplicateHandler(repo, svc)
 	}
@@ -174,26 +182,28 @@ func (h *MBSpinHandler) UpdateMBSpin(ctx context.Context, req *financev1.UpdateM
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, appmbspin.UpdateCommand{
-		ID:              id,
-		MgtName:         req.MbsMgtName,
-		MBCosting:       req.MbsMbCosting,
-		Denier:          req.MbsDenier,
-		Filament:        filament,
-		Dozing:          req.MbsDozing,
-		CC:              req.MbsCc,
-		CostRateMkt:     req.MbsCostRateMkt,
-		MBSStatus:       req.MbsStatus,
-		MBSLdrPrsn:      req.MbsLdrPrsn,
-		MBSRunLdrPct:    req.MbsRunLdrPct,
-		MBSFinalProduct: req.MbsFinalProduct,
-		LDRIsFixed:      req.MbsLdrIsFixed,
-		DozingIsFixed:   req.MbsDozingIsFixed,
-		IsActive:        req.MbsIsActive,
-		UpdatedBy:       getUserFromContext(ctx),
+		ID:               id,
+		MgtName:          req.MbsMgtName,
+		MBCosting:        req.MbsMbCosting,
+		Denier:           req.MbsDenier,
+		Filament:         filament,
+		Dozing:           req.MbsDozing,
+		CC:               req.MbsCc,
+		CostRateMkt:      req.MbsCostRateMkt,
+		MBSStatus:        req.MbsStatus,
+		MBSLdrPrsn:       req.MbsLdrPrsn,
+		MBSRunLdrPct:     req.MbsRunLdrPct,
+		MBSFinalProduct:  req.MbsFinalProduct,
+		LDRIsFixed:       req.MbsLdrIsFixed,
+		DozingIsFixed:    req.MbsDozingIsFixed,
+		IsActive:         req.MbsIsActive,
+		LDRAdjustmentPct: req.MbsLdrAdjustmentPct,
+		LDRLockActual:    req.MbsLdrLockActual,
+		UpdatedBy:        getUserFromContext(ctx),
 	})
 	if err != nil {
 		RecordMBSpinOperation("update", false)
-		return &financev1.UpdateMBSpinResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.UpdateMBSpinResponse{Base: mbSpinErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern: error returned in response body
 	}
 
 	RecordMBSpinOperation("update", true)
@@ -338,6 +348,10 @@ func mbSpinEntityToProto(e *mbspin.Entity) *financev1.MBSpin {
 	// Absence-vs-zero: nil stays nil so the UI can tell "unknown" from "computed".
 	p.MbsLdrIsFixed = e.LDRIsFixed()
 	p.MbsDozingIsFixed = e.DozingIsFixed()
+	p.MbsLdrType = e.LDRType()
+	p.MbsLdrCalculatedPct = e.LDRCalculatedPct()
+	p.MbsLdrAdjustmentPct = e.LDRAdjustmentPct()
+	p.MbsLdrIsActual = e.LDRIsActual()
 	if e.UpdatedAt() != nil {
 		p.Audit.UpdatedAt = e.UpdatedAt().Format(time.RFC3339)
 	}
@@ -452,20 +466,22 @@ func applyRecalcToDuplicateResponse(resp *financev1.DuplicateMBSpinResponse, rec
 	resp.ImpactTruncated = recalc.ImpactTruncated
 }
 
-// mbSpinErrorToBaseResponse maps the P8 duplicate/recalc sentinels onto HTTP-ish
-// status codes.
+// mbSpinErrorToBaseResponse maps the P8 duplicate/recalc sentinels, plus the
+// Task E LDR lock sentinel, onto HTTP-ish status codes.
 //
 // The generic domainErrorToBaseResponse matches on substrings ("not found",
-// "already exists", "invalid") and none of these five sentinels contains one, so
-// without this they would all surface as 500s — a cycle, a duplicate ERP code, or
-// a too-wide fan-out are all CLIENT-correctable conditions, not server faults.
+// "already exists", "invalid") and none of these sentinels contains one, so
+// without this they would all surface as 500s — a cycle, a duplicate ERP code, a
+// too-wide fan-out, or a rejected adjustment on a locked spin are all
+// CLIENT-correctable conditions, not server faults.
 func mbSpinErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	switch {
 	case errors.Is(err, mbspin.ErrDuplicateOrionItemCode):
 		return ConflictResponse(err.Error())
 	case errors.Is(err, mbspin.ErrParentCycle),
 		errors.Is(err, mbspin.ErrMaxDuplicateDepth),
-		errors.Is(err, mbspin.ErrAlreadyDeleted):
+		errors.Is(err, mbspin.ErrAlreadyDeleted),
+		errors.Is(err, mbspin.ErrLDRLockedActual):
 		return BadRequestResponse(err.Error())
 	case errors.Is(err, mbspin.ErrTooManyChildren):
 		return BadRequestResponse(err.Error() + "; recalculate the affected child spins manually")

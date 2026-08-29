@@ -9034,8 +9034,16 @@ type MBSpin struct {
 	// Fix/actual marker for the dozing value. Absent means "unknown", which the
 	// domain treats as FIXED (recalc-safe). true = fixed, false = computed.
 	MbsDozingIsFixed *bool `protobuf:"varint,18,opt,name=mbs_dozing_is_fixed,json=mbsDozingIsFixed,proto3,oneof" json:"mbs_dozing_is_fixed,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Current LDR provenance: NOT_CALCULATED, CALCULATED, or ACTUAL. Mirrors mbs_ldr_type.
+	MbsLdrType string `protobuf:"bytes,19,opt,name=mbs_ldr_type,json=mbsLdrType,proto3" json:"mbs_ldr_type,omitempty"`
+	// System-calculated LDR percentage, before any manual adjustment. Mirrors mbs_ldr_calculated_pct.
+	MbsLdrCalculatedPct *float64 `protobuf:"fixed64,20,opt,name=mbs_ldr_calculated_pct,json=mbsLdrCalculatedPct,proto3,oneof" json:"mbs_ldr_calculated_pct,omitempty"`
+	// Manual adjustment added on top of the calculated LDR. Mirrors mbs_ldr_adjustment_pct.
+	MbsLdrAdjustmentPct *float64 `protobuf:"fixed64,21,opt,name=mbs_ldr_adjustment_pct,json=mbsLdrAdjustmentPct,proto3,oneof" json:"mbs_ldr_adjustment_pct,omitempty"`
+	// True when the LDR is locked to an actual/manual value (mbs_ldr_type is then ACTUAL). Mirrors mbs_ldr_is_actual.
+	MbsLdrIsActual bool `protobuf:"varint,22,opt,name=mbs_ldr_is_actual,json=mbsLdrIsActual,proto3" json:"mbs_ldr_is_actual,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MBSpin) Reset() {
@@ -9190,6 +9198,34 @@ func (x *MBSpin) GetMbsLdrIsFixed() bool {
 func (x *MBSpin) GetMbsDozingIsFixed() bool {
 	if x != nil && x.MbsDozingIsFixed != nil {
 		return *x.MbsDozingIsFixed
+	}
+	return false
+}
+
+func (x *MBSpin) GetMbsLdrType() string {
+	if x != nil {
+		return x.MbsLdrType
+	}
+	return ""
+}
+
+func (x *MBSpin) GetMbsLdrCalculatedPct() float64 {
+	if x != nil && x.MbsLdrCalculatedPct != nil {
+		return *x.MbsLdrCalculatedPct
+	}
+	return 0
+}
+
+func (x *MBSpin) GetMbsLdrAdjustmentPct() float64 {
+	if x != nil && x.MbsLdrAdjustmentPct != nil {
+		return *x.MbsLdrAdjustmentPct
+	}
+	return 0
+}
+
+func (x *MBSpin) GetMbsLdrIsActual() bool {
+	if x != nil {
+		return x.MbsLdrIsActual
 	}
 	return false
 }
@@ -9566,6 +9602,12 @@ type UpdateMBSpinRequest struct {
 	MbsLdrIsFixed *bool `protobuf:"varint,15,opt,name=mbs_ldr_is_fixed,json=mbsLdrIsFixed,proto3,oneof" json:"mbs_ldr_is_fixed,omitempty"`
 	// Optional fix/actual marker for dozing. Absent = leave unchanged.
 	MbsDozingIsFixed *bool `protobuf:"varint,16,opt,name=mbs_dozing_is_fixed,json=mbsDozingIsFixed,proto3,oneof" json:"mbs_dozing_is_fixed,omitempty"`
+	// Optional new LDR adjustment percentage. Absent = leave unchanged. Rejected by
+	// the domain if the spin's LDR is currently locked as Actual — unlock first.
+	MbsLdrAdjustmentPct *float64 `protobuf:"fixed64,17,opt,name=mbs_ldr_adjustment_pct,json=mbsLdrAdjustmentPct,proto3,oneof" json:"mbs_ldr_adjustment_pct,omitempty"`
+	// Optional lock/unlock instruction for LDR Actual status. true = lock as
+	// Actual, false = unlock. Absent = no-op (leave the lock state untouched).
+	MbsLdrLockActual *bool `protobuf:"varint,18,opt,name=mbs_ldr_lock_actual,json=mbsLdrLockActual,proto3,oneof" json:"mbs_ldr_lock_actual,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -9708,6 +9750,20 @@ func (x *UpdateMBSpinRequest) GetMbsLdrIsFixed() bool {
 func (x *UpdateMBSpinRequest) GetMbsDozingIsFixed() bool {
 	if x != nil && x.MbsDozingIsFixed != nil {
 		return *x.MbsDozingIsFixed
+	}
+	return false
+}
+
+func (x *UpdateMBSpinRequest) GetMbsLdrAdjustmentPct() float64 {
+	if x != nil && x.MbsLdrAdjustmentPct != nil {
+		return *x.MbsLdrAdjustmentPct
+	}
+	return 0
+}
+
+func (x *UpdateMBSpinRequest) GetMbsLdrLockActual() bool {
+	if x != nil && x.MbsLdrLockActual != nil {
+		return *x.MbsLdrLockActual
 	}
 	return false
 }
@@ -19999,7 +20055,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06reason\"q\n" +
 	"\x1aRejectUnlockMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\x8d\a\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\x84\t\n" +
 	"\x06MBSpin\x12\x15\n" +
 	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12)\n" +
 	"\x11mbs_oracle_sys_id\x18\x02 \x01(\tR\x0embsOracleSysId\x12\x1c\n" +
@@ -20026,7 +20082,12 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12,\n" +
 	"\x10mbs_ldr_is_fixed\x18\x11 \x01(\bH\tR\rmbsLdrIsFixed\x88\x01\x01\x122\n" +
 	"\x13mbs_dozing_is_fixed\x18\x12 \x01(\bH\n" +
-	"R\x10mbsDozingIsFixed\x88\x01\x01B\r\n" +
+	"R\x10mbsDozingIsFixed\x88\x01\x01\x12 \n" +
+	"\fmbs_ldr_type\x18\x13 \x01(\tR\n" +
+	"mbsLdrType\x128\n" +
+	"\x16mbs_ldr_calculated_pct\x18\x14 \x01(\x01H\vR\x13mbsLdrCalculatedPct\x88\x01\x01\x128\n" +
+	"\x16mbs_ldr_adjustment_pct\x18\x15 \x01(\x01H\fR\x13mbsLdrAdjustmentPct\x88\x01\x01\x12)\n" +
+	"\x11mbs_ldr_is_actual\x18\x16 \x01(\bR\x0embsLdrIsActualB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
 	"\v_mbs_dozingB\t\n" +
@@ -20037,7 +20098,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x12_mbs_final_productB\x12\n" +
 	"\x10_mbs_run_ldr_pctB\x13\n" +
 	"\x11_mbs_ldr_is_fixedB\x16\n" +
-	"\x14_mbs_dozing_is_fixed\"\xc2\a\n" +
+	"\x14_mbs_dozing_is_fixedB\x19\n" +
+	"\x17_mbs_ldr_calculated_pctB\x19\n" +
+	"\x17_mbs_ldr_adjustment_pct\"\xc2\a\n" +
 	"\x13CreateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12+\n" +
 	"\fmbs_mgt_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\n" +
@@ -20082,7 +20145,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\"h\n" +
 	"\x11GetMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"\xe5\a\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"\x86\t\n" +
 	"\x13UpdateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\x120\n" +
@@ -20106,7 +20169,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"R\x0fmbsFinalProduct\x88\x01\x01\x12:\n" +
 	"\x0fmbs_run_ldr_pct\x18\x0e \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\vR\fmbsRunLdrPct\x88\x01\x01\x12,\n" +
 	"\x10mbs_ldr_is_fixed\x18\x0f \x01(\bH\fR\rmbsLdrIsFixed\x88\x01\x01\x122\n" +
-	"\x13mbs_dozing_is_fixed\x18\x10 \x01(\bH\rR\x10mbsDozingIsFixed\x88\x01\x01B\x0f\n" +
+	"\x13mbs_dozing_is_fixed\x18\x10 \x01(\bH\rR\x10mbsDozingIsFixed\x88\x01\x01\x128\n" +
+	"\x16mbs_ldr_adjustment_pct\x18\x11 \x01(\x01H\x0eR\x13mbsLdrAdjustmentPct\x88\x01\x01\x122\n" +
+	"\x13mbs_ldr_lock_actual\x18\x12 \x01(\bH\x0fR\x10mbsLdrLockActual\x88\x01\x01B\x0f\n" +
 	"\r_mbs_mgt_nameB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
@@ -20120,7 +20185,9 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x12_mbs_final_productB\x12\n" +
 	"\x10_mbs_run_ldr_pctB\x13\n" +
 	"\x11_mbs_ldr_is_fixedB\x16\n" +
-	"\x14_mbs_dozing_is_fixed\"k\n" +
+	"\x14_mbs_dozing_is_fixedB\x19\n" +
+	"\x17_mbs_ldr_adjustment_pctB\x16\n" +
+	"\x14_mbs_ldr_lock_actual\"k\n" +
 	"\x14UpdateMBSpinResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBSpinR\x04data\"W\n" +

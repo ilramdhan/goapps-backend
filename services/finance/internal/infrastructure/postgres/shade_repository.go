@@ -29,7 +29,32 @@ const shadeSelectColumns = `
 	ces_shade_id, ces_shade_code, ces_shade_name, ces_shade_short_name,
 	ces_is_active, ces_shade_source, ces_source_created_at, ces_source_updated_at,
 	ces_source_created_by, ces_source_updated_by, ces_synced_at,
-	created_at, created_by, updated_at, updated_by`
+	created_at, created_by, updated_at, updated_by,
+	COALESCE(shade_usage.cnt, 0) AS usage_count`
+
+// shadeUsageJoin computes, per shade code, how many mst_mb_head / mst_mb_head_shade /
+// mst_mb_spin rows reference it (soft-delete excluded). It is a string-keyed match
+// against ces_shade_code — not a FK — normalized the same way NormalizeCode does
+// (upper-case, trimmed) so casing differences between the master and the referencing
+// tables never under-count usage.
+const shadeUsageJoin = `
+	LEFT JOIN (
+		SELECT shade_code, COUNT(*) AS cnt
+		FROM (
+			SELECT UPPER(TRIM(mbh_shade_code)) AS shade_code
+			FROM mst_mb_head
+			WHERE deleted_at IS NULL AND mbh_shade_code IS NOT NULL
+			UNION ALL
+			SELECT UPPER(TRIM(mbhs_shade_code)) AS shade_code
+			FROM mst_mb_head_shade
+			WHERE deleted_at IS NULL AND mbhs_shade_code IS NOT NULL
+			UNION ALL
+			SELECT UPPER(TRIM(mbs_shade_code)) AS shade_code
+			FROM mst_mb_spin
+			WHERE deleted_at IS NULL AND mbs_shade_code IS NOT NULL
+		) refs
+		GROUP BY shade_code
+	) shade_usage ON shade_usage.shade_code = UPPER(TRIM(cost_erp_shade.ces_shade_code))`
 
 // Create persists a hand-authored shade and assigns its ID.
 func (r *ShadeRepository) Create(ctx context.Context, entity *shade.Shade) error {
@@ -58,13 +83,13 @@ func (r *ShadeRepository) Create(ctx context.Context, entity *shade.Shade) error
 
 // GetByID retrieves a shade by its ID.
 func (r *ShadeRepository) GetByID(ctx context.Context, id int64) (*shade.Shade, error) {
-	query := `SELECT ` + shadeSelectColumns + ` FROM cost_erp_shade WHERE ces_shade_id = $1`
+	query := `SELECT ` + shadeSelectColumns + ` FROM cost_erp_shade` + shadeUsageJoin + ` WHERE ces_shade_id = $1`
 	return r.scanRow(r.db.QueryRowContext(ctx, query, id))
 }
 
 // GetByCode retrieves a shade by its code, matched case-insensitively.
 func (r *ShadeRepository) GetByCode(ctx context.Context, code string) (*shade.Shade, error) {
-	query := `SELECT ` + shadeSelectColumns + ` FROM cost_erp_shade WHERE LOWER(ces_shade_code) = LOWER($1)`
+	query := `SELECT ` + shadeSelectColumns + ` FROM cost_erp_shade` + shadeUsageJoin + ` WHERE LOWER(ces_shade_code) = LOWER($1)`
 	return r.scanRow(r.db.QueryRowContext(ctx, query, shade.NormalizeCode(code)))
 }
 
@@ -124,7 +149,8 @@ func (r *ShadeRepository) List(ctx context.Context, filter shade.ListFilter) ([]
 		orderDir = sortDESC
 	}
 
-	query := `SELECT ` + shadeSelectColumns + base +
+	selectBase := strings.Replace(base, "FROM cost_erp_shade", "FROM cost_erp_shade"+shadeUsageJoin, 1)
+	query := `SELECT ` + shadeSelectColumns + selectBase +
 		fmt.Sprintf(` ORDER BY %s %s LIMIT $%d OFFSET $%d`,
 			orderCol, orderDir, len(args)+1, len(args)+2)
 	args = append(args, filter.PageSize, filter.Offset())
@@ -311,6 +337,7 @@ func scanShadeRow(row rowScanner) (*shade.ReconstructParams, error) {
 		sourceCreatedAt, sourceUpdatedAt, syncedAt, updatedAt  sql.NullTime
 		createdAt                                              time.Time
 		createdBy                                              string
+		usageCount                                             int64
 	)
 
 	err := row.Scan(
@@ -318,6 +345,7 @@ func scanShadeRow(row rowScanner) (*shade.ReconstructParams, error) {
 		&isActive, &source, &sourceCreatedAt, &sourceUpdatedAt,
 		&sourceCreatedBy, &sourceUpdatedBy, &syncedAt,
 		&createdAt, &createdBy, &updatedAt, &updatedBy,
+		&usageCount,
 	)
 	if err != nil {
 		return nil, err
@@ -337,5 +365,6 @@ func scanShadeRow(row rowScanner) (*shade.ReconstructParams, error) {
 		CreatedBy:       createdBy,
 		UpdatedAt:       nullTimePtr(updatedAt),
 		UpdatedBy:       nullStringPtr(updatedBy),
+		UsageCount:      int32(usageCount), //nolint:gosec // COUNT(*) of shade-code references, bounded well under int32 range
 	}, nil
 }

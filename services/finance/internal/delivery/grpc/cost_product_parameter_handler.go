@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/google/uuid"
 
@@ -456,6 +457,13 @@ func upsertReqToCommand(ctx context.Context, req *financev1.UpsertProductParamVa
 		b := req.ValueFlag
 		cmd.ValueFlag = &b
 	}
+	if req.MbSpinIdOverride != nil {
+		overrideID, parseErr := uuid.Parse(*req.MbSpinIdOverride)
+		if parseErr != nil {
+			return cppapp.UpsertCommand{}, errors.New("invalid mb_spin_id_override")
+		}
+		cmd.MBSpinIDOverride = &overrideID
+	}
 	return cmd, nil
 }
 
@@ -512,6 +520,40 @@ func applyEntryMBSpinCandidate(out *financev1.RequiredParamEntry, v *cpp.Value) 
 		out.MbSpinCandidateCount = *v.MBSpinCandidateCount
 		out.HasMbSpinCandidateCount = true
 	}
+	for _, c := range v.MBSpinCandidates {
+		out.MbSpinCandidates = append(out.MbSpinCandidates, mbSpinCandidateToProto(c))
+	}
+}
+
+// mbSpinCandidateToProto maps one ambiguity candidate to its wire shape.
+// Decimal fields use FormatFloat(-1) — the same "shortest round-trip"
+// formatting already used for value_numeric strings elsewhere in this
+// package — and are left empty when nil, matching the proto doc comment.
+func mbSpinCandidateToProto(c cpp.MBSpinCandidateInfo) *financev1.MBSpinCandidate {
+	out := &financev1.MBSpinCandidate{
+		MbsId:   c.MBSID.String(),
+		MgtName: c.MgtName,
+	}
+	if c.OrionItemCode != nil {
+		out.OrionItemCode = *c.OrionItemCode
+	}
+	if c.Denier != nil {
+		out.Denier = strconv.FormatFloat(*c.Denier, 'f', -1, 64)
+	}
+	if c.Filament != nil {
+		out.Filament = safeIntToInt32(*c.Filament)
+		out.HasFilament = true
+	}
+	if c.MBSLdrPrsn != nil {
+		out.LdrPrsn = strconv.FormatFloat(*c.MBSLdrPrsn, 'f', -1, 64)
+	}
+	if c.MBSRunLdrPct != nil {
+		out.RunLdrPct = strconv.FormatFloat(*c.MBSRunLdrPct, 'f', -1, 64)
+	}
+	if c.MBSStatus != nil {
+		out.Status = *c.MBSStatus
+	}
+	return out
 }
 
 func valueToProto(v *cpp.Value) *financev1.CostProductParameterValue {

@@ -99,7 +99,7 @@ func TestRecalcApply_RnDChildIsRecalculated(t *testing.T) {
 	child := newSpin(t, childID, headID, "child", ptrF(500), ptrI(96), ptrF(0.5), rnd())
 
 	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{parentID: {child}}}
-	svc := mbspin.NewRecalcService(nil, rr, nil)
+	svc := mbspin.NewRecalcService(nil, rr, nil, nil)
 
 	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestRecalcApply_NonRnDChildrenAreSkipped(t *testing.T) {
 	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{
 		parentID: {spinning, boughtout, noStatus, emptyStatus},
 	}}
-	svc := mbspin.NewRecalcService(nil, rr, nil)
+	svc := mbspin.NewRecalcService(nil, rr, nil, nil)
 
 	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
 	require.NoError(t, err)
@@ -160,7 +160,7 @@ func TestRecalcApply_OneLevelOnly(t *testing.T) {
 		parentID: {child},
 		childID:  {grandchild},
 	}}
-	svc := mbspin.NewRecalcService(nil, rr, nil)
+	svc := mbspin.NewRecalcService(nil, rr, nil, nil)
 
 	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
 	require.NoError(t, err)
@@ -185,7 +185,7 @@ func TestRecalcApply_TooManyChildren(t *testing.T) {
 		kids = append(kids, newSpin(t, uuid.New(), headID, "child", ptrF(500), ptrI(96), ptrF(0.5), rnd()))
 	}
 	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{parentID: kids}}
-	svc := mbspin.NewRecalcService(nil, rr, nil)
+	svc := mbspin.NewRecalcService(nil, rr, nil, nil)
 
 	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
 
@@ -204,7 +204,7 @@ func TestRecalcApply_ExactlyAtCapIsAllowed(t *testing.T) {
 		kids = append(kids, newSpin(t, uuid.New(), headID, "child", ptrF(500), ptrI(96), ptrF(0.5), rnd()))
 	}
 	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{parentID: kids}}
-	svc := mbspin.NewRecalcService(nil, rr, nil)
+	svc := mbspin.NewRecalcService(nil, rr, nil, nil)
 
 	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
 	require.NoError(t, err)
@@ -229,7 +229,7 @@ func TestRecalcApply_SingleWorkflowLogPerOperation(t *testing.T) {
 		true, testNow(), "tester", nil, nil, nil, nil,
 	)
 	ir := &fakeImpactRepo{totals: mbdozing.Totals{TotalAffected: 7, TotalLocked: 2}}
-	svc := mbspin.NewRecalcService(nil, rr, ir)
+	svc := mbspin.NewRecalcService(nil, rr, ir, nil)
 
 	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{
 		Parent: parentWithCode, OldDozing: ptrF(0.9), Actor: "tester",
@@ -260,7 +260,7 @@ func TestRecalcApply_IncompleteOperandsAreNotWritten(t *testing.T) {
 	noDenier := newSpin(t, uuid.New(), headID, "no-denier", nil, ptrI(96), ptrF(0.5), rnd())
 
 	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{parentID: {noDenier}}}
-	svc := mbspin.NewRecalcService(nil, rr, nil)
+	svc := mbspin.NewRecalcService(nil, rr, nil, nil)
 
 	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
 	require.NoError(t, err)
@@ -278,7 +278,7 @@ func TestRecalcPreview_WritesNothing(t *testing.T) {
 	actual := newSpin(t, uuid.New(), headID, "actual", ptrF(500), ptrI(96), ptrF(0.5), ptrS("Spinning"))
 
 	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{parentID: {actual}}}
-	svc := mbspin.NewRecalcService(nil, rr, nil)
+	svc := mbspin.NewRecalcService(nil, rr, nil, nil)
 
 	res, err := svc.Preview(context.Background(), parent)
 	require.NoError(t, err)
@@ -299,7 +299,7 @@ func newUpdateFixture(t *testing.T, stored *mbspindomain.Entity, children []*mbs
 	repo.On("Update", mock.Anything, mock.AnythingOfType("*mbspin.Entity")).Return(nil)
 
 	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{stored.ID(): children}}
-	return mbspin.NewUpdateHandlerWithRecalc(repo, mbspin.NewRecalcService(repo, rr, nil)), repo, rr
+	return mbspin.NewUpdateHandlerWithRecalc(repo, mbspin.NewRecalcService(repo, rr, nil, nil)), repo, rr
 }
 
 // TestUpdateHandler_RecalcNotTriggeredByNonDozingField is the negative case the

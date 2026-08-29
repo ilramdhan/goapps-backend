@@ -70,6 +70,9 @@ func (r *resolveFillFakeRepo) ExistsByOrionItemCode(_ context.Context, _ string)
 func (r *resolveFillFakeRepo) ResolveUniqueByOrionItemCode(_ context.Context, _ string) (uuid.UUID, bool, error) {
 	return uuid.UUID{}, false, nil
 }
+func (r *resolveFillFakeRepo) ListByOrionItemCode(_ context.Context, _ string) ([]*mbspin.Entity, error) {
+	return nil, nil
+}
 
 func newResolveTestSpin(t *testing.T, name string) *mbspin.Entity {
 	t.Helper()

@@ -220,6 +220,126 @@ func (x *CostProductParameterValue) GetFilledBy() string {
 	return ""
 }
 
+// MBSpinCandidate is one possible mst_mb_spin match behind an ambiguous
+// MB_SPIN lookup value_text (an ORION item code shared by more than one
+// mst_mb_spin row). Carries just enough disambiguating detail — mirrors the
+// columns already shown in the MB_SPIN combobox extra-detail row — for the
+// user to tell the candidates apart before picking one.
+type MBSpinCandidate struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Permanent mst_mb_spin.mbs_id UUID — this is what gets saved as
+	// mb_spin_id_override when the user picks this candidate, never the
+	// (possibly ambiguous) ORION item code.
+	MbsId         string `protobuf:"bytes,1,opt,name=mbs_id,json=mbsId,proto3" json:"mbs_id,omitempty"`
+	OrionItemCode string `protobuf:"bytes,2,opt,name=orion_item_code,json=orionItemCode,proto3" json:"orion_item_code,omitempty"`
+	MgtName       string `protobuf:"bytes,3,opt,name=mgt_name,json=mgtName,proto3" json:"mgt_name,omitempty"`
+	// Denier as a decimal string; empty = not set.
+	Denier      string `protobuf:"bytes,4,opt,name=denier,proto3" json:"denier,omitempty"`
+	Filament    int32  `protobuf:"varint,5,opt,name=filament,proto3" json:"filament,omitempty"`
+	HasFilament bool   `protobuf:"varint,6,opt,name=has_filament,json=hasFilament,proto3" json:"has_filament,omitempty"`
+	// "LDR Rencana" — planned LDR, as a decimal string; empty = not set.
+	LdrPrsn string `protobuf:"bytes,7,opt,name=ldr_prsn,json=ldrPrsn,proto3" json:"ldr_prsn,omitempty"`
+	// "LDR Aktual" — authoritative actual LDR (see mbs_run_ldr_pct), as a
+	// decimal string; empty = not set.
+	RunLdrPct     string `protobuf:"bytes,8,opt,name=run_ldr_pct,json=runLdrPct,proto3" json:"run_ldr_pct,omitempty"`
+	Status        string `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MBSpinCandidate) Reset() {
+	*x = MBSpinCandidate{}
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MBSpinCandidate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MBSpinCandidate) ProtoMessage() {}
+
+func (x *MBSpinCandidate) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MBSpinCandidate.ProtoReflect.Descriptor instead.
+func (*MBSpinCandidate) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *MBSpinCandidate) GetMbsId() string {
+	if x != nil {
+		return x.MbsId
+	}
+	return ""
+}
+
+func (x *MBSpinCandidate) GetOrionItemCode() string {
+	if x != nil {
+		return x.OrionItemCode
+	}
+	return ""
+}
+
+func (x *MBSpinCandidate) GetMgtName() string {
+	if x != nil {
+		return x.MgtName
+	}
+	return ""
+}
+
+func (x *MBSpinCandidate) GetDenier() string {
+	if x != nil {
+		return x.Denier
+	}
+	return ""
+}
+
+func (x *MBSpinCandidate) GetFilament() int32 {
+	if x != nil {
+		return x.Filament
+	}
+	return 0
+}
+
+func (x *MBSpinCandidate) GetHasFilament() bool {
+	if x != nil {
+		return x.HasFilament
+	}
+	return false
+}
+
+func (x *MBSpinCandidate) GetLdrPrsn() string {
+	if x != nil {
+		return x.LdrPrsn
+	}
+	return ""
+}
+
+func (x *MBSpinCandidate) GetRunLdrPct() string {
+	if x != nil {
+		return x.RunLdrPct
+	}
+	return ""
+}
+
+func (x *MBSpinCandidate) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 // RequiredParamEntry surfaces a required mst_parameter row that may or may not
 // yet have a value bound for the product (used by ListProductRequiredParams).
 type RequiredParamEntry struct {
@@ -254,6 +374,12 @@ type RequiredParamEntry struct {
 	// (an MB_SPIN lookup param with a non-empty value_text). False means the
 	// count is not applicable — do not interpret 0 as "not applicable".
 	HasMbSpinCandidateCount bool `protobuf:"varint,16,opt,name=has_mb_spin_candidate_count,json=hasMbSpinCandidateCount,proto3" json:"has_mb_spin_candidate_count,omitempty"`
+	// Full candidate list backing mb_spin_candidate_count, populated ONLY when
+	// the row is actually ambiguous (has_mb_spin_candidate_count is true and
+	// mb_spin_candidate_count > 1). Empty in every other case — including the
+	// "already resolved" and "zero matches" states — so callers should gate on
+	// the count fields above rather than on this list's emptiness alone.
+	MbSpinCandidates []*MBSpinCandidate `protobuf:"bytes,17,rep,name=mb_spin_candidates,json=mbSpinCandidates,proto3" json:"mb_spin_candidates,omitempty"`
 	// Existing value (zero/empty when not yet bound).
 	HasValue      bool   `protobuf:"varint,20,opt,name=has_value,json=hasValue,proto3" json:"has_value,omitempty"`
 	ValueNumeric  string `protobuf:"bytes,21,opt,name=value_numeric,json=valueNumeric,proto3" json:"value_numeric,omitempty"`
@@ -267,7 +393,7 @@ type RequiredParamEntry struct {
 
 func (x *RequiredParamEntry) Reset() {
 	*x = RequiredParamEntry{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[1]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -279,7 +405,7 @@ func (x *RequiredParamEntry) String() string {
 func (*RequiredParamEntry) ProtoMessage() {}
 
 func (x *RequiredParamEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[1]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -292,7 +418,7 @@ func (x *RequiredParamEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequiredParamEntry.ProtoReflect.Descriptor instead.
 func (*RequiredParamEntry) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{1}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RequiredParamEntry) GetParamId() string {
@@ -407,6 +533,13 @@ func (x *RequiredParamEntry) GetHasMbSpinCandidateCount() bool {
 	return false
 }
 
+func (x *RequiredParamEntry) GetMbSpinCandidates() []*MBSpinCandidate {
+	if x != nil {
+		return x.MbSpinCandidates
+	}
+	return nil
+}
+
 func (x *RequiredParamEntry) GetHasValue() bool {
 	if x != nil {
 		return x.HasValue
@@ -460,7 +593,7 @@ type ListProductRequiredParamsRequest struct {
 
 func (x *ListProductRequiredParamsRequest) Reset() {
 	*x = ListProductRequiredParamsRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[2]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -472,7 +605,7 @@ func (x *ListProductRequiredParamsRequest) String() string {
 func (*ListProductRequiredParamsRequest) ProtoMessage() {}
 
 func (x *ListProductRequiredParamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[2]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +618,7 @@ func (x *ListProductRequiredParamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProductRequiredParamsRequest.ProtoReflect.Descriptor instead.
 func (*ListProductRequiredParamsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{2}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListProductRequiredParamsRequest) GetProductSysId() int64 {
@@ -512,7 +645,7 @@ type ListProductRequiredParamsResponse struct {
 
 func (x *ListProductRequiredParamsResponse) Reset() {
 	*x = ListProductRequiredParamsResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[3]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -524,7 +657,7 @@ func (x *ListProductRequiredParamsResponse) String() string {
 func (*ListProductRequiredParamsResponse) ProtoMessage() {}
 
 func (x *ListProductRequiredParamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[3]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -537,7 +670,7 @@ func (x *ListProductRequiredParamsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListProductRequiredParamsResponse.ProtoReflect.Descriptor instead.
 func (*ListProductRequiredParamsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{3}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListProductRequiredParamsResponse) GetBase() *v1.BaseResponse {
@@ -563,15 +696,23 @@ type UpsertProductParamValueRequest struct {
 	ValueText    string `protobuf:"bytes,4,opt,name=value_text,json=valueText,proto3" json:"value_text,omitempty"`
 	// value_flag is a real bool — we cannot distinguish "unset" from FALSE, so
 	// callers must use has_value_flag to opt in.
-	ValueFlag     bool `protobuf:"varint,5,opt,name=value_flag,json=valueFlag,proto3" json:"value_flag,omitempty"`
-	HasValueFlag  bool `protobuf:"varint,6,opt,name=has_value_flag,json=hasValueFlag,proto3" json:"has_value_flag,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ValueFlag    bool `protobuf:"varint,5,opt,name=value_flag,json=valueFlag,proto3" json:"value_flag,omitempty"`
+	HasValueFlag bool `protobuf:"varint,6,opt,name=has_value_flag,json=hasValueFlag,proto3" json:"has_value_flag,omitempty"`
+	// Explicit mst_mb_spin.mbs_id UUID chosen by the user from the
+	// MBSpinCandidate list for an ambiguous MB_SPIN lookup value. When set,
+	// this is written directly to cpp_value_mb_spin_id and the normal
+	// ORION-code ambiguity resolver (which requires an exact single match) is
+	// skipped entirely — the user's explicit pick always wins. value_text is
+	// still saved as-is alongside it (companion column, see
+	// cpp_value_mb_spin_id / migration 000494).
+	MbSpinIdOverride *string `protobuf:"bytes,7,opt,name=mb_spin_id_override,json=mbSpinIdOverride,proto3,oneof" json:"mb_spin_id_override,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *UpsertProductParamValueRequest) Reset() {
 	*x = UpsertProductParamValueRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[4]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -583,7 +724,7 @@ func (x *UpsertProductParamValueRequest) String() string {
 func (*UpsertProductParamValueRequest) ProtoMessage() {}
 
 func (x *UpsertProductParamValueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[4]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -596,7 +737,7 @@ func (x *UpsertProductParamValueRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertProductParamValueRequest.ProtoReflect.Descriptor instead.
 func (*UpsertProductParamValueRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{4}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UpsertProductParamValueRequest) GetProductSysId() int64 {
@@ -641,6 +782,13 @@ func (x *UpsertProductParamValueRequest) GetHasValueFlag() bool {
 	return false
 }
 
+func (x *UpsertProductParamValueRequest) GetMbSpinIdOverride() string {
+	if x != nil && x.MbSpinIdOverride != nil {
+		return *x.MbSpinIdOverride
+	}
+	return ""
+}
+
 type UpsertProductParamValueResponse struct {
 	state         protoimpl.MessageState     `protogen:"open.v1"`
 	Base          *v1.BaseResponse           `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
@@ -651,7 +799,7 @@ type UpsertProductParamValueResponse struct {
 
 func (x *UpsertProductParamValueResponse) Reset() {
 	*x = UpsertProductParamValueResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[5]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -663,7 +811,7 @@ func (x *UpsertProductParamValueResponse) String() string {
 func (*UpsertProductParamValueResponse) ProtoMessage() {}
 
 func (x *UpsertProductParamValueResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[5]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -676,7 +824,7 @@ func (x *UpsertProductParamValueResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertProductParamValueResponse.ProtoReflect.Descriptor instead.
 func (*UpsertProductParamValueResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{5}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UpsertProductParamValueResponse) GetBase() *v1.BaseResponse {
@@ -703,7 +851,7 @@ type UpsertProductParamValuesBatchRequest struct {
 
 func (x *UpsertProductParamValuesBatchRequest) Reset() {
 	*x = UpsertProductParamValuesBatchRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[6]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -715,7 +863,7 @@ func (x *UpsertProductParamValuesBatchRequest) String() string {
 func (*UpsertProductParamValuesBatchRequest) ProtoMessage() {}
 
 func (x *UpsertProductParamValuesBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[6]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -728,7 +876,7 @@ func (x *UpsertProductParamValuesBatchRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use UpsertProductParamValuesBatchRequest.ProtoReflect.Descriptor instead.
 func (*UpsertProductParamValuesBatchRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{6}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpsertProductParamValuesBatchRequest) GetProductSysId() int64 {
@@ -757,7 +905,7 @@ type UpsertProductParamValuesBatchResponse struct {
 
 func (x *UpsertProductParamValuesBatchResponse) Reset() {
 	*x = UpsertProductParamValuesBatchResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[7]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -769,7 +917,7 @@ func (x *UpsertProductParamValuesBatchResponse) String() string {
 func (*UpsertProductParamValuesBatchResponse) ProtoMessage() {}
 
 func (x *UpsertProductParamValuesBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[7]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -782,7 +930,7 @@ func (x *UpsertProductParamValuesBatchResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use UpsertProductParamValuesBatchResponse.ProtoReflect.Descriptor instead.
 func (*UpsertProductParamValuesBatchResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{7}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpsertProductParamValuesBatchResponse) GetBase() *v1.BaseResponse {
@@ -823,7 +971,7 @@ type DeleteProductParamValueRequest struct {
 
 func (x *DeleteProductParamValueRequest) Reset() {
 	*x = DeleteProductParamValueRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[8]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -835,7 +983,7 @@ func (x *DeleteProductParamValueRequest) String() string {
 func (*DeleteProductParamValueRequest) ProtoMessage() {}
 
 func (x *DeleteProductParamValueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[8]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -848,7 +996,7 @@ func (x *DeleteProductParamValueRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProductParamValueRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProductParamValueRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{8}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteProductParamValueRequest) GetProductSysId() int64 {
@@ -874,7 +1022,7 @@ type DeleteProductParamValueResponse struct {
 
 func (x *DeleteProductParamValueResponse) Reset() {
 	*x = DeleteProductParamValueResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[9]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -886,7 +1034,7 @@ func (x *DeleteProductParamValueResponse) String() string {
 func (*DeleteProductParamValueResponse) ProtoMessage() {}
 
 func (x *DeleteProductParamValueResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[9]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -899,7 +1047,7 @@ func (x *DeleteProductParamValueResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProductParamValueResponse.ProtoReflect.Descriptor instead.
 func (*DeleteProductParamValueResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{9}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteProductParamValueResponse) GetBase() *v1.BaseResponse {
@@ -918,7 +1066,7 @@ type CheckMissingRequiredParamsRequest struct {
 
 func (x *CheckMissingRequiredParamsRequest) Reset() {
 	*x = CheckMissingRequiredParamsRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[10]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -930,7 +1078,7 @@ func (x *CheckMissingRequiredParamsRequest) String() string {
 func (*CheckMissingRequiredParamsRequest) ProtoMessage() {}
 
 func (x *CheckMissingRequiredParamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[10]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -943,7 +1091,7 @@ func (x *CheckMissingRequiredParamsRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use CheckMissingRequiredParamsRequest.ProtoReflect.Descriptor instead.
 func (*CheckMissingRequiredParamsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{10}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CheckMissingRequiredParamsRequest) GetProductSysId() int64 {
@@ -965,7 +1113,7 @@ type MissingParam struct {
 
 func (x *MissingParam) Reset() {
 	*x = MissingParam{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[11]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -977,7 +1125,7 @@ func (x *MissingParam) String() string {
 func (*MissingParam) ProtoMessage() {}
 
 func (x *MissingParam) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[11]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -990,7 +1138,7 @@ func (x *MissingParam) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MissingParam.ProtoReflect.Descriptor instead.
 func (*MissingParam) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{11}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *MissingParam) GetParamId() string {
@@ -1032,7 +1180,7 @@ type CheckMissingRequiredParamsResponse struct {
 
 func (x *CheckMissingRequiredParamsResponse) Reset() {
 	*x = CheckMissingRequiredParamsResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[12]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1044,7 +1192,7 @@ func (x *CheckMissingRequiredParamsResponse) String() string {
 func (*CheckMissingRequiredParamsResponse) ProtoMessage() {}
 
 func (x *CheckMissingRequiredParamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[12]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1057,7 +1205,7 @@ func (x *CheckMissingRequiredParamsResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use CheckMissingRequiredParamsResponse.ProtoReflect.Descriptor instead.
 func (*CheckMissingRequiredParamsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{12}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CheckMissingRequiredParamsResponse) GetBase() *v1.BaseResponse {
@@ -1096,7 +1244,7 @@ type AvailableParamEntry struct {
 
 func (x *AvailableParamEntry) Reset() {
 	*x = AvailableParamEntry{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[13]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1108,7 +1256,7 @@ func (x *AvailableParamEntry) String() string {
 func (*AvailableParamEntry) ProtoMessage() {}
 
 func (x *AvailableParamEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[13]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1121,7 +1269,7 @@ func (x *AvailableParamEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AvailableParamEntry.ProtoReflect.Descriptor instead.
 func (*AvailableParamEntry) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{13}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AvailableParamEntry) GetParamId() string {
@@ -1224,7 +1372,7 @@ type ListAvailableParamsRequest struct {
 
 func (x *ListAvailableParamsRequest) Reset() {
 	*x = ListAvailableParamsRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[14]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1236,7 +1384,7 @@ func (x *ListAvailableParamsRequest) String() string {
 func (*ListAvailableParamsRequest) ProtoMessage() {}
 
 func (x *ListAvailableParamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[14]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1249,7 +1397,7 @@ func (x *ListAvailableParamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAvailableParamsRequest.ProtoReflect.Descriptor instead.
 func (*ListAvailableParamsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{14}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListAvailableParamsRequest) GetProductSysId() int64 {
@@ -1269,7 +1417,7 @@ type ListAvailableParamsResponse struct {
 
 func (x *ListAvailableParamsResponse) Reset() {
 	*x = ListAvailableParamsResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[15]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1281,7 +1429,7 @@ func (x *ListAvailableParamsResponse) String() string {
 func (*ListAvailableParamsResponse) ProtoMessage() {}
 
 func (x *ListAvailableParamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[15]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1294,7 +1442,7 @@ func (x *ListAvailableParamsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAvailableParamsResponse.ProtoReflect.Descriptor instead.
 func (*ListAvailableParamsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{15}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListAvailableParamsResponse) GetBase() *v1.BaseResponse {
@@ -1324,7 +1472,7 @@ type AddApplicableParamRequest struct {
 
 func (x *AddApplicableParamRequest) Reset() {
 	*x = AddApplicableParamRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[16]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1336,7 +1484,7 @@ func (x *AddApplicableParamRequest) String() string {
 func (*AddApplicableParamRequest) ProtoMessage() {}
 
 func (x *AddApplicableParamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[16]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1349,7 +1497,7 @@ func (x *AddApplicableParamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddApplicableParamRequest.ProtoReflect.Descriptor instead.
 func (*AddApplicableParamRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{16}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *AddApplicableParamRequest) GetProductSysId() int64 {
@@ -1389,7 +1537,7 @@ type AddApplicableParamResponse struct {
 
 func (x *AddApplicableParamResponse) Reset() {
 	*x = AddApplicableParamResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[17]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1401,7 +1549,7 @@ func (x *AddApplicableParamResponse) String() string {
 func (*AddApplicableParamResponse) ProtoMessage() {}
 
 func (x *AddApplicableParamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[17]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1414,7 +1562,7 @@ func (x *AddApplicableParamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddApplicableParamResponse.ProtoReflect.Descriptor instead.
 func (*AddApplicableParamResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{17}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AddApplicableParamResponse) GetBase() *v1.BaseResponse {
@@ -1434,7 +1582,7 @@ type RemoveApplicableParamRequest struct {
 
 func (x *RemoveApplicableParamRequest) Reset() {
 	*x = RemoveApplicableParamRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[18]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1446,7 +1594,7 @@ func (x *RemoveApplicableParamRequest) String() string {
 func (*RemoveApplicableParamRequest) ProtoMessage() {}
 
 func (x *RemoveApplicableParamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[18]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1459,7 +1607,7 @@ func (x *RemoveApplicableParamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveApplicableParamRequest.ProtoReflect.Descriptor instead.
 func (*RemoveApplicableParamRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{18}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RemoveApplicableParamRequest) GetProductSysId() int64 {
@@ -1485,7 +1633,7 @@ type RemoveApplicableParamResponse struct {
 
 func (x *RemoveApplicableParamResponse) Reset() {
 	*x = RemoveApplicableParamResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[19]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1497,7 +1645,7 @@ func (x *RemoveApplicableParamResponse) String() string {
 func (*RemoveApplicableParamResponse) ProtoMessage() {}
 
 func (x *RemoveApplicableParamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[19]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1510,7 +1658,7 @@ func (x *RemoveApplicableParamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveApplicableParamResponse.ProtoReflect.Descriptor instead.
 func (*RemoveApplicableParamResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{19}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *RemoveApplicableParamResponse) GetBase() *v1.BaseResponse {
@@ -1532,7 +1680,7 @@ type UpdateApplicableParamRequest struct {
 
 func (x *UpdateApplicableParamRequest) Reset() {
 	*x = UpdateApplicableParamRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[20]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1544,7 +1692,7 @@ func (x *UpdateApplicableParamRequest) String() string {
 func (*UpdateApplicableParamRequest) ProtoMessage() {}
 
 func (x *UpdateApplicableParamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[20]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1557,7 +1705,7 @@ func (x *UpdateApplicableParamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateApplicableParamRequest.ProtoReflect.Descriptor instead.
 func (*UpdateApplicableParamRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{20}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *UpdateApplicableParamRequest) GetProductSysId() int64 {
@@ -1597,7 +1745,7 @@ type UpdateApplicableParamResponse struct {
 
 func (x *UpdateApplicableParamResponse) Reset() {
 	*x = UpdateApplicableParamResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[21]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1609,7 +1757,7 @@ func (x *UpdateApplicableParamResponse) String() string {
 func (*UpdateApplicableParamResponse) ProtoMessage() {}
 
 func (x *UpdateApplicableParamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[21]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1622,7 +1770,7 @@ func (x *UpdateApplicableParamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateApplicableParamResponse.ProtoReflect.Descriptor instead.
 func (*UpdateApplicableParamResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{21}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *UpdateApplicableParamResponse) GetBase() *v1.BaseResponse {
@@ -1644,7 +1792,7 @@ type ParamWithValue struct {
 
 func (x *ParamWithValue) Reset() {
 	*x = ParamWithValue{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[22]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1656,7 +1804,7 @@ func (x *ParamWithValue) String() string {
 func (*ParamWithValue) ProtoMessage() {}
 
 func (x *ParamWithValue) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[22]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1669,7 +1817,7 @@ func (x *ParamWithValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParamWithValue.ProtoReflect.Descriptor instead.
 func (*ParamWithValue) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{22}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ParamWithValue) GetParamCode() string {
@@ -1707,7 +1855,7 @@ type AddApplicableParamWithChildrenRequest struct {
 
 func (x *AddApplicableParamWithChildrenRequest) Reset() {
 	*x = AddApplicableParamWithChildrenRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[23]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1719,7 +1867,7 @@ func (x *AddApplicableParamWithChildrenRequest) String() string {
 func (*AddApplicableParamWithChildrenRequest) ProtoMessage() {}
 
 func (x *AddApplicableParamWithChildrenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[23]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1732,7 +1880,7 @@ func (x *AddApplicableParamWithChildrenRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use AddApplicableParamWithChildrenRequest.ProtoReflect.Descriptor instead.
 func (*AddApplicableParamWithChildrenRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{23}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *AddApplicableParamWithChildrenRequest) GetProductSysId() int64 {
@@ -1773,7 +1921,7 @@ type AddApplicableParamWithChildrenResponse struct {
 
 func (x *AddApplicableParamWithChildrenResponse) Reset() {
 	*x = AddApplicableParamWithChildrenResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[24]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1785,7 +1933,7 @@ func (x *AddApplicableParamWithChildrenResponse) String() string {
 func (*AddApplicableParamWithChildrenResponse) ProtoMessage() {}
 
 func (x *AddApplicableParamWithChildrenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[24]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1798,7 +1946,7 @@ func (x *AddApplicableParamWithChildrenResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use AddApplicableParamWithChildrenResponse.ProtoReflect.Descriptor instead.
 func (*AddApplicableParamWithChildrenResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{24}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *AddApplicableParamWithChildrenResponse) GetBase() *v1.BaseResponse {
@@ -1819,7 +1967,7 @@ type GetRemoveApplicablePreviewRequest struct {
 
 func (x *GetRemoveApplicablePreviewRequest) Reset() {
 	*x = GetRemoveApplicablePreviewRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[25]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1831,7 +1979,7 @@ func (x *GetRemoveApplicablePreviewRequest) String() string {
 func (*GetRemoveApplicablePreviewRequest) ProtoMessage() {}
 
 func (x *GetRemoveApplicablePreviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[25]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1844,7 +1992,7 @@ func (x *GetRemoveApplicablePreviewRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetRemoveApplicablePreviewRequest.ProtoReflect.Descriptor instead.
 func (*GetRemoveApplicablePreviewRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{25}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetRemoveApplicablePreviewRequest) GetProductSysId() int64 {
@@ -1874,7 +2022,7 @@ type GetRemoveApplicablePreviewResponse struct {
 
 func (x *GetRemoveApplicablePreviewResponse) Reset() {
 	*x = GetRemoveApplicablePreviewResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[26]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1886,7 +2034,7 @@ func (x *GetRemoveApplicablePreviewResponse) String() string {
 func (*GetRemoveApplicablePreviewResponse) ProtoMessage() {}
 
 func (x *GetRemoveApplicablePreviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[26]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1899,7 +2047,7 @@ func (x *GetRemoveApplicablePreviewResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetRemoveApplicablePreviewResponse.ProtoReflect.Descriptor instead.
 func (*GetRemoveApplicablePreviewResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{26}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetRemoveApplicablePreviewResponse) GetBase() *v1.BaseResponse {
@@ -1941,7 +2089,7 @@ type RemoveApplicableParamWithChildrenRequest struct {
 
 func (x *RemoveApplicableParamWithChildrenRequest) Reset() {
 	*x = RemoveApplicableParamWithChildrenRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[27]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1953,7 +2101,7 @@ func (x *RemoveApplicableParamWithChildrenRequest) String() string {
 func (*RemoveApplicableParamWithChildrenRequest) ProtoMessage() {}
 
 func (x *RemoveApplicableParamWithChildrenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[27]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1966,7 +2114,7 @@ func (x *RemoveApplicableParamWithChildrenRequest) ProtoReflect() protoreflect.M
 
 // Deprecated: Use RemoveApplicableParamWithChildrenRequest.ProtoReflect.Descriptor instead.
 func (*RemoveApplicableParamWithChildrenRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{27}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *RemoveApplicableParamWithChildrenRequest) GetProductSysId() int64 {
@@ -1993,7 +2141,7 @@ type RemoveApplicableParamWithChildrenResponse struct {
 
 func (x *RemoveApplicableParamWithChildrenResponse) Reset() {
 	*x = RemoveApplicableParamWithChildrenResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[28]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2005,7 +2153,7 @@ func (x *RemoveApplicableParamWithChildrenResponse) String() string {
 func (*RemoveApplicableParamWithChildrenResponse) ProtoMessage() {}
 
 func (x *RemoveApplicableParamWithChildrenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[28]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2018,7 +2166,7 @@ func (x *RemoveApplicableParamWithChildrenResponse) ProtoReflect() protoreflect.
 
 // Deprecated: Use RemoveApplicableParamWithChildrenResponse.ProtoReflect.Descriptor instead.
 func (*RemoveApplicableParamWithChildrenResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{28}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *RemoveApplicableParamWithChildrenResponse) GetBase() *v1.BaseResponse {
@@ -2043,7 +2191,7 @@ type OverrideParamValueItem struct {
 
 func (x *OverrideParamValueItem) Reset() {
 	*x = OverrideParamValueItem{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[29]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2055,7 +2203,7 @@ func (x *OverrideParamValueItem) String() string {
 func (*OverrideParamValueItem) ProtoMessage() {}
 
 func (x *OverrideParamValueItem) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[29]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2068,7 +2216,7 @@ func (x *OverrideParamValueItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverrideParamValueItem.ProtoReflect.Descriptor instead.
 func (*OverrideParamValueItem) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{29}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *OverrideParamValueItem) GetProductSysId() int64 {
@@ -2126,7 +2274,7 @@ type OverrideParamValuesRequest struct {
 
 func (x *OverrideParamValuesRequest) Reset() {
 	*x = OverrideParamValuesRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[30]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2138,7 +2286,7 @@ func (x *OverrideParamValuesRequest) String() string {
 func (*OverrideParamValuesRequest) ProtoMessage() {}
 
 func (x *OverrideParamValuesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[30]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2151,7 +2299,7 @@ func (x *OverrideParamValuesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverrideParamValuesRequest.ProtoReflect.Descriptor instead.
 func (*OverrideParamValuesRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{30}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *OverrideParamValuesRequest) GetRequestId() int64 {
@@ -2186,7 +2334,7 @@ type OverrideParamValuesResponse struct {
 
 func (x *OverrideParamValuesResponse) Reset() {
 	*x = OverrideParamValuesResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[31]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2198,7 +2346,7 @@ func (x *OverrideParamValuesResponse) String() string {
 func (*OverrideParamValuesResponse) ProtoMessage() {}
 
 func (x *OverrideParamValuesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[31]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2211,7 +2359,7 @@ func (x *OverrideParamValuesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverrideParamValuesResponse.ProtoReflect.Descriptor instead.
 func (*OverrideParamValuesResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{31}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *OverrideParamValuesResponse) GetBase() *v1.BaseResponse {
@@ -2245,7 +2393,7 @@ type ParamEditLogEntry struct {
 
 func (x *ParamEditLogEntry) Reset() {
 	*x = ParamEditLogEntry{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[32]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2257,7 +2405,7 @@ func (x *ParamEditLogEntry) String() string {
 func (*ParamEditLogEntry) ProtoMessage() {}
 
 func (x *ParamEditLogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[32]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2270,7 +2418,7 @@ func (x *ParamEditLogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParamEditLogEntry.ProtoReflect.Descriptor instead.
 func (*ParamEditLogEntry) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{32}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ParamEditLogEntry) GetParamCode() string {
@@ -2319,7 +2467,7 @@ type ListParamEditLogRequest struct {
 
 func (x *ListParamEditLogRequest) Reset() {
 	*x = ListParamEditLogRequest{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[33]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2331,7 +2479,7 @@ func (x *ListParamEditLogRequest) String() string {
 func (*ListParamEditLogRequest) ProtoMessage() {}
 
 func (x *ListParamEditLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[33]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2344,7 +2492,7 @@ func (x *ListParamEditLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListParamEditLogRequest.ProtoReflect.Descriptor instead.
 func (*ListParamEditLogRequest) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{33}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListParamEditLogRequest) GetRequestId() int64 {
@@ -2372,7 +2520,7 @@ type ListParamEditLogResponse struct {
 
 func (x *ListParamEditLogResponse) Reset() {
 	*x = ListParamEditLogResponse{}
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[34]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2384,7 +2532,7 @@ func (x *ListParamEditLogResponse) String() string {
 func (*ListParamEditLogResponse) ProtoMessage() {}
 
 func (x *ListParamEditLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[34]
+	mi := &file_finance_v1_cost_product_parameter_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2397,7 +2545,7 @@ func (x *ListParamEditLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListParamEditLogResponse.ProtoReflect.Descriptor instead.
 func (*ListParamEditLogResponse) Descriptor() ([]byte, []int) {
-	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{34}
+	return file_finance_v1_cost_product_parameter_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListParamEditLogResponse) GetBase() *v1.BaseResponse {
@@ -2444,7 +2592,17 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\n" +
 	"value_flag\x18\x16 \x01(\bR\tvalueFlag\x12\x1b\n" +
 	"\tfilled_at\x18\x1e \x01(\tR\bfilledAt\x12\x1b\n" +
-	"\tfilled_by\x18\x1f \x01(\tR\bfilledBy\"\xdd\x06\n" +
+	"\tfilled_by\x18\x1f \x01(\tR\bfilledBy\"\x95\x02\n" +
+	"\x0fMBSpinCandidate\x12\x15\n" +
+	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12&\n" +
+	"\x0forion_item_code\x18\x02 \x01(\tR\rorionItemCode\x12\x19\n" +
+	"\bmgt_name\x18\x03 \x01(\tR\amgtName\x12\x16\n" +
+	"\x06denier\x18\x04 \x01(\tR\x06denier\x12\x1a\n" +
+	"\bfilament\x18\x05 \x01(\x05R\bfilament\x12!\n" +
+	"\fhas_filament\x18\x06 \x01(\bR\vhasFilament\x12\x19\n" +
+	"\bldr_prsn\x18\a \x01(\tR\aldrPrsn\x12\x1e\n" +
+	"\vrun_ldr_pct\x18\b \x01(\tR\trunLdrPct\x12\x16\n" +
+	"\x06status\x18\t \x01(\tR\x06status\"\xa8\a\n" +
 	"\x12RequiredParamEntry\x12\x19\n" +
 	"\bparam_id\x18\x01 \x01(\tR\aparamId\x12\x1d\n" +
 	"\n" +
@@ -2464,7 +2622,8 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\x16lookup_fill_group_code\x18\r \x01(\tR\x13lookupFillGroupCode\x12'\n" +
 	"\x10value_mb_spin_id\x18\x0e \x01(\tR\rvalueMbSpinId\x125\n" +
 	"\x17mb_spin_candidate_count\x18\x0f \x01(\x05R\x14mbSpinCandidateCount\x12<\n" +
-	"\x1bhas_mb_spin_candidate_count\x18\x10 \x01(\bR\x17hasMbSpinCandidateCount\x12\x1b\n" +
+	"\x1bhas_mb_spin_candidate_count\x18\x10 \x01(\bR\x17hasMbSpinCandidateCount\x12I\n" +
+	"\x12mb_spin_candidates\x18\x11 \x03(\v2\x1b.finance.v1.MBSpinCandidateR\x10mbSpinCandidates\x12\x1b\n" +
 	"\thas_value\x18\x14 \x01(\bR\bhasValue\x12#\n" +
 	"\rvalue_numeric\x18\x15 \x01(\tR\fvalueNumeric\x12\x1d\n" +
 	"\n" +
@@ -2478,7 +2637,7 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\rrequired_only\x18\x02 \x01(\bR\frequiredOnly\"\x84\x01\n" +
 	"!ListProductRequiredParamsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x122\n" +
-	"\x04data\x18\x02 \x03(\v2\x1e.finance.v1.RequiredParamEntryR\x04data\"\xfd\x01\n" +
+	"\x04data\x18\x02 \x03(\v2\x1e.finance.v1.RequiredParamEntryR\x04data\"\xd3\x02\n" +
 	"\x1eUpsertProductParamValueRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fproductSysId\x12#\n" +
 	"\bparam_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aparamId\x12#\n" +
@@ -2487,7 +2646,9 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"value_text\x18\x04 \x01(\tR\tvalueText\x12\x1d\n" +
 	"\n" +
 	"value_flag\x18\x05 \x01(\bR\tvalueFlag\x12$\n" +
-	"\x0ehas_value_flag\x18\x06 \x01(\bR\fhasValueFlag\"\x89\x01\n" +
+	"\x0ehas_value_flag\x18\x06 \x01(\bR\fhasValueFlag\x12<\n" +
+	"\x13mb_spin_id_override\x18\a \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\x10mbSpinIdOverride\x88\x01\x01B\x16\n" +
+	"\x14_mb_spin_id_override\"\x89\x01\n" +
 	"\x1fUpsertProductParamValueResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x129\n" +
 	"\x04data\x18\x02 \x01(\v2%.finance.v1.CostProductParameterValueR\x04data\"\xa3\x01\n" +
@@ -2654,101 +2815,103 @@ func file_finance_v1_cost_product_parameter_proto_rawDescGZIP() []byte {
 	return file_finance_v1_cost_product_parameter_proto_rawDescData
 }
 
-var file_finance_v1_cost_product_parameter_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_finance_v1_cost_product_parameter_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_finance_v1_cost_product_parameter_proto_goTypes = []any{
 	(*CostProductParameterValue)(nil),                 // 0: finance.v1.CostProductParameterValue
-	(*RequiredParamEntry)(nil),                        // 1: finance.v1.RequiredParamEntry
-	(*ListProductRequiredParamsRequest)(nil),          // 2: finance.v1.ListProductRequiredParamsRequest
-	(*ListProductRequiredParamsResponse)(nil),         // 3: finance.v1.ListProductRequiredParamsResponse
-	(*UpsertProductParamValueRequest)(nil),            // 4: finance.v1.UpsertProductParamValueRequest
-	(*UpsertProductParamValueResponse)(nil),           // 5: finance.v1.UpsertProductParamValueResponse
-	(*UpsertProductParamValuesBatchRequest)(nil),      // 6: finance.v1.UpsertProductParamValuesBatchRequest
-	(*UpsertProductParamValuesBatchResponse)(nil),     // 7: finance.v1.UpsertProductParamValuesBatchResponse
-	(*DeleteProductParamValueRequest)(nil),            // 8: finance.v1.DeleteProductParamValueRequest
-	(*DeleteProductParamValueResponse)(nil),           // 9: finance.v1.DeleteProductParamValueResponse
-	(*CheckMissingRequiredParamsRequest)(nil),         // 10: finance.v1.CheckMissingRequiredParamsRequest
-	(*MissingParam)(nil),                              // 11: finance.v1.MissingParam
-	(*CheckMissingRequiredParamsResponse)(nil),        // 12: finance.v1.CheckMissingRequiredParamsResponse
-	(*AvailableParamEntry)(nil),                       // 13: finance.v1.AvailableParamEntry
-	(*ListAvailableParamsRequest)(nil),                // 14: finance.v1.ListAvailableParamsRequest
-	(*ListAvailableParamsResponse)(nil),               // 15: finance.v1.ListAvailableParamsResponse
-	(*AddApplicableParamRequest)(nil),                 // 16: finance.v1.AddApplicableParamRequest
-	(*AddApplicableParamResponse)(nil),                // 17: finance.v1.AddApplicableParamResponse
-	(*RemoveApplicableParamRequest)(nil),              // 18: finance.v1.RemoveApplicableParamRequest
-	(*RemoveApplicableParamResponse)(nil),             // 19: finance.v1.RemoveApplicableParamResponse
-	(*UpdateApplicableParamRequest)(nil),              // 20: finance.v1.UpdateApplicableParamRequest
-	(*UpdateApplicableParamResponse)(nil),             // 21: finance.v1.UpdateApplicableParamResponse
-	(*ParamWithValue)(nil),                            // 22: finance.v1.ParamWithValue
-	(*AddApplicableParamWithChildrenRequest)(nil),     // 23: finance.v1.AddApplicableParamWithChildrenRequest
-	(*AddApplicableParamWithChildrenResponse)(nil),    // 24: finance.v1.AddApplicableParamWithChildrenResponse
-	(*GetRemoveApplicablePreviewRequest)(nil),         // 25: finance.v1.GetRemoveApplicablePreviewRequest
-	(*GetRemoveApplicablePreviewResponse)(nil),        // 26: finance.v1.GetRemoveApplicablePreviewResponse
-	(*RemoveApplicableParamWithChildrenRequest)(nil),  // 27: finance.v1.RemoveApplicableParamWithChildrenRequest
-	(*RemoveApplicableParamWithChildrenResponse)(nil), // 28: finance.v1.RemoveApplicableParamWithChildrenResponse
-	(*OverrideParamValueItem)(nil),                    // 29: finance.v1.OverrideParamValueItem
-	(*OverrideParamValuesRequest)(nil),                // 30: finance.v1.OverrideParamValuesRequest
-	(*OverrideParamValuesResponse)(nil),               // 31: finance.v1.OverrideParamValuesResponse
-	(*ParamEditLogEntry)(nil),                         // 32: finance.v1.ParamEditLogEntry
-	(*ListParamEditLogRequest)(nil),                   // 33: finance.v1.ListParamEditLogRequest
-	(*ListParamEditLogResponse)(nil),                  // 34: finance.v1.ListParamEditLogResponse
-	(*v1.BaseResponse)(nil),                           // 35: common.v1.BaseResponse
+	(*MBSpinCandidate)(nil),                           // 1: finance.v1.MBSpinCandidate
+	(*RequiredParamEntry)(nil),                        // 2: finance.v1.RequiredParamEntry
+	(*ListProductRequiredParamsRequest)(nil),          // 3: finance.v1.ListProductRequiredParamsRequest
+	(*ListProductRequiredParamsResponse)(nil),         // 4: finance.v1.ListProductRequiredParamsResponse
+	(*UpsertProductParamValueRequest)(nil),            // 5: finance.v1.UpsertProductParamValueRequest
+	(*UpsertProductParamValueResponse)(nil),           // 6: finance.v1.UpsertProductParamValueResponse
+	(*UpsertProductParamValuesBatchRequest)(nil),      // 7: finance.v1.UpsertProductParamValuesBatchRequest
+	(*UpsertProductParamValuesBatchResponse)(nil),     // 8: finance.v1.UpsertProductParamValuesBatchResponse
+	(*DeleteProductParamValueRequest)(nil),            // 9: finance.v1.DeleteProductParamValueRequest
+	(*DeleteProductParamValueResponse)(nil),           // 10: finance.v1.DeleteProductParamValueResponse
+	(*CheckMissingRequiredParamsRequest)(nil),         // 11: finance.v1.CheckMissingRequiredParamsRequest
+	(*MissingParam)(nil),                              // 12: finance.v1.MissingParam
+	(*CheckMissingRequiredParamsResponse)(nil),        // 13: finance.v1.CheckMissingRequiredParamsResponse
+	(*AvailableParamEntry)(nil),                       // 14: finance.v1.AvailableParamEntry
+	(*ListAvailableParamsRequest)(nil),                // 15: finance.v1.ListAvailableParamsRequest
+	(*ListAvailableParamsResponse)(nil),               // 16: finance.v1.ListAvailableParamsResponse
+	(*AddApplicableParamRequest)(nil),                 // 17: finance.v1.AddApplicableParamRequest
+	(*AddApplicableParamResponse)(nil),                // 18: finance.v1.AddApplicableParamResponse
+	(*RemoveApplicableParamRequest)(nil),              // 19: finance.v1.RemoveApplicableParamRequest
+	(*RemoveApplicableParamResponse)(nil),             // 20: finance.v1.RemoveApplicableParamResponse
+	(*UpdateApplicableParamRequest)(nil),              // 21: finance.v1.UpdateApplicableParamRequest
+	(*UpdateApplicableParamResponse)(nil),             // 22: finance.v1.UpdateApplicableParamResponse
+	(*ParamWithValue)(nil),                            // 23: finance.v1.ParamWithValue
+	(*AddApplicableParamWithChildrenRequest)(nil),     // 24: finance.v1.AddApplicableParamWithChildrenRequest
+	(*AddApplicableParamWithChildrenResponse)(nil),    // 25: finance.v1.AddApplicableParamWithChildrenResponse
+	(*GetRemoveApplicablePreviewRequest)(nil),         // 26: finance.v1.GetRemoveApplicablePreviewRequest
+	(*GetRemoveApplicablePreviewResponse)(nil),        // 27: finance.v1.GetRemoveApplicablePreviewResponse
+	(*RemoveApplicableParamWithChildrenRequest)(nil),  // 28: finance.v1.RemoveApplicableParamWithChildrenRequest
+	(*RemoveApplicableParamWithChildrenResponse)(nil), // 29: finance.v1.RemoveApplicableParamWithChildrenResponse
+	(*OverrideParamValueItem)(nil),                    // 30: finance.v1.OverrideParamValueItem
+	(*OverrideParamValuesRequest)(nil),                // 31: finance.v1.OverrideParamValuesRequest
+	(*OverrideParamValuesResponse)(nil),               // 32: finance.v1.OverrideParamValuesResponse
+	(*ParamEditLogEntry)(nil),                         // 33: finance.v1.ParamEditLogEntry
+	(*ListParamEditLogRequest)(nil),                   // 34: finance.v1.ListParamEditLogRequest
+	(*ListParamEditLogResponse)(nil),                  // 35: finance.v1.ListParamEditLogResponse
+	(*v1.BaseResponse)(nil),                           // 36: common.v1.BaseResponse
 }
 var file_finance_v1_cost_product_parameter_proto_depIdxs = []int32{
-	35, // 0: finance.v1.ListProductRequiredParamsResponse.base:type_name -> common.v1.BaseResponse
-	1,  // 1: finance.v1.ListProductRequiredParamsResponse.data:type_name -> finance.v1.RequiredParamEntry
-	35, // 2: finance.v1.UpsertProductParamValueResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 3: finance.v1.UpsertProductParamValueResponse.data:type_name -> finance.v1.CostProductParameterValue
-	4,  // 4: finance.v1.UpsertProductParamValuesBatchRequest.values:type_name -> finance.v1.UpsertProductParamValueRequest
-	35, // 5: finance.v1.UpsertProductParamValuesBatchResponse.base:type_name -> common.v1.BaseResponse
-	35, // 6: finance.v1.DeleteProductParamValueResponse.base:type_name -> common.v1.BaseResponse
-	35, // 7: finance.v1.CheckMissingRequiredParamsResponse.base:type_name -> common.v1.BaseResponse
-	11, // 8: finance.v1.CheckMissingRequiredParamsResponse.data:type_name -> finance.v1.MissingParam
-	35, // 9: finance.v1.ListAvailableParamsResponse.base:type_name -> common.v1.BaseResponse
-	13, // 10: finance.v1.ListAvailableParamsResponse.data:type_name -> finance.v1.AvailableParamEntry
-	35, // 11: finance.v1.AddApplicableParamResponse.base:type_name -> common.v1.BaseResponse
-	35, // 12: finance.v1.RemoveApplicableParamResponse.base:type_name -> common.v1.BaseResponse
-	35, // 13: finance.v1.UpdateApplicableParamResponse.base:type_name -> common.v1.BaseResponse
-	35, // 14: finance.v1.AddApplicableParamWithChildrenResponse.base:type_name -> common.v1.BaseResponse
-	35, // 15: finance.v1.GetRemoveApplicablePreviewResponse.base:type_name -> common.v1.BaseResponse
-	22, // 16: finance.v1.GetRemoveApplicablePreviewResponse.children:type_name -> finance.v1.ParamWithValue
-	35, // 17: finance.v1.RemoveApplicableParamWithChildrenResponse.base:type_name -> common.v1.BaseResponse
-	29, // 18: finance.v1.OverrideParamValuesRequest.values:type_name -> finance.v1.OverrideParamValueItem
-	35, // 19: finance.v1.OverrideParamValuesResponse.base:type_name -> common.v1.BaseResponse
-	35, // 20: finance.v1.ListParamEditLogResponse.base:type_name -> common.v1.BaseResponse
-	32, // 21: finance.v1.ListParamEditLogResponse.entries:type_name -> finance.v1.ParamEditLogEntry
-	2,  // 22: finance.v1.CostProductParameterService.ListProductRequiredParams:input_type -> finance.v1.ListProductRequiredParamsRequest
-	4,  // 23: finance.v1.CostProductParameterService.UpsertProductParamValue:input_type -> finance.v1.UpsertProductParamValueRequest
-	6,  // 24: finance.v1.CostProductParameterService.UpsertProductParamValuesBatch:input_type -> finance.v1.UpsertProductParamValuesBatchRequest
-	8,  // 25: finance.v1.CostProductParameterService.DeleteProductParamValue:input_type -> finance.v1.DeleteProductParamValueRequest
-	10, // 26: finance.v1.CostProductParameterService.CheckMissingRequiredParams:input_type -> finance.v1.CheckMissingRequiredParamsRequest
-	14, // 27: finance.v1.CostProductParameterService.ListAvailableParams:input_type -> finance.v1.ListAvailableParamsRequest
-	16, // 28: finance.v1.CostProductParameterService.AddApplicableParam:input_type -> finance.v1.AddApplicableParamRequest
-	18, // 29: finance.v1.CostProductParameterService.RemoveApplicableParam:input_type -> finance.v1.RemoveApplicableParamRequest
-	23, // 30: finance.v1.CostProductParameterService.AddApplicableParamWithChildren:input_type -> finance.v1.AddApplicableParamWithChildrenRequest
-	25, // 31: finance.v1.CostProductParameterService.GetRemoveApplicablePreview:input_type -> finance.v1.GetRemoveApplicablePreviewRequest
-	27, // 32: finance.v1.CostProductParameterService.RemoveApplicableParamWithChildren:input_type -> finance.v1.RemoveApplicableParamWithChildrenRequest
-	20, // 33: finance.v1.CostProductParameterService.UpdateApplicableParam:input_type -> finance.v1.UpdateApplicableParamRequest
-	33, // 34: finance.v1.CostProductParameterService.ListParamEditLog:input_type -> finance.v1.ListParamEditLogRequest
-	30, // 35: finance.v1.CostProductParameterService.OverrideParamValues:input_type -> finance.v1.OverrideParamValuesRequest
-	3,  // 36: finance.v1.CostProductParameterService.ListProductRequiredParams:output_type -> finance.v1.ListProductRequiredParamsResponse
-	5,  // 37: finance.v1.CostProductParameterService.UpsertProductParamValue:output_type -> finance.v1.UpsertProductParamValueResponse
-	7,  // 38: finance.v1.CostProductParameterService.UpsertProductParamValuesBatch:output_type -> finance.v1.UpsertProductParamValuesBatchResponse
-	9,  // 39: finance.v1.CostProductParameterService.DeleteProductParamValue:output_type -> finance.v1.DeleteProductParamValueResponse
-	12, // 40: finance.v1.CostProductParameterService.CheckMissingRequiredParams:output_type -> finance.v1.CheckMissingRequiredParamsResponse
-	15, // 41: finance.v1.CostProductParameterService.ListAvailableParams:output_type -> finance.v1.ListAvailableParamsResponse
-	17, // 42: finance.v1.CostProductParameterService.AddApplicableParam:output_type -> finance.v1.AddApplicableParamResponse
-	19, // 43: finance.v1.CostProductParameterService.RemoveApplicableParam:output_type -> finance.v1.RemoveApplicableParamResponse
-	24, // 44: finance.v1.CostProductParameterService.AddApplicableParamWithChildren:output_type -> finance.v1.AddApplicableParamWithChildrenResponse
-	26, // 45: finance.v1.CostProductParameterService.GetRemoveApplicablePreview:output_type -> finance.v1.GetRemoveApplicablePreviewResponse
-	28, // 46: finance.v1.CostProductParameterService.RemoveApplicableParamWithChildren:output_type -> finance.v1.RemoveApplicableParamWithChildrenResponse
-	21, // 47: finance.v1.CostProductParameterService.UpdateApplicableParam:output_type -> finance.v1.UpdateApplicableParamResponse
-	34, // 48: finance.v1.CostProductParameterService.ListParamEditLog:output_type -> finance.v1.ListParamEditLogResponse
-	31, // 49: finance.v1.CostProductParameterService.OverrideParamValues:output_type -> finance.v1.OverrideParamValuesResponse
-	36, // [36:50] is the sub-list for method output_type
-	22, // [22:36] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	1,  // 0: finance.v1.RequiredParamEntry.mb_spin_candidates:type_name -> finance.v1.MBSpinCandidate
+	36, // 1: finance.v1.ListProductRequiredParamsResponse.base:type_name -> common.v1.BaseResponse
+	2,  // 2: finance.v1.ListProductRequiredParamsResponse.data:type_name -> finance.v1.RequiredParamEntry
+	36, // 3: finance.v1.UpsertProductParamValueResponse.base:type_name -> common.v1.BaseResponse
+	0,  // 4: finance.v1.UpsertProductParamValueResponse.data:type_name -> finance.v1.CostProductParameterValue
+	5,  // 5: finance.v1.UpsertProductParamValuesBatchRequest.values:type_name -> finance.v1.UpsertProductParamValueRequest
+	36, // 6: finance.v1.UpsertProductParamValuesBatchResponse.base:type_name -> common.v1.BaseResponse
+	36, // 7: finance.v1.DeleteProductParamValueResponse.base:type_name -> common.v1.BaseResponse
+	36, // 8: finance.v1.CheckMissingRequiredParamsResponse.base:type_name -> common.v1.BaseResponse
+	12, // 9: finance.v1.CheckMissingRequiredParamsResponse.data:type_name -> finance.v1.MissingParam
+	36, // 10: finance.v1.ListAvailableParamsResponse.base:type_name -> common.v1.BaseResponse
+	14, // 11: finance.v1.ListAvailableParamsResponse.data:type_name -> finance.v1.AvailableParamEntry
+	36, // 12: finance.v1.AddApplicableParamResponse.base:type_name -> common.v1.BaseResponse
+	36, // 13: finance.v1.RemoveApplicableParamResponse.base:type_name -> common.v1.BaseResponse
+	36, // 14: finance.v1.UpdateApplicableParamResponse.base:type_name -> common.v1.BaseResponse
+	36, // 15: finance.v1.AddApplicableParamWithChildrenResponse.base:type_name -> common.v1.BaseResponse
+	36, // 16: finance.v1.GetRemoveApplicablePreviewResponse.base:type_name -> common.v1.BaseResponse
+	23, // 17: finance.v1.GetRemoveApplicablePreviewResponse.children:type_name -> finance.v1.ParamWithValue
+	36, // 18: finance.v1.RemoveApplicableParamWithChildrenResponse.base:type_name -> common.v1.BaseResponse
+	30, // 19: finance.v1.OverrideParamValuesRequest.values:type_name -> finance.v1.OverrideParamValueItem
+	36, // 20: finance.v1.OverrideParamValuesResponse.base:type_name -> common.v1.BaseResponse
+	36, // 21: finance.v1.ListParamEditLogResponse.base:type_name -> common.v1.BaseResponse
+	33, // 22: finance.v1.ListParamEditLogResponse.entries:type_name -> finance.v1.ParamEditLogEntry
+	3,  // 23: finance.v1.CostProductParameterService.ListProductRequiredParams:input_type -> finance.v1.ListProductRequiredParamsRequest
+	5,  // 24: finance.v1.CostProductParameterService.UpsertProductParamValue:input_type -> finance.v1.UpsertProductParamValueRequest
+	7,  // 25: finance.v1.CostProductParameterService.UpsertProductParamValuesBatch:input_type -> finance.v1.UpsertProductParamValuesBatchRequest
+	9,  // 26: finance.v1.CostProductParameterService.DeleteProductParamValue:input_type -> finance.v1.DeleteProductParamValueRequest
+	11, // 27: finance.v1.CostProductParameterService.CheckMissingRequiredParams:input_type -> finance.v1.CheckMissingRequiredParamsRequest
+	15, // 28: finance.v1.CostProductParameterService.ListAvailableParams:input_type -> finance.v1.ListAvailableParamsRequest
+	17, // 29: finance.v1.CostProductParameterService.AddApplicableParam:input_type -> finance.v1.AddApplicableParamRequest
+	19, // 30: finance.v1.CostProductParameterService.RemoveApplicableParam:input_type -> finance.v1.RemoveApplicableParamRequest
+	24, // 31: finance.v1.CostProductParameterService.AddApplicableParamWithChildren:input_type -> finance.v1.AddApplicableParamWithChildrenRequest
+	26, // 32: finance.v1.CostProductParameterService.GetRemoveApplicablePreview:input_type -> finance.v1.GetRemoveApplicablePreviewRequest
+	28, // 33: finance.v1.CostProductParameterService.RemoveApplicableParamWithChildren:input_type -> finance.v1.RemoveApplicableParamWithChildrenRequest
+	21, // 34: finance.v1.CostProductParameterService.UpdateApplicableParam:input_type -> finance.v1.UpdateApplicableParamRequest
+	34, // 35: finance.v1.CostProductParameterService.ListParamEditLog:input_type -> finance.v1.ListParamEditLogRequest
+	31, // 36: finance.v1.CostProductParameterService.OverrideParamValues:input_type -> finance.v1.OverrideParamValuesRequest
+	4,  // 37: finance.v1.CostProductParameterService.ListProductRequiredParams:output_type -> finance.v1.ListProductRequiredParamsResponse
+	6,  // 38: finance.v1.CostProductParameterService.UpsertProductParamValue:output_type -> finance.v1.UpsertProductParamValueResponse
+	8,  // 39: finance.v1.CostProductParameterService.UpsertProductParamValuesBatch:output_type -> finance.v1.UpsertProductParamValuesBatchResponse
+	10, // 40: finance.v1.CostProductParameterService.DeleteProductParamValue:output_type -> finance.v1.DeleteProductParamValueResponse
+	13, // 41: finance.v1.CostProductParameterService.CheckMissingRequiredParams:output_type -> finance.v1.CheckMissingRequiredParamsResponse
+	16, // 42: finance.v1.CostProductParameterService.ListAvailableParams:output_type -> finance.v1.ListAvailableParamsResponse
+	18, // 43: finance.v1.CostProductParameterService.AddApplicableParam:output_type -> finance.v1.AddApplicableParamResponse
+	20, // 44: finance.v1.CostProductParameterService.RemoveApplicableParam:output_type -> finance.v1.RemoveApplicableParamResponse
+	25, // 45: finance.v1.CostProductParameterService.AddApplicableParamWithChildren:output_type -> finance.v1.AddApplicableParamWithChildrenResponse
+	27, // 46: finance.v1.CostProductParameterService.GetRemoveApplicablePreview:output_type -> finance.v1.GetRemoveApplicablePreviewResponse
+	29, // 47: finance.v1.CostProductParameterService.RemoveApplicableParamWithChildren:output_type -> finance.v1.RemoveApplicableParamWithChildrenResponse
+	22, // 48: finance.v1.CostProductParameterService.UpdateApplicableParam:output_type -> finance.v1.UpdateApplicableParamResponse
+	35, // 49: finance.v1.CostProductParameterService.ListParamEditLog:output_type -> finance.v1.ListParamEditLogResponse
+	32, // 50: finance.v1.CostProductParameterService.OverrideParamValues:output_type -> finance.v1.OverrideParamValuesResponse
+	37, // [37:51] is the sub-list for method output_type
+	23, // [23:37] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_product_parameter_proto_init() }
@@ -2756,14 +2919,15 @@ func file_finance_v1_cost_product_parameter_proto_init() {
 	if File_finance_v1_cost_product_parameter_proto != nil {
 		return
 	}
-	file_finance_v1_cost_product_parameter_proto_msgTypes[20].OneofWrappers = []any{}
+	file_finance_v1_cost_product_parameter_proto_msgTypes[5].OneofWrappers = []any{}
+	file_finance_v1_cost_product_parameter_proto_msgTypes[21].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_cost_product_parameter_proto_rawDesc), len(file_finance_v1_cost_product_parameter_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   35,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

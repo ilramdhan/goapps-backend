@@ -27,6 +27,16 @@ type Entity struct {
 	ldrIsFixed      *bool
 	dozingIsFixed   *bool
 	isActive        bool
+	// Shade/cross-section copy-down + LDR provenance tracking — migration 000496.
+	// Populated via HydrateShadeAndLDR, deliberately NOT parameters of New/Reconstruct
+	// (both already oversized) — same rationale as the Lineage block below.
+	shadeCode        *string
+	shadeName        *string
+	crossSection     *string
+	ldrType          string
+	ldrCalculatedPct *float64
+	ldrAdjustmentPct *float64
+	ldrIsActual      bool
 	// Lineage / recalc trail — migration 000484. Populated via HydrateLineage,
 	// deliberately NOT parameters of New/Reconstruct (both already oversized).
 	parentSpinID *uuid.UUID
@@ -67,6 +77,7 @@ func New(headID uuid.UUID, mgtName string, oracleSysID, orionItemCode *string, d
 		mbsStatus: mbsStatus, mbsLdrPrsn: mbsLdrPrsn, mbsRunLdrPct: mbsRunLdrPct, mbsFinalProduct: mbsFinalProduct,
 		ldrIsFixed: ldrIsFixed, dozingIsFixed: dozingIsFixed,
 		isActive: true, createdAt: time.Now(), createdBy: createdBy,
+		ldrType: LDRTypeNotCalculated,
 	}, nil
 }
 
@@ -82,6 +93,9 @@ func Reconstruct(id uuid.UUID, oracleSysID, orionItemCode *string, headID uuid.U
 		ldrIsFixed: ldrIsFixed, dozingIsFixed: dozingIsFixed,
 		isActive: isActive, createdAt: createdAt, createdBy: createdBy,
 		updatedAt: updatedAt, updatedBy: updatedBy, deletedAt: deletedAt, deletedBy: deletedBy,
+		// Matches the mbs_ldr_type column DEFAULT until HydrateShadeAndLDR (000496)
+		// applies the persisted value; see that method's doc comment.
+		ldrType: LDRTypeNotCalculated,
 	}
 }
 
@@ -154,6 +168,43 @@ func (e *Entity) IsFixedLDR() bool { return e.ldrIsFixed == nil || *e.ldrIsFixed
 // actual. Same nil-means-fixed contract as IsFixedLDR; kept separate because
 // recalc rule #3 is per-VALUE, not per-row.
 func (e *Entity) IsFixedDozing() bool { return e.dozingIsFixed == nil || *e.dozingIsFixed }
+
+// ShadeCode returns the optional shade code copied down from the parent MB
+// Head at MB Spin auto-generation time (migration 000496). Copy-on-create logic
+// is out of scope here — this is plumbing only.
+func (e *Entity) ShadeCode() *string { return e.shadeCode }
+
+// ShadeName returns the optional shade name copied down from the parent MB
+// Head at MB Spin auto-generation time (migration 000496).
+func (e *Entity) ShadeName() *string { return e.shadeName }
+
+// CrossSection returns the optional cross section copied down from the parent
+// MB Head at MB Spin auto-generation time (migration 000496).
+func (e *Entity) CrossSection() *string { return e.crossSection }
+
+// LDRType returns the LDR value provenance/state: LDRTypeNotCalculated
+// (default, new/auto-generated rows), LDRTypeCalculated (produced by the
+// recalculation formula), or LDRTypeActual (manually confirmed/locked by a
+// human — the recalculation cascade must not overwrite rows in this state).
+// Migration 000496. Deliberately separate from IsFixedLDR/LDRIsFixed (000486),
+// which is a distinct, adjacent recalc-skip concept.
+func (e *Entity) LDRType() string { return e.ldrType }
+
+// LDRCalculatedPct returns the LDR value produced by the recalculation
+// formula (migration 000496). Separate from LDRAdjustmentPct, which holds a
+// manual override applied on top of this value.
+func (e *Entity) LDRCalculatedPct() *float64 { return e.ldrCalculatedPct }
+
+// LDRAdjustmentPct returns the manual override/adjustment amount a user
+// applies on top of LDRCalculatedPct (migration 000496).
+func (e *Entity) LDRAdjustmentPct() *float64 { return e.ldrAdjustmentPct }
+
+// LDRIsActual reports whether a human has locked this LDR value as ACTUAL
+// (migration 000496), meaning it must never be overwritten by automatic
+// recalculation. Brand new flag, deliberately separate from the pre-existing
+// LDRIsFixed (000486), which is a distinct, adjacent recalc-skip concept and
+// must not be merged with this one.
+func (e *Entity) LDRIsActual() bool { return e.ldrIsActual }
 
 // IsActive returns whether the spin is active.
 func (e *Entity) IsActive() bool { return e.isActive }
@@ -362,3 +413,97 @@ func (e *Entity) IsClone() bool { return e.parentSpinID != nil }
 // candidate for automatic recalculation when its parent changes (A6). Spins with
 // Spinning / Boughtout / NULL status are non-candidates (A7) and are skipped.
 func (e *Entity) IsRnD() bool { return e.mbsStatus != nil && *e.mbsStatus == StatusRnD }
+
+// =============================================================================
+// Shade / cross-section copy-down + LDR provenance tracking (migration 000496)
+// =============================================================================
+
+// LDRTypeNotCalculated is the default mbs_ldr_type: new/auto-generated rows
+// start here. Matches the mst_mb_spin column DEFAULT.
+const LDRTypeNotCalculated = "NOT_CALCULATED"
+
+// LDRTypeCalculated marks an mbs_ldr_type value produced by the
+// recalculation formula.
+const LDRTypeCalculated = "CALCULATED"
+
+// LDRTypeActual marks an mbs_ldr_type value manually confirmed/locked by a
+// human; the recalculation cascade must skip rows in this state.
+const LDRTypeActual = "ACTUAL"
+
+// ShadeAndLDR carries the migration-000496 shade/cross-section copy-down
+// columns plus the LDR provenance-tracking columns back from storage.
+//
+// It is a separate hydration step rather than seven more positional
+// parameters on Reconstruct, which already carries 25 — the same reason
+// Lineage exists above and mbhead uses PersistedExtras/HydrateExtras.
+type ShadeAndLDR struct {
+	// ShadeCode / ShadeName / CrossSection are copied from the parent MB Head
+	// at MB Spin auto-generation time. That copy logic is a later task — this
+	// struct only carries the persisted values, it does not compute them.
+	ShadeCode    *string
+	ShadeName    *string
+	CrossSection *string
+	// LDRType is one of LDRTypeNotCalculated / LDRTypeCalculated / LDRTypeActual.
+	// NOT NULL in storage (CHECK-constrained), so this is a plain string, not a
+	// pointer.
+	LDRType string
+	// LDRCalculatedPct is the LDR value produced by the recalculation formula.
+	LDRCalculatedPct *float64
+	// LDRAdjustmentPct is a manual override/adjustment amount applied on top
+	// of LDRCalculatedPct.
+	LDRAdjustmentPct *float64
+	// LDRIsActual is TRUE when a human has locked this LDR value as ACTUAL.
+	// NOT NULL DEFAULT FALSE in storage, so this is a plain bool, not a pointer.
+	LDRIsActual bool
+}
+
+// HydrateShadeAndLDR applies the persisted 000496 columns onto a
+// New-ed or Reconstruct-ed entity. Unvalidated on purpose — see ShadeAndLDR.
+func (e *Entity) HydrateShadeAndLDR(s ShadeAndLDR) {
+	e.shadeCode = s.ShadeCode
+	e.shadeName = s.ShadeName
+	e.crossSection = s.CrossSection
+	e.ldrType = s.LDRType
+	e.ldrCalculatedPct = s.LDRCalculatedPct
+	e.ldrAdjustmentPct = s.LDRAdjustmentPct
+	e.ldrIsActual = s.LDRIsActual
+}
+
+// =============================================================================
+// LDR adjustment / lock mutators (Task E)
+// =============================================================================
+
+// SetLDRAdjustment sets the manual LDR adjustment percentage. It rejects the
+// mutation with ErrLDRLockedActual when the spin's LDR is currently locked as
+// Actual (business rule: adjustment freezes while locked; unlock first).
+// pct == nil clears the adjustment (also rejected while locked).
+func (e *Entity) SetLDRAdjustment(pct *float64) error {
+	if e.ldrIsActual {
+		return ErrLDRLockedActual
+	}
+	e.ldrAdjustmentPct = pct
+	return nil
+}
+
+// LockLDRActual locks this spin's LDR as Actual: mbs_ldr_is_actual becomes
+// true and mbs_ldr_type becomes LDRTypeActual together, per their documented
+// meanings. A locked spin is excluded from Task D's auto-recalc cascade
+// (runLDRCascade's child.LDRIsActual() gate) and its adjustment can no longer
+// be changed via SetLDRAdjustment until UnlockLDRActual is called.
+func (e *Entity) LockLDRActual() {
+	e.ldrIsActual = true
+	e.ldrType = LDRTypeActual
+}
+
+// UnlockLDRActual reverses LockLDRActual: mbs_ldr_is_actual becomes false and
+// mbs_ldr_type reverts to LDRTypeCalculated if a calculated value is present,
+// otherwise LDRTypeNotCalculated. The spin becomes eligible again for Task D's
+// auto-recalc cascade and its adjustment becomes editable again.
+func (e *Entity) UnlockLDRActual() {
+	e.ldrIsActual = false
+	if e.ldrCalculatedPct != nil {
+		e.ldrType = LDRTypeCalculated
+	} else {
+		e.ldrType = LDRTypeNotCalculated
+	}
+}

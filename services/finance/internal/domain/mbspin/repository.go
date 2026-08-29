@@ -74,6 +74,17 @@ type Repository interface {
 	// column NULL rather than guessing. A real error is returned only for a
 	// genuine query failure.
 	ResolveUniqueByOrionItemCode(ctx context.Context, code string) (id uuid.UUID, ok bool, err error)
+
+	// ListByOrionItemCode returns every non-deleted mst_mb_spin row sharing
+	// the given ORION item code — the full candidate set behind an ambiguous
+	// MB_SPIN lookup value.
+	//
+	// ⚠ Uses the IDENTICAL matching rule as ResolveUniqueByOrionItemCode
+	// (mbs_orion_item_code = code AND deleted_at IS NULL, no mbs_is_active
+	// filter, no TRIM/UPPER normalization) so the candidate list shown to the
+	// user never disagrees with what Upsert would resolve to on save.
+	// Ordered by created_at, mbs_id for a stable, deterministic display order.
+	ListByOrionItemCode(ctx context.Context, code string) ([]*Entity, error)
 }
 
 // MaxLineageDepth caps the mbs_parent_spin_id walk-up performed before a

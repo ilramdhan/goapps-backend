@@ -49,6 +49,9 @@ type Shade struct {
 	SourceUpdatedBy string `protobuf:"bytes,10,opt,name=source_updated_by,json=sourceUpdatedBy,proto3" json:"source_updated_by,omitempty"`
 	// Timestamp of the last successful Oracle sync (ISO 8601), empty if never synced.
 	SyncedAt string `protobuf:"bytes,11,opt,name=synced_at,json=syncedAt,proto3" json:"synced_at,omitempty"`
+	// Count of rows referencing this shade's code across mst_mb_head, mst_mb_head_shade,
+	// and mst_mb_spin (soft-delete excluded). Read-only, derived — not settable.
+	UsageCount int32 `protobuf:"varint,12,opt,name=usage_count,json=usageCount,proto3" json:"usage_count,omitempty"`
 	// Audit metadata.
 	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -160,6 +163,13 @@ func (x *Shade) GetSyncedAt() string {
 		return x.SyncedAt
 	}
 	return ""
+}
+
+func (x *Shade) GetUsageCount() int32 {
+	if x != nil {
+		return x.UsageCount
+	}
+	return 0
 }
 
 func (x *Shade) GetAudit() *v1.AuditInfo {
@@ -906,7 +916,7 @@ var File_finance_v1_shade_proto protoreflect.FileDescriptor
 const file_finance_v1_shade_proto_rawDesc = "" +
 	"\n" +
 	"\x16finance/v1/shade.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xc3\x03\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xe4\x03\n" +
 	"\x05Shade\x12\x19\n" +
 	"\bshade_id\x18\x01 \x01(\x03R\ashadeId\x12\x1d\n" +
 	"\n" +
@@ -921,7 +931,9 @@ const file_finance_v1_shade_proto_rawDesc = "" +
 	"\x11source_created_by\x18\t \x01(\tR\x0fsourceCreatedBy\x12*\n" +
 	"\x11source_updated_by\x18\n" +
 	" \x01(\tR\x0fsourceUpdatedBy\x12\x1b\n" +
-	"\tsynced_at\x18\v \x01(\tR\bsyncedAt\x12*\n" +
+	"\tsynced_at\x18\v \x01(\tR\bsyncedAt\x12\x1f\n" +
+	"\vusage_count\x18\f \x01(\x05R\n" +
+	"usageCount\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\x9c\x01\n" +
 	"\x12CreateShadeRequest\x12(\n" +
 	"\n" +

@@ -236,7 +236,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// the read side and the recalc write side; mbDozingImpactRepo is READ-ONLY and
 	// only counts the products a change WOULD affect (D24 preview) — ⛔ no yarn
 	// product is recalculated on this path.
-	mbSpinHandler, err := grpcdelivery.NewMBSpinHandlerWithRecalc(mbSpinRepo, mbSpinRepo, mbDozingImpactRepo)
+	mbSpinHandler, err := grpcdelivery.NewMBSpinHandlerWithRecalc(mbSpinRepo, mbSpinRepo, mbDozingImpactRepo, mbCrossSectionFactorRepo)
 	if err != nil {
 		return err
 	}

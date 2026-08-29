@@ -11,11 +11,13 @@ package mbspin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcrosssection"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbdozing"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 )
@@ -56,6 +58,20 @@ type RecalcResult struct {
 	// agreed response contract. Callers surface the count in the response
 	// message instead of silently pretending the pass was complete.
 	Incomplete []uuid.UUID
+	// LDRRecalculated lists the children whose LDR was rewritten (Task D).
+	// Always empty for Preview. Independent of Recalculated: a child's dozing
+	// and LDR outcomes are computed side by side and tracked separately per
+	// Task D business rule 7 — a child can be dozing-complete and LDR-incomplete,
+	// or vice versa.
+	LDRRecalculated []mbspin.ChildLDRRecalcUpdate
+	// LDRIncomplete lists LDR-eligible candidate children (IsRnD() AND
+	// LDRIsActual()==false) that COULD NOT be scaled/converted this pass — the
+	// parent had no effective LDR at all, an operand (denier/filament) was
+	// absent, the cross-section data was missing on either side, or the
+	// mbcrosssection factor lookup returned "not found" (Task D business rules
+	// 3-5). They were left untouched. Kept as a SEPARATE bucket from Incomplete
+	// on purpose (Task D business rule 7) — never merged into the dozing bucket.
+	LDRIncomplete []uuid.UUID
 	// ImpactRows / ImpactTotals / ImpactTruncated are the D24 PREVIEW: which
 	// cost products are bound to this spin. ⛔ Not a recalculation result.
 	ImpactRows      []mbdozing.ImpactRow
@@ -64,21 +80,28 @@ type RecalcResult struct {
 }
 
 // RecalcService classifies a parent spin's direct children and, on Apply,
-// rewrites the dozing of the eligible ones.
+// rewrites the dozing AND the LDR (Task D) of the eligible ones.
 //
-// It owns THREE collaborators and no others — deliberately: the spin reads, the
-// spin recalc writes, and the READ-ONLY product-impact SELECT. ⛔ There is no
-// costing engine here.
+// It owns FOUR collaborators and no others — deliberately: the spin reads, the
+// spin recalc writes, the READ-ONLY product-impact SELECT, and (Task D) the
+// cross-section factor lookup the LDR cascade's optional XSECTION step needs.
+// ⛔ There is no costing engine here.
 type RecalcService struct {
 	repo       mbspin.Repository
 	recalcRepo mbspin.RecalcRepository
 	impactRepo mbdozing.ImpactRepository
+	factorRepo mbcrosssection.FactorRepository
 }
 
 // NewRecalcService constructs a RecalcService. impactRepo may be nil, in which
 // case the impact preview is simply absent (the recalc itself still runs).
-func NewRecalcService(repo mbspin.Repository, recalcRepo mbspin.RecalcRepository, impactRepo mbdozing.ImpactRepository) *RecalcService {
-	return &RecalcService{repo: repo, recalcRepo: recalcRepo, impactRepo: impactRepo}
+// factorRepo (Task D) is used only by the LDR cascade's cross-section
+// conversion step; a nil factorRepo would make GetByPair panic, so callers
+// that want the LDR cascade to function MUST supply a real one — this mirrors
+// the existing recalcRepo contract (never nil) rather than impactRepo's
+// nil-safe one.
+func NewRecalcService(repo mbspin.Repository, recalcRepo mbspin.RecalcRepository, impactRepo mbdozing.ImpactRepository, factorRepo mbcrosssection.FactorRepository) *RecalcService {
+	return &RecalcService{repo: repo, recalcRepo: recalcRepo, impactRepo: impactRepo, factorRepo: factorRepo}
 }
 
 // Preview classifies the direct children of parent and gathers the product
@@ -97,6 +120,9 @@ func (s *RecalcService) Preview(ctx context.Context, parent *mbspin.Entity) (*Re
 		return nil, err
 	}
 	res := &RecalcResult{Skipped: skipped}
+	if err := s.runLDRCascade(ctx, parent, candidates, res); err != nil {
+		return nil, err
+	}
 	if err := s.attachImpact(ctx, parent, res); err != nil {
 		return nil, err
 	}
@@ -152,6 +178,10 @@ func (s *RecalcService) Apply(ctx context.Context, in ApplyInput) (*RecalcResult
 		})
 	}
 
+	if err := s.runLDRCascade(ctx, in.Parent, candidates, res); err != nil {
+		return nil, err
+	}
+
 	if err := s.attachImpact(ctx, in.Parent, res); err != nil {
 		return nil, err
 	}
@@ -169,6 +199,7 @@ func (s *RecalcService) Apply(ctx context.Context, in ApplyInput) (*RecalcResult
 		Actor:        in.Actor,
 		At:           time.Now(),
 		Updates:      res.Recalculated,
+		LDRUpdates:   res.LDRRecalculated,
 		LogReason: fmt.Sprintf(
 			"child spin recalc from parent %s: %d recalculated, %d skipped, %d incomplete",
 			in.Parent.ID(), len(res.Recalculated), len(res.Skipped), len(res.Incomplete)),
@@ -240,6 +271,127 @@ func scaleChildDozing(parent, child *mbspin.Entity) (float64, bool) {
 		return 0, false
 	}
 	return out, true
+}
+
+// runLDRCascade is the Task D counterpart of the dozing loop in Apply/Preview:
+// it filters candidates (already dozing-candidates per classify's IsRnD() gate)
+// down to the LDR-eligible subset and scales/converts each one, populating
+// res.LDRRecalculated / res.LDRIncomplete.
+//
+// Eligibility (Task D business rule 2): a candidate is LDR-eligible only when
+// child.LDRIsActual() is false. A child already locked ACTUAL is excluded from
+// the LDR cascade even though it may still be dozing-eligible — classify's
+// dozing-only candidate slice is reused as-is (⛔ its signature/behavior is not
+// changed), the LDR filter is applied on top of it here instead.
+//
+// Called from BOTH Preview and Apply: it only ever appends to res, it never
+// writes to the database — the actual persistence happens in Apply, via
+// RecalcApplyInput.LDRUpdates.
+func (s *RecalcService) runLDRCascade(ctx context.Context, parent *mbspin.Entity, candidates []*mbspin.Entity, res *RecalcResult) error {
+	for _, child := range candidates {
+		if child.LDRIsActual() {
+			continue
+		}
+		newLDR, ok, err := scaleAndConvertChildLDR(ctx, s.factorRepo, parent, child)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			res.LDRIncomplete = append(res.LDRIncomplete, child.ID())
+			continue
+		}
+		res.LDRRecalculated = append(res.LDRRecalculated, mbspin.ChildLDRRecalcUpdate{
+			SpinID: child.ID(), NewLDRCalculatedPct: newLDR,
+		})
+	}
+	return nil
+}
+
+// parentEffectiveLDR returns the parent's "current effective LDR" (Task D
+// business rule 3): LDRCalculatedPct value-or-0 plus LDRAdjustmentPct
+// value-or-0. ok is false only when BOTH are nil — i.e. the parent has no LDR
+// data at all, in which case there is nothing to scale from and the caller
+// must NOT fabricate a zero-value cascade.
+func parentEffectiveLDR(parent *mbspin.Entity) (float64, bool) {
+	calc, adj := parent.LDRCalculatedPct(), parent.LDRAdjustmentPct()
+	if calc == nil && adj == nil {
+		return 0, false
+	}
+	var out float64
+	if calc != nil {
+		out += *calc
+	}
+	if adj != nil {
+		out += *adj
+	}
+	return out, true
+}
+
+// scaleAndConvertChildLDR implements the Task D LDR cascade for one child:
+// Scale FIRST (mbdozing.ScaleLDR, same operand pattern as scaleChildDozing —
+// reference operands from the parent, target operands from the child), THEN,
+// only if BOTH sides carry a non-empty CrossSection() AND they differ, convert
+// across cross-section codes via mbdozing.ConvertCrossSection using the factor
+// looked up from factorRepo.GetByPair (Task D business rules 3-5).
+//
+// Returns ok=false (no error) for every "can't compute yet" outcome: parent has
+// no effective LDR at all, a denier/filament operand is absent on either side,
+// cross-section data is missing on one side (never assume "same" when it is
+// actually unknown), or the factor lookup reports mbcrosssection.ErrFactorNotFound.
+// It returns a real error only when factorRepo.GetByPair fails for an
+// infrastructure reason distinct from "not found" — that must propagate rather
+// than being silently swallowed as incomplete.
+func scaleAndConvertChildLDR(ctx context.Context, factorRepo mbcrosssection.FactorRepository, parent, child *mbspin.Entity) (float64, bool, error) {
+	ref, ok := parentEffectiveLDR(parent)
+	if !ok {
+		return 0, false, nil
+	}
+	pdn, pf := parent.Denier(), parent.Filament()
+	cdn, cf := child.Denier(), child.Filament()
+	if pdn == nil || pf == nil || cdn == nil || cf == nil {
+		return 0, false, nil
+	}
+	scaled, err := mbdozing.ScaleLDR(mbdozing.ScaleInput{
+		LDRRef:         ref,
+		DenierRef:      *pdn,
+		FilamentRef:    float64(*pf),
+		DenierTarget:   *cdn,
+		FilamentTarget: float64(*cf),
+	})
+	if err != nil {
+		// ScaleLDR's error is a rejected-arithmetic case (zero filament), not an
+		// infrastructure failure — same "incomplete, no error" shape scaleChildDozing
+		// already uses for its own ScaleLDR call.
+		return 0, false, nil //nolint:nilerr // arithmetic rejection => incomplete, not an error
+	}
+
+	pcs, ccs := parent.CrossSection(), child.CrossSection()
+	if pcs == nil || ccs == nil || *pcs == "" || *ccs == "" {
+		// Cross-section unknown on at least one side: Task D business rule 4
+		// forbids assuming "same" when the data is actually missing.
+		return 0, false, nil
+	}
+	if *pcs == *ccs {
+		// Same cross section on both sides: skip the XSECTION step entirely,
+		// the Scale result stands as-is.
+		return scaled, true, nil
+	}
+
+	factor, err := factorRepo.GetByPair(ctx, *pcs, *ccs)
+	if err != nil {
+		if errors.Is(err, mbcrosssection.ErrFactorNotFound) {
+			return 0, false, nil
+		}
+		return 0, false, fmt.Errorf("look up cross-section factor %s->%s: %w", *pcs, *ccs, err)
+	}
+	converted, err := mbdozing.ConvertCrossSection(scaled, factor)
+	if err != nil {
+		// A non-positive factor or unrecognized operation is bad master data, not
+		// an infrastructure failure — treated as incomplete for this pass rather
+		// than propagated, same rationale as the ScaleLDR branch above.
+		return 0, false, nil //nolint:nilerr // rejected factor data => incomplete, not an error
+	}
+	return converted, true, nil
 }
 
 // attachImpact fills the D24 preview fields.
