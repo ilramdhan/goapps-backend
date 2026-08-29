@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.17.0](https://github.com/mutugading/goapps-backend/compare/iam-service/v0.16.0...iam-service/v0.17.0) (2026-08-29)
+
+
+### Features
+
+* **finance:** add mb_cross_section and cross-section factor management ([930031c](https://github.com/mutugading/goapps-backend/commit/930031c48ded20a199b47cd68b0a2056d1d565bd))
+* **finance:** add mb_dozing impact calculation ([820ead2](https://github.com/mutugading/goapps-backend/commit/820ead2f7a0996f4ed10fb932db36b4fc4d12f0a))
+* **finance:** add mb_head full recipe export ([f4d309f](https://github.com/mutugading/goapps-backend/commit/f4d309f9f56bdf54fe523d9c3c8b9fc6246add61))
+* **finance:** add mb_head lock, relock job, and unlock-request workflow ([a7e5933](https://github.com/mutugading/goapps-backend/commit/a7e5933d1cc52da62a5f73001301e07f4afec4c8))
+* **finance:** add shade master CRUD with Oracle sync ([a4decba](https://github.com/mutugading/goapps-backend/commit/a4decba4ac0e36e706d96e805869dbc7b0ef7545))
+* **finance:** overhaul MB costing workflow, yarn lookup engine, and master data services ([8df1bc8](https://github.com/mutugading/goapps-backend/commit/8df1bc879d98331a70c63d2c4bbcbd70a8cd0bcb))
+* **iam:** seed spin fixed cost menu and permissions ([575dd44](https://github.com/mutugading/goapps-backend/commit/575dd44febe9f907ea7f0668906434f2602e8d01))
+
+
+### Bug Fixes
+
+* **build:** pin golangci-lint to v2.3.0 to match CI ([c00c906](https://github.com/mutugading/goapps-backend/commit/c00c906be743b87b9cb50a67324af76c1ba7b468))
+* **docker:** mount Postgres volumes at the PostgreSQL 18 data root ([4a960c8](https://github.com/mutugading/goapps-backend/commit/4a960c82ee4e965ff2cdb459e4f943157670b37f))
+* **finance:** implement spin fixed-cost POY pool model, master CRUD, calc engine injection, and permissions ([#163](https://github.com/mutugading/goapps-backend/issues/163)) ([b11085b](https://github.com/mutugading/goapps-backend/commit/b11085b2682ab8421690167f89a37ac84ff06b88))
+* **iam:** drop legacy chat tables before creating chat_message ([64ff286](https://github.com/mutugading/goapps-backend/commit/64ff2861a9754e8fe9a8b53c7d17e94cd8643aa9))
+* resolve Docker volume paths, IAM migration conflict, linter version, and PPC compose ([733bc38](https://github.com/mutugading/goapps-backend/commit/733bc38f102c94750b45a9c947ce28632a1565eb))
+
 ## [0.16.0](https://github.com/mutugading/goapps-backend/compare/iam-service/v0.15.1...iam-service/v0.16.0) (2026-07-30)
 
 
