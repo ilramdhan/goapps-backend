@@ -63,6 +63,32 @@ func TestMBSpinEntityToProto_FixedFlags_MatchDomainPredicate(t *testing.T) {
 	assert.False(t, *p.MbsDozingIsFixed)
 }
 
+// TestMBSpinEntityToProto_LDRProvenance proves the read-side LDR provenance
+// fields (mbs_ldr_type, mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct,
+// mbs_ldr_is_actual) round-trip from the domain entity onto the response
+// proto, closing the gap where GetMBSpin/ListMBSpins/UpdateMBSpin responses
+// previously had no way to expose the current LDR lock/adjustment state.
+func TestMBSpinEntityToProto_LDRProvenance(t *testing.T) {
+	e := newSpinWithFlags(t, nil, nil)
+	calculated := 3.55
+	adjustment := 0.25
+	e.HydrateShadeAndLDR(mbspin.ShadeAndLDR{
+		LDRType:          mbspin.LDRTypeCalculated,
+		LDRCalculatedPct: &calculated,
+		LDRAdjustmentPct: &adjustment,
+		LDRIsActual:      false,
+	})
+
+	p := mbSpinEntityToProto(e)
+
+	assert.Equal(t, mbspin.LDRTypeCalculated, p.MbsLdrType)
+	require.NotNil(t, p.MbsLdrCalculatedPct)
+	assert.InDelta(t, calculated, *p.MbsLdrCalculatedPct, 0.0001)
+	require.NotNil(t, p.MbsLdrAdjustmentPct)
+	assert.InDelta(t, adjustment, *p.MbsLdrAdjustmentPct, 0.0001)
+	assert.False(t, p.MbsLdrIsActual)
+}
+
 // captureRepo is a minimal mbspin.Repository that records the entity handed to
 // Create/Update so the request-side wiring can be asserted without a database.
 type captureRepo struct {
@@ -109,6 +135,10 @@ func (r *captureRepo) ExistsByOrionItemCode(_ context.Context, _ string) (bool, 
 
 func (r *captureRepo) ResolveUniqueByOrionItemCode(_ context.Context, _ string) (uuid.UUID, bool, error) {
 	return uuid.UUID{}, false, nil
+}
+
+func (r *captureRepo) ListByOrionItemCode(_ context.Context, _ string) ([]*mbspin.Entity, error) {
+	return nil, nil
 }
 
 // TestCreateMBSpin_FixedFlagsWiring proves the create request path carries the

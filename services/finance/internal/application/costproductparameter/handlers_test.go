@@ -205,6 +205,10 @@ func (f *fakeMBSpinRepo) ResolveUniqueByOrionItemCode(_ context.Context, code st
 	return id, ok, nil
 }
 
+func (f *fakeMBSpinRepo) ListByOrionItemCode(_ context.Context, _ string) ([]*mbspin.Entity, error) {
+	return nil, nil
+}
+
 // =============================================================================
 // Upsert
 // =============================================================================

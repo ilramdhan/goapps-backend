@@ -40,7 +40,50 @@ func (h *Handlers) ListProductRequiredParams(ctx context.Context, productSysID i
 	if !exists {
 		return nil, cpp.ErrProductNotFound
 	}
-	return h.repo.ListForProduct(ctx, productSysID, requiredOnly)
+	entries, err := h.repo.ListForProduct(ctx, productSysID, requiredOnly)
+	if err != nil {
+		return nil, err
+	}
+	h.attachMBSpinCandidates(ctx, entries)
+	return entries, nil
+}
+
+// attachMBSpinCandidates populates Value.MBSpinCandidates for rows that
+// ListForProduct flagged as ambiguous (MBSpinCandidateCount != nil and > 1).
+// Uses the same mbSpinRepo dependency as resolveMBSpinID, via
+// ListByOrionItemCode — which shares the identical matching rule as the
+// save-time resolver, so the candidate list shown never disagrees with what
+// Upsert would actually resolve to.
+func (h *Handlers) attachMBSpinCandidates(ctx context.Context, entries []cpp.RequiredEntry) {
+	if h.mbSpinRepo == nil {
+		return
+	}
+	for i := range entries {
+		v := entries[i].Value
+		if v == nil || v.MBSpinCandidateCount == nil || *v.MBSpinCandidateCount <= 1 {
+			continue
+		}
+		if v.ValueText == nil || *v.ValueText == "" {
+			continue
+		}
+		spins, err := h.mbSpinRepo.ListByOrionItemCode(ctx, *v.ValueText)
+		if err != nil {
+			continue // best-effort: leave candidates nil, count/badge still convey ambiguity
+		}
+		v.MBSpinCandidates = make([]cpp.MBSpinCandidateInfo, 0, len(spins))
+		for _, s := range spins {
+			v.MBSpinCandidates = append(v.MBSpinCandidates, cpp.MBSpinCandidateInfo{
+				MBSID:         s.ID(),
+				OrionItemCode: s.OrionItemCode(),
+				MgtName:       s.MgtName(),
+				Denier:        s.Denier(),
+				Filament:      s.Filament(),
+				MBSLdrPrsn:    s.MBSLdrPrsn(),
+				MBSRunLdrPct:  s.MBSRunLdrPct(),
+				MBSStatus:     s.MBSStatus(),
+			})
+		}
+	}
 }
 
 // UpsertCommand bundles an upsert request.
@@ -51,6 +94,13 @@ type UpsertCommand struct {
 	ValueText    *string
 	ValueFlag    *bool
 	FilledBy     string
+	// MBSpinIDOverride is the mst_mb_spin.mbs_id the user explicitly picked
+	// from an MBSpinCandidate list for an ambiguous MB_SPIN lookup value. When
+	// set, it is written directly to ValueMBSpinID and the normal
+	// resolveMBSpinID ambiguity resolver is skipped entirely — the user's
+	// explicit pick always wins over the ORION-code heuristic. ValueText is
+	// still saved as-is alongside it (companion column).
+	MBSpinIDOverride *uuid.UUID
 }
 
 // Upsert validates against the param meta then writes via the repo.
@@ -90,7 +140,25 @@ func (h *Handlers) Upsert(ctx context.Context, cmd UpsertCommand) (*cpp.Value, e
 		FilledBy:     cmd.FilledBy,
 		CreatedBy:    cmd.FilledBy,
 	}
-	if meta.LookupMasterCode == mbSpinLookupMasterCode {
+	switch {
+	case cmd.MBSpinIDOverride != nil:
+		// Explicit user pick from an MBSpinCandidate list always wins over the
+		// ORION-code heuristic — completely bypasses resolveMBSpinID. Still
+		// validated against mst_mb_spin so a stale/forged override can't write
+		// a dangling FK.
+		if h.mbSpinRepo == nil {
+			return nil, cpp.ErrMBSpinOverrideNotFound
+		}
+		exists, existsErr := h.mbSpinRepo.ExistsByID(ctx, *cmd.MBSpinIDOverride)
+		if existsErr != nil {
+			return nil, fmt.Errorf("check mb_spin_id_override: %w", existsErr)
+		}
+		if !exists {
+			return nil, cpp.ErrMBSpinOverrideNotFound
+		}
+		id := *cmd.MBSpinIDOverride
+		v.ValueMBSpinID = &id
+	case meta.LookupMasterCode == mbSpinLookupMasterCode:
 		v.ValueMBSpinID = h.resolveMBSpinID(ctx, cmd.ValueText)
 	}
 	if err := h.repo.Upsert(ctx, v); err != nil {

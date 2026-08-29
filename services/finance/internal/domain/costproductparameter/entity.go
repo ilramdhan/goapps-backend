@@ -23,14 +23,15 @@ const (
 
 // Sentinel errors.
 var (
-	ErrNotFound           = errors.New("product parameter value not found")
-	ErrInvalidValueShape  = errors.New("exactly one value column must be populated")
-	ErrInvalidDataType    = errors.New("invalid data_type for parameter")
-	ErrProductNotFound    = errors.New("product not found")
-	ErrParamNotFound      = errors.New("parameter not found")
-	ErrPeriodDependent    = errors.New("parameter is period-dependent and cannot be stored in CPP")
-	ErrParamNotApplicable = errors.New("parameter not in product's applicable list — add it first")
-	ErrProductLocked      = errors.New("product is locked — route and parameters cannot be edited")
+	ErrNotFound               = errors.New("product parameter value not found")
+	ErrInvalidValueShape      = errors.New("exactly one value column must be populated")
+	ErrInvalidDataType        = errors.New("invalid data_type for parameter")
+	ErrProductNotFound        = errors.New("product not found")
+	ErrParamNotFound          = errors.New("parameter not found")
+	ErrPeriodDependent        = errors.New("parameter is period-dependent and cannot be stored in CPP")
+	ErrParamNotApplicable     = errors.New("parameter not in product's applicable list — add it first")
+	ErrProductLocked          = errors.New("product is locked — route and parameters cannot be edited")
+	ErrMBSpinOverrideNotFound = errors.New("mb_spin_id_override does not match any mst_mb_spin row")
 )
 
 // Applicability is the per-product CAPP row metadata (no value).
@@ -75,12 +76,32 @@ type Value struct {
 	// isn't an MB_SPIN lookup parameter, or ValueText is empty) — never
 	// conflate nil with zero.
 	MBSpinCandidateCount *int32
-	FilledAt             time.Time
-	FilledBy             string
-	CreatedAt            time.Time
-	CreatedBy            string
-	UpdatedAt            *time.Time
-	UpdatedBy            *string
+	// MBSpinCandidates is the full candidate list backing MBSpinCandidateCount,
+	// populated ONLY when the row is actually ambiguous (MBSpinCandidateCount
+	// != nil and > 1) — see Handlers.attachMBSpinCandidates. Nil in every
+	// other case, including "already resolved" and "zero matches".
+	MBSpinCandidates []MBSpinCandidateInfo
+	FilledAt         time.Time
+	FilledBy         string
+	CreatedAt        time.Time
+	CreatedBy        string
+	UpdatedAt        *time.Time
+	UpdatedBy        *string
+}
+
+// MBSpinCandidateInfo is one possible mst_mb_spin match behind an ambiguous
+// MB_SPIN lookup value — just enough disambiguating detail (mirroring the
+// MB_SPIN combobox's extra-detail row) for the caller to tell candidates
+// apart before picking one via UpsertCommand.MBSpinIDOverride.
+type MBSpinCandidateInfo struct {
+	MBSID         uuid.UUID
+	OrionItemCode *string
+	MgtName       string
+	Denier        *float64
+	Filament      *int
+	MBSLdrPrsn    *float64
+	MBSRunLdrPct  *float64
+	MBSStatus     *string
 }
 
 // ParamMeta is the joined mst_parameter snapshot needed by the form / resolver.

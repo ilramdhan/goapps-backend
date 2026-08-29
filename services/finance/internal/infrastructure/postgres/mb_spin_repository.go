@@ -30,15 +30,25 @@ var _ mbspin.Repository = (*MBSpinRepository)(nil)
 
 // Create persists a new MB Spin.
 func (r *MBSpinRepository) Create(ctx context.Context, entity *mbspin.Entity) error {
-	_, err := r.db.ExecContext(ctx, `
+	return createSpinOn(ctx, r.db, entity)
+}
+
+// createSpinOn inserts an MB Spin through anything satisfying rowQuerier (already defined in
+// mb_composition_repository.go), i.e. either *DB standalone or a *sql.Tx. This lets
+// mb_autogen_repository.go's mbAutoGenSpin insert the auto-generated MB Spin row as part of the
+// same Lock/Validate transaction, instead of Create opening its own implicit commit boundary.
+func createSpinOn(ctx context.Context, q rowQuerier, entity *mbspin.Entity) error {
+	_, err := q.ExecContext(ctx, `
 		INSERT INTO mst_mb_spin (
 			mbs_id, mbs_oracle_sys_id, mbs_orion_item_code, mbs_mbh_id, mbs_mgt_name,
 			mbs_denier, mbs_filament, mbs_dozing, mbs_mb_costing,
 			mbs_cc, mbs_cost_rate_mkt,
 			mbs_status, mbs_ldr_prsn, mbs_run_ldr_pct, mbs_final_product,
 			mbs_ldr_is_fixed, mbs_dozing_is_fixed,
+			mbs_shade_code, mbs_shade_name, mbs_cross_section,
+			mbs_ldr_type, mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct, mbs_ldr_is_actual,
 			mbs_is_active, created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -57,6 +67,13 @@ func (r *MBSpinRepository) Create(ctx context.Context, entity *mbspin.Entity) er
 		entity.MBSFinalProduct(),
 		entity.LDRIsFixed(),
 		entity.DozingIsFixed(),
+		entity.ShadeCode(),
+		entity.ShadeName(),
+		entity.CrossSection(),
+		entity.LDRType(),
+		entity.LDRCalculatedPct(),
+		entity.LDRAdjustmentPct(),
+		entity.LDRIsActual(),
 		entity.IsActive(),
 		entity.CreatedAt(),
 		entity.CreatedBy(),
@@ -150,9 +167,16 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 			mbs_final_product = $12,
 			mbs_ldr_is_fixed    = $13,
 			mbs_dozing_is_fixed = $14,
-			mbs_is_active     = $15,
-			updated_at        = $16,
-			updated_by        = $17
+			mbs_shade_code           = $15,
+			mbs_shade_name           = $16,
+			mbs_cross_section        = $17,
+			mbs_ldr_type             = $18,
+			mbs_ldr_calculated_pct   = $19,
+			mbs_ldr_adjustment_pct   = $20,
+			mbs_ldr_is_actual        = $21,
+			mbs_is_active     = $22,
+			updated_at        = $23,
+			updated_by        = $24
 		WHERE mbs_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -169,6 +193,13 @@ func (r *MBSpinRepository) Update(ctx context.Context, entity *mbspin.Entity) er
 		entity.MBSFinalProduct(),
 		entity.LDRIsFixed(),
 		entity.DozingIsFixed(),
+		entity.ShadeCode(),
+		entity.ShadeName(),
+		entity.CrossSection(),
+		entity.LDRType(),
+		entity.LDRCalculatedPct(),
+		entity.LDRAdjustmentPct(),
+		entity.LDRIsActual(),
 		entity.IsActive(),
 		entity.UpdatedAt(),
 		entity.UpdatedBy(),
@@ -267,6 +298,33 @@ func (r *MBSpinRepository) ResolveUniqueByOrionItemCode(ctx context.Context, cod
 	return ids[0], true, nil
 }
 
+// ListByOrionItemCode returns every non-deleted spin sharing the given ORION
+// item code, ordered deterministically. See mbspin.Repository.ListByOrionItemCode
+// for the matching-rule consistency requirement this must honor.
+func (r *MBSpinRepository) ListByOrionItemCode(ctx context.Context, code string) ([]*mbspin.Entity, error) {
+	rows, err := r.db.QueryContext(ctx,
+		r.selectCols()+` WHERE mbs_orion_item_code = $1 AND deleted_at IS NULL ORDER BY created_at ASC, mbs_id ASC`,
+		code,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list by orion item code: %w", err)
+	}
+	defer closeRows(rows)
+
+	var items []*mbspin.Entity
+	for rows.Next() {
+		e, scanErr := r.scanRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		items = append(items, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate orion item code matches: %w", err)
+	}
+	return items, nil
+}
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -281,7 +339,9 @@ func (r *MBSpinRepository) selectCols() string {
 		       mbs_is_active,
 		       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by,
 		       mbs_parent_spin_id, mbs_duplicated_at, mbs_duplicated_by,
-		       mbs_last_recalc_at, mbs_last_recalc_by, mbs_cost_product_id
+		       mbs_last_recalc_at, mbs_last_recalc_by, mbs_cost_product_id,
+		       mbs_shade_code, mbs_shade_name, mbs_cross_section,
+		       mbs_ldr_type, mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct, mbs_ldr_is_actual
 		FROM mst_mb_spin
 	`
 }
@@ -331,6 +391,16 @@ type mbSpinDTO struct {
 	LastRecalcAt  sql.NullTime
 	LastRecalcBy  sql.NullString
 	CostProductID sql.NullInt64
+	// Shade/cross-section copy-down + LDR provenance tracking (migration 000496).
+	// LDRType and LDRIsActual are NOT NULL in storage, so they scan directly
+	// without a sql.Null wrapper.
+	ShadeCode        sql.NullString
+	ShadeName        sql.NullString
+	CrossSection     sql.NullString
+	LDRType          string
+	LDRCalculatedPct sql.NullFloat64
+	LDRAdjustmentPct sql.NullFloat64
+	LDRIsActual      bool
 }
 
 func (d *mbSpinDTO) toEntity() *mbspin.Entity {
@@ -342,6 +412,15 @@ func (d *mbSpinDTO) toEntity() *mbspin.Entity {
 		LastRecalcAt:  nullableTimePtr(d.LastRecalcAt),
 		LastRecalcBy:  nullableStringPtr(d.LastRecalcBy),
 		CostProductID: nullableInt64Ptr(d.CostProductID),
+	})
+	e.HydrateShadeAndLDR(mbspin.ShadeAndLDR{
+		ShadeCode:        nullableStringPtr(d.ShadeCode),
+		ShadeName:        nullableStringPtr(d.ShadeName),
+		CrossSection:     nullableStringPtr(d.CrossSection),
+		LDRType:          d.LDRType,
+		LDRCalculatedPct: nullableFloat64Ptr(d.LDRCalculatedPct),
+		LDRAdjustmentPct: nullableFloat64Ptr(d.LDRAdjustmentPct),
+		LDRIsActual:      d.LDRIsActual,
 	})
 	return e
 }
@@ -386,6 +465,8 @@ func (r *MBSpinRepository) scanOne(row *sql.Row) (*mbspin.Entity, error) {
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 		&d.ParentSpinID, &d.DuplicatedAt, &d.DuplicatedBy,
 		&d.LastRecalcAt, &d.LastRecalcBy, &d.CostProductID,
+		&d.ShadeCode, &d.ShadeName, &d.CrossSection,
+		&d.LDRType, &d.LDRCalculatedPct, &d.LDRAdjustmentPct, &d.LDRIsActual,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbspin.ErrNotFound
@@ -408,6 +489,8 @@ func (r *MBSpinRepository) scanRow(rows *sql.Rows) (*mbspin.Entity, error) {
 		&d.CreatedAt, &d.CreatedBy, &d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 		&d.ParentSpinID, &d.DuplicatedAt, &d.DuplicatedBy,
 		&d.LastRecalcAt, &d.LastRecalcBy, &d.CostProductID,
+		&d.ShadeCode, &d.ShadeName, &d.CrossSection,
+		&d.LDRType, &d.LDRCalculatedPct, &d.LDRAdjustmentPct, &d.LDRIsActual,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan mb spin row: %w", err)
