@@ -276,17 +276,18 @@ func mbInsertCostProductMaster(ctx context.Context, tx *sql.Tx, typeID int32, en
 		return 0, fmt.Errorf("mb_autogen: generate cost product code: %w", err)
 	}
 
-	// cpm_grade_code is written explicitly as NULL rather than omitted from the column list:
-	// omitting it would let the column fall through to its DB DEFAULT 'AX' (migration 000106),
-	// but MB Recipe has no grade concept at all — the value must read as empty ("—" in the UI),
-	// not the manual-entry default. cpmFromRow (cost_product_master_repository.go) is the
-	// counterpart that keeps this empty value from being coerced back to "AX" on read, gated on
-	// cpm_source == mbCostProductSource.
+	// cpm_grade_code is written explicitly as '' (empty string) rather than omitted from the
+	// column list or left as SQL NULL: the column is NOT NULL DEFAULT 'AX' (migration 000106), so
+	// omitting it — or writing NULL, which violates the NOT NULL constraint outright — would let
+	// the column fall through to its DB DEFAULT 'AX'. MB Recipe has no grade concept at all — the
+	// value must read as empty ("—" in the UI), not the manual-entry default. cpmFromRow
+	// (cost_product_master_repository.go) is the counterpart that keeps this empty value from
+	// being coerced back to "AX" on read, gated on cpm_source == mbCostProductSource.
 	const insertQ = `
 		INSERT INTO cost_product_master
 			(cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_source, cpm_is_locked,
 			 cpm_shade_code, cpm_shade_name, cpm_grade_code, cpm_created_by, cpm_updated_by)
-		VALUES ($1, $2, $3, $4, TRUE, $5, $6, NULL, $7, $7)
+		VALUES ($1, $2, $3, $4, TRUE, $5, $6, '', $7, $7)
 		RETURNING cpm_product_sys_id`
 	var productSysID int64
 	err := tx.QueryRowContext(ctx, insertQ, code, typeID, entity.MBCosting(), mbCostProductSource,
