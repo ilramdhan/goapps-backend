@@ -116,6 +116,32 @@ func (s *MBSpinCostProductIDSuite) cleanupFixtures() {
 	require.NoError(s.T(), err)
 	_, err = s.db.ExecContext(s.ctx, `DELETE FROM mst_mb_head WHERE mbh_mb_costing LIKE $1`, prefix)
 	require.NoError(s.T(), err)
+	_, err = s.db.ExecContext(s.ctx, `DELETE FROM cost_product_master WHERE cpm_product_name LIKE $1`, prefix)
+	require.NoError(s.T(), err)
+}
+
+// seedCostProductMaster inserts a real cost_product_master row and returns its generated
+// cpm_product_sys_id. mst_mb_spin.mbs_cost_product_id is protected by fk_mbs_cost_product
+// (migration 000490), so Create() can only ever persist a product_sys_id that actually exists
+// in cost_product_master — a hardcoded/made-up ID here would violate that FK regardless of
+// whether MBSpinRepository.Create itself is correct.
+func (s *MBSpinCostProductIDSuite) seedCostProductMaster() int64 {
+	var typeID int32
+	require.NoError(s.T(),
+		s.db.QueryRowContext(s.ctx, `SELECT cpt_type_id FROM cost_product_type WHERE cpt_type_code = 'MB' AND cpt_is_active = TRUE`).
+			Scan(&typeID))
+
+	var code string
+	require.NoError(s.T(),
+		s.db.QueryRowContext(s.ctx, `SELECT generate_cost_product_code($1)`, typeID).Scan(&code))
+
+	var productSysID int64
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx, `
+		INSERT INTO cost_product_master (cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_source, cpm_is_locked, cpm_created_by, cpm_updated_by)
+		VALUES ($1, $2, $3, 'MB_RECIPE', TRUE, 'itest', 'itest')
+		RETURNING cpm_product_sys_id`,
+		code, typeID, mbSpinCostProductIDFixturePrefix+"product").Scan(&productSysID))
+	return productSysID
 }
 
 // seedHead inserts the minimal mst_mb_head row mbs_mbh_id's FK needs to exist.
@@ -136,7 +162,7 @@ func (s *MBSpinCostProductIDSuite) TestCreate_WithCostProductIDSet_PersistsToDB(
 	entity, err := mbspin.New(s.mbhID, "Test Spin CostProductID", nil, nil, nil, nil, nil, &mbCosting, nil, nil, nil, nil, nil, nil, nil, nil, "itest")
 	require.NoError(s.T(), err)
 
-	productSysID := int64(999111)
+	productSysID := s.seedCostProductMaster()
 	entity.HydrateLineage(mbspin.Lineage{CostProductID: &productSysID})
 
 	require.NoError(s.T(), s.repo.Create(s.ctx, entity))

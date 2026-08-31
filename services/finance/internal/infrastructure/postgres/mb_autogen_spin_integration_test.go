@@ -118,6 +118,32 @@ func (s *MBAutoGenSpinSuite) cleanupFixtures() {
 	require.NoError(s.T(), err)
 	_, err = s.db.ExecContext(s.ctx, `DELETE FROM mst_mb_head WHERE mbh_mb_costing LIKE $1`, prefix)
 	require.NoError(s.T(), err)
+	_, err = s.db.ExecContext(s.ctx, `DELETE FROM cost_product_master WHERE cpm_product_name LIKE $1`, prefix)
+	require.NoError(s.T(), err)
+}
+
+// seedCostProductMaster inserts a real cost_product_master row and returns its generated
+// cpm_product_sys_id. mst_mb_spin.mbs_cost_product_id is protected by fk_mbs_cost_product
+// (migration 000490), so a spin row can only ever reference a product_sys_id that actually
+// exists in cost_product_master — a hardcoded/made-up ID here would violate that FK exactly
+// like a real caller's bug would, just for the wrong (test-fixture) reason.
+func (s *MBAutoGenSpinSuite) seedCostProductMaster() int64 {
+	var typeID int32
+	require.NoError(s.T(),
+		s.db.QueryRowContext(s.ctx, `SELECT cpt_type_id FROM cost_product_type WHERE cpt_type_code = 'MB' AND cpt_is_active = TRUE`).
+			Scan(&typeID))
+
+	var code string
+	require.NoError(s.T(),
+		s.db.QueryRowContext(s.ctx, `SELECT generate_cost_product_code($1)`, typeID).Scan(&code))
+
+	var productSysID int64
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx, `
+		INSERT INTO cost_product_master (cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_source, cpm_is_locked, cpm_created_by, cpm_updated_by)
+		VALUES ($1, $2, $3, 'MB_RECIPE', TRUE, 'itest', 'itest')
+		RETURNING cpm_product_sys_id`,
+		code, typeID, mbSpinAutoGenFixturePrefix+"product").Scan(&productSysID))
+	return productSysID
 }
 
 // seedHead inserts the minimal mst_mb_head row mbAutoGenSpin's FK (mbs_mbh_id) needs to exist.
@@ -150,7 +176,7 @@ func (s *MBAutoGenSpinSuite) TestAutoGenSpin_FullyPopulatedHead_PersistsDerivedF
 	})
 	require.NoError(s.T(), err)
 
-	const productSysID int64 = 424242
+	productSysID := s.seedCostProductMaster()
 	err = s.db.Transaction(s.ctx, func(tx *sql.Tx) error {
 		return mbAutoGenSpin(s.ctx, tx, s.mbhID, entity, productSysID, "itest")
 	})
