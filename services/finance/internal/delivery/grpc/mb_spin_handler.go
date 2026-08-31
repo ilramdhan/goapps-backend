@@ -182,7 +182,7 @@ func (h *MBSpinHandler) UpdateMBSpin(ctx context.Context, req *financev1.UpdateM
 		filament = &v
 	}
 
-	entity, err := h.updateHandler.Handle(ctx, appmbspin.UpdateCommand{
+	result, err := h.updateHandler.HandleWithRecalc(ctx, appmbspin.UpdateCommand{
 		ID:               id,
 		MgtName:          req.MbsMgtName,
 		MBCosting:        req.MbsMbCosting,
@@ -209,10 +209,12 @@ func (h *MBSpinHandler) UpdateMBSpin(ctx context.Context, req *financev1.UpdateM
 	}
 
 	RecordMBSpinOperation("update", true)
-	return &financev1.UpdateMBSpinResponse{
+	resp := &financev1.UpdateMBSpinResponse{
 		Base: successResponse("MB spin updated successfully"),
-		Data: mbSpinEntityToProto(entity),
-	}, nil
+		Data: mbSpinEntityToProto(result.Entity),
+	}
+	applyRecalcToUpdateResponse(resp, result.Recalc)
+	return resp, nil
 }
 
 // DeleteMBSpin soft-deletes an MB spin record.
@@ -355,6 +357,15 @@ func mbSpinEntityToProto(e *mbspin.Entity) *financev1.MBSpin {
 	p.MbsLdrAdjustmentPct = e.LDRAdjustmentPct()
 	p.MbsLdrIsActual = e.LDRIsActual()
 	p.MbsVsNumber = e.VSNumber()
+	if e.ShadeCode() != nil {
+		p.MbsShadeCode = *e.ShadeCode()
+	}
+	if e.ShadeName() != nil {
+		p.MbsShadeName = *e.ShadeName()
+	}
+	if e.CrossSection() != nil {
+		p.MbsCrossSection = *e.CrossSection()
+	}
 	if e.UpdatedAt() != nil {
 		p.Audit.UpdatedAt = e.UpdatedAt().Format(time.RFC3339)
 	}
@@ -429,33 +440,35 @@ func (h *MBSpinHandler) DuplicateMBSpin(ctx context.Context, req *financev1.Dupl
 	return resp, nil
 }
 
-// applyRecalcToDuplicateResponse copies the skip list and the D24 impact PREVIEW
-// onto the response.
-//
-// ⛔ Every impact number here comes from mbdozing.ImpactRepository, a read-only
-// repository that SELECTs the products carrying this spin's code. ⛔ Nothing was
-// recalculated to produce them.
-func applyRecalcToDuplicateResponse(resp *financev1.DuplicateMBSpinResponse, recalc *appmbspin.RecalcResult) {
-	if recalc == nil {
-		return
-	}
-	skipped := make([]*financev1.MBSpinRecalcSkipped, 0, len(recalc.Skipped))
-	for i := range recalc.Skipped {
-		s := recalc.Skipped[i]
-		skipped = append(skipped, &financev1.MBSpinRecalcSkipped{
+// recalcSkippedToProto maps the shared skip-list rows produced by RecalcResult
+// onto their proto representation. Shared by both the duplicate and update
+// gRPC response mappers so the skip/impact shape stays identical on both
+// cascade-surfacing paths.
+func recalcSkippedToProto(skipped []appmbspin.SkippedChild) []*financev1.MBSpinRecalcSkipped {
+	out := make([]*financev1.MBSpinRecalcSkipped, 0, len(skipped))
+	for i := range skipped {
+		s := skipped[i]
+		out = append(out, &financev1.MBSpinRecalcSkipped{
 			MbsId:      s.SpinID.String(),
 			MbsMgtName: s.MgtName,
 			MbsStatus:  s.Status,
 			Reason:     s.Reason,
 		})
 	}
-	resp.Skipped = skipped
-	resp.SkippedCount = safeconv.IntToInt32(len(skipped))
+	return out
+}
 
-	rows := make([]*financev1.DozingImpactRow, 0, len(recalc.ImpactRows))
-	for i := range recalc.ImpactRows {
-		r := recalc.ImpactRows[i]
-		rows = append(rows, &financev1.DozingImpactRow{
+// recalcImpactRowsToProto maps the shared D24 impact PREVIEW rows produced by
+// RecalcResult onto their proto representation.
+//
+// ⛔ Every impact number here comes from mbdozing.ImpactRepository, a read-only
+// repository that SELECTs the products carrying this spin's code. ⛔ Nothing was
+// recalculated to produce them.
+func recalcImpactRowsToProto(rows []mbdozing.ImpactRow) []*financev1.DozingImpactRow {
+	out := make([]*financev1.DozingImpactRow, 0, len(rows))
+	for i := range rows {
+		r := rows[i]
+		out = append(out, &financev1.DozingImpactRow{
 			CpmProductSysId: r.ProductSysID,
 			CpmProductCode:  r.ProductCode,
 			CpmProductName:  r.ProductName,
@@ -463,7 +476,37 @@ func applyRecalcToDuplicateResponse(resp *financev1.DuplicateMBSpinResponse, rec
 			FrozenDozing:    r.FrozenDozing,
 		})
 	}
-	resp.ImpactPreview = rows
+	return out
+}
+
+// applyRecalcToDuplicateResponse copies the skip list and the D24 impact PREVIEW
+// onto the response.
+func applyRecalcToDuplicateResponse(resp *financev1.DuplicateMBSpinResponse, recalc *appmbspin.RecalcResult) {
+	if recalc == nil {
+		return
+	}
+	skipped := recalcSkippedToProto(recalc.Skipped)
+	resp.Skipped = skipped
+	resp.SkippedCount = safeconv.IntToInt32(len(skipped))
+
+	resp.ImpactPreview = recalcImpactRowsToProto(recalc.ImpactRows)
+	resp.ImpactTotalAffected = safeconv.IntToInt32(recalc.ImpactTotals.TotalAffected)
+	resp.ImpactTotalLocked = safeconv.IntToInt32(recalc.ImpactTotals.TotalLocked)
+	resp.ImpactTruncated = recalc.ImpactTruncated
+}
+
+// applyRecalcToUpdateResponse copies the skip list and the D24 impact PREVIEW
+// onto an UpdateMBSpinResponse, using the exact same field shapes/mapping as
+// applyRecalcToDuplicateResponse (P7-T5).
+func applyRecalcToUpdateResponse(resp *financev1.UpdateMBSpinResponse, recalc *appmbspin.RecalcResult) {
+	if recalc == nil {
+		return
+	}
+	skipped := recalcSkippedToProto(recalc.Skipped)
+	resp.Skipped = skipped
+	resp.SkippedCount = safeconv.IntToInt32(len(skipped))
+
+	resp.ImpactPreview = recalcImpactRowsToProto(recalc.ImpactRows)
 	resp.ImpactTotalAffected = safeconv.IntToInt32(recalc.ImpactTotals.TotalAffected)
 	resp.ImpactTotalLocked = safeconv.IntToInt32(recalc.ImpactTotals.TotalLocked)
 	resp.ImpactTruncated = recalc.ImpactTruncated
