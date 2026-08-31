@@ -244,3 +244,40 @@ func TestUnlockLDRActual_ThenSetLDRAdjustment_Succeeds(t *testing.T) {
 	require.NotNil(t, e.LDRAdjustmentPct())
 	assert.InDelta(t, 4.0, *e.LDRAdjustmentPct(), 0.001)
 }
+
+func TestNew_LustureCodeDefaultsNil(t *testing.T) {
+	headID := uuid.New()
+	e, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	require.NoError(t, err)
+	assert.Nil(t, e.LustureCode())
+}
+
+func TestReconstruct_LustureCodeDefaultsNil(t *testing.T) {
+	e := mbspin.Reconstruct(uuid.New(), nil, nil, uuid.New(), "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, time.Now(), "admin", nil, nil, nil, nil)
+	assert.Nil(t, e.LustureCode())
+}
+
+func TestHydrateLustureCode_SetsAndReturnsValue(t *testing.T) {
+	headID := uuid.New()
+	e, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	require.NoError(t, err)
+
+	code := "LU01"
+	e.HydrateLustureCode(&code)
+
+	require.NotNil(t, e.LustureCode())
+	assert.Equal(t, "LU01", *e.LustureCode())
+}
+
+func TestHydrateLustureCode_NilClearsValue(t *testing.T) {
+	headID := uuid.New()
+	e, err := mbspin.New(headID, "MB Spin A", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	require.NoError(t, err)
+
+	code := "LU01"
+	e.HydrateLustureCode(&code)
+	require.NotNil(t, e.LustureCode())
+
+	e.HydrateLustureCode(nil)
+	assert.Nil(t, e.LustureCode())
+}
