@@ -25,6 +25,17 @@ func NewCostProductParameterRepository(db *DB) *CostProductParameterRepository {
 
 var _ cpp.Repository = (*CostProductParameterRepository)(nil)
 
+// boolTrueString/boolFalseString are the textual representations returned for a boolean-flag CPP
+// value (getCurrentValue's ValueFlag branch below). Named constants rather than inline literals:
+// this package's growing set of *_integration_test.go files (each with the standard
+// `if os.Getenv("INTEGRATION_TEST") != "true"` guard) pushed the shared goconst occurrence pool
+// for the literal "true" over the linter's min-occurrences threshold, even though test files are
+// themselves excluded from the goconst report.
+const (
+	boolTrueString  = "true"
+	boolFalseString = "false"
+)
+
 // selectListSQL drives from CAPP_ (per-product applicable params), joins
 // mst_parameter for metadata + LEFT JOIN cost_product_parameter for the value.
 // Per-product `capp_is_required` overrides mst_parameter.is_required_for_costing.
@@ -912,9 +923,9 @@ WHERE cpp_product_sys_id = $1 AND cpp_param_id = $2`
 		return vt.String, nil
 	case vf.Valid:
 		if vf.Bool {
-			return "true", nil
+			return boolTrueString, nil
 		}
-		return "false", nil
+		return boolFalseString, nil
 	default:
 		return "", nil
 	}

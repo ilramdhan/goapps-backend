@@ -1,7 +1,9 @@
 package postgres
 
 import (
+	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -82,4 +84,124 @@ func TestCpmEffectiveTypeIDs(t *testing.T) {
 			assert.Equal(t, tt.want, cpmEffectiveTypeIDs(tt.filter))
 		})
 	}
+}
+
+// TestCpmFromRow_GradeFallback proves the AX fallback in cpmFromRow is now
+// conditional on cpm_source: MB Recipe rows (mbCostProductSource, written NULL by
+// mbInsertCostProductMaster in mb_autogen_repository.go) must read back with an empty
+// grade so the UI can render "—", while every other source — manual create/update,
+// legacy import, duplicate route, or simply unset — must keep falling back to "AX"
+// exactly as before this change.
+func TestCpmFromRow_GradeFallback(t *testing.T) {
+	baseRow := func(source string, grade sql.NullString) cpmRow {
+		return cpmRow{
+			sysID:     1,
+			code:      "CPM-0001",
+			typeID:    10,
+			name:      "Test Product",
+			grade:     grade,
+			active:    true,
+			createdAt: time.Now(),
+			createdBy: "tester",
+			updatedAt: time.Now(),
+			updatedBy: "tester",
+			source:    source,
+		}
+	}
+
+	tests := []struct {
+		name      string
+		source    string
+		grade     sql.NullString
+		wantGrade string
+	}{
+		{
+			name:      "MB Recipe source with NULL grade stays empty",
+			source:    mbCostProductSource,
+			grade:     sql.NullString{},
+			wantGrade: "",
+		},
+		{
+			name:      "MB Recipe source with empty-string grade stays empty",
+			source:    mbCostProductSource,
+			grade:     sql.NullString{String: "", Valid: true},
+			wantGrade: "",
+		},
+		{
+			name:      "MB Recipe source with an explicit grade is preserved verbatim",
+			source:    mbCostProductSource,
+			grade:     sql.NullString{String: "B2", Valid: true},
+			wantGrade: "B2",
+		},
+		{
+			name:      "non-MB source (manual/import/duplicate) with NULL grade falls back to AX",
+			source:    "",
+			grade:     sql.NullString{},
+			wantGrade: "AX",
+		},
+		{
+			name:      "non-MB source with empty-string grade falls back to AX",
+			source:    "MANUAL",
+			grade:     sql.NullString{String: "", Valid: true},
+			wantGrade: "AX",
+		},
+		{
+			name:      "non-MB source with an explicit grade is preserved verbatim",
+			source:    "IMPORT",
+			grade:     sql.NullString{String: "A1", Valid: true},
+			wantGrade: "A1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cpmFromRow(baseRow(tt.source, tt.grade))
+			assert.Equal(t, tt.wantGrade, got.GradeCode())
+		})
+	}
+}
+
+// TestCpmFromRow_MBFullRow_AllColumns exercises cpmFromRow with a cpmRow shaped exactly like what
+// mbInsertCostProductMaster (mb_autogen_repository.go) writes for a complete MB Head: product_code
+// generated, product_name set from entity.MBCosting(), source MB_RECIPE, is_locked TRUE, shade
+// code/name copied from the head, grade NULL, and the legacy flex_01/02/03 columns never touched by
+// that INSERT's column list (so they arrive back as SQL NULL). This is the no-DB counterpart to
+// mb_autogen_cpm_fullrow_integration_test.go's real round trip — it runs under plain `go test`
+// (no INTEGRATION_TEST needed) and pins down every column cpmFromRow is responsible for mapping,
+// not just the grade fallback TestCpmFromRow_GradeFallback above already covers.
+func TestCpmFromRow_MBFullRow_AllColumns(t *testing.T) {
+	createdAt := time.Now()
+	row := cpmRow{
+		sysID:     42,
+		code:      "CSTMB260800000123",
+		typeID:    10,
+		name:      "MB COSTING FULL ROW",
+		shade:     sql.NullString{String: "SH-777", Valid: true},
+		shadeName: "MIDNIGHT BLUE",
+		grade:     sql.NullString{}, // written NULL by mbInsertCostProductMaster
+		active:    true,
+		createdAt: createdAt,
+		createdBy: "itest",
+		updatedAt: createdAt,
+		updatedBy: "itest",
+		// flex01/02/03 intentionally left at zero value (sql equivalent of NULL — never in the
+		// mbInsertCostProductMaster column list): confirmed by reading mb_autogen_repository.go's
+		// insertQ column list, which lists only cpm_product_code, cpm_product_type_id,
+		// cpm_product_name, cpm_source, cpm_is_locked, cpm_shade_code, cpm_shade_name,
+		// cpm_grade_code, cpm_created_by, cpm_updated_by — no cpm_flex_01/02/03 anywhere.
+		source: mbCostProductSource,
+		locked: true,
+	}
+
+	got := cpmFromRow(row)
+
+	assert.Equal(t, "CSTMB260800000123", got.ProductCode())
+	assert.Equal(t, "MB COSTING FULL ROW", got.ProductName())
+	assert.Equal(t, mbCostProductSource, got.Source())
+	assert.True(t, got.IsLocked())
+	assert.Equal(t, "SH-777", got.ShadeCode())
+	assert.Equal(t, "MIDNIGHT BLUE", got.ShadeName())
+	assert.Empty(t, got.GradeCode(), "MB_RECIPE source must never fall back to AX")
+	assert.Empty(t, got.Flex01())
+	assert.Empty(t, got.Flex02())
+	assert.Empty(t, got.Flex03())
 }

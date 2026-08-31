@@ -8492,6 +8492,18 @@
         "mbsVsNumber": {
           "type": "string",
           "description": "Optional Oracle CMBS_VS_NUMBER — VS reference number, copied from the parent MB Head's mbh_vs_number."
+        },
+        "mbsShadeCode": {
+          "type": "string",
+          "description": "Shade code, copied down from MB Head at auto-gen. Read-only lineage field."
+        },
+        "mbsShadeName": {
+          "type": "string",
+          "description": "Shade name, copied down from MB Head at auto-gen. Read-only lineage field."
+        },
+        "mbsCrossSection": {
+          "type": "string",
+          "description": "Cross section, copied down from MB Head at auto-gen. Read-only lineage field."
         }
       },
       "description": "MBSpin represents a Melange Batch spin detail record (child of MBHead)."
@@ -9581,6 +9593,41 @@
         "data": {
           "$ref": "#/definitions/v1MBSpin",
           "description": "Updated MB Spin data."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MBSpinRecalcSkipped"
+          },
+          "description": "Child spins deliberately left untouched by the recalc pass (rule A7).\nEmpty when every candidate child was recalculated."
+        },
+        "skippedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of skipped child spins. Equals len(skipped) — sent explicitly so a\ncaller that ignores the detail rows still gets the count."
+        },
+        "impactPreview": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DozingImpactRow"
+          },
+          "description": "Products that WOULD be affected, Top-N. ⛔ NOT a recalculation result (D24).\nReuses DozingImpactRow, the same row type PreviewDozingImpact returns, so\nthe UI can render both with one component."
+        },
+        "impactTotalAffected": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of affected products, before truncation."
+        },
+        "impactTotalLocked": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of affected products whose costing is locked."
+        },
+        "impactTruncated": {
+          "type": "boolean",
+          "description": "True when impact_preview was truncated by the server's row cap."
         }
       },
       "description": "UpdateMBSpinResponse is the response for updating an MB Spin record."

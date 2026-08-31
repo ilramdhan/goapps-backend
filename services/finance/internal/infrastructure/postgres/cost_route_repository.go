@@ -111,21 +111,25 @@ func (r *CostRouteRepository) PromoteFromDraft(ctx context.Context, in costroute
 // GetActiveByProduct returns the non-LOCKED head for the product or ErrNotFound.
 func (r *CostRouteRepository) GetActiveByProduct(ctx context.Context, productSysID int64) (*costroute.Head, error) {
 	const q = `
-		SELECT crh_head_id, crh_product_sys_id, crh_routing_status, crh_version,
-		       COALESCE(crh_promoted_from_draft_id, 0), COALESCE(crh_cyl_type_id, 0),
-		       COALESCE(crh_notes, ''),
-		       crh_created_at, crh_created_by, crh_updated_at, COALESCE(crh_updated_by, ''),
-		       COALESCE(crh_locked_by, ''), crh_locked_at,
-		       COALESCE(crh_unlocked_by, ''), crh_unlocked_at
-		FROM cost_route_head
-		WHERE crh_product_sys_id = $1
-		  AND crh_deleted_at IS NULL
-		  AND crh_routing_status <> 'LOCKED'
+		SELECT h.crh_head_id, h.crh_product_sys_id,
+		       COALESCE(p.cpm_product_code, ''), COALESCE(p.cpm_product_name, ''),
+		       h.crh_routing_status, h.crh_version,
+		       COALESCE(h.crh_promoted_from_draft_id, 0), COALESCE(h.crh_cyl_type_id, 0),
+		       COALESCE(h.crh_notes, ''),
+		       h.crh_created_at, h.crh_created_by, h.crh_updated_at, COALESCE(h.crh_updated_by, ''),
+		       COALESCE(h.crh_locked_by, ''), h.crh_locked_at,
+		       COALESCE(h.crh_unlocked_by, ''), h.crh_unlocked_at
+		FROM cost_route_head h
+		LEFT JOIN cost_product_master p ON p.cpm_product_sys_id = h.crh_product_sys_id
+		WHERE h.crh_product_sys_id = $1
+		  AND h.crh_deleted_at IS NULL
+		  AND h.crh_routing_status <> 'LOCKED'
 		LIMIT 1`
 	h := &costroute.Head{}
 	var lockedAt, unlockedAt sql.NullTime
 	err := r.db.QueryRowContext(ctx, q, productSysID).Scan(
-		&h.HeadID, &h.ProductSysID, &h.RoutingStatus, &h.Version,
+		&h.HeadID, &h.ProductSysID, &h.ProductCode, &h.ProductName,
+		&h.RoutingStatus, &h.Version,
 		&h.PromotedFromDraftID, &h.CylTypeID,
 		&h.Notes,
 		&h.CreatedAt, &h.CreatedBy, &h.UpdatedAt, &h.UpdatedBy,

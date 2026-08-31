@@ -89,6 +89,42 @@ func TestMBSpinEntityToProto_LDRProvenance(t *testing.T) {
 	assert.False(t, p.MbsLdrIsActual)
 }
 
+// TestMBSpinEntityToProto_ShadeAndCrossSection proves the shade code/name and
+// cross section carried down from the parent MB Head (via HydrateShadeAndLDR)
+// reach the response proto — this was the gap fixed for P2-T2: the data was
+// already persisted on the entity but never mapped onto the wire.
+func TestMBSpinEntityToProto_ShadeAndCrossSection(t *testing.T) {
+	t.Run("populated values are mapped", func(t *testing.T) {
+		e := newSpinWithFlags(t, nil, nil)
+		shadeCode := "SC-01"
+		shadeName := "Jet Black"
+		crossSection := "Round"
+		e.HydrateShadeAndLDR(mbspin.ShadeAndLDR{
+			ShadeCode:    &shadeCode,
+			ShadeName:    &shadeName,
+			CrossSection: &crossSection,
+			LDRType:      mbspin.LDRTypeCalculated,
+			LDRIsActual:  false,
+		})
+
+		p := mbSpinEntityToProto(e)
+
+		assert.Equal(t, shadeCode, p.MbsShadeCode)
+		assert.Equal(t, shadeName, p.MbsShadeName)
+		assert.Equal(t, crossSection, p.MbsCrossSection)
+	})
+
+	t.Run("nil values map to empty string, not panic", func(t *testing.T) {
+		e := newSpinWithFlags(t, nil, nil)
+
+		p := mbSpinEntityToProto(e)
+
+		assert.Empty(t, p.MbsShadeCode)
+		assert.Empty(t, p.MbsShadeName)
+		assert.Empty(t, p.MbsCrossSection)
+	})
+}
+
 // captureRepo is a minimal mbspin.Repository that records the entity handed to
 // Create/Update so the request-side wiring can be asserted without a database.
 type captureRepo struct {

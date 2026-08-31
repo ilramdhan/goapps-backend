@@ -32,6 +32,11 @@ type Entity struct {
 	// HydrateVSNumber, deliberately NOT a parameter of New/Reconstruct (both
 	// already oversized) — same rationale as the Shade/cross-section block below.
 	vsNumber *string
+	// Lusture code — migration 000498. Plumbing-only column, same rationale as
+	// vsNumber above: populated via HydrateLustureCode, deliberately NOT a
+	// parameter of New/Reconstruct. ⚠ Spelling is intentional and matches the
+	// persisted column mbs_lusture_code exactly — do not "correct" it.
+	lustureCode *string
 	// Shade/cross-section copy-down + LDR provenance tracking — migration 000496.
 	// Populated via HydrateShadeAndLDR, deliberately NOT parameters of New/Reconstruct
 	// (both already oversized) — same rationale as the Lineage block below.
@@ -221,6 +226,19 @@ func (e *Entity) VSNumber() *string { return e.vsNumber }
 // the parent MB Head, no format rule to enforce.
 func (e *Entity) HydrateVSNumber(vsNumber *string) {
 	e.vsNumber = vsNumber
+}
+
+// LustureCode returns the optional lusture code (migration 000498). Plumbing
+// only — copy-down/auto-gen logic that populates this value is out of scope
+// here (see P2-T5), same as ShadeCode above.
+func (e *Entity) LustureCode() *string { return e.lustureCode }
+
+// HydrateLustureCode applies the persisted mbs_lusture_code column (migration
+// 000498) onto a New-ed or Reconstruct-ed entity. Unvalidated on purpose, same
+// rationale as HydrateVSNumber/HydrateShadeAndLDR — free text with no format
+// rule to enforce at this layer.
+func (e *Entity) HydrateLustureCode(lustureCode *string) {
+	e.lustureCode = lustureCode
 }
 
 // IsActive returns whether the spin is active.

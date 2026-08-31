@@ -164,6 +164,18 @@ func (s *CostRouteRepoSuite) TestListHeads_Aggregates() {
 	s.Equal(int32(2), found.RmCount, "total rm rows")
 }
 
+// TestGetActiveByProduct_ProductNameJoin is the P6-T1 regression guard: the
+// routing "Name" column must not silently come back empty. Verifies that
+// GetActiveByProduct's SELECT joins cost_product_master and populates both
+// ProductCode and ProductName on the returned head.
+func (s *CostRouteRepoSuite) TestGetActiveByProduct_ProductNameJoin() {
+	h, err := s.repo.GetActiveByProduct(s.ctx, s.productSysID)
+	s.Require().NoError(err)
+	s.Require().NotNil(h)
+	s.Equal(crTestPrefix+"-FG", h.ProductCode, "product code should be populated via join")
+	s.Equal("cr itest fg", h.ProductName, "product name should be populated via join")
+}
+
 // TestGetGraph_RmGroupNameJoin verifies the GROUP rm resolves its display name.
 func (s *CostRouteRepoSuite) TestGetGraph_RmGroupNameJoin() {
 	g, err := s.repo.GetGraph(s.ctx, s.headID)

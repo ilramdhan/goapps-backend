@@ -8,6 +8,7 @@ package mbspin_test
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbspin"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcrosssection"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbdozing"
 	mbspindomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 )
@@ -63,6 +65,30 @@ func (f *fakeImpactRepo) ImpactBySpin(_ context.Context, _ string, _ int) ([]mbd
 	return f.rows, f.totals, nil
 }
 
+// fakeFactorRepo is an in-memory mbcrosssection.FactorRepository used only for
+// GetByPair — every other method is unimplemented since runLDRCascade never
+// calls them. getByPairCalls counts invocations so a test can prove the
+// cross-section step was (or was NOT) reached, which is how ordering
+// (Scale-before-CrossSection) is proven when the two operations' final
+// numeric outputs are indistinguishable (both are scalar multiplications, so
+// composing them in either order yields the same real number — see
+// TestRunLDRCascade_ScaleRunsBeforeCrossSection_FactorLookupNeverReachedWhenScaleFails
+// for the actual order proof).
+type fakeFactorRepo struct {
+	mbcrosssection.FactorRepository
+	factor         *mbcrosssection.FactorEntity
+	err            error
+	getByPairCalls int
+}
+
+func (f *fakeFactorRepo) GetByPair(_ context.Context, _, _ string) (*mbcrosssection.FactorEntity, error) {
+	f.getByPairCalls++
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.factor, nil
+}
+
 // --- helpers -----------------------------------------------------------------
 
 func ptrF(v float64) *float64 { return &v }
@@ -88,6 +114,20 @@ func newSpin(t *testing.T, id, headID uuid.UUID, name string, denier *float64, f
 }
 
 func rnd() *string { return ptrS(mbspindomain.StatusRnD) }
+
+// ldrSpin bundles the Task D LDR fields onto an entity built by newSpin, via
+// HydrateShadeAndLDR. crossSection nil means "not set" (mirrors legacy rows).
+func ldrSpin(t *testing.T, base *mbspindomain.Entity, crossSection *string, calc, adj *float64, isActual bool) *mbspindomain.Entity {
+	t.Helper()
+	base.HydrateShadeAndLDR(mbspindomain.ShadeAndLDR{
+		CrossSection:     crossSection,
+		LDRType:          mbspindomain.LDRTypeNotCalculated,
+		LDRCalculatedPct: calc,
+		LDRAdjustmentPct: adj,
+		LDRIsActual:      isActual,
+	})
+	return base
+}
 
 // --- tests -------------------------------------------------------------------
 
@@ -369,4 +409,201 @@ func TestUpdateHandler_RecalcTriggeredByDozingFields(t *testing.T) {
 			assert.Equal(t, "tester", rr.applied[0].Actor)
 		})
 	}
+}
+
+// --- P7-T4 property 1: parent denier/filament/dozing change cascades to
+// non-ACTUAL children's LDR too, not just dozing. ---------------------------
+
+// TestUpdateHandler_ParentDenierChange_CascadesLDRToNonActualChild proves
+// property 1 end-to-end through the real gRPC entrypoint's application-layer
+// counterpart (HandleWithRecalc): changing the parent's denier triggers
+// RecalcService.Apply, and a non-ACTUAL R&D child gets BOTH its dozing AND its
+// LDR recalculated in the same pass.
+func TestUpdateHandler_ParentDenierChange_CascadesLDRToNonActualChild(t *testing.T) {
+	parentID, headID := uuid.New(), uuid.New()
+	parent := newSpin(t, parentID, headID, "parent", ptrF(380), ptrI(108), ptrF(0.9), rnd())
+	ldrSpin(t, parent, ptrS("CS-A"), ptrF(0.8), ptrF(0.1), false) // effective LDR = 0.9
+
+	child := newSpin(t, uuid.New(), headID, "child", ptrF(500), ptrI(96), ptrF(0.5), rnd())
+	ldrSpin(t, child, ptrS("CS-A"), nil, nil, false) // not actual, same cross-section => no XSECTION step
+
+	h, _, rr := newUpdateFixture(t, parent, []*mbspindomain.Entity{child})
+
+	newDenier := 420.0
+	res, err := h.HandleWithRecalc(context.Background(), mbspin.UpdateCommand{
+		ID: parentID, Denier: &newDenier, UpdatedBy: "tester",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res.Recalc, "denier change must trigger the cascade")
+
+	require.Len(t, res.Recalc.Recalculated, 1, "the non-actual child's dozing must be recalculated")
+	require.Len(t, res.Recalc.LDRRecalculated, 1, "the non-actual child's LDR must be recalculated too")
+	assert.Empty(t, res.Recalc.LDRIncomplete)
+	require.Len(t, rr.applied, 1)
+	assert.Len(t, rr.applied[0].LDRUpdates, 1, "the persisted operation must carry the LDR update")
+}
+
+// --- P7-T4 property 2: an LDR-actual-locked child is never touched by the
+// LDR cascade, even though its parent changed. ------------------------------
+
+// TestRunLDRCascade_LDRIsActualChild_NeverTouched proves property 2 directly
+// against RecalcService.Apply: among two otherwise-identical R&D children, the
+// one locked via LDRIsActual==true must be completely absent from both
+// LDRRecalculated and LDRIncomplete — the cascade must not even attempt it —
+// while its sibling (not locked) IS recalculated.
+func TestRunLDRCascade_LDRIsActualChild_NeverTouched(t *testing.T) {
+	parentID, headID := uuid.New(), uuid.New()
+	parent := newSpin(t, parentID, headID, "parent", ptrF(380), ptrI(108), ptrF(0.9), rnd())
+	ldrSpin(t, parent, ptrS("CS-A"), ptrF(0.8), ptrF(0.1), false)
+
+	lockedID := uuid.New()
+	locked := newSpin(t, lockedID, headID, "locked-actual", ptrF(500), ptrI(96), ptrF(0.5), rnd())
+	ldrSpin(t, locked, ptrS("CS-A"), ptrF(0.6), nil, true) // LDRIsActual == true
+
+	freeID := uuid.New()
+	free := newSpin(t, freeID, headID, "free", ptrF(500), ptrI(96), ptrF(0.5), rnd())
+	ldrSpin(t, free, ptrS("CS-A"), nil, nil, false)
+
+	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{parentID: {locked, free}}}
+	svc := mbspin.NewRecalcService(nil, rr, nil, nil)
+
+	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
+	require.NoError(t, err)
+
+	// The locked child is untouched by the LDR cascade specifically: it must
+	// not appear in either LDR bucket.
+	for _, u := range res.LDRRecalculated {
+		assert.NotEqual(t, lockedID, u.SpinID, "an LDR-actual-locked child must never be LDR-recalculated")
+	}
+	assert.NotContains(t, res.LDRIncomplete, lockedID, "a locked child is skipped outright, not even recorded incomplete")
+
+	// The free sibling, by contrast, IS recalculated — proving the exclusion
+	// above is specific to the lock, not a blanket "nothing happened" bug.
+	require.Len(t, res.LDRRecalculated, 1)
+	assert.Equal(t, freeID, res.LDRRecalculated[0].SpinID)
+
+	// Dozing recalculation is a SEPARATE mechanism (gated by IsRnD status, not
+	// LDRIsActual) — both children remain dozing-candidates regardless of the
+	// LDR lock, confirming the two buckets are independent per business rule 7.
+	assert.Len(t, res.Recalculated, 2)
+}
+
+// --- P7-T4 property 3: Scale runs BEFORE CrossSection conversion. ----------
+
+// TestRunLDRCascade_ScaleThenCrossSection_MatchesGoldenFormula proves the
+// cascade's numeric output follows the documented Scale-then-CrossSection
+// pipeline: scaled = ScaleLDR(parent effective LDR, parent operands, child
+// operands), then converted = scaled * factor (MULTIPLY). The expected value
+// is computed independently here via the same two formulas the production
+// code uses (mbdozing.Ratio / mbdozing.ScaleLDR semantics), so this is a
+// regression pin on the actual composed value, not a re-statement of the
+// implementation.
+//
+// ⚠ NOTE ON "the two orders would produce different results": Scale and
+// CrossSection convert are BOTH scalar multiplications of the LDR value
+// (LDR * ratioRef/ratioTarget, then LDR * factor or LDR / factor). Scalar
+// multiplication commutes, so Scale-then-Convert and Convert-then-Scale
+// produce the IDENTICAL real number for any given input in this codebase —
+// there is no valid denier/filament/factor combination that makes the two
+// orders diverge numerically. This was verified by deriving both compositions
+// algebraically (Convert(Scale(ref)) = Scale(ref)*factor = ref*ratioRef/
+// ratioTarget*factor; Scale(Convert(ref)) = (ref*factor)*ratioRef/ratioTarget
+// — same product, just re-associated) and confirmed empirically below by
+// computing the "reverse order" value and asserting it is NOT numerically
+// distinguishable from the forward order (same InDelta). The ordering
+// guarantee is real and load-bearing for a DIFFERENT reason than raw output
+// value: see TestRunLDRCascade_ScaleRunsBeforeCrossSection_FactorLookupNeverReachedWhenScaleFails
+// below, which proves the order via an observable side effect (whether the
+// cross-section factor repository is even consulted) rather than via a
+// numeric divergence that cannot exist for this formula shape.
+func TestRunLDRCascade_ScaleThenCrossSection_MatchesGoldenFormula(t *testing.T) {
+	parentID, headID := uuid.New(), uuid.New()
+	parent := newSpin(t, parentID, headID, "parent", ptrF(380), ptrI(108), ptrF(0.9), rnd())
+	ldrSpin(t, parent, ptrS("CS-A"), ptrF(0.8), ptrF(0.1), false) // effective LDR = 0.9
+
+	child := newSpin(t, uuid.New(), headID, "child", ptrF(500), ptrI(96), ptrF(0.5), rnd())
+	ldrSpin(t, child, ptrS("CS-B"), nil, nil, false) // different cross-section => XSECTION step required
+
+	factorEntity, err := mbcrosssection.NewFactorEntity("CS-A", "CS-B", 1.25, mbcrosssection.OperationMultiply, "", true, "tester")
+	require.NoError(t, err)
+	fr := &fakeFactorRepo{factor: factorEntity}
+
+	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{parentID: {child}}}
+	svc := mbspin.NewRecalcService(nil, rr, nil, fr)
+
+	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
+	require.NoError(t, err)
+	require.Len(t, res.LDRRecalculated, 1)
+	require.Equal(t, 1, fr.getByPairCalls, "the factor must be looked up exactly once")
+
+	// Golden Scale-then-Convert value, computed independently of the SUT.
+	ratioRef := math.Sqrt(380.0 / 108.0)
+	ratioTarget := math.Sqrt(500.0 / 96.0)
+	scaled := 0.9 * ratioRef / ratioTarget
+	expectedForward := scaled * 1.25
+
+	// Algebraically equal "reverse order" value — included to make explicit
+	// that this formula shape cannot distinguish order numerically (see doc
+	// comment above); this is NOT a claim that the implementation runs in
+	// this order.
+	expectedReverse := (0.9 * 1.25) * (ratioRef / ratioTarget)
+
+	assert.InDelta(t, expectedForward, res.LDRRecalculated[0].NewLDRCalculatedPct, 1e-9)
+	assert.InDelta(t, expectedReverse, res.LDRRecalculated[0].NewLDRCalculatedPct, 1e-9,
+		"expected: for pure scalar multiplication, order-of-composition is not numerically observable")
+}
+
+// TestRunLDRCascade_ScaleRunsBeforeCrossSection_FactorLookupNeverReachedWhenScaleFails
+// proves the ACTUAL call order (Scale, then CrossSection) via an observable
+// side effect: when the child's filament is invalid (0, not nil — so it
+// passes the nil-operand guard but ScaleLDR itself rejects it with
+// ErrZeroFilament), the pass must be recorded as LDR-incomplete and the
+// cross-section factor repository must NEVER be consulted. If the
+// implementation instead ran CrossSection first, GetByPair would fire before
+// Scale's failure was ever known.
+func TestRunLDRCascade_ScaleRunsBeforeCrossSection_FactorLookupNeverReachedWhenScaleFails(t *testing.T) {
+	parentID, headID := uuid.New(), uuid.New()
+	parent := newSpin(t, parentID, headID, "parent", ptrF(380), ptrI(108), ptrF(0.9), rnd())
+	ldrSpin(t, parent, ptrS("CS-A"), ptrF(0.8), ptrF(0.1), false)
+
+	childID := uuid.New()
+	child := newSpin(t, childID, headID, "child", ptrF(500), ptrI(0), ptrF(0.5), rnd()) // filament=0, not nil
+	ldrSpin(t, child, ptrS("CS-B"), nil, nil, false)                                    // different cross-section: would need XSECTION IF reached
+
+	fr := &fakeFactorRepo{factor: nil, err: mbcrosssection.ErrFactorNotFound}
+
+	rr := &fakeRecalcRepo{children: map[uuid.UUID][]*mbspindomain.Entity{parentID: {child}}}
+	svc := mbspin.NewRecalcService(nil, rr, nil, fr)
+
+	res, err := svc.Apply(context.Background(), mbspin.ApplyInput{Parent: parent, Actor: "tester"})
+	require.NoError(t, err)
+
+	assert.Empty(t, res.LDRRecalculated)
+	assert.Equal(t, []uuid.UUID{childID}, res.LDRIncomplete)
+	assert.Equal(t, 0, fr.getByPairCalls, "Scale must fail and short-circuit BEFORE the cross-section step ever runs")
+}
+
+// --- P7-T4 property 4: mutating ONLY mbs_ldr_adjustment_pct must not trigger
+// RecalcService / the cascade at all. ---------------------------------------
+
+// TestUpdateHandler_RecalcNotTriggeredByLDRAdjustmentAlone is the LDR-specific
+// negative case: recalcTriggered only arms on denier/filament/dozing (see
+// update_handler.go), so setting ONLY LDRAdjustmentPct must leave res.Recalc
+// nil and never even read the children.
+func TestUpdateHandler_RecalcNotTriggeredByLDRAdjustmentAlone(t *testing.T) {
+	parentID, headID := uuid.New(), uuid.New()
+	parent := newSpin(t, parentID, headID, "parent", ptrF(380), ptrI(108), ptrF(0.9), rnd())
+	child := newSpin(t, uuid.New(), headID, "child", ptrF(500), ptrI(96), ptrF(0.5), rnd())
+
+	h, _, rr := newUpdateFixture(t, parent, []*mbspindomain.Entity{child})
+
+	newAdj := 0.15
+	res, err := h.HandleWithRecalc(context.Background(), mbspin.UpdateCommand{
+		ID: parentID, LDRAdjustmentPct: &newAdj, UpdatedBy: "tester",
+	})
+	require.NoError(t, err)
+	assert.Nil(t, res.Recalc, "an LDR-adjustment-only change must not start a recalc")
+	assert.Empty(t, rr.readParents, "children must not even be read")
+	assert.Empty(t, rr.applied)
+	assert.InDelta(t, newAdj, *res.Entity.LDRAdjustmentPct(), 1e-12, "the adjustment itself must still be saved")
 }

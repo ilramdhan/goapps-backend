@@ -696,8 +696,16 @@ func cpmFromRow(d cpmRow) *costproductmaster.CostProductMaster {
 		t := d.erpAt.Time
 		erpAt = &t
 	}
+	// The DB column default is 'AX' (migration 000106), applied whenever an INSERT omits
+	// cpm_grade_code. Rows produced by the MB Recipe auto-gen path (mb_autogen_repository.go's
+	// mbInsertCostProductMaster) explicitly write cpm_grade_code = NULL and are never meant to
+	// carry that default — MB Recipe has no grade concept, so an empty grade should read as
+	// empty ("—" in the UI), not fall back to "AX". Every OTHER source (manual create/update,
+	// legacy import, duplicate route) has no such NULL-on-purpose write, so an empty grade there
+	// genuinely means "never set" and must keep falling back to "AX" exactly as before — this
+	// fallback is intentionally conditioned on cpm_source, not removed outright.
 	grade := d.grade.String
-	if grade == "" {
+	if grade == "" && d.source != mbCostProductSource {
 		grade = "AX"
 	}
 	return costproductmaster.Reconstruct(
