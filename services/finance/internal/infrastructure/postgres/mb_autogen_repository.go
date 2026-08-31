@@ -171,42 +171,68 @@ func (r *MBHeadRepository) autoGenCostProduct(ctx context.Context, tx *sql.Tx, i
 
 // mbAutoGenSpin creates the single MB Spin row that must exist alongside every
 // first-ever-generated Master Product MB (business decision, see autoGenCostProduct's call
-// site comment above — never fires on re-validate). Shade/cross-section and (putaran 83
-// stakeholder decision) Denier/Filament/Dozing/MB Costing/VS Number are copied down from the
-// parent MB Head's identity fields; mbs_ldr_type starts at its NOT_CALCULATED default (mirrors
-// the mst_mb_spin column default) rather than being eagerly computed here — the LDR fields are
-// deliberately LEFT BLANK rather than copied, per the same stakeholder decision, so the
-// separate LDR calculation/locking process (Task E) is never bypassed; mbs_status starts at
-// mbspin.StatusRnD, the same default used for manually-created MB Spin rows today; and the new
-// row's cost-product linkage is set via the same HydrateLineage/CostProductID path the
-// repository already uses to read that column back from storage (migration 000490).
+// site comment above — never fires on re-validate). Shade/cross-section, CC, Final Product,
+// Lusture Code and (putaran 83 stakeholder decision) Denier/Filament/Dozing/MB Costing/VS
+// Number are copied down from the parent MB Head's identity fields; mbs_ldr_type starts at its
+// NOT_CALCULATED default (mirrors the mst_mb_spin column default) rather than being eagerly
+// computed here; mbs_status starts at mbspin.StatusRnD, the same default used for
+// manually-created MB Spin rows today; and the new row's cost-product linkage is set via the
+// same HydrateLineage/CostProductID path the repository already uses to read that column back
+// from storage (migration 000490).
 func mbAutoGenSpin(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mbhead.Entity, productSysID int64, actorUserID string) error {
-	mgtName := mbSpinAutoGenMgtName(entity)
-	rndStatus := mbspin.StatusRnD
-	mbCosting := mbEmptyStringToPtr(entity.MBCosting())
-
-	// Stakeholder decision (putaran 83): Denier/Filament/Dozing/MB Costing carry
-	// straight over from the parent MB Head — they are plain identity/spec fields with
-	// no separate recalculation process, unlike the LDR fields below.
-	spin, err := mbspin.New(headID, mgtName, nil, nil, entity.Denier(), entity.Filament(), entity.Dozing(), mbCosting, nil, nil, &rndStatus, nil, nil, nil, nil, nil, actorUserID)
+	spin, err := mbBuildAutoGenSpin(headID, entity, productSysID, actorUserID)
 	if err != nil {
-		return fmt.Errorf("mb_autogen: construct auto-generated mb spin: %w", err)
+		return err
 	}
-
-	spin.HydrateShadeAndLDR(mbspin.ShadeAndLDR{
-		ShadeCode:    mbEmptyStringToPtr(entity.ShadeCode()),
-		ShadeName:    mbEmptyStringToPtr(entity.ShadeName()),
-		CrossSection: mbEmptyStringToPtr(entity.CrossSection()),
-		LDRType:      mbspin.LDRTypeNotCalculated,
-		LDRIsActual:  false,
-	})
-	spin.HydrateVSNumber(entity.VSNumber())
-	spin.HydrateLineage(mbspin.Lineage{CostProductID: &productSysID})
-
 	if err := createSpinOn(ctx, tx, spin); err != nil {
 		return fmt.Errorf("mb_autogen: insert auto-generated mb spin: %w", err)
 	}
 	return nil
+}
+
+// mbBuildAutoGenSpin constructs (without persisting) the *mbspin.Entity that mbAutoGenSpin
+// writes. Split out from mbAutoGenSpin so the field-derivation rules can be unit-tested without
+// a database connection — createSpinOn (the only DB-touching step) stays in mbAutoGenSpin.
+func mbBuildAutoGenSpin(headID uuid.UUID, entity *mbhead.Entity, productSysID int64, actorUserID string) (*mbspin.Entity, error) {
+	mgtName := mbSpinAutoGenMgtName(entity)
+	rndStatus := mbspin.StatusRnD
+	mbCosting := mbEmptyStringToPtr(entity.MBCosting())
+	cc := mbEmptyStringToPtr(entity.ShadeCode())
+
+	// Stakeholder decision (putaran 83): Denier/Filament/Dozing/MB Costing/CC/Final Product
+	// carry straight over from the parent MB Head — they are plain identity/spec fields with
+	// no separate recalculation process, unlike the LDR fields below.
+	spin, err := mbspin.New(headID, mgtName, nil, nil, entity.Denier(), entity.Filament(), entity.Dozing(), mbCosting, cc, nil, &rndStatus, nil, nil, entity.MBHFinalProduct(), nil, nil, actorUserID)
+	if err != nil {
+		return nil, fmt.Errorf("mb_autogen: construct auto-generated mb spin: %w", err)
+	}
+
+	// Decision D3 (31 Aug) SUPERSEDES the earlier decision from the 28 Aug session (which said
+	// to leave mbs_ldr_calculated_pct blank here and rely solely on the separate LDR
+	// calculation/locking process, Task E). Per D3, the calculated LDR is now seeded from the
+	// MB Head at auto-gen time: prefer the head's already-recalculated run value
+	// (MBHRunLdrPct), falling back to its persisted/frozen value (MBHLdrPrsn) when no run value
+	// exists yet. This does NOT touch mbs_ldr_type (still LDRTypeNotCalculated, unchanged) or
+	// mbs_ldr_adjustment_pct/mbs_ldr_is_actual (still nil/false) — Task E's recalculation and
+	// locking flow still owns those.
+	ldrCalculatedPct := entity.MBHRunLdrPct()
+	if ldrCalculatedPct == nil {
+		ldrCalculatedPct = entity.MBHLdrPrsn()
+	}
+
+	spin.HydrateShadeAndLDR(mbspin.ShadeAndLDR{
+		ShadeCode:        mbEmptyStringToPtr(entity.ShadeCode()),
+		ShadeName:        mbEmptyStringToPtr(entity.ShadeName()),
+		CrossSection:     mbEmptyStringToPtr(entity.CrossSection()),
+		LDRType:          mbspin.LDRTypeNotCalculated,
+		LDRCalculatedPct: ldrCalculatedPct,
+		LDRIsActual:      false,
+	})
+	spin.HydrateVSNumber(entity.VSNumber())
+	spin.HydrateLustureCode(mbEmptyStringToPtr(entity.LustureCode()))
+	spin.HydrateLineage(mbspin.Lineage{CostProductID: &productSysID})
+
+	return spin, nil
 }
 
 // mbSpinAutoGenMgtName picks the source field for the auto-generated MB Spin's required
@@ -250,14 +276,21 @@ func mbInsertCostProductMaster(ctx context.Context, tx *sql.Tx, typeID int32, en
 		return 0, fmt.Errorf("mb_autogen: generate cost product code: %w", err)
 	}
 
+	// cpm_grade_code is written explicitly as NULL rather than omitted from the column list:
+	// omitting it would let the column fall through to its DB DEFAULT 'AX' (migration 000106),
+	// but MB Recipe has no grade concept at all — the value must read as empty ("—" in the UI),
+	// not the manual-entry default. cpmFromRow (cost_product_master_repository.go) is the
+	// counterpart that keeps this empty value from being coerced back to "AX" on read, gated on
+	// cpm_source == mbCostProductSource.
 	const insertQ = `
 		INSERT INTO cost_product_master
 			(cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_source, cpm_is_locked,
-			 cpm_created_by, cpm_updated_by)
-		VALUES ($1, $2, $3, $4, TRUE, $5, $5)
+			 cpm_shade_code, cpm_shade_name, cpm_grade_code, cpm_created_by, cpm_updated_by)
+		VALUES ($1, $2, $3, $4, TRUE, $5, $6, NULL, $7, $7)
 		RETURNING cpm_product_sys_id`
 	var productSysID int64
-	err := tx.QueryRowContext(ctx, insertQ, code, typeID, entity.MBCosting(), mbCostProductSource, actorUserID).Scan(&productSysID)
+	err := tx.QueryRowContext(ctx, insertQ, code, typeID, entity.MBCosting(), mbCostProductSource,
+		mbEmptyStringToPtr(entity.ShadeCode()), mbEmptyStringToPtr(entity.ShadeName()), actorUserID).Scan(&productSysID)
 	if err != nil {
 		return 0, fmt.Errorf("mb_autogen: insert cost_product_master: %w", err)
 	}
