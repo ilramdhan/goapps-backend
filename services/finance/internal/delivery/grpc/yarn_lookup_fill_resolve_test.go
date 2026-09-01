@@ -74,6 +74,14 @@ func (r *resolveFillFakeRepo) ListByOrionItemCode(_ context.Context, _ string) (
 	return nil, nil
 }
 
+func (r *resolveFillFakeRepo) HasChildren(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
+func (r *resolveFillFakeRepo) IsUsedByCostProduct(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 func newResolveTestSpin(t *testing.T, name string) *mbspin.Entity {
 	t.Helper()
 	e, err := mbspin.New(uuid.New(), name, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")

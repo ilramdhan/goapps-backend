@@ -40,6 +40,13 @@ var (
 	// 000486's unique index was permanently abandoned, so this is the sole
 	// enforcer of the invariant.
 	ErrDuplicateOrionItemCode = errors.New("mb spin orion_item_code already in use")
+	// ErrAlreadyDuplicated is returned when the SOURCE spin passed to
+	// DuplicateMBSpin already has a non-nil mbs_parent_spin_id, i.e. it is
+	// itself the result of a prior duplicate. Only a root spin (mbs_parent_spin_id
+	// IS NULL) may be duplicated: lineage depth is capped at one level and
+	// grandchildren are no longer allowed, superseding the earlier multi-level
+	// design.
+	ErrAlreadyDuplicated = errors.New("mb spin has already been duplicated and cannot be duplicated again")
 	// ErrTooManyChildren is returned when a recalc fan-out would exceed 20
 	// children (largest observed head carries 15 spins); the caller is expected
 	// to fall back to a manual recalc.
@@ -50,4 +57,19 @@ var (
 	// ErrLDRLockedActual is returned when SetLDRAdjustment is called while the
 	// spin's LDR is locked as Actual. Unlock first via UnlockLDRActual.
 	ErrLDRLockedActual = errors.New("mb spin ldr is locked as actual; unlock before changing adjustment")
+
+	// --- Delete guards ---
+
+	// ErrHasChildren is returned when attempting to delete a spin that still has
+	// one or more live duplicated children (mbs_parent_spin_id = this spin's id
+	// AND deleted_at IS NULL). Lineage integrity is enforced regardless of the
+	// child's status: a child that has since moved past R&D still counts.
+	ErrHasChildren = errors.New("mb spin cannot be deleted while it has duplicated children")
+
+	// ErrInUse is returned when attempting to delete a spin that is still
+	// referenced by a Master Product's cost parameter
+	// (cost_product_parameter.cpp_value_mb_spin_id). The FK is ON DELETE SET
+	// NULL but only fires on a hard delete, so this guard is required because
+	// deletion here is a soft UPDATE.
+	ErrInUse = errors.New("mb spin cannot be deleted while it is used by a master product's cost parameter")
 )

@@ -39,8 +39,10 @@ type Repository interface {
 	// which columns are copied, nulled, and set.
 	//
 	// Returns ErrNotFound when the source spin is absent or soft-deleted,
-	// ErrParentCycle / ErrMaxDuplicateDepth when the source's lineage chain is
-	// unusable.
+	// ErrAlreadyDuplicated when the source itself already has a non-nil
+	// mbs_parent_spin_id (only a root spin may be duplicated; lineage depth is
+	// capped at one level), or ErrParentCycle / ErrMaxDuplicateDepth when the
+	// source's lineage chain is unusable.
 	DuplicateSpin(ctx context.Context, in DuplicateInput) (DuplicateOutput, error)
 
 	// ListChildren returns the direct recalc CANDIDATES of a parent spin:
@@ -85,6 +87,18 @@ type Repository interface {
 	// user never disagrees with what Upsert would resolve to on save.
 	// Ordered by created_at, mbs_id for a stable, deterministic display order.
 	ListByOrionItemCode(ctx context.Context, code string) ([]*Entity, error)
+
+	// HasChildren reports whether any OTHER mst_mb_spin row still points at this
+	// spin via mbs_parent_spin_id and is not soft-deleted. Unlike ListChildren,
+	// this considers a child with ANY status (not just R&D candidates) — it
+	// exists to protect lineage integrity for delete, a different concern from
+	// the recalc fan-out that ListChildren serves.
+	HasChildren(ctx context.Context, id uuid.UUID) (bool, error)
+
+	// IsUsedByCostProduct reports whether any cost_product_parameter row
+	// references this spin via cpp_value_mb_spin_id. cost_product_parameter has
+	// no soft-delete column, so any matching row counts.
+	IsUsedByCostProduct(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 // MaxLineageDepth caps the mbs_parent_spin_id walk-up performed before a
@@ -152,8 +166,11 @@ type DuplicateOutput struct {
 	HeadID uuid.UUID
 	// MgtName is the name actually stored (override, or source + " (copy)").
 	MgtName string
-	// LineageDepth is how many ancestors the pre-insert walk-up traversed. 0 for
-	// a source that is not itself a clone.
+	// LineageDepth is how many ancestors the pre-insert walk-up traversed. Since
+	// only a root spin (mbs_parent_spin_id IS NULL) may be duplicated —
+	// ErrAlreadyDuplicated rejects any other source before this walk runs — this
+	// is now always 0 in practice. Kept as a field (not removed) so a future
+	// change to the depth cap does not require a wire/API change.
 	LineageDepth int
 }
 

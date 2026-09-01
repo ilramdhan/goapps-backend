@@ -90,6 +90,15 @@ func (h *DuplicateHandler) Handle(ctx context.Context, cmd DuplicateCommand) (*D
 	if source.IsDeleted() {
 		return nil, mbspin.ErrAlreadyDeleted
 	}
+	// Only a root spin (mbs_parent_spin_id IS NULL) may be duplicated: this caps
+	// lineage depth at one level and rejects re-duplicating an already-cloned
+	// spin, regardless of what the new mbs_parent_spin_id would be. This is a
+	// sibling check to AssertNoParentCycle (which guards the self-loop case
+	// inside DuplicateSpin) — it inspects the SOURCE's own lineage instead, so it
+	// must run before any write, not just before a cycle would form.
+	if source.ParentSpinID() != nil {
+		return nil, mbspin.ErrAlreadyDuplicated
+	}
 	if cmd.HeadID != nil && *cmd.HeadID != uuid.Nil && *cmd.HeadID != source.HeadID() {
 		return nil, mbspin.ErrHeadNotFound
 	}

@@ -100,6 +100,16 @@ func (m *MockRepository) ListByOrionItemCode(ctx context.Context, code string) (
 	return items, args.Error(1)
 }
 
+func (m *MockRepository) HasChildren(ctx context.Context, id uuid.UUID) (bool, error) {
+	args := m.Called(ctx, id)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockRepository) IsUsedByCostProduct(ctx context.Context, id uuid.UUID) (bool, error) {
+	args := m.Called(ctx, id)
+	return args.Bool(0), args.Error(1)
+}
+
 func TestCreateHandler_Handle(t *testing.T) {
 	t.Run("success - creates new MB Spin", func(t *testing.T) {
 		mockRepo := new(MockRepository)
@@ -299,12 +309,15 @@ func TestUpdateHandler_Handle(t *testing.T) {
 }
 
 func TestDeleteHandler_Handle(t *testing.T) {
-	t.Run("success - soft deletes entity", func(t *testing.T) {
+	t.Run("success - soft deletes entity when no children and no product usage", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		handler := mbspin.NewDeleteHandler(mockRepo)
 		ctx := context.Background()
 
 		id := uuid.New()
+		mockRepo.On("ExistsByID", ctx, id).Return(true, nil)
+		mockRepo.On("HasChildren", ctx, id).Return(false, nil)
+		mockRepo.On("IsUsedByCostProduct", ctx, id).Return(false, nil)
 		mockRepo.On("SoftDelete", ctx, id, "admin").Return(nil)
 
 		cmd := mbspin.DeleteCommand{ID: id, DeletedBy: "admin"}
@@ -320,13 +333,49 @@ func TestDeleteHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		id := uuid.New()
-		mockRepo.On("SoftDelete", ctx, id, "admin").Return(mbspindomain.ErrNotFound)
+		mockRepo.On("ExistsByID", ctx, id).Return(false, nil)
 
 		cmd := mbspin.DeleteCommand{ID: id, DeletedBy: "admin"}
 		err := handler.Handle(ctx, cmd)
 
 		assert.ErrorIs(t, err, mbspindomain.ErrNotFound)
 		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("error - blocked when spin has live children", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		handler := mbspin.NewDeleteHandler(mockRepo)
+		ctx := context.Background()
+
+		id := uuid.New()
+		mockRepo.On("ExistsByID", ctx, id).Return(true, nil)
+		mockRepo.On("HasChildren", ctx, id).Return(true, nil)
+
+		cmd := mbspin.DeleteCommand{ID: id, DeletedBy: "admin"}
+		err := handler.Handle(ctx, cmd)
+
+		assert.ErrorIs(t, err, mbspindomain.ErrHasChildren)
+		mockRepo.AssertExpectations(t)
+		mockRepo.AssertNotCalled(t, "IsUsedByCostProduct", ctx, id)
+		mockRepo.AssertNotCalled(t, "SoftDelete", ctx, id, "admin")
+	})
+
+	t.Run("error - blocked when spin is referenced by a cost product parameter", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		handler := mbspin.NewDeleteHandler(mockRepo)
+		ctx := context.Background()
+
+		id := uuid.New()
+		mockRepo.On("ExistsByID", ctx, id).Return(true, nil)
+		mockRepo.On("HasChildren", ctx, id).Return(false, nil)
+		mockRepo.On("IsUsedByCostProduct", ctx, id).Return(true, nil)
+
+		cmd := mbspin.DeleteCommand{ID: id, DeletedBy: "admin"}
+		err := handler.Handle(ctx, cmd)
+
+		assert.ErrorIs(t, err, mbspindomain.ErrInUse)
+		mockRepo.AssertExpectations(t)
+		mockRepo.AssertNotCalled(t, "SoftDelete", ctx, id, "admin")
 	})
 }
 

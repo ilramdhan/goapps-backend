@@ -177,6 +177,14 @@ func (r *captureRepo) ListByOrionItemCode(_ context.Context, _ string) ([]*mbspi
 	return nil, nil
 }
 
+func (r *captureRepo) HasChildren(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
+func (r *captureRepo) IsUsedByCostProduct(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 // TestCreateMBSpin_FixedFlagsWiring proves the create request path carries the
 // markers through to the domain, and that an absent marker stays nil (NULL) rather
 // than being defaulted to false.

@@ -256,6 +256,33 @@ func (r *MBSpinRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, 
 	return exists, nil
 }
 
+// HasChildren reports whether any live (non-deleted) mst_mb_spin row still
+// points at id via mbs_parent_spin_id, regardless of that child's status.
+func (r *MBSpinRepository) HasChildren(ctx context.Context, id uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM mst_mb_spin WHERE mbs_parent_spin_id=$1 AND deleted_at IS NULL)`, id,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("has children: %w", err)
+	}
+	return exists, nil
+}
+
+// IsUsedByCostProduct reports whether any cost_product_parameter row
+// references id via cpp_value_mb_spin_id. cost_product_parameter carries no
+// soft-delete column, so any matching row counts as in use.
+func (r *MBSpinRepository) IsUsedByCostProduct(ctx context.Context, id uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM cost_product_parameter WHERE cpp_value_mb_spin_id=$1)`, id,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("is used by cost product: %w", err)
+	}
+	return exists, nil
+}
+
 // GetByMBCosting retrieves an MB Spin by its MB costing code.
 func (r *MBSpinRepository) GetByMBCosting(ctx context.Context, code string) (*mbspin.Entity, error) {
 	// D20/M2a: deterministic tie-breaker on duplicate keys; no mbs_is_active filter on purpose

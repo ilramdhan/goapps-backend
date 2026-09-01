@@ -209,6 +209,14 @@ func (f *fakeMBSpinRepo) ListByOrionItemCode(_ context.Context, _ string) ([]*mb
 	return nil, nil
 }
 
+func (f *fakeMBSpinRepo) HasChildren(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
+func (f *fakeMBSpinRepo) IsUsedByCostProduct(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 // =============================================================================
 // Upsert
 // =============================================================================
