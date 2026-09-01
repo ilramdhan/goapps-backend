@@ -99,19 +99,36 @@ const MaxRecalcChildren = 20
 
 // DuplicateInput is the payload for DuplicateSpin.
 //
-// Column policy, fixed by A5 / D19 — the persistence layer implements exactly this:
+// Column policy, fixed by A5 / D19 as amended by D31/D32 — the persistence
+// layer (insertClone in mb_spin_duplicate.go) implements exactly this. Kept
+// in sync with the actual INSERT so this comment can be audited straight off
+// the code — see mb_spin_column_parity_test.go, which fails the build if
+// insertClone ever drops a column that the plain-create path (createSpinOn)
+// still writes:
 //
-//	NULLED  : mbs_oracle_sys_id, mbs_orion_item_code, mbs_mb_costing
+//	COPIED  : mbs_mbh_id, mbs_denier, mbs_filament, mbs_dozing, mbs_cc,
+//	          mbs_cost_rate_mkt, mbs_ldr_prsn, mbs_run_ldr_pct,
+//	          mbs_final_product, mbs_lesture, mbs_shade_code, mbs_shade_name,
+//	          mbs_cross_section, mbs_vs_number, mbs_lusture_code,
+//	          mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct,
+//	          mbs_mb_costing (D31=B — copied; previously nulled)
+//	NULLED  : mbs_oracle_sys_id, mbs_orion_item_code
 //	          (ERP/identity keys — a clone is not yet known to any ERP)
-//	SET     : mbs_parent_spin_id = SourceSpinID, mbs_status = StatusRnD (D5),
-//	          mbs_is_active = TRUE, mbs_duplicated_at/by,
-//	          mbs_cost_product_id = the parent HEAD's mbh_cost_product_id (may be NULL),
+//	SET     : mbs_id (fresh uuid), mbs_mgt_name (source name + " (copy)"
+//	          unless overridden), mbs_parent_spin_id = SourceSpinID,
+//	          mbs_duplicated_at/by, mbs_status = StatusRnD (D5),
+//	          mbs_is_active = TRUE,
+//	          mbs_cost_product_id = the parent HEAD's mbh_cost_product_id
+//	          (may be NULL, D18),
 //	          mbs_ldr_is_fixed = FALSE and mbs_dozing_is_fixed = FALSE — written
 //	          EXPLICITLY, never left NULL, because NULL means "fixed" and would
-//	          permanently exclude the clone from recalc.
-//	COPIED  : mbs_mbh_id, mbs_mgt_name (+ " (copy)" unless overridden),
-//	          mbs_denier, mbs_filament, mbs_dozing, mbs_cc, mbs_cost_rate_mkt,
-//	          mbs_ldr_prsn, mbs_final_product, mbs_lesture
+//	          permanently exclude the clone from recalc,
+//	          mbs_ldr_type = source value, EXCEPT an ACTUAL source is demoted
+//	          to CALCULATED on the clone (D32=A),
+//	          mbs_ldr_is_actual = ALWAYS FALSE regardless of source (D32=A),
+//	          created_at/by
+//	DEFAULT : mbs_last_recalc_at/by, updated_at/by, deleted_at/by — left at
+//	          their column defaults (not written by insertClone at all)
 type DuplicateInput struct {
 	// SourceSpinID is the spin to clone; it becomes the clone's mbs_parent_spin_id.
 	SourceSpinID uuid.UUID

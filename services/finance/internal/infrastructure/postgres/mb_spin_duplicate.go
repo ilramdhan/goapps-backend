@@ -158,6 +158,22 @@ type mbSpinCloneSource struct {
 	MBSFinalProduct sql.NullString
 	Lesture         sql.NullString
 	CostProductID   sql.NullInt64
+	// Shade/cross-section/VS/lusture copy-down (D31/D32 gate, added P1-T1).
+	ShadeCode    sql.NullString
+	ShadeName    sql.NullString
+	CrossSection sql.NullString
+	VSNumber     sql.NullString
+	LustureCode  sql.NullString
+	// LDR provenance (D32=A). LDRType and LDRIsActual are NOT NULL in storage
+	// (see mbSpinDTO), so they read directly without a sql.Null wrapper.
+	LDRCalculatedPct sql.NullFloat64
+	LDRAdjustmentPct sql.NullFloat64
+	LDRType          string
+	LDRIsActual      bool
+	// MBCosting is read from the source so it can be copied onto the clone
+	// (D31=B) — previously absent from this struct because insertClone nulled
+	// mbs_mb_costing directly instead of copying it.
+	MBCosting sql.NullString
 }
 
 // lockSourceSpin loads the clonable columns of the source under FOR UPDATE.
@@ -176,7 +192,12 @@ func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uu
 		       s.mbs_denier, s.mbs_filament, s.mbs_dozing,
 		       s.mbs_cc, s.mbs_cost_rate_mkt,
 		       s.mbs_ldr_prsn, s.mbs_run_ldr_pct, s.mbs_final_product,
-		       s.mbs_lesture, h.mbh_cost_product_id
+		       s.mbs_lesture, h.mbh_cost_product_id,
+		       s.mbs_shade_code, s.mbs_shade_name, s.mbs_cross_section,
+		       s.mbs_vs_number, s.mbs_lusture_code,
+		       s.mbs_ldr_calculated_pct, s.mbs_ldr_adjustment_pct,
+		       s.mbs_ldr_type, s.mbs_ldr_is_actual,
+		       s.mbs_mb_costing
 		  FROM mst_mb_spin s
 		  JOIN mst_mb_head h ON h.mbh_id = s.mbs_mbh_id
 		 WHERE s.mbs_id = $1 AND s.deleted_at IS NULL
@@ -187,6 +208,11 @@ func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uu
 		&s.CC, &s.CostRateMkt,
 		&s.MBSLdrPrsn, &s.MBSRunLdrPct, &s.MBSFinalProduct,
 		&s.Lesture, &s.CostProductID,
+		&s.ShadeCode, &s.ShadeName, &s.CrossSection,
+		&s.VSNumber, &s.LustureCode,
+		&s.LDRCalculatedPct, &s.LDRAdjustmentPct,
+		&s.LDRType, &s.LDRIsActual,
+		&s.MBCosting,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbspin.ErrNotFound
@@ -220,16 +246,27 @@ func (r *MBSpinRepository) txParentLookup(ctx context.Context, tx *sql.Tx) mbspi
 	}
 }
 
-// insertClone writes the clone row. The column policy of A5/D19 is expressed
-// literally in the SQL so it can be read off the statement:
+// insertClone writes the clone row. The column policy of A5/D19 (as amended by
+// D31/D32) is expressed literally in the SQL so it can be read off the
+// statement:
 //
-//	mbs_oracle_sys_id / mbs_orion_item_code / mbs_mb_costing => NULL
-//	mbs_status                                               => 'R and D' (D5)
-//	mbs_ldr_is_fixed / mbs_dozing_is_fixed                   => FALSE, explicit
+//	mbs_oracle_sys_id / mbs_orion_item_code                  => NULL (D19, unchanged)
+//	mbs_status                                                => 'R and D' (D5)
+//	mbs_ldr_is_fixed / mbs_dozing_is_fixed                    => FALSE, explicit
+//	mbs_mb_costing                                            => COPIED from source (D31=B)
+//	mbs_shade_code / mbs_shade_name / mbs_cross_section       => COPIED from source
+//	mbs_vs_number / mbs_lusture_code                          => COPIED from source
+//	mbs_ldr_calculated_pct / mbs_ldr_adjustment_pct           => COPIED from source (D32=A)
+//	mbs_ldr_type                                              => source value, except
+//	                                                              ACTUAL source downgrades
+//	                                                              to CALCULATED on the clone (D32=A)
+//	mbs_ldr_is_actual                                         => ALWAYS FALSE, regardless of
+//	                                                              source (D32=A)
 //
-// ⚠ The two FALSE literals are MANDATORY and must never become NULL: NULL is
-// interpreted as "fixed" (mbspin.IsFixedLDR / IsFixedDozing), so a NULL clone
-// would be silently and permanently excluded from every future recalc.
+// ⚠ The two FALSE literals for mbs_ldr_is_fixed / mbs_dozing_is_fixed are
+// MANDATORY and must never become NULL: NULL is interpreted as "fixed"
+// (mbspin.IsFixedLDR / IsFixedDozing), so a NULL clone would be silently and
+// permanently excluded from every future recalc.
 func (r *MBSpinRepository) insertClone(
 	ctx context.Context, tx *sql.Tx, src *mbSpinCloneSource, in mbspin.DuplicateInput, name string,
 ) (uuid.UUID, error) {
@@ -242,6 +279,14 @@ func (r *MBSpinRepository) insertClone(
 		filament = sql.NullInt64{Int64: int64(*in.Filament), Valid: true}
 	}
 
+	// D32=A: a clone never inherits an ACTUAL LDR type — it is always demoted
+	// to CALCULATED, since mbs_ldr_is_actual on the clone is unconditionally
+	// FALSE below.
+	ldrType := src.LDRType
+	if ldrType == mbspin.LDRTypeActual {
+		ldrType = mbspin.LDRTypeCalculated
+	}
+
 	newID := uuid.New()
 	now := time.Now()
 	_, err := tx.ExecContext(ctx, `
@@ -252,24 +297,34 @@ func (r *MBSpinRepository) insertClone(
 			mbs_cc, mbs_cost_rate_mkt,
 			mbs_status, mbs_ldr_prsn, mbs_run_ldr_pct, mbs_final_product, mbs_lesture,
 			mbs_ldr_is_fixed, mbs_dozing_is_fixed,
+			mbs_shade_code, mbs_shade_name, mbs_cross_section,
+			mbs_vs_number, mbs_lusture_code,
+			mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct, mbs_ldr_type, mbs_ldr_is_actual,
 			mbs_parent_spin_id, mbs_duplicated_at, mbs_duplicated_by,
 			mbs_cost_product_id,
 			mbs_is_active, created_at, created_by
 		) VALUES (
 			$1, $2, $3,
-			NULL, NULL, NULL,
-			$4, $5, $6,
-			$7, $8,
-			$9, $10, $11, $12, $13,
+			NULL, NULL, $4,
+			$5, $6, $7,
+			$8, $9,
+			$10, $11, $12, $13, $14,
 			FALSE, FALSE,
-			$14, $15, $16,
-			$17,
-			TRUE, $18, $16
+			$15, $16, $17,
+			$18, $19,
+			$20, $21, $22, FALSE,
+			$23, $24, $25,
+			$26,
+			TRUE, $27, $25
 		)`,
 		newID, src.HeadID, name,
+		src.MBCosting,
 		denier, filament, src.Dozing,
 		src.CC, src.CostRateMkt,
 		mbspin.StatusRnD, src.MBSLdrPrsn, src.MBSRunLdrPct, src.MBSFinalProduct, src.Lesture,
+		src.ShadeCode, src.ShadeName, src.CrossSection,
+		src.VSNumber, src.LustureCode,
+		src.LDRCalculatedPct, src.LDRAdjustmentPct, ldrType,
 		in.SourceSpinID, now, in.ActorUserID,
 		src.CostProductID,
 		now,
