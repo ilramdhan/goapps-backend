@@ -3987,6 +3987,46 @@
         ]
       }
     },
+    "/api/v1/finance/mb-heads/{mbhId}/unrevoke": {
+      "post": {
+        "summary": "UnrevokeMBHead returns a revoked MB Head back to draft. Reason is optional; when empty the existing state_reason is preserved.",
+        "operationId": "MBHeadService_UnrevokeMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnrevokeMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mbhId",
+            "description": "MB Head UUID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MBHeadServiceUnrevokeMBHeadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
     "/api/v1/finance/mb-heads/{mbhId}/validate": {
       "post": {
         "summary": "ValidateMBHead validates an approved MB Head, freezing its cost and param snapshot.",
@@ -4683,6 +4723,16 @@
         }
       },
       "description": "UnApproveMBHeadRequest is the request for reverting an MB Head out of the approved state."
+    },
+    "MBHeadServiceUnrevokeMBHeadBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for unrevoking. Optional; when empty the existing state_reason is preserved."
+        }
+      },
+      "description": "UnrevokeMBHeadRequest is the request for unrevoking a revoked MB Head back to draft."
     },
     "MBHeadServiceUpdateMBHeadBody": {
       "type": "object",
@@ -9528,6 +9578,20 @@
         }
       },
       "description": "UnApproveMBHeadResponse is the response for un-approving an MB Head."
+    },
+    "v1UnrevokeMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1MBHead",
+          "description": "Updated MB Head data."
+        }
+      },
+      "description": "UnrevokeMBHeadResponse is the response for unrevoking an MB Head."
     },
     "v1UpdateBoxBobbinCostResponse": {
       "type": "object",
