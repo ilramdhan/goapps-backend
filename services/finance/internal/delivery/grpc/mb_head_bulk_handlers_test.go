@@ -136,7 +136,7 @@ func newBulkTestHandler(t *testing.T, pub mbheadbulk.BulkTransitionJobPublisher)
 	require.NoError(t, err)
 
 	jobRepo := newFakeBulkJobRepo()
-	bulkHandler := mbheadbulk.NewRequestBulkTransitionHandler(jobRepo, pub)
+	bulkHandler := mbheadbulk.NewRequestBulkTransitionHandler(jobRepo, pub, nil)
 	h = h.WithBulkTransition(bulkHandler, jobRepo, mbHeadRepo)
 	return h, jobRepo, mbHeadRepo
 }
