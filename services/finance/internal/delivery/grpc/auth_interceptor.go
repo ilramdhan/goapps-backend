@@ -454,6 +454,19 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.MBHeadService/GrantUnlockMBHead":   "finance.mb.recipe.unlock",
 		"/finance.v1.MBHeadService/RejectUnlockMBHead":  "finance.mb.recipe.unlock",
 
+		// Bulk MB Head Regenerate (Phase C). All 5 gated to codes seeded by iam
+		// migration 000092, SUPER_ADMIN only — no other role receives them. The two
+		// read RPCs (status polling + failure listing) reuse bulkvalidate rather than
+		// a new dedicated view code: 000092 seeded only 3 permissions
+		// (bulkunvalidate/bulksubmit/bulkvalidate), all Super-Admin-exclusive, and
+		// these reads only ever expose data about a batch the same Super Admin just
+		// queued — there is no broader audience for them to be split out for.
+		"/finance.v1.MBHeadService/BulkForceUnvalidateMBHead": "finance.mb.head.bulkunvalidate",
+		"/finance.v1.MBHeadService/BulkSubmitMBHead":          "finance.mb.head.bulksubmit",
+		"/finance.v1.MBHeadService/BulkValidateMBHead":        "finance.mb.head.bulkvalidate",
+		"/finance.v1.MBHeadService/GetBulkMBHeadJobStatus":    "finance.mb.head.bulkvalidate",
+		"/finance.v1.MBHeadService/ListBulkMBHeadJobFailures": "finance.mb.head.bulkvalidate",
+
 		// MBSpinService (reuses finance.yarnmaster.mbspin.* seeded in iam mig 000057)
 		"/finance.v1.MBSpinService/CreateMBSpin":  "finance.yarnmaster.mbspin.create",
 		"/finance.v1.MBSpinService/GetMBSpin":     "finance.yarnmaster.mbspin.view",

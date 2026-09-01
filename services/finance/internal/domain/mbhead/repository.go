@@ -84,6 +84,15 @@ type Repository interface {
 	// changed, and the empty string is exempt.
 	ExistsByDevCode(ctx context.Context, devCode string, excludeID uuid.UUID) (bool, error)
 
+	// ForceUnvalidateTransition atomically forces a VALIDATED head back to DRAFT for the Bulk
+	// MB Head Regenerate feature (Phase B): updates mst_mb_head's entry_status/state_reason,
+	// clears the lock columns (is_locked/unlock_requested_at/unlock_requested_by), resets the
+	// cost-product linkage (mbh_cost_product_id/mbh_cost_generated_at/mbh_cost_generated_by so
+	// a subsequent Bulk Validate takes the FULL auto-gen path instead of the lighter
+	// regenerate-RMs-only path), and inserts a mst_mb_workflow_log audit row. All writes commit
+	// or roll back together.
+	ForceUnvalidateTransition(ctx context.Context, id uuid.UUID, currentVersion int, stateReason, actorUserID string) error
+
 	// RefreezeCostParams updates the frozen mbh_param_* columns on mst_mb_head and re-runs the
 	// CPP (cost_product_parameter) freeze from the entity's current in-memory param getters.
 	// Unlike Validate, this does not change entry_status, does not bump the version, does not

@@ -1651,26 +1651,31 @@ var ProductGradeService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	MBHeadService_CreateMBHead_FullMethodName           = "/finance.v1.MBHeadService/CreateMBHead"
-	MBHeadService_GetMBHead_FullMethodName              = "/finance.v1.MBHeadService/GetMBHead"
-	MBHeadService_ListMBHeads_FullMethodName            = "/finance.v1.MBHeadService/ListMBHeads"
-	MBHeadService_UpdateMBHead_FullMethodName           = "/finance.v1.MBHeadService/UpdateMBHead"
-	MBHeadService_DeleteMBHead_FullMethodName           = "/finance.v1.MBHeadService/DeleteMBHead"
-	MBHeadService_ExportMBHeads_FullMethodName          = "/finance.v1.MBHeadService/ExportMBHeads"
-	MBHeadService_ExportMBRecipeFull_FullMethodName     = "/finance.v1.MBHeadService/ExportMBRecipeFull"
-	MBHeadService_ImportMBHeads_FullMethodName          = "/finance.v1.MBHeadService/ImportMBHeads"
-	MBHeadService_DownloadMBHeadTemplate_FullMethodName = "/finance.v1.MBHeadService/DownloadMBHeadTemplate"
-	MBHeadService_SubmitMBHead_FullMethodName           = "/finance.v1.MBHeadService/SubmitMBHead"
-	MBHeadService_ApproveMBHead_FullMethodName          = "/finance.v1.MBHeadService/ApproveMBHead"
-	MBHeadService_ValidateMBHead_FullMethodName         = "/finance.v1.MBHeadService/ValidateMBHead"
-	MBHeadService_UnApproveMBHead_FullMethodName        = "/finance.v1.MBHeadService/UnApproveMBHead"
-	MBHeadService_RevokeMBHead_FullMethodName           = "/finance.v1.MBHeadService/RevokeMBHead"
-	MBHeadService_RejectMBHead_FullMethodName           = "/finance.v1.MBHeadService/RejectMBHead"
-	MBHeadService_ReturnMBHeadToDraft_FullMethodName    = "/finance.v1.MBHeadService/ReturnMBHeadToDraft"
-	MBHeadService_UnrevokeMBHead_FullMethodName         = "/finance.v1.MBHeadService/UnrevokeMBHead"
-	MBHeadService_RequestUnlockMBHead_FullMethodName    = "/finance.v1.MBHeadService/RequestUnlockMBHead"
-	MBHeadService_GrantUnlockMBHead_FullMethodName      = "/finance.v1.MBHeadService/GrantUnlockMBHead"
-	MBHeadService_RejectUnlockMBHead_FullMethodName     = "/finance.v1.MBHeadService/RejectUnlockMBHead"
+	MBHeadService_CreateMBHead_FullMethodName              = "/finance.v1.MBHeadService/CreateMBHead"
+	MBHeadService_GetMBHead_FullMethodName                 = "/finance.v1.MBHeadService/GetMBHead"
+	MBHeadService_ListMBHeads_FullMethodName               = "/finance.v1.MBHeadService/ListMBHeads"
+	MBHeadService_UpdateMBHead_FullMethodName              = "/finance.v1.MBHeadService/UpdateMBHead"
+	MBHeadService_DeleteMBHead_FullMethodName              = "/finance.v1.MBHeadService/DeleteMBHead"
+	MBHeadService_ExportMBHeads_FullMethodName             = "/finance.v1.MBHeadService/ExportMBHeads"
+	MBHeadService_ExportMBRecipeFull_FullMethodName        = "/finance.v1.MBHeadService/ExportMBRecipeFull"
+	MBHeadService_ImportMBHeads_FullMethodName             = "/finance.v1.MBHeadService/ImportMBHeads"
+	MBHeadService_DownloadMBHeadTemplate_FullMethodName    = "/finance.v1.MBHeadService/DownloadMBHeadTemplate"
+	MBHeadService_SubmitMBHead_FullMethodName              = "/finance.v1.MBHeadService/SubmitMBHead"
+	MBHeadService_ApproveMBHead_FullMethodName             = "/finance.v1.MBHeadService/ApproveMBHead"
+	MBHeadService_ValidateMBHead_FullMethodName            = "/finance.v1.MBHeadService/ValidateMBHead"
+	MBHeadService_UnApproveMBHead_FullMethodName           = "/finance.v1.MBHeadService/UnApproveMBHead"
+	MBHeadService_RevokeMBHead_FullMethodName              = "/finance.v1.MBHeadService/RevokeMBHead"
+	MBHeadService_RejectMBHead_FullMethodName              = "/finance.v1.MBHeadService/RejectMBHead"
+	MBHeadService_ReturnMBHeadToDraft_FullMethodName       = "/finance.v1.MBHeadService/ReturnMBHeadToDraft"
+	MBHeadService_UnrevokeMBHead_FullMethodName            = "/finance.v1.MBHeadService/UnrevokeMBHead"
+	MBHeadService_RequestUnlockMBHead_FullMethodName       = "/finance.v1.MBHeadService/RequestUnlockMBHead"
+	MBHeadService_GrantUnlockMBHead_FullMethodName         = "/finance.v1.MBHeadService/GrantUnlockMBHead"
+	MBHeadService_RejectUnlockMBHead_FullMethodName        = "/finance.v1.MBHeadService/RejectUnlockMBHead"
+	MBHeadService_BulkForceUnvalidateMBHead_FullMethodName = "/finance.v1.MBHeadService/BulkForceUnvalidateMBHead"
+	MBHeadService_BulkSubmitMBHead_FullMethodName          = "/finance.v1.MBHeadService/BulkSubmitMBHead"
+	MBHeadService_BulkValidateMBHead_FullMethodName        = "/finance.v1.MBHeadService/BulkValidateMBHead"
+	MBHeadService_GetBulkMBHeadJobStatus_FullMethodName    = "/finance.v1.MBHeadService/GetBulkMBHeadJobStatus"
+	MBHeadService_ListBulkMBHeadJobFailures_FullMethodName = "/finance.v1.MBHeadService/ListBulkMBHeadJobFailures"
 )
 
 // MBHeadServiceClient is the client API for MBHeadService service.
@@ -1724,6 +1729,31 @@ type MBHeadServiceClient interface {
 	// RejectUnlockMBHead refuses a pending unlock request: the MB Head stays locked and
 	// returns to the state it was parked from (P10, K-52). Reason is REQUIRED.
 	RejectUnlockMBHead(ctx context.Context, in *RejectUnlockMBHeadRequest, opts ...grpc.CallOption) (*RejectUnlockMBHeadResponse, error)
+	// BulkForceUnvalidateMBHead force-transitions up to 500 MB Heads from VALIDATED
+	// directly back to DRAFT in one step, bypassing the normal two-step
+	// RequestUnlockMBHead/GrantUnlockMBHead flow. Intended for Super Admin bulk
+	// re-triggering of the validate lifecycle. Runs asynchronously via a job: the
+	// response returns immediately with job info while the per-item work happens in
+	// a background worker — poll GetBulkMBHeadJobStatus for progress.
+	BulkForceUnvalidateMBHead(ctx context.Context, in *BulkForceUnvalidateMBHeadRequest, opts ...grpc.CallOption) (*BulkForceUnvalidateMBHeadResponse, error)
+	// BulkSubmitMBHead submits up to 500 MB Heads for approval in one request. Runs
+	// asynchronously via a job: the response returns immediately with job info while
+	// the per-item work happens in a background worker — poll GetBulkMBHeadJobStatus
+	// for progress.
+	BulkSubmitMBHead(ctx context.Context, in *BulkSubmitMBHeadRequest, opts ...grpc.CallOption) (*BulkSubmitMBHeadResponse, error)
+	// BulkValidateMBHead validates up to 500 approved MB Heads in one request,
+	// freezing each one's cost and param snapshot. Runs asynchronously via a job: the
+	// response returns immediately with job info while the per-item work happens in
+	// a background worker — poll GetBulkMBHeadJobStatus for progress.
+	BulkValidateMBHead(ctx context.Context, in *BulkValidateMBHeadRequest, opts ...grpc.CallOption) (*BulkValidateMBHeadResponse, error)
+	// GetBulkMBHeadJobStatus polls the live status and progress counters of a bulk
+	// MB Head lifecycle job (BulkForceUnvalidateMBHead, BulkSubmitMBHead, or
+	// BulkValidateMBHead) while it is still running.
+	GetBulkMBHeadJobStatus(ctx context.Context, in *GetBulkMBHeadJobStatusRequest, opts ...grpc.CallOption) (*GetBulkMBHeadJobStatusResponse, error)
+	// ListBulkMBHeadJobFailures lists the per-item failures recorded by a finished
+	// (or in-progress) bulk MB Head lifecycle job, so the caller can see which MB
+	// Heads failed and why.
+	ListBulkMBHeadJobFailures(ctx context.Context, in *ListBulkMBHeadJobFailuresRequest, opts ...grpc.CallOption) (*ListBulkMBHeadJobFailuresResponse, error)
 }
 
 type mBHeadServiceClient struct {
@@ -1934,6 +1964,56 @@ func (c *mBHeadServiceClient) RejectUnlockMBHead(ctx context.Context, in *Reject
 	return out, nil
 }
 
+func (c *mBHeadServiceClient) BulkForceUnvalidateMBHead(ctx context.Context, in *BulkForceUnvalidateMBHeadRequest, opts ...grpc.CallOption) (*BulkForceUnvalidateMBHeadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkForceUnvalidateMBHeadResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_BulkForceUnvalidateMBHead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) BulkSubmitMBHead(ctx context.Context, in *BulkSubmitMBHeadRequest, opts ...grpc.CallOption) (*BulkSubmitMBHeadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkSubmitMBHeadResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_BulkSubmitMBHead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) BulkValidateMBHead(ctx context.Context, in *BulkValidateMBHeadRequest, opts ...grpc.CallOption) (*BulkValidateMBHeadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkValidateMBHeadResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_BulkValidateMBHead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) GetBulkMBHeadJobStatus(ctx context.Context, in *GetBulkMBHeadJobStatusRequest, opts ...grpc.CallOption) (*GetBulkMBHeadJobStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetBulkMBHeadJobStatusResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_GetBulkMBHeadJobStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) ListBulkMBHeadJobFailures(ctx context.Context, in *ListBulkMBHeadJobFailuresRequest, opts ...grpc.CallOption) (*ListBulkMBHeadJobFailuresResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBulkMBHeadJobFailuresResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_ListBulkMBHeadJobFailures_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MBHeadServiceServer is the server API for MBHeadService service.
 // All implementations must embed UnimplementedMBHeadServiceServer
 // for forward compatibility.
@@ -1985,6 +2065,31 @@ type MBHeadServiceServer interface {
 	// RejectUnlockMBHead refuses a pending unlock request: the MB Head stays locked and
 	// returns to the state it was parked from (P10, K-52). Reason is REQUIRED.
 	RejectUnlockMBHead(context.Context, *RejectUnlockMBHeadRequest) (*RejectUnlockMBHeadResponse, error)
+	// BulkForceUnvalidateMBHead force-transitions up to 500 MB Heads from VALIDATED
+	// directly back to DRAFT in one step, bypassing the normal two-step
+	// RequestUnlockMBHead/GrantUnlockMBHead flow. Intended for Super Admin bulk
+	// re-triggering of the validate lifecycle. Runs asynchronously via a job: the
+	// response returns immediately with job info while the per-item work happens in
+	// a background worker — poll GetBulkMBHeadJobStatus for progress.
+	BulkForceUnvalidateMBHead(context.Context, *BulkForceUnvalidateMBHeadRequest) (*BulkForceUnvalidateMBHeadResponse, error)
+	// BulkSubmitMBHead submits up to 500 MB Heads for approval in one request. Runs
+	// asynchronously via a job: the response returns immediately with job info while
+	// the per-item work happens in a background worker — poll GetBulkMBHeadJobStatus
+	// for progress.
+	BulkSubmitMBHead(context.Context, *BulkSubmitMBHeadRequest) (*BulkSubmitMBHeadResponse, error)
+	// BulkValidateMBHead validates up to 500 approved MB Heads in one request,
+	// freezing each one's cost and param snapshot. Runs asynchronously via a job: the
+	// response returns immediately with job info while the per-item work happens in
+	// a background worker — poll GetBulkMBHeadJobStatus for progress.
+	BulkValidateMBHead(context.Context, *BulkValidateMBHeadRequest) (*BulkValidateMBHeadResponse, error)
+	// GetBulkMBHeadJobStatus polls the live status and progress counters of a bulk
+	// MB Head lifecycle job (BulkForceUnvalidateMBHead, BulkSubmitMBHead, or
+	// BulkValidateMBHead) while it is still running.
+	GetBulkMBHeadJobStatus(context.Context, *GetBulkMBHeadJobStatusRequest) (*GetBulkMBHeadJobStatusResponse, error)
+	// ListBulkMBHeadJobFailures lists the per-item failures recorded by a finished
+	// (or in-progress) bulk MB Head lifecycle job, so the caller can see which MB
+	// Heads failed and why.
+	ListBulkMBHeadJobFailures(context.Context, *ListBulkMBHeadJobFailuresRequest) (*ListBulkMBHeadJobFailuresResponse, error)
 	mustEmbedUnimplementedMBHeadServiceServer()
 }
 
@@ -2054,6 +2159,21 @@ func (UnimplementedMBHeadServiceServer) GrantUnlockMBHead(context.Context, *Gran
 }
 func (UnimplementedMBHeadServiceServer) RejectUnlockMBHead(context.Context, *RejectUnlockMBHeadRequest) (*RejectUnlockMBHeadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RejectUnlockMBHead not implemented")
+}
+func (UnimplementedMBHeadServiceServer) BulkForceUnvalidateMBHead(context.Context, *BulkForceUnvalidateMBHeadRequest) (*BulkForceUnvalidateMBHeadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkForceUnvalidateMBHead not implemented")
+}
+func (UnimplementedMBHeadServiceServer) BulkSubmitMBHead(context.Context, *BulkSubmitMBHeadRequest) (*BulkSubmitMBHeadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkSubmitMBHead not implemented")
+}
+func (UnimplementedMBHeadServiceServer) BulkValidateMBHead(context.Context, *BulkValidateMBHeadRequest) (*BulkValidateMBHeadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkValidateMBHead not implemented")
+}
+func (UnimplementedMBHeadServiceServer) GetBulkMBHeadJobStatus(context.Context, *GetBulkMBHeadJobStatusRequest) (*GetBulkMBHeadJobStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBulkMBHeadJobStatus not implemented")
+}
+func (UnimplementedMBHeadServiceServer) ListBulkMBHeadJobFailures(context.Context, *ListBulkMBHeadJobFailuresRequest) (*ListBulkMBHeadJobFailuresResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBulkMBHeadJobFailures not implemented")
 }
 func (UnimplementedMBHeadServiceServer) mustEmbedUnimplementedMBHeadServiceServer() {}
 func (UnimplementedMBHeadServiceServer) testEmbeddedByValue()                       {}
@@ -2436,6 +2556,96 @@ func _MBHeadService_RejectUnlockMBHead_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MBHeadService_BulkForceUnvalidateMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkForceUnvalidateMBHeadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).BulkForceUnvalidateMBHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_BulkForceUnvalidateMBHead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).BulkForceUnvalidateMBHead(ctx, req.(*BulkForceUnvalidateMBHeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_BulkSubmitMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkSubmitMBHeadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).BulkSubmitMBHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_BulkSubmitMBHead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).BulkSubmitMBHead(ctx, req.(*BulkSubmitMBHeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_BulkValidateMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkValidateMBHeadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).BulkValidateMBHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_BulkValidateMBHead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).BulkValidateMBHead(ctx, req.(*BulkValidateMBHeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_GetBulkMBHeadJobStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBulkMBHeadJobStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).GetBulkMBHeadJobStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_GetBulkMBHeadJobStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).GetBulkMBHeadJobStatus(ctx, req.(*GetBulkMBHeadJobStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_ListBulkMBHeadJobFailures_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBulkMBHeadJobFailuresRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).ListBulkMBHeadJobFailures(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_ListBulkMBHeadJobFailures_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).ListBulkMBHeadJobFailures(ctx, req.(*ListBulkMBHeadJobFailuresRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MBHeadService_ServiceDesc is the grpc.ServiceDesc for MBHeadService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2522,6 +2732,26 @@ var MBHeadService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RejectUnlockMBHead",
 			Handler:    _MBHeadService_RejectUnlockMBHead_Handler,
+		},
+		{
+			MethodName: "BulkForceUnvalidateMBHead",
+			Handler:    _MBHeadService_BulkForceUnvalidateMBHead_Handler,
+		},
+		{
+			MethodName: "BulkSubmitMBHead",
+			Handler:    _MBHeadService_BulkSubmitMBHead_Handler,
+		},
+		{
+			MethodName: "BulkValidateMBHead",
+			Handler:    _MBHeadService_BulkValidateMBHead_Handler,
+		},
+		{
+			MethodName: "GetBulkMBHeadJobStatus",
+			Handler:    _MBHeadService_GetBulkMBHeadJobStatus_Handler,
+		},
+		{
+			MethodName: "ListBulkMBHeadJobFailures",
+			Handler:    _MBHeadService_ListBulkMBHeadJobFailures_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

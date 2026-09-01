@@ -59,6 +59,10 @@ const (
 	TypeCalculation            Type = "calculation"
 	TypeExport                 Type = "export"
 	TypeProductCostSheetExport Type = "product_cost_sheet_export"
+	// TypeMBBulkTransition is the Bulk MB Head Regenerate job type (Phase B): a parent job
+	// fans out one child per mbh_id, each child running one of the force-unvalidate/submit/
+	// validate transitions — see job.Execution's subtype for which one.
+	TypeMBBulkTransition Type = "mb_bulk_transition"
 )
 
 // String returns the string representation.

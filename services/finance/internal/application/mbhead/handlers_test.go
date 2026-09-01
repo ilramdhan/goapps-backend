@@ -111,6 +111,11 @@ func (m *MockRepository) RefreezeCostParams(ctx context.Context, id uuid.UUID, e
 	return args.Error(0)
 }
 
+func (m *MockRepository) ForceUnvalidateTransition(ctx context.Context, id uuid.UUID, currentVersion int, stateReason, actorUserID string) error {
+	args := m.Called(ctx, id, currentVersion, stateReason, actorUserID)
+	return args.Error(0)
+}
+
 func TestCreateHandler_Handle(t *testing.T) {
 	t.Run("success - creates new MB Head", func(t *testing.T) {
 		mockRepo := new(MockRepository)

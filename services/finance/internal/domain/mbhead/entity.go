@@ -718,6 +718,36 @@ func (e *Entity) Unrevoke(reason string) error {
 	return nil
 }
 
+// ForceUnvalidate forcibly transitions a VALIDATED head straight back to DRAFT for the
+// Bulk MB Head Regenerate feature (Super Admin only, gated one layer up by permission
+// finance.mb.head.bulkunvalidate). Unlike RequestUnlock/GrantUnlock's 2-step P10 dance,
+// this is a direct one-step force — see canForceUnvalidate for why it is a separate gate.
+//
+// 🔴 The reason is OPTIONAL, same rationale as Unrevoke/ReturnToDraft: this is not an
+// accusation, so nothing needs to be justified.
+//
+// 🔴 stateReason is PRESERVED, ⛔ never cleared, when the caller supplies an empty
+// reason — mirrors Unrevoke/ReturnToDraft (principle U-2).
+//
+// 🔴 The lock is cleared unconditionally: VALIDATED is a lockOnEnter state, so a head
+// reaching here is locked (or carries the legacy NULL/"not locked" reading); either way
+// the head must be fully editable again in DRAFT. Any pending unlock request is cleared
+// alongside it — forcing past VALIDATED makes a parked request moot.
+func (e *Entity) ForceUnvalidate(reason string) error {
+	if !canForceUnvalidate(e.entryStatus) {
+		return ErrInvalidTransition
+	}
+	e.entryStatus = StatusDraft
+	e.isLocked = false
+	e.unlockRequestedAt = nil
+	e.unlockRequestedBy = nil
+	if reason != "" {
+		e.stateReason = reason
+	}
+	e.RecomputeCheckStatusCalc()
+	return nil
+}
+
 // Revoke ~~transitions any non-terminal state to REVOKED, requiring a reason. Terminal —
 // no further transitions are possible after Revoke.~~
 //

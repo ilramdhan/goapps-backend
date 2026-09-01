@@ -101,6 +101,19 @@ func canRevoke(_ string) bool {
 	return false
 }
 
+// canForceUnvalidate reports whether `from` may be force-unvalidated (Bulk MB Head
+// Regenerate, Phase B, Super-Admin only). Only VALIDATED qualifies.
+//
+// 🔴 This is a SEPARATE gate, deliberately ⛔ NOT added to allowedTransitions. Adding
+// StatusValidated → StatusDraft there would also legalize it for the normal
+// single-item flow, which must stay the 2-step RequestUnlock/GrantUnlock dance — see
+// state_machine_freeze_test.go for the frozen matrix this must not disturb. The bulk
+// force path is a distinct, separately-gated operation (finance.mb.head.bulkunvalidate)
+// and gets its own predicate, mirroring how canAutoRelock stays outside the map too.
+func canForceUnvalidate(from string) bool {
+	return from == StatusValidated
+}
+
 // canRequestUnlock reports whether an unlock may be requested from `from`. Only the
 // two states that lockOnEnter locks (APPROVED, VALIDATED) qualify — anything else
 // is either already editable or not a lockable state at all.

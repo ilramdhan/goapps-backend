@@ -19,6 +19,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductapplicableparam"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
+	appmbhead "github.com/mutugading/goapps-backend/services/finance/internal/application/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
@@ -172,8 +173,25 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 		"",
 	)
 
+	// Bulk MB Head Regenerate (Phase C). Reuses the SAME application-layer handlers
+	// the ordinary single-head Submit/Validate RPCs use (built here from the same
+	// repos, not shared instances — the worker and gRPC server are separate
+	// processes) so a bulk-triggered transition behaves identically to a manual one,
+	// including the [G.5] composition-sum gate on submit/validate.
+	mbCompositionRepo := postgres.NewMBCompositionRepository(db)
+	mbHeadRepo := postgres.NewMBHeadRepository(db, mbCompositionRepo)
+	mbParamRepo := postgres.NewMBParamRepository(db)
+	mbBulkTransitionHandler := workerinternal.NewMBBulkTransitionHandler(
+		jobRepo,
+		appmbhead.NewForceUnvalidateHandler(mbHeadRepo),
+		appmbhead.NewSubmitHandlerWithComposition(mbHeadRepo, mbCompositionRepo),
+		appmbhead.NewValidateHandlerWithComposition(mbHeadRepo, mbParamRepo, mbCompositionRepo),
+		log.Logger,
+	)
+
 	consumers := buildConsumers(
 		rmqConn, syncHandler, rmCostExec, rmCostExportHandler, costingImportHandler, costSheetExportHandler,
+		mbBulkTransitionHandler,
 		cfg.RabbitMQ.ExportWorkerConcurrency,
 	)
 
@@ -215,6 +233,13 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 //     locally scoped (no shared writer or package-level mutable state). This
 //     is also the one queue where batch parents fan out 200+ child jobs, so
 //     it is the only one with a real sequential-processing bottleneck.
+//   - mb_bulk_transition: each child runs a full mbhead.Entity workflow
+//     transition (force_unvalidate/submit/validate) against ITS OWN mbh_id, so
+//     children never race each other on the same row — but ValidateHandler's
+//     underlying repo call was not audited for concurrent-write safety across
+//     DIFFERENT rows sharing downstream tables (cost_product_master/
+//     cost_route_*), so this is left sequential as a conservative default,
+//     same reasoning as costing_import.
 func buildConsumers(
 	rmqConn *rabbitmq.Connection,
 	syncHandler *oraclesync.SyncHandler,
@@ -222,6 +247,7 @@ func buildConsumers(
 	rmCostExportHandler *workerinternal.RMCostExportHandler,
 	costingImportHandler *workerinternal.CostingImportHandler,
 	costSheetExportHandler *workerinternal.CostSheetExportHandler,
+	mbBulkTransitionHandler *workerinternal.MBBulkTransitionHandler,
 	exportConcurrency int,
 ) []*rabbitmq.Consumer {
 	syncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
@@ -239,11 +265,15 @@ func buildConsumers(
 	costSheetExportMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return costSheetExportHandler.Handle(ctx, msg)
 	}
+	mbBulkTransitionMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		return mbBulkTransitionHandler.Handle(ctx, msg)
+	}
 	return []*rabbitmq.Consumer{
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueOracleSync, syncMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostCalc, rmCostMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostExport, rmCostExportMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueImportJob, costingImportMsgHandler, log.Logger),
+		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueMBBulkTransition, mbBulkTransitionMsgHandler, log.Logger),
 		rabbitmq.NewConcurrentConsumer(
 			rmqConn, rabbitmq.QueueProductCostSheetExport, costSheetExportMsgHandler, log.Logger, exportConcurrency,
 		),

@@ -10,6 +10,8 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	appmbhead "github.com/mutugading/goapps-backend/services/finance/internal/application/mbhead"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbheadbulk"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/machine"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcomposition"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
@@ -54,6 +56,16 @@ type MBHeadHandler struct {
 	importHandler        *appmbhead.ImportHandler
 	templateHandler      *appmbhead.TemplateHandler
 	validation           *ValidationHelper
+	// Bulk MB Head Regenerate (Phase C). bulkTransitionHandler queues the async
+	// batch job; bulkJobRepo backs GetBulkMBHeadJobStatus/ListBulkMBHeadJobFailures
+	// (parent status + per-child failure detail); bulkMBHeadRepo is used ONLY for
+	// the best-effort mb_costing lookup in ListBulkMBHeadJobFailures — it is the
+	// same repo instance as the one backing every other handler above, not a
+	// second connection. All three are nil until WithBulkTransition is called, and
+	// every RPC that uses them degrades to a clean 503 rather than a nil dereference.
+	bulkTransitionHandler *mbheadbulk.RequestBulkTransitionHandler
+	bulkJobRepo           job.Repository
+	bulkMBHeadRepo        mbhead.Repository
 }
 
 // NewMBHeadHandler constructs an MBHeadHandler without the [G.5] composition-sum
@@ -138,6 +150,19 @@ func (h *MBHeadHandler) WithUnlockActors(s appmbhead.UnlockActorStore) *MBHeadHa
 	h.requestUnlockHandler = h.requestUnlockHandler.WithUnlockActors(s)
 	h.grantUnlockHandler = h.grantUnlockHandler.WithUnlockActors(s)
 	h.rejectUnlockHandler = h.rejectUnlockHandler.WithUnlockActors(s)
+	return h
+}
+
+// WithBulkTransition attaches the Bulk MB Head Regenerate dependencies (Phase C)
+// and returns the handler for chaining. jobRepo and repo are the SAME instances
+// already wired to the rest of the server (cmd/server/main.go passes jobRepo and
+// mbHeadRepo straight through) — nothing new is connected here.
+func (h *MBHeadHandler) WithBulkTransition(
+	handler *mbheadbulk.RequestBulkTransitionHandler, jobRepo job.Repository, repo mbhead.Repository,
+) *MBHeadHandler {
+	h.bulkTransitionHandler = handler
+	h.bulkJobRepo = jobRepo
+	h.bulkMBHeadRepo = repo
 	return h
 }
 

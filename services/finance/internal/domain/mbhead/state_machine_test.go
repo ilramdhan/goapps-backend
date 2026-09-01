@@ -2,6 +2,7 @@ package mbhead
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -403,6 +404,102 @@ func TestUnrevoke_RecomputesCheckStatusCalc(t *testing.T) {
 	e := newEntityAt(StatusRevoked, false)
 
 	require.NoError(t, e.Unrevoke(""))
+	require.NotNil(t, e.MBHCheckStatusCalc())
+	assert.Equal(t, CheckStatusWaiting, *e.MBHCheckStatusCalc())
+}
+
+// TestCanForceUnvalidate_OnlyValidatedQualifies table-drives canForceUnvalidate across
+// every known status: only StatusValidated must report true (Bulk MB Head Regenerate,
+// Phase B/G) — this predicate is deliberately kept OUT of allowedTransitions (see the
+// doc comment on canForceUnvalidate), so it needs its own direct coverage rather than
+// relying on the generic canTransition table-driven tests above.
+func TestCanForceUnvalidate_OnlyValidatedQualifies(t *testing.T) {
+	tests := []struct {
+		status string
+		want   bool
+	}{
+		{StatusDraft, false},
+		{StatusSubmitted, false},
+		{StatusApproved, false},
+		{StatusValidated, true},
+		{StatusUnApproved, false},
+		{StatusRevoked, false},
+		{StatusRejected, false},
+		{StatusUnlockRequested, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.status, func(t *testing.T) {
+			assert.Equal(t, tt.want, canForceUnvalidate(tt.status))
+		})
+	}
+}
+
+// TestForceUnvalidate_FromValidated_Succeeds proves the happy path: VALIDATED -> DRAFT,
+// the lock is cleared unconditionally, and a supplied reason is stored.
+func TestForceUnvalidate_FromValidated_Succeeds(t *testing.T) {
+	e := newEntityAt(StatusValidated, false)
+	e.isLocked = true
+	requestedAt := time.Now()
+	requestedBy := "someone"
+	e.unlockRequestedAt = &requestedAt
+	e.unlockRequestedBy = &requestedBy
+
+	require.NoError(t, e.ForceUnvalidate("bulk regenerate"))
+	assert.Equal(t, StatusDraft, e.EntryStatus())
+	assert.False(t, e.IsLocked(), "ForceUnvalidate must clear the lock unconditionally")
+	assert.Nil(t, e.UnlockRequestedAt(), "ForceUnvalidate must clear any pending unlock request")
+	assert.Nil(t, e.UnlockRequestedBy())
+	assert.Equal(t, "bulk regenerate", e.StateReason())
+}
+
+// TestForceUnvalidate_EmptyReason_PreservesPriorReason mirrors Unrevoke/ReturnToDraft:
+// an empty reason must NOT clear stateReason (principle U-2).
+func TestForceUnvalidate_EmptyReason_PreservesPriorReason(t *testing.T) {
+	e := newEntityAt(StatusValidated, false)
+	e.stateReason = "validated by QA"
+
+	require.NoError(t, e.ForceUnvalidate(""))
+	assert.Equal(t, StatusDraft, e.EntryStatus())
+	assert.Equal(t, "validated by QA", e.StateReason(),
+		"an empty reason must preserve the prior stateReason")
+}
+
+// TestForceUnvalidate_ClearsLock_EvenWithoutReason proves the lock/unlock-request
+// clearing is unconditional and independent of whether a reason was supplied.
+func TestForceUnvalidate_ClearsLock_EvenWithoutReason(t *testing.T) {
+	e := newEntityAt(StatusValidated, false)
+	e.isLocked = true
+
+	require.NoError(t, e.ForceUnvalidate(""))
+	assert.False(t, e.IsLocked())
+}
+
+// TestForceUnvalidate_FromNonValidated_Fails proves VALIDATED is the ONLY legal
+// origin: every other status must be refused with ErrInvalidTransition and must not
+// mutate any state.
+func TestForceUnvalidate_FromNonValidated_Fails(t *testing.T) {
+	for _, status := range []string{
+		StatusDraft, StatusSubmitted, StatusApproved,
+		StatusUnApproved, StatusRevoked, StatusRejected, StatusUnlockRequested,
+	} {
+		t.Run(status, func(t *testing.T) {
+			e := newEntityAt(status, false)
+			e.isLocked = true
+
+			err := e.ForceUnvalidate("bulk regenerate")
+			assert.ErrorIs(t, err, ErrInvalidTransition)
+			assert.Equal(t, status, e.EntryStatus(), "a failed ForceUnvalidate must not mutate state")
+			assert.True(t, e.IsLocked(), "a failed ForceUnvalidate must not touch the lock")
+			assert.Empty(t, e.StateReason(), "a failed ForceUnvalidate must not write a reason")
+		})
+	}
+}
+
+// TestForceUnvalidate_RecomputesCheckStatusCalc mirrors TestUnrevoke_RecomputesCheckStatusCalc.
+func TestForceUnvalidate_RecomputesCheckStatusCalc(t *testing.T) {
+	e := newEntityAt(StatusValidated, false)
+
+	require.NoError(t, e.ForceUnvalidate(""))
 	require.NotNil(t, e.MBHCheckStatusCalc())
 	assert.Equal(t, CheckStatusWaiting, *e.MBHCheckStatusCalc())
 }

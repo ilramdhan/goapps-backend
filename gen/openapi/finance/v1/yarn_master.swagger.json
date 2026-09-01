@@ -2967,6 +2967,172 @@
         ]
       }
     },
+    "/api/v1/finance/mb-heads/bulk-jobs/{jobId}/failures": {
+      "get": {
+        "summary": "ListBulkMBHeadJobFailures lists the per-item failures recorded by a finished\n(or in-progress) bulk MB Head lifecycle job, so the caller can see which MB\nHeads failed and why.",
+        "operationId": "MBHeadService_ListBulkMBHeadJobFailures",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBulkMBHeadJobFailuresResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "description": "job_execution.job_id (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/bulk-jobs/{jobId}/status": {
+      "get": {
+        "summary": "GetBulkMBHeadJobStatus polls the live status and progress counters of a bulk\nMB Head lifecycle job (BulkForceUnvalidateMBHead, BulkSubmitMBHead, or\nBulkValidateMBHead) while it is still running.",
+        "operationId": "MBHeadService_GetBulkMBHeadJobStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetBulkMBHeadJobStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "description": "job_execution.job_id (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/bulk-submit": {
+      "post": {
+        "summary": "BulkSubmitMBHead submits up to 500 MB Heads for approval in one request. Runs\nasynchronously via a job: the response returns immediately with job info while\nthe per-item work happens in a background worker — poll GetBulkMBHeadJobStatus\nfor progress.",
+        "operationId": "MBHeadService_BulkSubmitMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BulkSubmitMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BulkSubmitMBHeadRequest is the request for submitting a batch of MB Heads for\napproval in one call.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BulkSubmitMBHeadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/bulk-unvalidate": {
+      "post": {
+        "summary": "BulkForceUnvalidateMBHead force-transitions up to 500 MB Heads from VALIDATED\ndirectly back to DRAFT in one step, bypassing the normal two-step\nRequestUnlockMBHead/GrantUnlockMBHead flow. Intended for Super Admin bulk\nre-triggering of the validate lifecycle. Runs asynchronously via a job: the\nresponse returns immediately with job info while the per-item work happens in\na background worker — poll GetBulkMBHeadJobStatus for progress.",
+        "operationId": "MBHeadService_BulkForceUnvalidateMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BulkForceUnvalidateMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BulkForceUnvalidateMBHeadRequest is the request for force-transitioning a batch\nof MB Heads from VALIDATED directly back to DRAFT in one step, bypassing the\nnormal RequestUnlockMBHead/GrantUnlockMBHead two-step flow. Intended for Super\nAdmin bulk re-triggering of the validate lifecycle.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BulkForceUnvalidateMBHeadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
+    "/api/v1/finance/mb-heads/bulk-validate": {
+      "post": {
+        "summary": "BulkValidateMBHead validates up to 500 approved MB Heads in one request,\nfreezing each one's cost and param snapshot. Runs asynchronously via a job: the\nresponse returns immediately with job info while the per-item work happens in\na background worker — poll GetBulkMBHeadJobStatus for progress.",
+        "operationId": "MBHeadService_BulkValidateMBHead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BulkValidateMBHeadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BulkValidateMBHeadRequest is the request for validating a batch of approved MB\nHeads in one call, freezing each one's cost and param snapshot.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BulkValidateMBHeadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
     "/api/v1/finance/mb-heads/export": {
       "get": {
         "summary": "ExportMBHeads exports MB Head records to Excel.",
@@ -5615,6 +5781,142 @@
       },
       "description": "BoxBobbinCostRate represents a period-specific rate for a Box Bobbin Cost config."
     },
+    "v1BulkForceUnvalidateMBHeadRequest": {
+      "type": "object",
+      "properties": {
+        "mbhIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "MB Head UUIDs to force-unvalidate. 1-500 items, each a valid UUID."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for force-unvalidating. Optional."
+        }
+      },
+      "description": "BulkForceUnvalidateMBHeadRequest is the request for force-transitioning a batch\nof MB Heads from VALIDATED directly back to DRAFT in one step, bypassing the\nnormal RequestUnlockMBHead/GrantUnlockMBHead two-step flow. Intended for Super\nAdmin bulk re-triggering of the validate lifecycle."
+    },
+    "v1BulkForceUnvalidateMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1BulkMBHeadJobInfo",
+          "description": "Queued job summary (job_id, job_code, status, progress counters)."
+        }
+      },
+      "description": "BulkForceUnvalidateMBHeadResponse is the response for queuing a bulk\nforce-unvalidate job. The job runs asynchronously; poll GetBulkMBHeadJobStatus\nfor progress."
+    },
+    "v1BulkMBHeadJobFailure": {
+      "type": "object",
+      "properties": {
+        "mbhId": {
+          "type": "string",
+          "description": "MB Head UUID that failed."
+        },
+        "mbCosting": {
+          "type": "string",
+          "description": "MB Head's cost code / identifier, for display without a follow-up lookup."
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message explaining the failure."
+        }
+      },
+      "description": "BulkMBHeadJobFailure describes one MB Head that failed within a bulk job."
+    },
+    "v1BulkMBHeadJobInfo": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "description": "job_execution.job_id (UUID)."
+        },
+        "jobCode": {
+          "type": "string",
+          "description": "Human-readable code (e.g. \"MBH_BULK-202609-001\")."
+        },
+        "status": {
+          "type": "string",
+          "description": "Initial status, typically \"QUEUED\"."
+        },
+        "totalChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total MB Heads expected to be processed by this job."
+        },
+        "completedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "MB Heads processed successfully so far."
+        },
+        "failedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "MB Heads that failed so far."
+        }
+      },
+      "description": "BulkMBHeadJobInfo summarizes a freshly-queued bulk MB Head lifecycle job."
+    },
+    "v1BulkSubmitMBHeadRequest": {
+      "type": "object",
+      "properties": {
+        "mbhIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "MB Head UUIDs to submit. 1-500 items, each a valid UUID."
+        }
+      },
+      "description": "BulkSubmitMBHeadRequest is the request for submitting a batch of MB Heads for\napproval in one call."
+    },
+    "v1BulkSubmitMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1BulkMBHeadJobInfo",
+          "description": "Queued job summary (job_id, job_code, status, progress counters)."
+        }
+      },
+      "description": "BulkSubmitMBHeadResponse is the response for queuing a bulk submit job. The job\nruns asynchronously; poll GetBulkMBHeadJobStatus for progress."
+    },
+    "v1BulkValidateMBHeadRequest": {
+      "type": "object",
+      "properties": {
+        "mbhIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "MB Head UUIDs to validate. 1-500 items, each a valid UUID."
+        }
+      },
+      "description": "BulkValidateMBHeadRequest is the request for validating a batch of approved MB\nHeads in one call, freezing each one's cost and param snapshot."
+    },
+    "v1BulkValidateMBHeadResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1BulkMBHeadJobInfo",
+          "description": "Queued job summary (job_id, job_code, status, progress counters)."
+        }
+      },
+      "description": "BulkValidateMBHeadResponse is the response for queuing a bulk validate job. The\njob runs asynchronously; poll GetBulkMBHeadJobStatus for progress."
+    },
     "v1CalculateDozingRequest": {
       "type": "object",
       "properties": {
@@ -7142,6 +7444,43 @@
       },
       "description": "GetBoxBobbinCostResponse is the response for retrieving a Box Bobbin Cost config."
     },
+    "v1GetBulkMBHeadJobStatusResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "job_execution.job_id (UUID)."
+        },
+        "jobCode": {
+          "type": "string",
+          "description": "Human-readable code (e.g. \"MBH_BULK-202609-001\")."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status (e.g. \"QUEUED\", \"PROCESSING\", \"DONE\", \"FAILED\", \"PARTIAL\")."
+        },
+        "totalChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total MB Heads expected to be processed by this job."
+        },
+        "completedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "MB Heads processed successfully so far."
+        },
+        "failedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "MB Heads that failed so far."
+        }
+      },
+      "description": "GetBulkMBHeadJobStatusResponse reports the bulk job's current status and live\nchild-completion counters."
+    },
     "v1GetInterminglingResponse": {
       "type": "object",
       "properties": {
@@ -7808,6 +8147,24 @@
         }
       },
       "description": "ListBoxBobbinCostsResponse is the response for listing Box Bobbin Cost configs."
+    },
+    "v1ListBulkMBHeadJobFailuresResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BulkMBHeadJobFailure"
+          },
+          "description": "Failed items, in the order the worker processed them."
+        }
+      },
+      "description": "ListBulkMBHeadJobFailuresResponse lists every MB Head that failed within a\nbulk job, with its error message."
     },
     "v1ListInterminglingsResponse": {
       "type": "object",

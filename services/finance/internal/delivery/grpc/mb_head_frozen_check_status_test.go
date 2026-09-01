@@ -93,6 +93,10 @@ func (f *fakeFrozenMBHeadRepo) RefreezeCostParams(_ context.Context, _ uuid.UUID
 	return nil
 }
 
+func (f *fakeFrozenMBHeadRepo) ForceUnvalidateTransition(_ context.Context, _ uuid.UUID, _ int, _, _ string) error {
+	return nil
+}
+
 // fakeMBMachineRepo resolves the "MB" machine that B5 pins every create to.
 type fakeMBMachineRepo struct{}
 

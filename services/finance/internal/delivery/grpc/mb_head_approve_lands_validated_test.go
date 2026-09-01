@@ -121,6 +121,10 @@ func (f *approveFakeRepo) RefreezeCostParams(_ context.Context, _ uuid.UUID, _ *
 	return nil
 }
 
+func (f *approveFakeRepo) ForceUnvalidateTransition(_ context.Context, _ uuid.UUID, _ int, _, _ string) error {
+	return nil
+}
+
 // approveFakeParamRepo serves the 8 recipe params ValidateHandler freezes. Only
 // ListActive is exercised; the rest satisfy the interface.
 type approveFakeParamRepo struct{}
