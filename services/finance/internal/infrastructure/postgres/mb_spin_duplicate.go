@@ -65,7 +65,16 @@ func (r *MBSpinRepository) DuplicateSpin(ctx context.Context, in mbspin.Duplicat
 	// spin. Checked here, at the same locked-row snapshot used by
 	// AssertNoParentCycle below, so a concurrent re-parent cannot slip past it —
 	// mirroring why the source row is loaded FOR UPDATE in the first place.
+	//
+	// A self-referencing parent (mbs_parent_spin_id = mbs_id) is not an ordinary
+	// "already duplicated" source — migration 000484 deliberately allows the DB
+	// to store that self-loop, and it must surface as ErrParentCycle so the
+	// caller sees a lineage-integrity failure, not a routine re-duplication
+	// rejection.
 	if src.ParentSpinID.Valid {
+		if parentID := nullableUUIDPtr(src.ParentSpinID); parentID != nil && *parentID == in.SourceSpinID {
+			return mbspin.DuplicateOutput{}, mbspin.ErrParentCycle
+		}
 		return mbspin.DuplicateOutput{}, mbspin.ErrAlreadyDuplicated
 	}
 
