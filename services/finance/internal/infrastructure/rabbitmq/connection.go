@@ -37,6 +37,10 @@ const (
 	QueueImportJob = "finance.costing.import"
 	// RoutingKeyImportJob is the routing key for costing data import jobs.
 	RoutingKeyImportJob = "costing_import"
+	// QueueMBBulkTransition is the queue for Bulk MB Head Regenerate transition jobs.
+	QueueMBBulkTransition = "finance.jobs.mb_bulk_transition"
+	// RoutingKeyMBBulkTransition is the routing key for Bulk MB Head Regenerate messages.
+	RoutingKeyMBBulkTransition = "mb_bulk_transition"
 	// DeadLetterExchange is the dead letter exchange for failed messages.
 	DeadLetterExchange = "finance.jobs.dlx"
 	// DeadLetterQueue is the dead letter queue.
@@ -343,49 +347,42 @@ func (c *Connection) declareTopology() error {
 		return fmt.Errorf("declare exchange: %w", err)
 	}
 
-	// Oracle sync queue with dead-letter routing.
+	// Every job queue below is declared with dead-letter routing to DeadLetterExchange
+	// and bound to ExchangeName by its own routing key.
 	args := amqp.Table{
 		"x-dead-letter-exchange": DeadLetterExchange,
 	}
-	if _, err := c.channel.QueueDeclare(QueueOracleSync, true, false, false, false, args); err != nil {
-		return fmt.Errorf("declare oracle sync queue: %w", err)
+	queues := []struct {
+		name       string
+		routingKey string
+	}{
+		{QueueOracleSync, RoutingKeyOracleSync},
+		{QueueRMCostCalc, RoutingKeyRMCostCalc},
+		{QueueRMCostExport, RoutingKeyRMCostExport},
+		{QueueProductCostSheetExport, RoutingKeyProductCostSheetExport},
+		{QueueImportJob, RoutingKeyImportJob},
+		{QueueMBBulkTransition, RoutingKeyMBBulkTransition},
 	}
-	if err := c.channel.QueueBind(QueueOracleSync, RoutingKeyOracleSync, ExchangeName, false, nil); err != nil {
-		return fmt.Errorf("bind oracle sync queue: %w", err)
-	}
-
-	// RM cost calculation queue with dead-letter routing.
-	if _, err := c.channel.QueueDeclare(QueueRMCostCalc, true, false, false, false, args); err != nil {
-		return fmt.Errorf("declare rm cost calc queue: %w", err)
-	}
-	if err := c.channel.QueueBind(QueueRMCostCalc, RoutingKeyRMCostCalc, ExchangeName, false, nil); err != nil {
-		return fmt.Errorf("bind rm cost calc queue: %w", err)
-	}
-
-	// RM cost export queue with dead-letter routing.
-	if _, err := c.channel.QueueDeclare(QueueRMCostExport, true, false, false, false, args); err != nil {
-		return fmt.Errorf("declare rm cost export queue: %w", err)
-	}
-	if err := c.channel.QueueBind(QueueRMCostExport, RoutingKeyRMCostExport, ExchangeName, false, nil); err != nil {
-		return fmt.Errorf("bind rm cost export queue: %w", err)
+	for _, q := range queues {
+		if err := c.declareJobQueue(q.name, q.routingKey, args); err != nil {
+			return err
+		}
 	}
 
-	// Product cost sheet export queue with dead-letter routing.
-	if _, err := c.channel.QueueDeclare(QueueProductCostSheetExport, true, false, false, false, args); err != nil {
-		return fmt.Errorf("declare product cost sheet export queue: %w", err)
-	}
-	if err := c.channel.QueueBind(QueueProductCostSheetExport, RoutingKeyProductCostSheetExport, ExchangeName, false, nil); err != nil {
-		return fmt.Errorf("bind product cost sheet export queue: %w", err)
-	}
+	return nil
+}
 
-	// Costing import queue with dead-letter routing.
-	if _, err := c.channel.QueueDeclare(QueueImportJob, true, false, false, false, args); err != nil {
-		return fmt.Errorf("declare costing import queue: %w", err)
+// declareJobQueue declares one durable, dead-letter-routed job queue and binds it to
+// ExchangeName by routingKey. Factored out of declareTopology so adding a job queue
+// is a one-line append to that function's slice literal instead of another
+// declare+bind pair inflating its cyclomatic complexity.
+func (c *Connection) declareJobQueue(name, routingKey string, args amqp.Table) error {
+	if _, err := c.channel.QueueDeclare(name, true, false, false, false, args); err != nil {
+		return fmt.Errorf("declare %s queue: %w", name, err)
 	}
-	if err := c.channel.QueueBind(QueueImportJob, RoutingKeyImportJob, ExchangeName, false, nil); err != nil {
-		return fmt.Errorf("bind costing import queue: %w", err)
+	if err := c.channel.QueueBind(name, routingKey, ExchangeName, false, nil); err != nil {
+		return fmt.Errorf("bind %s queue: %w", name, err)
 	}
-
 	return nil
 }
 

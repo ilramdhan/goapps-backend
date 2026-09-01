@@ -111,3 +111,21 @@ func (a *JobPublisherAdapter) PublishRMCostCalculation(
 	}
 	return a.publisher.PublishJob(ctx, RoutingKeyRMCostCalc, msg)
 }
+
+// PublishMBBulkTransition publishes one Bulk MB Head Regenerate child job message —
+// one mbh_id, one action (force_unvalidate/submit/validate). reason is only
+// meaningful for force_unvalidate; empty otherwise.
+func (a *JobPublisherAdapter) PublishMBBulkTransition(
+	ctx context.Context,
+	jobID, mbhID, action, reason, createdBy string,
+) error {
+	msg := JobMessage{
+		JobID:     jobID,
+		JobType:   "mb_bulk_transition",
+		Subtype:   action,
+		CreatedBy: createdBy,
+		Reason:    reason,
+		MbhID:     mbhID,
+	}
+	return a.publisher.PublishJob(ctx, RoutingKeyMBBulkTransition, msg)
+}
