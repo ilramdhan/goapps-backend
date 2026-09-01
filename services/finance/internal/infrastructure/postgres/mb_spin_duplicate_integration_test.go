@@ -12,7 +12,7 @@
 //
 // What is locked in here:
 //
-//	(a) the A5/D19 column policy — what is nulled, set, copied
+//	(a) the A5/D19 column policy (as amended by D31/D32) — what is nulled, set, copied
 //	(b) mbs_ldr_is_fixed / mbs_dozing_is_fixed land as FALSE, never NULL (§11 item 95)
 //	(c) a self-loop parent is rejected by the app layer even though the DB allows it
 //	(d) ListChildren returns R&D children only, one level deep (A6/A7, R13)
@@ -155,7 +155,6 @@ func (s *MBSpinDuplicateSuite) TestDuplicateSpin_ColumnPolicy() {
 	// NULLED — ERP / identity keys.
 	require.Nil(s.T(), clone.OracleSysID())
 	require.Nil(s.T(), clone.OrionItemCode())
-	require.Nil(s.T(), clone.MBCosting())
 
 	// SET — lineage + status. The clone is always born R&D (D5), regardless of the
 	// source's status (here deliberately "Spinning").
@@ -178,6 +177,12 @@ func (s *MBSpinDuplicateSuite) TestDuplicateSpin_ColumnPolicy() {
 	require.NotNil(s.T(), clone.Dozing())
 	require.InDelta(s.T(), 2.25, *clone.Dozing(), 0.0001)
 	require.Equal(s.T(), s.headID, clone.HeadID())
+
+	// COPIED — mbs_mb_costing (D31=B: the clone inherits the source's MB
+	// Costing instead of being nulled, unlike mbs_oracle_sys_id/orion_item_code
+	// above, which stay ERP/identity keys and remain NULLED).
+	require.NotNil(s.T(), clone.MBCosting())
+	require.Equal(s.T(), mbSpinDupPrefix+"MBC-"+src.String()[:8], *clone.MBCosting())
 }
 
 // TestDuplicateSpin_FixedMarkersAreExplicitFalse is the §11-item-95 guard: NULL reads
