@@ -33,6 +33,11 @@ const (
 	// EventUnlockRejected fires on UNLOCK_REQUESTED → APPROVED/VALIDATED. Recipient:
 	// the original requester.
 	EventUnlockRejected = "MB_HEAD_UNLOCK_REJECTED"
+	// EventUnrevoked fires on REVOKED → DRAFT only, gated by the dedicated
+	// finance.mb.head.unrevoke permission (Super Admin only). Recipients: holders of
+	// finance.mb.head.submit, same audience as EventReturnedToDraft since the row
+	// lands in DRAFT and they're the ones who can resubmit it.
+	EventUnrevoked = "MB_HEAD_UNREVOKED"
 )
 
 // Permission codes used as BY_PERMISSION rule values.
