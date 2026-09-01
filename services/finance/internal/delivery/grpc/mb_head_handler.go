@@ -39,6 +39,9 @@ type MBHeadHandler struct {
 	// the wiring here is gone.
 	rejectHandler        *appmbhead.RejectHandler
 	returnToDraftHandler *appmbhead.ReturnToDraftHandler
+	// unrevokeHandler drives REVOKED -> DRAFT (2026-08-31), gated by the dedicated
+	// finance.mb.head.unrevoke permission granted only to Super Admin.
+	unrevokeHandler *appmbhead.UnrevokeHandler
 	// P10 lock/unlock workflow handlers. All three go through the SAME
 	// repo.Transition path as the other workflow handlers, so the lock columns and
 	// the mst_mb_head_lock_log row are written in one transaction.
@@ -95,6 +98,7 @@ func NewMBHeadHandlerWithRecipeFull(
 		validateHandler:      appmbhead.NewValidateHandlerWithComposition(repo, paramRepo, compositionRepo),
 		rejectHandler:        appmbhead.NewRejectHandler(repo),
 		returnToDraftHandler: appmbhead.NewReturnToDraftHandler(repo),
+		unrevokeHandler:      appmbhead.NewUnrevokeHandler(repo),
 		requestUnlockHandler: appmbhead.NewRequestUnlockHandler(repo),
 		grantUnlockHandler:   appmbhead.NewGrantUnlockHandler(repo),
 		rejectUnlockHandler:  appmbhead.NewRejectUnlockHandler(repo),
@@ -115,6 +119,7 @@ func NewMBHeadHandlerWithRecipeFull(
 func (h *MBHeadHandler) WithNotifier(n appmbhead.Notifier) *MBHeadHandler {
 	h.submitHandler = h.submitHandler.WithNotifier(n)
 	h.returnToDraftHandler = h.returnToDraftHandler.WithNotifier(n)
+	h.unrevokeHandler = h.unrevokeHandler.WithNotifier(n)
 	h.requestUnlockHandler = h.requestUnlockHandler.WithNotifier(n)
 	// E4/E5 — the two unlock DECISIONS notify the original requester.
 	h.grantUnlockHandler = h.grantUnlockHandler.WithNotifier(n)
@@ -513,6 +518,37 @@ func (h *MBHeadHandler) ReturnMBHeadToDraft(ctx context.Context, req *financev1.
 	RecordMBHeadOperation("return_to_draft", true)
 	return &financev1.ReturnMBHeadToDraftResponse{
 		Base: successResponse("MB head returned to draft successfully"),
+		Data: mbHeadEntityToProto(entity),
+	}, nil
+}
+
+// UnrevokeMBHead sends a revoked MB Head back for editing (REVOKED -> DRAFT, user
+// decision 2026-08-31). Gated at the permission-interceptor level by
+// finance.mb.head.unrevoke, granted only to Super Admin.
+//
+// The reason is OPTIONAL here, same rationale as ReturnMBHeadToDraft above: when it is
+// empty the existing stateReason is PRESERVED. Do NOT add a reason-required check.
+func (h *MBHeadHandler) UnrevokeMBHead(ctx context.Context, req *financev1.UnrevokeMBHeadRequest) (*financev1.UnrevokeMBHeadResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		RecordMBHeadOperation("unrevoke", false)
+		return &financev1.UnrevokeMBHeadResponse{Base: baseResp}, nil
+	}
+
+	id, err := uuid.Parse(req.MbhId)
+	if err != nil {
+		RecordMBHeadOperation("unrevoke", false)
+		return &financev1.UnrevokeMBHeadResponse{Base: invalidIDResponse("mbh_id")}, nil //nolint:nilerr // BaseResponse pattern: error returned in response body
+	}
+
+	entity, err := h.unrevokeHandler.Handle(ctx, appmbhead.UnrevokeCommand{MbhID: id, Reason: req.Reason, ActorUserID: getUserFromContext(ctx)})
+	if err != nil {
+		RecordMBHeadOperation("unrevoke", false)
+		return &financev1.UnrevokeMBHeadResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+
+	RecordMBHeadOperation("unrevoke", true)
+	return &financev1.UnrevokeMBHeadResponse{
+		Base: successResponse("MB head unrevoked successfully"),
 		Data: mbHeadEntityToProto(entity),
 	}, nil
 }

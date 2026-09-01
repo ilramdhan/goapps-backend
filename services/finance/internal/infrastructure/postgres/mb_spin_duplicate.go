@@ -60,6 +60,24 @@ func (r *MBSpinRepository) DuplicateSpin(ctx context.Context, in mbspin.Duplicat
 		return mbspin.DuplicateOutput{}, err
 	}
 
+	// Only a root spin (mbs_parent_spin_id IS NULL) may be duplicated: this caps
+	// lineage depth at one level and rejects re-duplicating an already-cloned
+	// spin. Checked here, at the same locked-row snapshot used by
+	// AssertNoParentCycle below, so a concurrent re-parent cannot slip past it —
+	// mirroring why the source row is loaded FOR UPDATE in the first place.
+	//
+	// A self-referencing parent (mbs_parent_spin_id = mbs_id) is not an ordinary
+	// "already duplicated" source — migration 000484 deliberately allows the DB
+	// to store that self-loop, and it must surface as ErrParentCycle so the
+	// caller sees a lineage-integrity failure, not a routine re-duplication
+	// rejection.
+	if src.ParentSpinID.Valid {
+		if parentID := nullableUUIDPtr(src.ParentSpinID); parentID != nil && *parentID == in.SourceSpinID {
+			return mbspin.DuplicateOutput{}, mbspin.ErrParentCycle
+		}
+		return mbspin.DuplicateOutput{}, mbspin.ErrAlreadyDuplicated
+	}
+
 	depth, err := mbspin.AssertNoParentCycle(in.SourceSpinID, r.txParentLookup(ctx, tx))
 	if err != nil {
 		return mbspin.DuplicateOutput{}, err
@@ -174,6 +192,11 @@ type mbSpinCloneSource struct {
 	// (D31=B) — previously absent from this struct because insertClone nulled
 	// mbs_mb_costing directly instead of copying it.
 	MBCosting sql.NullString
+	// ParentSpinID is the source's OWN mbs_parent_spin_id (not the clone's,
+	// which is always set to the source's id). A non-NULL value here means the
+	// source is itself a previously duplicated child, which DuplicateSpin must
+	// reject (ErrAlreadyDuplicated) before any further lineage/insert work.
+	ParentSpinID sql.NullString
 }
 
 // lockSourceSpin loads the clonable columns of the source under FOR UPDATE.
@@ -197,7 +220,7 @@ func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uu
 		       s.mbs_vs_number, s.mbs_lusture_code,
 		       s.mbs_ldr_calculated_pct, s.mbs_ldr_adjustment_pct,
 		       s.mbs_ldr_type, s.mbs_ldr_is_actual,
-		       s.mbs_mb_costing
+		       s.mbs_mb_costing, s.mbs_parent_spin_id
 		  FROM mst_mb_spin s
 		  JOIN mst_mb_head h ON h.mbh_id = s.mbs_mbh_id
 		 WHERE s.mbs_id = $1 AND s.deleted_at IS NULL
@@ -212,7 +235,7 @@ func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uu
 		&s.VSNumber, &s.LustureCode,
 		&s.LDRCalculatedPct, &s.LDRAdjustmentPct,
 		&s.LDRType, &s.LDRIsActual,
-		&s.MBCosting,
+		&s.MBCosting, &s.ParentSpinID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbspin.ErrNotFound

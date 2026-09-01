@@ -419,6 +419,11 @@ func getRequiredPermission(fullMethod string) string {
 		// MB may pull their own MB back to DRAFT to fix it. Zero IAM migrations, zero new
 		// seeds. This is not a copy-paste slip.
 		"/finance.v1.MBHeadService/ReturnMBHeadToDraft": "finance.mb.head.submit",
+		// 2026-08-31: Unrevoke (REVOKED → DRAFT) is gated by a NEW, DEDICATED permission
+		// — unlike ReturnMBHeadToDraft above, it does NOT reuse an existing code. Granted
+		// only to SUPER_ADMIN via migration 000091; a plain author with submit rights
+		// cannot self-service their way out of REVOKED.
+		"/finance.v1.MBHeadService/UnrevokeMBHead": "finance.mb.head.unrevoke",
 		// P10 lock/unlock — the two sides of the workflow gate on DIFFERENT codes, per
 		// an explicit USER DECISION: asking for an unlock and deciding on one are
 		// separate entitlements, so a plain requester cannot approve anything.

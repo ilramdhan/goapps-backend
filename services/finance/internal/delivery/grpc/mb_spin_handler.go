@@ -232,7 +232,7 @@ func (h *MBSpinHandler) DeleteMBSpin(ctx context.Context, req *financev1.DeleteM
 
 	if err := h.deleteHandler.Handle(ctx, appmbspin.DeleteCommand{ID: id, DeletedBy: getUserFromContext(ctx)}); err != nil {
 		RecordMBSpinOperation("delete", false)
-		return &financev1.DeleteMBSpinResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.DeleteMBSpinResponse{Base: mbSpinErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern: error returned in response body
 	}
 
 	RecordMBSpinOperation("delete", true)
@@ -512,17 +512,21 @@ func applyRecalcToUpdateResponse(resp *financev1.UpdateMBSpinResponse, recalc *a
 	resp.ImpactTruncated = recalc.ImpactTruncated
 }
 
-// mbSpinErrorToBaseResponse maps the P8 duplicate/recalc sentinels, plus the
-// Task E LDR lock sentinel, onto HTTP-ish status codes.
+// mbSpinErrorToBaseResponse maps the P8 duplicate/recalc sentinels, the
+// Task E LDR lock sentinel, and the delete-guard sentinels onto HTTP-ish
+// status codes.
 //
 // The generic domainErrorToBaseResponse matches on substrings ("not found",
 // "already exists", "invalid") and none of these sentinels contains one, so
 // without this they would all surface as 500s — a cycle, a duplicate ERP code, a
-// too-wide fan-out, or a rejected adjustment on a locked spin are all
-// CLIENT-correctable conditions, not server faults.
+// too-wide fan-out, a rejected adjustment on a locked spin, or a delete blocked
+// by live children/cost-product usage are all CLIENT-correctable conditions,
+// not server faults.
 func mbSpinErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	switch {
 	case errors.Is(err, mbspin.ErrDuplicateOrionItemCode):
+		return ConflictResponse(err.Error())
+	case errors.Is(err, mbspin.ErrAlreadyDuplicated):
 		return ConflictResponse(err.Error())
 	case errors.Is(err, mbspin.ErrParentCycle),
 		errors.Is(err, mbspin.ErrMaxDuplicateDepth),
@@ -531,6 +535,10 @@ func mbSpinErrorToBaseResponse(err error) *commonv1.BaseResponse {
 		return BadRequestResponse(err.Error())
 	case errors.Is(err, mbspin.ErrTooManyChildren):
 		return BadRequestResponse(err.Error() + "; recalculate the affected child spins manually")
+	case errors.Is(err, mbspin.ErrHasChildren):
+		return ConflictResponse("cannot delete: this MB Spin has one or more duplicated children")
+	case errors.Is(err, mbspin.ErrInUse):
+		return ConflictResponse("cannot delete: this MB Spin is used by a Master Product's cost parameter")
 	default:
 		return domainErrorToBaseResponse(err)
 	}

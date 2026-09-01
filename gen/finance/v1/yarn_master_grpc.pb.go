@@ -1667,6 +1667,7 @@ const (
 	MBHeadService_RevokeMBHead_FullMethodName           = "/finance.v1.MBHeadService/RevokeMBHead"
 	MBHeadService_RejectMBHead_FullMethodName           = "/finance.v1.MBHeadService/RejectMBHead"
 	MBHeadService_ReturnMBHeadToDraft_FullMethodName    = "/finance.v1.MBHeadService/ReturnMBHeadToDraft"
+	MBHeadService_UnrevokeMBHead_FullMethodName         = "/finance.v1.MBHeadService/UnrevokeMBHead"
 	MBHeadService_RequestUnlockMBHead_FullMethodName    = "/finance.v1.MBHeadService/RequestUnlockMBHead"
 	MBHeadService_GrantUnlockMBHead_FullMethodName      = "/finance.v1.MBHeadService/GrantUnlockMBHead"
 	MBHeadService_RejectUnlockMBHead_FullMethodName     = "/finance.v1.MBHeadService/RejectUnlockMBHead"
@@ -1711,6 +1712,8 @@ type MBHeadServiceClient interface {
 	RejectMBHead(ctx context.Context, in *RejectMBHeadRequest, opts ...grpc.CallOption) (*RejectMBHeadResponse, error)
 	// ReturnMBHeadToDraft returns a rejected MB Head back to draft (K-29). Reason is optional; when empty the existing state_reason is preserved.
 	ReturnMBHeadToDraft(ctx context.Context, in *ReturnMBHeadToDraftRequest, opts ...grpc.CallOption) (*ReturnMBHeadToDraftResponse, error)
+	// UnrevokeMBHead returns a revoked MB Head back to draft. Reason is optional; when empty the existing state_reason is preserved.
+	UnrevokeMBHead(ctx context.Context, in *UnrevokeMBHeadRequest, opts ...grpc.CallOption) (*UnrevokeMBHeadResponse, error)
 	// RequestUnlockMBHead parks a locked MB Head (APPROVED/VALIDATED) in UNLOCK_REQUESTED
 	// so an approver can decide (P10). Reason is REQUIRED — an unlock reopens content that
 	// was already approved, so the record must say why.
@@ -1891,6 +1894,16 @@ func (c *mBHeadServiceClient) ReturnMBHeadToDraft(ctx context.Context, in *Retur
 	return out, nil
 }
 
+func (c *mBHeadServiceClient) UnrevokeMBHead(ctx context.Context, in *UnrevokeMBHeadRequest, opts ...grpc.CallOption) (*UnrevokeMBHeadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UnrevokeMBHeadResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_UnrevokeMBHead_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *mBHeadServiceClient) RequestUnlockMBHead(ctx context.Context, in *RequestUnlockMBHeadRequest, opts ...grpc.CallOption) (*RequestUnlockMBHeadResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RequestUnlockMBHeadResponse)
@@ -1960,6 +1973,8 @@ type MBHeadServiceServer interface {
 	RejectMBHead(context.Context, *RejectMBHeadRequest) (*RejectMBHeadResponse, error)
 	// ReturnMBHeadToDraft returns a rejected MB Head back to draft (K-29). Reason is optional; when empty the existing state_reason is preserved.
 	ReturnMBHeadToDraft(context.Context, *ReturnMBHeadToDraftRequest) (*ReturnMBHeadToDraftResponse, error)
+	// UnrevokeMBHead returns a revoked MB Head back to draft. Reason is optional; when empty the existing state_reason is preserved.
+	UnrevokeMBHead(context.Context, *UnrevokeMBHeadRequest) (*UnrevokeMBHeadResponse, error)
 	// RequestUnlockMBHead parks a locked MB Head (APPROVED/VALIDATED) in UNLOCK_REQUESTED
 	// so an approver can decide (P10). Reason is REQUIRED — an unlock reopens content that
 	// was already approved, so the record must say why.
@@ -2027,6 +2042,9 @@ func (UnimplementedMBHeadServiceServer) RejectMBHead(context.Context, *RejectMBH
 }
 func (UnimplementedMBHeadServiceServer) ReturnMBHeadToDraft(context.Context, *ReturnMBHeadToDraftRequest) (*ReturnMBHeadToDraftResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReturnMBHeadToDraft not implemented")
+}
+func (UnimplementedMBHeadServiceServer) UnrevokeMBHead(context.Context, *UnrevokeMBHeadRequest) (*UnrevokeMBHeadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UnrevokeMBHead not implemented")
 }
 func (UnimplementedMBHeadServiceServer) RequestUnlockMBHead(context.Context, *RequestUnlockMBHeadRequest) (*RequestUnlockMBHeadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RequestUnlockMBHead not implemented")
@@ -2346,6 +2364,24 @@ func _MBHeadService_ReturnMBHeadToDraft_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MBHeadService_UnrevokeMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnrevokeMBHeadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).UnrevokeMBHead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_UnrevokeMBHead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).UnrevokeMBHead(ctx, req.(*UnrevokeMBHeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _MBHeadService_RequestUnlockMBHead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RequestUnlockMBHeadRequest)
 	if err := dec(in); err != nil {
@@ -2470,6 +2506,10 @@ var MBHeadService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReturnMBHeadToDraft",
 			Handler:    _MBHeadService_ReturnMBHeadToDraft_Handler,
+		},
+		{
+			MethodName: "UnrevokeMBHead",
+			Handler:    _MBHeadService_UnrevokeMBHead_Handler,
 		},
 		{
 			MethodName: "RequestUnlockMBHead",

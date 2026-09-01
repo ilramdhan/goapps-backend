@@ -688,8 +688,9 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// GrantUnlockMBHead, RejectUnlockMBHead. 395 in gen - 17.
 	// 378 -> 384: ShadeService (6 RPCs) was registered in main.go all along but
 	// missing from registeredServiceDescs() — added, not a new RPC surface.
-	assert.Len(t, reachable, 384,
-		"reachable RPC count changed (395 in gen − 17 on the 3 unregistered services + 6 for the "+
+	// 384 -> 385: RPC BARU UnrevokeMBHead (REVOKED -> DRAFT, 2026-08-31).
+	assert.Len(t, reachable, 385,
+		"reachable RPC count changed (396 in gen − 17 on the 3 unregistered services + 6 for the "+
 			"previously-omitted-from-this-list ShadeService)")
 	// 130 -> 132: dua kunci basi UOM (ImportUOM/ExportUOM) dibetulkan jadi ImportUOMs/ExportUOMs, K-36
 	// 132 -> 135: tiga bulk RPC CostProductMasterService (Export/Import/DownloadTemplate) dijaga, K-43
@@ -709,7 +710,10 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// (Update/Delete), FormulaService (Update/Delete), MachineService
 	// (Update/Delete), LookupMasterService (Update/Delete), ProductGradeService
 	// (Update/Delete), RMGroupService (DeleteRMGroup) — 2+2+2+2+2+2+1 = 13.
-	assert.Equal(t, 158, guarded, "number of properly guarded RPCs changed")
+	// 158 -> 159: UnrevokeMBHead dijaga oleh kode permission BARU DAN DEDIKASI
+	// finance.mb.head.unrevoke (WAJIB di-seed migrasi IAM 000091, hanya untuk
+	// SUPER_ADMIN — bukan reuse permission submit seperti ReturnMBHeadToDraft).
+	assert.Equal(t, 159, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43

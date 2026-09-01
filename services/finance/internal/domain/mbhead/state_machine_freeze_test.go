@@ -66,7 +66,16 @@ import (
 // RPC is still alive to move them on, and cmd/backfill-mb-validate still walks rows
 // through APPROVED on purpose.
 //
-// The matrix below is the NEW frozen baseline for the 2026-08-26 workflow.
+// 🔴 UPDATED 2026-08-31 (USER DECISION) — a SECOND widening, this time of REVOKED:
+//   - REVOKED → DRAFT (new). A REVOKED row was otherwise frozen forever, with no
+//     legal move at all — unlike UN_APPROVED, which kept its exit edge in the
+//     2026-08-26 change above. This adds the same kind of exit-only edge: a new,
+//     dedicated, Super-Admin-only permission (finance.mb.head.unrevoke, IAM
+//     migration 000091) gates the "Unrevoke" transition. Revoke itself STAYS
+//     removed as a feature — canRevoke() still always reports false, so nothing
+//     can ENTER REVOKED. Only the way out changed.
+//
+// The matrix below is the NEW frozen baseline for the 2026-08-31 workflow.
 //
 // Read as: from -> the complete set of legal targets. Anything not listed is
 // illegal.
@@ -89,8 +98,9 @@ func TestWorkflow_LegalTransitionMatrix_Frozen(t *testing.T) {
 		// Kept on purpose: the EXIT from UN_APPROVED still works for legacy rows even
 		// though nothing can enter that state any more.
 		StatusUnApproved: {StatusApproved: true},
-		StatusRevoked:    {},
-		StatusRejected:   {StatusDraft: true},
+		// 2026-08-31: Unrevoke — exit-only edge, mirroring StatusUnApproved above.
+		StatusRevoked:  {StatusDraft: true},
+		StatusRejected: {StatusDraft: true},
 		StatusUnlockRequested: {
 			StatusApproved: true, StatusValidated: true, StatusDraft: true,
 		},

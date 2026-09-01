@@ -16,6 +16,9 @@
 //	(b) mbs_ldr_is_fixed / mbs_dozing_is_fixed land as FALSE, never NULL (§11 item 95)
 //	(c) a self-loop parent is rejected by the app layer even though the DB allows it
 //	(d) ListChildren returns R&D children only, one level deep (A6/A7, R13)
+//	(e) only a root spin (mbs_parent_spin_id IS NULL) may be duplicated — a
+//	    source that is itself a duplicated child is rejected with
+//	    ErrAlreadyDuplicated, capping lineage depth at one level
 package postgres_test
 
 import (
@@ -130,6 +133,25 @@ func (s *MBSpinDuplicateSuite) insertSource(status string) uuid.UUID {
 		mbSpinDupPrefix+"ORION-"+id.String()[:8],
 		mbSpinDupPrefix+"MBC-"+id.String()[:8],
 		mbSpinDupPrefix+"CC", status, mbSpinDupPrefix+"FP")
+	require.NoError(s.T(), err)
+	return id
+}
+
+// insertChildOf writes a row with mbs_parent_spin_id already set, bypassing
+// DuplicateSpin entirely. Used to simulate a grandchild for ListChildren
+// fixtures: since ErrAlreadyDuplicated now rejects duplicating a spin that
+// already has a parent, DuplicateSpin itself can no longer produce a
+// grandchild, but ListChildren's one-level-deep contract must still be proven
+// against a row shaped like one (e.g. surviving legacy data).
+func (s *MBSpinDuplicateSuite) insertChildOf(parentID uuid.UUID, status string) uuid.UUID {
+	id := uuid.New()
+	_, err := s.db.ExecContext(s.ctx, `
+		INSERT INTO mst_mb_spin (
+			mbs_id, mbs_mbh_id, mbs_mgt_name, mbs_parent_spin_id,
+			mbs_status, mbs_is_active, mbs_ldr_is_fixed, mbs_dozing_is_fixed,
+			created_at, created_by
+		) VALUES ($1, $2, $3, $4, $5, TRUE, TRUE, TRUE, NOW(), 'itest')`,
+		id, s.headID, mbSpinDupPrefix+"GRANDCHILD", parentID, status)
 	require.NoError(s.T(), err)
 	return id
 }
@@ -254,19 +276,28 @@ func (s *MBSpinDuplicateSuite) TestDuplicateSpin_MissingSourceIsNotFound() {
 	require.ErrorIs(s.T(), err, mbspin.ErrNotFound)
 }
 
-// TestDuplicateSpin_LineageDepthCountsAncestors: duplicating a clone reports depth 1.
-func (s *MBSpinDuplicateSuite) TestDuplicateSpin_LineageDepthCountsAncestors() {
+// TestDuplicateSpin_AlreadyDuplicatedSourceRejected supersedes the old
+// TestDuplicateSpin_LineageDepthCountsAncestors, which asserted that
+// duplicating a clone (producing a grandchild) succeeded with LineageDepth==1.
+// That is now deliberately disallowed: only a root spin (mbs_parent_spin_id IS
+// NULL) may be duplicated, so re-duplicating a spin that is itself already a
+// duplicated child must fail with ErrAlreadyDuplicated instead, and must not
+// insert anything.
+func (s *MBSpinDuplicateSuite) TestDuplicateSpin_AlreadyDuplicatedSourceRejected() {
 	root := s.insertSource(mbspin.StatusRnD)
 	child, err := s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{
 		SourceSpinID: root, ActorUserID: "itest-actor",
 	})
 	require.NoError(s.T(), err)
 
-	grandchild, err := s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{
+	_, err = s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{
 		SourceSpinID: child.NewSpinID, ActorUserID: "itest-actor",
 	})
+	require.ErrorIs(s.T(), err, mbspin.ErrAlreadyDuplicated)
+
+	children, err := s.repo.ListChildren(s.ctx, child.NewSpinID)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), 1, grandchild.LineageDepth)
+	require.Empty(s.T(), children, "the rejected duplicate must not have inserted a grandchild")
 }
 
 // TestListChildren_RnDOnlyAndOneLevelDeep covers A6, A7 and R13 together.
@@ -294,11 +325,10 @@ func (s *MBSpinDuplicateSuite) TestListChildren_RnDOnlyAndOneLevelDeep() {
 	require.NoError(s.T(), err)
 	require.NoError(s.T(), s.repo.SoftDelete(s.ctx, deleted.NewSpinID, "itest"))
 
-	// R13: a grandchild must NOT appear under root.
-	_, err = s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{
-		SourceSpinID: candidate.NewSpinID, ActorUserID: "itest-actor",
-	})
-	require.NoError(s.T(), err)
+	// R13: a grandchild must NOT appear under root. Inserted directly rather
+	// than via DuplicateSpin, since ErrAlreadyDuplicated now prevents
+	// DuplicateSpin from ever producing one from a live source.
+	s.insertChildOf(candidate.NewSpinID, mbspin.StatusRnD)
 
 	children, err := s.repo.ListChildren(s.ctx, root)
 	require.NoError(s.T(), err)
