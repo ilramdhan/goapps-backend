@@ -689,9 +689,14 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 378 -> 384: ShadeService (6 RPCs) was registered in main.go all along but
 	// missing from registeredServiceDescs() — added, not a new RPC surface.
 	// 384 -> 385: RPC BARU UnrevokeMBHead (REVOKED -> DRAFT, 2026-08-31).
-	assert.Len(t, reachable, 385,
+	// 385 -> 390: LIMA RPC BARU Bulk MB Head Regenerate (Phase C):
+	// BulkForceUnvalidateMBHead, BulkSubmitMBHead, BulkValidateMBHead,
+	// GetBulkMBHeadJobStatus, ListBulkMBHeadJobFailures. Generated types already
+	// existed in gen/finance/v1/yarn_master.pb.go from Phase A; this is the first
+	// time the methods are implemented on MBHeadHandler and reachable.
+	assert.Len(t, reachable, 390,
 		"reachable RPC count changed (396 in gen − 17 on the 3 unregistered services + 6 for the "+
-			"previously-omitted-from-this-list ShadeService)")
+			"previously-omitted-from-this-list ShadeService + 5 new Bulk MB Head Regenerate RPCs)")
 	// 130 -> 132: dua kunci basi UOM (ImportUOM/ExportUOM) dibetulkan jadi ImportUOMs/ExportUOMs, K-36
 	// 132 -> 135: tiga bulk RPC CostProductMasterService (Export/Import/DownloadTemplate) dijaga, K-43
 	// 135 -> 136: DuplicateMBSpin dijaga finance.yarnmaster.mbspin.create (di-seed iam 000057:47), P8
@@ -713,7 +718,13 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 158 -> 159: UnrevokeMBHead dijaga oleh kode permission BARU DAN DEDIKASI
 	// finance.mb.head.unrevoke (WAJIB di-seed migrasi IAM 000091, hanya untuk
 	// SUPER_ADMIN — bukan reuse permission submit seperti ReturnMBHeadToDraft).
-	assert.Equal(t, 159, guarded, "number of properly guarded RPCs changed")
+	// 159 -> 164: LIMA RPC BARU Bulk MB Head Regenerate (Phase C), semuanya dijaga
+	// kode permission BARU DAN DEDIKASI finance.mb.head.bulk{unvalidate,submit,
+	// validate} (WAJIB di-seed migrasi IAM 000092, hanya untuk SUPER_ADMIN). Kedua
+	// RPC baca (GetBulkMBHeadJobStatus/ListBulkMBHeadJobFailures) reuse
+	// finance.mb.head.bulkvalidate — 000092 tidak men-seed kode view terpisah untuk
+	// keduanya, dan tidak ada audiens di luar SUPER_ADMIN untuk dipisahkan.
+	assert.Equal(t, 164, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43

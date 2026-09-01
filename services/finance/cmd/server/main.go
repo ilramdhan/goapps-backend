@@ -37,6 +37,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupregistry"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbheadbulk"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbpush"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
@@ -134,11 +135,13 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	var rmCostExportPublisher apprmcost.ExportJobPublisher
 	var costSheetExportPublisher costsheet.ExportJobPublisher
 	var costCalcJobTriggerPub costcalc.JobTriggerPublisher
+	var bulkTransitionPublisher mbheadbulk.BulkTransitionJobPublisher
 	if rmqAdapter != nil {
 		oracleSyncPublisher = rmqAdapter
 		rmCostPublisher = rmqAdapter
 		rmCostExportPublisher = rmqAdapter
 		costSheetExportPublisher = rmqAdapter
+		bulkTransitionPublisher = rmqAdapter
 	}
 	if costJobPub != nil {
 		costCalcJobTriggerPub = costJobPub
@@ -508,6 +511,13 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// E4/E5 need the requester's UUID, which lives in mst_mb_head_lock_log.mbhl_meta.
 	// The MB head repository is the only thing that can read or write it.
 	mbHeadHandler = mbHeadHandler.WithUnlockActors(mbHeadRepo)
+	// Bulk MB Head Regenerate (Phase C). bulkTransitionPublisher is the SAME
+	// rmqAdapter every other job publisher above uses — nil when RabbitMQ is
+	// unavailable, in which case RequestBulkTransitionHandler.Handle refuses with
+	// mbheadbulk.ErrPublisherUnavailable and the gRPC handlers fold that into a
+	// clean 503 rather than panicking.
+	bulkTransitionHandler := mbheadbulk.NewRequestBulkTransitionHandler(jobRepo, bulkTransitionPublisher)
+	mbHeadHandler = mbHeadHandler.WithBulkTransition(bulkTransitionHandler, jobRepo, mbHeadRepo)
 	fillIAMNotifier := iamnotifier.NewFillNotifier(iamNotifClient)
 
 	costProductParameterApp := cppapp.New(costProductParameterRepo, mbSpinRepo)
