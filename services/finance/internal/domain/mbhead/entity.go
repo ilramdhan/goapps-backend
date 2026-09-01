@@ -675,7 +675,39 @@ func (e *Entity) Reject(reason string) error {
 // the MB was rejected while fixing it. It also follows the global principle U-2 —
 // don't erase the trail.
 func (e *Entity) ReturnToDraft(reason string) error {
-	if !canTransition(e.entryStatus, StatusDraft) {
+	// 2026-08-31: REJECTED is deliberately the ONLY legal origin here, checked
+	// explicitly rather than via the generic canTransition(from, StatusDraft).
+	// allowedTransitions now ALSO maps StatusRevoked -> StatusDraft (for the
+	// separate Unrevoke method below, gated by the Super-Admin-only
+	// finance.mb.head.unrevoke permission). Relying on canTransition alone would
+	// let ReturnToDraft -- reachable via the differently-gated
+	// finance.mb.head.submit permission -- silently unrevoke a REVOKED row too.
+	if e.entryStatus != StatusRejected || !canTransition(e.entryStatus, StatusDraft) {
+		return ErrInvalidTransition
+	}
+	e.entryStatus = StatusDraft
+	if reason != "" {
+		e.stateReason = reason
+	}
+	e.RecomputeCheckStatusCalc()
+	return nil
+}
+
+// Unrevoke transitions REVOKED → DRAFT so a Super Admin can send a revoked recipe back
+// for rework (user decision 2026-08-31, mirroring K-29's ReturnToDraft above).
+//
+// 🔴 The reason is OPTIONAL, same rationale as ReturnToDraft: this is not an accusation,
+// so nothing needs to be justified.
+//
+// 🔴 stateReason is PRESERVED, ⛔ never cleared. When the caller supplies a non-empty
+// reason it OVERWRITES the stored one; when it is empty the previous value (e.g. why it
+// was revoked) stays readable — following the global principle U-2, don't erase the trail.
+func (e *Entity) Unrevoke(reason string) error {
+	// REVOKED is deliberately the ONLY legal origin, checked explicitly rather than
+	// via the generic canTransition(from, StatusDraft) — that map also routes
+	// StatusRejected and StatusUnlockRequested to StatusDraft (for ReturnToDraft and
+	// grant-unlock respectively), which must NOT be reachable through this method.
+	if e.entryStatus != StatusRevoked || !canTransition(e.entryStatus, StatusDraft) {
 		return ErrInvalidTransition
 	}
 	e.entryStatus = StatusDraft

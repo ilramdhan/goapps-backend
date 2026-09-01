@@ -326,3 +326,83 @@ func TestReturnToDraft_RecomputesCheckStatusCalc(t *testing.T) {
 		"check_status_calc must not stay 'Rejected' after returning to DRAFT")
 	assert.Equal(t, CheckStatusWaiting, *e.MBHCheckStatusCalc())
 }
+
+// ---------------------------------------------------------------------------
+// Unrevoke — user decision 2026-08-31, mirroring K-29's ReturnToDraft above.
+// ---------------------------------------------------------------------------
+
+// TestUnrevoke_FromRevoked_Succeeds is the LOAD-BEARING happy path: REVOKED -> DRAFT.
+func TestUnrevoke_FromRevoked_Succeeds(t *testing.T) {
+	e := newEntityAt(StatusRevoked, false)
+
+	require.NoError(t, e.Unrevoke("rework please"))
+	assert.Equal(t, StatusDraft, e.EntryStatus())
+	assert.Equal(t, "rework please", e.StateReason())
+}
+
+// TestUnrevoke_EmptyReason_PreservesPriorReason — an empty reason must NOT clear
+// stateReason, so the trail of why it was revoked stays readable (principle U-2).
+func TestUnrevoke_EmptyReason_PreservesPriorReason(t *testing.T) {
+	e := newEntityAt(StatusRevoked, false)
+	e.stateReason = "quality failed inspection"
+
+	require.NoError(t, e.Unrevoke(""))
+	assert.Equal(t, StatusDraft, e.EntryStatus())
+	assert.Equal(t, "quality failed inspection", e.StateReason(),
+		"an empty reason must preserve the original revoke reason")
+}
+
+// TestUnrevoke_WithReason_OverwritesStateReason — a non-empty reason wins.
+func TestUnrevoke_WithReason_OverwritesStateReason(t *testing.T) {
+	e := newEntityAt(StatusRevoked, false)
+	e.stateReason = "quality failed inspection"
+
+	require.NoError(t, e.Unrevoke("alasan baru"))
+	assert.Equal(t, StatusDraft, e.EntryStatus())
+	assert.Equal(t, "alasan baru", e.StateReason())
+}
+
+// TestUnrevoke_FromNonRevoked_Fails — REVOKED is the ONLY legal origin. This also
+// guards the 2026-08-31 fix: Unrevoke must NOT be reachable from REJECTED or
+// UNLOCK_REQUESTED, even though allowedTransitions routes both of those to DRAFT
+// too (for ReturnToDraft and grant-unlock respectively).
+func TestUnrevoke_FromNonRevoked_Fails(t *testing.T) {
+	for _, status := range []string{
+		StatusDraft, StatusSubmitted, StatusApproved,
+		StatusValidated, StatusUnApproved, StatusRejected, StatusUnlockRequested,
+	} {
+		t.Run(status, func(t *testing.T) {
+			e := newEntityAt(status, false)
+
+			err := e.Unrevoke("rework please")
+			assert.ErrorIs(t, err, ErrInvalidTransition)
+			assert.Equal(t, status, e.EntryStatus(), "a failed Unrevoke must not mutate state")
+			assert.Empty(t, e.StateReason(), "a failed Unrevoke must not write a reason")
+		})
+	}
+}
+
+// TestReturnToDraft_FromRevoked_Fails guards the 2026-08-31 fix directly: before it,
+// ReturnToDraft used the generic canTransition(from, StatusDraft) check, which also
+// permitted REVOKED once that edge was added for Unrevoke — silently letting a holder
+// of finance.mb.head.submit (ReturnToDraft's permission) unrevoke a REVOKED row
+// without ever holding finance.mb.head.unrevoke (Unrevoke's dedicated, Super-Admin-only
+// permission). ReturnToDraft must stay REJECTED-only.
+func TestReturnToDraft_FromRevoked_Fails(t *testing.T) {
+	e := newEntityAt(StatusRevoked, false)
+
+	err := e.ReturnToDraft("rework please")
+	assert.ErrorIs(t, err, ErrInvalidTransition)
+	assert.Equal(t, StatusRevoked, e.EntryStatus())
+	assert.Empty(t, e.StateReason())
+}
+
+// TestUnrevoke_RecomputesCheckStatusCalc proves RecomputeCheckStatusCalc really runs
+// on Unrevoke too, mirroring TestReturnToDraft_RecomputesCheckStatusCalc above.
+func TestUnrevoke_RecomputesCheckStatusCalc(t *testing.T) {
+	e := newEntityAt(StatusRevoked, false)
+
+	require.NoError(t, e.Unrevoke(""))
+	require.NotNil(t, e.MBHCheckStatusCalc())
+	assert.Equal(t, CheckStatusWaiting, *e.MBHCheckStatusCalc())
+}

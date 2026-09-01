@@ -52,7 +52,13 @@ var allowedTransitions = map[string]map[string]struct{}{
 	// no legal move at all. Reading and rescuing legacy rows stays possible; only
 	// the entrance was closed.
 	StatusUnApproved: {StatusApproved: {}},
-	StatusRejected:   {StatusDraft: {}}, // Rejected work goes back to the author as a Draft
+	// 🔴 2026-08-31 — Unrevoke: an exit-only edge mirroring StatusUnApproved above.
+	// Revoke itself stays removed as a feature (canRevoke always reports false), so
+	// nothing may ENTER REVOKED any more, but legacy/newly-revoked rows must have a
+	// legal way out. Super Admin (gated by permission finance.mb.head.unrevoke) can
+	// send a REVOKED row back to DRAFT for editing and resubmission.
+	StatusRevoked:  {StatusDraft: {}},
+	StatusRejected: {StatusDraft: {}}, // Rejected work goes back to the author as a Draft
 	// P10 exits: reject-unlock returns the head to whichever locked state it came
 	// from (APPROVED or VALIDATED), grant-unlock opens it for editing as DRAFT.
 	StatusUnlockRequested: {StatusApproved: {}, StatusValidated: {}, StatusDraft: {}},
