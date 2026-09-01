@@ -53,6 +53,23 @@ type Repository interface {
 	// validate gates call EnforceHeadSum), so importing mbhead from here would create
 	// an import cycle.
 	ParentEntryStatus(ctx context.Context, mbhID string) (string, error)
+
+	// ListMBRefEdgesForBatch returns the within-batch MB-to-MB composition
+	// references among mbhIDs: one BatchRefEdge per live (non-deleted) MB
+	// composition row whose SourceType is MB and whose OWN mbh_id and
+	// referenced mb_ref_mbh_id are BOTH members of mbhIDs. References to heads
+	// outside mbhIDs are deliberately excluded — this is used only to detect
+	// same-batch ordering dependencies (see mbheadbulk.RequestBulkTransitionHandler),
+	// not to resolve every recipe reference.
+	ListMBRefEdgesForBatch(ctx context.Context, mbhIDs []string) ([]BatchRefEdge, error)
+}
+
+// BatchRefEdge is one within-batch MB-to-MB composition reference: the
+// composition row belonging to MbhID references RefMbhID as a nested MB RM
+// input, i.e. MbhID depends on RefMbhID.
+type BatchRefEdge struct {
+	MbhID    string
+	RefMbhID string
 }
 
 // VersionRow is one frozen composition line from a VALIDATED snapshot.

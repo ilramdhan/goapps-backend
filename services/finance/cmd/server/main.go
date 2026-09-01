@@ -516,7 +516,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// unavailable, in which case RequestBulkTransitionHandler.Handle refuses with
 	// mbheadbulk.ErrPublisherUnavailable and the gRPC handlers fold that into a
 	// clean 503 rather than panicking.
-	bulkTransitionHandler := mbheadbulk.NewRequestBulkTransitionHandler(jobRepo, bulkTransitionPublisher)
+	bulkTransitionHandler := mbheadbulk.NewRequestBulkTransitionHandler(jobRepo, bulkTransitionPublisher, mbCompositionRepo)
 	mbHeadHandler = mbHeadHandler.WithBulkTransition(bulkTransitionHandler, jobRepo, mbHeadRepo)
 	fillIAMNotifier := iamnotifier.NewFillNotifier(iamNotifClient)
 

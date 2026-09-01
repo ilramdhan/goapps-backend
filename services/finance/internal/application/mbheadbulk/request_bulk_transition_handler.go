@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcomposition"
 )
 
 // Action discriminators, recorded as each job.Execution's subtype (parent and
@@ -40,6 +41,14 @@ type BulkTransitionJobPublisher interface {
 	PublishMBBulkTransition(ctx context.Context, jobID, mbhID, action, reason, createdBy string) error
 }
 
+// CompositionRefLookup abstracts the within-batch MB-to-MB composition
+// reference lookup Handle uses to order children by dependency, mirroring
+// BulkTransitionJobPublisher's narrow-interface-for-testability pattern above
+// instead of depending on the full mbcomposition.Repository interface.
+type CompositionRefLookup interface {
+	ListMBRefEdgesForBatch(ctx context.Context, mbhIDs []string) ([]mbcomposition.BatchRefEdge, error)
+}
+
 // RequestBulkTransitionCommand carries the validated input for queueing a bulk MB
 // Head transition. Reason is only meaningful for ActionForceUnvalidate — Submit and
 // Validate ignore it, mirroring mbhead.Entity.ForceUnvalidate's own optional-reason
@@ -58,13 +67,18 @@ type RequestBulkTransitionResult struct {
 
 // RequestBulkTransitionHandler queues an asynchronous bulk MB Head transition job.
 type RequestBulkTransitionHandler struct {
-	jobRepo   job.Repository
-	publisher BulkTransitionJobPublisher
+	jobRepo         job.Repository
+	publisher       BulkTransitionJobPublisher
+	compositionRepo CompositionRefLookup
 }
 
-// NewRequestBulkTransitionHandler constructs the handler.
-func NewRequestBulkTransitionHandler(jobRepo job.Repository, publisher BulkTransitionJobPublisher) *RequestBulkTransitionHandler {
-	return &RequestBulkTransitionHandler{jobRepo: jobRepo, publisher: publisher}
+// NewRequestBulkTransitionHandler constructs the handler. compositionRepo may be
+// nil — Handle then skips dependency ordering entirely and publishes children in
+// their original request order, exactly as before this was added.
+func NewRequestBulkTransitionHandler(
+	jobRepo job.Repository, publisher BulkTransitionJobPublisher, compositionRepo CompositionRefLookup,
+) *RequestBulkTransitionHandler {
+	return &RequestBulkTransitionHandler{jobRepo: jobRepo, publisher: publisher, compositionRepo: compositionRepo}
 }
 
 // Handle creates one parent job.Execution (total_children = len(cmd.MBHIDs), no
@@ -72,6 +86,20 @@ func NewRequestBulkTransitionHandler(jobRepo job.Repository, publisher BulkTrans
 // publishes each child to RabbitMQ independently. A per-child publish failure fails
 // only that child (recorded via failJob + IncrementChildProgress) — it never aborts
 // the rest of the batch or the parent job, matching costsheet's handleBatch pattern.
+//
+// Before creating any child, cmd.MBHIDs is reordered (see orderByDependency) so
+// that, if this batch contains both an MB head and another MB head it references
+// as a nested RM input in its own recipe, the referenced head's job is created and
+// published first. This fixes a real production incident: the mb_bulk_transition
+// worker consumer processes strictly sequentially (concurrency 1, see
+// cmd/worker/main.go), and RabbitMQ delivers a single consumer's messages in the
+// order they were published — so publish order fully determines processing order
+// here (see orderByDependency's doc comment for the caveats that would break this).
+// Without the reorder, a dependent head validated before its dependency finished
+// would hit mbResolveRefProductSysID with mbh_cost_product_id still NULL. Applies
+// uniformly to all three actions (force_unvalidate/submit/validate) since Handle is
+// one shared code path — ordering only matters for Validate's cost generation, but
+// reordering the other two is harmless and keeps this simple.
 //
 // Handle's returned error is reserved for genuine Handle-level failures: the parent
 // job.Execution (or its children) could not be created/persisted at all. A per-child
@@ -85,6 +113,7 @@ func (h *RequestBulkTransitionHandler) Handle(ctx context.Context, cmd RequestBu
 	if err := h.validate(cmd); err != nil {
 		return nil, err
 	}
+	cmd.MBHIDs = h.orderByDependency(ctx, cmd.MBHIDs)
 
 	parentParams, err := buildParams(cmd, "")
 	if err != nil {
@@ -165,6 +194,47 @@ func (h *RequestBulkTransitionHandler) publishChildren(
 		return parent
 	}
 	return refreshed
+}
+
+// orderByDependency returns mbhIDs reordered so that, within THIS batch only, any
+// head another head in the batch references as a nested MB RM input
+// (mst_mb_composition.mbcm_mb_ref_mbh_id, source_type MB) is placed before its
+// dependent. References to heads outside this batch are irrelevant here — they
+// are either already VALIDATED or will legitimately fail later with
+// mbResolveRefProductSysID's clear error message naming the missing dependency,
+// which is an acceptable, expected outcome, not something this ordering needs to
+// prevent.
+//
+// Best-effort by design: h.compositionRepo == nil (not wired, e.g. in tests that
+// don't care about ordering) or a lookup failure both fall back to the original
+// order unchanged rather than failing the whole bulk request — this ordering is a
+// correctness improvement for the common case, not a hard precondition for
+// queuing the batch at all. A dependency cycle among referencing heads (should
+// not normally happen, but recipes are not validated against it elsewhere) also
+// falls back to original order for the cyclic subset only; see kahnTopoSort.
+//
+// This relies on the mb_bulk_transition worker consumer being both (a) strictly
+// sequential (concurrency 1) and (b) a single consumer processing one queue in
+// publish order — both true as of cmd/worker/main.go (NewConsumer, not
+// NewConcurrentConsumer) and the finance-worker deployment (replicas: 1). A nacked
+// delivery goes straight to the DLQ (Nack(false, false), no requeue), so a retry
+// never re-enters the queue out of order either. If mb_bulk_transition ever moves
+// to a concurrent or multi-replica consumer, or gains a requeue-on-retry path,
+// publish-order sorting alone would stop being sufficient and this would need a
+// real cross-child coordination mechanism instead.
+func (h *RequestBulkTransitionHandler) orderByDependency(ctx context.Context, mbhIDs []string) []string {
+	if h.compositionRepo == nil || len(mbhIDs) < 2 {
+		return mbhIDs
+	}
+	edges, err := h.compositionRepo.ListMBRefEdgesForBatch(ctx, mbhIDs)
+	if err != nil {
+		log.Warn().Err(err).Msg("mb bulk transition: failed to look up within-batch composition dependencies; using original order")
+		return mbhIDs
+	}
+	if len(edges) == 0 {
+		return mbhIDs
+	}
+	return kahnTopoSort(mbhIDs, edges)
 }
 
 // validate checks the fields Handle needs before doing any work.
