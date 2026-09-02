@@ -101,6 +101,10 @@ func (f *fakeRepo) ParentEntryStatus(_ context.Context, _ string) (string, error
 	return f.parentStatus, nil
 }
 
+func (f *fakeRepo) ListMBRefEdgesForBatch(_ context.Context, _ []string) ([]mbcomposition.BatchRefEdge, error) {
+	return nil, nil
+}
+
 const testMbhID = "11111111-1111-1111-1111-111111111111"
 
 func createCmd(pct string) appmbcomposition.CreateCommand {

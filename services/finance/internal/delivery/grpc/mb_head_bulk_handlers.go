@@ -50,10 +50,33 @@ func bulkMBHeadJobInfoFromExecution(exec *job.Execution) *financev1.BulkMBHeadJo
 	return &financev1.BulkMBHeadJobInfo{
 		JobId:             exec.ID().String(),
 		JobCode:           exec.Code().String(),
-		Status:            string(exec.Status()),
+		Status:            bulkMBHeadJobStatusString(exec),
 		TotalChildren:     safeIntToInt32(exec.TotalChildren()),
 		CompletedChildren: safeIntToInt32(exec.CompletedChildren()),
 		FailedChildren:    safeIntToInt32(exec.FailedChildren()),
+	}
+}
+
+// bulkMBHeadJobStatusString translates the parent job's internal job.Status onto
+// the status vocabulary this RPC actually documents (see the proto doc comment on
+// GetBulkMBHeadJobStatusResponse.status: "QUEUED", "PROCESSING", "DONE", "FAILED",
+// "PARTIAL"). completeParentJob (mb_bulk_transition_handler.go) only ever calls
+// exec.Complete() — never exec.Fail() — for a batch with at least one successful
+// child, even when some children also failed, so job.StatusSuccess alone does not
+// distinguish "every child succeeded" from "some children failed": that split is
+// resolved here using FailedChildren(), the same counter ListBulkMBHeadJobFailures
+// already surfaces per-item detail from.
+func bulkMBHeadJobStatusString(exec *job.Execution) string {
+	switch exec.Status() {
+	case job.StatusSuccess:
+		if exec.FailedChildren() > 0 {
+			return "PARTIAL"
+		}
+		return "DONE"
+	case job.StatusFailed:
+		return "FAILED"
+	default:
+		return string(exec.Status()) // QUEUED / PROCESSING
 	}
 }
 

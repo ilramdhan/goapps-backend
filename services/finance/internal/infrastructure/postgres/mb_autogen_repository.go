@@ -4,6 +4,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -384,13 +385,31 @@ func mbGroupRef(row VersionRow) (*string, error) {
 	return &groupCode, nil
 }
 
+// mbResolveRefProductSysID resolves the cost_product_master.cpm_product_sys_id linked to a
+// nested MB composition row's referenced MB Head (mbcm_source_type = MB), so that head's cost
+// product can be priced as an RM input on the composition being auto-generated/regenerated here.
+//
+// mbh_cost_product_id is nullable (migration 000445): it is NULL until the referenced head has
+// itself been through the auto-gen path at least once. In a bulk/staged regenerate this is a
+// real, reachable state — e.g. two heads reference each other, or the referenced head simply
+// hasn't reached Validate yet in this batch — so a NULL here must surface as a clear, actionable
+// error rather than a raw driver panic from scanning NULL into a bare int64 (see incident: bulk
+// regenerate of 99 heads, one failure surfaced as an opaque
+// "converting NULL to int64 is unsupported" instead of naming the dependency).
 func mbResolveRefProductSysID(ctx context.Context, tx *sql.Tx, refMbhID string) (int64, error) {
-	const q = `SELECT mbh_cost_product_id FROM mst_mb_head WHERE mbh_id = $1 AND deleted_at IS NULL`
-	var productSysID int64
-	if err := tx.QueryRowContext(ctx, q, refMbhID).Scan(&productSysID); err != nil {
+	const q = `SELECT mbh_mb_costing, mbh_cost_product_id FROM mst_mb_head WHERE mbh_id = $1 AND deleted_at IS NULL`
+	var refCosting string
+	var productSysID sql.NullInt64
+	err := tx.QueryRowContext(ctx, q, refMbhID).Scan(&refCosting, &productSysID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return 0, fmt.Errorf("mb_autogen: resolve nested MB cost product: referenced MB head %s was not found (deleted or invalid reference)", refMbhID)
+	case err != nil:
 		return 0, fmt.Errorf("mb_autogen: resolve nested MB cost product: %w", err)
+	case !productSysID.Valid:
+		return 0, fmt.Errorf("mb_autogen: resolve nested MB cost product: referenced MB head %q has not generated its cost product yet — validate %q first, then retry this one", refCosting, refCosting)
 	}
-	return productSysID, nil
+	return productSysID.Int64, nil
 }
 
 // mbOutputParamCodes are the 7 F_MB_* formulas' result_param_codes (migration 000452). They must

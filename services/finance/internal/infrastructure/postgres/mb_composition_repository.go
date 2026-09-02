@@ -186,6 +186,45 @@ func (r *MBCompositionRepository) ParentEntryStatus(ctx context.Context, mbhID s
 	return status, nil
 }
 
+// ListMBRefEdgesForBatch returns the within-batch MB-to-MB composition
+// references among mbhIDs, reading the LIVE mst_mb_composition table (not the
+// VALIDATED mst_mb_composition_version snapshot — at ordering time the heads
+// in this batch have not necessarily been validated yet, so their current
+// working recipe is what matters). Both the row's own mbh_id and its
+// mbcm_mb_ref_mbh_id must be members of mbhIDs, or the row is excluded: a
+// reference to a head outside the batch is not this method's concern (see
+// mbcomposition.Repository.ListMBRefEdgesForBatch doc comment).
+func (r *MBCompositionRepository) ListMBRefEdgesForBatch(ctx context.Context, mbhIDs []string) ([]mbcomposition.BatchRefEdge, error) {
+	if len(mbhIDs) == 0 {
+		return nil, nil
+	}
+	const q = `
+		SELECT mbcm_mbh_id, mbcm_mb_ref_mbh_id
+		FROM mst_mb_composition
+		WHERE mbcm_mbh_id = ANY($1::uuid[])
+		  AND mbcm_source_type = 'MB'
+		  AND mbcm_mb_ref_mbh_id = ANY($1::uuid[])
+		  AND deleted_at IS NULL`
+	rows, err := r.db.QueryContext(ctx, q, pq.Array(mbhIDs))
+	if err != nil {
+		return nil, fmt.Errorf("mb_composition_repository: list mb ref edges for batch: %w", err)
+	}
+	defer closeRows(rows)
+
+	var out []mbcomposition.BatchRefEdge
+	for rows.Next() {
+		var e mbcomposition.BatchRefEdge
+		if scanErr := rows.Scan(&e.MbhID, &e.RefMbhID); scanErr != nil {
+			return nil, fmt.Errorf("mb_composition_repository: scan mb ref edge: %w", scanErr)
+		}
+		out = append(out, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("mb_composition_repository: iterate mb ref edges: %w", err)
+	}
+	return out, nil
+}
+
 // GetByID returns a single active composition row by ID.
 func (r *MBCompositionRepository) GetByID(ctx context.Context, id string) (*mbcomposition.Entity, error) {
 	row := r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbcm_id = $1 AND deleted_at IS NULL`, id)

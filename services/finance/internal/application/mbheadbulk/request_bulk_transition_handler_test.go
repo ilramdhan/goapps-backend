@@ -12,6 +12,7 @@ import (
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbheadbulk"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcomposition"
 )
 
 // jobRepoMock is a small testify mock for job.Repository — only the methods
@@ -113,7 +114,7 @@ func TestRequestBulkTransitionHandler_Validate(t *testing.T) {
 	pub := &publisherMock{}
 
 	t.Run("publisher nil", func(t *testing.T) {
-		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, nil)
+		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, nil, nil)
 		_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
 			MBHIDs: []string{"a"}, Action: mbheadbulk.ActionSubmit, CreatedBy: "admin",
 		})
@@ -121,7 +122,7 @@ func TestRequestBulkTransitionHandler_Validate(t *testing.T) {
 	})
 
 	t.Run("empty mbh_ids", func(t *testing.T) {
-		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub)
+		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, nil)
 		_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
 			Action: mbheadbulk.ActionSubmit, CreatedBy: "admin",
 		})
@@ -129,7 +130,7 @@ func TestRequestBulkTransitionHandler_Validate(t *testing.T) {
 	})
 
 	t.Run("unknown action", func(t *testing.T) {
-		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub)
+		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, nil)
 		_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
 			MBHIDs: []string{"a"}, Action: "bogus", CreatedBy: "admin",
 		})
@@ -137,7 +138,7 @@ func TestRequestBulkTransitionHandler_Validate(t *testing.T) {
 	})
 
 	t.Run("missing created by", func(t *testing.T) {
-		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub)
+		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, nil)
 		_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
 			MBHIDs: []string{"a"}, Action: mbheadbulk.ActionSubmit,
 		})
@@ -169,7 +170,7 @@ func TestRequestBulkTransitionHandler_OneChildPerMBHID_NoChunking(t *testing.T) 
 			Return(nil).Once()
 	}
 
-	h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub)
+	h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, nil)
 	res, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
 		MBHIDs:    mbhIDs,
 		Action:    mbheadbulk.ActionForceUnvalidate,
@@ -228,7 +229,7 @@ func TestRequestBulkTransitionHandler_PerChildPublishFailure_DoesNotAbortBatch(t
 	refreshedParent.IncrementFailedChildren()
 	repo.On("GetByID", mock.Anything, mock.Anything).Return(refreshedParent, nil).Once()
 
-	h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub)
+	h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, nil)
 	res, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
 		MBHIDs:    mbhIDs,
 		Action:    mbheadbulk.ActionSubmit,
@@ -245,6 +246,149 @@ func TestRequestBulkTransitionHandler_PerChildPublishFailure_DoesNotAbortBatch(t
 	require.NotNil(t, res)
 	require.NotNil(t, res.Execution)
 	assert.Equal(t, 2, res.Execution.FailedChildren())
+	repo.AssertExpectations(t)
+	pub.AssertExpectations(t)
+}
+
+// compositionLookupStub is a minimal stand-in for mbheadbulk.CompositionRefLookup.
+type compositionLookupStub struct {
+	edges []mbcomposition.BatchRefEdge
+	err   error
+}
+
+func (s *compositionLookupStub) ListMBRefEdgesForBatch(_ context.Context, _ []string) ([]mbcomposition.BatchRefEdge, error) {
+	return s.edges, s.err
+}
+
+// publishOrder extracts the mbhID argument (third positional arg to
+// PublishMBBulkTransition, after ctx and jobID) from each recorded call, in the
+// order Handle actually invoked them — the order children were published in.
+func publishOrder(pub *publisherMock) []string {
+	order := make([]string, 0, len(pub.Calls))
+	for _, call := range pub.Calls {
+		if call.Method != "PublishMBBulkTransition" {
+			continue
+		}
+		order = append(order, call.Arguments.String(2))
+	}
+	return order
+}
+
+// setupOrderingExpectations wires the Create/CreateChildren/Publish mock
+// expectations shared by the ordering tests below — only the publish order
+// varies per test, everything else about a successful Handle call is the same.
+func setupOrderingExpectations(repo *jobRepoMock, pub *publisherMock, mbhIDs []string, action string) {
+	repo.On("Create", mock.Anything, mock.Anything).Return(nil).Once()
+	repo.On("CreateChildren", mock.Anything, mock.Anything).Return(nil).Once()
+	for _, id := range mbhIDs {
+		pub.On("PublishMBBulkTransition", mock.Anything, mock.Anything, id, action, "", "admin").Return(nil).Once()
+	}
+}
+
+// TestRequestBulkTransitionHandler_OrderByDependency_NoDependencies_OrderUnchanged
+// proves a batch with no within-batch composition references publishes children in
+// the exact order they were submitted in.
+func TestRequestBulkTransitionHandler_OrderByDependency_NoDependencies_OrderUnchanged(t *testing.T) {
+	t.Parallel()
+
+	repo := &jobRepoMock{}
+	pub := &publisherMock{}
+	comp := &compositionLookupStub{}
+	mbhIDs := []string{"mbh-1", "mbh-2", "mbh-3"}
+	setupOrderingExpectations(repo, pub, mbhIDs, mbheadbulk.ActionValidate)
+
+	h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, comp)
+	_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
+		MBHIDs: mbhIDs, Action: mbheadbulk.ActionValidate, CreatedBy: "admin",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, mbhIDs, publishOrder(pub))
+	repo.AssertExpectations(t)
+	pub.AssertExpectations(t)
+}
+
+// TestRequestBulkTransitionHandler_OrderByDependency_LinearChain_DependencyFirst
+// proves that when A's recipe references B (both in the same batch), B is
+// published before A even though the request listed A first — the fix for the
+// production bug where A's cost generation could hit B's still-NULL
+// mbh_cost_product_id.
+func TestRequestBulkTransitionHandler_OrderByDependency_LinearChain_DependencyFirst(t *testing.T) {
+	t.Parallel()
+
+	repo := &jobRepoMock{}
+	pub := &publisherMock{}
+	comp := &compositionLookupStub{edges: []mbcomposition.BatchRefEdge{
+		{MbhID: "mbh-a", RefMbhID: "mbh-b"}, // A depends on B
+	}}
+	mbhIDs := []string{"mbh-a", "mbh-b"}
+	setupOrderingExpectations(repo, pub, mbhIDs, mbheadbulk.ActionValidate)
+
+	h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, comp)
+	_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
+		MBHIDs: mbhIDs, Action: mbheadbulk.ActionValidate, CreatedBy: "admin",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"mbh-b", "mbh-a"}, publishOrder(pub))
+	repo.AssertExpectations(t)
+	pub.AssertExpectations(t)
+}
+
+// TestRequestBulkTransitionHandler_OrderByDependency_Cycle_DoesNotHangAndFallsBack
+// proves a within-batch reference cycle (A depends on B, B depends on A) neither
+// hangs nor crashes Handle, and produces a valid publish order: the uninvolved
+// third head (no dependency edges at all) is free to be placed as soon as it's
+// ready — which Kahn's algorithm does immediately, ahead of the stalled cyclic
+// pair — while A and B, unable to ever become "ready" of each other, fall back to
+// their original relative order (A before B) once the stall is detected.
+func TestRequestBulkTransitionHandler_OrderByDependency_Cycle_DoesNotHangAndFallsBack(t *testing.T) {
+	t.Parallel()
+
+	repo := &jobRepoMock{}
+	pub := &publisherMock{}
+	comp := &compositionLookupStub{edges: []mbcomposition.BatchRefEdge{
+		{MbhID: "mbh-a", RefMbhID: "mbh-b"},
+		{MbhID: "mbh-b", RefMbhID: "mbh-a"},
+	}}
+	mbhIDs := []string{"mbh-a", "mbh-b", "mbh-c"}
+	setupOrderingExpectations(repo, pub, mbhIDs, mbheadbulk.ActionValidate)
+
+	h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, comp)
+	res, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
+		MBHIDs: mbhIDs, Action: mbheadbulk.ActionValidate, CreatedBy: "admin",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	order := publishOrder(pub)
+	assert.ElementsMatch(t, mbhIDs, order, "cycle handling must not drop or duplicate any child")
+	assert.Equal(t, []string{"mbh-c", "mbh-a", "mbh-b"}, order,
+		"mbh-c has no dependency edges so it is published as soon as it's ready; "+
+			"mbh-a/mbh-b are mutually cyclic so they fall back to their original relative order")
+	repo.AssertExpectations(t)
+	pub.AssertExpectations(t)
+}
+
+// TestRequestBulkTransitionHandler_OrderByDependency_LookupError_FallsBackToOriginalOrder
+// proves a composition-lookup failure is swallowed (best-effort) rather than
+// failing the whole bulk request — children still publish in original order.
+func TestRequestBulkTransitionHandler_OrderByDependency_LookupError_FallsBackToOriginalOrder(t *testing.T) {
+	t.Parallel()
+
+	repo := &jobRepoMock{}
+	pub := &publisherMock{}
+	comp := &compositionLookupStub{err: errors.New("db unavailable")}
+	mbhIDs := []string{"mbh-1", "mbh-2"}
+	setupOrderingExpectations(repo, pub, mbhIDs, mbheadbulk.ActionSubmit)
+
+	h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, comp)
+	_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
+		MBHIDs: mbhIDs, Action: mbheadbulk.ActionSubmit, CreatedBy: "admin",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, mbhIDs, publishOrder(pub))
 	repo.AssertExpectations(t)
 	pub.AssertExpectations(t)
 }

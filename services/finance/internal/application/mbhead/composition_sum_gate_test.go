@@ -64,6 +64,10 @@ func (s *stubCompositionRepo) ParentEntryStatus(context.Context, string) (string
 	return "DRAFT", nil
 }
 
+func (s *stubCompositionRepo) ListMBRefEdgesForBatch(context.Context, []string) ([]mbcompositiondomain.BatchRefEdge, error) {
+	return nil, nil
+}
+
 // draftHead builds a DRAFT own-production head — the only state from which
 // SubmitMBHead is a legal transition.
 func draftHead() *mbheaddomain.Entity {
