@@ -19,12 +19,35 @@ import "github.com/mutugading/goapps-backend/services/finance/internal/domain/mb
 // one of the cyclic nodes will simply fail its own dependency lookup later
 // (mbResolveRefProductSysID's clear error), the rest are unaffected.
 func kahnTopoSort(order []string, edges []mbcomposition.BatchRefEdge) []string {
+	dependsOn := buildDependsOn(order, edges)
+
+	placed := make(map[string]bool, len(order))
+	result := make([]string, 0, len(order))
+
+	for len(result) < len(order) {
+		var progressed bool
+		result, progressed = appendReadyNodes(order, dependsOn, placed, result)
+		if !progressed {
+			// Cycle among the remaining nodes: fall back to original order for
+			// the stalled subset instead of looping forever.
+			result = appendStalledInOriginalOrder(order, placed, result)
+			break
+		}
+	}
+	return result
+}
+
+// buildDependsOn returns, for each id in order, the set of ids that must be
+// placed before it. Edges pointing outside order, or self-referencing a
+// node, are ignored -- the caller (ListMBRefEdgesForBatch) already restricts
+// edges to within-batch pairs, but this stays defensive rather than trusting
+// that invariant blindly.
+func buildDependsOn(order []string, edges []mbcomposition.BatchRefEdge) map[string]map[string]bool {
 	inBatch := make(map[string]bool, len(order))
 	for _, id := range order {
 		inBatch[id] = true
 	}
 
-	// dependsOn[id] is the set of ids that must be placed before id.
 	dependsOn := make(map[string]map[string]bool, len(order))
 	for _, e := range edges {
 		if e.MbhID == e.RefMbhID || !inBatch[e.MbhID] || !inBatch[e.RefMbhID] {
@@ -35,40 +58,46 @@ func kahnTopoSort(order []string, edges []mbcomposition.BatchRefEdge) []string {
 		}
 		dependsOn[e.MbhID][e.RefMbhID] = true
 	}
+	return dependsOn
+}
 
-	placed := make(map[string]bool, len(order))
-	result := make([]string, 0, len(order))
+// isReady reports whether all of id's dependencies have already been placed.
+func isReady(id string, dependsOn map[string]map[string]bool, placed map[string]bool) bool {
+	for dep := range dependsOn[id] {
+		if !placed[dep] {
+			return false
+		}
+	}
+	return true
+}
 
-	for len(result) < len(order) {
-		progressed := false
-		for _, id := range order {
-			if placed[id] {
-				continue
-			}
-			ready := true
-			for dep := range dependsOn[id] {
-				if !placed[dep] {
-					ready = false
-					break
-				}
-			}
-			if !ready {
-				continue
-			}
+// appendReadyNodes performs a single Kahn's-algorithm pass: it appends every
+// not-yet-placed node whose dependencies are all satisfied, in original
+// order (stable tie-breaking), and reports whether any node was placed.
+func appendReadyNodes(order []string, dependsOn map[string]map[string]bool, placed map[string]bool, result []string) ([]string, bool) {
+	progressed := false
+	for _, id := range order {
+		if placed[id] {
+			continue
+		}
+		if !isReady(id, dependsOn, placed) {
+			continue
+		}
+		result = append(result, id)
+		placed[id] = true
+		progressed = true
+	}
+	return result, progressed
+}
+
+// appendStalledInOriginalOrder appends every not-yet-placed node in its
+// original relative order. Used as the cycle fallback once a pass makes no
+// progress.
+func appendStalledInOriginalOrder(order []string, placed map[string]bool, result []string) []string {
+	for _, id := range order {
+		if !placed[id] {
 			result = append(result, id)
 			placed[id] = true
-			progressed = true
-		}
-		if !progressed {
-			// Cycle among the remaining nodes: fall back to original order for
-			// the stalled subset instead of looping forever.
-			for _, id := range order {
-				if !placed[id] {
-					result = append(result, id)
-					placed[id] = true
-				}
-			}
-			break
 		}
 	}
 	return result
