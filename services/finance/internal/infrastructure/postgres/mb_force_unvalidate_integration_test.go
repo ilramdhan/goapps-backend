@@ -1,8 +1,10 @@
 // Package postgres — integration coverage for the Bulk MB Head Regenerate feature's
 // ForceUnvalidateTransition (Phase B, mb_force_unvalidate.go): proves that forcing a
-// VALIDATED head back to DRAFT really nulls the cost-lineage columns and writes an
-// mst_mb_workflow_log audit row against a real PostgreSQL instance, mirroring
-// mb_spin_repository_cost_product_id_integration_test.go's suite shape.
+// VALIDATED head back to DRAFT flips entry_status to DRAFT, clears the P10 lock, writes
+// an mst_mb_workflow_log audit row, and — critically — LEAVES the cost-lineage columns
+// (mbh_cost_product_id/mbh_cost_generated_at/mbh_cost_generated_by) untouched, against a
+// real PostgreSQL instance, mirroring mb_spin_repository_cost_product_id_integration_test.go's
+// suite shape.
 //
 // Gated by INTEGRATION_TEST=true; requires a reachable PostgreSQL (defaults match the
 // docker-compose finance DB: postgres://finance:finance123@localhost:5434/finance_db).
@@ -129,7 +131,8 @@ func (s *MBForceUnvalidateSuite) seedCostProductMaster() int64 {
 
 // seedValidatedHead inserts a VALIDATED mst_mb_head row with cost lineage columns
 // populated (mbh_cost_product_id/mbh_cost_generated_at/mbh_cost_generated_by) plus the
-// P10 lock flag set, so ForceUnvalidateTransition has real non-NULL values to clear.
+// P10 lock flag set, so the test can prove those cost lineage values survive
+// ForceUnvalidateTransition unchanged while the lock/status columns are cleared.
 func (s *MBForceUnvalidateSuite) seedValidatedHead(costProductID int64) uuid.UUID {
 	id := uuid.New()
 	_, err := s.db.ExecContext(s.ctx, `
@@ -144,11 +147,17 @@ func (s *MBForceUnvalidateSuite) seedValidatedHead(costProductID int64) uuid.UUI
 	return id
 }
 
-// TestForceUnvalidateTransition_NullsCostLineage_AndWritesWorkflowLog is the core
-// contract: after forcing a VALIDATED head with a non-null cost product back to DRAFT,
-// the cost lineage columns are all NULL, entry_status is DRAFT, and a new
-// mst_mb_workflow_log row records the VALIDATED -> DRAFT transition.
-func (s *MBForceUnvalidateSuite) TestForceUnvalidateTransition_NullsCostLineage_AndWritesWorkflowLog() {
+// TestForceUnvalidateTransition_PreservesCostLineage_AndWritesWorkflowLog proves cost
+// lineage columns survive force-unvalidate: after forcing a VALIDATED head with a
+// non-null cost product back to DRAFT, mbh_cost_product_id/mbh_cost_generated_at/
+// mbh_cost_generated_by keep their original seeded values (they must NOT be nulled —
+// nulling them here used to force every subsequent re-validate onto the FULL
+// autoGenCostProduct path instead of the lighter regenerateCostProductRMs path, which
+// duplicated cost_product_master/mst_mb_spin rows on every Bulk Regenerate and even
+// re-generated MB Spin rows already locked as actual), while entry_status flips to
+// DRAFT, the P10 lock is cleared, and a new mst_mb_workflow_log row records the
+// VALIDATED -> DRAFT transition.
+func (s *MBForceUnvalidateSuite) TestForceUnvalidateTransition_PreservesCostLineage_AndWritesWorkflowLog() {
 	productSysID := s.seedCostProductMaster()
 	headID := s.seedValidatedHead(productSysID)
 
@@ -171,9 +180,11 @@ func (s *MBForceUnvalidateSuite) TestForceUnvalidateTransition_NullsCostLineage_
 
 	require.Equal(s.T(), "DRAFT", entryStatus)
 	require.False(s.T(), isLocked, "ForceUnvalidateTransition must clear the P10 lock")
-	require.False(s.T(), costProductID.Valid, "mbh_cost_product_id must be NULL after force-unvalidate")
-	require.False(s.T(), costGeneratedAt.Valid, "mbh_cost_generated_at must be NULL after force-unvalidate")
-	require.False(s.T(), costGeneratedBy.Valid, "mbh_cost_generated_by must be NULL after force-unvalidate")
+	require.True(s.T(), costProductID.Valid, "mbh_cost_product_id must survive force-unvalidate unchanged")
+	require.Equal(s.T(), productSysID, costProductID.Int64, "mbh_cost_product_id must keep its original seeded value")
+	require.True(s.T(), costGeneratedAt.Valid, "mbh_cost_generated_at must survive force-unvalidate unchanged")
+	require.True(s.T(), costGeneratedBy.Valid, "mbh_cost_generated_by must survive force-unvalidate unchanged")
+	require.Equal(s.T(), "itest", costGeneratedBy.String, "mbh_cost_generated_by must keep its original seeded value")
 	require.False(s.T(), unlockRequestedAt.Valid, "mbh_unlock_requested_at must be cleared")
 
 	var logCount int
