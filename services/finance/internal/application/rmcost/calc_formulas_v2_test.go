@@ -206,22 +206,51 @@ func TestAggregateGroupTotals_TestingRMCost(t *testing.T) {
 	floatNear(t, "FL", tot.FL, 0.25405, eps)
 }
 
-// TestSelectValuation_AutoCascadeFL prefers CL when set, falls back to SL then FL.
+// TestSelectValuation_AutoCascadeFL prefers CL when set, falls back to
+// SL, then FL, then PR.
 func TestSelectValuation_AutoCascadeFL(t *testing.T) {
 	tests := []struct {
 		name string
 		tot  GroupTotals
 		want float64
 	}{
-		{"CL set", GroupTotals{CL: 1.5, SL: 2.5, FL: 3.5}, 1.5},
-		{"CL=0, SL set", GroupTotals{CL: 0, SL: 2.5, FL: 3.5}, 2.5},
-		{"CL=0, SL=0, FL set", GroupTotals{CL: 0, SL: 0, FL: 3.5}, 3.5},
+		{"CL set", GroupTotals{CL: 1.5, SL: 2.5, FL: 3.5, PR: 4.5}, 1.5},
+		{"CL=0, SL set", GroupTotals{CL: 0, SL: 2.5, FL: 3.5, PR: 4.5}, 2.5},
+		{"CL=0, SL=0, FL set", GroupTotals{CL: 0, SL: 0, FL: 3.5, PR: 4.5}, 3.5},
+		{"CL=0, SL=0, FL=0, PR set", GroupTotals{CL: 0, SL: 0, FL: 0, PR: 4.5}, 4.5},
 		{"all zero", GroupTotals{}, 0},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got := SelectValuation(tc.tot, "AUTO")
 			floatNear(t, tc.name, got, tc.want, 1e-9)
+		})
+	}
+}
+
+// TestSelectValuationWithFlag_AutoCascadePR locks the flag label resolved by
+// the AUTO cascade once PR joins as the final fallback after CL/SL/FL: PR is
+// only picked when CL/SL/FL are all zero, and the resolved label reported
+// back is "PR" in that case. When every candidate including PR is zero, the
+// resolved label is "NONE" — there is no price source for the period.
+func TestSelectValuationWithFlag_AutoCascadePR(t *testing.T) {
+	tests := []struct {
+		name      string
+		tot       GroupTotals
+		wantValue float64
+		wantLabel string
+	}{
+		{"FL set beats PR", GroupTotals{FL: 3.5, PR: 4.5}, 3.5, "FL"},
+		{"CL=SL=FL=0, PR set", GroupTotals{PR: 4.5}, 4.5, "PR"},
+		{"all zero including PR", GroupTotals{}, 0, "NONE"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotValue, gotLabel := SelectValuationWithFlag(tc.tot, "AUTO")
+			floatNear(t, tc.name, gotValue, tc.wantValue, 1e-9)
+			if gotLabel != tc.wantLabel {
+				t.Errorf("%s: label = %q, want %q", tc.name, gotLabel, tc.wantLabel)
+			}
 		})
 	}
 }
@@ -234,6 +263,32 @@ func TestSelectMarketing_AutoCascade(t *testing.T) {
 	floatNear(t, "SP first", got, 1.1, 1e-9)
 	got = SelectMarketing(MarketingProjections{SP: 1.1, PP: 2.2, FP: 7.5}, "PP")
 	floatNear(t, "PP explicit", got, 2.2, 1e-9)
+}
+
+// TestSelectMarketingWithFlag_AutoCascadeAllZero locks the flag label
+// resolved by the AUTO cascade once every candidate (SP/PP/FP) is zero: the
+// resolved label is "NONE" instead of misleadingly echoing back "FP".
+func TestSelectMarketingWithFlag_AutoCascadeAllZero(t *testing.T) {
+	tests := []struct {
+		name      string
+		proj      MarketingProjections
+		wantValue float64
+		wantLabel string
+	}{
+		{"SP set", MarketingProjections{SP: 1.1, PP: 2.2, FP: 7.5}, 1.1, "SP"},
+		{"PP set", MarketingProjections{PP: 2.2, FP: 7.5}, 2.2, "PP"},
+		{"FP set", MarketingProjections{FP: 7.5}, 7.5, "FP"},
+		{"all zero", MarketingProjections{}, 0, "NONE"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotValue, gotLabel := SelectMarketingWithFlag(tc.proj, "AUTO")
+			floatNear(t, tc.name, gotValue, tc.wantValue, 1e-9)
+			if gotLabel != tc.wantLabel {
+				t.Errorf("%s: label = %q, want %q", tc.name, gotLabel, tc.wantLabel)
+			}
+		})
+	}
 }
 
 // TestFirstNonZero edge cases.

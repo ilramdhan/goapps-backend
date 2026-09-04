@@ -456,6 +456,8 @@ func parseProtoValuationFlag(s string) financev1.RMValuationFlag {
 		return financev1.RMValuationFlag_RM_VALUATION_FLAG_SL
 	case "FL":
 		return financev1.RMValuationFlag_RM_VALUATION_FLAG_FL
+	case "NONE":
+		return financev1.RMValuationFlag_RM_VALUATION_FLAG_NONE
 	default:
 		return financev1.RMValuationFlag_RM_VALUATION_FLAG_UNSPECIFIED
 	}
@@ -470,6 +472,8 @@ func parseProtoMarketingFlag(s string) financev1.RMMarketingFlag {
 		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_PP
 	case "FP":
 		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_FP
+	case "NONE":
+		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_NONE
 	default:
 		return financev1.RMMarketingFlag_RM_MARKETING_FLAG_UNSPECIFIED
 	}
