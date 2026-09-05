@@ -101,12 +101,12 @@ func (RMGroupFlag) EnumDescriptor() ([]byte, []int) {
 }
 
 // RMValuationFlag selects which computed rate becomes `cost_val` in the
-// RM Cost row. UNSPECIFIED behaves as AUTO (CL → SL → FL fallback, where
+// RM Cost row. UNSPECIFIED behaves as AUTO (CL → SL → FL → PR fallback, where
 // FL incorporates the per-detail valuation_default_value).
 type RMValuationFlag int32
 
 const (
-	// Default zero value. Treated as AUTO (CL→SL→FL fallback).
+	// Default zero value. Treated as AUTO (CL→SL→FL→PR fallback).
 	RMValuationFlag_RM_VALUATION_FLAG_UNSPECIFIED RMValuationFlag = 0
 	// Use Consumption Rate (CR) — group-total cons_val / cons_qty.
 	RMValuationFlag_RM_VALUATION_FLAG_CR RMValuationFlag = 1
@@ -120,6 +120,10 @@ const (
 	RMValuationFlag_RM_VALUATION_FLAG_SL RMValuationFlag = 5
 	// Use Fix Landed Cost (FL) — MAX of per-detail FL.
 	RMValuationFlag_RM_VALUATION_FLAG_FL RMValuationFlag = 6
+	// AUTO resolved to nothing — every cascade candidate (CL/SL/FL/PR) was zero,
+	// so there is no price source for this period. Never user-selectable; it is
+	// only ever written by the engine as the resolved `valuation_flag_used`.
+	RMValuationFlag_RM_VALUATION_FLAG_NONE RMValuationFlag = 7
 )
 
 // Enum value maps for RMValuationFlag.
@@ -132,6 +136,7 @@ var (
 		4: "RM_VALUATION_FLAG_CL",
 		5: "RM_VALUATION_FLAG_SL",
 		6: "RM_VALUATION_FLAG_FL",
+		7: "RM_VALUATION_FLAG_NONE",
 	}
 	RMValuationFlag_value = map[string]int32{
 		"RM_VALUATION_FLAG_UNSPECIFIED": 0,
@@ -141,6 +146,7 @@ var (
 		"RM_VALUATION_FLAG_CL":          4,
 		"RM_VALUATION_FLAG_SL":          5,
 		"RM_VALUATION_FLAG_FL":          6,
+		"RM_VALUATION_FLAG_NONE":        7,
 	}
 )
 
@@ -184,6 +190,11 @@ const (
 	RMMarketingFlag_RM_MARKETING_FLAG_PP RMMarketingFlag = 2
 	// Projection Fix Value Landed Cost.
 	RMMarketingFlag_RM_MARKETING_FLAG_FP RMMarketingFlag = 3
+	// AUTO resolved to nothing — every cascade candidate (SP/PP/FP) was zero,
+	// so there is no marketing projection for this period. Never
+	// user-selectable; it is only ever written by the engine as the resolved
+	// `marketing_flag_used`.
+	RMMarketingFlag_RM_MARKETING_FLAG_NONE RMMarketingFlag = 4
 )
 
 // Enum value maps for RMMarketingFlag.
@@ -193,12 +204,14 @@ var (
 		1: "RM_MARKETING_FLAG_SP",
 		2: "RM_MARKETING_FLAG_PP",
 		3: "RM_MARKETING_FLAG_FP",
+		4: "RM_MARKETING_FLAG_NONE",
 	}
 	RMMarketingFlag_value = map[string]int32{
 		"RM_MARKETING_FLAG_UNSPECIFIED": 0,
 		"RM_MARKETING_FLAG_SP":          1,
 		"RM_MARKETING_FLAG_PP":          2,
 		"RM_MARKETING_FLAG_FP":          3,
+		"RM_MARKETING_FLAG_NONE":        4,
 	}
 )
 
@@ -4195,7 +4208,7 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x12RM_GROUP_FLAG_DEPT\x10\x04\x12\x16\n" +
 	"\x12RM_GROUP_FLAG_PO_1\x10\x05\x12\x16\n" +
 	"\x12RM_GROUP_FLAG_PO_2\x10\x06\x12\x16\n" +
-	"\x12RM_GROUP_FLAG_PO_3\x10\a*\xd0\x01\n" +
+	"\x12RM_GROUP_FLAG_PO_3\x10\a*\xec\x01\n" +
 	"\x0fRMValuationFlag\x12!\n" +
 	"\x1dRM_VALUATION_FLAG_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14RM_VALUATION_FLAG_CR\x10\x01\x12\x18\n" +
@@ -4203,12 +4216,14 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x14RM_VALUATION_FLAG_PR\x10\x03\x12\x18\n" +
 	"\x14RM_VALUATION_FLAG_CL\x10\x04\x12\x18\n" +
 	"\x14RM_VALUATION_FLAG_SL\x10\x05\x12\x18\n" +
-	"\x14RM_VALUATION_FLAG_FL\x10\x06*\x82\x01\n" +
+	"\x14RM_VALUATION_FLAG_FL\x10\x06\x12\x1a\n" +
+	"\x16RM_VALUATION_FLAG_NONE\x10\a*\x9e\x01\n" +
 	"\x0fRMMarketingFlag\x12!\n" +
 	"\x1dRM_MARKETING_FLAG_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14RM_MARKETING_FLAG_SP\x10\x01\x12\x18\n" +
 	"\x14RM_MARKETING_FLAG_PP\x10\x02\x12\x18\n" +
-	"\x14RM_MARKETING_FLAG_FP\x10\x03*y\n" +
+	"\x14RM_MARKETING_FLAG_FP\x10\x03\x12\x1a\n" +
+	"\x16RM_MARKETING_FLAG_NONE\x10\x04*y\n" +
 	"\x0fRemoveItemsMode\x12!\n" +
 	"\x1dREMOVE_ITEMS_MODE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cREMOVE_ITEMS_MODE_DEACTIVATE\x10\x01\x12!\n" +

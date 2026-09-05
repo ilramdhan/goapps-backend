@@ -1799,10 +1799,11 @@
         "RM_MARKETING_FLAG_UNSPECIFIED",
         "RM_MARKETING_FLAG_SP",
         "RM_MARKETING_FLAG_PP",
-        "RM_MARKETING_FLAG_FP"
+        "RM_MARKETING_FLAG_FP",
+        "RM_MARKETING_FLAG_NONE"
       ],
       "default": "RM_MARKETING_FLAG_UNSPECIFIED",
-      "description": "RMMarketingFlag selects which computed marketing projection becomes\n`cost_mark`. UNSPECIFIED behaves as AUTO (SP → PP → FP fallback).\n\n - RM_MARKETING_FLAG_UNSPECIFIED: Default zero value. Treated as AUTO (SP→PP→FP fallback).\n - RM_MARKETING_FLAG_SP: Projection Stock Landed Cost.\n - RM_MARKETING_FLAG_PP: Projection PO Landed Cost.\n - RM_MARKETING_FLAG_FP: Projection Fix Value Landed Cost."
+      "description": "RMMarketingFlag selects which computed marketing projection becomes\n`cost_mark`. UNSPECIFIED behaves as AUTO (SP → PP → FP fallback).\n\n - RM_MARKETING_FLAG_UNSPECIFIED: Default zero value. Treated as AUTO (SP→PP→FP fallback).\n - RM_MARKETING_FLAG_SP: Projection Stock Landed Cost.\n - RM_MARKETING_FLAG_PP: Projection PO Landed Cost.\n - RM_MARKETING_FLAG_FP: Projection Fix Value Landed Cost.\n - RM_MARKETING_FLAG_NONE: AUTO resolved to nothing — every cascade candidate (SP/PP/FP) was zero,\nso there is no marketing projection for this period. Never\nuser-selectable; it is only ever written by the engine as the resolved\n`marketing_flag_used`."
     },
     "v1RMValuationFlag": {
       "type": "string",
@@ -1813,10 +1814,11 @@
         "RM_VALUATION_FLAG_PR",
         "RM_VALUATION_FLAG_CL",
         "RM_VALUATION_FLAG_SL",
-        "RM_VALUATION_FLAG_FL"
+        "RM_VALUATION_FLAG_FL",
+        "RM_VALUATION_FLAG_NONE"
       ],
       "default": "RM_VALUATION_FLAG_UNSPECIFIED",
-      "description": "RMValuationFlag selects which computed rate becomes `cost_val` in the\nRM Cost row. UNSPECIFIED behaves as AUTO (CL → SL → FL fallback, where\nFL incorporates the per-detail valuation_default_value).\n\n - RM_VALUATION_FLAG_UNSPECIFIED: Default zero value. Treated as AUTO (CL→SL→FL fallback).\n - RM_VALUATION_FLAG_CR: Use Consumption Rate (CR) — group-total cons_val / cons_qty.\n - RM_VALUATION_FLAG_SR: Use Stock Rate (SR) — group-total stock_val / stock_qty.\n - RM_VALUATION_FLAG_PR: Use PO Rate (PR) — group-total po_val / po_qty.\n - RM_VALUATION_FLAG_CL: Use Consumption Landed Cost (CL) — group-total CL aggregate.\n - RM_VALUATION_FLAG_SL: Use Stock Landed Cost (SL) — group-total SL aggregate.\n - RM_VALUATION_FLAG_FL: Use Fix Landed Cost (FL) — MAX of per-detail FL."
+      "description": "RMValuationFlag selects which computed rate becomes `cost_val` in the\nRM Cost row. UNSPECIFIED behaves as AUTO (CL → SL → FL → PR fallback, where\nFL incorporates the per-detail valuation_default_value).\n\n - RM_VALUATION_FLAG_UNSPECIFIED: Default zero value. Treated as AUTO (CL→SL→FL→PR fallback).\n - RM_VALUATION_FLAG_CR: Use Consumption Rate (CR) — group-total cons_val / cons_qty.\n - RM_VALUATION_FLAG_SR: Use Stock Rate (SR) — group-total stock_val / stock_qty.\n - RM_VALUATION_FLAG_PR: Use PO Rate (PR) — group-total po_val / po_qty.\n - RM_VALUATION_FLAG_CL: Use Consumption Landed Cost (CL) — group-total CL aggregate.\n - RM_VALUATION_FLAG_SL: Use Stock Landed Cost (SL) — group-total SL aggregate.\n - RM_VALUATION_FLAG_FL: Use Fix Landed Cost (FL) — MAX of per-detail FL.\n - RM_VALUATION_FLAG_NONE: AUTO resolved to nothing — every cascade candidate (CL/SL/FL/PR) was zero,\nso there is no price source for this period. Never user-selectable; it is\nonly ever written by the engine as the resolved `valuation_flag_used`."
     },
     "v1RemoveItemsMode": {
       "type": "string",

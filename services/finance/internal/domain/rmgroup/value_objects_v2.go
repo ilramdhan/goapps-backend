@@ -5,13 +5,13 @@ package rmgroup
 import "strings"
 
 // ValuationFlag selects which computed rate feeds cost_val. AUTO triggers a
-// CL→SL→FL fallback. Distinct from the V1 Flag enum.
+// CL→SL→FL→PR fallback. Distinct from the V1 Flag enum.
 type ValuationFlag string
 
 // ValuationFlag constants — MUST match the chk_rm_group_valuation_flag_v2
 // CHECK constraint and the cst_rm_cost.valuation_flag_v2 column.
 const (
-	// ValuationFlagAuto picks the first non-zero rate from CL, SL, FL in order.
+	// ValuationFlagAuto picks the first non-zero rate from CL, SL, FL, PR in order.
 	ValuationFlagAuto ValuationFlag = "AUTO"
 	// ValuationFlagCR forces Consumption Rate (group total cons_val/cons_qty).
 	ValuationFlagCR ValuationFlag = "CR"

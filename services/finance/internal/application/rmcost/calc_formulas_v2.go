@@ -15,8 +15,15 @@ package rmcost
 import "math"
 
 // flagAuto is the cascade-fallback marker for both ValuationFlag and
-// MarketingFlag. CL→SL→FL for valuation, SP→PP→FP for marketing.
+// MarketingFlag. CL→SL→FL→PR for valuation, SP→PP→FP for marketing.
 const flagAuto = "AUTO"
+
+// flagNone is the resolved flag when an AUTO cascade finds every candidate
+// zero -- CL/SL/FL/PR for valuation, SP/PP/FP for marketing -- meaning no
+// source existed for the period. Distinct from the real source labels so
+// downstream consumers can tell "resolved to that source" apart from "no
+// source at all".
+const flagNone = "NONE"
 
 // SourceQty is one item's source quantities/values for one period.
 // All fields zero when no sync row was found for the (item, grade, period).
@@ -283,7 +290,7 @@ func ComputeSimulation(simRate float64, h HeaderInputsV2) float64 {
 }
 
 // SelectValuation picks cost_val based on flag + group totals. AUTO triggers
-// the CL→SL→FL fallback (first non-zero).
+// the CL→SL→FL→PR fallback (first non-zero).
 func SelectValuation(tot GroupTotals, flag string) float64 {
 	v, _ := SelectValuationWithFlag(tot, flag)
 	return v
@@ -292,8 +299,9 @@ func SelectValuation(tot GroupTotals, flag string) float64 {
 // SelectValuationWithFlag returns cost_val and the flag actually applied. When
 // flag is explicit (CR/SR/PR/CL/SL/FL) the same flag is echoed back. When flag
 // is AUTO (or unrecognized), the cascade picks the first non-zero in
-// CL→SL→FL and returns the chosen flag — when all three are zero, the
-// resolved flag is "FL" (the last fallback).
+// CL→SL→FL→PR and returns the chosen flag — when all four candidates are
+// zero, the resolved flag is "NONE", meaning no price source existed for the
+// period (cost_val is 0).
 func SelectValuationWithFlag(tot GroupTotals, flag string) (float64, string) {
 	switch flag {
 	case "CR":
@@ -310,9 +318,16 @@ func SelectValuationWithFlag(tot GroupTotals, flag string) (float64, string) {
 		return tot.FL, "FL"
 	}
 	// AUTO / "" / unknown → cascade.
-	return firstNonZeroWithLabel([]labeledRate{
-		{tot.CL, "CL"}, {tot.SL, "SL"}, {tot.FL, "FL"},
+	v, label := firstNonZeroWithLabel([]labeledRate{
+		{tot.CL, "CL"}, {tot.SL, "SL"}, {tot.FL, "FL"}, {tot.PR, "PR"},
 	})
+	if v == 0 {
+		// All four candidates are zero: no price source existed for the
+		// period. Use the honest "NONE" label instead of echoing back
+		// whichever candidate happened to be last in the cascade.
+		label = flagNone
+	}
+	return v, label
 }
 
 // SelectMarketing picks cost_mark based on flag + projections. AUTO triggers
@@ -323,7 +338,12 @@ func SelectMarketing(p MarketingProjections, flag string) float64 {
 }
 
 // SelectMarketingWithFlag returns cost_mark and the flag actually applied,
-// mirroring SelectValuationWithFlag but for marketing projections.
+// mirroring SelectValuationWithFlag but for marketing projections. When flag
+// is explicit (SP/PP/FP) the same flag is echoed back. When flag is AUTO (or
+// unrecognized), the cascade picks the first non-zero in SP→PP→FP and
+// returns the chosen flag — when all three candidates are zero, the resolved
+// flag is "NONE", meaning no marketing projection existed for the period
+// (cost_mark is 0).
 func SelectMarketingWithFlag(p MarketingProjections, flag string) (float64, string) {
 	switch flag {
 	case "SP":
@@ -333,9 +353,17 @@ func SelectMarketingWithFlag(p MarketingProjections, flag string) (float64, stri
 	case "FP":
 		return p.FP, "FP"
 	}
-	return firstNonZeroWithLabel([]labeledRate{
+	// AUTO / "" / unknown → cascade.
+	v, label := firstNonZeroWithLabel([]labeledRate{
 		{p.SP, "SP"}, {p.PP, "PP"}, {p.FP, "FP"},
 	})
+	if v == 0 {
+		// All three candidates are zero: no marketing projection existed
+		// for the period. Use the honest "NONE" label instead of echoing
+		// back whichever candidate happened to be last in the cascade.
+		label = flagNone
+	}
+	return v, label
 }
 
 // labeledRate pairs a candidate value with the flag label that selecting it

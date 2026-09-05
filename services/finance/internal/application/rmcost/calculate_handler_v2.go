@@ -103,8 +103,9 @@ func (h *CalculateHandlerV2) HandleOneGroup(
 		return nil, err
 	}
 	simRate := simRateFromExisting(existing)
+	mdv := mdvFromExisting(existing)
 
-	hv2 := headerInputsV2FromHead(head, simRate)
+	hv2 := headerInputsV2FromHead(head, simRate, mdv)
 	proj := ComputeMarketingProjections(totals, hv2)
 	costSim := ComputeSimulation(simRate, hv2)
 	costVal, valUsed := SelectValuationWithFlag(totals, hv2.ValuationFlag)
@@ -202,6 +203,19 @@ func simRateFromExisting(existing *rmcost.Cost) float64 {
 		return 0
 	}
 	return *existing.V2Inputs().SimulationRate
+}
+
+// mdvFromExisting preserves the user-edited marketing_default_value across
+// full recalcs. The "Edit Inputs" drawer writes this as a period snapshot on
+// cst_rm_cost, and a full recalc must not silently overwrite it with the
+// master group head's default — see headerInputsV2FromHead. Returns 0 (no
+// override) when the existing cost row has none set, mirroring
+// simRateFromExisting.
+func mdvFromExisting(existing *rmcost.Cost) float64 {
+	if existing == nil || existing.V2Inputs() == nil || existing.V2Inputs().MarketingDefaultValue == nil {
+		return 0
+	}
+	return *existing.V2Inputs().MarketingDefaultValue
 }
 
 // resolveGroupUOM picks the group UOM from details, falling back to the sync
@@ -307,7 +321,7 @@ func detailInputsFromGroupDetail(d *rmgroup.Detail) DetailInputs {
 	}
 }
 
-func headerInputsV2FromHead(h *rmgroup.Head, simRate float64) HeaderInputsV2 {
+func headerInputsV2FromHead(h *rmgroup.Head, simRate, mdvOverride float64) HeaderInputsV2 {
 	mi := h.MarketingInputs()
 	out := HeaderInputsV2{
 		MarketingFreightRate:    derefOrZero(mi.FreightRate),
@@ -318,6 +332,13 @@ func headerInputsV2FromHead(h *rmgroup.Head, simRate float64) HeaderInputsV2 {
 		SimulationRate:          simRate,
 		ValuationFlag:           string(mi.ValuationFlag),
 		MarketingFlag:           string(mi.MarketingFlag),
+	}
+	// A user-edited marketing_default_value on the existing cost row (see
+	// mdvFromExisting) takes precedence over the master group head's default;
+	// mdvOverride == 0 means "no existing override", not "user set it to 0"
+	// (nilIfZero cannot distinguish the two — see mdvFromExisting caller).
+	if mdvOverride != 0 {
+		out.MarketingDefaultValue = mdvOverride
 	}
 	if out.ValuationFlag == "" {
 		out.ValuationFlag = flagAuto
