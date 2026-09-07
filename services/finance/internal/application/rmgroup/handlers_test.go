@@ -109,32 +109,57 @@ func TestUpdateHandler_Success(t *testing.T) {
 	head := newHead(t)
 	repo := new(mockRepo)
 	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
+	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202604").
+		Return(nil, rmgroup.ErrNotFound)
+	repo.On("UpsertHeadPeriod", ctx, mock.AnythingOfType("*rmgroup.HeadPeriodSnapshot")).Return(nil)
+	repo.On("LatestSyncPeriod", ctx).Return("202604", nil)
 	repo.On("UpdateHead", ctx, head).Return(nil)
 
 	newName := "Updated Name"
 	h := appgroup.NewUpdateHandler(repo)
 	out, err := h.Handle(ctx, appgroup.UpdateCommand{
 		HeadID:    head.ID().String(),
+		Period:    "202604",
 		Name:      &newName,
 		UpdatedBy: "user:edit",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "Updated Name", out.Name())
+	assert.Equal(t, "Updated Name", out.Name)
+	repo.AssertExpectations(t)
 }
 
 func TestUpdateHandler_InvalidFlag(t *testing.T) {
 	head := newHead(t)
 	repo := new(mockRepo)
 	repo.On("GetHeadByID", mock.Anything, head.ID()).Return(head, nil)
+	repo.On("GetHeadPeriodSnapshot", mock.Anything, head.ID(), "202604").
+		Return(nil, rmgroup.ErrNotFound)
 
 	bad := "BOGUS"
 	h := appgroup.NewUpdateHandler(repo)
 	_, err := h.Handle(context.Background(), appgroup.UpdateCommand{
 		HeadID:        head.ID().String(),
+		Period:        "202604",
 		FlagValuation: &bad,
 		UpdatedBy:     "user:edit",
 	})
 	assert.ErrorIs(t, err, rmgroup.ErrInvalidFlag)
+}
+
+func TestUpdateHandler_InvalidPeriodFormat(t *testing.T) {
+	head := newHead(t)
+	repo := new(mockRepo)
+
+	newName := "X"
+	h := appgroup.NewUpdateHandler(repo)
+	_, err := h.Handle(context.Background(), appgroup.UpdateCommand{
+		HeadID:    head.ID().String(),
+		Period:    "not-a-period",
+		Name:      &newName,
+		UpdatedBy: "user:edit",
+	})
+	assert.ErrorIs(t, err, rmgroup.ErrInvalidPeriod)
+	repo.AssertNotCalled(t, "GetHeadByID")
 }
 
 func TestDeleteHandler_Success(t *testing.T) {

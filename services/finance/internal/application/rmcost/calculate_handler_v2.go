@@ -88,7 +88,7 @@ func (h *CalculateHandlerV2) HandleOneGroup(
 	if err := h.validateInputs(period, calculatedBy); err != nil {
 		return nil, err
 	}
-	head, details, err := h.loadHeadAndDetails(ctx, headID)
+	head, details, err := h.loadHeadAndDetails(ctx, headID, period)
 	if err != nil {
 		return nil, err
 	}
@@ -142,16 +142,96 @@ func (h *CalculateHandlerV2) validateInputs(period, calculatedBy string) error {
 	return nil
 }
 
-func (h *CalculateHandlerV2) loadHeadAndDetails(ctx context.Context, headID uuid.UUID) (*rmgroup.Head, []*rmgroup.Detail, error) {
+// loadHeadAndDetails loads the group config used to calculate one period.
+// Per design §2.2/§2.3, this is a period-aware read: for the given period it
+// first tries the period-scoped snapshot (cst_rm_group_head_period /
+// cst_rm_group_detail_period), falling back to the anchor row when no
+// snapshot exists yet for that period. For the latest period this is
+// byte-identical to reading the anchor row directly, because the
+// write-through rule (update_handler.go / update_item_handler.go) keeps the
+// anchor row and the latest-period snapshot in sync on every edit.
+func (h *CalculateHandlerV2) loadHeadAndDetails(ctx context.Context, headID uuid.UUID, period string) (*rmgroup.Head, []*rmgroup.Detail, error) {
 	head, err := h.groupRepo.GetHeadByID(ctx, headID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load head: %w", err)
+	}
+	head, err = h.overlayHeadForPeriod(ctx, head, period)
+	if err != nil {
+		return nil, nil, err
 	}
 	details, err := h.groupRepo.ListActiveDetailsByHeadID(ctx, headID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list details: %w", err)
 	}
+	details, err = h.overlayDetailsForPeriod(ctx, details, period)
+	if err != nil {
+		return nil, nil, err
+	}
 	return head, details, nil
+}
+
+// overlayHeadForPeriod resolves the (head.ID(), period) snapshot, falling
+// back to a fresh snapshot built from the anchor head's current values when
+// none exists yet (get-or-create baseline, same fallback rule as
+// rmgroup.GetHandler.overlayHeadPeriod), and merges it onto a new Head value
+// so the anchor entity itself is never mutated.
+func (h *CalculateHandlerV2) overlayHeadForPeriod(ctx context.Context, head *rmgroup.Head, period string) (*rmgroup.Head, error) {
+	snap, err := h.groupRepo.GetHeadPeriodSnapshot(ctx, head.ID(), period)
+	if err != nil {
+		if !errors.Is(err, rmgroup.ErrNotFound) {
+			return nil, fmt.Errorf("load head period snapshot: %w", err)
+		}
+		fresh := rmgroup.NewHeadPeriodSnapshotFromHead(period, head)
+		snap = &fresh
+	}
+	overlaid := rmgroup.ReconstructHead(
+		head.ID(), head.Code(),
+		snap.Name, snap.Description, snap.Colorant, snap.CIName,
+		snap.CostPercentage, snap.CostPerKg,
+		snap.FlagValuation, snap.FlagMarketing, snap.FlagSimulation,
+		snap.InitValValuation, snap.InitValMarketing, snap.InitValSimulation,
+		head.IsActive(),
+		head.CreatedAt(), head.CreatedBy(),
+		head.UpdatedAt(), head.UpdatedBy(),
+		head.DeletedAt(), head.DeletedBy(),
+	)
+	if err := overlaid.AttachMarketingInputs(snap.MarketingInputs); err != nil {
+		return nil, fmt.Errorf("attach head period overlay marketing inputs: %w", err)
+	}
+	return overlaid, nil
+}
+
+// overlayDetailsForPeriod overlays every detail row with its (detailID,
+// period) snapshot, applying the same get-or-create fallback as
+// overlayHeadForPeriod.
+func (h *CalculateHandlerV2) overlayDetailsForPeriod(
+	ctx context.Context, details []*rmgroup.Detail, period string,
+) ([]*rmgroup.Detail, error) {
+	overlaid := make([]*rmgroup.Detail, len(details))
+	for i, d := range details {
+		snap, err := h.groupRepo.GetDetailPeriodSnapshot(ctx, d.ID(), period)
+		if err != nil {
+			if !errors.Is(err, rmgroup.ErrNotFound) {
+				return nil, fmt.Errorf("load detail period snapshot: %w", err)
+			}
+			fresh := rmgroup.NewDetailPeriodSnapshotFromDetail(period, d)
+			snap = &fresh
+		}
+		merged := rmgroup.ReconstructDetail(
+			d.ID(), d.HeadID(), d.ItemCode(),
+			d.ItemName(), d.ItemTypeCode(), d.GradeCode(), d.ItemGrade(), d.UOMCode(),
+			snap.MarketPercentage, snap.MarketValueRp,
+			snap.SortOrder, snap.IsActive, snap.IsDummy,
+			d.CreatedAt(), d.CreatedBy(),
+			d.UpdatedAt(), d.UpdatedBy(),
+			d.DeletedAt(), d.DeletedBy(),
+		)
+		if err := merged.AttachValuationInputs(snap.ValuationInputs); err != nil {
+			return nil, fmt.Errorf("attach detail period overlay valuation inputs: %w", err)
+		}
+		overlaid[i] = merged
+	}
+	return overlaid, nil
 }
 
 // computeDetailOutputs builds the per-(item, grade) source-key list, fetches
