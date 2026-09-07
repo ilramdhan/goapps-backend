@@ -97,6 +97,13 @@ func (r *MBHeadRepository) TransitionWithAutoGen(ctx context.Context, id uuid.UU
 // the SAME transaction as everything else in TransitionWithAutoGen, so a failure here rolls back
 // together with it, but it deliberately does not sit in the middle of the cost_route_rm/
 // mbWriteBackCostProduct sequence so that logic keeps running exactly as it always has.
+//
+// syncRootSpinShadeFromHead and syncCostProductMasterShadeFromHead run right after
+// syncRootSpinLDRFromHead, for the same reason and under the same shape (shade-bug fix): before
+// this, an MB Recipe's shade (Master Shade dropdown) edited after the first Validate never
+// propagated to either mst_mb_spin's root row or the linked cost_product_master row on
+// re-validate. Unlike LDR, shade has no lock/guard column — it is always overwritten from the
+// recipe on every regenerate (business-confirmed).
 func (r *MBHeadRepository) regenerateCostProductRMs(ctx context.Context, tx *sql.Tx, id uuid.UUID, version int32, actorUserID string, productSysID int64, entity *mbhead.Entity) error {
 	seqID, err := mbResolveExistingRouteSeqID(ctx, tx, productSysID)
 	if err != nil {
@@ -115,7 +122,13 @@ func (r *MBHeadRepository) regenerateCostProductRMs(ctx context.Context, tx *sql
 	if err := mbWriteBackCostProduct(ctx, tx, id, productSysID, actorUserID); err != nil {
 		return err
 	}
-	return syncRootSpinLDRFromHead(ctx, tx, id, entity, actorUserID)
+	if err := syncRootSpinLDRFromHead(ctx, tx, id, entity, actorUserID); err != nil {
+		return err
+	}
+	if err := syncRootSpinShadeFromHead(ctx, tx, id, entity, actorUserID); err != nil {
+		return err
+	}
+	return syncCostProductMasterShadeFromHead(ctx, tx, productSysID, entity, actorUserID)
 }
 
 // syncRootSpinLDRFromHead keeps the root MB Spin's (mbs_parent_spin_id IS NULL) mbs_ldr_calculated_pct
@@ -162,6 +175,74 @@ func mbResolveRootSpinLDRPct(entity *mbhead.Entity) *float64 {
 		return v
 	}
 	return entity.MBHLdrPrsn()
+}
+
+// syncRootSpinShadeFromHead keeps the root MB Spin's (mbs_parent_spin_id IS NULL) shade/
+// cross-section columns synced with its parent MB Head every time the recipe is (re)validated —
+// mirrors syncRootSpinLDRFromHead's shape exactly (31 Aug LDR fix), but for shade instead of LDR.
+//
+// Before this fix, mst_mb_spin's shade columns were only ever seeded once, at the very first
+// Validate (mbBuildAutoGenSpin, when CostProductID() == 0); every later re-validate went through
+// regenerateCostProductRMs, which never touched mst_mb_spin's shade columns at all. A user editing
+// the recipe's shade (Master Shade dropdown) and re-validating never saw the change reflected on
+// the MB Recipe page's root spin.
+//
+// Deliberately NO guard/lock for shade (business-confirmed, unlike mbs_ldr_is_actual for LDR):
+// shade is always allowed to be overwritten by the recipe on every regenerate.
+//
+// Still applies the same "never write NULL over a value that might already be correct" safety as
+// syncRootSpinLDRFromHead: if the recipe currently has neither a shade code nor a shade name, this
+// is a no-op rather than blanking out mst_mb_spin's shade columns. This is a defensive choice, not
+// a stated requirement — see mb_autogen_repository.go's syncRootSpinShadeFromHead callers/docs for
+// rationale — because there is no guard to fall back on if this ever races/regresses.
+//
+// Purely additive and non-duplicating: it UPDATEs the single existing root spin row identified by
+// mbs_mbh_id = headID AND mbs_parent_spin_id IS NULL AND deleted_at IS NULL — it never INSERTs.
+func syncRootSpinShadeFromHead(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mbhead.Entity, actorUserID string) error {
+	shadeCode := mbEmptyStringToPtr(entity.ShadeCode())
+	shadeName := mbEmptyStringToPtr(entity.ShadeName())
+	crossSection := mbEmptyStringToPtr(entity.CrossSection())
+	if shadeCode == nil && shadeName == nil && crossSection == nil {
+		return nil
+	}
+	const q = `
+		UPDATE mst_mb_spin
+		SET mbs_shade_code = $1, mbs_shade_name = $2, mbs_cross_section = $3, mbs_cc = $1,
+		    updated_at = NOW(), updated_by = $4
+		WHERE mbs_mbh_id = $5 AND mbs_parent_spin_id IS NULL AND deleted_at IS NULL`
+	if _, err := tx.ExecContext(ctx, q, shadeCode, shadeName, crossSection, actorUserID, headID); err != nil {
+		return fmt.Errorf("mb_autogen: sync root spin shade from head: %w", err)
+	}
+	return nil
+}
+
+// syncCostProductMasterShadeFromHead keeps the linked cost_product_master row's shade columns
+// (Master Product MB) synced with its parent MB Head every time the recipe is (re)validated.
+// Companion to syncRootSpinShadeFromHead — same recipe-shade source, same "always overwrite, but
+// never with NULL over existing data" behavior, different target table.
+//
+// Before this fix, cpm_shade_code/cpm_shade_name were only ever written once, at
+// mbInsertCostProductMaster (first-ever Validate). mbWriteBackCostProduct (which runs on every
+// regen) only ever touches mst_mb_head, never cost_product_master, so a shade edited after the
+// first validate never propagated to the Master Product MB record.
+//
+// Identifies the row the exact same way mbWriteBackCostProduct/mbResolveExistingRouteSeqID do:
+// by cpm_product_sys_id — the productSysID already resolved/threaded through
+// regenerateCostProductRMs, not a fresh lookup.
+func syncCostProductMasterShadeFromHead(ctx context.Context, tx *sql.Tx, productSysID int64, entity *mbhead.Entity, actorUserID string) error {
+	shadeCode := mbEmptyStringToPtr(entity.ShadeCode())
+	shadeName := mbEmptyStringToPtr(entity.ShadeName())
+	if shadeCode == nil && shadeName == nil {
+		return nil
+	}
+	const q = `
+		UPDATE cost_product_master
+		SET cpm_shade_code = $1, cpm_shade_name = $2, cpm_updated_at = NOW(), cpm_updated_by = $3
+		WHERE cpm_product_sys_id = $4`
+	if _, err := tx.ExecContext(ctx, q, shadeCode, shadeName, actorUserID, productSysID); err != nil {
+		return fmt.Errorf("mb_autogen: sync cost_product_master shade from head: %w", err)
+	}
+	return nil
 }
 
 // mbResolveExistingRouteSeqID finds the single route/seq (level 1, seq 1 — the only shape

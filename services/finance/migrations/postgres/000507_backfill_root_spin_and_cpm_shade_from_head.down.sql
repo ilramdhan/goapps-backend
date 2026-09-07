@@ -1,0 +1,12 @@
+-- 000507 down: intentional no-op.
+--
+-- This migration's up direction is a DATA BACKFILL, not a schema change — it corrects
+-- mst_mb_spin.mbs_shade_code/mbs_shade_name/mbs_cross_section/mbs_cc and
+-- cost_product_master.cpm_shade_code/cpm_shade_name rows that had drifted out of sync with their
+-- parent mst_mb_head due to a pre-fix bug (regenerateCostProductRMs never wrote shade back to
+-- either table on re-validate). There is no reliable way to know, for any given row, what its
+-- shade columns held immediately before the backfill ran (no prior-value snapshot was taken, and
+-- rows may have been synced multiple times since by the accompanying application-code fix).
+-- Reverting by setting these columns back to NULL would destroy legitimate, correct data —
+-- including values written by ordinary application traffic after this migration ran, not just the
+-- backfill itself — so this file deliberately does nothing, mirroring 000506's down migration.
