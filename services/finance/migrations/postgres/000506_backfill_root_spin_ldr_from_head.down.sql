@@ -1,0 +1,11 @@
+-- 000506 down: intentional no-op.
+--
+-- This migration's up direction is a DATA BACKFILL, not a schema change — it corrects
+-- mst_mb_spin.mbs_ldr_calculated_pct/mbs_ldr_type rows that had drifted out of sync with their
+-- parent mst_mb_head due to a pre-fix bug (regenerateCostProductRMs never wrote back to
+-- mst_mb_spin on re-validate). There is no reliable way to know, for any given row, what its
+-- mbs_ldr_calculated_pct/mbs_ldr_type held immediately before the backfill ran (no prior-value
+-- snapshot was taken, and rows may have been synced multiple times since by the accompanying
+-- application-code fix). Reverting by setting these columns back to NULL/'NOT_CALCULATED' would
+-- destroy legitimate, correct data — including values written by ordinary application traffic
+-- after this migration ran, not just the backfill itself — so this file deliberately does nothing.

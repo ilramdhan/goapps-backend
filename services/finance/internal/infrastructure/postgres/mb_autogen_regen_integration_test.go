@@ -22,6 +22,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
 )
 
 const mbRegenFixturePrefix = "ITEST-MBREGEN-"
@@ -125,6 +127,8 @@ func (s *MBAutoGenRegenSuite) cleanupFixtures() {
 	require.NoError(s.T(), err)
 	_, err = s.db.ExecContext(s.ctx, `DELETE FROM cost_route_head WHERE crh_product_sys_id IN (SELECT cpm_product_sys_id FROM cost_product_master WHERE cpm_product_code LIKE $1)`, prefix)
 	require.NoError(s.T(), err)
+	_, err = s.db.ExecContext(s.ctx, `DELETE FROM mst_mb_spin WHERE mbs_mbh_id IN (SELECT mbh_id FROM mst_mb_head WHERE mbh_mb_costing LIKE $1)`, prefix)
+	require.NoError(s.T(), err)
 	_, err = s.db.ExecContext(s.ctx, `DELETE FROM mst_mb_head WHERE mbh_mb_costing LIKE $1`, prefix)
 	require.NoError(s.T(), err)
 	_, err = s.db.ExecContext(s.ctx, `DELETE FROM cost_product_master WHERE cpm_product_code LIKE $1`, prefix)
@@ -198,11 +202,103 @@ func (s *MBAutoGenRegenSuite) insertVersion(version int32, pct string) {
 	require.NoError(s.T(), err)
 }
 
+// regenHeadEntity builds the minimal in-memory *mbhead.Entity regenerateCostProductRMs needs for
+// its (additive, 31 Aug fix) root-spin LDR sync step. By default it carries no LDR value at all
+// (nil MBHRunLdrPct/MBHLdrPrsn), so syncRootSpinLDRFromHead's nil-guard makes the sync a no-op and
+// every pre-existing assertion in this suite is unaffected. Tests that specifically exercise the
+// LDR sync pass overrides.
+func (s *MBAutoGenRegenSuite) regenHeadEntity(overrides func(*mbhead.NewParams)) *mbhead.Entity {
+	p := mbhead.NewParams{MBCosting: "ITEST-MBREGEN-ENTITY", CreatedBy: "itest2"}
+	if overrides != nil {
+		overrides(&p)
+	}
+	entity, err := mbhead.New(p)
+	require.NoError(s.T(), err)
+	return entity
+}
+
 func (s *MBAutoGenRegenSuite) runRegen(version int32) {
+	s.runRegenWithEntity(version, s.regenHeadEntity(nil))
+}
+
+func (s *MBAutoGenRegenSuite) runRegenWithEntity(version int32, entity *mbhead.Entity) {
 	err := s.db.Transaction(s.ctx, func(tx *sql.Tx) error {
-		return s.headRepo.regenerateCostProductRMs(s.ctx, tx, s.mbhID, version, "itest2", s.productSysID)
+		return s.headRepo.regenerateCostProductRMs(s.ctx, tx, s.mbhID, version, "itest2", s.productSysID, entity)
 	})
 	require.NoError(s.T(), err)
+}
+
+// seedRootSpin inserts a root MB Spin row (mbs_parent_spin_id IS NULL) under s.mbhID, the shape
+// syncRootSpinLDRFromHead targets. Returns the new spin's ID.
+func (s *MBAutoGenRegenSuite) seedRootSpin(ldrIsActual bool) uuid.UUID {
+	spinID := uuid.New()
+	_, err := s.db.ExecContext(s.ctx, `
+		INSERT INTO mst_mb_spin (mbs_id, mbs_mbh_id, mbs_mgt_name, mbs_ldr_is_actual, created_by)
+		VALUES ($1, $2, $3, $4, 'itest2')`,
+		spinID, s.mbhID, mbRegenFixturePrefix+"spin", ldrIsActual)
+	require.NoError(s.T(), err)
+	return spinID
+}
+
+func (s *MBAutoGenRegenSuite) rootSpinLDR(spinID uuid.UUID) (pct sql.NullFloat64, ldrType string) {
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT mbs_ldr_calculated_pct, mbs_ldr_type FROM mst_mb_spin WHERE mbs_id = $1`, spinID).
+		Scan(&pct, &ldrType))
+	return pct, ldrType
+}
+
+// (v): regenerateCostProductRMs must sync the root spin's LDR from the head on every regen, not
+// just the first-ever validate — this is the actual bug this suite's package was created to fix.
+func (s *MBAutoGenRegenSuite) TestRegenerate_SyncsRootSpinLDR_WhenNotActual() {
+	spinID := s.seedRootSpin(false)
+	entity := s.regenHeadEntity(func(p *mbhead.NewParams) {
+		v := 42.5
+		p.MBHRunLdrPct = &v
+	})
+
+	s.runRegenWithEntity(2, entity)
+
+	pct, ldrType := s.rootSpinLDR(spinID)
+	require.True(s.T(), pct.Valid)
+	require.InDelta(s.T(), 42.5, pct.Float64, 0.0001)
+	require.Equal(s.T(), "CALCULATED", ldrType)
+}
+
+// (vi): a root spin already locked as ACTUAL (mbs_ldr_is_actual = TRUE) must never be overwritten
+// by the sync — this is the hard guard the fix's design explicitly requires.
+func (s *MBAutoGenRegenSuite) TestRegenerate_DoesNotOverwriteActualLockedLDR() {
+	spinID := s.seedRootSpin(true)
+	_, err := s.db.ExecContext(s.ctx,
+		`UPDATE mst_mb_spin SET mbs_ldr_calculated_pct = 10, mbs_ldr_type = 'ACTUAL' WHERE mbs_id = $1`, spinID)
+	require.NoError(s.T(), err)
+
+	entity := s.regenHeadEntity(func(p *mbhead.NewParams) {
+		v := 99.0
+		p.MBHRunLdrPct = &v
+	})
+	s.runRegenWithEntity(2, entity)
+
+	pct, ldrType := s.rootSpinLDR(spinID)
+	require.True(s.T(), pct.Valid)
+	require.InDelta(s.T(), 10, pct.Float64, 0.0001, "a locked ACTUAL LDR must never be overwritten by regenerate")
+	require.Equal(s.T(), "ACTUAL", ldrType)
+}
+
+// (vii): when the recipe has no LDR at all (neither MBHRunLdrPct nor MBHLdrPrsn), the sync must
+// be a true no-op — it must never overwrite an existing calculated value with NULL.
+func (s *MBAutoGenRegenSuite) TestRegenerate_NilHeadLDR_DoesNotOverwriteWithNull() {
+	spinID := s.seedRootSpin(false)
+	_, err := s.db.ExecContext(s.ctx,
+		`UPDATE mst_mb_spin SET mbs_ldr_calculated_pct = 33.3, mbs_ldr_type = 'CALCULATED' WHERE mbs_id = $1`, spinID)
+	require.NoError(s.T(), err)
+
+	entity := s.regenHeadEntity(nil) // nil LDR fields
+	s.runRegenWithEntity(2, entity)
+
+	pct, ldrType := s.rootSpinLDR(spinID)
+	require.True(s.T(), pct.Valid, "must not be nulled out")
+	require.InDelta(s.T(), 33.3, pct.Float64, 0.0001)
+	require.Equal(s.T(), "CALCULATED", ldrType)
 }
 
 func (s *MBAutoGenRegenSuite) routeRMRatios() []string {
