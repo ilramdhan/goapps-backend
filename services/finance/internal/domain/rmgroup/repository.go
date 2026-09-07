@@ -71,6 +71,29 @@ type Repository interface {
 
 	// SoftDeleteDetail marks a single detail row as deleted.
 	SoftDeleteDetail(ctx context.Context, id uuid.UUID, deletedBy string) error
+
+	// ---------- Period-scoped snapshot operations ----------
+
+	// GetHeadPeriodSnapshot returns the period-scoped snapshot for (headID, period).
+	// Returns ErrNotFound when no snapshot exists yet for that period (caller falls
+	// back to constructing one from the anchor Head via NewHeadPeriodSnapshotFromHead).
+	GetHeadPeriodSnapshot(ctx context.Context, headID uuid.UUID, period string) (*HeadPeriodSnapshot, error)
+
+	// UpsertHeadPeriod writes the snapshot keyed on (period, group_head_id).
+	UpsertHeadPeriod(ctx context.Context, snap *HeadPeriodSnapshot) error
+
+	// GetDetailPeriodSnapshot returns the period-scoped snapshot for (detailID, period).
+	// Returns ErrNotFound when no snapshot exists yet for that period (caller falls
+	// back to constructing one from the anchor Detail via NewDetailPeriodSnapshotFromDetail).
+	GetDetailPeriodSnapshot(ctx context.Context, detailID uuid.UUID, period string) (*DetailPeriodSnapshot, error)
+
+	// UpsertDetailPeriod writes the snapshot keyed on (period, group_detail_id).
+	UpsertDetailPeriod(ctx context.Context, snap *DetailPeriodSnapshot) error
+
+	// LatestSyncPeriod returns the most recent period known to the system (reuses
+	// the same source of truth as rmcost.ListDistinctPeriods / useSyncPeriods),
+	// used by the update handlers to decide whether to write-through to the anchor row.
+	LatestSyncPeriod(ctx context.Context) (string, error)
 }
 
 // ListFilter describes pagination, search, and sort options for ListHeads.

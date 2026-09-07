@@ -124,3 +124,26 @@ func (f Flag) IsInit() bool { return f == FlagInit }
 
 // String returns the canonical string form.
 func (f Flag) String() string { return string(f) }
+
+// periodPattern validates a 6-character YYYYMM period (e.g. "202604").
+// Mirrors the chk_rm_group_head_period_format / chk_rm_group_detail_period_format
+// CHECK constraints on cst_rm_group_head_period / cst_rm_group_detail_period, and is
+// intentionally kept as its own copy of rmcost's identical pattern rather than an
+// import of the rmcost package: the domain layer must not import sibling domain
+// packages (see goapps-backend/CLAUDE.md §5/§13 — domain layer is standard-library
+// only), so each domain owns its own period value object instead of reaching across
+// package boundaries for it.
+var periodPattern = regexp.MustCompile(`^\d{6}$`)
+
+// ValidatePeriodFormat returns ErrInvalidPeriod when the supplied string is not a
+// 6-digit YYYYMM value with a month in 01-12.
+func ValidatePeriodFormat(period string) error {
+	if !periodPattern.MatchString(period) {
+		return ErrInvalidPeriod
+	}
+	month := period[4:]
+	if month < "01" || month > "12" {
+		return ErrInvalidPeriod
+	}
+	return nil
+}

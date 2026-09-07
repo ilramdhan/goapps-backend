@@ -541,3 +541,88 @@ func TestListFilter_Validate(t *testing.T) {
 	f.Validate()
 	assert.Equal(t, 40, f.Offset())
 }
+
+// ----------------------------------------------------------------------------
+// HeadPeriodSnapshot / DetailPeriodSnapshot construction tests
+// ----------------------------------------------------------------------------
+
+func TestNewHeadPeriodSnapshotFromHead_CopiesCurrentValues(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHead(t)
+	freight := 1.5
+	antiDumping := 2.5
+	defaultVal := 3.5
+	require.NoError(t, h.AttachMarketingInputs(rmgroup.MarketingInputs{
+		FreightRate:    &freight,
+		AntiDumpingPct: &antiDumping,
+		DefaultValue:   &defaultVal,
+		ValuationFlag:  rmgroup.ValuationFlagAuto,
+		MarketingFlag:  rmgroup.MarketingFlagAuto,
+	}))
+
+	snap := rmgroup.NewHeadPeriodSnapshotFromHead("202604", h)
+
+	assert.Equal(t, "202604", snap.Period)
+	assert.Equal(t, h.ID(), snap.GroupHeadID)
+	assert.Equal(t, h.Name(), snap.Name)
+	assert.Equal(t, h.Description(), snap.Description)
+	assert.Equal(t, h.Colorant(), snap.Colorant)
+	assert.Equal(t, h.CIName(), snap.CIName)
+	assert.Equal(t, h.CostPercentage(), snap.CostPercentage)
+	assert.Equal(t, h.CostPerKg(), snap.CostPerKg)
+	assert.Equal(t, h.FlagValuation(), snap.FlagValuation)
+	assert.Equal(t, h.FlagMarketing(), snap.FlagMarketing)
+	assert.Equal(t, h.FlagSimulation(), snap.FlagSimulation)
+	assert.Equal(t, h.InitValValuation(), snap.InitValValuation)
+	assert.Equal(t, h.InitValMarketing(), snap.InitValMarketing)
+	assert.Equal(t, h.InitValSimulation(), snap.InitValSimulation)
+	assert.Equal(t, h.MarketingInputs(), snap.MarketingInputs)
+	assert.False(t, snap.IsBackfilled)
+	assert.Equal(t, h.CreatedBy(), snap.CreatedBy)
+	assert.NotEqual(t, uuid.Nil, snap.ID)
+	assert.False(t, snap.CreatedAt.IsZero())
+	assert.Nil(t, snap.UpdatedAt)
+	assert.Nil(t, snap.UpdatedBy)
+}
+
+func TestNewHeadPeriodSnapshotFromHead_DistinctIDsPerCall(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHead(t)
+	a := rmgroup.NewHeadPeriodSnapshotFromHead("202604", h)
+	b := rmgroup.NewHeadPeriodSnapshotFromHead("202604", h)
+	assert.NotEqual(t, a.ID, b.ID)
+}
+
+func TestNewDetailPeriodSnapshotFromDetail_CopiesCurrentValues(t *testing.T) {
+	t.Parallel()
+
+	d := newTestDetail(t)
+	freight := 4.5
+	antiDumping := 5.5
+	require.NoError(t, d.AttachValuationInputs(rmgroup.ValuationInputs{
+		FreightRate:    &freight,
+		AntiDumpingPct: &antiDumping,
+	}))
+	require.NoError(t, d.Update(rmgroup.DetailUpdateInput{
+		SortOrder: int32Ptr(5),
+	}, "editor"))
+
+	snap := rmgroup.NewDetailPeriodSnapshotFromDetail("202604", d)
+
+	assert.Equal(t, "202604", snap.Period)
+	assert.Equal(t, d.ID(), snap.GroupDetailID)
+	assert.Equal(t, d.MarketPercentage(), snap.MarketPercentage)
+	assert.Equal(t, d.MarketValueRp(), snap.MarketValueRp)
+	assert.Equal(t, d.SortOrder(), snap.SortOrder)
+	assert.Equal(t, d.IsActive(), snap.IsActive)
+	assert.Equal(t, d.IsDummy(), snap.IsDummy)
+	assert.Equal(t, d.ValuationInputs(), snap.ValuationInputs)
+	assert.False(t, snap.IsBackfilled)
+	assert.Equal(t, d.CreatedBy(), snap.CreatedBy)
+	assert.NotEqual(t, uuid.Nil, snap.ID)
+	assert.False(t, snap.CreatedAt.IsZero())
+}
+
+func int32Ptr(v int32) *int32 { return &v }

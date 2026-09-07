@@ -73,4 +73,7 @@ var (
 	// that has already produced cost calculation rows. Deleting would orphan
 	// the historical cost audit trail, so the operation is blocked.
 	ErrGroupHasCostData = errors.New("rm group cannot be deleted: cost data has already been generated for this group")
+
+	// ErrInvalidPeriod is returned when a period string is not a valid YYYYMM value.
+	ErrInvalidPeriod = errors.New("period must be a 6-character YYYYMM string")
 )

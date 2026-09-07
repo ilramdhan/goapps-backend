@@ -117,6 +117,35 @@ func (m *mockRepo) SoftDeleteDetail(ctx context.Context, id uuid.UUID, deletedBy
 	return m.Called(ctx, id, deletedBy).Error(0)
 }
 
+func (m *mockRepo) GetHeadPeriodSnapshot(ctx context.Context, headID uuid.UUID, period string) (*rmgroup.HeadPeriodSnapshot, error) {
+	args := m.Called(ctx, headID, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*rmgroup.HeadPeriodSnapshot), args.Error(1)
+}
+
+func (m *mockRepo) UpsertHeadPeriod(ctx context.Context, snap *rmgroup.HeadPeriodSnapshot) error {
+	return m.Called(ctx, snap).Error(0)
+}
+
+func (m *mockRepo) GetDetailPeriodSnapshot(ctx context.Context, detailID uuid.UUID, period string) (*rmgroup.DetailPeriodSnapshot, error) {
+	args := m.Called(ctx, detailID, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*rmgroup.DetailPeriodSnapshot), args.Error(1)
+}
+
+func (m *mockRepo) UpsertDetailPeriod(ctx context.Context, snap *rmgroup.DetailPeriodSnapshot) error {
+	return m.Called(ctx, snap).Error(0)
+}
+
+func (m *mockRepo) LatestSyncPeriod(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
 // mockUngroupedReader mocks appgroup.UngroupedItemsReader.
 type mockUngroupedReader struct {
 	mock.Mock
