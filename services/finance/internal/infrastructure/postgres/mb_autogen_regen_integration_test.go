@@ -247,6 +247,115 @@ func (s *MBAutoGenRegenSuite) rootSpinLDR(spinID uuid.UUID) (pct sql.NullFloat64
 	return pct, ldrType
 }
 
+// rootSpinShade reads back the shade/cross-section columns syncRootSpinShadeFromHead writes.
+func (s *MBAutoGenRegenSuite) rootSpinShade(spinID uuid.UUID) (code, name, crossSection, cc sql.NullString) {
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT mbs_shade_code, mbs_shade_name, mbs_cross_section, mbs_cc FROM mst_mb_spin WHERE mbs_id = $1`, spinID).
+		Scan(&code, &name, &crossSection, &cc))
+	return code, name, crossSection, cc
+}
+
+// cpmShade reads back the shade columns syncCostProductMasterShadeFromHead writes.
+func (s *MBAutoGenRegenSuite) cpmShade() (code, name sql.NullString) {
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT cpm_shade_code, cpm_shade_name FROM cost_product_master WHERE cpm_product_sys_id = $1`, s.productSysID).
+		Scan(&code, &name))
+	return code, name
+}
+
+// (viii): regenerateCostProductRMs must sync the root spin's shade/cross-section (and mbs_cc,
+// which mirrors mbs_shade_code — 000499) from the head on every regen, not just the first-ever
+// validate — the shade counterpart of the LDR bug this suite's package was created to fix.
+func (s *MBAutoGenRegenSuite) TestRegenerate_SyncsRootSpinShade() {
+	spinID := s.seedRootSpin(false)
+	entity := s.regenHeadEntity(func(p *mbhead.NewParams) {
+		p.ShadeCode = "SH01"
+		p.ShadeName = "Jet Black"
+		p.CrossSection = "ROUND"
+	})
+
+	s.runRegenWithEntity(2, entity)
+
+	code, name, crossSection, cc := s.rootSpinShade(spinID)
+	require.True(s.T(), code.Valid)
+	require.Equal(s.T(), "SH01", code.String)
+	require.True(s.T(), name.Valid)
+	require.Equal(s.T(), "Jet Black", name.String)
+	require.True(s.T(), crossSection.Valid)
+	require.Equal(s.T(), "ROUND", crossSection.String)
+	require.True(s.T(), cc.Valid, "mbs_cc must mirror mbs_shade_code (000499)")
+	require.Equal(s.T(), "SH01", cc.String)
+}
+
+// (ix): shade has no lock/guard column (unlike LDR's mbs_ldr_is_actual) — it must always be
+// overwritten by the recipe's current value on regenerate, even replacing a prior shade.
+func (s *MBAutoGenRegenSuite) TestRegenerate_ShadeAlwaysOverwritesPriorValue() {
+	spinID := s.seedRootSpin(false)
+	_, err := s.db.ExecContext(s.ctx,
+		`UPDATE mst_mb_spin SET mbs_shade_code = 'OLD', mbs_shade_name = 'Old Shade', mbs_cc = 'OLD' WHERE mbs_id = $1`, spinID)
+	require.NoError(s.T(), err)
+
+	entity := s.regenHeadEntity(func(p *mbhead.NewParams) {
+		p.ShadeCode = "NEW"
+		p.ShadeName = "New Shade"
+	})
+	s.runRegenWithEntity(2, entity)
+
+	code, name, _, cc := s.rootSpinShade(spinID)
+	require.Equal(s.T(), "NEW", code.String)
+	require.Equal(s.T(), "New Shade", name.String)
+	require.Equal(s.T(), "NEW", cc.String)
+}
+
+// (x): when the recipe has no shade at all (empty ShadeCode/ShadeName/CrossSection), the sync must
+// be a no-op — it must never overwrite an existing shade with NULL.
+func (s *MBAutoGenRegenSuite) TestRegenerate_NilHeadShade_DoesNotOverwriteWithNull() {
+	spinID := s.seedRootSpin(false)
+	_, err := s.db.ExecContext(s.ctx,
+		`UPDATE mst_mb_spin SET mbs_shade_code = 'KEEP', mbs_shade_name = 'Keep Shade', mbs_cross_section = 'KEEP-CS', mbs_cc = 'KEEP' WHERE mbs_id = $1`, spinID)
+	require.NoError(s.T(), err)
+
+	entity := s.regenHeadEntity(nil) // empty ShadeCode/ShadeName/CrossSection
+	s.runRegenWithEntity(2, entity)
+
+	code, name, crossSection, cc := s.rootSpinShade(spinID)
+	require.Equal(s.T(), "KEEP", code.String, "must not be nulled out")
+	require.Equal(s.T(), "Keep Shade", name.String)
+	require.Equal(s.T(), "KEEP-CS", crossSection.String)
+	require.Equal(s.T(), "KEEP", cc.String)
+}
+
+// (xi): the linked cost_product_master (Master Product MB) row's shade columns must also be
+// synced on every regen, not just the first-ever validate.
+func (s *MBAutoGenRegenSuite) TestRegenerate_SyncsCostProductMasterShade() {
+	entity := s.regenHeadEntity(func(p *mbhead.NewParams) {
+		p.ShadeCode = "SH02"
+		p.ShadeName = "Natural"
+	})
+
+	s.runRegenWithEntity(2, entity)
+
+	code, name := s.cpmShade()
+	require.True(s.T(), code.Valid)
+	require.Equal(s.T(), "SH02", code.String)
+	require.True(s.T(), name.Valid)
+	require.Equal(s.T(), "Natural", name.String)
+}
+
+// (xii): cost_product_master's shade must not be nulled out when the recipe has no shade at all.
+func (s *MBAutoGenRegenSuite) TestRegenerate_NilHeadShade_DoesNotOverwriteCPMWithNull() {
+	_, err := s.db.ExecContext(s.ctx,
+		`UPDATE cost_product_master SET cpm_shade_code = 'KEEP', cpm_shade_name = 'Keep Shade' WHERE cpm_product_sys_id = $1`, s.productSysID)
+	require.NoError(s.T(), err)
+
+	entity := s.regenHeadEntity(nil)
+	s.runRegenWithEntity(2, entity)
+
+	code, name := s.cpmShade()
+	require.Equal(s.T(), "KEEP", code.String, "must not be nulled out")
+	require.Equal(s.T(), "Keep Shade", name.String)
+}
+
 // (v): regenerateCostProductRMs must sync the root spin's LDR from the head on every regen, not
 // just the first-ever validate — this is the actual bug this suite's package was created to fix.
 func (s *MBAutoGenRegenSuite) TestRegenerate_SyncsRootSpinLDR_WhenNotActual() {
