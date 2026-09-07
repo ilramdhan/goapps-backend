@@ -73,7 +73,7 @@ func (r *MBHeadRepository) TransitionWithAutoGen(ctx context.Context, id uuid.UU
 			return err
 		}
 		if entity.CostProductID() != 0 {
-			return r.regenerateCostProductRMs(ctx, tx, id, currentVersion, actorUserID, entity.CostProductID())
+			return r.regenerateCostProductRMs(ctx, tx, id, currentVersion, actorUserID, entity.CostProductID(), entity)
 		}
 		return r.autoGenCostProduct(ctx, tx, id, currentVersion, actorUserID, entity)
 	})
@@ -89,7 +89,15 @@ func (r *MBHeadRepository) TransitionWithAutoGen(ctx context.Context, id uuid.UU
 // already used by BulkReplaceRMs (cost_route_repository.go). mbWriteBackCostProduct's
 // mbh_cost_generated_at/_by columns are refreshed too, so there is always a visible trail of when
 // the copy was last regenerated instead of the number silently drifting.
-func (r *MBHeadRepository) regenerateCostProductRMs(ctx context.Context, tx *sql.Tx, id uuid.UUID, version int32, actorUserID string, productSysID int64) error {
+//
+// syncRootSpinLDRFromHead runs last, as a separate additive step AFTER the cost-calculation work
+// above has fully succeeded (31 Aug fix): before this, the root MB Spin's LDR was seeded only once,
+// at the very first Validate (mbBuildAutoGenSpin) — this path never touched mst_mb_spin at all, so
+// every later re-validate/regenerate left the MB Recipe page showing a stale LDR. It is still inside
+// the SAME transaction as everything else in TransitionWithAutoGen, so a failure here rolls back
+// together with it, but it deliberately does not sit in the middle of the cost_route_rm/
+// mbWriteBackCostProduct sequence so that logic keeps running exactly as it always has.
+func (r *MBHeadRepository) regenerateCostProductRMs(ctx context.Context, tx *sql.Tx, id uuid.UUID, version int32, actorUserID string, productSysID int64, entity *mbhead.Entity) error {
 	seqID, err := mbResolveExistingRouteSeqID(ctx, tx, productSysID)
 	if err != nil {
 		return err
@@ -104,7 +112,56 @@ func (r *MBHeadRepository) regenerateCostProductRMs(ctx context.Context, tx *sql
 	if err := mbInsertRouteRMs(ctx, tx, seqID, productSysID, rows, actorUserID); err != nil {
 		return err
 	}
-	return mbWriteBackCostProduct(ctx, tx, id, productSysID, actorUserID)
+	if err := mbWriteBackCostProduct(ctx, tx, id, productSysID, actorUserID); err != nil {
+		return err
+	}
+	return syncRootSpinLDRFromHead(ctx, tx, id, entity, actorUserID)
+}
+
+// syncRootSpinLDRFromHead keeps the root MB Spin's (mbs_parent_spin_id IS NULL) mbs_ldr_calculated_pct
+// synced with its parent MB Head's LDR every time the recipe is (re)validated — not only the very
+// first time. Before the 31 Aug fix, only mbBuildAutoGenSpin ever seeded the root spin's LDR, and
+// only once (first Validate, when CostProductID() == 0); every later re-validate went through
+// regenerateCostProductRMs, which never touched mst_mb_spin at all, so the MB Recipe page kept
+// showing a stale LDR after the first edit.
+//
+// Guarded by mbs_ldr_is_actual = FALSE: a spin whose LDR was locked as ACTUAL by a human (see
+// mbspin.Entity.LockLDRActual) must never be silently overwritten by this sync. It applies to the
+// root spin regardless of its mbs_status (R&D, Spinning, ...) — mbs_ldr_is_actual is the only gate.
+//
+// A nil resolved LDR (the recipe genuinely has no LDR value yet, from neither MBHRunLdrPct nor
+// MBHLdrPrsn) is a deliberate no-op: this must never write NULL over a value a previous seed/sync
+// already wrote.
+//
+// Purely additive and non-duplicating: it UPDATEs the single existing root spin row identified by
+// mbs_mbh_id = headID AND mbs_parent_spin_id IS NULL AND deleted_at IS NULL — it never INSERTs, so
+// it can never create a second mst_mb_spin row or a new master product.
+func syncRootSpinLDRFromHead(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mbhead.Entity, actorUserID string) error {
+	ldrCalculatedPct := mbResolveRootSpinLDRPct(entity)
+	if ldrCalculatedPct == nil {
+		return nil
+	}
+	const q = `
+		UPDATE mst_mb_spin
+		SET mbs_ldr_calculated_pct = $1, mbs_ldr_type = $2, updated_at = NOW(), updated_by = $3
+		WHERE mbs_mbh_id = $4 AND mbs_parent_spin_id IS NULL AND mbs_ldr_is_actual = FALSE AND deleted_at IS NULL`
+	if _, err := tx.ExecContext(ctx, q, *ldrCalculatedPct, mbspin.LDRTypeCalculated, actorUserID, headID); err != nil {
+		return fmt.Errorf("mb_autogen: sync root spin ldr from head: %w", err)
+	}
+	return nil
+}
+
+// mbResolveRootSpinLDRPct resolves the LDR percentage to seed/sync onto a root MB Spin from its
+// parent MB Head: prefer the head's already-recalculated run value (MBHRunLdrPct), falling back to
+// its persisted/frozen value (MBHLdrPrsn) when no run value exists yet (Decision D3, 31 Aug).
+// Shared by mbBuildAutoGenSpin (first-ever Validate, seeded via INSERT) and
+// syncRootSpinLDRFromHead (every re-validate afterwards, synced via UPDATE) so both paths derive
+// the value the exact same way.
+func mbResolveRootSpinLDRPct(entity *mbhead.Entity) *float64 {
+	if v := entity.MBHRunLdrPct(); v != nil {
+		return v
+	}
+	return entity.MBHLdrPrsn()
 }
 
 // mbResolveExistingRouteSeqID finds the single route/seq (level 1, seq 1 — the only shape
@@ -211,15 +268,12 @@ func mbBuildAutoGenSpin(headID uuid.UUID, entity *mbhead.Entity, productSysID in
 	// Decision D3 (31 Aug) SUPERSEDES the earlier decision from the 28 Aug session (which said
 	// to leave mbs_ldr_calculated_pct blank here and rely solely on the separate LDR
 	// calculation/locking process, Task E). Per D3, the calculated LDR is now seeded from the
-	// MB Head at auto-gen time: prefer the head's already-recalculated run value
-	// (MBHRunLdrPct), falling back to its persisted/frozen value (MBHLdrPrsn) when no run value
-	// exists yet. This does NOT touch mbs_ldr_type (still LDRTypeNotCalculated, unchanged) or
+	// MB Head at auto-gen time via mbResolveRootSpinLDRPct (shared with syncRootSpinLDRFromHead,
+	// which keeps this value in sync on every later re-validate — see that function's doc
+	// comment). This does NOT touch mbs_ldr_type (still LDRTypeNotCalculated, unchanged) or
 	// mbs_ldr_adjustment_pct/mbs_ldr_is_actual (still nil/false) — Task E's recalculation and
 	// locking flow still owns those.
-	ldrCalculatedPct := entity.MBHRunLdrPct()
-	if ldrCalculatedPct == nil {
-		ldrCalculatedPct = entity.MBHLdrPrsn()
-	}
+	ldrCalculatedPct := mbResolveRootSpinLDRPct(entity)
 
 	spin.HydrateShadeAndLDR(mbspin.ShadeAndLDR{
 		ShadeCode:        mbEmptyStringToPtr(entity.ShadeCode()),
