@@ -770,3 +770,127 @@ func (d *Detail) Deactivate(updatedBy string) error {
 	d.updatedBy = &updatedBy
 	return nil
 }
+
+// =============================================================================
+// HeadPeriodSnapshot — period-scoped, editable subset of Head's fields.
+// =============================================================================
+
+// HeadPeriodSnapshot is the period-scoped, editable subset of Head's fields.
+// One row exists per (period, group_head_id) once that period has been
+// explicitly edited (or backfilled). It is a snapshot value type, not an
+// aggregate root: it carries no independent identity-check behavior beyond
+// what its constructor and the repository's upsert-by-period key provide.
+//
+// IsActive is deliberately excluded — activity status is not period-scoped,
+// a group is active/inactive "now" regardless of which period is displayed.
+type HeadPeriodSnapshot struct {
+	ID          uuid.UUID
+	Period      string // YYYYMM
+	GroupHeadID uuid.UUID
+
+	// Mirrors Head's UpdateInput-shaped editable fields.
+	Name              string
+	Description       string
+	Colorant          string
+	CIName            string
+	CostPercentage    float64
+	CostPerKg         float64
+	FlagValuation     Flag
+	FlagMarketing     Flag
+	FlagSimulation    Flag
+	InitValValuation  *float64
+	InitValMarketing  *float64
+	InitValSimulation *float64
+
+	// MarketingInputs reuses Head's V2 marketing-projection value object verbatim.
+	MarketingInputs MarketingInputs
+
+	// IsBackfilled distinguishes a real per-period edit from a row produced by
+	// the one-time historical backfill migration.
+	IsBackfilled bool
+
+	CreatedAt time.Time
+	CreatedBy string
+	UpdatedAt *time.Time
+	UpdatedBy *string
+}
+
+// NewHeadPeriodSnapshotFromHead builds the "no period-row exists yet" fallback
+// snapshot directly from the anchor Head's current getters. This is the
+// get-or-create baseline: an unedited period inherits the anchor row's current
+// config, giving the read-fallback and update-handler flows a single, tested
+// construction path instead of ad-hoc field copying at each call site.
+func NewHeadPeriodSnapshotFromHead(period string, head *Head) HeadPeriodSnapshot {
+	return HeadPeriodSnapshot{
+		ID:                uuid.New(),
+		Period:            period,
+		GroupHeadID:       head.ID(),
+		Name:              head.Name(),
+		Description:       head.Description(),
+		Colorant:          head.Colorant(),
+		CIName:            head.CIName(),
+		CostPercentage:    head.CostPercentage(),
+		CostPerKg:         head.CostPerKg(),
+		FlagValuation:     head.FlagValuation(),
+		FlagMarketing:     head.FlagMarketing(),
+		FlagSimulation:    head.FlagSimulation(),
+		InitValValuation:  head.InitValValuation(),
+		InitValMarketing:  head.InitValMarketing(),
+		InitValSimulation: head.InitValSimulation(),
+		MarketingInputs:   head.MarketingInputs(),
+		IsBackfilled:      false,
+		CreatedAt:         time.Now(),
+		CreatedBy:         head.CreatedBy(),
+	}
+}
+
+// =============================================================================
+// DetailPeriodSnapshot — period-scoped, editable subset of Detail's fields.
+// =============================================================================
+
+// DetailPeriodSnapshot is the period-scoped, editable subset of Detail's
+// fields. One row exists per (period, group_detail_id) once that period has
+// been explicitly edited (or backfilled).
+type DetailPeriodSnapshot struct {
+	ID            uuid.UUID
+	Period        string // YYYYMM
+	GroupDetailID uuid.UUID
+
+	MarketPercentage *float64
+	MarketValueRp    *float64
+	SortOrder        int32
+	IsActive         bool
+	IsDummy          bool
+
+	// ValuationInputs reuses Detail's V2 valuation-formula value object verbatim.
+	ValuationInputs ValuationInputs
+
+	// IsBackfilled distinguishes a real per-period edit from a row produced by
+	// the one-time historical backfill migration.
+	IsBackfilled bool
+
+	CreatedAt time.Time
+	CreatedBy string
+	UpdatedAt *time.Time
+	UpdatedBy *string
+}
+
+// NewDetailPeriodSnapshotFromDetail builds the "no period-row exists yet"
+// fallback snapshot directly from the anchor Detail's current getters —
+// the same get-or-create baseline pattern as NewHeadPeriodSnapshotFromHead.
+func NewDetailPeriodSnapshotFromDetail(period string, detail *Detail) DetailPeriodSnapshot {
+	return DetailPeriodSnapshot{
+		ID:               uuid.New(),
+		Period:           period,
+		GroupDetailID:    detail.ID(),
+		MarketPercentage: detail.MarketPercentage(),
+		MarketValueRp:    detail.MarketValueRp(),
+		SortOrder:        detail.SortOrder(),
+		IsActive:         detail.IsActive(),
+		IsDummy:          detail.IsDummy(),
+		ValuationInputs:  detail.ValuationInputs(),
+		IsBackfilled:     false,
+		CreatedAt:        time.Now(),
+		CreatedBy:        detail.CreatedBy(),
+	}
+}

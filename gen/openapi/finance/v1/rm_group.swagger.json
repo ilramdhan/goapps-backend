@@ -418,6 +418,13 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "period",
+            "description": "Optional period (YYYYMM) for period-scoped read; empty means anchor/latest read.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -799,6 +806,10 @@
         },
         "clearValuationDefaultValue": {
           "type": "boolean"
+        },
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM) this update targets."
         }
       },
       "description": "V2: Partial update of one detail row's valuation fields + sort_order/is_active."
@@ -907,6 +918,10 @@
         },
         "clearMarketingDefaultValue": {
           "type": "boolean"
+        },
+        "period": {
+          "type": "string",
+          "description": "Period (YYYYMM) this update targets."
         }
       },
       "description": "Partial update of an RM group head. Absent fields leave state unchanged.\nClear_* booleans explicitly set nullable fields to NULL."

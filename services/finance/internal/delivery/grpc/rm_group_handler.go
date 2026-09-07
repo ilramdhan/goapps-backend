@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -96,6 +97,7 @@ func (h *RMGroupHandler) enrichItemInput(ctx context.Context, itemCode, gradeCod
 // RMGroupHandler implements the RMGroupServiceServer interface.
 type RMGroupHandler struct {
 	financev1.UnimplementedRMGroupServiceServer
+	repo               rmgroupdomain.Repository
 	createHandler      *appgroup.CreateHandler
 	getHandler         *appgroup.GetHandler
 	updateHandler      *appgroup.UpdateHandler
@@ -227,6 +229,7 @@ func NewRMGroupHandler(
 		return nil, err
 	}
 	return &RMGroupHandler{
+		repo:               repo,
 		createHandler:      appgroup.NewCreateHandler(repo),
 		getHandler:         appgroup.NewGetHandler(repo),
 		updateHandler:      appgroup.NewUpdateHandler(repo),
@@ -295,6 +298,7 @@ func (h *RMGroupHandler) GetRMGroup(ctx context.Context, req *financev1.GetRMGro
 		HeadID:      req.GroupHeadId,
 		WithDetails: true,
 		ActiveOnly:  false,
+		Period:      req.GetPeriod(),
 	})
 	if err != nil {
 		RecordRMGroupOperation(opGet, false)
@@ -323,8 +327,24 @@ func (h *RMGroupHandler) UpdateRMGroup(ctx context.Context, req *financev1.Updat
 		return &financev1.UpdateRMGroupResponse{Base: baseResp}, nil
 	}
 
+	period := req.GetPeriod()
+	if period == "" {
+		// Backward-compatible fallback: callers that don't yet send a period
+		// (design §7/§8) resolve to the current latest sync period so the
+		// write-through rule (design §2.2) always fires — reproducing
+		// today's pre-versioning behavior of always updating the single
+		// anchor row.
+		var err error
+		period, err = h.resolveWritePeriod(ctx)
+		if err != nil {
+			RecordRMGroupOperation(opUpdate, false)
+			return &financev1.UpdateRMGroupResponse{Base: domainErrorToBaseResponse(err)}, nil
+		}
+	}
+
 	cmd := appgroup.UpdateCommand{
 		HeadID:                 req.GroupHeadId,
+		Period:                 period,
 		Name:                   req.GroupName,
 		Description:            req.Description,
 		Colorant:               req.Colourant,
@@ -368,18 +388,45 @@ func (h *RMGroupHandler) UpdateRMGroup(ctx context.Context, req *financev1.Updat
 		cmd.MarketingFlag = &s
 	}
 
-	head, err := h.updateHandler.Handle(ctx, cmd)
+	if _, err := h.updateHandler.Handle(ctx, cmd); err != nil {
+		RecordRMGroupOperation(opUpdate, false)
+		return &financev1.UpdateRMGroupResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+
+	// UpdateHandler.Handle now returns the period-scoped *rmgroup.HeadPeriodSnapshot
+	// rather than the anchor *rmgroup.Head (design §5.1 step 6), so the response's
+	// full Head view (identity + audit fields, per design §2.3) is rebuilt via the
+	// same period-aware read path GetRMGroup uses.
+	result, err := h.getHandler.Handle(ctx, appgroup.GetQuery{
+		HeadID:      req.GroupHeadId,
+		WithDetails: false,
+		Period:      period,
+	})
 	if err != nil {
 		RecordRMGroupOperation(opUpdate, false)
 		return &financev1.UpdateRMGroupResponse{Base: domainErrorToBaseResponse(err)}, nil
 	}
 
 	RecordRMGroupOperation(opUpdate, true)
-	h.recalc.Publish(ctx, head.ID(), string(apprmcost.TriggerGroupUpdate), getUserFromContext(ctx))
+	h.recalc.Publish(ctx, result.Head.ID(), string(apprmcost.TriggerGroupUpdate), getUserFromContext(ctx))
 	return &financev1.UpdateRMGroupResponse{
 		Base: successResponse("RM Group updated successfully"),
-		Data: rmGroupHeadToProto(head),
+		Data: rmGroupHeadToProto(result.Head),
 	}, nil
+}
+
+// resolveWritePeriod is the backward-compatible fallback used when a
+// caller's UpdateRMGroupRequest/UpdateGroupItemRequest omits `period`
+// (empty string). It resolves to the current latest sync period via the
+// same repository method the application-layer write-through rule uses
+// (design §2.2/§6's LatestSyncPeriod), so an update without an explicit
+// period targets "now" exactly as it did before period-versioning existed.
+func (h *RMGroupHandler) resolveWritePeriod(ctx context.Context) (string, error) {
+	period, err := h.repo.LatestSyncPeriod(ctx)
+	if err != nil {
+		return "", fmt.Errorf("resolve latest sync period: %w", err)
+	}
+	return period, nil
 }
 
 // DeleteRMGroup soft-deletes a group head (cascade to details).
@@ -533,9 +580,25 @@ func (h *RMGroupHandler) UpdateGroupItem(ctx context.Context, req *financev1.Upd
 		RecordRMGroupOperation(opUpdate, false)
 		return &financev1.UpdateGroupItemResponse{Base: baseResp}, nil
 	}
+	period := req.GetPeriod()
+	if period == "" {
+		// Backward-compatible fallback: callers that don't yet send a period
+		// (design §7/§8) resolve to the current latest sync period so the
+		// write-through rule (design §2.2) always fires — reproducing
+		// today's pre-versioning behavior of always updating the single
+		// anchor row.
+		var err error
+		period, err = h.resolveWritePeriod(ctx)
+		if err != nil {
+			RecordRMGroupOperation(opUpdate, false)
+			return &financev1.UpdateGroupItemResponse{Base: domainErrorToBaseResponse(err)}, nil
+		}
+	}
+
 	cmd := appgroup.UpdateItemCommand{
 		HeadID:                       req.GroupHeadId,
 		GroupDetailID:                req.GroupDetailId,
+		Period:                       period,
 		ValuationFreightRate:         req.ValuationFreightRate,
 		ValuationAntiDumpingPct:      req.ValuationAntiDumpingPct,
 		ValuationDutyPct:             req.ValuationDutyPct,
@@ -550,19 +613,53 @@ func (h *RMGroupHandler) UpdateGroupItem(ctx context.Context, req *financev1.Upd
 		ClearValuationDefaultValue:   req.ClearValuationDefaultValue,
 		UpdatedBy:                    getUserFromContext(ctx),
 	}
-	d, err := h.updateItemHandler.Handle(ctx, cmd)
+	if _, err := h.updateItemHandler.Handle(ctx, cmd); err != nil {
+		RecordRMGroupOperation(opUpdate, false)
+		return &financev1.UpdateGroupItemResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+
+	// UpdateItemHandler.Handle now returns the period-scoped
+	// *rmgroup.DetailPeriodSnapshot rather than the anchor *rmgroup.Detail
+	// (design §5.2 step 6), so the response's full Detail view (identity +
+	// audit fields, per design §2.3) is rebuilt via the same period-aware
+	// read path GetRMGroup uses.
+	detail, err := h.findUpdatedDetail(ctx, req.GroupHeadId, req.GroupDetailId, period)
 	if err != nil {
 		RecordRMGroupOperation(opUpdate, false)
 		return &financev1.UpdateGroupItemResponse{Base: domainErrorToBaseResponse(err)}, nil
 	}
+
 	RecordRMGroupOperation(opUpdate, true)
 	if headID, parseErr := uuid.Parse(req.GroupHeadId); parseErr == nil {
 		h.recalc.Publish(ctx, headID, string(apprmcost.TriggerDetailChange), getUserFromContext(ctx))
 	}
 	return &financev1.UpdateGroupItemResponse{
 		Base: successResponse("Group item updated"),
-		Data: rmGroupDetailToProto(d),
+		Data: rmGroupDetailToProto(detail),
 	}, nil
+}
+
+// findUpdatedDetail re-reads the head's details overlaid with period and
+// returns the one matching groupDetailID, for building the UpdateGroupItem
+// response after the write path stopped returning the anchor *rmgroup.Detail
+// directly (see the comment at its call site).
+func (h *RMGroupHandler) findUpdatedDetail(
+	ctx context.Context, groupHeadID, groupDetailID, period string,
+) (*rmgroupdomain.Detail, error) {
+	result, err := h.getHandler.Handle(ctx, appgroup.GetQuery{
+		HeadID:      groupHeadID,
+		WithDetails: true,
+		Period:      period,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, d := range result.Details {
+		if d.ID().String() == groupDetailID {
+			return d, nil
+		}
+	}
+	return nil, rmgroupdomain.ErrDetailNotFound
 }
 
 // ListUngroupedItems returns items from the sync feed with no active group.
