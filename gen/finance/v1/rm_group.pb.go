@@ -1264,7 +1264,9 @@ func (x *CreateRMGroupResponse) GetData() *RMGroupHead {
 type GetRMGroupRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Head UUID.
-	GroupHeadId   string `protobuf:"bytes,1,opt,name=group_head_id,json=groupHeadId,proto3" json:"group_head_id,omitempty"`
+	GroupHeadId string `protobuf:"bytes,1,opt,name=group_head_id,json=groupHeadId,proto3" json:"group_head_id,omitempty"`
+	// Optional period (YYYYMM) for period-scoped read; empty means anchor/latest read.
+	Period        *string `protobuf:"bytes,2,opt,name=period,proto3,oneof" json:"period,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1302,6 +1304,13 @@ func (*GetRMGroupRequest) Descriptor() ([]byte, []int) {
 func (x *GetRMGroupRequest) GetGroupHeadId() string {
 	if x != nil {
 		return x.GroupHeadId
+	}
+	return ""
+}
+
+func (x *GetRMGroupRequest) GetPeriod() string {
+	if x != nil && x.Period != nil {
+		return *x.Period
 	}
 	return ""
 }
@@ -1413,8 +1422,10 @@ type UpdateRMGroupRequest struct {
 	ClearMarketingFreightRate    bool `protobuf:"varint,23,opt,name=clear_marketing_freight_rate,json=clearMarketingFreightRate,proto3" json:"clear_marketing_freight_rate,omitempty"`
 	ClearMarketingAntiDumpingPct bool `protobuf:"varint,24,opt,name=clear_marketing_anti_dumping_pct,json=clearMarketingAntiDumpingPct,proto3" json:"clear_marketing_anti_dumping_pct,omitempty"`
 	ClearMarketingDefaultValue   bool `protobuf:"varint,25,opt,name=clear_marketing_default_value,json=clearMarketingDefaultValue,proto3" json:"clear_marketing_default_value,omitempty"`
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	// Period (YYYYMM) this update targets.
+	Period        string `protobuf:"bytes,26,opt,name=period,proto3" json:"period,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateRMGroupRequest) Reset() {
@@ -1620,6 +1631,13 @@ func (x *UpdateRMGroupRequest) GetClearMarketingDefaultValue() bool {
 		return x.ClearMarketingDefaultValue
 	}
 	return false
+}
+
+func (x *UpdateRMGroupRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
 }
 
 // Update response.
@@ -2297,8 +2315,10 @@ type UpdateGroupItemRequest struct {
 	ClearValuationDutyPct        bool `protobuf:"varint,12,opt,name=clear_valuation_duty_pct,json=clearValuationDutyPct,proto3" json:"clear_valuation_duty_pct,omitempty"`
 	ClearValuationTransportRate  bool `protobuf:"varint,13,opt,name=clear_valuation_transport_rate,json=clearValuationTransportRate,proto3" json:"clear_valuation_transport_rate,omitempty"`
 	ClearValuationDefaultValue   bool `protobuf:"varint,14,opt,name=clear_valuation_default_value,json=clearValuationDefaultValue,proto3" json:"clear_valuation_default_value,omitempty"`
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	// Period (YYYYMM) this update targets.
+	Period        string `protobuf:"bytes,15,opt,name=period,proto3" json:"period,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateGroupItemRequest) Reset() {
@@ -2427,6 +2447,13 @@ func (x *UpdateGroupItemRequest) GetClearValuationDefaultValue() bool {
 		return x.ClearValuationDefaultValue
 	}
 	return false
+}
+
+func (x *UpdateGroupItemRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
 }
 
 // V2: Update one detail response.
@@ -3936,12 +3963,15 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x18_marketing_default_value\"q\n" +
 	"\x15CreateRMGroupResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
-	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.RMGroupHeadR\x04data\"A\n" +
+	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.RMGroupHeadR\x04data\"|\n" +
 	"\x11GetRMGroupRequest\x12,\n" +
-	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\"y\n" +
+	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x12.\n" +
+	"\x06period\x18\x02 \x01(\tB\x11\xbaH\x0er\f2\n" +
+	"^[0-9]{6}$H\x00R\x06period\x88\x01\x01B\t\n" +
+	"\a_period\"y\n" +
 	"\x12GetRMGroupResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x126\n" +
-	"\x04data\x18\x02 \x01(\v2\".finance.v1.RMGroupHeadWithDetailsR\x04data\"\xa1\x0f\n" +
+	"\x04data\x18\x02 \x01(\v2\".finance.v1.RMGroupHeadWithDetailsR\x04data\"\xcc\x0f\n" +
 	"\x14UpdateRMGroupRequest\x12,\n" +
 	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x12,\n" +
 	"\n" +
@@ -3970,7 +4000,9 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x0emarketing_flag\x18\x16 \x01(\x0e2\x1b.finance.v1.RMMarketingFlagH\x11R\rmarketingFlag\x88\x01\x01\x12?\n" +
 	"\x1cclear_marketing_freight_rate\x18\x17 \x01(\bR\x19clearMarketingFreightRate\x12F\n" +
 	" clear_marketing_anti_dumping_pct\x18\x18 \x01(\bR\x1cclearMarketingAntiDumpingPct\x12A\n" +
-	"\x1dclear_marketing_default_value\x18\x19 \x01(\bR\x1aclearMarketingDefaultValueB\r\n" +
+	"\x1dclear_marketing_default_value\x18\x19 \x01(\bR\x1aclearMarketingDefaultValue\x12)\n" +
+	"\x06period\x18\x1a \x01(\tB\x11\xbaH\x0er\f2\n" +
+	"^[0-9]{6}$R\x06periodB\r\n" +
 	"\v_group_nameB\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
@@ -4047,7 +4079,7 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x04mode\x18\x03 \x01(\x0e2\x1b.finance.v1.RemoveItemsModeB\b\xbaH\x05\x82\x01\x02 \x00R\x04mode\"g\n" +
 	"\x13RemoveItemsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12#\n" +
-	"\rremoved_count\x18\x02 \x01(\x05R\fremovedCount\"\xb4\b\n" +
+	"\rremoved_count\x18\x02 \x01(\x05R\fremovedCount\"\xdf\b\n" +
 	"\x16UpdateGroupItemRequest\x12,\n" +
 	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x120\n" +
 	"\x0fgroup_detail_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rgroupDetailId\x12I\n" +
@@ -4064,7 +4096,9 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	" clear_valuation_anti_dumping_pct\x18\v \x01(\bR\x1cclearValuationAntiDumpingPct\x127\n" +
 	"\x18clear_valuation_duty_pct\x18\f \x01(\bR\x15clearValuationDutyPct\x12C\n" +
 	"\x1eclear_valuation_transport_rate\x18\r \x01(\bR\x1bclearValuationTransportRate\x12A\n" +
-	"\x1dclear_valuation_default_value\x18\x0e \x01(\bR\x1aclearValuationDefaultValueB\x19\n" +
+	"\x1dclear_valuation_default_value\x18\x0e \x01(\bR\x1aclearValuationDefaultValue\x12)\n" +
+	"\x06period\x18\x0f \x01(\tB\x11\xbaH\x0er\f2\n" +
+	"^[0-9]{6}$R\x06periodB\x19\n" +
 	"\x17_valuation_freight_rateB\x1d\n" +
 	"\x1b_valuation_anti_dumping_pctB\x15\n" +
 	"\x13_valuation_duty_pctB\x1b\n" +
@@ -4420,6 +4454,7 @@ func file_finance_v1_rm_group_proto_init() {
 	file_finance_v1_rm_group_proto_msgTypes[0].OneofWrappers = []any{}
 	file_finance_v1_rm_group_proto_msgTypes[1].OneofWrappers = []any{}
 	file_finance_v1_rm_group_proto_msgTypes[5].OneofWrappers = []any{}
+	file_finance_v1_rm_group_proto_msgTypes[7].OneofWrappers = []any{}
 	file_finance_v1_rm_group_proto_msgTypes[9].OneofWrappers = []any{}
 	file_finance_v1_rm_group_proto_msgTypes[15].OneofWrappers = []any{}
 	file_finance_v1_rm_group_proto_msgTypes[20].OneofWrappers = []any{}
