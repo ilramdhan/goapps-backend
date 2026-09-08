@@ -1,0 +1,10 @@
+-- 000508 down: intentional no-op.
+--
+-- This migration's up direction is a DATA BACKFILL, not a schema change — it derives
+-- mst_mb_head.mbh_shade_code/mbh_shade_name for legacy Oracle-imported rows (from mbh_code and
+-- cost_erp_shade respectively), then re-propagates those values into mst_mb_spin and
+-- cost_product_master via the same logic as 000507. There is no reliable way to know, for any
+-- given row, what its shade columns held immediately before this ran (no prior-value snapshot was
+-- taken, and rows may have been synced further since by ordinary application traffic). Reverting by
+-- setting these columns back to NULL would destroy legitimate, correct data — mirroring 000506's
+-- and 000507's down migrations, so this file deliberately does nothing.
