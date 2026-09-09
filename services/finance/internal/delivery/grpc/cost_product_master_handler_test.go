@@ -58,6 +58,10 @@ func (f *fakeCPMRepo) RollbackImport(_ context.Context, _ []int64) error { retur
 
 func (f *fakeCPMRepo) UnlockWithLog(_ context.Context, _ domain.LockLogInput) error { return nil }
 
+func (f *fakeCPMRepo) DuplicateProduct(_ context.Context, in domain.DuplicateInput) (domain.DuplicateOutput, error) {
+	return domain.DuplicateOutput{NewProductSysID: in.ProductSysID + 1000, NewProductCode: in.NewCodePrefix + "1"}, nil
+}
+
 var _ domain.Repository = (*fakeCPMRepo)(nil)
 
 // fakeCPTRepo is an in-memory costproducttype.Repository whose GetByID resolves

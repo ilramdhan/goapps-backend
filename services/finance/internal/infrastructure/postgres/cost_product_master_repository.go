@@ -763,3 +763,61 @@ func (r *CostProductMasterRepository) ListAllLegacyIDs(ctx context.Context) (map
 	}
 	return result, nil
 }
+
+// DuplicateProduct clones one product master row (F2), reusing the same
+// duplicateProductTx/generateForkedCode helpers CostRouteRepository.DuplicateRoute
+// uses for Fork's product-cloning step (extracted to package-level functions in
+// cost_route_repository.go so both repositories can share them verbatim). Unlike
+// Fork, this never touches any route -- the new product starts with no route,
+// same as CreateCostProductMaster.
+func (r *CostProductMasterRepository) DuplicateProduct(
+	ctx context.Context, in costproductmaster.DuplicateInput,
+) (costproductmaster.DuplicateOutput, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return costproductmaster.DuplicateOutput{}, fmt.Errorf("begin tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	var sourceCode string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT cpm_product_code FROM cost_product_master WHERE cpm_product_sys_id = $1`,
+		in.ProductSysID,
+	).Scan(&sourceCode); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return costproductmaster.DuplicateOutput{}, costproductmaster.ErrNotFound
+		}
+		return costproductmaster.DuplicateOutput{}, fmt.Errorf("load source product %d: %w", in.ProductSysID, err)
+	}
+
+	newCode, err := generateForkedCode(ctx, tx, in.NewCodePrefix, sourceCode)
+	if err != nil {
+		return costproductmaster.DuplicateOutput{}, err
+	}
+
+	// CopyParams gates BOTH applicability (CAPP) and values (CPP) together -- per design.md
+	// §2.1/§2.2, there's no partial-copy option for the standalone product duplicate (unlike
+	// Fork, which exposes include_applicability/include_values independently).
+	newSysID, err := duplicateProductTx(ctx, tx, in.ProductSysID, newCode, in.CopyParams, in.CopyParams, in.ActorUserID)
+	if err != nil {
+		return costproductmaster.DuplicateOutput{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return costproductmaster.DuplicateOutput{}, fmt.Errorf("commit duplicate product tx: %w", err)
+	}
+	committed = true
+
+	return costproductmaster.DuplicateOutput{
+		NewProductSysID: newSysID,
+		NewProductCode:  newCode,
+	}, nil
+}

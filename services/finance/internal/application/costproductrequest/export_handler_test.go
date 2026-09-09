@@ -79,6 +79,10 @@ func (r *fakeExportProductMasterRepo) UnlockWithLog(_ context.Context, _ pmDomai
 	return nil
 }
 
+func (r *fakeExportProductMasterRepo) DuplicateProduct(_ context.Context, _ pmDomain.DuplicateInput) (pmDomain.DuplicateOutput, error) {
+	return pmDomain.DuplicateOutput{}, nil
+}
+
 func newTestRequest(t *testing.T, referenceProductSysID int64) *domain.Request {
 	t.Helper()
 	req, err := domain.New(domain.NewInput{

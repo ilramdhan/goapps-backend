@@ -69,6 +69,8 @@ func (s *CostProductMasterRepoSuite) TearDownSuite() {
 	}
 	_, err := s.db.ExecContext(s.ctx, `DELETE FROM cost_product_master WHERE cpm_product_code LIKE $1`, cpmTestSearchPrefix+"%")
 	require.NoError(s.T(), err)
+	_, err = s.db.ExecContext(s.ctx, `DELETE FROM mst_parameter WHERE param_code LIKE $1`, cpmTestSearchPrefix+"%")
+	require.NoError(s.T(), err)
 	_, err = s.db.ExecContext(s.ctx, `DELETE FROM cost_product_type WHERE cpt_type_code IN ('ZZT1','ZZT2')`)
 	require.NoError(s.T(), err)
 	require.NoError(s.T(), s.db.Close())
@@ -205,4 +207,129 @@ func (s *CostProductMasterRepoSuite) TestList_NewSortKeys() {
 		_, _, err = s.repo.List(s.ctx, f)
 		s.Require().NoError(err, "sort by %q must not fail", key)
 	}
+}
+
+// seedDuplicateSourceParam inserts a throwaway mst_parameter row and attaches it to
+// productSysID via both CAPP (applicability) and CPP (a TEXT value), for exercising
+// DuplicateProduct's copy_params=true path (design.md §2.5).
+func (s *CostProductMasterRepoSuite) seedDuplicateSourceParam(productSysID int64, paramCode string) {
+	t := s.T()
+	var paramID string
+	require.NoError(t, s.db.QueryRowContext(s.ctx, `
+		INSERT INTO mst_parameter (param_code, param_name, data_type, param_category, is_active, created_by)
+		VALUES ($1, $1, 'TEXT', 'INPUT', TRUE, 'itest')
+		RETURNING id`, paramCode,
+	).Scan(&paramID))
+
+	_, err := s.db.ExecContext(s.ctx, `
+		INSERT INTO cost_product_applicable_param (
+			capp_product_sys_id, capp_param_id, capp_is_required, capp_created_by
+		) VALUES ($1, $2, TRUE, 'itest')`, productSysID, paramID)
+	require.NoError(t, err)
+
+	_, err = s.db.ExecContext(s.ctx, `
+		INSERT INTO cost_product_parameter (
+			cpp_product_sys_id, cpp_param_id, cpp_value_text, cpp_filled_by, cpp_created_by
+		) VALUES ($1, $2, 'itest-value', 'itest', 'itest')`, productSysID, paramID)
+	require.NoError(t, err)
+}
+
+func (s *CostProductMasterRepoSuite) cappCount(productSysID int64) int {
+	var n int
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT COUNT(*) FROM cost_product_applicable_param WHERE capp_product_sys_id = $1`, productSysID,
+	).Scan(&n))
+	return n
+}
+
+func (s *CostProductMasterRepoSuite) cppCount(productSysID int64) int {
+	var n int
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT COUNT(*) FROM cost_product_parameter WHERE cpp_product_sys_id = $1`, productSysID,
+	).Scan(&n))
+	return n
+}
+
+// deleteDuplicatedProduct removes a product row created by DuplicateProduct
+// (CAPP/CPP rows cascade). Called via t.Cleanup so the row never leaks past
+// its own test — TestList_MultiTypeFilter/TestList_NewSortKeys below filter
+// by the same cpmTestSearchPrefix and would otherwise pick up these clones
+// regardless of test execution order within the suite.
+func (s *CostProductMasterRepoSuite) deleteDuplicatedProduct(productSysID int64) {
+	_, err := s.db.ExecContext(s.ctx,
+		`DELETE FROM cost_product_master WHERE cpm_product_sys_id = $1`, productSysID)
+	require.NoError(s.T(), err)
+}
+
+// TestDuplicateProduct_CopyParamsTrue_ClonesCappAndCpp covers design.md §2.5: with
+// copy_params=true, the new product must get a new unique code AND the exact same
+// CAPP/CPP row counts (and values) as the source.
+func (s *CostProductMasterRepoSuite) TestDuplicateProduct_CopyParamsTrue_ClonesCappAndCpp() {
+	sourceSysID := s.sysIDs[0]
+	paramCode := cpmTestSearchPrefix + "-PARAM-TRUE"
+	s.seedDuplicateSourceParam(sourceSysID, paramCode)
+
+	out, err := s.repo.DuplicateProduct(s.ctx, costproductmaster.DuplicateInput{
+		ProductSysID:  sourceSysID,
+		NewCodePrefix: cpmTestSearchPrefix + "-DUPT",
+		CopyParams:    true,
+		ActorUserID:   "itest",
+	})
+	s.Require().NoError(err)
+	s.Require().NotZero(out.NewProductSysID)
+	s.T().Cleanup(func() { s.deleteDuplicatedProduct(out.NewProductSysID) })
+	s.NotEqual(sourceSysID, out.NewProductSysID)
+	s.Contains(out.NewProductCode, cpmTestSearchPrefix+"-DUPT")
+
+	// New product row exists with a distinct, unique code.
+	dup, err := s.repo.GetBySysID(s.ctx, out.NewProductSysID)
+	s.Require().NoError(err)
+	s.Equal(out.NewProductCode, dup.ProductCode())
+
+	s.Equal(s.cappCount(sourceSysID), s.cappCount(out.NewProductSysID))
+	s.Equal(1, s.cappCount(out.NewProductSysID))
+	s.Equal(s.cppCount(sourceSysID), s.cppCount(out.NewProductSysID))
+	s.Equal(1, s.cppCount(out.NewProductSysID))
+
+	var value string
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT cpp_value_text FROM cost_product_parameter WHERE cpp_product_sys_id = $1`, out.NewProductSysID,
+	).Scan(&value))
+	s.Equal("itest-value", value)
+}
+
+// TestDuplicateProduct_CopyParamsFalse_NoCappOrCpp covers design.md §2.5's negative
+// case: with copy_params=false, the new product must have zero CAPP/CPP rows even
+// though the source has some.
+func (s *CostProductMasterRepoSuite) TestDuplicateProduct_CopyParamsFalse_NoCappOrCpp() {
+	sourceSysID := s.sysIDs[1]
+	paramCode := cpmTestSearchPrefix + "-PARAM-FALSE"
+	s.seedDuplicateSourceParam(sourceSysID, paramCode)
+	s.Require().Equal(1, s.cappCount(sourceSysID))
+	s.Require().Equal(1, s.cppCount(sourceSysID))
+
+	out, err := s.repo.DuplicateProduct(s.ctx, costproductmaster.DuplicateInput{
+		ProductSysID:  sourceSysID,
+		NewCodePrefix: cpmTestSearchPrefix + "-DUPF",
+		CopyParams:    false,
+		ActorUserID:   "itest",
+	})
+	s.Require().NoError(err)
+	s.Require().NotZero(out.NewProductSysID)
+	s.T().Cleanup(func() { s.deleteDuplicatedProduct(out.NewProductSysID) })
+
+	s.Equal(0, s.cappCount(out.NewProductSysID))
+	s.Equal(0, s.cppCount(out.NewProductSysID))
+}
+
+// TestDuplicateProduct_NotFound_ReturnsErrNotFound covers the sentinel-error path
+// used by productMasterErrToBase to map a missing source product to HTTP 404.
+func (s *CostProductMasterRepoSuite) TestDuplicateProduct_NotFound_ReturnsErrNotFound() {
+	_, err := s.repo.DuplicateProduct(s.ctx, costproductmaster.DuplicateInput{
+		ProductSysID:  9_000_000_000,
+		NewCodePrefix: cpmTestSearchPrefix + "-DUPNF",
+		CopyParams:    false,
+		ActorUserID:   "itest",
+	})
+	s.Require().ErrorIs(err, costproductmaster.ErrNotFound)
 }

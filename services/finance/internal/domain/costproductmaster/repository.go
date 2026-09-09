@@ -69,6 +69,26 @@ type Repository interface {
 	// UnlockWithLog clears cpm_is_locked and inserts the mst_mb_lock_log audit row in a single
 	// transaction, so a failure writing the audit trail rolls back the lock change too.
 	UnlockWithLog(ctx context.Context, in LockLogInput) error
+	// DuplicateProduct clones one product master row and, when CopyParams is true, its
+	// cost_product_applicable_param (CAPP) and cost_product_parameter (CPP) rows onto the
+	// new product (F2). Does not touch any route -- the duplicate starts with no route,
+	// exactly like a freshly-created product. Mirrors the product-cloning step Fork
+	// (CostRouteService.DuplicateRoute) already performs.
+	DuplicateProduct(ctx context.Context, in DuplicateInput) (DuplicateOutput, error)
+}
+
+// DuplicateInput is F2's request: clone one product master, optionally with its CAPP/CPP rows.
+type DuplicateInput struct {
+	ProductSysID  int64
+	NewCodePrefix string
+	CopyParams    bool
+	ActorUserID   string
+}
+
+// DuplicateOutput reports the newly created product.
+type DuplicateOutput struct {
+	NewProductSysID int64
+	NewProductCode  string
 }
 
 // LockLogInput is a single mst_mb_lock_log row for an escape-hatch unlock.

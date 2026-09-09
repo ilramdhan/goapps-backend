@@ -730,6 +730,22 @@ func (r *CostRouteRepository) DuplicateRoute(ctx context.Context, in costroute.D
 		}
 	}()
 
+	// F1: SAME_PRODUCT mode auto-locks the source head then forks a new DRAFT
+	// head for the SAME product -- no product/CAPP/CPP cloning at all. This is
+	// a distinct transactional shape from the NEW_PRODUCT path below, so it's
+	// dispatched to its own helper before the NEW_PRODUCT steps begin.
+	if in.TargetMode == costroute.DuplicateTargetModeSameProduct {
+		out, sErr := r.duplicateRouteSameProductTx(ctx, tx, in)
+		if sErr != nil {
+			return costroute.DuplicateOutput{}, sErr
+		}
+		if cErr := tx.Commit(); cErr != nil {
+			return costroute.DuplicateOutput{}, fmt.Errorf("commit same-product duplicate tx: %w", cErr)
+		}
+		committed = true
+		return out, nil
+	}
+
 	// 1. Load source head.
 	var sourceHead struct {
 		productSysID int64
@@ -750,7 +766,7 @@ func (r *CostRouteRepository) DuplicateRoute(ctx context.Context, in costroute.D
 	}
 
 	// 2. Generate FG fork code.
-	newFGCode, err := r.generateForkedCode(ctx, tx, in.NewCodePrefix, sourceHead.productCode)
+	newFGCode, err := generateForkedCode(ctx, tx, in.NewCodePrefix, sourceHead.productCode)
 	if err != nil {
 		return costroute.DuplicateOutput{}, err
 	}
@@ -797,7 +813,7 @@ func (r *CostRouteRepository) DuplicateRoute(ctx context.Context, in costroute.D
 
 	// 4. Duplicate FG product master.
 	productMap := map[int64]int64{}
-	newFGSysID, err := r.duplicateProductTx(ctx, tx, sourceHead.productSysID, newFGCode, in.IncludeApplicability, in.IncludeValues, in.ActorUserID)
+	newFGSysID, err := duplicateProductTx(ctx, tx, sourceHead.productSysID, newFGCode, in.IncludeApplicability, in.IncludeValues, in.ActorUserID)
 	if err != nil {
 		return costroute.DuplicateOutput{}, err
 	}
@@ -805,11 +821,11 @@ func (r *CostRouteRepository) DuplicateRoute(ctx context.Context, in costroute.D
 
 	// 5. Duplicate upstream products.
 	for _, upstream := range upstreamProductIDs {
-		newCode, gErr := r.generateForkedCode(ctx, tx, in.NewCodePrefix, "")
+		newCode, gErr := generateForkedCode(ctx, tx, in.NewCodePrefix, "")
 		if gErr != nil {
 			return costroute.DuplicateOutput{}, gErr
 		}
-		newID, dErr := r.duplicateProductTx(ctx, tx, upstream, newCode, in.IncludeApplicability, in.IncludeValues, in.ActorUserID)
+		newID, dErr := duplicateProductTx(ctx, tx, upstream, newCode, in.IncludeApplicability, in.IncludeValues, in.ActorUserID)
 		if dErr != nil {
 			return costroute.DuplicateOutput{}, dErr
 		}
@@ -865,12 +881,212 @@ func (r *CostRouteRepository) DuplicateRoute(ctx context.Context, in costroute.D
 	}, nil
 }
 
+// duplicateRouteSameProductTx implements F1 (fork route only, same product)
+// inside the caller's already-open transaction: it locks the source head row
+// (SELECT ... FOR UPDATE), force-transitions it to LOCKED (idempotent if
+// already LOCKED -- this is a system auto-lock, not the user-initiated
+// Lock/COMPLETE->LOCKED flow gated by Head.Lock()), then creates a new DRAFT
+// head for the SAME product and copies the full graph with no product remap
+// (identity map) so every seq/RM keeps pointing at exactly the products the
+// source did. Exactly one non-LOCKED head can exist per product at a time
+// (uk_cost_route_head_active_per_product), so the source must be locked
+// before the new head is inserted -- both statements share this transaction.
+func (r *CostRouteRepository) duplicateRouteSameProductTx(
+	ctx context.Context, tx *sql.Tx, in costroute.DuplicateInput,
+) (costroute.DuplicateOutput, error) {
+	var (
+		productSysID  int64
+		productCode   string
+		version       int32
+		routingStatus string
+		cylTypeID     int32
+	)
+	if err := tx.QueryRowContext(ctx, `
+		SELECT h.crh_product_sys_id, COALESCE(p.cpm_product_code,''), h.crh_version,
+		       h.crh_routing_status, COALESCE(h.crh_cyl_type_id, 0)
+		FROM cost_route_head h
+		LEFT JOIN cost_product_master p ON p.cpm_product_sys_id = h.crh_product_sys_id
+		WHERE h.crh_head_id = $1 AND h.crh_deleted_at IS NULL
+		FOR UPDATE OF h`, in.SourceHeadID,
+	).Scan(&productSysID, &productCode, &version, &routingStatus, &cylTypeID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return costroute.DuplicateOutput{}, costroute.ErrNotFound
+		}
+		return costroute.DuplicateOutput{}, fmt.Errorf("load+lock source head: %w", err)
+	}
+
+	// Auto-lock the source head unless it's already LOCKED (idempotent).
+	if routingStatus != costroute.StatusLocked {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE cost_route_head SET
+				crh_routing_status = $2,
+				crh_locked_by = $3, crh_locked_at = now(),
+				crh_updated_at = now(), crh_updated_by = $3
+			WHERE crh_head_id = $1`,
+			in.SourceHeadID, costroute.StatusLocked, in.ActorUserID,
+		); err != nil {
+			return costroute.DuplicateOutput{}, fmt.Errorf("auto-lock source head %d: %w", in.SourceHeadID, err)
+		}
+	}
+
+	// Create the new DRAFT head for the SAME product, forked from the source.
+	var newHeadID int64
+	if err := tx.QueryRowContext(ctx, `
+		INSERT INTO cost_route_head (
+			crh_product_sys_id, crh_routing_status, crh_version,
+			crh_cyl_type_id, crh_forked_from_head_id,
+			crh_created_by, crh_updated_by
+		) VALUES ($1, 'DRAFT', $2, NULLIF($3,0)::integer, $4, $5, $5)
+		RETURNING crh_head_id`,
+		productSysID, version+1, cylTypeID, in.SourceHeadID, in.ActorUserID,
+	).Scan(&newHeadID); err != nil {
+		if isRouteUniqueViolation(err) {
+			return costroute.DuplicateOutput{}, costroute.ErrAlreadyExists
+		}
+		return costroute.DuplicateOutput{}, fmt.Errorf("insert same-product forked head: %w", err)
+	}
+
+	// Copy the full graph with NO product remap: pass a nil map so
+	// duplicateGraphTx's fallback ("if mapped, ok := productMap[id]; ok") keeps
+	// every seq/RM's product reference unchanged (identity copy).
+	if err := r.duplicateGraphTx(ctx, tx, in.SourceHeadID, newHeadID, nil, in.ActorUserID); err != nil {
+		return costroute.DuplicateOutput{}, err
+	}
+
+	if in.LinkedRequestID > 0 {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE cost_product_request
+			SET cpr_linked_route_head_id = $2,
+			    cpr_existing_product_sys_id = NULL,
+			    cpr_updated_at = now()
+			WHERE cpr_request_id = $1`,
+			in.LinkedRequestID, newHeadID); err != nil {
+			return costroute.DuplicateOutput{}, fmt.Errorf("update linked request: %w", err)
+		}
+	}
+
+	return costroute.DuplicateOutput{
+		NewHeadID:       newHeadID,
+		NewProductSysID: productSysID,
+		NewProductCode:  productCode,
+	}, nil
+}
+
+// AttachRoute implements F3 (attach an existing route from a different
+// product onto a target product). Unlike DuplicateRoute's NEW_PRODUCT mode
+// (which clones every upstream product) and duplicateRouteSameProductTx's
+// SAME_PRODUCT mode (which remaps nothing), this is the sparse-map case:
+// only the top-level FG seq/RM references (matching the source head's own
+// product) are remapped to the target product; every other seq/RM -- the
+// embedded upstream levels such as masterbatch/POY -- keeps pointing at
+// exactly the same existing products the source route did, so they compute
+// through the SAME UpstreamCosts entries the source's route did.
+func (r *CostRouteRepository) AttachRoute(ctx context.Context, in costroute.AttachInput) (costroute.AttachOutput, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return costroute.AttachOutput{}, fmt.Errorf("begin tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			_ = rbErr
+		}
+	}()
+
+	// 1. Pre-check: target product must not already have a live (non-LOCKED)
+	// head. Surfaced as a friendly domain error before the DB's
+	// uk_cost_route_head_active_per_product partial unique index would
+	// otherwise raise a raw constraint violation on the insert below.
+	var targetHasActive bool
+	if err := tx.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM cost_route_head
+			WHERE crh_product_sys_id = $1
+			  AND crh_deleted_at IS NULL
+			  AND crh_routing_status <> 'LOCKED'
+		)`, in.TargetProductSysID).Scan(&targetHasActive); err != nil {
+		return costroute.AttachOutput{}, fmt.Errorf("check target product active route: %w", err)
+	}
+	if targetHasActive {
+		return costroute.AttachOutput{}, costroute.ErrTargetProductHasActiveRoute
+	}
+
+	// 2. Load the source head's own (top-level FG) product -- this is the
+	// ONLY product reference the graph copy remaps.
+	var (
+		sourceProductSysID int64
+		cylTypeID          int32
+	)
+	if err := tx.QueryRowContext(ctx, `
+		SELECT crh_product_sys_id, COALESCE(crh_cyl_type_id, 0)
+		FROM cost_route_head
+		WHERE crh_head_id = $1 AND crh_deleted_at IS NULL`, in.SourceHeadID,
+	).Scan(&sourceProductSysID, &cylTypeID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return costroute.AttachOutput{}, costroute.ErrNotFound
+		}
+		return costroute.AttachOutput{}, fmt.Errorf("load source head: %w", err)
+	}
+
+	// 3. Create the new DRAFT head owned by the target product.
+	var newHeadID int64
+	if err := tx.QueryRowContext(ctx, `
+		INSERT INTO cost_route_head (
+			crh_product_sys_id, crh_routing_status, crh_version,
+			crh_cyl_type_id, crh_forked_from_head_id,
+			crh_created_by, crh_updated_by
+		) VALUES ($1, 'DRAFT', 1, NULLIF($2,0)::integer, $3, $4, $4)
+		RETURNING crh_head_id`,
+		in.TargetProductSysID, cylTypeID, in.SourceHeadID, in.ActorUserID,
+	).Scan(&newHeadID); err != nil {
+		if isRouteUniqueViolation(err) {
+			return costroute.AttachOutput{}, costroute.ErrTargetProductHasActiveRoute
+		}
+		return costroute.AttachOutput{}, fmt.Errorf("insert attached head: %w", err)
+	}
+
+	// 4. Copy the full graph with a SPARSE product map: only the source's own
+	// top-level product remaps to the target; duplicateGraphTx's fallback
+	// ("if mapped, ok := productMap[id]; ok") leaves every other seq/RM's
+	// product reference unchanged, so shared upstream products (masterbatch,
+	// POY, ...) keep referencing exactly the same existing products.
+	productMap := map[int64]int64{sourceProductSysID: in.TargetProductSysID}
+	if err := r.duplicateGraphTx(ctx, tx, in.SourceHeadID, newHeadID, productMap, in.ActorUserID); err != nil {
+		return costroute.AttachOutput{}, err
+	}
+
+	if in.LinkedRequestID > 0 {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE cost_product_request
+			SET cpr_linked_route_head_id = $2,
+			    cpr_existing_product_sys_id = NULL,
+			    cpr_updated_at = now()
+			WHERE cpr_request_id = $1`,
+			in.LinkedRequestID, newHeadID); err != nil {
+			return costroute.AttachOutput{}, fmt.Errorf("update linked request: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return costroute.AttachOutput{}, fmt.Errorf("commit attach tx: %w", err)
+	}
+	committed = true
+
+	return costroute.AttachOutput{NewHeadID: newHeadID}, nil
+}
+
 const maxProductCodeLen = 20
 
 // generateForkedCode finds the next unique product code derived from base.
 // Each candidate is at most 20 chars: the numeric suffix is allocated first
 // so a long base never produces duplicate truncated candidates.
-func (r *CostRouteRepository) generateForkedCode(ctx context.Context, tx *sql.Tx, prefix, sourceCode string) (string, error) {
+//
+// Package-level (not a *CostRouteRepository method) for the same reason as
+// duplicateProductTx above -- shared with CostProductMasterRepository.DuplicateProduct (F2).
+func generateForkedCode(ctx context.Context, tx *sql.Tx, prefix, sourceCode string) (string, error) {
 	base := prefix
 	if base == "" {
 		if sourceCode != "" {
@@ -906,17 +1122,22 @@ func (r *CostRouteRepository) generateForkedCode(ctx context.Context, tx *sql.Tx
 }
 
 // duplicateProductTx copies a product master + optional applicability + values.
-func (r *CostRouteRepository) duplicateProductTx(
+//
+// This is a package-level function (not a *CostRouteRepository method) so it can be
+// shared verbatim between CostRouteRepository (Fork, F1/F3) and CostProductMasterRepository
+// (standalone product duplicate, F2) -- both types live in this same postgres package.
+// Extracted for B2/F2; behavior is unchanged from the original Fork-only implementation.
+func duplicateProductTx(
 	ctx context.Context, tx *sql.Tx,
 	sourceProductSysID int64, newCode string,
 	includeApplicability, includeValues bool,
 	actor string,
 ) (int64, error) {
-	// DuplicateRoute is user-triggered and copies cpm_product_type_id verbatim from the
-	// source, so duplicating an MB-typed product would mint a second MB product master with
-	// no MB Recipe behind it — exactly what CreateHandler.rejectMBType and the bulk importer
-	// refuse. Refuse it here too, at the one funnel both the FG and the upstream copies pass
-	// through (callers at :795 and :807).
+	// DuplicateRoute (and DuplicateProduct) are user-triggered and copy cpm_product_type_id
+	// verbatim from the source, so duplicating an MB-typed product would mint a second MB
+	// product master with no MB Recipe behind it — exactly what CreateHandler.rejectMBType and
+	// the bulk importer refuse. Refuse it here too, at the one funnel every FG/upstream/
+	// standalone copy passes through.
 	//
 	// Note this rejects *duplicating an MB product*, not *touching* one: an existing MB product
 	// stays fully editable through UpdateCostProductMaster. The line being drawn is only

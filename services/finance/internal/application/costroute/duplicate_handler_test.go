@@ -33,6 +33,9 @@ func (fakeRepoForDup) ListHeads(_ context.Context, _ costroute.Filter) ([]*costr
 func (fakeRepoForDup) DuplicateRoute(_ context.Context, _ costroute.DuplicateInput) (costroute.DuplicateOutput, error) {
 	return costroute.DuplicateOutput{NewHeadID: 99, NewProductSysID: 50, NewProductCode: "TEST_F1"}, nil
 }
+func (fakeRepoForDup) AttachRoute(_ context.Context, _ costroute.AttachInput) (costroute.AttachOutput, error) {
+	return costroute.AttachOutput{NewHeadID: 199}, nil
+}
 func (fakeRepoForDup) ListLinkedRequests(_ context.Context, _ int64) ([]costroute.LinkedRequest, error) {
 	return nil, nil
 }
@@ -74,6 +77,43 @@ func TestDuplicate_InvalidHeadIDRejected(t *testing.T) {
 	_, err := h.Handle(context.Background(), costroute.DuplicateInput{SourceHeadID: 0})
 	if err == nil {
 		t.Fatal("expected error for zero head id, got nil")
+	}
+}
+
+func TestDuplicate_SameProductModeRejectsOtherFlags(t *testing.T) {
+	t.Parallel()
+	h := app.NewDuplicateHandler(fakeRepoForDup{})
+	cases := []struct {
+		name string
+		in   costroute.DuplicateInput
+	}{
+		{"include_upstream", costroute.DuplicateInput{SourceHeadID: 1, TargetMode: costroute.DuplicateTargetModeSameProduct, IncludeUpstream: true}},
+		{"include_applicability", costroute.DuplicateInput{SourceHeadID: 1, TargetMode: costroute.DuplicateTargetModeSameProduct, IncludeApplicability: true}},
+		{"include_values (with applicability)", costroute.DuplicateInput{SourceHeadID: 1, TargetMode: costroute.DuplicateTargetModeSameProduct, IncludeApplicability: true, IncludeValues: true}},
+		{"new_code_prefix", costroute.DuplicateInput{SourceHeadID: 1, TargetMode: costroute.DuplicateTargetModeSameProduct, NewCodePrefix: "X"}},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := h.Handle(context.Background(), tc.in)
+			if err == nil {
+				t.Fatalf("expected error for %s combined with SAME_PRODUCT mode, got nil", tc.name)
+			}
+		})
+	}
+}
+
+func TestDuplicate_SameProductModeAcceptsMinimalRequest(t *testing.T) {
+	t.Parallel()
+	h := app.NewDuplicateHandler(fakeRepoForDup{})
+	_, err := h.Handle(context.Background(), costroute.DuplicateInput{
+		SourceHeadID:   1,
+		TargetMode:     costroute.DuplicateTargetModeSameProduct,
+		IncludeRouting: true,
+	})
+	if err != nil {
+		t.Fatalf("expected minimal SAME_PRODUCT request to be accepted, got %v", err)
 	}
 }
 
