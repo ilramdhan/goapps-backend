@@ -1,0 +1,399 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_product_param_bulk.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostProductParamBulkService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/cost-product-parameters/bulk-edit": {
+      "post": {
+        "summary": "BulkEditProductParams applies a list of add-applicable/remove-applicable/\nupsert-value operations, in order, to up to 500 products in one request.\nRuns asynchronously via a job: the response returns immediately with job\ninfo while the per-product work happens in a background worker, each\nproduct in its own transaction — poll GetBulkProductParamJobStatus for\nprogress.",
+        "operationId": "CostProductParamBulkService_BulkEditProductParams",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BulkEditProductParamsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BulkEditProductParamsRequest applies a list of param operations, in order,\nto a batch of products in one call.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BulkEditProductParamsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductParamBulkService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/bulk-jobs/{jobId}/failures": {
+      "get": {
+        "summary": "ListBulkProductParamJobFailures lists the per-product failures recorded\nby a finished (or in-progress) bulk product-param edit job, so the caller\ncan see which products failed and why.",
+        "operationId": "CostProductParamBulkService_ListBulkProductParamJobFailures",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBulkProductParamJobFailuresResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "description": "job_execution.job_id (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostProductParamBulkService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-product-parameters/bulk-jobs/{jobId}/status": {
+      "get": {
+        "summary": "GetBulkProductParamJobStatus polls the live status and progress counters\nof a bulk product-param edit job while it is still running.",
+        "operationId": "CostProductParamBulkService_GetBulkProductParamJobStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetBulkProductParamJobStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "description": "job_execution.job_id (UUID).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostProductParamBulkService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AddApplicableParamOp": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string"
+        },
+        "isRequired": {
+          "type": "boolean"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "format": "int32",
+          "description": "0 means inherit mst_parameter.display_order."
+        }
+      },
+      "description": "AddApplicableParamOp marks a parameter as applicable to every targeted product."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1BulkEditProductParamsRequest": {
+      "type": "object",
+      "properties": {
+        "productSysIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          },
+          "description": "cost_product_master.cpm_product_sys_id values to edit. 1-500 items."
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BulkParamOperation"
+          },
+          "description": "Operations applied in order to every targeted product."
+        },
+        "skipMissingApplicable": {
+          "type": "boolean",
+          "description": "When TRUE (default), an UpsertParamValueOp targeting a product where the\nparam is not yet applicable is skipped and reported as a failure for that\nproduct rather than silently auto-adding the applicability row first."
+        }
+      },
+      "description": "BulkEditProductParamsRequest applies a list of param operations, in order,\nto a batch of products in one call."
+    },
+    "v1BulkEditProductParamsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1BulkParamJobInfo",
+          "description": "Queued job summary (job_id, job_code, status, progress counters)."
+        }
+      },
+      "description": "BulkEditProductParamsResponse is the response for queuing a bulk param-edit\njob. The job runs asynchronously; poll GetBulkProductParamJobStatus for progress."
+    },
+    "v1BulkParamJobInfo": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "description": "job_execution.job_id (UUID)."
+        },
+        "jobCode": {
+          "type": "string",
+          "description": "Human-readable code (e.g. \"CPP_BULK-202609-001\")."
+        },
+        "status": {
+          "type": "string",
+          "description": "Initial status, typically \"QUEUED\"."
+        },
+        "totalChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total products expected to be processed by this job."
+        },
+        "completedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Products processed successfully so far."
+        },
+        "failedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Products that failed so far."
+        }
+      },
+      "description": "BulkParamJobInfo summarizes a freshly-queued bulk product-param edit job."
+    },
+    "v1BulkParamOperation": {
+      "type": "object",
+      "properties": {
+        "addApplicable": {
+          "$ref": "#/definitions/v1AddApplicableParamOp"
+        },
+        "removeApplicable": {
+          "$ref": "#/definitions/v1RemoveApplicableParamOp"
+        },
+        "upsertValue": {
+          "$ref": "#/definitions/v1UpsertParamValueOp"
+        }
+      },
+      "description": "BulkParamOperation is one step applied, in order, to every targeted product."
+    },
+    "v1BulkProductParamJobFailure": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "cost_product_master.cpm_product_sys_id that failed."
+        },
+        "productCode": {
+          "type": "string",
+          "description": "Product's business code, for display without a follow-up lookup."
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message explaining the failure."
+        }
+      },
+      "description": "BulkProductParamJobFailure describes one product that failed within a bulk\nparam-edit job."
+    },
+    "v1GetBulkProductParamJobStatusResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "job_execution.job_id (UUID)."
+        },
+        "jobCode": {
+          "type": "string",
+          "description": "Human-readable code (e.g. \"CPP_BULK-202609-001\")."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status (e.g. \"QUEUED\", \"PROCESSING\", \"DONE\", \"FAILED\", \"PARTIAL\")."
+        },
+        "totalChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total products expected to be processed by this job."
+        },
+        "completedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Products processed successfully so far."
+        },
+        "failedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Products that failed so far."
+        }
+      },
+      "description": "GetBulkProductParamJobStatusResponse reports the bulk job's current status\nand live child-completion counters."
+    },
+    "v1ListBulkProductParamJobFailuresResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BulkProductParamJobFailure"
+          },
+          "description": "Failed items, in the order the worker processed them."
+        }
+      },
+      "description": "ListBulkProductParamJobFailuresResponse lists every product that failed\nwithin a bulk job, with its error message."
+    },
+    "v1RemoveApplicableParamOp": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string"
+        }
+      },
+      "description": "RemoveApplicableParamOp removes a parameter (and its value) from every\ntargeted product it currently applies to."
+    },
+    "v1UpsertParamValueOp": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string"
+        },
+        "valueNumeric": {
+          "type": "string",
+          "description": "Value as string (decimals as text for precision). One of these must be set."
+        },
+        "valueText": {
+          "type": "string"
+        },
+        "valueFlag": {
+          "type": "boolean",
+          "description": "value_flag is a real bool — we cannot distinguish \"unset\" from FALSE, so\ncallers must use has_value_flag to opt in."
+        },
+        "hasValueFlag": {
+          "type": "boolean"
+        }
+      },
+      "description": "UpsertParamValueOp sets a param value on every targeted product that has\nthe parameter applicable — see BulkEditProductParamsRequest.skip_missing_applicable\nfor the behavior when a targeted product does not yet have it applicable."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

@@ -28,6 +28,7 @@ type CostProductMasterHandler struct {
 	linkErpHandler    *app.LinkErpHandler
 	deactivateHandler *app.DeactivateHandler
 	unlockHandler     *app.UnlockHandler
+	duplicateHandler  *app.DuplicateHandler
 	listHandler       *app.ListHandler
 	exportHandler     *app.ExportHandler
 	templateHandler   *costbulkimport.TemplateHandler
@@ -52,6 +53,7 @@ func NewCostProductMasterHandler(repo domain.Repository, typeRepo cptdomain.Repo
 		linkErpHandler:    app.NewLinkErpHandler(repo),
 		deactivateHandler: app.NewDeactivateHandler(repo),
 		unlockHandler:     app.NewUnlockHandler(repo),
+		duplicateHandler:  app.NewDuplicateHandler(repo),
 		listHandler:       app.NewListHandler(repo),
 		exportHandler:     app.NewExportHandler(repo),
 		templateHandler:   costbulkimport.NewTemplateHandler(),
@@ -234,6 +236,31 @@ func (h *CostProductMasterHandler) UnlockCostProductMaster(ctx context.Context, 
 	return &financev1.UnlockCostProductMasterResponse{
 		Base: successResponse("Cost product master unlocked"),
 		Data: costProductMasterToProto(p),
+	}, nil
+}
+
+// DuplicateProduct clones a product master row (F2), optionally copying its applicable
+// params (CAPP) and values (CPP). Never touches any route -- the duplicate starts with
+// no route, exactly like a freshly-created product via CreateCostProductMaster.
+func (h *CostProductMasterHandler) DuplicateProduct(ctx context.Context, req *financev1.DuplicateProductRequest) (*financev1.DuplicateProductResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.DuplicateProductResponse{Base: baseResp}, nil
+	}
+	actor, _ := GetUserIDFromCtx(ctx)
+	out, err := h.duplicateHandler.Handle(ctx, app.DuplicateCommand{
+		ProductSysID:  req.GetProductSysId(),
+		NewCodePrefix: req.GetNewCodePrefix(),
+		CopyParams:    req.GetCopyParams(),
+		ActorUserID:   actor,
+	})
+	if err != nil {
+		return &financev1.DuplicateProductResponse{Base: productMasterErrToBase(err)}, nil
+	}
+	h.emitAudit(ctx, costauditlog.OpInsert, out.NewProductSysID, actor)
+	return &financev1.DuplicateProductResponse{
+		Base:            successResponse("Cost product master duplicated"),
+		NewProductSysId: out.NewProductSysID,
+		NewProductCode:  out.NewProductCode,
 	}, nil
 }
 

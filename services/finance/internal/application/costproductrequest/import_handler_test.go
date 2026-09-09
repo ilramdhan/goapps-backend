@@ -110,6 +110,10 @@ func (r *fakeImportProductMasterRepo) UnlockWithLog(_ context.Context, _ pmDomai
 	return nil
 }
 
+func (r *fakeImportProductMasterRepo) DuplicateProduct(_ context.Context, _ pmDomain.DuplicateInput) (pmDomain.DuplicateOutput, error) {
+	return pmDomain.DuplicateOutput{}, nil
+}
+
 // buildXlsxRows builds an .xlsx file's bytes from a header row + data rows,
 // in exportHeaders column order. Returns file content ready to feed into
 // ImportCommand.FileContent.

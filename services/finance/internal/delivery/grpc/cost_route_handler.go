@@ -40,6 +40,7 @@ type CostRouteHandler struct {
 	del                *app.DeleteHandler
 	list               *app.ListHandler
 	duplicate          *app.DuplicateHandler
+	attach             *app.AttachHandler
 	listLinkedRequests *app.ListLinkedRequestsHandler
 	createFromProduct  *app.CreateFromProductHandler
 }
@@ -61,6 +62,7 @@ func NewCostRouteHandler(repo costroute.Repository, cprRepo cprDomain.Repository
 		del:                app.NewDeleteHandler(repo),
 		list:               app.NewListHandler(repo),
 		duplicate:          app.NewDuplicateHandler(repo),
+		attach:             app.NewAttachHandler(repo),
 		listLinkedRequests: app.NewListLinkedRequestsHandler(repo),
 		createFromProduct:  app.NewCreateFromProductHandler(repo, cprRepo),
 	}, nil
@@ -188,6 +190,7 @@ func (h *CostRouteHandler) DuplicateRoute(ctx context.Context, req *financev1.Du
 		NewCodePrefix:        req.GetNewCodePrefix(),
 		LinkedRequestID:      req.GetLinkedRequestId(),
 		ActorUserID:          actorFromCtx(ctx),
+		TargetMode:           costroute.DuplicateTargetMode(req.GetTargetMode()),
 	})
 	if err != nil {
 		return &financev1.DuplicateRouteResponse{Base: routeErrToBase(err)}, nil
@@ -197,6 +200,24 @@ func (h *CostRouteHandler) DuplicateRoute(ctx context.Context, req *financev1.Du
 		NewHeadId:       out.NewHeadID,
 		NewProductSysId: out.NewProductSysID,
 		NewProductCode:  out.NewProductCode,
+	}, nil
+}
+
+// AttachRoute copies an existing route's full graph onto a different
+// (target) product, reusing the same upstream products as the source.
+func (h *CostRouteHandler) AttachRoute(ctx context.Context, req *financev1.AttachRouteRequest) (*financev1.AttachRouteResponse, error) {
+	out, err := h.attach.Handle(ctx, costroute.AttachInput{
+		SourceHeadID:       req.GetSourceHeadId(),
+		TargetProductSysID: req.GetTargetProductSysId(),
+		LinkedRequestID:    req.GetLinkedRequestId(),
+		ActorUserID:        actorFromCtx(ctx),
+	})
+	if err != nil {
+		return &financev1.AttachRouteResponse{Base: routeErrToBase(err)}, nil
+	}
+	return &financev1.AttachRouteResponse{
+		Base:      successResponse("Route attached"),
+		NewHeadId: out.NewHeadID,
 	}, nil
 }
 
@@ -407,6 +428,10 @@ func routeErrToBase(err error) *commonv1.BaseResponse {
 		return ErrorResponse("400", "invalid status transition")
 	case errors.Is(err, costroute.ErrParamIncomplete):
 		return ErrorResponse("422", err.Error())
+	// AttachRoute (F3) refuses to attach onto a product that already has a
+	// live route -- surfaced as a friendly 409, not a raw DB constraint error.
+	case errors.Is(err, costroute.ErrTargetProductHasActiveRoute):
+		return ErrorResponse("409", err.Error())
 	// DuplicateRoute refuses to clone an MB-typed product master (see duplicateProductTx).
 	// Mapped explicitly so the client sees the reason instead of a generic 500.
 	case errors.Is(err, cpmDomain.ErrMBProductNotManuallyCreatable):
@@ -418,7 +443,8 @@ func routeErrToBase(err error) *commonv1.BaseResponse {
 		errors.Is(err, costroute.ErrInvalidRmType),
 		errors.Is(err, costroute.ErrMultipleRmRefs),
 		errors.Is(err, costroute.ErrRmRefTypeMismatch),
-		errors.Is(err, costroute.ErrNonPositiveRatio):
+		errors.Is(err, costroute.ErrNonPositiveRatio),
+		errors.Is(err, costroute.ErrSelfReferencingRoute):
 		return ErrorResponse("400", err.Error())
 	}
 	if s, ok := status.FromError(err); ok && s != nil {

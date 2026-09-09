@@ -263,6 +263,45 @@
         ]
       }
     },
+    "/api/v1/finance/cost-product-master/{productSysId}/duplicate": {
+      "post": {
+        "operationId": "CostProductMasterService_DuplicateProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DuplicateProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductMasterServiceDuplicateProductBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductMasterService"
+        ]
+      }
+    },
     "/api/v1/finance/cost-product-master/{productSysId}/erp-linkage": {
       "put": {
         "operationId": "CostProductMasterService_UpdateCostProductMasterErpLinkage",
@@ -439,6 +478,17 @@
     }
   },
   "definitions": {
+    "CostProductMasterServiceDuplicateProductBody": {
+      "type": "object",
+      "properties": {
+        "newCodePrefix": {
+          "type": "string"
+        },
+        "copyParams": {
+          "type": "boolean"
+        }
+      }
+    },
     "CostProductMasterServiceUnlockCostProductMasterBody": {
       "type": "object",
       "properties": {
@@ -707,6 +757,21 @@
           "format": "byte"
         },
         "fileName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DuplicateProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "newProductSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "newProductCode": {
           "type": "string"
         }
       }

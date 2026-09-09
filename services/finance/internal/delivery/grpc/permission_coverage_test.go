@@ -89,6 +89,7 @@ func registeredServiceDescs() []grpc.ServiceDesc {
 		financev1.CostAuditLogService_ServiceDesc,
 		financev1.CostNotificationService_ServiceDesc,
 		financev1.CostProductParameterService_ServiceDesc,
+		financev1.CostProductParamBulkService_ServiceDesc,
 		financev1.CostDataImportService_ServiceDesc,
 		financev1.CostCalcService_ServiceDesc,
 		financev1.CostLevelAssignmentConfigService_ServiceDesc,
@@ -211,7 +212,11 @@ func genMethods(t *testing.T) map[string]struct{} {
 func allGenMethodsIncludingUnregistered() map[string]struct{} {
 	descs := append(registeredServiceDescs(),
 		financev1.CstRoutingService_ServiceDesc,
-		financev1.ProductService_ServiceDesc,
+		// financev1.ProductService_ServiceDesc intentionally omitted: the legacy
+		// ProductService proto/generated code (product.proto and its gen/ output)
+		// was removed as an orphaned duplicate of CostProductMasterService's
+		// DuplicateProduct RPC (B1/B2, product-route-fork-attach-bulk) -- there is
+		// no such service registered or generated anymore.
 		financev1.ProductTypeService_ServiceDesc,
 	)
 
@@ -681,7 +686,10 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 		}
 	}
 
-	assert.Len(t, registeredServiceDescs(), 51,
+	// 51 -> 52: CostProductParamBulkService (F4/B4, product-route-fork-attach-bulk)
+	// newly registered in cmd/server/main.go — Bulk Edit Product Params
+	// submit/status/failures RPCs.
+	assert.Len(t, registeredServiceDescs(), 52,
 		"service count changed — reconcile registeredServiceDescs() with cmd/server/main.go")
 	// 374 -> 375: RPC BARU DuplicateMBSpin (P8, gerbang G16 opsi (a)), 392 in gen - 17
 	// 375 -> 378: TIGA RPC BARU unlock MBHeadService (P10-b): RequestUnlockMBHead,
@@ -694,9 +702,22 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// GetBulkMBHeadJobStatus, ListBulkMBHeadJobFailures. Generated types already
 	// existed in gen/finance/v1/yarn_master.pb.go from Phase A; this is the first
 	// time the methods are implemented on MBHeadHandler and reachable.
-	assert.Len(t, reachable, 390,
-		"reachable RPC count changed (396 in gen − 17 on the 3 unregistered services + 6 for the "+
-			"previously-omitted-from-this-list ShadeService + 5 new Bulk MB Head Regenerate RPCs)")
+	// 390 -> 392: RPC BARU DuplicateProduct (F2/B2, CostProductMasterService) dan
+	// AttachRoute sudah reachable sebelumnya tapi baru sekarang terhitung karena
+	// registeredServiceDescs() tidak berubah — DuplicateProduct benar-benar RPC
+	// baru; AttachRoute sudah ada di gen/ (CostRouteService) namun baru diberi
+	// permission mapping di komentar bawah, bukan RPC baru untuk reachable.
+	// 392 -> 395: THREE new RPCs, CostProductParamBulkService (F4/B4,
+	// product-route-fork-attach-bulk): BulkEditProductParams,
+	// GetBulkProductParamJobStatus, ListBulkProductParamJobFailures. Generated
+	// types already existed in gen/finance/v1/cost_product_param_bulk.pb.go from
+	// Phase A; this is the first time the methods are implemented on
+	// CostProductParamBulkHandler and reachable (service also newly added to
+	// registeredServiceDescs() above).
+	assert.Len(t, reachable, 395,
+		"reachable RPC count changed (398 in gen − 17 on the 3 unregistered services + 6 for the "+
+			"previously-omitted-from-this-list ShadeService + 5 new Bulk MB Head Regenerate RPCs + 1 new "+
+			"DuplicateProduct RPC + 3 new CostProductParamBulkService RPCs, product-route-fork-attach-bulk F2/B2/F4/B4)")
 	// 130 -> 132: dua kunci basi UOM (ImportUOM/ExportUOM) dibetulkan jadi ImportUOMs/ExportUOMs, K-36
 	// 132 -> 135: tiga bulk RPC CostProductMasterService (Export/Import/DownloadTemplate) dijaga, K-43
 	// 135 -> 136: DuplicateMBSpin dijaga finance.yarnmaster.mbspin.create (di-seed iam 000057:47), P8
@@ -724,7 +745,19 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// RPC baca (GetBulkMBHeadJobStatus/ListBulkMBHeadJobFailures) reuse
 	// finance.mb.head.bulkvalidate — 000092 tidak men-seed kode view terpisah untuk
 	// keduanya, dan tidak ada audiens di luar SUPER_ADMIN untuk dipisahkan.
-	assert.Equal(t, 164, guarded, "number of properly guarded RPCs changed")
+	// 164 -> 166: DuplicateProduct (F2/B2) newly guarded finance.product.route.create
+	// (reuses Create/Update's permission per the locked design decision — no new
+	// IAM code/migration). AttachRoute (F3, product-route-fork-attach-bulk) was
+	// previously fail-open; guarded here (not by the F3 sub-agent) only because
+	// its absence broke this shared ratchet test for all phases including B2 —
+	// also reuses finance.product.route.create per design.md line 186.
+	// 166 -> 169: THREE new CostProductParamBulkService RPCs (F4/B4), all guarded
+	// from birth: BulkEditProductParams -> finance.product.route.create,
+	// GetBulkProductParamJobStatus / ListBulkProductParamJobFailures ->
+	// finance.product.route.view (reuses existing codes per the locked design
+	// decision — no new IAM permission codes/migrations). knownFailOpen does NOT
+	// grow.
+	assert.Equal(t, 169, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43

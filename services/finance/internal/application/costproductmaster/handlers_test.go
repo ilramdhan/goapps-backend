@@ -18,10 +18,11 @@ import (
 // passed to List so mapping tests can assert on it.
 // =============================================================================
 type fakeRepo struct {
-	gotFilter domain.Filter
-	listItems []*domain.CostProductMaster
-	listTotal int64
-	listErr   error
+	gotFilter    domain.Filter
+	listItems    []*domain.CostProductMaster
+	listTotal    int64
+	listErr      error
+	duplicateErr error
 }
 
 func (f *fakeRepo) Create(_ context.Context, _ *domain.CostProductMaster) error { return nil }
@@ -61,6 +62,13 @@ func (f *fakeRepo) ListAllLegacyIDs(_ context.Context) (map[string]int64, error)
 func (f *fakeRepo) RollbackImport(_ context.Context, _ []int64) error { return nil }
 
 func (f *fakeRepo) UnlockWithLog(_ context.Context, _ domain.LockLogInput) error { return nil }
+
+func (f *fakeRepo) DuplicateProduct(_ context.Context, in domain.DuplicateInput) (domain.DuplicateOutput, error) {
+	if f.duplicateErr != nil {
+		return domain.DuplicateOutput{}, f.duplicateErr
+	}
+	return domain.DuplicateOutput{NewProductSysID: in.ProductSysID + 1000, NewProductCode: in.NewCodePrefix + "1"}, nil
+}
 
 var _ domain.Repository = (*fakeRepo)(nil)
 
@@ -228,5 +236,63 @@ func TestCreateHandler_Handle_RejectsMBProductType(t *testing.T) {
 
 		require.NoError(t, err, "an unknown type is the FK's problem, not this guard's")
 		assert.True(t, repo.createCalled)
+	})
+}
+
+// =============================================================================
+// DuplicateHandler — F2 (B2): standalone product duplicate
+// =============================================================================
+
+func TestDuplicateHandler_Handle_ValidatesProductSysID(t *testing.T) {
+	t.Run("product_sys_id <= 0 is rejected before hitting the repository", func(t *testing.T) {
+		repo := &fakeRepo{}
+		h := app.NewDuplicateHandler(repo)
+
+		_, err := h.Handle(context.Background(), app.DuplicateCommand{
+			ProductSysID:  0,
+			NewCodePrefix: "ZZTDUP",
+			CopyParams:    true,
+			ActorUserID:   "admin",
+		})
+
+		require.ErrorIs(t, err, domain.ErrNotFound)
+	})
+
+	t.Run("negative product_sys_id is rejected", func(t *testing.T) {
+		repo := &fakeRepo{}
+		h := app.NewDuplicateHandler(repo)
+
+		_, err := h.Handle(context.Background(), app.DuplicateCommand{
+			ProductSysID: -5,
+		})
+
+		require.ErrorIs(t, err, domain.ErrNotFound)
+	})
+
+	t.Run("a valid product_sys_id delegates to the repository and returns its output", func(t *testing.T) {
+		repo := &fakeRepo{}
+		h := app.NewDuplicateHandler(repo)
+
+		out, err := h.Handle(context.Background(), app.DuplicateCommand{
+			ProductSysID:  42,
+			NewCodePrefix: "ZZTDUP",
+			CopyParams:    true,
+			ActorUserID:   "admin",
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(1042), out.NewProductSysID)
+		assert.Equal(t, "ZZTDUP1", out.NewProductCode)
+	})
+
+	t.Run("repository errors are propagated unchanged", func(t *testing.T) {
+		repo := &fakeRepo{duplicateErr: domain.ErrMBProductNotManuallyCreatable}
+		h := app.NewDuplicateHandler(repo)
+
+		_, err := h.Handle(context.Background(), app.DuplicateCommand{
+			ProductSysID: 42,
+		})
+
+		require.ErrorIs(t, err, domain.ErrMBProductNotManuallyCreatable)
 	})
 }

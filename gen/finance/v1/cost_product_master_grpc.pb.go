@@ -30,6 +30,7 @@ const (
 	CostProductMasterService_ExportCostProductMasters_FullMethodName          = "/finance.v1.CostProductMasterService/ExportCostProductMasters"
 	CostProductMasterService_ImportCostProductMasters_FullMethodName          = "/finance.v1.CostProductMasterService/ImportCostProductMasters"
 	CostProductMasterService_DownloadCostProductMasterTemplate_FullMethodName = "/finance.v1.CostProductMasterService/DownloadCostProductMasterTemplate"
+	CostProductMasterService_DuplicateProduct_FullMethodName                  = "/finance.v1.CostProductMasterService/DuplicateProduct"
 )
 
 // CostProductMasterServiceClient is the client API for CostProductMasterService service.
@@ -47,6 +48,7 @@ type CostProductMasterServiceClient interface {
 	ExportCostProductMasters(ctx context.Context, in *ExportCostProductMastersRequest, opts ...grpc.CallOption) (*ExportCostProductMastersResponse, error)
 	ImportCostProductMasters(ctx context.Context, in *ImportCostProductMastersRequest, opts ...grpc.CallOption) (*ImportCostProductMastersResponse, error)
 	DownloadCostProductMasterTemplate(ctx context.Context, in *DownloadCostProductMasterTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductMasterTemplateResponse, error)
+	DuplicateProduct(ctx context.Context, in *DuplicateProductRequest, opts ...grpc.CallOption) (*DuplicateProductResponse, error)
 }
 
 type costProductMasterServiceClient struct {
@@ -167,6 +169,16 @@ func (c *costProductMasterServiceClient) DownloadCostProductMasterTemplate(ctx c
 	return out, nil
 }
 
+func (c *costProductMasterServiceClient) DuplicateProduct(ctx context.Context, in *DuplicateProductRequest, opts ...grpc.CallOption) (*DuplicateProductResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DuplicateProductResponse)
+	err := c.cc.Invoke(ctx, CostProductMasterService_DuplicateProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostProductMasterServiceServer is the server API for CostProductMasterService service.
 // All implementations must embed UnimplementedCostProductMasterServiceServer
 // for forward compatibility.
@@ -182,6 +194,7 @@ type CostProductMasterServiceServer interface {
 	ExportCostProductMasters(context.Context, *ExportCostProductMastersRequest) (*ExportCostProductMastersResponse, error)
 	ImportCostProductMasters(context.Context, *ImportCostProductMastersRequest) (*ImportCostProductMastersResponse, error)
 	DownloadCostProductMasterTemplate(context.Context, *DownloadCostProductMasterTemplateRequest) (*DownloadCostProductMasterTemplateResponse, error)
+	DuplicateProduct(context.Context, *DuplicateProductRequest) (*DuplicateProductResponse, error)
 	mustEmbedUnimplementedCostProductMasterServiceServer()
 }
 
@@ -224,6 +237,9 @@ func (UnimplementedCostProductMasterServiceServer) ImportCostProductMasters(cont
 }
 func (UnimplementedCostProductMasterServiceServer) DownloadCostProductMasterTemplate(context.Context, *DownloadCostProductMasterTemplateRequest) (*DownloadCostProductMasterTemplateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DownloadCostProductMasterTemplate not implemented")
+}
+func (UnimplementedCostProductMasterServiceServer) DuplicateProduct(context.Context, *DuplicateProductRequest) (*DuplicateProductResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DuplicateProduct not implemented")
 }
 func (UnimplementedCostProductMasterServiceServer) mustEmbedUnimplementedCostProductMasterServiceServer() {
 }
@@ -445,6 +461,24 @@ func _CostProductMasterService_DownloadCostProductMasterTemplate_Handler(srv int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductMasterService_DuplicateProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DuplicateProductRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductMasterServiceServer).DuplicateProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductMasterService_DuplicateProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductMasterServiceServer).DuplicateProduct(ctx, req.(*DuplicateProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostProductMasterService_ServiceDesc is the grpc.ServiceDesc for CostProductMasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -495,6 +529,10 @@ var CostProductMasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DownloadCostProductMasterTemplate",
 			Handler:    _CostProductMasterService_DownloadCostProductMasterTemplate_Handler,
+		},
+		{
+			MethodName: "DuplicateProduct",
+			Handler:    _CostProductMasterService_DuplicateProduct_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

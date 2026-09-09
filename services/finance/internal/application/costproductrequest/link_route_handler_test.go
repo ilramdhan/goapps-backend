@@ -89,6 +89,10 @@ func (r *fakeUnlinkRouteRepo) DuplicateRoute(_ context.Context, _ costroute.Dupl
 	return costroute.DuplicateOutput{}, nil
 }
 
+func (r *fakeUnlinkRouteRepo) AttachRoute(_ context.Context, _ costroute.AttachInput) (costroute.AttachOutput, error) {
+	return costroute.AttachOutput{}, nil
+}
+
 func (r *fakeUnlinkRouteRepo) ListLinkedRequests(_ context.Context, _ int64) ([]costroute.LinkedRequest, error) {
 	return nil, nil
 }

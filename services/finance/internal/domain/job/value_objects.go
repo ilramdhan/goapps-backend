@@ -63,6 +63,10 @@ const (
 	// fans out one child per mbh_id, each child running one of the force-unvalidate/submit/
 	// validate transitions — see job.Execution's subtype for which one.
 	TypeMBBulkTransition Type = "mb_bulk_transition"
+	// TypeProductParamBulk is the Bulk Edit Product Params job type (F4): a parent job
+	// fans out one child per cost_product_master.cpm_product_sys_id, each child applying
+	// the same ordered list of add/remove/upsert param operations to its one product.
+	TypeProductParamBulk Type = "product_param_bulk"
 )
 
 // String returns the string representation.

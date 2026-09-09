@@ -79,6 +79,38 @@
         ]
       }
     },
+    "/api/v1/finance/routes/attach": {
+      "post": {
+        "operationId": "CostRouteService_AttachRoute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AttachRouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AttachRouteRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostRouteService"
+        ]
+      }
+    },
     "/api/v1/finance/routes/by-product/{productSysId}": {
       "get": {
         "operationId": "CostRouteService_GetRouteByProduct",
@@ -454,6 +486,10 @@
         "linkedRequestId": {
           "type": "string",
           "format": "int64"
+        },
+        "targetMode": {
+          "$ref": "#/definitions/v1DuplicateRouteTargetMode",
+          "description": "Defaults to NEW_PRODUCT when unspecified, matching pre-existing behavior."
         }
       }
     },
@@ -496,6 +532,36 @@
             "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
+        }
+      }
+    },
+    "v1AttachRouteRequest": {
+      "type": "object",
+      "properties": {
+        "sourceHeadId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "targetProductSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "linkedRequestId": {
+          "type": "string",
+          "format": "int64",
+          "description": "optional, atomically links the request on success."
+        }
+      }
+    },
+    "v1AttachRouteResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "newHeadId": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -817,6 +883,16 @@
           "type": "string"
         }
       }
+    },
+    "v1DuplicateRouteTargetMode": {
+      "type": "string",
+      "enum": [
+        "DUPLICATE_ROUTE_TARGET_MODE_UNSPECIFIED",
+        "DUPLICATE_ROUTE_TARGET_MODE_NEW_PRODUCT",
+        "DUPLICATE_ROUTE_TARGET_MODE_SAME_PRODUCT"
+      ],
+      "default": "DUPLICATE_ROUTE_TARGET_MODE_UNSPECIFIED",
+      "description": "DuplicateRouteTargetMode selects what DuplicateRoute duplicates onto.\n\n - DUPLICATE_ROUTE_TARGET_MODE_UNSPECIFIED: Default -- treated as NEW_PRODUCT for backward compatibility.\n - DUPLICATE_ROUTE_TARGET_MODE_NEW_PRODUCT: Existing behavior: duplicate onto brand-new product(s).\n - DUPLICATE_ROUTE_TARGET_MODE_SAME_PRODUCT: Fork the route graph only, keeping the same product."
     },
     "v1GetRouteByProductResponse": {
       "type": "object",

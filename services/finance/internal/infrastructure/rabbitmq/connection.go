@@ -41,6 +41,10 @@ const (
 	QueueMBBulkTransition = "finance.jobs.mb_bulk_transition"
 	// RoutingKeyMBBulkTransition is the routing key for Bulk MB Head Regenerate messages.
 	RoutingKeyMBBulkTransition = "mb_bulk_transition"
+	// QueueProductParamBulk is the queue for Bulk Edit Product Params (F4) jobs.
+	QueueProductParamBulk = "finance.jobs.product_param_bulk"
+	// RoutingKeyProductParamBulk is the routing key for Bulk Edit Product Params messages.
+	RoutingKeyProductParamBulk = "product_param_bulk"
 	// DeadLetterExchange is the dead letter exchange for failed messages.
 	DeadLetterExchange = "finance.jobs.dlx"
 	// DeadLetterQueue is the dead letter queue.
@@ -362,6 +366,7 @@ func (c *Connection) declareTopology() error {
 		{QueueProductCostSheetExport, RoutingKeyProductCostSheetExport},
 		{QueueImportJob, RoutingKeyImportJob},
 		{QueueMBBulkTransition, RoutingKeyMBBulkTransition},
+		{QueueProductParamBulk, RoutingKeyProductParamBulk},
 	}
 	for _, q := range queues {
 		if err := c.declareJobQueue(q.name, q.routingKey, args); err != nil {

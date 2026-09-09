@@ -189,9 +189,15 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 		log.Logger,
 	)
 
+	// Bulk Edit Product Params (F4, B4). cppRepo is the SAME
+	// CostProductParameterRepository instance built above for the costing
+	// import handlers — it already implements cpp.Repository.ApplyBulkOperations.
+	productParamBulkHandler := workerinternal.NewProductParamBulkHandler(jobRepo, cppRepo, log.Logger)
+
 	consumers := buildConsumers(
 		rmqConn, syncHandler, rmCostExec, rmCostExportHandler, costingImportHandler, costSheetExportHandler,
 		mbBulkTransitionHandler,
+		productParamBulkHandler,
 		cfg.RabbitMQ.ExportWorkerConcurrency,
 	)
 
@@ -248,6 +254,7 @@ func buildConsumers(
 	costingImportHandler *workerinternal.CostingImportHandler,
 	costSheetExportHandler *workerinternal.CostSheetExportHandler,
 	mbBulkTransitionHandler *workerinternal.MBBulkTransitionHandler,
+	productParamBulkHandler *workerinternal.ProductParamBulkHandler,
 	exportConcurrency int,
 ) []*rabbitmq.Consumer {
 	syncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
@@ -268,12 +275,20 @@ func buildConsumers(
 	mbBulkTransitionMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return mbBulkTransitionHandler.Handle(ctx, msg)
 	}
+	productParamBulkMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		return productParamBulkHandler.Handle(ctx, msg)
+	}
 	return []*rabbitmq.Consumer{
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueOracleSync, syncMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostCalc, rmCostMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostExport, rmCostExportMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueImportJob, costingImportMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueMBBulkTransition, mbBulkTransitionMsgHandler, log.Logger),
+		// product_param_bulk: mirrors mb_bulk_transition's conservative default —
+		// ApplyBulkOperations has not been audited for concurrent-write safety
+		// across children of the same batch (e.g. two children referencing the
+		// same lookup_fill_group_code trigger param). Left sequential.
+		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueProductParamBulk, productParamBulkMsgHandler, log.Logger),
 		rabbitmq.NewConcurrentConsumer(
 			rmqConn, rabbitmq.QueueProductCostSheetExport, costSheetExportMsgHandler, log.Logger, exportConcurrency,
 		),

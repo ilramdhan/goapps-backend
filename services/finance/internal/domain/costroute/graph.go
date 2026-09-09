@@ -19,6 +19,10 @@ var (
 	ErrMultipleRmRefs         = errors.New("exactly one of rm_product_sys_id/rm_item_code/rm_group_code must be set")
 	ErrRmRefTypeMismatch      = errors.New("rm_type does not match the populated ref column")
 	ErrNonPositiveRatio       = errors.New("route_rm_ratio must be positive")
+	// ErrSelfReferencingRoute is returned when a seq at level > 1 produces the
+	// same product as the head itself -- a self-consuming cycle (the route
+	// would indirectly require its own finished good as an upstream input).
+	ErrSelfReferencingRoute = errors.New("a level>1 seq cannot produce the head's own product")
 )
 
 // ValidateLevels enforces the routing's level discipline:
@@ -53,6 +57,9 @@ func (g *Graph) ValidateLevels() error { //nolint:gocognit,gocyclo // graph leve
 				return fmt.Errorf("multiple level-1 seqs: %d and %d", levelOne.SeqID, s.SeqID)
 			}
 			levelOne = s
+		} else if s.RouteLevel > 1 && s.ProductSysID == g.Head.ProductSysID {
+			return fmt.Errorf("seq #%d level=%d produces head product %d: %w",
+				s.SeqID, s.RouteLevel, s.ProductSysID, ErrSelfReferencingRoute)
 		}
 		// Record producedAt with the deepest level (= highest number).
 		if cur, ok := producedAt[s.ProductSysID]; !ok || s.RouteLevel > cur {

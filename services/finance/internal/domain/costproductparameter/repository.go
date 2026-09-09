@@ -94,4 +94,28 @@ type Repository interface {
 	// ListAllParams returns all active mst_parameter rows for bulk import map preloading.
 	// Only param_id and param_code fields are used from the result.
 	ListAllParams(ctx context.Context) ([]ParamMeta, error)
+
+	// ApplyBulkOperations applies ops, in order, to a single product inside ONE
+	// database transaction — used by the Bulk Edit Product Params (F4) worker,
+	// once per targeted product, so that one product's failure never rolls back
+	// any other product's changes (per-item isolation is achieved by the caller
+	// invoking this once per product, not by anything inside this method).
+	//
+	// AddApplicable ops are a plain upsert of the CAPP row (no fill-group
+	// cascade — the bulk request's shape is flat, one op per param). Remove
+	// ops reuse the SAME cascading-children logic as RemoveApplicableWithChildren
+	// (trigger + fill-group children removed together) so a MASTER_LOOKUP
+	// trigger param removed in bulk behaves identically to the single-product
+	// remove flow — EXCEPT that when there is nothing to remove (the param
+	// was never applicable to this product), that is treated as a soft skip
+	// (recorded in the returned outcomes) rather than a hard error, so it
+	// never aborts sibling ops in the same per-product transaction. Genuine
+	// errors (invalid param, DB failure) still propagate normally. UpsertValue
+	// ops check CAPP applicability first: if the param
+	// is not applicable and skipMissingApplicable is true, that op is skipped
+	// (recorded in the returned outcomes, not silently dropped and not
+	// escalated into a whole-product failure) and the remaining ops still run;
+	// if skipMissingApplicable is false, the CAPP row is auto-inserted
+	// (not required) before the value is written.
+	ApplyBulkOperations(ctx context.Context, productSysID int64, ops []BulkOp, actor string, skipMissingApplicable bool) ([]BulkOpOutcome, error)
 }

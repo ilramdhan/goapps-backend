@@ -117,6 +117,30 @@ func TestValidateLevels_NonPositiveRatio(t *testing.T) {
 	}
 }
 
+func TestValidateLevels_SelfReferencingRoute(t *testing.T) {
+	// FG=100. Level-1 seq (product 100) consumes intermediate 200 at level 2.
+	// Level-2 seq itself is (incorrectly) recorded as producing product 100 --
+	// the head's own product -- which would create a self-consuming cycle.
+	g := &costroute.Graph{
+		Head: &costroute.Head{HeadID: 1, ProductSysID: 100},
+		Seqs: []*costroute.Seq{
+			{SeqID: 10, HeadID: 1, ProductSysID: 100, RouteLevel: 1, RouteSeq: 1,
+				Rms: []*costroute.Rm{
+					{RmType: costroute.RmTypeProduct, RmProductSysID: 200, RouteRmRatio: 1.0},
+				},
+			},
+			{SeqID: 20, HeadID: 1, ProductSysID: 100, RouteLevel: 2, RouteSeq: 1,
+				Rms: []*costroute.Rm{
+					{RmType: costroute.RmTypeItem, RmItemCode: "X", RouteRmRatio: 1.0},
+				},
+			},
+		},
+	}
+	if err := g.ValidateLevels(); !errors.Is(err, costroute.ErrSelfReferencingRoute) {
+		t.Fatalf("expected ErrSelfReferencingRoute, got %v", err)
+	}
+}
+
 func TestValidateLevels_RmRefMismatch(t *testing.T) {
 	// rm_type=PRODUCT but only item_code set.
 	g := &costroute.Graph{

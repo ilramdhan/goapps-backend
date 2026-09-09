@@ -129,3 +129,22 @@ func (a *JobPublisherAdapter) PublishMBBulkTransition(
 	}
 	return a.publisher.PublishJob(ctx, RoutingKeyMBBulkTransition, msg)
 }
+
+// PublishProductParamBulk publishes one Bulk Edit Product Params child job
+// message — one product_sys_id, the shared ops sequence (already JSON-encoded
+// by the caller) and skip_missing_applicable flag applied identically to every
+// child in the batch.
+func (a *JobPublisherAdapter) PublishProductParamBulk(
+	ctx context.Context,
+	jobID string, productSysID int64, operationsJSON string, skipMissingApplicable bool, createdBy string,
+) error {
+	msg := JobMessage{
+		JobID:                 jobID,
+		JobType:               "product_param_bulk",
+		CreatedBy:             createdBy,
+		ProductSysID:          productSysID,
+		Operations:            operationsJSON,
+		SkipMissingApplicable: skipMissingApplicable,
+	}
+	return a.publisher.PublishJob(ctx, RoutingKeyProductParamBulk, msg)
+}

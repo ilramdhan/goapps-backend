@@ -121,6 +121,25 @@ var (
 	ErrInvalidStatusTransition = errors.New("invalid route status transition")
 	// ErrParamIncomplete is returned when locking is attempted with unfilled required params.
 	ErrParamIncomplete = errors.New("required params incomplete")
+	// ErrTargetProductHasActiveRoute is returned by AttachRoute (F3) when the
+	// target product already has a live (non-LOCKED) route head -- a friendly
+	// pre-check surfaced before the DB's uk_cost_route_head_active_per_product
+	// partial unique index would otherwise raise a raw constraint violation.
+	ErrTargetProductHasActiveRoute = errors.New("target product already has an active route")
+)
+
+// DuplicateTargetMode selects what DuplicateRoute duplicates onto. Values
+// mirror the generated financev1.DuplicateRouteTargetMode enum numbering
+// (0=UNSPECIFIED, 1=NEW_PRODUCT, 2=SAME_PRODUCT) so delivery can convert with
+// a plain type conversion; the domain layer stays free of the gen import.
+type DuplicateTargetMode int32
+
+// DuplicateTargetMode values. Unspecified/zero is treated as NewProduct for
+// backward compatibility with callers that never set target_mode.
+const (
+	DuplicateTargetModeUnspecified DuplicateTargetMode = 0
+	DuplicateTargetModeNewProduct  DuplicateTargetMode = 1
+	DuplicateTargetModeSameProduct DuplicateTargetMode = 2
 )
 
 // DuplicateInput is the use-case payload for a deep-fork of a route.
@@ -133,6 +152,9 @@ type DuplicateInput struct {
 	NewCodePrefix        string
 	LinkedRequestID      int64 // when >0, atomically set cpr_linked_route_head_id
 	ActorUserID          string
+	// TargetMode selects NEW_PRODUCT (default/legacy) vs SAME_PRODUCT (F1:
+	// fork the route graph only, keeping the same product).
+	TargetMode DuplicateTargetMode
 }
 
 // DuplicateOutput is the result returned by DuplicateRoute.
@@ -140,6 +162,21 @@ type DuplicateOutput struct {
 	NewHeadID       int64
 	NewProductSysID int64
 	NewProductCode  string
+}
+
+// AttachInput is the use-case payload for F3: attaching an existing route's
+// full graph onto a different (target) product, reusing every upstream
+// product reference as-is (only the top-level FG seq is remapped).
+type AttachInput struct {
+	SourceHeadID       int64
+	TargetProductSysID int64
+	LinkedRequestID    int64 // when >0, atomically set cpr_linked_route_head_id
+	ActorUserID        string
+}
+
+// AttachOutput is the result returned by AttachRoute.
+type AttachOutput struct {
+	NewHeadID int64
 }
 
 // LinkedRequest is the read model for ListLinkedRequests.
@@ -285,6 +322,13 @@ type Repository interface {
 	ListHeads(ctx context.Context, f Filter) (rows []*Head, total int64, err error)
 	// DuplicateRoute deep-forks a route per the requested toggles, all in one tx.
 	DuplicateRoute(ctx context.Context, in DuplicateInput) (DuplicateOutput, error)
+	// AttachRoute (F3) copies the full graph of an existing route owned by
+	// another product onto in.TargetProductSysID: a brand-new head is created
+	// for the target, only the top-level FG seq's product reference is
+	// remapped to the target, and every other seq/RM keeps referencing its
+	// original (shared) product. Returns ErrTargetProductHasActiveRoute if the
+	// target already has a live (non-LOCKED) head.
+	AttachRoute(ctx context.Context, in AttachInput) (AttachOutput, error)
 	// ListLinkedRequests returns requests linking to this route head.
 	ListLinkedRequests(ctx context.Context, headID int64) ([]LinkedRequest, error)
 	// BulkUpsertHeads upserts route head rows by (crh_product_sys_id).

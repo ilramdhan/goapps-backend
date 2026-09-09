@@ -27,5 +27,11 @@ func (h *DuplicateHandler) Handle(ctx context.Context, in costroute.DuplicateInp
 	if !in.IncludeApplicability && in.IncludeValues {
 		return costroute.DuplicateOutput{}, fmt.Errorf("duplicate: values toggle requires applicability toggle")
 	}
+	if in.TargetMode == costroute.DuplicateTargetModeSameProduct {
+		if in.IncludeUpstream || in.IncludeApplicability || in.IncludeValues || in.NewCodePrefix != "" {
+			return costroute.DuplicateOutput{}, errors.New(
+				"duplicate: same-product mode does not support include_upstream, include_applicability, include_values, or new_code_prefix")
+		}
+	}
 	return h.repo.DuplicateRoute(ctx, in)
 }
