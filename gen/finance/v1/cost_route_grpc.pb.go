@@ -30,6 +30,7 @@ const (
 	CostRouteService_DuplicateRoute_FullMethodName         = "/finance.v1.CostRouteService/DuplicateRoute"
 	CostRouteService_ListLinkedRequests_FullMethodName     = "/finance.v1.CostRouteService/ListLinkedRequests"
 	CostRouteService_CreateRouteFromProduct_FullMethodName = "/finance.v1.CostRouteService/CreateRouteFromProduct"
+	CostRouteService_AttachRoute_FullMethodName            = "/finance.v1.CostRouteService/AttachRoute"
 )
 
 // CostRouteServiceClient is the client API for CostRouteService service.
@@ -49,6 +50,7 @@ type CostRouteServiceClient interface {
 	DuplicateRoute(ctx context.Context, in *DuplicateRouteRequest, opts ...grpc.CallOption) (*DuplicateRouteResponse, error)
 	ListLinkedRequests(ctx context.Context, in *ListLinkedRequestsRequest, opts ...grpc.CallOption) (*ListLinkedRequestsResponse, error)
 	CreateRouteFromProduct(ctx context.Context, in *CreateRouteFromProductRequest, opts ...grpc.CallOption) (*CreateRouteFromProductResponse, error)
+	AttachRoute(ctx context.Context, in *AttachRouteRequest, opts ...grpc.CallOption) (*AttachRouteResponse, error)
 }
 
 type costRouteServiceClient struct {
@@ -169,6 +171,16 @@ func (c *costRouteServiceClient) CreateRouteFromProduct(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *costRouteServiceClient) AttachRoute(ctx context.Context, in *AttachRouteRequest, opts ...grpc.CallOption) (*AttachRouteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AttachRouteResponse)
+	err := c.cc.Invoke(ctx, CostRouteService_AttachRoute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostRouteServiceServer is the server API for CostRouteService service.
 // All implementations must embed UnimplementedCostRouteServiceServer
 // for forward compatibility.
@@ -186,6 +198,7 @@ type CostRouteServiceServer interface {
 	DuplicateRoute(context.Context, *DuplicateRouteRequest) (*DuplicateRouteResponse, error)
 	ListLinkedRequests(context.Context, *ListLinkedRequestsRequest) (*ListLinkedRequestsResponse, error)
 	CreateRouteFromProduct(context.Context, *CreateRouteFromProductRequest) (*CreateRouteFromProductResponse, error)
+	AttachRoute(context.Context, *AttachRouteRequest) (*AttachRouteResponse, error)
 	mustEmbedUnimplementedCostRouteServiceServer()
 }
 
@@ -228,6 +241,9 @@ func (UnimplementedCostRouteServiceServer) ListLinkedRequests(context.Context, *
 }
 func (UnimplementedCostRouteServiceServer) CreateRouteFromProduct(context.Context, *CreateRouteFromProductRequest) (*CreateRouteFromProductResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateRouteFromProduct not implemented")
+}
+func (UnimplementedCostRouteServiceServer) AttachRoute(context.Context, *AttachRouteRequest) (*AttachRouteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AttachRoute not implemented")
 }
 func (UnimplementedCostRouteServiceServer) mustEmbedUnimplementedCostRouteServiceServer() {}
 func (UnimplementedCostRouteServiceServer) testEmbeddedByValue()                          {}
@@ -448,6 +464,24 @@ func _CostRouteService_CreateRouteFromProduct_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostRouteService_AttachRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttachRouteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostRouteServiceServer).AttachRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostRouteService_AttachRoute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostRouteServiceServer).AttachRoute(ctx, req.(*AttachRouteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostRouteService_ServiceDesc is the grpc.ServiceDesc for CostRouteService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -498,6 +532,10 @@ var CostRouteService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateRouteFromProduct",
 			Handler:    _CostRouteService_CreateRouteFromProduct_Handler,
+		},
+		{
+			MethodName: "AttachRoute",
+			Handler:    _CostRouteService_AttachRoute_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

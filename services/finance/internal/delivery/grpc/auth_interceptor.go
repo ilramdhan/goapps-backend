@@ -590,6 +590,14 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostRouteService/ListRoutes":             "finance.product.route.view",
 		"/finance.v1.CostRouteService/DuplicateRoute":         "finance.product.route.create",
 		"/finance.v1.CostRouteService/ListLinkedRequests":     "finance.product.route.view",
+		// F3 (product-route-fork-attach-bulk, design.md line 186): AttachRoute copies a full
+		// route graph into a new head owned by the target product -- a create-like action,
+		// reusing the same permission as CreateRouteFromProduct/DuplicateRoute per the locked
+		// design decision. Added here (not by the F3 sub-agent) only because its absence broke
+		// the shared TestNoNewFailOpenRPCs/TestPermissionCoverageCountsAreStable ratchet tests
+		// that gate ALL phases, including this one (B2); the RPC's own handler/repo logic is
+		// out of scope for B2 and untouched.
+		"/finance.v1.CostRouteService/AttachRoute": "finance.product.route.create",
 
 		// CostProductMasterService
 		"/finance.v1.CostProductMasterService/CreateCostProductMaster":           "finance.product.route.create",
@@ -605,6 +613,19 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostProductMasterService/ExportCostProductMasters":          "finance.product.route.view",
 		"/finance.v1.CostProductMasterService/ImportCostProductMasters":          "finance.product.route.create",
 		"/finance.v1.CostProductMasterService/DownloadCostProductMasterTemplate": "finance.product.route.view",
+		// F2 (B2): DuplicateProduct mints a new product master row -- reuses the same
+		// create-like permission as CreateCostProductMaster/UpdateCostProductMaster per the
+		// locked design decision (no new IAM codes/migrations for this plan).
+		"/finance.v1.CostProductMasterService/DuplicateProduct": "finance.product.route.create",
+
+		// CostProductParamBulkService (F4, B4): Bulk Edit Product Params reuses the
+		// same finance.product.route.* codes as CostProductParameterService per the
+		// locked design decision (no new IAM permission codes/migrations for this
+		// plan) -- BulkEditProductParams is the mutating submit RPC (.create); the
+		// status/failures RPCs are read-only (.view).
+		"/finance.v1.CostProductParamBulkService/BulkEditProductParams":           "finance.product.route.create",
+		"/finance.v1.CostProductParamBulkService/GetBulkProductParamJobStatus":    "finance.product.route.view",
+		"/finance.v1.CostProductParamBulkService/ListBulkProductParamJobFailures": "finance.product.route.view",
 
 		// CostFillTaskService — authenticated-only (access controlled by fill config domain)
 		"/finance.v1.CostFillTaskService/ListFillTasks":   "",

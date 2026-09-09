@@ -24,6 +24,56 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// DuplicateRouteTargetMode selects what DuplicateRoute duplicates onto.
+type DuplicateRouteTargetMode int32
+
+const (
+	DuplicateRouteTargetMode_DUPLICATE_ROUTE_TARGET_MODE_UNSPECIFIED  DuplicateRouteTargetMode = 0 // Default -- treated as NEW_PRODUCT for backward compatibility.
+	DuplicateRouteTargetMode_DUPLICATE_ROUTE_TARGET_MODE_NEW_PRODUCT  DuplicateRouteTargetMode = 1 // Existing behavior: duplicate onto brand-new product(s).
+	DuplicateRouteTargetMode_DUPLICATE_ROUTE_TARGET_MODE_SAME_PRODUCT DuplicateRouteTargetMode = 2 // Fork the route graph only, keeping the same product.
+)
+
+// Enum value maps for DuplicateRouteTargetMode.
+var (
+	DuplicateRouteTargetMode_name = map[int32]string{
+		0: "DUPLICATE_ROUTE_TARGET_MODE_UNSPECIFIED",
+		1: "DUPLICATE_ROUTE_TARGET_MODE_NEW_PRODUCT",
+		2: "DUPLICATE_ROUTE_TARGET_MODE_SAME_PRODUCT",
+	}
+	DuplicateRouteTargetMode_value = map[string]int32{
+		"DUPLICATE_ROUTE_TARGET_MODE_UNSPECIFIED":  0,
+		"DUPLICATE_ROUTE_TARGET_MODE_NEW_PRODUCT":  1,
+		"DUPLICATE_ROUTE_TARGET_MODE_SAME_PRODUCT": 2,
+	}
+)
+
+func (x DuplicateRouteTargetMode) Enum() *DuplicateRouteTargetMode {
+	p := new(DuplicateRouteTargetMode)
+	*p = x
+	return p
+}
+
+func (x DuplicateRouteTargetMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DuplicateRouteTargetMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_finance_v1_cost_route_proto_enumTypes[0].Descriptor()
+}
+
+func (DuplicateRouteTargetMode) Type() protoreflect.EnumType {
+	return &file_finance_v1_cost_route_proto_enumTypes[0]
+}
+
+func (x DuplicateRouteTargetMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DuplicateRouteTargetMode.Descriptor instead.
+func (DuplicateRouteTargetMode) EnumDescriptor() ([]byte, []int) {
+	return file_finance_v1_cost_route_proto_rawDescGZIP(), []int{0}
+}
+
 // CostRouteHead is the per-product released routing aggregate.
 // One non-LOCKED head per product (UK by cpm_product_sys_id).
 type CostRouteHead struct {
@@ -1410,8 +1460,10 @@ type DuplicateRouteRequest struct {
 	IncludeValues        bool                   `protobuf:"varint,5,opt,name=include_values,json=includeValues,proto3" json:"include_values,omitempty"`
 	NewCodePrefix        string                 `protobuf:"bytes,6,opt,name=new_code_prefix,json=newCodePrefix,proto3" json:"new_code_prefix,omitempty"`
 	LinkedRequestId      int64                  `protobuf:"varint,7,opt,name=linked_request_id,json=linkedRequestId,proto3" json:"linked_request_id,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Defaults to NEW_PRODUCT when unspecified, matching pre-existing behavior.
+	TargetMode    DuplicateRouteTargetMode `protobuf:"varint,8,opt,name=target_mode,json=targetMode,proto3,enum=finance.v1.DuplicateRouteTargetMode" json:"target_mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DuplicateRouteRequest) Reset() {
@@ -1491,6 +1543,13 @@ func (x *DuplicateRouteRequest) GetLinkedRequestId() int64 {
 		return x.LinkedRequestId
 	}
 	return 0
+}
+
+func (x *DuplicateRouteRequest) GetTargetMode() DuplicateRouteTargetMode {
+	if x != nil {
+		return x.TargetMode
+	}
+	return DuplicateRouteTargetMode_DUPLICATE_ROUTE_TARGET_MODE_UNSPECIFIED
 }
 
 type DuplicateRouteResponse struct {
@@ -1853,6 +1912,118 @@ func (x *CreateRouteFromProductResponse) GetHeadId() int64 {
 	return 0
 }
 
+type AttachRouteRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	SourceHeadId       int64                  `protobuf:"varint,1,opt,name=source_head_id,json=sourceHeadId,proto3" json:"source_head_id,omitempty"`
+	TargetProductSysId int64                  `protobuf:"varint,2,opt,name=target_product_sys_id,json=targetProductSysId,proto3" json:"target_product_sys_id,omitempty"`
+	LinkedRequestId    int64                  `protobuf:"varint,3,opt,name=linked_request_id,json=linkedRequestId,proto3" json:"linked_request_id,omitempty"` // optional, atomically links the request on success.
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AttachRouteRequest) Reset() {
+	*x = AttachRouteRequest{}
+	mi := &file_finance_v1_cost_route_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AttachRouteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AttachRouteRequest) ProtoMessage() {}
+
+func (x *AttachRouteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_route_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AttachRouteRequest.ProtoReflect.Descriptor instead.
+func (*AttachRouteRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_route_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *AttachRouteRequest) GetSourceHeadId() int64 {
+	if x != nil {
+		return x.SourceHeadId
+	}
+	return 0
+}
+
+func (x *AttachRouteRequest) GetTargetProductSysId() int64 {
+	if x != nil {
+		return x.TargetProductSysId
+	}
+	return 0
+}
+
+func (x *AttachRouteRequest) GetLinkedRequestId() int64 {
+	if x != nil {
+		return x.LinkedRequestId
+	}
+	return 0
+}
+
+type AttachRouteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	NewHeadId     int64                  `protobuf:"varint,2,opt,name=new_head_id,json=newHeadId,proto3" json:"new_head_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AttachRouteResponse) Reset() {
+	*x = AttachRouteResponse{}
+	mi := &file_finance_v1_cost_route_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AttachRouteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AttachRouteResponse) ProtoMessage() {}
+
+func (x *AttachRouteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_route_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AttachRouteResponse.ProtoReflect.Descriptor instead.
+func (*AttachRouteResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_route_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *AttachRouteResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *AttachRouteResponse) GetNewHeadId() int64 {
+	if x != nil {
+		return x.NewHeadId
+	}
+	return 0
+}
+
 var File_finance_v1_cost_route_proto protoreflect.FileDescriptor
 
 const file_finance_v1_cost_route_proto_rawDesc = "" +
@@ -1976,7 +2147,7 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\x04data\x18\x02 \x03(\v2\x19.finance.v1.CostRouteHeadR\x04data\x12=\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xc6\x02\n" +
+	"pagination\"\x8d\x03\n" +
 	"\x15DuplicateRouteRequest\x12 \n" +
 	"\ahead_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x06headId\x12'\n" +
 	"\x0finclude_routing\x18\x02 \x01(\bR\x0eincludeRouting\x12)\n" +
@@ -1984,7 +2155,9 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\x15include_applicability\x18\x04 \x01(\bR\x14includeApplicability\x12%\n" +
 	"\x0einclude_values\x18\x05 \x01(\bR\rincludeValues\x12/\n" +
 	"\x0fnew_code_prefix\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18(R\rnewCodePrefix\x12*\n" +
-	"\x11linked_request_id\x18\a \x01(\x03R\x0flinkedRequestId\"\xbc\x01\n" +
+	"\x11linked_request_id\x18\a \x01(\x03R\x0flinkedRequestId\x12E\n" +
+	"\vtarget_mode\x18\b \x01(\x0e2$.finance.v1.DuplicateRouteTargetModeR\n" +
+	"targetMode\"\xbc\x01\n" +
 	"\x16DuplicateRouteResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x1e\n" +
 	"\vnew_head_id\x18\x02 \x01(\x03R\tnewHeadId\x12+\n" +
@@ -2012,7 +2185,18 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\vcyl_type_id\x18\x03 \x01(\x05R\tcylTypeId\"f\n" +
 	"\x1eCreateRouteFromProductResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x17\n" +
-	"\ahead_id\x18\x02 \x01(\x03R\x06headId2\x8d\f\n" +
+	"\ahead_id\x18\x02 \x01(\x03R\x06headId\"\xab\x01\n" +
+	"\x12AttachRouteRequest\x12-\n" +
+	"\x0esource_head_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fsourceHeadId\x12:\n" +
+	"\x15target_product_sys_id\x18\x02 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x12targetProductSysId\x12*\n" +
+	"\x11linked_request_id\x18\x03 \x01(\x03R\x0flinkedRequestId\"b\n" +
+	"\x13AttachRouteResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x1e\n" +
+	"\vnew_head_id\x18\x02 \x01(\x03R\tnewHeadId*\xa2\x01\n" +
+	"\x18DuplicateRouteTargetMode\x12+\n" +
+	"'DUPLICATE_ROUTE_TARGET_MODE_UNSPECIFIED\x10\x00\x12+\n" +
+	"'DUPLICATE_ROUTE_TARGET_MODE_NEW_PRODUCT\x10\x01\x12,\n" +
+	"(DUPLICATE_ROUTE_TARGET_MODE_SAME_PRODUCT\x10\x022\x87\r\n" +
 	"\x10CostRouteService\x12\x9c\x01\n" +
 	"\x11GetRouteByProduct\x12$.finance.v1.GetRouteByProductRequest\x1a%.finance.v1.GetRouteByProductResponse\":\x82\xd3\xe4\x93\x024\x122/api/v1/finance/routes/by-product/{product_sys_id}\x12\x84\x01\n" +
 	"\rGetRouteGraph\x12 .finance.v1.GetRouteGraphRequest\x1a!.finance.v1.GetRouteGraphResponse\".\x82\xd3\xe4\x93\x02(\x12&/api/v1/finance/routes/{head_id}/graph\x12\x8a\x01\n" +
@@ -2025,7 +2209,8 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"ListRoutes\x12\x1d.finance.v1.ListRoutesRequest\x1a\x1e.finance.v1.ListRoutesResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/finance/routes\x12\x8e\x01\n" +
 	"\x0eDuplicateRoute\x12!.finance.v1.DuplicateRouteRequest\x1a\".finance.v1.DuplicateRouteResponse\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/api/v1/finance/routes/{head_id}/duplicate\x12\x9d\x01\n" +
 	"\x12ListLinkedRequests\x12%.finance.v1.ListLinkedRequestsRequest\x1a&.finance.v1.ListLinkedRequestsResponse\"8\x82\xd3\xe4\x93\x022\x120/api/v1/finance/routes/{head_id}/linked-requests\x12\x9f\x01\n" +
-	"\x16CreateRouteFromProduct\x12).finance.v1.CreateRouteFromProductRequest\x1a*.finance.v1.CreateRouteFromProductResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/api/v1/finance/routes/from-productB\xa8\x01\n" +
+	"\x16CreateRouteFromProduct\x12).finance.v1.CreateRouteFromProductRequest\x1a*.finance.v1.CreateRouteFromProductResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/api/v1/finance/routes/from-product\x12x\n" +
+	"\vAttachRoute\x12\x1e.finance.v1.AttachRouteRequest\x1a\x1f.finance.v1.AttachRouteResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/finance/routes/attachB\xa8\x01\n" +
 	"\x0ecom.finance.v1B\x0eCostRouteProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
 	"Finance.V1\xca\x02\n" +
 	"Finance\\V1\xe2\x02\x16Finance\\V1\\GPBMetadata\xea\x02\vFinance::V1b\x06proto3"
@@ -2042,92 +2227,100 @@ func file_finance_v1_cost_route_proto_rawDescGZIP() []byte {
 	return file_finance_v1_cost_route_proto_rawDescData
 }
 
-var file_finance_v1_cost_route_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_finance_v1_cost_route_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_finance_v1_cost_route_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_finance_v1_cost_route_proto_goTypes = []any{
-	(*CostRouteHead)(nil),                  // 0: finance.v1.CostRouteHead
-	(*CostRouteSeq)(nil),                   // 1: finance.v1.CostRouteSeq
-	(*CostRouteRm)(nil),                    // 2: finance.v1.CostRouteRm
-	(*RouteGraph)(nil),                     // 3: finance.v1.RouteGraph
-	(*GetRouteByProductRequest)(nil),       // 4: finance.v1.GetRouteByProductRequest
-	(*GetRouteByProductResponse)(nil),      // 5: finance.v1.GetRouteByProductResponse
-	(*GetRouteGraphRequest)(nil),           // 6: finance.v1.GetRouteGraphRequest
-	(*GetRouteGraphResponse)(nil),          // 7: finance.v1.GetRouteGraphResponse
-	(*SaveRouteGraphRequest)(nil),          // 8: finance.v1.SaveRouteGraphRequest
-	(*SaveRouteGraphResponse)(nil),         // 9: finance.v1.SaveRouteGraphResponse
-	(*CompleteRouteRequest)(nil),           // 10: finance.v1.CompleteRouteRequest
-	(*CompleteRouteResponse)(nil),          // 11: finance.v1.CompleteRouteResponse
-	(*LockRouteRequest)(nil),               // 12: finance.v1.LockRouteRequest
-	(*LockRouteResponse)(nil),              // 13: finance.v1.LockRouteResponse
-	(*UnlockRouteRequest)(nil),             // 14: finance.v1.UnlockRouteRequest
-	(*UnlockRouteResponse)(nil),            // 15: finance.v1.UnlockRouteResponse
-	(*DeleteRouteRequest)(nil),             // 16: finance.v1.DeleteRouteRequest
-	(*DeleteRouteResponse)(nil),            // 17: finance.v1.DeleteRouteResponse
-	(*ListRoutesRequest)(nil),              // 18: finance.v1.ListRoutesRequest
-	(*ListRoutesResponse)(nil),             // 19: finance.v1.ListRoutesResponse
-	(*DuplicateRouteRequest)(nil),          // 20: finance.v1.DuplicateRouteRequest
-	(*DuplicateRouteResponse)(nil),         // 21: finance.v1.DuplicateRouteResponse
-	(*ListLinkedRequestsRequest)(nil),      // 22: finance.v1.ListLinkedRequestsRequest
-	(*LinkedRequest)(nil),                  // 23: finance.v1.LinkedRequest
-	(*ListLinkedRequestsResponse)(nil),     // 24: finance.v1.ListLinkedRequestsResponse
-	(*CreateRouteFromProductRequest)(nil),  // 25: finance.v1.CreateRouteFromProductRequest
-	(*CreateRouteFromProductResponse)(nil), // 26: finance.v1.CreateRouteFromProductResponse
-	(*v1.AuditInfo)(nil),                   // 27: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),                // 28: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),          // 29: common.v1.PaginationResponse
+	(DuplicateRouteTargetMode)(0),          // 0: finance.v1.DuplicateRouteTargetMode
+	(*CostRouteHead)(nil),                  // 1: finance.v1.CostRouteHead
+	(*CostRouteSeq)(nil),                   // 2: finance.v1.CostRouteSeq
+	(*CostRouteRm)(nil),                    // 3: finance.v1.CostRouteRm
+	(*RouteGraph)(nil),                     // 4: finance.v1.RouteGraph
+	(*GetRouteByProductRequest)(nil),       // 5: finance.v1.GetRouteByProductRequest
+	(*GetRouteByProductResponse)(nil),      // 6: finance.v1.GetRouteByProductResponse
+	(*GetRouteGraphRequest)(nil),           // 7: finance.v1.GetRouteGraphRequest
+	(*GetRouteGraphResponse)(nil),          // 8: finance.v1.GetRouteGraphResponse
+	(*SaveRouteGraphRequest)(nil),          // 9: finance.v1.SaveRouteGraphRequest
+	(*SaveRouteGraphResponse)(nil),         // 10: finance.v1.SaveRouteGraphResponse
+	(*CompleteRouteRequest)(nil),           // 11: finance.v1.CompleteRouteRequest
+	(*CompleteRouteResponse)(nil),          // 12: finance.v1.CompleteRouteResponse
+	(*LockRouteRequest)(nil),               // 13: finance.v1.LockRouteRequest
+	(*LockRouteResponse)(nil),              // 14: finance.v1.LockRouteResponse
+	(*UnlockRouteRequest)(nil),             // 15: finance.v1.UnlockRouteRequest
+	(*UnlockRouteResponse)(nil),            // 16: finance.v1.UnlockRouteResponse
+	(*DeleteRouteRequest)(nil),             // 17: finance.v1.DeleteRouteRequest
+	(*DeleteRouteResponse)(nil),            // 18: finance.v1.DeleteRouteResponse
+	(*ListRoutesRequest)(nil),              // 19: finance.v1.ListRoutesRequest
+	(*ListRoutesResponse)(nil),             // 20: finance.v1.ListRoutesResponse
+	(*DuplicateRouteRequest)(nil),          // 21: finance.v1.DuplicateRouteRequest
+	(*DuplicateRouteResponse)(nil),         // 22: finance.v1.DuplicateRouteResponse
+	(*ListLinkedRequestsRequest)(nil),      // 23: finance.v1.ListLinkedRequestsRequest
+	(*LinkedRequest)(nil),                  // 24: finance.v1.LinkedRequest
+	(*ListLinkedRequestsResponse)(nil),     // 25: finance.v1.ListLinkedRequestsResponse
+	(*CreateRouteFromProductRequest)(nil),  // 26: finance.v1.CreateRouteFromProductRequest
+	(*CreateRouteFromProductResponse)(nil), // 27: finance.v1.CreateRouteFromProductResponse
+	(*AttachRouteRequest)(nil),             // 28: finance.v1.AttachRouteRequest
+	(*AttachRouteResponse)(nil),            // 29: finance.v1.AttachRouteResponse
+	(*v1.AuditInfo)(nil),                   // 30: common.v1.AuditInfo
+	(*v1.BaseResponse)(nil),                // 31: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),          // 32: common.v1.PaginationResponse
 }
 var file_finance_v1_cost_route_proto_depIdxs = []int32{
-	27, // 0: finance.v1.CostRouteHead.audit:type_name -> common.v1.AuditInfo
-	2,  // 1: finance.v1.CostRouteSeq.rms:type_name -> finance.v1.CostRouteRm
-	0,  // 2: finance.v1.RouteGraph.head:type_name -> finance.v1.CostRouteHead
-	1,  // 3: finance.v1.RouteGraph.seqs:type_name -> finance.v1.CostRouteSeq
-	28, // 4: finance.v1.GetRouteByProductResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 5: finance.v1.GetRouteByProductResponse.data:type_name -> finance.v1.CostRouteHead
-	28, // 6: finance.v1.GetRouteGraphResponse.base:type_name -> common.v1.BaseResponse
-	3,  // 7: finance.v1.GetRouteGraphResponse.data:type_name -> finance.v1.RouteGraph
-	3,  // 8: finance.v1.SaveRouteGraphRequest.graph:type_name -> finance.v1.RouteGraph
-	28, // 9: finance.v1.SaveRouteGraphResponse.base:type_name -> common.v1.BaseResponse
-	3,  // 10: finance.v1.SaveRouteGraphResponse.data:type_name -> finance.v1.RouteGraph
-	28, // 11: finance.v1.CompleteRouteResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 12: finance.v1.CompleteRouteResponse.data:type_name -> finance.v1.CostRouteHead
-	28, // 13: finance.v1.LockRouteResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 14: finance.v1.LockRouteResponse.data:type_name -> finance.v1.CostRouteHead
-	28, // 15: finance.v1.UnlockRouteResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 16: finance.v1.UnlockRouteResponse.data:type_name -> finance.v1.CostRouteHead
-	28, // 17: finance.v1.DeleteRouteResponse.base:type_name -> common.v1.BaseResponse
-	28, // 18: finance.v1.ListRoutesResponse.base:type_name -> common.v1.BaseResponse
-	0,  // 19: finance.v1.ListRoutesResponse.data:type_name -> finance.v1.CostRouteHead
-	29, // 20: finance.v1.ListRoutesResponse.pagination:type_name -> common.v1.PaginationResponse
-	28, // 21: finance.v1.DuplicateRouteResponse.base:type_name -> common.v1.BaseResponse
-	28, // 22: finance.v1.ListLinkedRequestsResponse.base:type_name -> common.v1.BaseResponse
-	23, // 23: finance.v1.ListLinkedRequestsResponse.data:type_name -> finance.v1.LinkedRequest
-	28, // 24: finance.v1.CreateRouteFromProductResponse.base:type_name -> common.v1.BaseResponse
-	4,  // 25: finance.v1.CostRouteService.GetRouteByProduct:input_type -> finance.v1.GetRouteByProductRequest
-	6,  // 26: finance.v1.CostRouteService.GetRouteGraph:input_type -> finance.v1.GetRouteGraphRequest
-	8,  // 27: finance.v1.CostRouteService.SaveRouteGraph:input_type -> finance.v1.SaveRouteGraphRequest
-	10, // 28: finance.v1.CostRouteService.CompleteRoute:input_type -> finance.v1.CompleteRouteRequest
-	12, // 29: finance.v1.CostRouteService.LockRoute:input_type -> finance.v1.LockRouteRequest
-	14, // 30: finance.v1.CostRouteService.UnlockRoute:input_type -> finance.v1.UnlockRouteRequest
-	16, // 31: finance.v1.CostRouteService.DeleteRoute:input_type -> finance.v1.DeleteRouteRequest
-	18, // 32: finance.v1.CostRouteService.ListRoutes:input_type -> finance.v1.ListRoutesRequest
-	20, // 33: finance.v1.CostRouteService.DuplicateRoute:input_type -> finance.v1.DuplicateRouteRequest
-	22, // 34: finance.v1.CostRouteService.ListLinkedRequests:input_type -> finance.v1.ListLinkedRequestsRequest
-	25, // 35: finance.v1.CostRouteService.CreateRouteFromProduct:input_type -> finance.v1.CreateRouteFromProductRequest
-	5,  // 36: finance.v1.CostRouteService.GetRouteByProduct:output_type -> finance.v1.GetRouteByProductResponse
-	7,  // 37: finance.v1.CostRouteService.GetRouteGraph:output_type -> finance.v1.GetRouteGraphResponse
-	9,  // 38: finance.v1.CostRouteService.SaveRouteGraph:output_type -> finance.v1.SaveRouteGraphResponse
-	11, // 39: finance.v1.CostRouteService.CompleteRoute:output_type -> finance.v1.CompleteRouteResponse
-	13, // 40: finance.v1.CostRouteService.LockRoute:output_type -> finance.v1.LockRouteResponse
-	15, // 41: finance.v1.CostRouteService.UnlockRoute:output_type -> finance.v1.UnlockRouteResponse
-	17, // 42: finance.v1.CostRouteService.DeleteRoute:output_type -> finance.v1.DeleteRouteResponse
-	19, // 43: finance.v1.CostRouteService.ListRoutes:output_type -> finance.v1.ListRoutesResponse
-	21, // 44: finance.v1.CostRouteService.DuplicateRoute:output_type -> finance.v1.DuplicateRouteResponse
-	24, // 45: finance.v1.CostRouteService.ListLinkedRequests:output_type -> finance.v1.ListLinkedRequestsResponse
-	26, // 46: finance.v1.CostRouteService.CreateRouteFromProduct:output_type -> finance.v1.CreateRouteFromProductResponse
-	36, // [36:47] is the sub-list for method output_type
-	25, // [25:36] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	30, // 0: finance.v1.CostRouteHead.audit:type_name -> common.v1.AuditInfo
+	3,  // 1: finance.v1.CostRouteSeq.rms:type_name -> finance.v1.CostRouteRm
+	1,  // 2: finance.v1.RouteGraph.head:type_name -> finance.v1.CostRouteHead
+	2,  // 3: finance.v1.RouteGraph.seqs:type_name -> finance.v1.CostRouteSeq
+	31, // 4: finance.v1.GetRouteByProductResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 5: finance.v1.GetRouteByProductResponse.data:type_name -> finance.v1.CostRouteHead
+	31, // 6: finance.v1.GetRouteGraphResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 7: finance.v1.GetRouteGraphResponse.data:type_name -> finance.v1.RouteGraph
+	4,  // 8: finance.v1.SaveRouteGraphRequest.graph:type_name -> finance.v1.RouteGraph
+	31, // 9: finance.v1.SaveRouteGraphResponse.base:type_name -> common.v1.BaseResponse
+	4,  // 10: finance.v1.SaveRouteGraphResponse.data:type_name -> finance.v1.RouteGraph
+	31, // 11: finance.v1.CompleteRouteResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 12: finance.v1.CompleteRouteResponse.data:type_name -> finance.v1.CostRouteHead
+	31, // 13: finance.v1.LockRouteResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 14: finance.v1.LockRouteResponse.data:type_name -> finance.v1.CostRouteHead
+	31, // 15: finance.v1.UnlockRouteResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 16: finance.v1.UnlockRouteResponse.data:type_name -> finance.v1.CostRouteHead
+	31, // 17: finance.v1.DeleteRouteResponse.base:type_name -> common.v1.BaseResponse
+	31, // 18: finance.v1.ListRoutesResponse.base:type_name -> common.v1.BaseResponse
+	1,  // 19: finance.v1.ListRoutesResponse.data:type_name -> finance.v1.CostRouteHead
+	32, // 20: finance.v1.ListRoutesResponse.pagination:type_name -> common.v1.PaginationResponse
+	0,  // 21: finance.v1.DuplicateRouteRequest.target_mode:type_name -> finance.v1.DuplicateRouteTargetMode
+	31, // 22: finance.v1.DuplicateRouteResponse.base:type_name -> common.v1.BaseResponse
+	31, // 23: finance.v1.ListLinkedRequestsResponse.base:type_name -> common.v1.BaseResponse
+	24, // 24: finance.v1.ListLinkedRequestsResponse.data:type_name -> finance.v1.LinkedRequest
+	31, // 25: finance.v1.CreateRouteFromProductResponse.base:type_name -> common.v1.BaseResponse
+	31, // 26: finance.v1.AttachRouteResponse.base:type_name -> common.v1.BaseResponse
+	5,  // 27: finance.v1.CostRouteService.GetRouteByProduct:input_type -> finance.v1.GetRouteByProductRequest
+	7,  // 28: finance.v1.CostRouteService.GetRouteGraph:input_type -> finance.v1.GetRouteGraphRequest
+	9,  // 29: finance.v1.CostRouteService.SaveRouteGraph:input_type -> finance.v1.SaveRouteGraphRequest
+	11, // 30: finance.v1.CostRouteService.CompleteRoute:input_type -> finance.v1.CompleteRouteRequest
+	13, // 31: finance.v1.CostRouteService.LockRoute:input_type -> finance.v1.LockRouteRequest
+	15, // 32: finance.v1.CostRouteService.UnlockRoute:input_type -> finance.v1.UnlockRouteRequest
+	17, // 33: finance.v1.CostRouteService.DeleteRoute:input_type -> finance.v1.DeleteRouteRequest
+	19, // 34: finance.v1.CostRouteService.ListRoutes:input_type -> finance.v1.ListRoutesRequest
+	21, // 35: finance.v1.CostRouteService.DuplicateRoute:input_type -> finance.v1.DuplicateRouteRequest
+	23, // 36: finance.v1.CostRouteService.ListLinkedRequests:input_type -> finance.v1.ListLinkedRequestsRequest
+	26, // 37: finance.v1.CostRouteService.CreateRouteFromProduct:input_type -> finance.v1.CreateRouteFromProductRequest
+	28, // 38: finance.v1.CostRouteService.AttachRoute:input_type -> finance.v1.AttachRouteRequest
+	6,  // 39: finance.v1.CostRouteService.GetRouteByProduct:output_type -> finance.v1.GetRouteByProductResponse
+	8,  // 40: finance.v1.CostRouteService.GetRouteGraph:output_type -> finance.v1.GetRouteGraphResponse
+	10, // 41: finance.v1.CostRouteService.SaveRouteGraph:output_type -> finance.v1.SaveRouteGraphResponse
+	12, // 42: finance.v1.CostRouteService.CompleteRoute:output_type -> finance.v1.CompleteRouteResponse
+	14, // 43: finance.v1.CostRouteService.LockRoute:output_type -> finance.v1.LockRouteResponse
+	16, // 44: finance.v1.CostRouteService.UnlockRoute:output_type -> finance.v1.UnlockRouteResponse
+	18, // 45: finance.v1.CostRouteService.DeleteRoute:output_type -> finance.v1.DeleteRouteResponse
+	20, // 46: finance.v1.CostRouteService.ListRoutes:output_type -> finance.v1.ListRoutesResponse
+	22, // 47: finance.v1.CostRouteService.DuplicateRoute:output_type -> finance.v1.DuplicateRouteResponse
+	25, // 48: finance.v1.CostRouteService.ListLinkedRequests:output_type -> finance.v1.ListLinkedRequestsResponse
+	27, // 49: finance.v1.CostRouteService.CreateRouteFromProduct:output_type -> finance.v1.CreateRouteFromProductResponse
+	29, // 50: finance.v1.CostRouteService.AttachRoute:output_type -> finance.v1.AttachRouteResponse
+	39, // [39:51] is the sub-list for method output_type
+	27, // [27:39] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_route_proto_init() }
@@ -2140,13 +2333,14 @@ func file_finance_v1_cost_route_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_cost_route_proto_rawDesc), len(file_finance_v1_cost_route_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   27,
+			NumEnums:      1,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_finance_v1_cost_route_proto_goTypes,
 		DependencyIndexes: file_finance_v1_cost_route_proto_depIdxs,
+		EnumInfos:         file_finance_v1_cost_route_proto_enumTypes,
 		MessageInfos:      file_finance_v1_cost_route_proto_msgTypes,
 	}.Build()
 	File_finance_v1_cost_route_proto = out.File
