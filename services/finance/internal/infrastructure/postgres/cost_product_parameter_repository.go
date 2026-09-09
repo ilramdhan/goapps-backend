@@ -834,9 +834,24 @@ func (r *CostProductParameterRepository) RemoveApplicableWithChildren(ctx contex
 		}
 	}()
 
+	if err = removeApplicableWithChildrenTx(ctx, tx, productSysID, triggerParamID); err != nil {
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	committed = true
+	return nil
+}
+
+// removeApplicableWithChildrenTx is the tx-scoped core of RemoveApplicableWithChildren,
+// extracted so ApplyBulkOperations can run the exact same cascade logic inside a
+// transaction it already owns (one per product), instead of duplicating the SQL.
+func removeApplicableWithChildrenTx(ctx context.Context, tx *sql.Tx, productSysID int64, triggerParamID uuid.UUID) error {
 	// Get trigger param_code for fill-group lookup.
 	var trigParamCode string
-	if err = tx.QueryRowContext(ctx, `SELECT param_code FROM mst_parameter WHERE id = $1 AND deleted_at IS NULL`, triggerParamID).Scan(&trigParamCode); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT param_code FROM mst_parameter WHERE id = $1 AND deleted_at IS NULL`, triggerParamID).Scan(&trigParamCode); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return cpp.ErrParamNotFound
 		}
@@ -879,11 +894,168 @@ WHERE capp.capp_product_sys_id = $1
 		return fmt.Errorf("delete capp rows: %w", err)
 	}
 
+	return nil
+}
+
+// addApplicableTx upserts a single CAPP row inside a caller-owned transaction —
+// the tx-scoped equivalent of AddApplicable, used by ApplyBulkOperations.
+func addApplicableTx(ctx context.Context, tx *sql.Tx, productSysID int64, paramID uuid.UUID, isRequired bool, displayOrder *int32, actor string) error {
+	const q = `
+INSERT INTO cost_product_applicable_param (
+    capp_product_sys_id, capp_param_id, capp_is_required, capp_display_order,
+    capp_created_at, capp_created_by
+) VALUES ($1, $2, $3, $4, NOW(), $5)
+ON CONFLICT (capp_product_sys_id, capp_param_id) DO UPDATE SET
+    capp_is_required    = EXCLUDED.capp_is_required,
+    capp_display_order  = EXCLUDED.capp_display_order,
+    capp_updated_at     = NOW(),
+    capp_updated_by     = EXCLUDED.capp_created_by
+`
+	var displayOrderArg any
+	if displayOrder != nil {
+		displayOrderArg = *displayOrder
+	}
+	if _, err := tx.ExecContext(ctx, q, productSysID, paramID, isRequired, displayOrderArg, actor); err != nil {
+		return fmt.Errorf("insert capp %s: %w", paramID, err)
+	}
+	return nil
+}
+
+// isApplicableTx reports whether (productSysID, paramID) already has a CAPP row,
+// inside a caller-owned transaction.
+func isApplicableTx(ctx context.Context, tx *sql.Tx, productSysID int64, paramID uuid.UUID) (bool, error) {
+	const q = `SELECT 1 FROM cost_product_applicable_param WHERE capp_product_sys_id = $1 AND capp_param_id = $2`
+	var dummy int
+	err := tx.QueryRowContext(ctx, q, productSysID, paramID).Scan(&dummy)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("check applicable: %w", err)
+	}
+	return true, nil
+}
+
+// upsertValueTx writes a single CPP value row inside a caller-owned transaction —
+// the tx-scoped equivalent of Upsert (minus the applicability check, which the
+// caller — ApplyBulkOperations — already performed via isApplicableTx).
+func upsertValueTx(ctx context.Context, tx *sql.Tx, productSysID int64, paramID uuid.UUID, valueNumeric, valueText *string, valueFlag *bool, actor string) error {
+	const q = `
+INSERT INTO cost_product_parameter (
+    cpp_product_sys_id, cpp_param_id,
+    cpp_value_numeric, cpp_value_text, cpp_value_flag,
+    cpp_filled_at, cpp_filled_by,
+    cpp_created_at, cpp_created_by
+) VALUES ($1, $2, $3::numeric, $4, $5, $6, $7, $6, $7)
+ON CONFLICT (cpp_product_sys_id, cpp_param_id) DO UPDATE SET
+    cpp_value_numeric = EXCLUDED.cpp_value_numeric,
+    cpp_value_text    = EXCLUDED.cpp_value_text,
+    cpp_value_flag    = EXCLUDED.cpp_value_flag,
+    cpp_filled_at     = EXCLUDED.cpp_filled_at,
+    cpp_filled_by     = EXCLUDED.cpp_filled_by,
+    cpp_updated_at    = EXCLUDED.cpp_filled_at,
+    cpp_updated_by    = EXCLUDED.cpp_filled_by
+`
+	if _, err := tx.ExecContext(ctx, q, productSysID, paramID, valueNumeric, valueText, valueFlag, time.Now(), actor); err != nil {
+		return fmt.Errorf("upsert cpp value %s: %w", paramID, err)
+	}
+	return nil
+}
+
+// ApplyBulkOperations applies ops, in order, to productSysID inside one transaction.
+// See cpp.Repository.ApplyBulkOperations for the full contract.
+func (r *CostProductParameterRepository) ApplyBulkOperations(
+	ctx context.Context, productSysID int64, ops []cpp.BulkOp, actor string, skipMissingApplicable bool,
+) ([]cpp.BulkOpOutcome, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+				_ = rbErr
+			}
+		}
+	}()
+
+	outcomes := make([]cpp.BulkOpOutcome, 0, len(ops))
+	for _, op := range ops {
+		outcome, applyErr := r.applyOneBulkOpTx(ctx, tx, productSysID, op, actor, skipMissingApplicable)
+		if applyErr != nil {
+			return nil, applyErr
+		}
+		outcomes = append(outcomes, outcome)
+	}
+
 	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("commit: %w", err)
+		return nil, fmt.Errorf("commit: %w", err)
 	}
 	committed = true
-	return nil
+	return outcomes, nil
+}
+
+// applyOneBulkOpTx dispatches a single BulkOp to its tx-scoped implementation.
+func (r *CostProductParameterRepository) applyOneBulkOpTx(
+	ctx context.Context, tx *sql.Tx, productSysID int64, op cpp.BulkOp, actor string, skipMissingApplicable bool,
+) (cpp.BulkOpOutcome, error) {
+	outcome := cpp.BulkOpOutcome{ParamID: op.ParamID, Kind: op.Kind}
+
+	switch op.Kind {
+	case cpp.BulkOpAddApplicable:
+		if err := addApplicableTx(ctx, tx, productSysID, op.ParamID, op.IsRequired, op.DisplayOrder, actor); err != nil {
+			return outcome, err
+		}
+	case cpp.BulkOpRemoveApplicable:
+		if err := removeApplicableWithChildrenTx(ctx, tx, productSysID, op.ParamID); err != nil {
+			// cpp.ErrNotFound means the param (and any fill-group children)
+			// simply weren't applicable to this product — nothing to remove.
+			// That's not a hard failure of the whole per-product transaction
+			// (which would also abort sibling ops, e.g. valid UPSERT_VALUE
+			// ops in the same bulk request): mirror applyUpsertValueOpTx's
+			// skip semantics and report a soft Skipped outcome instead.
+			if errors.Is(err, cpp.ErrNotFound) {
+				outcome.Skipped = true
+				outcome.Reason = cpp.ErrBulkSkippedNotApplicable.Error()
+				return outcome, nil
+			}
+			return outcome, err
+		}
+	case cpp.BulkOpUpsertValue:
+		return r.applyUpsertValueOpTx(ctx, tx, productSysID, op, actor, skipMissingApplicable)
+	default:
+		return outcome, fmt.Errorf("unknown bulk op kind %q", op.Kind)
+	}
+	return outcome, nil
+}
+
+// applyUpsertValueOpTx handles the UpsertValue op's applicability precondition:
+// skip (recording why) when the param isn't applicable and skipMissingApplicable
+// is true, otherwise auto-add the CAPP row (not required) before writing the value.
+func (r *CostProductParameterRepository) applyUpsertValueOpTx(
+	ctx context.Context, tx *sql.Tx, productSysID int64, op cpp.BulkOp, actor string, skipMissingApplicable bool,
+) (cpp.BulkOpOutcome, error) {
+	outcome := cpp.BulkOpOutcome{ParamID: op.ParamID, Kind: op.Kind}
+
+	applicable, err := isApplicableTx(ctx, tx, productSysID, op.ParamID)
+	if err != nil {
+		return outcome, err
+	}
+	if !applicable {
+		if skipMissingApplicable {
+			outcome.Skipped = true
+			outcome.Reason = cpp.ErrBulkSkippedNotApplicable.Error()
+			return outcome, nil
+		}
+		if err := addApplicableTx(ctx, tx, productSysID, op.ParamID, false, nil, actor); err != nil {
+			return outcome, err
+		}
+	}
+	if err := upsertValueTx(ctx, tx, productSysID, op.ParamID, op.ValueNumeric, op.ValueText, op.ValueFlag, actor); err != nil {
+		return outcome, err
+	}
+	return outcome, nil
 }
 
 // GetParamCodeByID resolves a param UUID to its param_code string.

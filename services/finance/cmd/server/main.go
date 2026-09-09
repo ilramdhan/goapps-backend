@@ -40,6 +40,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbheadbulk"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbpush"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/productparambulk"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	appshade "github.com/mutugading/goapps-backend/services/finance/internal/application/shade"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
@@ -136,12 +137,14 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	var costSheetExportPublisher costsheet.ExportJobPublisher
 	var costCalcJobTriggerPub costcalc.JobTriggerPublisher
 	var bulkTransitionPublisher mbheadbulk.BulkTransitionJobPublisher
+	var productParamBulkPublisher productparambulk.BulkEditJobPublisher
 	if rmqAdapter != nil {
 		oracleSyncPublisher = rmqAdapter
 		rmCostPublisher = rmqAdapter
 		rmCostExportPublisher = rmqAdapter
 		costSheetExportPublisher = rmqAdapter
 		bulkTransitionPublisher = rmqAdapter
+		productParamBulkPublisher = rmqAdapter
 	}
 	if costJobPub != nil {
 		costCalcJobTriggerPub = costJobPub
@@ -526,6 +529,17 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		WithFormulaRepo(formulaRepo).
 		WithAuditSupport(costAuditLogRepo)
 
+	// Bulk Edit Product Params (F4, B4). productParamBulkPublisher is the SAME
+	// rmqAdapter every other job publisher above uses — nil when RabbitMQ is
+	// unavailable, in which case RequestBulkEditHandler.Handle refuses with
+	// productparambulk.ErrPublisherUnavailable and the gRPC handlers fold that
+	// into a clean 503 rather than panicking. costProductParameterRepo already
+	// implements ProductChecker (ProductExists); costProductMasterRepo backs
+	// the best-effort product_code lookup in ListBulkProductParamJobFailures.
+	productParamBulkSubmitHandler := productparambulk.NewRequestBulkEditHandler(jobRepo, productParamBulkPublisher, costProductParameterRepo)
+	costProductParamBulkHandler := grpcdelivery.NewCostProductParamBulkHandler().
+		WithSubmitHandler(productParamBulkSubmitHandler, jobRepo, costProductMasterRepo)
+
 	// Fill-assignment repositories + handlers.
 	fillConfigRepo := postgres.NewCostFillConfigRepository(db)
 	fillTaskRepo := postgres.NewCostFillTaskRepository(db)
@@ -807,6 +821,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costRequestCommentHandler, costAttachmentHandler,
 		costRoutingRuleHandler, costAuditLogHandler, costNotificationHandler,
 		costProductParameterHandler,
+		costProductParamBulkHandler,
 		costDataImportHandler,
 		costCalcHandler,
 		costFillConfigHandler, costFillTaskHandler,
@@ -951,6 +966,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	costAuditLogHandler *grpcdelivery.CostAuditLogHandler,
 	costNotificationHandler *grpcdelivery.CostNotificationHandler,
 	costProductParameterHandler *grpcdelivery.CostProductParameterHandler,
+	costProductParamBulkHandler *grpcdelivery.CostProductParamBulkHandler,
 	costDataImportHandler *grpcdelivery.CostDataImportHandler,
 	costCalcHandler *grpcdelivery.CostCalcHandler,
 	costFillConfigHandler *grpcdelivery.CostFillConfigHandler,
@@ -1015,6 +1031,10 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterCostAuditLogServiceServer(grpcServer.GRPCServer(), costAuditLogHandler)
 	financev1.RegisterCostNotificationServiceServer(grpcServer.GRPCServer(), costNotificationHandler)
 	financev1.RegisterCostProductParameterServiceServer(grpcServer.GRPCServer(), costProductParameterHandler)
+	// F4 (B4): Bulk Edit Product Params — a separate proto service from
+	// CostProductParameterService (own Unimplemented embed, own auth_interceptor
+	// permission mappings).
+	financev1.RegisterCostProductParamBulkServiceServer(grpcServer.GRPCServer(), costProductParamBulkHandler)
 	// Costing data import/export service.
 	financev1.RegisterCostDataImportServiceServer(grpcServer.GRPCServer(), costDataImportHandler)
 	// S8a foundation: CostCalcService stub.

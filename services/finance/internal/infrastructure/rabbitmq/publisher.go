@@ -38,6 +38,18 @@ type JobMessage struct {
 	// (force_unvalidate/submit/validate, see application/mbheadbulk's Action
 	// constants) and Reason carries ForceUnvalidate's optional reason.
 	MbhID string `json:"mbh_id,omitempty"`
+	// ProductSysID is the target cost_product_master.cpm_product_sys_id for
+	// product_param_bulk jobs — each child job carries exactly one (unlike
+	// ProductSysIDs above, which is a whole batch for product_cost_sheet_export).
+	ProductSysID int64 `json:"product_sys_id,omitempty"`
+	// Operations is the JSON-encoded []productparambulk.OperationDTO applied,
+	// in order, to ProductSysID for product_param_bulk jobs — identical across
+	// every child in the same batch.
+	Operations string `json:"operations,omitempty"`
+	// SkipMissingApplicable mirrors BulkEditProductParamsRequest.skip_missing_applicable
+	// for product_param_bulk jobs — controls UpsertValue op behavior when the
+	// param is not yet CAPP-applicable to ProductSysID.
+	SkipMissingApplicable bool `json:"skip_missing_applicable,omitempty"`
 }
 
 // Publisher publishes messages to RabbitMQ exchanges.

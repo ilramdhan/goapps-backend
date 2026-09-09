@@ -150,6 +150,12 @@ func (f *fakeRepo) ListAllParams(_ context.Context) ([]cpp.ParamMeta, error) {
 	return nil, nil
 }
 
+func (f *fakeRepo) ApplyBulkOperations(
+	_ context.Context, _ int64, _ []cpp.BulkOp, _ string, _ bool,
+) ([]cpp.BulkOpOutcome, error) {
+	return nil, nil
+}
+
 // =============================================================================
 // fakeMBSpinRepo — minimal test double for mbspin.Repository. Only ExistsByID
 // and ResolveUniqueByOrionItemCode are exercised by resolveMBSpinID; every
