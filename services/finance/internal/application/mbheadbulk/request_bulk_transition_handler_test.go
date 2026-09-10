@@ -3,6 +3,7 @@ package mbheadbulk_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -127,6 +128,41 @@ func TestRequestBulkTransitionHandler_Validate(t *testing.T) {
 			Action: mbheadbulk.ActionSubmit, CreatedBy: "admin",
 		})
 		require.Error(t, err)
+	})
+
+	t.Run("mbh_ids over the max", func(t *testing.T) {
+		ids := make([]string, mbheadbulk.MaxBulkItems+1)
+		for i := range ids {
+			ids[i] = fmt.Sprintf("id-%d", i)
+		}
+		h := mbheadbulk.NewRequestBulkTransitionHandler(repo, pub, nil)
+		_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
+			MBHIDs: ids, Action: mbheadbulk.ActionSubmit, CreatedBy: "admin",
+		})
+		require.Error(t, err)
+		// The message must name both the cap and the actual count — an opaque
+		// "invalid" here is exactly the failure mode this check exists to remove.
+		require.Contains(t, err.Error(), "501")
+		require.Contains(t, err.Error(), "500")
+	})
+
+	t.Run("mbh_ids exactly at the max is accepted", func(t *testing.T) {
+		ids := make([]string, mbheadbulk.MaxBulkItems)
+		for i := range ids {
+			ids[i] = fmt.Sprintf("id-%d", i)
+		}
+		okRepo := &jobRepoMock{}
+		okRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
+		okRepo.On("CreateChildren", mock.Anything, mock.Anything).Return(nil)
+		okPub := &publisherMock{}
+		okPub.On("PublishMBBulkTransition",
+			mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		h := mbheadbulk.NewRequestBulkTransitionHandler(okRepo, okPub, nil)
+		_, err := h.Handle(context.Background(), mbheadbulk.RequestBulkTransitionCommand{
+			MBHIDs: ids, Action: mbheadbulk.ActionSubmit, CreatedBy: "admin",
+		})
+		require.NoError(t, err)
 	})
 
 	t.Run("unknown action", func(t *testing.T) {

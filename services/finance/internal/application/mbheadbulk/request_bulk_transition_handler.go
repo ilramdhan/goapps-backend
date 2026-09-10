@@ -31,6 +31,16 @@ const (
 	ActionValidate        = "validate"
 )
 
+// MaxBulkItems mirrors the max_items: 500 rule carried by all three bulk MB Head
+// requests in goapps-shared-proto/finance/v1/yarn_master.proto.
+//
+// protovalidate already rejects an oversized batch at the interceptor, so in
+// practice Handle never sees one via gRPC. It is re-checked here so the cap is
+// still enforced — with a message that names the limit and the actual count —
+// for any caller that reaches this handler without passing through protovalidate
+// (in-process callers, tests, a future transport).
+const MaxBulkItems = 500
+
 // ErrPublisherUnavailable is returned when the finance service has no working
 // RabbitMQ publisher, so no bulk transition job can be queued.
 var ErrPublisherUnavailable = errors.New("message queue unavailable: RabbitMQ not connected " +
@@ -244,6 +254,10 @@ func (h *RequestBulkTransitionHandler) validate(cmd RequestBulkTransitionCommand
 	}
 	if len(cmd.MBHIDs) == 0 {
 		return fmt.Errorf("mbh_ids is required")
+	}
+	if len(cmd.MBHIDs) > MaxBulkItems {
+		return fmt.Errorf("mbh_ids has %d items, which exceeds the maximum of %d per request; "+
+			"split the batch", len(cmd.MBHIDs), MaxBulkItems)
 	}
 	switch cmd.Action {
 	case ActionForceUnvalidate, ActionSubmit, ActionValidate:
