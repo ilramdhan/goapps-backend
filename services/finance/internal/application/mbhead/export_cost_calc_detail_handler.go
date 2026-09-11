@@ -92,6 +92,10 @@ func (h *ExportCostCalcDetailHandler) Handle(
 		return nil, "", fmt.Errorf("failed to read mb cost calc detail rows: %w", err)
 	}
 
+	// ⛔ OBSERVABILITY ONLY — deliberately AFTER the rows are already in hand, on a
+	// separate read, so nothing here can touch what gets emitted. See recordSkippedMBs.
+	h.recordSkippedMBs(ctx, cmd, calcType)
+
 	f := excelize.NewFile()
 	defer func() {
 		if closeErr := f.Close(); closeErr != nil {
@@ -119,6 +123,54 @@ func (h *ExportCostCalcDetailHandler) Handle(
 		return nil, "", fmt.Errorf("failed to write cost-calc-detail excel to buffer: %w", err)
 	}
 	return buffer.Bytes(), "mb_cost_calc_detail_export.xlsx", nil
+}
+
+// recordSkippedMBs counts and logs the MB heads that match every filter of this export
+// but contribute ZERO rows to it, because the cost snapshot the dump selected for them
+// carries an EMPTY cpc_rm_cost_detail array.
+//
+// ⭐ WHY: this report is a FLATTENING of that JSONB array — one emitted row per RM line.
+// An MB with no RM lines therefore disappears from the workbook entirely, and before this
+// it disappeared with no log, no count and no warning. Production example: CSTMB2609000099
+// ("TW0509 50% TIO2 PBT MASTERBATCH") is VALIDATED, active, version 9, and has an APPROVED
+// 202607/ACTUAL cost row, yet every one of its 21 cost rows holds zero RM lines. The
+// upstream data defect is out of scope; the silence was the export's own defect.
+//
+// ⛔ IT ADDS NOTHING TO THE WORKBOOK. The emitted rows, their count, the column set and
+// the ordering are untouched — the dump emits 21813 rows for period 202607 and that number
+// matches the reference workbook exactly. This is a SECOND, independent read whose result
+// only ever reaches the log.
+//
+// ⛔ NEVER FATAL. A failure of the skip probe is logged and swallowed: an observability
+// read must not be able to fail an export that already has its rows.
+func (h *ExportCostCalcDetailHandler) recordSkippedMBs(
+	ctx context.Context, cmd ExportCostCalcDetailCommand, calcType string,
+) {
+	skipped, err := h.reader.ListCostCalcDetailSkippedMBCodes(ctx, CostCalcDetailFilter{
+		IsActive:        cmd.ActiveOnly,
+		Period:          cmd.Period,
+		CalculationType: calcType,
+		CalcStatus:      cmd.CalcStatus,
+		IncludeRejected: cmd.IncludeRejected,
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not determine skipped cost-calc-detail masterbatches")
+		return
+	}
+	if len(skipped) == 0 {
+		return
+	}
+
+	warnings := make([]string, 0, len(skipped))
+	for _, mbCode := range skipped {
+		warnings = append(warnings,
+			fmt.Sprintf("masterbatch %s has no rm cost lines and was skipped", mbCode))
+	}
+	log.Warn().
+		Int("skipped_count", len(skipped)).
+		Strs("skipped_mb_codes", skipped).
+		Strs("warnings", warnings).
+		Msg("Some masterbatches contributed no cost-calc-detail rows and were skipped")
 }
 
 // setupCostCalcDetailSheet creates the sheet and writes the styled header row.

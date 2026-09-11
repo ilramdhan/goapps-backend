@@ -3,9 +3,13 @@ package mbhead_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"math"
+	"strings"
 	"testing"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbhead"
@@ -16,6 +20,14 @@ type stubCostCalcDetailReader struct {
 	rows []mbhead.CostCalcDetailRow
 	got  mbhead.CostCalcDetailFilter
 	err  error
+
+	// skipped is what the observability probe reports: mb_codes whose selected cost
+	// snapshot carries an EMPTY cpc_rm_cost_detail array, so they contribute no rows.
+	skipped    []string
+	skippedErr error
+	// gotSkipped captures the filter the probe was given, to pin that it mirrors the
+	// row read's filter exactly.
+	gotSkipped mbhead.CostCalcDetailFilter
 }
 
 func (s *stubCostCalcDetailReader) ListCostCalcDetailRows(
@@ -23,6 +35,13 @@ func (s *stubCostCalcDetailReader) ListCostCalcDetailRows(
 ) ([]mbhead.CostCalcDetailRow, error) {
 	s.got = f
 	return s.rows, s.err
+}
+
+func (s *stubCostCalcDetailReader) ListCostCalcDetailSkippedMBCodes(
+	_ context.Context, f mbhead.CostCalcDetailFilter,
+) ([]string, error) {
+	s.gotSkipped = f
+	return s.skipped, s.skippedErr
 }
 
 func f64(v float64) *float64 { return &v }
@@ -269,7 +288,13 @@ func TestCostCalcDetail_WorkbookIsNotPasswordProtected(t *testing.T) {
 // workbookBytes runs the handler over rows and returns the raw workbook.
 func workbookBytes(t *testing.T, rows []mbhead.CostCalcDetailRow) []byte {
 	t.Helper()
-	h := mbhead.NewExportCostCalcDetailHandler(&stubCostCalcDetailReader{rows: rows})
+	return workbookBytesFrom(t, &stubCostCalcDetailReader{rows: rows})
+}
+
+// workbookBytesFrom runs the handler over a fully configured reader stub.
+func workbookBytesFrom(t *testing.T, reader *stubCostCalcDetailReader) []byte {
+	t.Helper()
+	h := mbhead.NewExportCostCalcDetailHandler(reader)
 	content, name, err := h.Handle(context.Background(), mbhead.ExportCostCalcDetailCommand{})
 	if err != nil {
 		t.Fatalf("Handle: %v", err)
@@ -280,10 +305,161 @@ func workbookBytes(t *testing.T, rows []mbhead.CostCalcDetailRow) []byte {
 	return content
 }
 
+// captureWarnLogs redirects the package-level zerolog logger into a buffer for the
+// duration of one test and returns the accumulated output.
+//
+// ⚠ Tests using it must NOT call t.Parallel: they mutate the global logger.
+func captureWarnLogs(t *testing.T, fn func()) string {
+	t.Helper()
+	var buf bytes.Buffer
+	prev := log.Logger
+	log.Logger = zerolog.New(&buf).Level(zerolog.WarnLevel)
+	defer func() { log.Logger = prev }()
+	fn()
+	return buf.String()
+}
+
+// TestCostCalcDetail_EmptyRMDetailMBIsCountedAndLogged pins the whole point of the skip
+// accounting: an MB whose selected cost snapshot holds an EMPTY cpc_rm_cost_detail array
+// flattens to ZERO rows and so vanishes from the workbook. Before this it vanished with
+// NO log, NO count and NO warning.
+//
+// ⭐ Production case, not a hypothetical: CSTMB2609000099 ("TW0509 50% TIO2 PBT
+// MASTERBATCH") is VALIDATED, active, version 9, has an APPROVED 202607/ACTUAL cost row, a
+// route head and a route sequence — and zero RM lines on every one of its 21 cost rows.
+// The upstream data defect is out of scope; this test pins that the export no longer hides
+// it.
+func TestCostCalcDetail_EmptyRMDetailMBIsCountedAndLogged(t *testing.T) {
+	reader := &stubCostCalcDetailReader{
+		rows:    []mbhead.CostCalcDetailRow{referenceRow()},
+		skipped: []string{"CSTMB2609000099"},
+	}
+
+	out := captureWarnLogs(t, func() {
+		h := mbhead.NewExportCostCalcDetailHandler(reader)
+		if _, _, err := h.Handle(context.Background(), mbhead.ExportCostCalcDetailCommand{}); err != nil {
+			t.Fatalf("Handle: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, `"skipped_count":1`) {
+		t.Errorf("the skipped MB must be COUNTED, got log:\n%s", out)
+	}
+	if !strings.Contains(out, "CSTMB2609000099") {
+		t.Errorf("the skipped MB must be NAMED in the log, got log:\n%s", out)
+	}
+	if !strings.Contains(out, "masterbatch CSTMB2609000099 has no rm cost lines and was skipped") {
+		t.Errorf("the warning must mirror the costsheet export phrasing, got log:\n%s", out)
+	}
+
+	// The probe must see the SAME filter as the row read, or it would report heads the
+	// dump never considered.
+	if reader.gotSkipped != reader.got {
+		t.Errorf("skip probe filter %+v must equal the row filter %+v", reader.gotSkipped, reader.got)
+	}
+}
+
+// TestCostCalcDetail_SkipAccountingDoesNotChangeEmittedRows is the HARD CONSTRAINT test.
+// The dump emits 21813 rows for period 202607 and that number matches the reference
+// workbook EXACTLY. The skip accounting is observability ONLY: the emitted rows, their
+// count, the column set and the ordering must be byte-for-byte what they were before.
+//
+// ⛔ If this fails, the skip accounting has started feeding the workbook — revert it
+// rather than adjusting this test.
+func TestCostCalcDetail_SkipAccountingDoesNotChangeEmittedRows(t *testing.T) {
+	second := referenceRow()
+	second.MBCode = "CSTMB2607000002"
+	second.RMRef = "202006005"
+	data := []mbhead.CostCalcDetailRow{referenceRow(), second}
+
+	var without, with [][]string
+	// The logger is swapped for both runs so the two workbooks differ in NOTHING but
+	// the presence of skipped MBs.
+	captureWarnLogs(t, func() {
+		without = sheetRowsFrom(t, &stubCostCalcDetailReader{rows: data})
+		with = sheetRowsFrom(t, &stubCostCalcDetailReader{
+			rows:    data,
+			skipped: []string{"CSTMB2609000099", "CSTMB2609000100"},
+		})
+	})
+
+	if len(with) != len(without) {
+		t.Fatalf("row count changed: got %d rows with skip accounting, want %d", len(with), len(without))
+	}
+	if len(with) != 3 {
+		t.Fatalf("expected header + 2 data rows, got %d", len(with))
+	}
+	for i := range without {
+		if len(with[i]) != len(without[i]) {
+			t.Fatalf("row %d column count changed: got %d, want %d", i, len(with[i]), len(without[i]))
+		}
+		for j := range without[i] {
+			if with[i][j] != without[i][j] {
+				t.Errorf("row %d col %d changed: got %q, want %q", i, j, with[i][j], without[i][j])
+			}
+		}
+	}
+	// Ordering is part of the contract: mb_code order must survive untouched.
+	if with[1][0] != "CSTMB2607000001" || with[2][0] != "CSTMB2607000002" {
+		t.Errorf("row ordering changed: got %q then %q", with[1][0], with[2][0])
+	}
+	// And a skipped MB must never leak INTO the sheet.
+	for _, row := range with[1:] {
+		if row[0] == "CSTMB2609000099" || row[0] == "CSTMB2609000100" {
+			t.Errorf("a skipped MB must never be emitted as a data row, got %q", row[0])
+		}
+	}
+}
+
+// TestCostCalcDetail_SkipProbeFailureIsNotFatal pins that the observability read can
+// never fail an export that already has its rows.
+func TestCostCalcDetail_SkipProbeFailureIsNotFatal(t *testing.T) {
+	reader := &stubCostCalcDetailReader{
+		rows:       []mbhead.CostCalcDetailRow{referenceRow()},
+		skippedErr: errors.New("boom"),
+	}
+
+	var content []byte
+	out := captureWarnLogs(t, func() {
+		h := mbhead.NewExportCostCalcDetailHandler(reader)
+		var err error
+		content, _, err = h.Handle(context.Background(), mbhead.ExportCostCalcDetailCommand{})
+		if err != nil {
+			t.Fatalf("a failed skip probe must NOT fail the export, got: %v", err)
+		}
+	})
+
+	if len(content) == 0 {
+		t.Error("the workbook must still be produced when the skip probe fails")
+	}
+	if !strings.Contains(out, "Could not determine skipped cost-calc-detail masterbatches") {
+		t.Errorf("a failed skip probe must be logged, got log:\n%s", out)
+	}
+}
+
+// TestCostCalcDetail_NoSkipsLogsNothing pins that the clean case stays quiet — the log
+// line is a signal, not noise on every export.
+func TestCostCalcDetail_NoSkipsLogsNothing(t *testing.T) {
+	out := captureWarnLogs(t, func() {
+		_ = workbookBytesFrom(t, &stubCostCalcDetailReader{
+			rows: []mbhead.CostCalcDetailRow{referenceRow()},
+		})
+	})
+	if strings.Contains(out, "skipped") {
+		t.Errorf("no skipped MBs must produce no skip log, got:\n%s", out)
+	}
+}
+
 // sheetRows opens the produced workbook and returns its rows as strings.
 func sheetRows(t *testing.T, rows []mbhead.CostCalcDetailRow) [][]string {
 	t.Helper()
-	f, err := excelize.OpenReader(bytes.NewReader(workbookBytes(t, rows)))
+	return sheetRowsFrom(t, &stubCostCalcDetailReader{rows: rows})
+}
+
+// sheetRowsFrom opens the workbook produced from a reader stub and returns its rows.
+func sheetRowsFrom(t *testing.T, reader *stubCostCalcDetailReader) [][]string {
+	t.Helper()
+	f, err := excelize.OpenReader(bytes.NewReader(workbookBytesFrom(t, reader)))
 	if err != nil {
 		t.Fatalf("open workbook: %v", err)
 	}

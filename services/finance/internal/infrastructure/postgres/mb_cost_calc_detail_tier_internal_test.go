@@ -475,3 +475,84 @@ func TestCostCalcDetailQuery_RowNoIsPeriodOrdinal(t *testing.T) {
 			"is the column's only legitimate use here, got:\n%s", costCalcDetailQuery)
 	}
 }
+
+// TestCostCalcDetailSkippedQuery_MirrorsTheDumpsPredicates pins that the observability
+// twin selects exactly the population the dump itself considers.
+//
+// ⭐ WHY IT MATTERS: costCalcDetailSkippedQuery names the MB heads the dump DROPS because
+// their selected cost snapshot has an EMPTY cpc_rm_cost_detail array. If its head
+// predicates or its snapshot pick drift away from costCalcDetailQuery's, it reports heads
+// the dump never considered in the first place — a false alarm that is worse than the
+// silence it replaced.
+func TestCostCalcDetailSkippedQuery_MirrorsTheDumpsPredicates(t *testing.T) {
+	// The same globally-resolved period CTE, the same INNER cost_product_master join,
+	// the same single-snapshot LATERAL pick, the same head WHERE clause.
+	for _, want := range []string{
+		"WITH target_period AS (",
+		"WHEN $2::text <> '' THEN $2::text",
+		"SELECT MAX(x.cpc_period)",
+		"JOIN cost_product_master p\n       ON p.cpm_product_sys_id = h.mbh_cost_product_id",
+		"ORDER BY x.cpc_version DESC, x.cpc_cost_id DESC\n    LIMIT 1",
+		"WHERE h.deleted_at IS NULL",
+		"AND tp.period IS NOT NULL",
+		"AND ($1::boolean IS NULL OR h.mbh_is_active = $1::boolean)",
+		"AND ($5::boolean OR h.mbh_entry_status != $6)",
+	} {
+		if !strings.Contains(costCalcDetailSkippedQuery, want) {
+			t.Fatalf("costCalcDetailSkippedQuery must mirror costCalcDetailQuery's predicates "+
+				"(missing %q), got query:\n%s", want, costCalcDetailSkippedQuery)
+		}
+	}
+}
+
+// TestCostCalcDetailSkippedQuery_SelectsOnlyEmptyRMDetail pins WHAT is counted: heads
+// whose selected snapshot carries an EMPTY RM-line array — the case that flattens to zero
+// rows and made CSTMB2609000099 disappear from the dump without a trace.
+//
+// ⛔ The non-array case cannot error: the same jsonb_typeof guard the dump uses wraps the
+// column here too. The EMPTY-ARRAY case is the one being counted.
+func TestCostCalcDetailSkippedQuery_SelectsOnlyEmptyRMDetail(t *testing.T) {
+	if !strings.Contains(costCalcDetailSkippedQuery, "jsonb_array_length(") {
+		t.Fatalf("costCalcDetailSkippedQuery must test the RM-line array LENGTH, got:\n%s",
+			costCalcDetailSkippedQuery)
+	}
+	if !strings.Contains(costCalcDetailSkippedQuery, "= 0") {
+		t.Fatalf("costCalcDetailSkippedQuery must select only ZERO-length RM detail, got:\n%s",
+			costCalcDetailSkippedQuery)
+	}
+	if !strings.Contains(costCalcDetailSkippedQuery,
+		"CASE WHEN jsonb_typeof(pc.cpc_rm_cost_detail) = 'array'") {
+		t.Fatalf("costCalcDetailSkippedQuery must keep the dump's non-array guard, got:\n%s",
+			costCalcDetailSkippedQuery)
+	}
+}
+
+// TestCostCalcDetailSkippedQuery_EmitsNoDumpRows is the HARD-CONSTRAINT guard on the
+// repository side. The dump emits 21813 rows for period 202607 and that number matches
+// the reference workbook EXACTLY.
+//
+// ⛔ The skip probe is a SEPARATE read that must never become part of the dump: it may
+// project ONLY mb_code (so nothing of it can reach a data column), and it must never
+// flatten the RM array (that is the dump's job and its row grain).
+func TestCostCalcDetailSkippedQuery_EmitsNoDumpRows(t *testing.T) {
+	// Only the mb_code column is projected.
+	if !strings.Contains(costCalcDetailSkippedQuery, "SELECT p.cpm_product_code\nFROM mst_mb_head h") {
+		t.Fatalf("the skip probe must project ONLY mb_code, got:\n%s", costCalcDetailSkippedQuery)
+	}
+	// It never flattens the RM array, and never touches the dump's lookup joins.
+	for _, banned := range []string{
+		"jsonb_array_elements", "WITH ORDINALITY", "cst_rm_group_head", "cst_rm_cost",
+	} {
+		if strings.Contains(costCalcDetailSkippedQuery, banned) {
+			t.Fatalf("the skip probe must not contain %q — it is observability only and "+
+				"must not reproduce the dump's row grain:\n%s", banned, costCalcDetailSkippedQuery)
+		}
+	}
+	// ⛔ And the dump itself must stay a CROSS JOIN LATERAL over the RM array. Turning it
+	// into a LEFT JOIN would surface empty-array heads as rows and break the 21813 match.
+	if !strings.Contains(costCalcDetailQuery, "CROSS JOIN LATERAL jsonb_array_elements(") {
+		t.Fatalf("costCalcDetailQuery must keep its CROSS JOIN LATERAL over the RM array — "+
+			"a LEFT JOIN would add a row per empty-array MB and break the 21813-row "+
+			"reference match:\n%s", costCalcDetailQuery)
+	}
+}

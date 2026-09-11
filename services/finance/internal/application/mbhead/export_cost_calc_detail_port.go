@@ -165,4 +165,23 @@ type CostCalcDetailRow struct {
 // ⛔ Read-only by contract: cst_product_cost and cst_rm_cost are read for display only.
 type CostCalcDetailReader interface {
 	ListCostCalcDetailRows(ctx context.Context, filter CostCalcDetailFilter) ([]CostCalcDetailRow, error)
+
+	// ListCostCalcDetailSkippedMBCodes returns the mb_codes that satisfy EVERY filter of
+	// ListCostCalcDetailRows — same head predicates, same globally resolved period, same
+	// single chosen cost snapshot — but contribute ZERO rows to it because that snapshot's
+	// cpc_rm_cost_detail holds an EMPTY array (or is absent/not an array).
+	//
+	// ⭐ WHY THIS EXISTS: the dump flattens cpc_rm_cost_detail, so an MB with no RM lines
+	// vanishes from the workbook with no log, no count and no warning. Production proved
+	// this is real, not hypothetical: CSTMB2609000099 ("TW0509 50% TIO2 PBT MASTERBATCH")
+	// is VALIDATED, active, version 9, has an APPROVED 202607/ACTUAL cost row, a route head
+	// and a route sequence — yet zero route RMs, zero composition rows in any state, and
+	// zero RM lines on all 21 of its cost rows. The upstream data defect is out of scope
+	// here; the export's own defect — dropping it SILENTLY — is what this closes.
+	//
+	// ⛔ OBSERVABILITY ONLY. This is a SECOND, independent read. It must never influence
+	// ListCostCalcDetailRows' result: the dump emits 21813 rows for period 202607 and that
+	// number matches the reference workbook exactly. Callers treat a failure here as a
+	// warning, never as an export failure.
+	ListCostCalcDetailSkippedMBCodes(ctx context.Context, filter CostCalcDetailFilter) ([]string, error)
 }

@@ -236,6 +236,117 @@ WHERE h.deleted_at IS NULL
   AND ($5::boolean OR h.mbh_entry_status != $6)
 ORDER BY p.cpm_product_code ASC, d.ord ASC`
 
+// costCalcDetailSkippedQuery is the OBSERVABILITY twin of costCalcDetailQuery: it names
+// the MB heads that pass every one of that query's filters and select the very same cost
+// snapshot, but contribute ZERO rows to the dump because that snapshot's
+// cpc_rm_cost_detail is an EMPTY array.
+//
+// ⭐ WHY IT IS A SECOND QUERY AND NOT A CHANGE TO THE FIRST. costCalcDetailQuery flattens
+// the JSONB array with CROSS JOIN LATERAL jsonb_array_elements, so a head with zero RM
+// lines produces zero rows and is simply absent from the result — the repository returns
+// only flattened RM rows, so the handler cannot possibly tell WHICH heads were dropped.
+// Turning that CROSS JOIN into a LEFT JOIN would surface them, but it would also change
+// the emitted row set: the dump emits 21813 rows for period 202607 and that number matches
+// the reference workbook EXACTLY. ⛔ So costCalcDetailQuery is not touched at all, and the
+// skip count comes from this separate, cheap read instead.
+//
+// ⛔ IT PROJECTS ONLY mb_code. It feeds a log line, nothing else, and nothing it returns
+// ever reaches the workbook.
+//
+// ⭐ THE PREDICATES ARE A VERBATIM COPY of costCalcDetailQuery's — the same target_period
+// CTE, the same cost_product_master INNER JOIN, the same JOIN LATERAL ... LIMIT 1 snapshot
+// pick, and the same WHERE clause. They MUST stay in lockstep: a head counted as "skipped"
+// that the dump would never have considered in the first place is a false alarm.
+// TestCostCalcDetailSkippedQuery_MirrorsTheDumpsPredicates pins this.
+//
+// ⚠ SCOPE, STATED PLAINLY: this counts the EMPTY-ARRAY case only — a head that HAS a
+// matching snapshot whose RM-line array is empty. It deliberately keeps the INNER
+// JOIN LATERAL, so a head with NO matching snapshot at all is not counted here; that is a
+// different (and differently caused) absence. The non-array case cannot error either way:
+// both queries wrap the column in the same jsonb_typeof guard.
+//
+// Production case this exists for: CSTMB2609000099 ("TW0509 50% TIO2 PBT MASTERBATCH") —
+// VALIDATED, active, version 9, an APPROVED 202607/ACTUAL cost row, a route head and a
+// route sequence, but zero route RMs and zero RM lines on all 21 of its cost rows.
+//
+// $1..$6 are IDENTICAL to costCalcDetailQuery's.
+const costCalcDetailSkippedQuery = `
+WITH target_period AS (
+    SELECT CASE
+        WHEN $2::text <> '' THEN $2::text
+        ELSE (
+            SELECT MAX(x.cpc_period)
+            FROM cst_product_cost x
+            WHERE x.cpc_calculation_type = $3
+              AND ($4::text = '' OR x.cpc_status = $4::text)
+              AND ($4::text <> '' OR x.cpc_status <> 'SUPERSEDED')
+        )
+    END AS period
+)
+SELECT p.cpm_product_code
+FROM mst_mb_head h
+CROSS JOIN target_period tp
+JOIN cost_product_master p
+       ON p.cpm_product_sys_id = h.mbh_cost_product_id
+JOIN LATERAL (
+    SELECT x.cpc_cost_id, x.cpc_version, x.cpc_status, x.cpc_period,
+           x.cpc_param_snapshot, x.cpc_rm_cost_detail
+    FROM cst_product_cost x
+    WHERE x.cpc_product_sys_id = h.mbh_cost_product_id
+      AND x.cpc_calculation_type = $3
+      AND x.cpc_period = tp.period
+      AND ($4::text = '' OR x.cpc_status = $4::text)
+      AND ($4::text <> '' OR x.cpc_status <> 'SUPERSEDED')
+    ORDER BY x.cpc_version DESC, x.cpc_cost_id DESC
+    LIMIT 1
+) pc ON TRUE
+WHERE h.deleted_at IS NULL
+  AND tp.period IS NOT NULL
+  AND ($1::boolean IS NULL OR h.mbh_is_active = $1::boolean)
+  AND ($5::boolean OR h.mbh_entry_status != $6)
+  AND COALESCE(jsonb_array_length(
+        CASE WHEN jsonb_typeof(pc.cpc_rm_cost_detail) = 'array'
+             THEN pc.cpc_rm_cost_detail
+             ELSE '[]'::jsonb
+        END), 0) = 0
+ORDER BY p.cpm_product_code ASC`
+
+// ListCostCalcDetailSkippedMBCodes names the MB heads the dump silently drops because
+// their selected cost snapshot has an EMPTY cpc_rm_cost_detail array.
+//
+// ⛔ OBSERVABILITY ONLY: a separate read that never influences ListCostCalcDetailRows.
+func (r *MBCostCalcDetailExportRepository) ListCostCalcDetailSkippedMBCodes(
+	ctx context.Context, filter appmbhead.CostCalcDetailFilter,
+) ([]string, error) {
+	var active sql.NullBool
+	if filter.IsActive != nil {
+		active = sql.NullBool{Bool: *filter.IsActive, Valid: true}
+	}
+
+	// ⚠ Argument order MUST match costCalcDetailQuery's, placeholder for placeholder.
+	rows, err := r.db.QueryContext(
+		ctx, costCalcDetailSkippedQuery, active, filter.Period, filter.CalculationType,
+		filter.CalcStatus, filter.IncludeRejected, domainmbhead.StatusRejected,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("mb_cost_calc_detail_export_repository: list skipped mb codes: %w", err)
+	}
+	defer closeRows(rows)
+
+	var out []string
+	for rows.Next() {
+		var mbCode string
+		if scanErr := rows.Scan(&mbCode); scanErr != nil {
+			return nil, fmt.Errorf("mb_cost_calc_detail_export_repository: scan skipped mb code: %w", scanErr)
+		}
+		out = append(out, mbCode)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("mb_cost_calc_detail_export_repository: iterate skipped mb codes: %w", err)
+	}
+	return out, nil
+}
+
 // ListCostCalcDetailRows executes the calc-detail read. One row per (MB head, RM line).
 func (r *MBCostCalcDetailExportRepository) ListCostCalcDetailRows(
 	ctx context.Context, filter appmbhead.CostCalcDetailFilter,
