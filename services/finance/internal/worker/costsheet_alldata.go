@@ -4,9 +4,10 @@ package worker
 // sheet — the flat, one-row-per-stage counterpart of the transposed per-product
 // sheet rendered by costsheet_export_excel.go.
 //
-// CODE GENERATED from docs/export-product-cost/all-data-column-map.tsv by
-// docs/export-product-cost/gen_alldata.py. Re-run that script rather than
-// editing the table by hand.
+// CODE GENERATED from <repo-root>/docs/export-product-cost/all-data-column-map.tsv
+// by <repo-root>/docs/export-product-cost/gen_alldata.py. Both paths are
+// relative to the WORKSPACE root (the directory holding goapps-backend/), not
+// to this service. Re-run that script rather than editing the table by hand.
 
 import (
 	"fmt"
