@@ -320,8 +320,8 @@ func bindEnvVars(v *viper.Viper) {
 		{"database.port", "DATABASE_PORT"},
 		{"database.user", "DATABASE_USER"},
 		{"database.password", "DATABASE_PASSWORD"},
-		{"database.dbname", "DATABASE_NAME"},
-		{"database.sslmode", "DATABASE_SSLMODE"},
+		{"database.name", "DATABASE_NAME"},
+		{"database.ssl_mode", "DATABASE_SSLMODE"},
 		// JWT (shared secret with IAM)
 		{"jwt.access_token_secret", "JWT_ACCESS_SECRET"},
 		// Redis (UOM cache)
