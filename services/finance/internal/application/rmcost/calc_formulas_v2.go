@@ -12,18 +12,22 @@
 //   - FL group total = MAX(detail FL), not SUM (per Excel AS13).
 package rmcost
 
-import "math"
+import (
+	"math"
 
-// flagAuto is the cascade-fallback marker for both ValuationFlag and
-// MarketingFlag. CL→SL→FL→PR for valuation, SP→PP→FP for marketing.
-const flagAuto = "AUTO"
+	rmcostdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
+)
 
-// flagNone is the resolved flag when an AUTO cascade finds every candidate
-// zero -- CL/SL/FL/PR for valuation, SP/PP/FP for marketing -- meaning no
-// source existed for the period. Distinct from the real source labels so
-// downstream consumers can tell "resolved to that source" apart from "no
-// source at all".
-const flagNone = "NONE"
+// flagAuto and FlagNone alias the DOMAIN constants — the cascade itself now
+// lives in domain/rmcost so that infrastructure/postgres can re-derive a
+// persisted row's tier without an import cycle (application/rmcost imports
+// infrastructure/postgres). ⛔ Do not redefine the literals here; a second copy
+// would be free to drift from the one the engine actually applies.
+const (
+	flagAuto = rmcostdomain.FlagAuto
+	// FlagNone is re-exported here for callers already importing this package.
+	FlagNone = rmcostdomain.FlagNone
+)
 
 // SourceQty is one item's source quantities/values for one period.
 // All fields zero when no sync row was found for the (item, grade, period).
@@ -303,31 +307,10 @@ func SelectValuation(tot GroupTotals, flag string) float64 {
 // zero, the resolved flag is "NONE", meaning no price source existed for the
 // period (cost_val is 0).
 func SelectValuationWithFlag(tot GroupTotals, flag string) (float64, string) {
-	switch flag {
-	case "CR":
-		return tot.CR, "CR"
-	case "SR":
-		return tot.SR, "SR"
-	case "PR":
-		return tot.PR, "PR"
-	case "CL":
-		return tot.CL, "CL"
-	case "SL":
-		return tot.SL, "SL"
-	case "FL":
-		return tot.FL, "FL"
-	}
-	// AUTO / "" / unknown → cascade.
-	v, label := firstNonZeroWithLabel([]labeledRate{
-		{tot.CL, "CL"}, {tot.SL, "SL"}, {tot.FL, "FL"}, {tot.PR, "PR"},
-	})
-	if v == 0 {
-		// All four candidates are zero: no price source existed for the
-		// period. Use the honest "NONE" label instead of echoing back
-		// whichever candidate happened to be last in the cascade.
-		label = flagNone
-	}
-	return v, label
+	return rmcostdomain.SelectValuationWithFlag(rmcostdomain.ValuationTotals{
+		CR: tot.CR, SR: tot.SR, PR: tot.PR,
+		CL: tot.CL, SL: tot.SL, FL: tot.FL,
+	}, flag)
 }
 
 // SelectMarketing picks cost_mark based on flag + projections. AUTO triggers
@@ -345,47 +328,9 @@ func SelectMarketing(p MarketingProjections, flag string) float64 {
 // flag is "NONE", meaning no marketing projection existed for the period
 // (cost_mark is 0).
 func SelectMarketingWithFlag(p MarketingProjections, flag string) (float64, string) {
-	switch flag {
-	case "SP":
-		return p.SP, "SP"
-	case "PP":
-		return p.PP, "PP"
-	case "FP":
-		return p.FP, "FP"
-	}
-	// AUTO / "" / unknown → cascade.
-	v, label := firstNonZeroWithLabel([]labeledRate{
-		{p.SP, "SP"}, {p.PP, "PP"}, {p.FP, "FP"},
-	})
-	if v == 0 {
-		// All three candidates are zero: no marketing projection existed
-		// for the period. Use the honest "NONE" label instead of echoing
-		// back whichever candidate happened to be last in the cascade.
-		label = flagNone
-	}
-	return v, label
-}
-
-// labeledRate pairs a candidate value with the flag label that selecting it
-// would correspond to.
-type labeledRate struct {
-	value float64
-	label string
-}
-
-// firstNonZeroWithLabel returns the first candidate whose value is strictly
-// > 0 along with its label. When every candidate is zero, returns (0, last
-// label) so callers always get a non-empty flag back.
-func firstNonZeroWithLabel(candidates []labeledRate) (float64, string) {
-	for _, c := range candidates {
-		if c.value > 0 {
-			return c.value, c.label
-		}
-	}
-	if len(candidates) == 0 {
-		return 0, ""
-	}
-	return 0, candidates[len(candidates)-1].label
+	return rmcostdomain.SelectMarketingWithFlag(rmcostdomain.MarketingTotals{
+		SP: p.SP, PP: p.PP, FP: p.FP,
+	}, flag)
 }
 
 // firstNonZero returns the first argument that is strictly > 0, else 0.
