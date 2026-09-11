@@ -3178,6 +3178,72 @@
         ]
       }
     },
+    "/api/v1/finance/mb-heads/export-cost-calc-detail": {
+      "get": {
+        "summary": "ExportMBCostCalcDetail exports the flat MB cost-calculation detail dump\n(29 columns) to Excel, one row per (MB head, RM line) from the persisted\ncst_product_cost snapshot. Separate from ExportMBRecipeFull by design.",
+        "operationId": "MBHeadService_ExportMBCostCalcDetail",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportMBCostCalcDetailResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status of the MB head.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "period",
+            "description": "Cost period YYYYMM. Empty means \"latest calculated period per head\".",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "calculationType",
+            "description": "Calculation type of the cost snapshot to dump. Empty defaults to ACTUAL, which\nkeeps exactly one cost snapshot per head and therefore one row per RM line.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "calcStatus",
+            "description": "Filter on the cost snapshot status (cst_product_cost.cpc_status). Empty means\nALL non-superseded statuses — the four values are the ones allowed by the CHECK\nconstraint chk_cpc_status (migration 000228).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "includeRejected",
+            "description": "Whether to include REJECTED MB Heads. Default false (proto3 zero value) excludes\nthem, mirroring ExportMBRecipeFull's behaviour.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "MBHeadService"
+        ]
+      }
+    },
     "/api/v1/finance/mb-heads/export-full": {
       "get": {
         "summary": "ExportMBRecipeFull exports the denormalized full MB recipe (recipe + composition\n+ MB cost) to Excel, one row per composition line.",
@@ -7296,6 +7362,25 @@
         }
       },
       "description": "ExportLookupMastersResponse carries the Excel workbook bytes."
+    },
+    "v1ExportMBCostCalcDetailResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte",
+          "description": "Excel file content."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Excel file name."
+        }
+      },
+      "description": "ExportMBCostCalcDetailResponse carries the cost-calc-detail Excel workbook bytes."
     },
     "v1ExportMBHeadsResponse": {
       "type": "object",
