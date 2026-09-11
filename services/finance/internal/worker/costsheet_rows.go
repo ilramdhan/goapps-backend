@@ -18,17 +18,28 @@ package worker
 // report shape. See design doc
 // <repo-root>/docs/superpowers/specs/2026-08-04-cost-results-enhancements-design.md §2.2.
 //
-// ⚠ The CSV carries 96 lines: one leading report-title line ("Report : Find
-// Color by Product") plus 95 data rows. This manifest deliberately reproduces
-// only the FIRST 84 of them — the trim is intentional, not an accidental
-// truncation. Verified 2026-09-11 by unzipping the reference workbook
-// (<repo-root>/data-examples/export-product-cost/example-export-param.xlsx):
-// its "parameter check" sheet ends at row 84 exactly, so a per-product sheet
-// longer than 84 rows would not match the target.
+// The CSV carries 96 lines: one leading report-title line ("Report : Find
+// Color by Product") plus 95 data rows. This manifest reproduces ALL 95 of
+// them and adds ONE synthetic divider of its own, so len(costSheetRows) is 96,
+// not 95. The layout splits into two sections:
 //
-// CSV data rows 85-95 are NOT lost: nine of them are carried by the "all data"
-// sheet instead (see costsheet_alldata.go), where they appear under printed
-// header numbers 132-140 — sheet columns 141-149, EK..ES:
+//   - Manifest entries 1..84 — the printed sheet. Verified 2026-09-11 by
+//     unzipping the reference workbook
+//     (<repo-root>/data-examples/export-product-cost/example-export-param.xlsx):
+//     its "parameter check" sheet ends at row 84 exactly, so this prefix is
+//     what a user comparing against the reference expects to see on paper.
+//
+//   - Manifest entries 85.. — the "others" section, opened by the labeled
+//     separator othersSeparatorLabel and carrying CSV rows 85-95. These rows
+//     are present in the worksheet but are deliberately left OUTSIDE the
+//     worksheet's print area, which costsheet_export_excel.go pins to the last
+//     row before that separator (see applyPrintArea / printableRowCount).
+//     Printing the sheet therefore still reproduces the reference's 84-row
+//     shape while the extra rows stay available on screen.
+//
+// Nine of the others rows are also carried by the "all data" sheet (see
+// costsheet_alldata.go), where they appear under printed header numbers
+// 132-140 — sheet columns 141-149, EK..ES:
 //
 //	85.R-AX..              → 132.R-AX.            (R_AX)
 //	86.R-AE./A9/A.         → 133.R-AE./A9/A       (R_AE_A9_A)
@@ -40,16 +51,22 @@ package worker
 //	92.R BC loss.          → 139.R BC loss        (R_BC_LOSS)
 //	94.Addl Val Loss.      → 140.Addl Val Loss    (ADDITIONAL_VAL_LOSS)
 //
-// The remaining two — CSV rows "93.Std loss as above." and "95.Domestic cost
-// with uneven packing." — appear on NEITHER sheet. Checked 2026-09-11 by
-// grepping both the all-data column map
-// (<repo-root>/docs/export-product-cost/all-data-column-map.tsv, 149 columns)
-// and costsheet_alldata.go for "std loss", "loss as above", "uneven" and
-// "packing": no match. They are a known, unclosed gap, not a coverage claim.
+// Those nine carry no per-sheet param code of their own here and stay
+// kindMissing — no mst_parameter code was proven for them, so they print "-".
+// The remaining two others rows DO have params, verified 2026-09-11 by
+// grepping <repo-root>/goapps-backend/services/finance/migrations/postgres/:
 //
-// A maintainer diffing CSV against this manifest should therefore expect
-// exactly 84 entries here and should treat any 85th as a deliberate decision
-// to outgrow the reference workbook's sheet length.
+//   - "93.Std loss as above." → QLTY_LOSS_DELIVERY_COST, seeded active in
+//     000407_seed_oracle_142_params.up.sql:109 and produced by formula
+//     F_YARN_QLOSS_DEL (000408_seed_oracle_formulas.up.sql:47, is_active TRUE).
+//   - "95.Domestic cost with uneven packing." → DOMESTIC_COST_UNEVEN_PACK,
+//     seeded in 000469_seed_derived_cost_params.up.sql:49 with formula
+//     F_YARN_DOMESTIC_COST_UNEVEN (same file, line 71 — inserted with
+//     is_active TRUE by the PART 2 INSERT, currently a pass-through of
+//     DOMESTIC_COST until costing supplies the uneven-packing delta).
+//
+// No later migration soft-deletes or deactivates either param or formula
+// (checked every "UPDATE mst_formula" in migrations/postgres/).
 
 // sheetRowKind classifies where a row's value comes from.
 type sheetRowKind int
@@ -75,13 +92,33 @@ const (
 	numFmtText     = "@"
 )
 
-// sheetRow is one of the 84 fixed rows of the product cost sheet.
+// sheetRow is one of the 96 fixed entries of the product cost sheet: the
+// CSV template's 95 data rows plus the synthetic "others" divider.
 type sheetRow struct {
 	Num       string // the row number as printed in column A ("1.", "33.", "" for separators)
 	Label     string // the printed label
 	ParamCode string // mst_parameter.param_code; empty for separator/stage rows
 	Kind      sheetRowKind
 	NumFmt    string // Excel number format; "" for non-numeric rows
+}
+
+// othersSeparatorLabel opens the "others" section that carries CSV rows
+// 85-95. It is a labeled kindSeparator — the same mechanism as the
+// "For sale of AX Grade only" divider — and it doubles as the print-area
+// boundary marker read by printableRowCount.
+const othersSeparatorLabel = "Others (CSV rows 85-95) - outside print area"
+
+// printableRowCount reports how many manifest rows fall inside the worksheet's
+// print area: every row up to, but not including, the othersSeparatorLabel
+// divider. Falls back to the whole manifest if the divider is ever removed, so
+// a missing marker widens the print area rather than emptying it.
+func printableRowCount() int {
+	for i := range costSheetRows {
+		if costSheetRows[i].Kind == kindSeparator && costSheetRows[i].Label == othersSeparatorLabel {
+			return i
+		}
+	}
+	return len(costSheetRows)
 }
 
 // costSheetRows is the ordered, fixed layout of the product cost sheet,
@@ -209,4 +246,26 @@ var costSheetRows = []sheetRow{
 	// = 2.2451, so the obvious sum is wrong. Do not infer a formula from the
 	// template's numbers.
 	{Num: "84.", Label: "Domestic Cost AX grd only.", Kind: kindMissing},
+	// ── "Others" section ──────────────────────────────────────────────────────
+	// Everything below this labeled separator is CSV rows 85-95. It sits
+	// OUTSIDE the worksheet print area (see applyPrintArea in
+	// costsheet_export_excel.go), so printing still reproduces the reference
+	// workbook's 84-row sheet while the rows stay visible on screen.
+	{Label: othersSeparatorLabel, Kind: kindSeparator},
+	// Labels below are transcribed verbatim from
+	// <repo-root>/docs/export-product-cost/template_export_product_cost.csv
+	// lines 86-96 (CSV data rows 85-95), including the doubled full stop on
+	// "R-AX..". Rows 85-92 and 94 have no proven mst_parameter code and stay
+	// kindMissing; only 93 and 95 were verified against the seed migrations.
+	{Num: "85.", Label: "R-AX..", Kind: kindMissing},
+	{Num: "86.", Label: "R-AE./A9/A.", Kind: kindMissing},
+	{Num: "87.", Label: "R-BC.", Kind: kindMissing},
+	{Num: "88.", Label: "R NS SP.", Kind: kindMissing},
+	{Num: "89.", Label: "R NS difference.", Kind: kindMissing},
+	{Num: "90.", Label: "B/C SP.", Kind: kindMissing},
+	{Num: "91.", Label: "R NS loss.", Kind: kindMissing},
+	{Num: "92.", Label: "R BC loss.", Kind: kindMissing},
+	{Num: "93.", Label: "Std loss as above.", ParamCode: "QLTY_LOSS_DELIVERY_COST", Kind: kindSnapshot, NumFmt: numFmtDecimal},
+	{Num: "94.", Label: "Addl Val Loss.", Kind: kindMissing},
+	{Num: "95.", Label: "Domestic cost with uneven packing.", ParamCode: "DOMESTIC_COST_UNEVEN_PACK", Kind: kindSnapshot, NumFmt: numFmtDecimal},
 }

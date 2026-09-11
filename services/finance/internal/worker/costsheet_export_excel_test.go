@@ -5,6 +5,8 @@ package worker
 // the worker package.
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,9 +14,22 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-// expectedSheetRowCount is the fixed height of the cost sheet body, matching the
-// 84 data rows of docs/export-product-cost/template_export_product_cost.csv.
-const expectedSheetRowCount = 84
+// Row-count pins for the cost sheet body.
+//
+//   - expectedCSVDataRowCount: every data row of
+//     docs/export-product-cost/template_export_product_cost.csv is represented
+//     in the manifest (the CSV's own separator lines 36/68/78/80 included).
+//   - expectedSheetRowCount: manifest entries, i.e. the CSV rows PLUS the one
+//     synthetic divider that opens the "others" section. That divider has no
+//     CSV line of its own, so the sheet is one row taller than the CSV.
+//   - expectedPrintableRowCount: the prefix that is actually printed. The
+//     reference workbook's "parameter check" sheet ends at row 84, so CSV rows
+//     85-95 sit below the divider, outside the print area.
+const (
+	expectedCSVDataRowCount   = 95
+	expectedSheetRowCount     = expectedCSVDataRowCount + 1
+	expectedPrintableRowCount = 84
+)
 
 const (
 	testItemCode    = "PTY0001305"
@@ -42,10 +57,23 @@ func stageWith(snapshot map[string]string) Stage {
 // Row manifest
 // -----------------------------------------------------------------------------
 
-func TestCostSheetRows_HasExactly84Rows(t *testing.T) {
+func TestCostSheetRows_HasExactly95CSVRows(t *testing.T) {
 	t.Parallel()
 	assert.Len(t, costSheetRows, expectedSheetRowCount,
-		"the cost sheet layout is fixed at %d rows by the CSV template", expectedSheetRowCount)
+		"the cost sheet layout is fixed at %d CSV rows plus the others divider",
+		expectedCSVDataRowCount)
+
+	// Every manifest entry except the synthetic others divider maps to a CSV
+	// data row, so dropping it leaves exactly the CSV's 95.
+	csvRows := 0
+	for i := range costSheetRows {
+		if costSheetRows[i].Kind == kindSeparator && costSheetRows[i].Label == othersSeparatorLabel {
+			continue
+		}
+		csvRows++
+	}
+	assert.Equal(t, expectedCSVDataRowCount, csvRows,
+		"all %d CSV data rows must be represented", expectedCSVDataRowCount)
 }
 
 func TestCostSheetRows_KindInvariants(t *testing.T) {
@@ -704,5 +732,163 @@ func TestNumericCell_RoundsToDeclaredDecimals(t *testing.T) {
 			assert.InDelta(t, tc.want, number, 1e-9)
 			assert.Equal(t, styles.numericStyle(tc.numFmt), styleID)
 		})
+	}
+}
+
+// -----------------------------------------------------------------------------
+// "Others" section (CSV rows 85-95) and print area
+// -----------------------------------------------------------------------------
+
+// TestCostSheetRows_OthersSection pins the tail of the manifest: the full CSV
+// is 95 data rows, the last 11 of them live below the othersSeparatorLabel
+// divider, and the two rows whose params were verified against the seed
+// migrations carry those param codes. Trimming the manifest back to 84 rows,
+// dropping the divider, or un-wiring row 93/95 all fail here.
+func TestCostSheetRows_OthersSection(t *testing.T) {
+	t.Parallel()
+
+	require.Len(t, costSheetRows, expectedSheetRowCount)
+
+	sepIdx := -1
+	for i := range costSheetRows {
+		if costSheetRows[i].Kind == kindSeparator && costSheetRows[i].Label == othersSeparatorLabel {
+			sepIdx = i
+			break
+		}
+	}
+	require.NotEqual(t, -1, sepIdx, "the manifest must open the others section with a labeled separator")
+	assert.Equal(t, expectedPrintableRowCount, sepIdx,
+		"the others separator must sit immediately after the %d printed rows", expectedPrintableRowCount)
+	assert.Equal(t, expectedPrintableRowCount, printableRowCount())
+
+	// The 11 CSV rows 85-95, in order, below the divider.
+	wantOthers := []struct {
+		num       string
+		label     string
+		paramCode string
+		kind      sheetRowKind
+	}{
+		{num: "85.", label: "R-AX..", kind: kindMissing},
+		{num: "86.", label: "R-AE./A9/A.", kind: kindMissing},
+		{num: "87.", label: "R-BC.", kind: kindMissing},
+		{num: "88.", label: "R NS SP.", kind: kindMissing},
+		{num: "89.", label: "R NS difference.", kind: kindMissing},
+		{num: "90.", label: "B/C SP.", kind: kindMissing},
+		{num: "91.", label: "R NS loss.", kind: kindMissing},
+		{num: "92.", label: "R BC loss.", kind: kindMissing},
+		{num: "93.", label: "Std loss as above.", paramCode: "QLTY_LOSS_DELIVERY_COST", kind: kindSnapshot},
+		{num: "94.", label: "Addl Val Loss.", kind: kindMissing},
+		{num: "95.", label: "Domestic cost with uneven packing.", paramCode: "DOMESTIC_COST_UNEVEN_PACK", kind: kindSnapshot},
+	}
+
+	others := costSheetRows[sepIdx+1:]
+	require.Len(t, others, len(wantOthers))
+	for i, want := range wantOthers {
+		assert.Equal(t, want.num, others[i].Num, "others row %d number", i)
+		assert.Equal(t, want.label, others[i].Label, "others row %d label", i)
+		assert.Equal(t, want.paramCode, others[i].ParamCode, "others row %d param code", i)
+		assert.Equal(t, want.kind, others[i].Kind, "others row %d kind", i)
+	}
+}
+
+// TestBuildProductCostSheet_PrintAreaExcludesOthers reads the generated
+// workbook's "_xlnm.Print_Area" defined name back and asserts it stops at the
+// last row before the others section, so a user printing the sheet still gets
+// the reference workbook's shape.
+func TestBuildProductCostSheet_PrintAreaExcludesOthers(t *testing.T) {
+	t.Parallel()
+
+	stages := []Stage{
+		stageWith(map[string]string{}),
+		stageWith(map[string]string{}),
+	}
+
+	f, err := BuildProductCostSheet(stages)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, f.Close()) }()
+
+	sheet := f.GetSheetName(0)
+
+	var got *excelize.DefinedName
+	for _, dn := range f.GetDefinedName() {
+		if dn.Name == printAreaDefinedName && dn.Scope == sheet {
+			cp := dn
+			got = &cp
+			break
+		}
+	}
+	require.NotNil(t, got, "the sheet must declare a %s defined name", printAreaDefinedName)
+
+	lastPrintedRow := headerRowCount + expectedPrintableRowCount
+	// Columns: A plus one per stage.
+	lastCol, err := excelize.ColumnNumberToName(len(stages) + 1)
+	require.NoError(t, err)
+	assert.Equal(t,
+		quoteSheetRef(sheet)+"!$A$1:$"+lastCol+"$"+strconv.Itoa(lastPrintedRow),
+		got.RefersTo,
+		"the print area must end at the last row before the others section")
+
+	// The others rows are still in the sheet, just outside that range.
+	rows, err := f.GetRows(sheet)
+	require.NoError(t, err)
+	assert.Len(t, rows, headerRowCount+expectedSheetRowCount)
+
+	// The separator row itself is the first row past the print area.
+	sepLabel, err := f.GetCellValue(sheet, "A"+strconv.Itoa(lastPrintedRow+1))
+	require.NoError(t, err)
+	assert.Equal(t, othersSeparatorLabel, sepLabel)
+}
+
+// TestBuildProductCostSheet_PrintAreaQuotesSpacedSheetName guards the formula
+// reference itself: the default sheet name "Cost Sheet" and the single-product
+// reference name "parameter check" both contain a space, and an unquoted
+// space makes the reference invalid to Excel.
+func TestBuildProductCostSheet_PrintAreaQuotesSpacedSheetName(t *testing.T) {
+	t.Parallel()
+
+	// No stages at all -> the sheet takes the (spaced) default name.
+	f, err := BuildProductCostSheet(nil)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, f.Close()) }()
+
+	sheet := f.GetSheetName(0)
+	require.Equal(t, defaultSheetName, sheet)
+	require.Contains(t, sheet, " ", "this test is only meaningful for a spaced sheet name")
+
+	for _, dn := range f.GetDefinedName() {
+		if dn.Name == printAreaDefinedName && dn.Scope == sheet {
+			assert.True(t, strings.HasPrefix(dn.RefersTo, "'"+sheet+"'!"),
+				"a spaced sheet name must be single-quoted in the print-area reference, got %q", dn.RefersTo)
+			return
+		}
+	}
+	t.Fatalf("no %s defined name for sheet %q", printAreaDefinedName, sheet)
+}
+
+// TestBuildProductCostSheet_OthersRowsRenderValues checks the two wired others
+// rows actually resolve their snapshot values in the rendered sheet.
+func TestBuildProductCostSheet_OthersRowsRenderValues(t *testing.T) {
+	t.Parallel()
+
+	stages := []Stage{stageWith(map[string]string{
+		"QLTY_LOSS_DELIVERY_COST":   "0.034",
+		"DOMESTIC_COST_UNEVEN_PACK": "2.393",
+	})}
+
+	f, err := BuildProductCostSheet(stages)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, f.Close()) }()
+
+	sheet := f.GetSheetName(0)
+	for label, want := range map[string]string{
+		"Std loss as above.":                 "0.034",
+		"Domestic cost with uneven packing.": "2.393",
+	} {
+		row := manifestRowIndexByLabel(t, label) + headerRowCount + 1
+		cell, cErr := excelize.CoordinatesToCellName(2, row)
+		require.NoError(t, cErr)
+		raw, vErr := f.GetCellValue(sheet, cell, excelize.Options{RawCellValue: true})
+		require.NoError(t, vErr)
+		assert.Equal(t, want, raw, "row %q must render its snapshot value", label)
 	}
 }

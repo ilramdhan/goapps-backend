@@ -1,7 +1,9 @@
 package worker
 
-// costsheet_export_excel.go renders the fixed 84-row manifest in
+// costsheet_export_excel.go renders the fixed 96-entry manifest in
 // costsheet_rows.go into an A4 xlsx workbook, one column per route stage.
+// Only the rows before the "others" separator are inside the print area; see
+// applyPrintArea.
 // See design doc
 // docs/superpowers/specs/2026-08-04-cost-results-enhancements-design.md §3.
 
@@ -69,6 +71,10 @@ const (
 	// maxSheetNameLen is Excel's hard limit on worksheet names.
 	maxSheetNameLen = 31
 
+	// printAreaDefinedName is the OOXML built-in defined name that holds a
+	// worksheet's print area.
+	printAreaDefinedName = "_xlnm.Print_Area"
+
 	// labelSeparatorFill and stageSeparatorFill reproduce the dashed divider
 	// rows of the CSV template. labelSeparatorFill (column A, 35 dashes) matches
 	// the reference workbook on every separator row.
@@ -129,6 +135,9 @@ func BuildProductCostSheet(stages []Stage) (*excelize.File, error) {
 		return nil, err
 	}
 	if err := applyRowHeights(f, sheet); err != nil {
+		return nil, err
+	}
+	if err := applyPrintArea(f, sheet, len(stages)); err != nil {
 		return nil, err
 	}
 	return f, nil
@@ -354,6 +363,46 @@ func applyPageLayout(f *excelize.File, sheet string, stageCount int) error {
 		return fmt.Errorf("freeze panes: %w", err)
 	}
 	return nil
+}
+
+// applyPrintArea limits printing to the rows above the "others" separator, so
+// the printed sheet keeps the reference workbook's 84-row shape while CSV rows
+// 85-95 remain present on screen. Implemented with the built-in defined name
+// "_xlnm.Print_Area" scoped to the sheet — excelize v2.8.1 whitelists exactly
+// that name in SetDefinedName (see
+// $GOMODCACHE/github.com/xuri/excelize/v2@v2.8.1/sheet.go:1655 and the
+// builtInDefinedNames slice at templates.go:492).
+func applyPrintArea(f *excelize.File, sheet string, stageCount int) error {
+	lastRow := headerRowCount + printableRowCount()
+	if lastRow <= 0 {
+		return nil
+	}
+	lastCol, err := excelize.ColumnNumberToName(stageCount + 1)
+	if err != nil {
+		return fmt.Errorf("print area last column name: %w", err)
+	}
+	refersTo := fmt.Sprintf("%s!$A$1:$%s$%d", quoteSheetRef(sheet), lastCol, lastRow)
+	if err := f.SetDefinedName(&excelize.DefinedName{
+		Name:     printAreaDefinedName,
+		RefersTo: refersTo,
+		Scope:    sheet,
+	}); err != nil {
+		return fmt.Errorf("set print area %s: %w", refersTo, err)
+	}
+	return nil
+}
+
+// quoteSheetRef renders a worksheet name for use inside a formula reference.
+// Excel requires single quotes around any sheet name that is not a bare
+// identifier — the default name "Cost Sheet" and the reference name
+// "parameter check" both contain spaces — and an embedded apostrophe is
+// escaped by doubling it. sanitizeSheetName already strips the characters
+// Excel forbids outright, so quoting is the only escaping needed here.
+func quoteSheetRef(sheet string) string {
+	if !strings.ContainsAny(sheet, " '") {
+		return sheet
+	}
+	return "'" + strings.ReplaceAll(sheet, "'", "''") + "'"
 }
 
 func applyRowHeights(f *excelize.File, sheet string) error {
