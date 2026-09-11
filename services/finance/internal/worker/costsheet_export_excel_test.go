@@ -13,8 +13,8 @@ import (
 )
 
 // expectedSheetRowCount is the fixed height of the cost sheet body, matching the
-// 95 data rows of docs/export-product-cost/template_export_product_cost.csv.
-const expectedSheetRowCount = 95
+// 84 data rows of docs/export-product-cost/template_export_product_cost.csv.
+const expectedSheetRowCount = 84
 
 const (
 	testItemCode    = "PTY0001305"
@@ -42,7 +42,7 @@ func stageWith(snapshot map[string]string) Stage {
 // Row manifest
 // -----------------------------------------------------------------------------
 
-func TestCostSheetRows_HasExactly95Rows(t *testing.T) {
+func TestCostSheetRows_HasExactly84Rows(t *testing.T) {
 	t.Parallel()
 	assert.Len(t, costSheetRows, expectedSheetRowCount,
 		"the cost sheet layout is fixed at %d rows by the CSV template", expectedSheetRowCount)
@@ -119,7 +119,7 @@ func TestCostSheetRows_ContainsExpectedAnchors(t *testing.T) {
 		{label: "RM Rate.", paramCode: "RM_RATE", kind: kindSnapshot},
 		{label: "Machine Name.", paramCode: "MC_NAME", kind: kindText},
 		{label: "Fixed Cost.", kind: kindMissing},
-		{label: "Domestic cost with uneven packing.", paramCode: "DOMESTIC_COST_UNEVEN_PACK", kind: kindSnapshot},
+		{label: "Domestic Cost AX grd only.", kind: kindMissing},
 	}
 
 	for _, tc := range tests {
@@ -330,7 +330,7 @@ func TestStageCellFor_DashPlaceholders(t *testing.T) {
 			name:  "shade row joins code and name",
 			row:   sheetRow{Label: labelShade, Kind: kindStage},
 			stage: stageWith(map[string]string{}),
-			want:  "SH01 / Navy",
+			want:  "SH01/Navy",
 		},
 		{
 			name:  "raw material has no source yet and renders a dash",
@@ -343,7 +343,7 @@ func TestStageCellFor_DashPlaceholders(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, styleID := stageCellFor(tc.row, tc.stage, styles)
+			got, styleID := stageCellFor(tc.row, tc.stage, []Stage{tc.stage}, styles)
 			assert.Equal(t, tc.want, got)
 			assert.NotZero(t, styleID, "every cell must be styled")
 		})
@@ -359,7 +359,7 @@ func TestJoinShade(t *testing.T) {
 		val  string
 		want string
 	}{
-		{name: "both halves", code: "SH01", val: "Navy", want: "SH01 / Navy"},
+		{name: "both halves", code: "SH01", val: "Navy", want: "SH01/Navy"},
 		{name: "code only", code: "SH01", want: "SH01"},
 		{name: "name only", val: "Navy", want: "Navy"},
 		{name: "neither", want: ""},
@@ -399,15 +399,11 @@ func TestBuildProductCostSheet_Shape(t *testing.T) {
 	rows, err := f.GetRows(sheet)
 	require.NoError(t, err)
 	assert.Len(t, rows, headerRowCount+expectedSheetRowCount,
-		"title row + header row + %d manifest rows", expectedSheetRowCount)
+		"%d manifest rows, with no title or header block above them", expectedSheetRowCount)
 
-	// Row 2 carries the stage column headers, one per stage plus the label column.
-	stageHeaderCell, err := f.GetCellValue(sheet, "B2")
-	require.NoError(t, err)
-	assert.Contains(t, stageHeaderCell, "POY0000433")
-
-	// Column A of the first manifest row (Excel row 3) is "1.Particulars.".
-	labelCell, err := f.GetCellValue(sheet, "A3")
+	// Column A of the first manifest row (Excel row 1) is "1.Particulars." —
+	// the sheet starts straight at the data, with no title or header rows.
+	labelCell, err := f.GetCellValue(sheet, "A1")
 	require.NoError(t, err)
 	assert.Equal(t, "1."+labelParticulars, labelCell)
 }
@@ -472,7 +468,7 @@ func TestCopySheet_PreservesNumericCells(t *testing.T) {
 	assert.Equal(t, "1.352", raw)
 
 	// The label column must survive as text.
-	label, err := dst.GetCellValue(dstName, "A3")
+	label, err := dst.GetCellValue(dstName, "A1")
 	require.NoError(t, err)
 	assert.Equal(t, "1."+labelParticulars, label)
 }
@@ -571,4 +567,142 @@ func separatorRowCount() int {
 		}
 	}
 	return count
+}
+
+// -----------------------------------------------------------------------------
+// Number-format pinning
+// -----------------------------------------------------------------------------
+
+// TestCostSheetRows_Decimal4Set pins the EXACT set of rows printed with four
+// decimals. TestCostSheetRows_KindInvariants only asserts that a numeric row
+// carries one of the three known formats, which passed before row 13 was moved
+// to four decimals too — so it cannot catch a silent revert. This test can:
+// dropping row 13 back to numFmtDecimal would round its reference value 6.6858
+// to 6.686 and lose the digit the template shows.
+//
+// The negative half matters as much as the positive: the reference workbook
+// (<repo-root>/data-examples/export-product-cost/example-export-param.xlsx,
+// sheet "parameter check") carries more than 3 dp in exactly three cells, so a
+// fourth numFmtDecimal4 row must be a deliberate act with its own evidence,
+// never an incidental copy-paste.
+func TestCostSheetRows_Decimal4Set(t *testing.T) {
+	t.Parallel()
+
+	// Keyed by printed row number, with the label the number must still carry.
+	wantDecimal4 := map[string]string{
+		"13.": "MB Rate.",
+		"79.": "Final Conversion excl MB.",
+		"81.": "Cost lessQL,CO,Frwd.",
+	}
+
+	t.Run("each four-decimal row keeps its format", func(t *testing.T) {
+		t.Parallel()
+		byNum := make(map[string]sheetRow, len(costSheetRows))
+		for _, row := range costSheetRows {
+			if _, dup := byNum[row.Num]; dup && row.Num != "" {
+				continue // two rows print "33."; neither is in the 4-dp set.
+			}
+			byNum[row.Num] = row
+		}
+		for num, label := range wantDecimal4 {
+			row, ok := byNum[num]
+			require.True(t, ok, "row %q vanished from the manifest", num)
+			assert.Equal(t, label, row.Label, "row %q changed label", num)
+			assert.Equal(t, numFmtDecimal4, row.NumFmt,
+				"row %q (%q) must print four decimals", num, label)
+		}
+	})
+
+	t.Run("no other row carries the four-decimal format", func(t *testing.T) {
+		t.Parallel()
+		var got []string
+		for i := range costSheetRows {
+			if costSheetRows[i].NumFmt == numFmtDecimal4 {
+				got = append(got, costSheetRows[i].Num)
+			}
+		}
+		assert.Len(t, got, len(wantDecimal4),
+			"exactly %d rows may print four decimals; got %v", len(wantDecimal4), got)
+		for _, num := range got {
+			assert.Contains(t, wantDecimal4, num,
+				"row %q gained numFmtDecimal4 without a reference-workbook cell to justify it", num)
+		}
+	})
+}
+
+// TestNumericCell_RoundsToDeclaredDecimals pins the rounding contract: the
+// number stored in the cell must already be rounded to the decimals the cell's
+// format displays, so re-totalling the sheet in Excel cannot drift by hidden
+// sub-precision digits.
+//
+// The 6.6858 case is the row-13 regression in numeric form: under the
+// three-decimal format the same input must become 6.686, under four it must
+// survive intact.
+func TestNumericCell_RoundsToDeclaredDecimals(t *testing.T) {
+	t.Parallel()
+
+	f := excelize.NewFile()
+	defer func() { require.NoError(t, f.Close()) }()
+	styles, err := newSheetStyles(f)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name   string
+		numFmt string
+		raw    string
+		want   float64
+	}{
+		{
+			name:   "four-decimal row keeps the fourth digit",
+			numFmt: numFmtDecimal4,
+			raw:    "6.6858",
+			want:   6.6858,
+		},
+		{
+			name:   "three-decimal row rounds the same input up",
+			numFmt: numFmtDecimal,
+			raw:    "6.6858",
+			want:   6.686,
+		},
+		{
+			name:   "four-decimal row rounds a fifth digit away",
+			numFmt: numFmtDecimal4,
+			raw:    "0.79275",
+			want:   0.7928,
+		},
+		{
+			name:   "integer row drops the fraction",
+			numFmt: numFmtInt,
+			raw:    "1234.6",
+			want:   1235,
+		},
+		{
+			name:   "row with no declared format follows the three-decimal default",
+			numFmt: "",
+			raw:    "6.6858",
+			want:   6.686,
+		},
+		{
+			name:   "negative values round away from zero, not toward it",
+			numFmt: numFmtDecimal,
+			raw:    "-0.0125",
+			want:   -0.013,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			row := sheetRow{
+				Label: "probe", ParamCode: "PROBE", Kind: kindSnapshot, NumFmt: tc.numFmt,
+			}
+			value, styleID := numericCell(row, stageWith(map[string]string{"PROBE": tc.raw}), styles)
+
+			number, ok := value.(float64)
+			require.True(t, ok, "value must stay a real number, got %T (%v)", value, value)
+			assert.InDelta(t, tc.want, number, 1e-9)
+			assert.Equal(t, styles.numericStyle(tc.numFmt), styleID)
+		})
+	}
 }

@@ -6,15 +6,50 @@ package worker
 // layout. It intentionally does NOT derive rows from mst_parameter.display_order
 // at runtime.
 //
-// The CSV template (docs/export-product-cost/template_export_product_cost.csv)
-// numbers its 95 rows as a report layout, not a param list: two rows are both
-// printed "33.", four rows are dashed section separators, and one row is a
-// bare section label with no printed number at all. Deriving that from
-// display_order would silently drift the moment someone adds or reorders a
-// param. Pinning the layout here keeps display_order as the source of truth
-// for the master-data screens while this file stays the source of truth for
-// the export's fixed report shape. See design doc
-// docs/superpowers/specs/2026-08-04-cost-results-enhancements-design.md §2.2.
+// The CSV template (<repo-root>/docs/export-product-cost/template_export_product_cost.csv)
+// is a report layout, not a param list: two rows are both printed "33.", three
+// rows are all-dash section separators (report rows 36, 68, 78), and one row is
+// a bare section label with dashed filler cells and no printed number at all
+// ("For sale of AX Grade only", report row 80) — four kindSeparator entries in
+// total, three dashed plus one labeled. Deriving that from display_order would
+// silently drift the moment someone adds or reorders a param. Pinning the
+// layout here keeps display_order as the source of truth for the master-data
+// screens while this file stays the source of truth for the export's fixed
+// report shape. See design doc
+// <repo-root>/docs/superpowers/specs/2026-08-04-cost-results-enhancements-design.md §2.2.
+//
+// ⚠ The CSV carries 96 lines: one leading report-title line ("Report : Find
+// Color by Product") plus 95 data rows. This manifest deliberately reproduces
+// only the FIRST 84 of them — the trim is intentional, not an accidental
+// truncation. Verified 2026-09-11 by unzipping the reference workbook
+// (<repo-root>/data-examples/export-product-cost/example-export-param.xlsx):
+// its "parameter check" sheet ends at row 84 exactly, so a per-product sheet
+// longer than 84 rows would not match the target.
+//
+// CSV data rows 85-95 are NOT lost: nine of them are carried by the "all data"
+// sheet instead (see costsheet_alldata.go), where they appear under printed
+// header numbers 132-140 — sheet columns 141-149, EK..ES:
+//
+//	85.R-AX..              → 132.R-AX.            (R_AX)
+//	86.R-AE./A9/A.         → 133.R-AE./A9/A       (R_AE_A9_A)
+//	87.R-BC.               → 134.R-BC (%)         (R_BC)
+//	88.R NS SP.            → 135.R NS SP          (R_NON_STD_SP)
+//	89.R NS difference.    → 136.R NS difference   (R_NON_STD_DIFF)
+//	90.B/C SP.             → 137.B/C SP           (BC_SP)
+//	91.R NS loss.          → 138.R NS loss        (R_NON_STD_LOSS)
+//	92.R BC loss.          → 139.R BC loss        (R_BC_LOSS)
+//	94.Addl Val Loss.      → 140.Addl Val Loss    (ADDITIONAL_VAL_LOSS)
+//
+// The remaining two — CSV rows "93.Std loss as above." and "95.Domestic cost
+// with uneven packing." — appear on NEITHER sheet. Checked 2026-09-11 by
+// grepping both the all-data column map
+// (<repo-root>/docs/export-product-cost/all-data-column-map.tsv, 149 columns)
+// and costsheet_alldata.go for "std loss", "loss as above", "uneven" and
+// "packing": no match. They are a known, unclosed gap, not a coverage claim.
+//
+// A maintainer diffing CSV against this manifest should therefore expect
+// exactly 84 entries here and should treat any 85th as a deliberate decision
+// to outgrow the reference workbook's sheet length.
 
 // sheetRowKind classifies where a row's value comes from.
 type sheetRowKind int
@@ -29,8 +64,10 @@ const (
 
 // Excel number formats used across the sheet. Rates, costs, percentages, and
 // final costs all share the same three-decimal format in the template; counts,
-// production, and speed rows share the integer format. The two final-conversion
-// rows (79 and 81) are printed with four decimals in the template.
+// production, and speed rows share the integer format. Exactly THREE rows carry
+// numFmtDecimal4 — 13 (MB Rate.), 79 (Final Conversion excl MB.) and 81 (Cost
+// lessQL,CO,Frwd.); the justification and the reference-workbook sweep behind
+// that set are documented at the row-13 entry below.
 const (
 	numFmtDecimal  = "#,##0.000"
 	numFmtDecimal4 = "#,##0.0000"
@@ -38,7 +75,7 @@ const (
 	numFmtText     = "@"
 )
 
-// sheetRow is one of the 95 fixed rows of the product cost sheet.
+// sheetRow is one of the 84 fixed rows of the product cost sheet.
 type sheetRow struct {
 	Num       string // the row number as printed in column A ("1.", "33.", "" for separators)
 	Label     string // the printed label
@@ -68,7 +105,14 @@ var costSheetRows = []sheetRow{
 	{Num: "10.", Label: "Shade Code / Name.", Kind: kindStage},
 	{Num: "11.", Label: "MB / SP Dye Name.", ParamCode: "MB_SP_DYE", Kind: kindText, NumFmt: numFmtText},
 	{Num: "12.", Label: "Dozing %.", ParamCode: "MB_SP_DOZING", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "13.", Label: "MB Rate.", ParamCode: "MB_RATE_MKT", Kind: kindSnapshot, NumFmt: numFmtDecimal},
+	// 4 decimals, not 3. A sweep of the reference workbook
+	// (<repo-root>/data-examples/export-product-cost/example-export-param.xlsx, sheet
+	// "parameter check") found exactly THREE cells carrying more than 3 dp:
+	// this row (6.6858), row 79 (0.7927) and row 81 (2.0141). The other two
+	// already declare numFmtDecimal4, so the 4-dp set is a deliberate pattern
+	// in the template rather than one stray sample; 3 dp here would round
+	// 6.6858 to 6.686 and silently lose a digit the template shows.
+	{Num: "13.", Label: "MB Rate.", ParamCode: "MB_RATE_MKT", Kind: kindSnapshot, NumFmt: numFmtDecimal4},
 	{Num: "14.", Label: "Machine Name.", ParamCode: "MC_NAME", Kind: kindText, NumFmt: numFmtText},
 	{Num: "15.", Label: "Net Prdn.", ParamCode: "NET_PRODUCTION", Kind: kindSnapshot, NumFmt: numFmtInt},
 	{Num: "16.", Label: "MC Speed.", ParamCode: "MC_SPEED", Kind: kindSnapshot, NumFmt: numFmtInt},
@@ -145,28 +189,24 @@ var costSheetRows = []sheetRow{
 	// Unnumbered section divider in the source template — printed as a label
 	// with dashed filler cells, not a data row.
 	{Label: "For sale of AX Grade only", Kind: kindSeparator},
-	// "Cost lessQL,CO,Frwd." has no confidently matching mst_parameter code;
-	// left as kindMissing rather than guessing. NumFmt is carried anyway so the
-	// row prints with the template's four decimals once a param is wired.
+	// "Cost lessQL,CO,Frwd." has NO mst_parameter code — this was settled by
+	// query, not assumed. <repo-root>/docs/export-product-cost/verify-param-rows-81-84.sql
+	// (run 2026-09-11) swept mst_parameter by name for "less"/"frwd"/"forward"/
+	// "domestic"/"AX grade" and found only R_AX, AX_PERC, AX_WT and
+	// WASTE_LESS_MB_OPU — all pre-existing rows in unrelated display groups.
+	// Migrations 000234/000240/000381/000391/000407/000469 were swept too.
+	// The param was never seeded, so it has no formula and never reaches
+	// cpc_param_snapshot: wiring a ParamCode here would still print "-".
+	// Seeding it is a costing-team decision, not an export fix.
+	// NumFmt is carried anyway so the row prints with the template's four
+	// decimals the day a param does exist.
 	{Num: "81.", Label: "Cost lessQL,CO,Frwd.", Kind: kindMissing, NumFmt: numFmtDecimal4},
 	{Num: "82.", Label: "NSBC SP.", ParamCode: "NON_STD_BC_SP", Kind: kindSnapshot, NumFmt: numFmtDecimal},
 	{Num: "83.", Label: "Addl. NSBC Loss.", ParamCode: "ADD_NON_STD_BC_LOSS", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	// "Domestic Cost AX grd only." has no confidently matching mst_parameter
-	// code; left as kindMissing rather than guessing.
+	// "Domestic Cost AX grd only." has NO mst_parameter code either — same
+	// sweep, same verdict as row 81 above. ⚠ And it is NOT derivable from its
+	// neighbors: the reference shows 84 = 2.306 while 81 + 83 = 2.0141 + 0.231
+	// = 2.2451, so the obvious sum is wrong. Do not infer a formula from the
+	// template's numbers.
 	{Num: "84.", Label: "Domestic Cost AX grd only.", Kind: kindMissing},
-	{Num: "85.", Label: "R-AX..", ParamCode: "R_AX", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "86.", Label: "R-AE./A9/A.", ParamCode: "R_AE_A9_A", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "87.", Label: "R-BC.", ParamCode: "R_BC", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "88.", Label: "R NS SP.", ParamCode: "R_NON_STD_SP", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "89.", Label: "R NS difference.", ParamCode: "R_NON_STD_DIFF", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "90.", Label: "B/C SP.", ParamCode: "BC_SP", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "91.", Label: "R NS loss.", ParamCode: "R_NON_STD_LOSS", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "92.", Label: "R BC loss.", ParamCode: "R_BC_LOSS", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	// "Std loss as above." literally repeats the standard loss already printed
-	// on row 58 — the template's values for the two rows are identical across
-	// every sample column. It is NOT mst_parameter STD_VALUE_LOSS, which is a
-	// TEXT lookup holding grade names, not a number.
-	{Num: "93.", Label: "Std loss as above.", ParamCode: "QLTY_LOSS_DELIVERY_COST", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "94.", Label: "Addl Val Loss.", ParamCode: "ADDITIONAL_VAL_LOSS", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	{Num: "95.", Label: "Domestic cost with uneven packing.", ParamCode: "DOMESTIC_COST_UNEVEN_PACK", Kind: kindSnapshot, NumFmt: numFmtDecimal},
 }
