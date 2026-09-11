@@ -36,6 +36,13 @@ type RouteCostSheetStage struct {
 	ProductSysID  int64
 	HasCost       bool
 	ParamSnapshot map[string]string
+	// LeftSysID is the legacy Oracle sys id (cpm_flex_02) — the "Left Sys ID"
+	// column of the flat "all data" sheet. Empty for products that were never
+	// imported from the legacy system.
+	LeftSysID string
+	// YarnType is the legacy product type label (cpm_flex_03) — "POY",
+	// "MELANGE". The "Yarn Type" column of the flat "all data" sheet.
+	YarnType string
 }
 
 // GetRouteCostSheetHandler assembles the full N-column cost sheet for one
@@ -174,6 +181,10 @@ func fillIdentityFromProductMaster(stage *RouteCostSheetStage, p *costproductmas
 	if stage.ShadeName == "" {
 		stage.ShadeName = p.ShadeName()
 	}
+	// Legacy identity columns are only ever on the product master — the route
+	// seq carries no denormalized copy — so these are assigned, not defaulted.
+	stage.LeftSysID = p.Flex02()
+	stage.YarnType = p.Flex03()
 }
 
 func fillCostFromResult(stage *RouteCostSheetStage, res *costcalcdom.Result) {
