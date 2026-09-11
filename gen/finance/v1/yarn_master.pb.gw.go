@@ -1462,6 +1462,41 @@ func local_request_MBHeadService_ExportMBRecipeFull_0(ctx context.Context, marsh
 	return msg, metadata, err
 }
 
+var filter_MBHeadService_ExportMBCostCalcDetail_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_MBHeadService_ExportMBCostCalcDetail_0(ctx context.Context, marshaler runtime.Marshaler, client MBHeadServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ExportMBCostCalcDetailRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_MBHeadService_ExportMBCostCalcDetail_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.ExportMBCostCalcDetail(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_MBHeadService_ExportMBCostCalcDetail_0(ctx context.Context, marshaler runtime.Marshaler, server MBHeadServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ExportMBCostCalcDetailRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_MBHeadService_ExportMBCostCalcDetail_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.ExportMBCostCalcDetail(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 func request_MBHeadService_ImportMBHeads_0(ctx context.Context, marshaler runtime.Marshaler, client MBHeadServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ImportMBHeadsRequest
@@ -5259,6 +5294,26 @@ func RegisterMBHeadServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		}
 		forward_MBHeadService_ExportMBRecipeFull_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_MBHeadService_ExportMBCostCalcDetail_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.MBHeadService/ExportMBCostCalcDetail", runtime.WithHTTPPathPattern("/api/v1/finance/mb-heads/export-cost-calc-detail"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_MBHeadService_ExportMBCostCalcDetail_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_MBHeadService_ExportMBCostCalcDetail_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_MBHeadService_ImportMBHeads_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -7944,6 +7999,23 @@ func RegisterMBHeadServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		}
 		forward_MBHeadService_ExportMBRecipeFull_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_MBHeadService_ExportMBCostCalcDetail_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.MBHeadService/ExportMBCostCalcDetail", runtime.WithHTTPPathPattern("/api/v1/finance/mb-heads/export-cost-calc-detail"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_MBHeadService_ExportMBCostCalcDetail_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_MBHeadService_ExportMBCostCalcDetail_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_MBHeadService_ImportMBHeads_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -8261,6 +8333,7 @@ var (
 	pattern_MBHeadService_DeleteMBHead_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "finance", "mb-heads", "mbh_id"}, ""))
 	pattern_MBHeadService_ExportMBHeads_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "mb-heads", "export"}, ""))
 	pattern_MBHeadService_ExportMBRecipeFull_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "mb-heads", "export-full"}, ""))
+	pattern_MBHeadService_ExportMBCostCalcDetail_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "mb-heads", "export-cost-calc-detail"}, ""))
 	pattern_MBHeadService_ImportMBHeads_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "mb-heads", "import"}, ""))
 	pattern_MBHeadService_DownloadMBHeadTemplate_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "mb-heads", "template"}, ""))
 	pattern_MBHeadService_SubmitMBHead_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "mb-heads", "mbh_id", "submit"}, ""))
@@ -8289,6 +8362,7 @@ var (
 	forward_MBHeadService_DeleteMBHead_0              = runtime.ForwardResponseMessage
 	forward_MBHeadService_ExportMBHeads_0             = runtime.ForwardResponseMessage
 	forward_MBHeadService_ExportMBRecipeFull_0        = runtime.ForwardResponseMessage
+	forward_MBHeadService_ExportMBCostCalcDetail_0    = runtime.ForwardResponseMessage
 	forward_MBHeadService_ImportMBHeads_0             = runtime.ForwardResponseMessage
 	forward_MBHeadService_DownloadMBHeadTemplate_0    = runtime.ForwardResponseMessage
 	forward_MBHeadService_SubmitMBHead_0              = runtime.ForwardResponseMessage

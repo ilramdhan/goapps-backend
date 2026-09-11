@@ -237,6 +237,10 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return err
 	}
+	// The 29-column calc dump gets its OWN read-only repository. ⛔ It deliberately
+	// does not reuse mbRecipeFullExportRepo: that repo owns the 37-column export's
+	// query, which must stay byte-for-byte unchanged.
+	mbHeadHandler = mbHeadHandler.WithCostCalcDetail(postgres.NewMBCostCalcDetailExportRepository(db))
 
 	// Full wiring: duplicate spin + child-recalc cascade. mbSpinRepo supplies both
 	// the read side and the recalc write side; mbDozingImpactRepo is READ-ONLY and

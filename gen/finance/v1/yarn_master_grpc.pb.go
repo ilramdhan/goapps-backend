@@ -1658,6 +1658,7 @@ const (
 	MBHeadService_DeleteMBHead_FullMethodName              = "/finance.v1.MBHeadService/DeleteMBHead"
 	MBHeadService_ExportMBHeads_FullMethodName             = "/finance.v1.MBHeadService/ExportMBHeads"
 	MBHeadService_ExportMBRecipeFull_FullMethodName        = "/finance.v1.MBHeadService/ExportMBRecipeFull"
+	MBHeadService_ExportMBCostCalcDetail_FullMethodName    = "/finance.v1.MBHeadService/ExportMBCostCalcDetail"
 	MBHeadService_ImportMBHeads_FullMethodName             = "/finance.v1.MBHeadService/ImportMBHeads"
 	MBHeadService_DownloadMBHeadTemplate_FullMethodName    = "/finance.v1.MBHeadService/DownloadMBHeadTemplate"
 	MBHeadService_SubmitMBHead_FullMethodName              = "/finance.v1.MBHeadService/SubmitMBHead"
@@ -1699,6 +1700,10 @@ type MBHeadServiceClient interface {
 	// ExportMBRecipeFull exports the denormalized full MB recipe (recipe + composition
 	// + MB cost) to Excel, one row per composition line.
 	ExportMBRecipeFull(ctx context.Context, in *ExportMBRecipeFullRequest, opts ...grpc.CallOption) (*ExportMBRecipeFullResponse, error)
+	// ExportMBCostCalcDetail exports the flat MB cost-calculation detail dump
+	// (29 columns) to Excel, one row per (MB head, RM line) from the persisted
+	// cst_product_cost snapshot. Separate from ExportMBRecipeFull by design.
+	ExportMBCostCalcDetail(ctx context.Context, in *ExportMBCostCalcDetailRequest, opts ...grpc.CallOption) (*ExportMBCostCalcDetailResponse, error)
 	// ImportMBHeads imports MB Head records from Excel.
 	ImportMBHeads(ctx context.Context, in *ImportMBHeadsRequest, opts ...grpc.CallOption) (*ImportMBHeadsResponse, error)
 	// DownloadMBHeadTemplate downloads the Excel import template.
@@ -1828,6 +1833,16 @@ func (c *mBHeadServiceClient) ExportMBRecipeFull(ctx context.Context, in *Export
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ExportMBRecipeFullResponse)
 	err := c.cc.Invoke(ctx, MBHeadService_ExportMBRecipeFull_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mBHeadServiceClient) ExportMBCostCalcDetail(ctx context.Context, in *ExportMBCostCalcDetailRequest, opts ...grpc.CallOption) (*ExportMBCostCalcDetailResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportMBCostCalcDetailResponse)
+	err := c.cc.Invoke(ctx, MBHeadService_ExportMBCostCalcDetail_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2035,6 +2050,10 @@ type MBHeadServiceServer interface {
 	// ExportMBRecipeFull exports the denormalized full MB recipe (recipe + composition
 	// + MB cost) to Excel, one row per composition line.
 	ExportMBRecipeFull(context.Context, *ExportMBRecipeFullRequest) (*ExportMBRecipeFullResponse, error)
+	// ExportMBCostCalcDetail exports the flat MB cost-calculation detail dump
+	// (29 columns) to Excel, one row per (MB head, RM line) from the persisted
+	// cst_product_cost snapshot. Separate from ExportMBRecipeFull by design.
+	ExportMBCostCalcDetail(context.Context, *ExportMBCostCalcDetailRequest) (*ExportMBCostCalcDetailResponse, error)
 	// ImportMBHeads imports MB Head records from Excel.
 	ImportMBHeads(context.Context, *ImportMBHeadsRequest) (*ImportMBHeadsResponse, error)
 	// DownloadMBHeadTemplate downloads the Excel import template.
@@ -2120,6 +2139,9 @@ func (UnimplementedMBHeadServiceServer) ExportMBHeads(context.Context, *ExportMB
 }
 func (UnimplementedMBHeadServiceServer) ExportMBRecipeFull(context.Context, *ExportMBRecipeFullRequest) (*ExportMBRecipeFullResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExportMBRecipeFull not implemented")
+}
+func (UnimplementedMBHeadServiceServer) ExportMBCostCalcDetail(context.Context, *ExportMBCostCalcDetailRequest) (*ExportMBCostCalcDetailResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportMBCostCalcDetail not implemented")
 }
 func (UnimplementedMBHeadServiceServer) ImportMBHeads(context.Context, *ImportMBHeadsRequest) (*ImportMBHeadsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ImportMBHeads not implemented")
@@ -2318,6 +2340,24 @@ func _MBHeadService_ExportMBRecipeFull_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MBHeadServiceServer).ExportMBRecipeFull(ctx, req.(*ExportMBRecipeFullRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MBHeadService_ExportMBCostCalcDetail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportMBCostCalcDetailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MBHeadServiceServer).ExportMBCostCalcDetail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MBHeadService_ExportMBCostCalcDetail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MBHeadServiceServer).ExportMBCostCalcDetail(ctx, req.(*ExportMBCostCalcDetailRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2680,6 +2720,10 @@ var MBHeadService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExportMBRecipeFull",
 			Handler:    _MBHeadService_ExportMBRecipeFull_Handler,
+		},
+		{
+			MethodName: "ExportMBCostCalcDetail",
+			Handler:    _MBHeadService_ExportMBCostCalcDetail_Handler,
 		},
 		{
 			MethodName: "ImportMBHeads",

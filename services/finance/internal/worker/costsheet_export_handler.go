@@ -319,19 +319,42 @@ type exportStats struct {
 	// or product_name as a fallback — never sys_id), in write order. Used to name
 	// the download filename after the actual FG rather than a generic name.
 	fgLabels []string
+	// allStages accumulates every written product's stages, in write order, to
+	// feed the flat "all data" sheet — one row per stage across all products.
+	allStages []Stage
 }
 
-// buildWorkbook renders one sheet per product into a single workbook. Products
-// whose route resolves to zero stages are skipped with a warning rather than
-// failing the whole job.
+// buildWorkbook renders the workbook: the flat "all data" sheet first, then one
+// transposed sheet per product. Products whose route resolves to zero stages
+// are skipped with a warning rather than failing the whole job.
+//
+// The "all data" sheet must be the workbook's first, and excelize v2.8.1 can
+// only append sheets, so its slot is claimed by renaming the default sheet
+// before any product sheet is added; its rows are written at the end, once
+// every product's stages have been collected.
 func (h *CostSheetExportHandler) buildWorkbook(
 	ctx context.Context, msg rabbitmq.JobMessage, calcType costcalcdom.CalculationType,
 ) (*excelize.File, *exportStats, error) {
 	book := excelize.NewFile()
 	stats := &exportStats{taken: map[string]bool{}}
 
+	// Claim slot 0 for the flat sheet by renaming the default sheet into it,
+	// rather than deleting the default and appending later.
+	if err := book.SetSheetName(book.GetSheetName(0), allDataSheetName); err != nil {
+		closeWorkbook(h.logger, book)
+		return nil, nil, fmt.Errorf("reserve %q sheet: %w", allDataSheetName, err)
+	}
+	// The flat sheet's name is now taken; a product whose FG label collides with
+	// it must be suffixed rather than silently overwrite it.
+	stats.taken[allDataSheetName] = true
+
+	// A single-product export is the mode the reference workbook specifies, so
+	// its product sheet takes the reference's fixed name; a bulk export keeps the
+	// per-product FG code (see parameterCheckSheetName).
+	singleProduct := len(msg.ProductSysIDs) == 1
+
 	for _, productSysID := range msg.ProductSysIDs {
-		if err := h.addProductSheet(ctx, book, stats, productSysID, msg.Period, calcType); err != nil {
+		if err := h.addProductSheet(ctx, book, stats, productSysID, msg.Period, calcType, singleProduct); err != nil {
 			closeWorkbook(h.logger, book)
 			return nil, nil, err
 		}
@@ -341,8 +364,9 @@ func (h *CostSheetExportHandler) buildWorkbook(
 		closeWorkbook(h.logger, book)
 		return nil, nil, fmt.Errorf("no product produced a cost sheet (all %d products had no route stages)", len(msg.ProductSysIDs))
 	}
-	if err := book.DeleteSheet(book.GetSheetName(0)); err != nil {
-		h.logger.Warn().Err(err).Msg("cost sheet export: delete placeholder sheet")
+	if err := WriteAllDataSheet(book, stats.allStages); err != nil {
+		closeWorkbook(h.logger, book)
+		return nil, nil, fmt.Errorf("build %q sheet: %w", allDataSheetName, err)
 	}
 	book.SetActiveSheet(0)
 	return book, stats, nil
@@ -351,6 +375,10 @@ func (h *CostSheetExportHandler) buildWorkbook(
 // addProductSheet resolves, renders, and appends one product's sheet. A fatal
 // error (route load or render failure) aborts the whole job; an empty route is
 // recorded as a skip.
+//
+// singleProduct selects the sheet name: the reference workbook's fixed
+// "parameter check" when this export holds exactly one product, the product's
+// finished-good label otherwise (see parameterCheckSheetName).
 func (h *CostSheetExportHandler) addProductSheet(
 	ctx context.Context,
 	book *excelize.File,
@@ -358,6 +386,7 @@ func (h *CostSheetExportHandler) addProductSheet(
 	productSysID int64,
 	period string,
 	calcType costcalcdom.CalculationType,
+	singleProduct bool,
 ) error {
 	raw, err := h.sheets.Handle(ctx, appcostcalc.GetRouteCostSheetQuery{
 		ProductSysID: productSysID,
@@ -388,21 +417,38 @@ func (h *CostSheetExportHandler) addProductSheet(
 	defer closeWorkbook(h.logger, rendered)
 
 	fgLabel := finishedGoodLabel(stages)
-	sheetName := sanitizeSheetName(fgLabel, stats.taken)
+	// The FG label is still recorded in stats.fgLabels below (it names the
+	// download file) even when the sheet itself takes the reference name. Both
+	// names go through sanitizeSheetName so stats.taken bookkeeping stays
+	// consistent and a pathological collision with the reserved "all data" slot
+	// is suffixed rather than silently overwriting that sheet.
+	baseName := fgLabel
+	if singleProduct {
+		baseName = parameterCheckSheetName
+	}
+	sheetName := sanitizeSheetName(baseName, stats.taken)
 	if err := copySheet(rendered, book, sheetName); err != nil {
 		return fmt.Errorf("append sheet for product %d: %w", productSysID, err)
 	}
 	stats.written++
 	stats.fgLabels = append(stats.fgLabels, fgLabel)
+	stats.allStages = append(stats.allStages, stages...)
 	return nil
 }
 
 // toStages converts the application-layer stage DTOs into the Excel builder's
 // input shape. The two structs are deliberately decoupled: the builder must not
 // import the application layer.
+//
+// The query returns stages downstream-first (route level 1, the finished good,
+// leads). The exported sheet reads the other way round — the source template
+// puts the most upstream stage in the first value column and works down to the
+// finished good — so the order is reversed here, at the export boundary only,
+// leaving the gRPC read model's ordering untouched.
 func toStages(in []appcostcalc.RouteCostSheetStage) []Stage {
 	out := make([]Stage, 0, len(in))
-	for _, s := range in {
+	for i := len(in) - 1; i >= 0; i-- {
+		s := in[i]
 		out = append(out, Stage{
 			RouteLevel:    s.RouteLevel,
 			RouteSeq:      s.RouteSeq,
@@ -414,6 +460,8 @@ func toStages(in []appcostcalc.RouteCostSheetStage) []Stage {
 			ProductSysID:  s.ProductSysID,
 			HasCost:       s.HasCost,
 			ParamSnapshot: s.ParamSnapshot,
+			LeftSysID:     s.LeftSysID,
+			YarnType:      s.YarnType,
 		})
 	}
 	return out

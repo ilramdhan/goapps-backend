@@ -395,7 +395,12 @@ func getRequiredPermission(fullMethod string) string {
 		// P12: the denormalized full-recipe export gates on the dedicated recipe-export
 		// permission seeded by iam migration 000083, NOT on finance.mb.head.view — it
 		// discloses composition and MB cost, which plain head viewing does not.
-		"/finance.v1.MBHeadService/ExportMBRecipeFull":     "finance.mb.recipe.export",
+		"/finance.v1.MBHeadService/ExportMBRecipeFull": "finance.mb.recipe.export",
+		// The calc-detail dump discloses the SAME class of data (composition lines +
+		// MB cost) as the full-recipe export, so it gates on the same dedicated
+		// permission. ⛔ Never finance.mb.head.view: plain head viewing must not
+		// disclose cost.
+		"/finance.v1.MBHeadService/ExportMBCostCalcDetail": "finance.mb.recipe.export",
 		"/finance.v1.MBHeadService/ImportMBHeads":          "finance.mb.head.create",
 		"/finance.v1.MBHeadService/DownloadMBHeadTemplate": "finance.mb.head.view",
 		"/finance.v1.MBHeadService/SubmitMBHead":           "finance.mb.head.submit",

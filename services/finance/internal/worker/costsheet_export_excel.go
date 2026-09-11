@@ -1,12 +1,15 @@
 package worker
 
-// costsheet_export_excel.go renders the fixed 95-row manifest in
+// costsheet_export_excel.go renders the fixed 96-entry manifest in
 // costsheet_rows.go into an A4 xlsx workbook, one column per route stage.
+// Only the rows before the "others" separator are inside the print area; see
+// applyPrintArea.
 // See design doc
 // docs/superpowers/specs/2026-08-04-cost-results-enhancements-design.md §3.
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -36,6 +39,13 @@ type Stage struct {
 	ProductSysID  int64
 	HasCost       bool
 	ParamSnapshot map[string]string
+	// LeftSysID is the legacy Oracle sys id (cpm_flex_02) — the "Left Sys ID"
+	// column of the flat "all data" sheet. Empty for products that were never
+	// imported from the legacy system.
+	LeftSysID string
+	// YarnType is the legacy product type label (cpm_flex_03) — "POY",
+	// "MELANGE". The "Yarn Type" column of the flat "all data" sheet.
+	YarnType string
 }
 
 // Rendering constants for the sheet's fixed look.
@@ -44,7 +54,6 @@ const (
 	dashValue = "-"
 
 	defaultSheetName = "Cost Sheet"
-	sheetTitle       = "Report : Find Color by Product"
 
 	labelColWidth  = 30.0
 	stageColWidth  = 13.0
@@ -54,15 +63,33 @@ const (
 	fontSize    = 7.0
 	borderColor = "BFBFBF"
 
-	// headerRowCount is the number of rows above the manifest: the title row
-	// and the stage column header row.
-	headerRowCount = 2
+	// headerRowCount is the number of rows above the manifest. The sheet has no
+	// title or column-header block — the target template starts straight at
+	// "1.Particulars." on row 1 — so the manifest is written from row 1 down.
+	headerRowCount = 0
 
 	// maxSheetNameLen is Excel's hard limit on worksheet names.
 	maxSheetNameLen = 31
 
+	// printAreaDefinedName is the OOXML built-in defined name that holds a
+	// worksheet's print area.
+	printAreaDefinedName = "_xlnm.Print_Area"
+
 	// labelSeparatorFill and stageSeparatorFill reproduce the dashed divider
-	// rows of the CSV template.
+	// rows of the CSV template. labelSeparatorFill (column A, 35 dashes) matches
+	// the reference workbook on every separator row.
+	//
+	// ⚠ stageSeparatorFill is deliberately ONE width for all four separator rows,
+	// even though the reference is itself inconsistent: unzipping
+	// <repo-root>/data-examples/export-product-cost/example-export-param.xlsx
+	// (sheet "parameter check", checked 2026-09-11) shows 21 dashes on row 36 but
+	// only 17 on rows 68, 78 and 80. The CSV template carries the same 21/17/17/17
+	// split. Since the dashes are pure visual filler — no formula, no total, no
+	// reader ever parses them — reproducing an inconsistency was judged worse than
+	// a uniform fill. The visible consequence is that rows 68, 78 and 80 render
+	// four dashes wider than the reference. Do not "fix" this to 17 without
+	// making row 36 divergent instead; if per-row widths are ever wanted, they
+	// belong on the sheetRow manifest, not here.
 	labelSeparatorFill = "-----------------------------------"
 	stageSeparatorFill = "---------------------"
 )
@@ -104,13 +131,13 @@ func BuildProductCostSheet(stages []Stage) (*excelize.File, error) {
 	if err := applyPageLayout(f, sheet, len(stages)); err != nil {
 		return nil, err
 	}
-	if err := writeCostSheetHeader(f, sheet, stages, styles); err != nil {
-		return nil, err
-	}
 	if err := writeCostSheetBody(f, sheet, stages, styles); err != nil {
 		return nil, err
 	}
 	if err := applyRowHeights(f, sheet); err != nil {
+		return nil, err
+	}
+	if err := applyPrintArea(f, sheet, len(stages)); err != nil {
 		return nil, err
 	}
 	return f, nil
@@ -189,24 +216,16 @@ func sheetNameForStages(stages []Stage) string {
 
 // sheetStyles holds the style IDs reused across every cell of the sheet.
 type sheetStyles struct {
-	title     int
-	colHeader int
-	label     int
-	text      int
-	dash      int
-	numeric   map[string]int
+	label   int
+	text    int
+	dash    int
+	numeric map[string]int
 }
 
 func newSheetStyles(f *excelize.File) (*sheetStyles, error) {
 	s := &sheetStyles{numeric: make(map[string]int, 2)}
 
 	var err error
-	if s.title, err = newStyle(f, styleSpec{bold: true, size: 9, horizontal: "left"}); err != nil {
-		return nil, err
-	}
-	if s.colHeader, err = newStyle(f, styleSpec{bold: true, horizontal: "center", wrap: true}); err != nil {
-		return nil, err
-	}
 	if s.label, err = newStyle(f, styleSpec{horizontal: "left"}); err != nil {
 		return nil, err
 	}
@@ -236,26 +255,26 @@ func (s *sheetStyles) numericStyle(format string) int {
 }
 
 // styleSpec describes the handful of style variations the sheet needs.
+//
+// It carries only the two axes that actually vary: every cell of this sheet is
+// non-bold, non-wrapped, and fontSize tall. Earlier revisions also carried
+// bold/size/wrap fields for a report-header block that has since been removed
+// (headerRowCount is 0); they were left behind set-by-nobody and read-by-newStyle,
+// so no linter flagged them. Verified 2026-09-11 that no caller in the service
+// — production or test — ever set them before deleting; if a future variation
+// needs one, add the field back together with the caller that sets it.
 type styleSpec struct {
-	bold       bool
-	size       float64
 	horizontal string
 	numFmt     string
-	wrap       bool
 }
 
 func newStyle(f *excelize.File, spec styleSpec) (int, error) {
-	size := spec.size
-	if size == 0 {
-		size = fontSize
-	}
 	style := &excelize.Style{
 		Border: thinBorders(),
-		Font:   &excelize.Font{Bold: spec.bold, Family: fontName, Size: size},
+		Font:   &excelize.Font{Family: fontName, Size: fontSize},
 		Alignment: &excelize.Alignment{
 			Horizontal: spec.horizontal,
 			Vertical:   "center",
-			WrapText:   spec.wrap,
 		},
 	}
 	if spec.numFmt != "" {
@@ -334,17 +353,56 @@ func applyPageLayout(f *excelize.File, sheet string, stageCount int) error {
 		}
 	}
 
-	// Freeze the label column and the two header rows.
+	// Freeze the label column only — there are no header rows to freeze.
 	if err := f.SetPanes(sheet, &excelize.Panes{
 		Freeze:      true,
 		XSplit:      1,
-		YSplit:      headerRowCount,
-		TopLeftCell: "B3",
-		ActivePane:  "bottomRight",
+		TopLeftCell: "B1",
+		ActivePane:  "topRight",
 	}); err != nil {
 		return fmt.Errorf("freeze panes: %w", err)
 	}
 	return nil
+}
+
+// applyPrintArea limits printing to the rows above the "others" separator, so
+// the printed sheet keeps the reference workbook's 84-row shape while CSV rows
+// 85-95 remain present on screen. Implemented with the built-in defined name
+// "_xlnm.Print_Area" scoped to the sheet — excelize v2.8.1 whitelists exactly
+// that name in SetDefinedName (see
+// $GOMODCACHE/github.com/xuri/excelize/v2@v2.8.1/sheet.go:1655 and the
+// builtInDefinedNames slice at templates.go:492).
+func applyPrintArea(f *excelize.File, sheet string, stageCount int) error {
+	lastRow := headerRowCount + printableRowCount()
+	if lastRow <= 0 {
+		return nil
+	}
+	lastCol, err := excelize.ColumnNumberToName(stageCount + 1)
+	if err != nil {
+		return fmt.Errorf("print area last column name: %w", err)
+	}
+	refersTo := fmt.Sprintf("%s!$A$1:$%s$%d", quoteSheetRef(sheet), lastCol, lastRow)
+	if err := f.SetDefinedName(&excelize.DefinedName{
+		Name:     printAreaDefinedName,
+		RefersTo: refersTo,
+		Scope:    sheet,
+	}); err != nil {
+		return fmt.Errorf("set print area %s: %w", refersTo, err)
+	}
+	return nil
+}
+
+// quoteSheetRef renders a worksheet name for use inside a formula reference.
+// Excel requires single quotes around any sheet name that is not a bare
+// identifier — the default name "Cost Sheet" and the reference name
+// "parameter check" both contain spaces — and an embedded apostrophe is
+// escaped by doubling it. sanitizeSheetName already strips the characters
+// Excel forbids outright, so quoting is the only escaping needed here.
+func quoteSheetRef(sheet string) string {
+	if !strings.ContainsAny(sheet, " '") {
+		return sheet
+	}
+	return "'" + strings.ReplaceAll(sheet, "'", "''") + "'"
 }
 
 func applyRowHeights(f *excelize.File, sheet string) error {
@@ -355,83 +413,6 @@ func applyRowHeights(f *excelize.File, sheet string) error {
 		}
 	}
 	return nil
-}
-
-// =============================================================================
-// Header block
-// =============================================================================
-
-// writeCostSheetHeader writes row 1 (title) and row 2 (stage column headers).
-func writeCostSheetHeader(f *excelize.File, sheet string, stages []Stage, styles *sheetStyles) error {
-	if err := setCell(f, sheet, 1, 1, sheetTitleFor(stages), styles.title); err != nil {
-		return err
-	}
-	if len(stages) > 0 {
-		if err := mergeTitleRow(f, sheet, len(stages)); err != nil {
-			return err
-		}
-	}
-
-	if err := setCell(f, sheet, 1, headerRowCount, "Route Stage", styles.colHeader); err != nil {
-		return err
-	}
-	for i, stage := range stages {
-		if err := setCell(f, sheet, i+2, headerRowCount, stageHeader(stage), styles.colHeader); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// sheetTitleFor builds the title row. The signature carries no period, so the
-// title is the template's fixed report caption, qualified with the target
-// product when one is known.
-func sheetTitleFor(stages []Stage) string {
-	if len(stages) == 0 {
-		return sheetTitle
-	}
-	target := stages[len(stages)-1]
-	parts := make([]string, 0, 2)
-	if target.ItemCode != "" {
-		parts = append(parts, target.ItemCode)
-	}
-	if target.ProductName != "" {
-		parts = append(parts, target.ProductName)
-	}
-	if len(parts) == 0 {
-		return sheetTitle
-	}
-	return sheetTitle + " — " + strings.Join(parts, " ")
-}
-
-func mergeTitleRow(f *excelize.File, sheet string, stageCount int) error {
-	last, err := excelize.CoordinatesToCellName(stageCount+1, 1)
-	if err != nil {
-		return fmt.Errorf("title merge coordinate: %w", err)
-	}
-	if err := f.MergeCell(sheet, "A1", last); err != nil {
-		return fmt.Errorf("merge title row: %w", err)
-	}
-	return nil
-}
-
-// stageHeader labels a stage column with its route position and item code.
-// Internal identifiers are never printed.
-func stageHeader(stage Stage) string {
-	position := "L" + strconv.FormatInt(int64(stage.RouteLevel), 10) +
-		"." + strconv.FormatInt(int64(stage.RouteSeq), 10)
-	name := stage.RouteName
-	if name == "" {
-		name = stage.ProductName
-	}
-	parts := []string{position}
-	if name != "" {
-		parts = append(parts, name)
-	}
-	if stage.ItemCode != "" {
-		parts = append(parts, stage.ItemCode)
-	}
-	return strings.Join(parts, "\n")
 }
 
 // =============================================================================
@@ -461,7 +442,7 @@ func writeManifestRow(
 		return err
 	}
 	for i, stage := range stages {
-		value, styleID := stageCellFor(row, stage, styles)
+		value, styleID := stageCellFor(row, stage, stages, styles)
 		if err := setCell(f, sheet, i+2, excelRow, value, styleID); err != nil {
 			return err
 		}
@@ -480,14 +461,14 @@ func rowLabel(row sheetRow) any {
 
 // stageCellFor resolves one stage's value for one manifest row, together with
 // the style it must be written in.
-func stageCellFor(row sheetRow, stage Stage, styles *sheetStyles) (any, int) {
+func stageCellFor(row sheetRow, stage Stage, stages []Stage, styles *sheetStyles) (any, int) {
 	switch row.Kind {
 	case kindSeparator:
 		return stageSeparatorFill, styles.text
 	case kindMissing:
 		return dashValue, styles.dash
 	case kindStage:
-		return textOrDash(stageIdentityValue(row.Label, stage), styles)
+		return textOrDash(stageIdentityValue(row.Label, stage, stages), styles)
 	case kindText:
 		return textOrDash(snapshotValue(row.ParamCode, stage), styles)
 	case kindSnapshot:
@@ -519,6 +500,13 @@ func textOrDash(value string, styles *sheetStyles) (any, int) {
 // numericCell parses a snapshot value into a real number so the user can
 // re-total the sheet in Excel. Values that are not parsable as numbers fall
 // back to their raw string form rather than being dropped.
+//
+// The stored value is rounded to the same number of decimals the cell's number
+// format displays, so the workbook's underlying data matches what is printed
+// and re-totalling the sheet cannot drift by hidden sub-precision digits. A
+// value that is exactly zero after rounding renders as "-" — the source
+// template leaves genuinely-nil costs blank rather than printing 0 — while
+// negatives (e.g. an oil gain) are preserved.
 func numericCell(row sheetRow, stage Stage, styles *sheetStyles) (any, int) {
 	raw := snapshotValue(row.ParamCode, stage)
 	if raw == "" {
@@ -528,25 +516,48 @@ func numericCell(row sheetRow, stage Stage, styles *sheetStyles) (any, int) {
 	if err != nil {
 		return raw, styles.text
 	}
+	number = roundTo(number, numFmtDecimals(row.NumFmt))
+	if number == 0 {
+		return dashValue, styles.dash
+	}
 	return number, styles.numericStyle(row.NumFmt)
 }
 
+// numFmtDecimals reports how many decimal places a manifest row's number
+// format displays. Rows with no explicit format follow the sheet default of
+// three decimals, matching sheetStyles.numericStyle.
+func numFmtDecimals(format string) int {
+	switch format {
+	case numFmtInt:
+		return 0
+	case numFmtDecimal4:
+		return 4
+	case numFmtDecimal:
+		return 3
+	default:
+		return 3
+	}
+}
+
+// roundTo rounds v to places decimal places, half away from zero.
+func roundTo(v float64, places int) float64 {
+	factor := math.Pow(10, float64(places))
+	return math.Round(v*factor) / factor
+}
+
 // stageIdentityValue resolves the kindStage rows, whose values come from the
-// route stage and product master rather than the parameter snapshot.
-func stageIdentityValue(label string, stage Stage) string {
+// route stage and product master rather than the parameter snapshot. stages is
+// the full column set, needed because a stage's raw material is another stage.
+func stageIdentityValue(label string, stage Stage, stages []Stage) string {
 	switch label {
 	case labelParticulars:
-		return stage.RouteName
+		return particularsValue(stage)
 	case labelProductName, labelItemName:
 		return stage.ProductName
 	case labelItemCode:
 		return stage.ItemCode
 	case labelRawMaterial:
-		// The raw material of a stage is not carried on the stage record and is
-		// not in the parameter snapshot either, so there is no source for it
-		// here. It renders as "-" until the route's RM lines are plumbed
-		// through.
-		return ""
+		return rawMaterialValue(stage, stages)
 	case labelShade:
 		return joinShade(stage.ShadeCode, stage.ShadeName)
 	default:
@@ -554,11 +565,70 @@ func stageIdentityValue(label string, stage Stage) string {
 	}
 }
 
-// joinShade renders "code / name", or whichever half is present.
+// particularsValue renders the sheet's first row as "<yarn type>(<left no>)" —
+// e.g. "POY(14671)" — matching the source template. The yarn type is the
+// legacy product type label (cpm_flex_03) and the left no is the product
+// master's own sys id. Products never imported from the legacy system carry no
+// yarn type, so those fall back to the route name rather than printing a bare
+// number in parentheses.
+func particularsValue(stage Stage) string {
+	if stage.YarnType == "" || stage.ProductSysID <= 0 {
+		return stage.RouteName
+	}
+	return stage.YarnType + "(" + strconv.FormatInt(stage.ProductSysID, 10) + ")"
+}
+
+// rawMaterialValue resolves the "Raw Material." row. The RAW_MATERIAL text
+// param is authoritative when the master stores one — it is the same value the
+// flat sheet prints in its "20.Raw Material" column, and it is the only source
+// for raw materials that are store items or groups (e.g. "SD"), which have no
+// route stage of their own.
+//
+// When the master stores nothing, the value is composed from the stage's own
+// upstream stage, which for a yarn route is the raw material: the next route
+// level up, rendered in the established "<item code>-<shade code>-<machine
+// code>" link form also used by 2.Marketing Costing Link.
+func rawMaterialValue(stage Stage, stages []Stage) string {
+	if v := snapshotValue(paramRawMaterial, stage); v != "" {
+		return v
+	}
+	up := upstreamStage(stage, stages)
+	if up == nil {
+		return ""
+	}
+	return composeCostingLink(*up)
+}
+
+// upstreamStage returns the stage feeding the given one: the lowest route level
+// strictly above it. Returns nil for the most upstream stage of the route,
+// whose raw material is a purchased item rather than another stage.
+func upstreamStage(stage Stage, stages []Stage) *Stage {
+	var best *Stage
+	for i := range stages {
+		s := &stages[i]
+		if s.RouteLevel <= stage.RouteLevel {
+			continue
+		}
+		if best == nil || s.RouteLevel < best.RouteLevel ||
+			(s.RouteLevel == best.RouteLevel && s.RouteSeq < best.RouteSeq) {
+			best = s
+		}
+	}
+	return best
+}
+
+// joinShade renders "code/name", or whichever half is present.
+//
+// ⚠ NO spaces around the slash. The reference workbook
+// (data-examples/export-product-cost/example-export-param.xlsx, sheet
+// "parameter check" row 10) holds "6912-01/RUSA BG AT" — unpadded. Do not
+// "tidy" this into " / ": the row LABEL "10.Shade Code / Name." does carry
+// spaces, and so does the unrelated OPU value ".4% / 2.4067", which is why
+// padding looks correct here at a glance. It is not.
 func joinShade(code, name string) string {
 	switch {
 	case code != "" && name != "":
-		return code + " / " + name
+		return code + "/" + name
 	case code != "":
 		return code
 	default:
