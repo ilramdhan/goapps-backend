@@ -714,10 +714,14 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// Phase A; this is the first time the methods are implemented on
 	// CostProductParamBulkHandler and reachable (service also newly added to
 	// registeredServiceDescs() above).
-	assert.Len(t, reachable, 395,
+	// 395 -> 396: ONE new RPC, MBHeadService/ExportMBCostCalcDetail — the flat
+	// 29-column MB cost-calc-detail dump. It is an ADDITIONAL export alongside
+	// ExportMBRecipeFull, which is untouched.
+	assert.Len(t, reachable, 396,
 		"reachable RPC count changed (398 in gen − 17 on the 3 unregistered services + 6 for the "+
 			"previously-omitted-from-this-list ShadeService + 5 new Bulk MB Head Regenerate RPCs + 1 new "+
-			"DuplicateProduct RPC + 3 new CostProductParamBulkService RPCs, product-route-fork-attach-bulk F2/B2/F4/B4)")
+			"DuplicateProduct RPC + 3 new CostProductParamBulkService RPCs, product-route-fork-attach-bulk "+
+			"F2/B2/F4/B4 + 1 new ExportMBCostCalcDetail RPC)")
 	// 130 -> 132: dua kunci basi UOM (ImportUOM/ExportUOM) dibetulkan jadi ImportUOMs/ExportUOMs, K-36
 	// 132 -> 135: tiga bulk RPC CostProductMasterService (Export/Import/DownloadTemplate) dijaga, K-43
 	// 135 -> 136: DuplicateMBSpin dijaga finance.yarnmaster.mbspin.create (di-seed iam 000057:47), P8
@@ -757,7 +761,11 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// finance.product.route.view (reuses existing codes per the locked design
 	// decision — no new IAM permission codes/migrations). knownFailOpen does NOT
 	// grow.
-	assert.Equal(t, 169, guarded, "number of properly guarded RPCs changed")
+	// 169 -> 170: ExportMBCostCalcDetail is guarded FROM BIRTH by the existing
+	// finance.mb.recipe.export code — the same permission ExportMBRecipeFull uses,
+	// since the calc dump discloses the same class of data (composition + MB cost).
+	// No new IAM permission code or migration. knownFailOpen does NOT grow.
+	assert.Equal(t, 170, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43

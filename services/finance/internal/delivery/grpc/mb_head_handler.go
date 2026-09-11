@@ -53,9 +53,14 @@ type MBHeadHandler struct {
 	refreezeHandler      *appmbhead.RefreezeHandler
 	exportHandler        *appmbhead.ExportHandler
 	exportFullH          *appmbhead.ExportFullHandler
-	importHandler        *appmbhead.ImportHandler
-	templateHandler      *appmbhead.TemplateHandler
-	validation           *ValidationHelper
+	// exportCostCalcDetailH backs ExportMBCostCalcDetail — the flat 29-column calc
+	// dump. It is nil until WithCostCalcDetail is called, and the RPC then returns a
+	// clean "not configured" error rather than dereferencing nil. ⛔ Separate from
+	// exportFullH: the two exports share no code and must never share a handler.
+	exportCostCalcDetailH *appmbhead.ExportCostCalcDetailHandler
+	importHandler         *appmbhead.ImportHandler
+	templateHandler       *appmbhead.TemplateHandler
+	validation            *ValidationHelper
 	// Bulk MB Head Regenerate (Phase C). bulkTransitionHandler queues the async
 	// batch job; bulkJobRepo backs GetBulkMBHeadJobStatus/ListBulkMBHeadJobFailures
 	// (parent status + per-child failure detail); bulkMBHeadRepo is used ONLY for
@@ -121,6 +126,19 @@ func NewMBHeadHandlerWithRecipeFull(
 		templateHandler:      appmbhead.NewTemplateHandler(),
 		validation:           v,
 	}, nil
+}
+
+// WithCostCalcDetail attaches the read-only reader backing ExportMBCostCalcDetail and
+// returns the handler for chaining.
+//
+// It is a chaining setter rather than another constructor parameter so that every
+// existing NewMBHeadHandler* caller keeps working unchanged. A nil reader leaves the
+// RPC reporting a configuration error instead of panicking.
+func (h *MBHeadHandler) WithCostCalcDetail(reader appmbhead.CostCalcDetailReader) *MBHeadHandler {
+	if reader != nil {
+		h.exportCostCalcDetailH = appmbhead.NewExportCostCalcDetailHandler(reader)
+	}
+	return h
 }
 
 // WithNotifier attaches the MB recipe notifier to every workflow handler that emits
@@ -732,6 +750,67 @@ func (h *MBHeadHandler) ExportMBRecipeFull(ctx context.Context, req *financev1.E
 	RecordMBHeadOperation("export_full", true)
 	return &financev1.ExportMBRecipeFullResponse{
 		Base:        successResponse("MB recipe full export generated successfully"),
+		FileContent: content,
+		FileName:    fileName,
+	}, nil
+}
+
+// ExportMBCostCalcDetail exports the flat MB cost-calculation detail dump (29 columns)
+// to Excel, one row per (MB head, RM line) from the persisted cst_product_cost snapshot.
+//
+// ⛔ Read-only: this path issues no UPDATE. cst_product_cost and cst_rm_cost are read
+// for display only.
+//
+// ⛔ It does NOT touch ExportMBRecipeFull's 37-column report, which stays byte-for-byte
+// unchanged — the two are separate RPCs backed by separate handlers and repositories.
+func (h *MBHeadHandler) ExportMBCostCalcDetail(
+	ctx context.Context, req *financev1.ExportMBCostCalcDetailRequest,
+) (*financev1.ExportMBCostCalcDetailResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		RecordMBHeadOperation("export_cost_calc_detail", false)
+		return &financev1.ExportMBCostCalcDetailResponse{Base: baseResp}, nil
+	}
+	if h.exportCostCalcDetailH == nil {
+		RecordMBHeadOperation("export_cost_calc_detail", false)
+		return &financev1.ExportMBCostCalcDetailResponse{
+			Base: &commonv1.BaseResponse{
+				IsSuccess:  false,
+				StatusCode: "500",
+				Message:    "MB cost calc detail export is not configured",
+			},
+		}, nil
+	}
+
+	cmd := appmbhead.ExportCostCalcDetailCommand{
+		Period: req.GetPeriod(),
+		// Empty CalculationType is defaulted to ACTUAL by the application layer — the
+		// default belongs in exactly one place (D13), never here.
+		CalculationType: req.GetCalculationType(),
+		// Forwarded VERBATIM. Empty = no cpc_status filter (ALL statuses).
+		CalcStatus: req.GetCalcStatus(),
+		// proto3 zero value (false) EXCLUDES rejected documents.
+		IncludeRejected: req.GetIncludeRejected(),
+	}
+	switch req.GetActiveFilter() {
+	case financev1.ActiveFilter_ACTIVE_FILTER_ACTIVE:
+		active := true
+		cmd.ActiveOnly = &active
+	case financev1.ActiveFilter_ACTIVE_FILTER_INACTIVE:
+		active := false
+		cmd.ActiveOnly = &active
+	case financev1.ActiveFilter_ACTIVE_FILTER_UNSPECIFIED:
+		// No active filter — absence stays absence.
+	}
+
+	content, fileName, err := h.exportCostCalcDetailH.Handle(ctx, cmd)
+	if err != nil {
+		RecordMBHeadOperation("export_cost_calc_detail", false)
+		return &financev1.ExportMBCostCalcDetailResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+
+	RecordMBHeadOperation("export_cost_calc_detail", true)
+	return &financev1.ExportMBCostCalcDetailResponse{
+		Base:        successResponse("MB cost calc detail export generated successfully"),
 		FileContent: content,
 		FileName:    fileName,
 	}, nil
