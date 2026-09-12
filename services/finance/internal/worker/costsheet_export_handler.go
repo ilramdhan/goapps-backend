@@ -368,7 +368,11 @@ func (h *CostSheetExportHandler) buildWorkbook(
 		closeWorkbook(h.logger, book)
 		return nil, nil, fmt.Errorf("build %q sheet: %w", allDataSheetName, err)
 	}
-	book.SetActiveSheet(0)
+	// Open on the first product sheet, not the flat one. The reference workbook
+	// stores workbookView activeTab=1 — slot 0 holds "all data" and slot 1 the
+	// first (for a single-product export, the only) product sheet. stats.written
+	// is non-zero here, so that slot always exists.
+	book.SetActiveSheet(1)
 	return book, stats, nil
 }
 
