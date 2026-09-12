@@ -194,7 +194,10 @@ func setupCostCalcDetailSheet(f *excelize.File) error {
 		}
 	}
 
-	lastCol, err := excelize.CoordinatesToCellName(len(costCalcDetailHeaders), 1)
+	// CoordinatesToCellName already returns a full cell reference including the
+	// row ("AC1"), so this is the end of the range as-is. Appending a row number
+	// to it would yield "AC11" and stretch the header fill down over 11 rows.
+	lastCell, err := excelize.CoordinatesToCellName(len(costCalcDetailHeaders), 1)
 	if err != nil {
 		return fmt.Errorf("failed to get last header cell name: %w", err)
 	}
@@ -206,7 +209,7 @@ func setupCostCalcDetailSheet(f *excelize.File) error {
 	if err != nil {
 		return fmt.Errorf("failed to create header style: %w", err)
 	}
-	if err := f.SetCellStyle(costCalcDetailSheetName, "A1", lastCol+"1", style); err != nil {
+	if err := f.SetCellStyle(costCalcDetailSheetName, "A1", lastCell, style); err != nil {
 		return fmt.Errorf("failed to set header style: %w", err)
 	}
 	return nil
