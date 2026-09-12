@@ -151,7 +151,7 @@ var allDataColumns = []allDataColumn{
 	{Header: "82.Net Prdn", Kind: allDataParam, ParamCode: "NET_PRODUCTION"},
 	{Header: "83.Pwr/day", Kind: allDataParam, ParamCode: "POWER_PER_DAY"},
 	{Header: "84.MP/day", Kind: allDataParam, ParamCode: "MANPOWER_PER_DAY"},
-	{Header: "85.OH/day", Kind: allDataParam, ParamCode: "OVERHEAD_PER_DAY"},
+	{Header: "85.OH/day", Kind: allDataParam, ParamCode: "OVERHEAD_PER_HEAD"},
 	{Header: "86.CS/day", Kind: allDataParam, ParamCode: "SPARESCOST_PER_DAY"},
 	{Header: "87.Pwr/kg", Kind: allDataParam, ParamCode: "POWER_PER_KG"},
 	{Header: "88.MP/kg", Kind: allDataParam, ParamCode: "MANPOWER_PER_KG"},
