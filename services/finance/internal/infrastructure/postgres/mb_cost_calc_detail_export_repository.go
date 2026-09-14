@@ -106,7 +106,7 @@ var _ appmbhead.CostCalcDetailReader = (*MBCostCalcDetailExportRepository)(nil)
 // The displayed rm_ref column resolves "product:<id>" to a product code (see the rp
 // join), but that resolved code is a CSTMB... product code, not an rm_code. Joining
 // cst_rm_cost on it would start matching unrelated rows and give PRODUCT refs a
-// bogus rate tier, breaking exactly the blank-tier behaviour described above.
+// bogus rate tier, breaking exactly the blank-tier behavior described above.
 //
 // ===================== row_no: A PRESENTATION ORDINAL, BY DECISION ====================
 // row_no is a DENSE PER-PERIOD ORDINAL read from the numeric suffix of cpm_product_code
