@@ -102,6 +102,12 @@ var _ appmbhead.CostCalcDetailReader = (*MBCostCalcDetailExportRepository)(nil)
 // "product:<id>", see costcalc.rmRefCode), so has_rm_cost is false for them and their
 // tier renders blank.
 //
+// ⛔ THE rc AND g JOINS MUST KEEP USING THE RAW ref_code, never the resolved rm_ref.
+// The displayed rm_ref column resolves "product:<id>" to a product code (see the rp
+// join), but that resolved code is a CSTMB... product code, not an rm_code. Joining
+// cst_rm_cost on it would start matching unrelated rows and give PRODUCT refs a
+// bogus rate tier, breaking exactly the blank-tier behavior described above.
+//
 // ===================== row_no: A PRESENTATION ORDINAL, BY DECISION ====================
 // row_no is a DENSE PER-PERIOD ORDINAL read from the numeric suffix of cpm_product_code
 // (CSTMB<YYMM><NNNNNN>), so it runs 1..N within the exported period. It is a row number
@@ -195,7 +201,11 @@ SELECT
     COALESCE((substring(p.cpm_product_code FROM '([0-9]{6})$'))::bigint, 0)
         AS row_no,
     COALESCE(d.elem ->> 'rm_type', ''),
-    COALESCE(d.elem ->> 'ref_code', ''),
+    -- rm_ref: PRODUCT-type refs are frozen into the snapshot as the internal
+    -- surrogate "product:<sys_id>" (costcalc.rmRefCode). Resolve it back to the
+    -- human-facing product code here; ITEM and GROUP refs are already codes and
+    -- pass through untouched. See the rm_ref note above.
+    COALESCE(rp.cpm_product_code, d.elem ->> 'ref_code', ''),
     g.group_name,
     (d.elem ->> 'ratio')::float8,
     (d.elem ->> 'unit_cost')::float8,
@@ -230,6 +240,13 @@ LEFT JOIN cst_rm_group_head g
        ON g.group_code = (d.elem ->> 'ref_code') AND g.deleted_at IS NULL
 LEFT JOIN cst_rm_cost rc
        ON rc.rm_code = (d.elem ->> 'ref_code') AND rc.period = pc.cpc_period
+-- rp resolves a "product:<sys_id>" ref_code back to its product code. The join is
+-- on cost_product_master's BIGSERIAL primary key, so it matches at most one row and
+-- cannot change the emitted row count. Non-PRODUCT ref_codes fail the regexp and
+-- yield NULL, which the COALESCE above falls back through.
+LEFT JOIN cost_product_master rp
+       ON rp.cpm_product_sys_id =
+          NULLIF(substring(d.elem ->> 'ref_code' FROM '^product:([0-9]+)$'), '')::bigint
 WHERE h.deleted_at IS NULL
   AND tp.period IS NOT NULL
   AND ($1::boolean IS NULL OR h.mbh_is_active = $1::boolean)

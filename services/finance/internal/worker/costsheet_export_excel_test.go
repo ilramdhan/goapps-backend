@@ -839,6 +839,54 @@ func TestBuildProductCostSheet_PrintAreaExcludesOthers(t *testing.T) {
 	assert.Equal(t, othersSeparatorLabel, sepLabel)
 }
 
+// TestCopySheet_PreservesPrintArea guards the workbook-merge path against the
+// defect TestBuildProductCostSheet_PrintAreaExcludesOthers cannot see: that test
+// calls BuildProductCostSheet directly, so it passes even when the print area is
+// dropped during the merge into the combined workbook. copyLayout copied
+// dimensions, merges and page setup but no defined names, so every multi-product
+// export printed the "others" rows.
+//
+// The destination name here deliberately contains a space, because the real
+// sheet names do and an unquoted space makes the reference invalid to Excel.
+func TestCopySheet_PreservesPrintArea(t *testing.T) {
+	t.Parallel()
+
+	stages := []Stage{stageWith(map[string]string{"RM_RATE": "1.352"})}
+
+	src, err := BuildProductCostSheet(stages)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, src.Close()) }()
+
+	dst := excelize.NewFile()
+	defer func() { require.NoError(t, dst.Close()) }()
+
+	const dstName = "TRIAL 23112203"
+	require.NoError(t, copySheet(src, dst, dstName))
+
+	var got *excelize.DefinedName
+	for _, dn := range dst.GetDefinedName() {
+		if dn.Name == printAreaDefinedName && dn.Scope == dstName {
+			cp := dn
+			got = &cp
+			break
+		}
+	}
+	require.NotNil(t, got, "the merged sheet must keep its %s defined name", printAreaDefinedName)
+
+	lastPrintedRow := headerRowCount + expectedPrintableRowCount
+	lastCol, err := excelize.ColumnNumberToName(len(stages) + 1)
+	require.NoError(t, err)
+	assert.Equal(t,
+		quoteSheetRef(dstName)+"!$A$1:$"+lastCol+"$"+strconv.Itoa(lastPrintedRow),
+		got.RefersTo,
+		"the print area must be retargeted to the destination sheet and keep its range")
+
+	// The others rows must still be present in the merged sheet, just unprinted.
+	rows, err := dst.GetRows(dstName)
+	require.NoError(t, err)
+	assert.Len(t, rows, headerRowCount+expectedSheetRowCount)
+}
+
 // TestBuildProductCostSheet_PrintAreaQuotesSpacedSheetName guards the formula
 // reference itself: the default sheet name "Cost Sheet" and the single-product
 // reference name "parameter check" both contain a space, and an unquoted
