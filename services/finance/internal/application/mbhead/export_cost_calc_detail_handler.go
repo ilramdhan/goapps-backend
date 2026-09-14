@@ -118,6 +118,12 @@ func (h *ExportCostCalcDetailHandler) Handle(
 		log.Warn().Err(writer.error()).Msg("Some cost-calc-detail Excel cell writes failed")
 	}
 
+	// Dimension and AutoFilter both need the last row number, which is only known
+	// once every data row has been written — hence here and not in the sheet setup.
+	if finalizeErr := finalizeCostCalcDetailSheet(f, len(rows)+1); finalizeErr != nil {
+		return nil, "", finalizeErr
+	}
+
 	buffer, err := f.WriteToBuffer()
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to write cost-calc-detail excel to buffer: %w", err)
@@ -211,6 +217,58 @@ func setupCostCalcDetailSheet(f *excelize.File) error {
 	}
 	if err := f.SetCellStyle(costCalcDetailSheetName, "A1", lastCell, style); err != nil {
 		return fmt.Errorf("failed to set header style: %w", err)
+	}
+	return setCostCalcDetailColumnWidths(f)
+}
+
+// costCalcDetailColumnWidths lists the column-range widths applied to the calc-dump
+// sheet. The reference workbook auto-fits its columns; excelize has no auto-fit, so
+// these are fixed widths chosen to make the same content readable.
+var costCalcDetailColumnWidths = []struct {
+	startCol string
+	endCol   string
+	width    float64
+}{
+	{"A", "A", 20}, // mb_code
+	{"B", "B", 30}, // mb_name
+	{"C", "S", 14}, // numeric MB params and calc results
+	{"T", "W", 16}, // calc_version .. rm_type
+	{"X", "X", 22}, // rm_ref, holds long codes
+	{"Y", "AC", 16},
+}
+
+// setCostCalcDetailColumnWidths widens the calc-dump columns so the sheet is readable.
+func setCostCalcDetailColumnWidths(f *excelize.File) error {
+	for _, w := range costCalcDetailColumnWidths {
+		if err := f.SetColWidth(costCalcDetailSheetName, w.startCol, w.endCol, w.width); err != nil {
+			return fmt.Errorf("failed to set column width %s:%s: %w", w.startCol, w.endCol, err)
+		}
+	}
+	return nil
+}
+
+// finalizeCostCalcDetailSheet applies the sheet-level settings that can only be made
+// once the last written row is known: the explicit dimension and the AutoFilter.
+//
+// lastRow is the 1-based index of the final written row (the header row when the
+// export produced no data rows at all).
+//
+// ⭐ WHY the dimension is set explicitly: excelize leaves it at "A1" for a
+// streaming-free write, and some XML readers mis-parse a sheet whose declared
+// dimension is a single cell while it actually carries tens of thousands of rows.
+func finalizeCostCalcDetailSheet(f *excelize.File, lastRow int) error {
+	lastCell, err := excelize.CoordinatesToCellName(len(costCalcDetailHeaders), lastRow)
+	if err != nil {
+		return fmt.Errorf("failed to get last sheet cell name: %w", err)
+	}
+	rangeRef := "A1:" + lastCell
+
+	if err := f.SetSheetDimension(costCalcDetailSheetName, rangeRef); err != nil {
+		return fmt.Errorf("failed to set sheet dimension %s: %w", rangeRef, err)
+	}
+	// nil opts means a plain filter with no pre-applied criteria, matching the reference.
+	if err := f.AutoFilter(costCalcDetailSheetName, rangeRef, nil); err != nil {
+		return fmt.Errorf("failed to set autofilter %s: %w", rangeRef, err)
 	}
 	return nil
 }
