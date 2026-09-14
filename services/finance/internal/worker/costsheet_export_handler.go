@@ -655,7 +655,50 @@ func copyLayout(src, dst *excelize.File, srcName, dstName string, rowCount, colC
 	if err := copyMerges(src, dst, srcName, dstName); err != nil {
 		return err
 	}
-	return copyPageSetup(src, dst, srcName, dstName)
+	if err := copyPageSetup(src, dst, srcName, dstName); err != nil {
+		return err
+	}
+	return copyDefinedNames(src, dst, srcName, dstName)
+}
+
+// copyDefinedNames carries over sheet-scoped defined names, most importantly
+// "_xlnm.Print_Area". Without this the print area applyPrintArea sets on the
+// per-product workbook is silently dropped when the sheet is transplanted into
+// the combined workbook, and the "others" rows below the separator print too.
+//
+// Both the Scope and the sheet qualifier inside RefersTo name the source sheet,
+// so both must be rewritten to the destination sheet name.
+func copyDefinedNames(src, dst *excelize.File, srcName, dstName string) error {
+	for _, dn := range src.GetDefinedName() {
+		if dn.Scope != srcName {
+			// Workbook-scoped names are not part of a sheet's layout; copying
+			// them per sheet would duplicate or clobber them.
+			continue
+		}
+		refersTo, err := retargetSheetRef(dn.RefersTo, dstName)
+		if err != nil {
+			return fmt.Errorf("retarget defined name %q: %w", dn.Name, err)
+		}
+		if err := dst.SetDefinedName(&excelize.DefinedName{
+			Name:     dn.Name,
+			RefersTo: refersTo,
+			Scope:    dstName,
+		}); err != nil {
+			return fmt.Errorf("set defined name %q to %s: %w", dn.Name, refersTo, err)
+		}
+	}
+	return nil
+}
+
+// retargetSheetRef swaps the sheet qualifier of a formula reference for sheet.
+// A reference looks like "'Cost Sheet'!$A$1:$D$84"; only the part before the
+// last "!" is the sheet name, and the cell range after it is preserved as-is.
+func retargetSheetRef(refersTo, sheet string) (string, error) {
+	idx := strings.LastIndex(refersTo, "!")
+	if idx < 0 {
+		return "", fmt.Errorf("reference %q has no sheet qualifier", refersTo)
+	}
+	return quoteSheetRef(sheet) + refersTo[idx:], nil
 }
 
 // copyDimensions copies per-column widths and per-row heights.
