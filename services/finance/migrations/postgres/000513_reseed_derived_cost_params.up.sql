@@ -215,6 +215,7 @@ DECLARE
     n_capp_expected    BIGINT;
     n_uom_usd          INTEGER;
     n_param_no_uom     INTEGER;
+    n_real_products    BIGINT;
 BEGIN
     SELECT * INTO pre FROM m513_pre;
 
@@ -311,10 +312,39 @@ BEGIN
         RAISE EXCEPTION '000513: % declared formula_param edge(s) missing — PART 3 silently filtered rows away (upstream param codes RM_LANDED_COST / RM_RATE / DELIVERY_COST_QLTY_LOSS may not exist)', n_edge_missing;
     END IF;
 
-    -- This is the exact 000464 failure mode: an empty derived base makes every
-    -- INSERT write zero rows while each individual statement "succeeds".
-    IF n_base_products = 0 THEN
+    -- ---- Is this a real (populated) catalogue, or a migration-only database? ----
+    -- The only products any migration ever inserts are the TXFX_% fixtures of
+    -- 000236 / 000239. A database built by running migrations alone therefore
+    -- contains fixtures and nothing else, and those fixtures never carry
+    -- RM_LANDED_COST / DELIVERY_COST_QLTY_LOSS: 000242 cross-joined products
+    -- against the formula inputs that existed AT THAT TIME, and both of those
+    -- param codes were only created later (000381 / 000407). No migration
+    -- re-runs that cross join afterwards, so n_base_products = 0 is the CORRECT
+    -- and unavoidable outcome on a fresh database.
+    --
+    -- Real products arrive only via the application / Oracle import, never via
+    -- migrations. So "at least one non-fixture product exists" is what separates
+    -- a populated database from a migration-only one.
+    SELECT COUNT(*) INTO n_real_products
+      FROM cost_product_master
+     WHERE cpm_product_code NOT LIKE 'TXFX\_%';
+
+    -- Why zero is fatal in one case and fine in the other: on a populated
+    -- database (production carries ~13k products) an empty derived base is the
+    -- exact 000464 failure mode — every INSERT writes zero rows while each
+    -- individual statement still "succeeds", and the export silently keeps
+    -- printing "-". On a migration-only database (CI) there is simply nothing
+    -- to derive from, and failing there would block the whole migration chain
+    -- over an absence of data that is expected by construction.
+    --
+    -- Note this guard is a BUSINESS-VOLUME assertion, not a correctness one.
+    -- Correctness is still enforced unconditionally by the n_capp shortfall
+    -- check below: when the base is 0 the expectation is 0, and 0 >= 0 passes
+    -- for the right reason rather than by being skipped.
+    IF n_real_products > 0 AND n_base_products = 0 THEN
         RAISE EXCEPTION '000513: no product carries RM_LANDED_COST or DELIVERY_COST_QLTY_LOSS in cost_product_applicable_param — CAPP backfill would write 0 rows and the export would keep printing "-"';
+    ELSIF n_base_products = 0 THEN
+        RAISE NOTICE '000513: no product carries RM_LANDED_COST or DELIVERY_COST_QLTY_LOSS (non-fixture products = %) — CAPP backfill wrote 0 rows. This is EXPECTED on a migration-only database such as CI, where only the TXFX_%% fixtures exist. On production it would mean the derived-cost columns silently export as "-".', n_real_products;
     END IF;
 
     IF n_capp < n_capp_expected THEN

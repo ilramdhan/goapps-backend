@@ -111,6 +111,7 @@ DECLARE
     v_ns   BIGINT;
     v_bc   BIGINT;
     v_prod BIGINT;
+    v_real BIGINT;
 BEGIN
     SELECT
         COUNT(*) FILTER (WHERE sp.param_code = 'MC_NAME'),
@@ -127,15 +128,37 @@ BEGIN
     RAISE NOTICE '000514 pre-flight: source CPP rows MC_NAME=%, STD_VALUE_LOSS=%, VALUE_LOSS=%; distinct source products=%',
         v_mc, v_ns, v_bc, v_prod;
 
-    IF v_mc = 0 OR v_ns = 0 OR v_bc = 0 THEN
+    -- Real vs migration-only database. The only products any migration inserts
+    -- are the TXFX_% fixtures of 000236 / 000239, and no migration ever writes
+    -- MC_NAME / STD_VALUE_LOSS / VALUE_LOSS values for them — those per-product
+    -- values arrive exclusively from the application / Oracle import. So on a
+    -- database built by migrations alone the inheritance source is legitimately
+    -- empty, and aborting there would block the migration chain over an absence
+    -- of data that is expected by construction.
+    SELECT COUNT(*) INTO v_real
+      FROM cost_product_master
+     WHERE cpm_product_code NOT LIKE 'TXFX\_%';
+
+    -- On a populated database an empty source IS the 000464 failure mode: every
+    -- INSERT below writes zero rows while each statement still "succeeds", and
+    -- the export keeps printing "-". Volume assertion, so it is conditional on
+    -- the catalogue actually holding real products.
+    IF v_real > 0 AND (v_mc = 0 OR v_ns = 0 OR v_bc = 0) THEN
         RAISE EXCEPTION
             '000514 ABORT: inheritance source is empty (MC_NAME=%, STD_VALUE_LOSS=%, VALUE_LOSS=%). Nothing can be derived; refusing to write zero rows silently. Check that the legacy per-product params were seeded before re-running.',
             v_mc, v_ns, v_bc;
+    ELSIF v_mc = 0 OR v_ns = 0 OR v_bc = 0 THEN
+        RAISE NOTICE
+            '000514: inheritance source empty (MC_NAME=%, STD_VALUE_LOSS=%, VALUE_LOSS=%) and non-fixture products = % — nothing to derive. EXPECTED on a migration-only database such as CI; on production this would mean the Group-C columns export as "-".',
+            v_mc, v_ns, v_bc, v_real;
     END IF;
 
-    IF v_prod = 0 THEN
+    IF v_real > 0 AND v_prod = 0 THEN
         RAISE EXCEPTION
             '000514 ABORT: zero distinct products carry the Group-C source params. CAPP would be written for no product at all.';
+    ELSIF v_prod = 0 THEN
+        RAISE NOTICE
+            '000514: zero distinct products carry the Group-C source params — EXPECTED on a migration-only database (non-fixture products = %).', v_real;
     END IF;
 END $$;
 
@@ -329,7 +352,14 @@ DECLARE
     v_capp_want  BIGINT;
     r            RECORD;
     v_have       BIGINT;
+    v_real       BIGINT;
 BEGIN
+    -- Real (non-fixture) products: see PRE-FLIGHT 2 for why this is the
+    -- populated-vs-migration-only discriminator.
+    SELECT COUNT(*) INTO v_real
+      FROM cost_product_master
+     WHERE cpm_product_code NOT LIKE 'TXFX\_%';
+
     -- Products in scope: those carrying any of the three source params.
     SELECT COUNT(DISTINCT src.cpp_product_sys_id) INTO v_src_prod
     FROM cost_product_parameter src
@@ -441,9 +471,16 @@ BEGIN
     JOIN mst_parameter np ON np.id = cpp.cpp_param_id AND np.deleted_at IS NULL
     WHERE np.param_code IN ('NS_LOSS_TYPE', 'BC_LOSS_TYPE', 'NS_LOSS',
                             'STD_SP_AX', 'STD_SP_BC', 'TOTAL_FIXED_COST');
-    IF v_have = 0 THEN
+    -- Volume assertion, not a correctness one: with an empty inheritance source
+    -- (migration-only database) zero written rows is arithmetically correct, and
+    -- the per-param shortfall loop above already proves correctness either way —
+    -- every want is 0, so every have >= want holds for the right reason.
+    IF v_real > 0 AND v_have = 0 THEN
         RAISE EXCEPTION
             '000514 ABORT: zero CPP value rows exist for the 6 Group-C params after the backfill. This is the 000464 silent-no-op failure mode; the export would still print "-".';
+    ELSIF v_have = 0 THEN
+        RAISE NOTICE
+            '000514: zero Group-C CPP value rows after the backfill (non-fixture products = %) — EXPECTED on a migration-only database such as CI, since no migration ever seeds the MC_NAME / STD_VALUE_LOSS / VALUE_LOSS source values. On production this would be the 000464 silent no-op.', v_real;
     END IF;
     RAISE NOTICE '000514 post: total Group-C CPP value rows = %', v_have;
 END $$;
