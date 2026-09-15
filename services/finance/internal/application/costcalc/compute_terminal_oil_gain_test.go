@@ -3,6 +3,8 @@ package costcalc
 import (
 	"context"
 	"math"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -287,4 +289,78 @@ func TestComputeProduct_OilGainAsInput_DoesNotMoveTerminalFormula(t *testing.T) 
 	// OIL_GAIN is still evaluated in both passes; only its consumption changes.
 	assert.InDelta(t, 0.0, outBefore.ParamSnapshot["OIL_GAIN"], 1e-12)
 	assert.InDelta(t, 0.0, outAfter.ParamSnapshot["OIL_GAIN"], 1e-12)
+}
+
+// TestMigration000510_MatchesFixtureExpressions keeps the fixture above honest.
+//
+// Everything the two tests above prove is only meaningful if the "after" shape
+// they model is the shape migration 000510 actually writes. Nothing else in the
+// build links the two, so a later edit to the migration — a different operator,
+// a renamed param, a dropped formula_param edge — would leave both tests green
+// while the database diverges from what they cleared.
+//
+// This test closes that gap by reading the migration and asserting the exact
+// post-change expression text and both input edges are present. It is still
+// database-free: the file is parsed as text, never executed.
+func TestMigration000510_MatchesFixtureExpressions(t *testing.T) {
+	const migration = "../../../migrations/postgres/000510_wire_oil_gain_into_conversion_cost.up.sql"
+
+	raw, err := os.ReadFile(migration)
+	require.NoError(t, err, "migration 000510 must exist — the tests above describe its effect")
+	sql := string(raw)
+
+	// The fixture builds the post-change expressions by appending " + OIL_GAIN"
+	// to the verbatim 000408 text, so deriving the expected strings from the
+	// fixture (rather than retyping them) is what makes this a real link.
+	after := yarnTerminalFormulas(true)
+	byCode := make(map[string]Formula, len(after))
+	for _, f := range after {
+		byCode[f.FormulaCode] = f
+	}
+
+	for _, code := range []string{"F_YARN_CONV_CAP", "F_YARN_CONV_DEL"} {
+		f, ok := byCode[code]
+		require.True(t, ok, "fixture must define %s", code)
+
+		assert.Contains(t, sql, "'"+f.Expression+"'",
+			"migration 000510 must set %s to the expression the fixture models; "+
+				"if the migration changed deliberately, update yarnTerminalFormulas to match",
+			code)
+		assert.Contains(t, sql, code,
+			"migration 000510 must name %s", code)
+	}
+
+	// The expression alone is not enough: formula_param is what populates
+	// InputParamCodes and therefore what removes OIL_GAIN from the terminal set
+	// (compute.go:812-818). Assert the edge insert targets both formulas.
+	assert.Contains(t, sql, "INSERT INTO formula_param",
+		"migration 000510 must declare OIL_GAIN as an input edge, not only as expression text")
+	assert.Contains(t, sql, "'OIL_GAIN'",
+		"migration 000510 must reference the OIL_GAIN param")
+
+	// Sign guard. OIL_GAIN is stored already-negative (see the migration header
+	// and data-examples/import-file-csv/param_value_import/
+	// product_parameters_1.csv:101, OIL_GAIN = -0.0495), so the term must be
+	// ADDED. A '- OIL_GAIN' would invert the correction: it would raise
+	// conversion cost by the oil gain instead of lowering it.
+	//
+	// Comment lines are stripped first — the migration header discusses the
+	// rejected '- OIL_GAIN' form in prose, and only executable SQL should be
+	// judged here.
+	assert.NotContains(t, stripSQLComments(sql), "- OIL_GAIN",
+		"OIL_GAIN values are stored negative, so the term must be added, not subtracted")
+}
+
+// stripSQLComments removes whole-line and trailing "--" comments so a guard can
+// assert on executable SQL without matching the file's own prose.
+func stripSQLComments(sql string) string {
+	lines := strings.Split(sql, "\n")
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if idx := strings.Index(line, "--"); idx >= 0 {
+			line = line[:idx]
+		}
+		out = append(out, line)
+	}
+	return strings.Join(out, "\n")
 }
