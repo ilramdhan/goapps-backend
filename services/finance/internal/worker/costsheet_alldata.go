@@ -235,6 +235,15 @@ const (
 	paramMachineName = "MC_NAME"
 	paramCostingLink = "COSTING_LINK"
 	paramOrionLink   = "ORION_LINK"
+	// The four identity params below are seeded as INPUT-kind text params
+	// (000407_seed_oracle_142_params) that no formula ever assigns, so they are
+	// absent from the calculated snapshot for most products. The same values
+	// already sit on the stage record, feeding identity columns 4/6/7/8, so
+	// these columns fall back to it rather than exporting blank.
+	paramOrionItem = "ORION_ITEM"
+	paramItemName  = "ITEM_NAME"
+	paramShadeCode = "SHADE_CODE"
+	paramShadeName = "SHADE_NAME"
 	// paramRawMaterial is the "20.Raw Material" column of the flat sheet, also
 	// used by the per-product sheet's "5.Raw Material." row.
 	paramRawMaterial = "RAW_MATERIAL"
@@ -350,6 +359,14 @@ func allDataCellValue(col allDataColumn, no int, stage Stage) string {
 		return firstNonEmpty(snapshotValue(col.ParamCode, stage), composeCostingLink(stage))
 	case paramOrionLink:
 		return firstNonEmpty(snapshotValue(col.ParamCode, stage), composeOrionLink(stage))
+	case paramOrionItem:
+		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ItemCode)
+	case paramItemName:
+		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ProductName)
+	case paramShadeCode:
+		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ShadeCode)
+	case paramShadeName:
+		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ShadeName)
 	default:
 		return snapshotValue(col.ParamCode, stage)
 	}

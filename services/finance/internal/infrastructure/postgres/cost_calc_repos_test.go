@@ -9,6 +9,18 @@ import (
 	"testing"
 	"time"
 
+	// DRIVER DIVERGENCE — READ BEFORE TRUSTING THIS SUITE.
+	// This suite runs on lib/pq, but production runs on pgx (see
+	// internal/infrastructure/postgres/connection.go:11). The two drivers bind parameters
+	// differently: lib/pq sends everything as TEXT, while pgx binds binary according to the
+	// server-inferred parameter OID. That means a whole class of type-inference bugs is
+	// structurally UNREPRODUCIBLE here — notably the fast-query NUMERIC(20,6) truncation,
+	// where an uncast float64 bound to an int4-inferred placeholder was silently truncated
+	// by pgx's float64Wrapper.Int64Value() but would have passed cleanly under lib/pq.
+	// A green run of this suite is therefore NOT evidence that the production write path is
+	// correct. Type/encoding contracts are asserted DB-free in
+	// cost_result_repository_internal_test.go instead. Switching this suite to pgx is the
+	// real fix, but it is a risky change and deliberately out of scope here.
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

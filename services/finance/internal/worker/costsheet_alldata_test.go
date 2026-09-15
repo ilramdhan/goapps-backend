@@ -147,11 +147,16 @@ func TestWriteAllDataSheet_AbsentParamsStayBlank(t *testing.T) {
 	}
 
 	// A stage without a cost row contributes identity plus only the columns
-	// sourced outside the calculation: MC_NAME (master data) and the two links
-	// composed from identity.
+	// sourced outside the calculation: MC_NAME (master data), the two links
+	// composed from identity, and the four identity params that fall back to
+	// the stage record.
 	fromMaster := map[string]bool{
+		"1.Item Code":              true,
 		"2.Marketing Costing Link": true,
 		"3.Orion Link":             true,
+		"4.Item Name":              true,
+		"5.Shade Code":             true,
+		"6.Shade Name":             true,
 		"7.Machine Name":           true,
 	}
 	rows, err := f.GetRows(allDataSheetName)
@@ -222,4 +227,41 @@ func TestWriteAllDataSheet_ReusesPreCreatedSheet(t *testing.T) {
 
 	require.NoError(t, WriteAllDataSheet(f, allDataFixture()))
 	require.Equal(t, []string{allDataSheetName}, f.GetSheetList())
+}
+
+// Columns 10/13/14/15 ("1.Item Code", "4.Item Name", "5.Shade Code",
+// "6.Shade Name") name params that no formula assigns, so they are absent from
+// the snapshot for most products. They fall back to the stage identity that
+// already feeds columns 4/6/7/8 rather than exporting blank, and a snapshot
+// value still wins when one exists.
+func TestWriteAllDataSheet_IdentityParamFallback(t *testing.T) {
+	stages := allDataFixture()
+	// ORION_ITEM is present in the fixture snapshot; override it so a snapshot
+	// win is distinguishable from the identity fallback.
+	stages[0].ParamSnapshot["ORION_ITEM"] = "FROM-SNAPSHOT"
+
+	f := excelize.NewFile()
+	defer func() { require.NoError(t, f.Close()) }()
+	require.NoError(t, WriteAllDataSheet(f, stages))
+
+	for _, tc := range []struct{ cell, want string }{
+		{"J2", "FROM-SNAPSHOT"},                 // snapshot wins over ItemCode
+		{"M2", "POY 250/72/RND/DSD/SIM/NS/1/O"}, // ITEM_NAME <- ProductName
+		{"N2", "7A12-01"},                       // SHADE_CODE <- ShadeCode
+		{"O2", "TISHA GY"},                      // SHADE_NAME <- ShadeName
+		{"J3", "PTY0000090"},                    // no cost row: still from identity
+		{"N3", "6912-01"},
+	} {
+		got, err := f.GetCellValue(allDataSheetName, tc.cell)
+		require.NoError(t, err)
+		require.Equal(t, tc.want, got, "cell %s", tc.cell)
+	}
+
+	// The second stage carries no product name or shade name, so those columns
+	// stay genuinely blank instead of inventing a value.
+	for _, cell := range []string{"M3", "O3"} {
+		got, err := f.GetCellValue(allDataSheetName, cell)
+		require.NoError(t, err)
+		require.Empty(t, got, "cell %s must be blank", cell)
+	}
 }
