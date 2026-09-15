@@ -170,9 +170,35 @@ func supersedePrevious(
 	return prevVersion, prevTotal, prevCostID, nil
 }
 
-// insertNewResult inserts a new cst_product_cost row at the given version.
-func insertNewResult(ctx context.Context, tx *sql.Tx, r *costcalc.Result, version int) (int64, error) {
-	const q = `
+// insertNewResultQuery is the INSERT used by insertNewResult. It is a package-level
+// constant (not a function-local one) so cost_result_repository_internal_test.go can
+// assert on its text without opening a database connection.
+//
+// WHY THE `::numeric` CASTS ON $20-$26 ARE MANDATORY
+//
+// The seven fast-query columns (cpc_captive_cost, cpc_delivery_cost, cpc_vb1..vb5_del_cost)
+// are NUMERIC(20,6) — see migrations/postgres/000383_add_cpc_fast_query_cols.up.sql:9-15 —
+// and the Go values bound to them are float64.
+//
+// Six of them were originally written as `NULLIF($n,0)` with no cast. The literal `0` is an
+// integer, so PostgreSQL resolved the NULLIF argument — and therefore the placeholder's
+// parameter type — to int4 rather than numeric. The production driver is pgx
+// (internal/infrastructure/postgres/connection.go:11 imports jackc/pgx/v5/stdlib), which
+// encodes a float64 according to the server-inferred OID: for an integer OID it routes
+// through float64Wrapper.Int64Value(), i.e. `int64(w)` — a plain TRUNCATION, no rounding,
+// no error (github.com/jackc/pgx/v5@v5.8.0/pgtype/builtin_wrappers.go:359-365). Every
+// fractional part was silently discarded on write.
+//
+// cpc_delivery_cost ($21) was the one placeholder with no NULLIF wrapper, so it inferred
+// numeric from the target column and stayed correct — which is exactly why it was the only
+// clean column in production while the other six diverged.
+//
+// The bug is NOT NULLIF (NULLIF rounds nothing); it is the inferred parameter type. The
+// casts pin every one of the seven placeholders to numeric explicitly, including $21 which
+// currently happens to infer correctly. DELETING ANY OF THESE CASTS WILL SILENTLY TRUNCATE
+// VALUES AGAIN — there is no error, only wrong data. cost_result_repository_internal_test.go
+// guards this.
+const insertNewResultQuery = `
 		INSERT INTO cst_product_cost (
 			cpc_product_sys_id, cpc_period, cpc_calculation_type, cpc_route_head_id,
 			cpc_version, cpc_cost_per_unit, cpc_total_rm_cost, cpc_total_conversion,
@@ -183,10 +209,14 @@ func insertNewResult(ctx context.Context, tx *sql.Tx, r *costcalc.Result, versio
 			cpc_vb1_del_cost, cpc_vb2_del_cost, cpc_vb3_del_cost,
 			cpc_vb4_del_cost, cpc_vb5_del_cost
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NULLIF($10,0),$11,$12,$13,$14,$15,NULLIF($16,''),$17,NULLIF($18,0),$19,
-		          NULLIF($20,0),$21,NULLIF($22,0),NULLIF($23,0),NULLIF($24,0),NULLIF($25,0),NULLIF($26,0))
+		          NULLIF($20::numeric,0),$21::numeric,NULLIF($22::numeric,0),NULLIF($23::numeric,0),
+		          NULLIF($24::numeric,0),NULLIF($25::numeric,0),NULLIF($26::numeric,0))
 		RETURNING cpc_cost_id`
+
+// insertNewResult inserts a new cst_product_cost row at the given version.
+func insertNewResult(ctx context.Context, tx *sql.Tx, r *costcalc.Result, version int) (int64, error) {
 	var id int64
-	err := tx.QueryRowContext(ctx, q,
+	err := tx.QueryRowContext(ctx, insertNewResultQuery,
 		r.ProductSysID(), r.Period(), string(r.CalcType()), r.RouteHeadID(),
 		safeconv.IntToInt32(version), r.CostPerUnit(), r.TotalRMCost(), r.TotalConv(),
 		r.TotalCost(), safeconv.IntToInt32(r.UomID()), r.Currency(),

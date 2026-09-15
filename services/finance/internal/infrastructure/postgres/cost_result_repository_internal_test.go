@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -146,4 +147,61 @@ func TestResultColumns_MatchesScanArity(t *testing.T) {
 	} {
 		assert.Contains(t, resultColumns, col)
 	}
+}
+
+// --- fast-query column cast guards -------------------------------------------------
+//
+// The seven fast-query columns are NUMERIC(20,6) (migrations/postgres/
+// 000383_add_cpc_fast_query_cols.up.sql:9-15) but are bound from Go float64. Without an
+// explicit ::numeric cast, PostgreSQL infers the parameter type from the surrounding
+// expression — `NULLIF($n,0)` infers int4 from the integer literal 0 — and the production
+// pgx driver (connection.go:11) then encodes the float64 via float64Wrapper.Int64Value(),
+// i.e. `int64(w)`, TRUNCATING the fractional part with no error
+// (pgx/v5@v5.8.0/pgtype/builtin_wrappers.go:359-365).
+//
+// These tests lock the cast into the SQL text. They are deliberately database-free: the
+// DB-backed suite in cost_calc_repos_test.go runs on lib/pq, which sends parameters as
+// text and therefore CANNOT reproduce this class of bug at all.
+var cpcFastQueryPlaceholders = map[string]string{
+	"cpc_captive_cost":  "$20",
+	"cpc_delivery_cost": "$21",
+	"cpc_vb1_del_cost":  "$22",
+	"cpc_vb2_del_cost":  "$23",
+	"cpc_vb3_del_cost":  "$24",
+	"cpc_vb4_del_cost":  "$25",
+	"cpc_vb5_del_cost":  "$26",
+}
+
+func TestInsertNewResultQuery_FastQueryParamsAreCastToNumeric(t *testing.T) {
+	for col, ph := range cpcFastQueryPlaceholders {
+		t.Run(col, func(t *testing.T) {
+			assert.Contains(t, insertNewResultQuery, ph+"::numeric",
+				"%s is NUMERIC(20,6); placeholder %s must carry an explicit ::numeric cast or "+
+					"pgx truncates the float64 to int64 on write", col, ph)
+
+			// A bare placeholder (not followed by ':') means the cast was dropped.
+			re := regexp.MustCompile(regexp.QuoteMeta(ph) + `(?:[^0-9:]|$)`)
+			assert.Empty(t, re.FindAllString(insertNewResultQuery, -1),
+				"%s appears uncast in the INSERT; every occurrence must be %s::numeric", ph, ph)
+		})
+	}
+}
+
+// TestInsertNewResultQuery_DeliveryCostIsCast pins the one placeholder that historically had
+// no NULLIF wrapper and therefore inferred numeric by accident — it was the only fast-query
+// column that stayed correct in production. Relying on that inference again would reintroduce
+// the same asymmetry, so the cast must be explicit here too.
+func TestInsertNewResultQuery_DeliveryCostIsCast(t *testing.T) {
+	assert.Contains(t, insertNewResultQuery, "$21::numeric",
+		"cpc_delivery_cost must be explicitly cast, not left to type inference")
+}
+
+// TestInsertNewResultQuery_IntegerParamsStayUncast documents the columns that are correctly
+// left without a cast: cpc_uom_id is INT, cpc_job_id is BIGINT, cpc_input_hash is VARCHAR(64)
+// (migrations/postgres/000228_create_cst_product_cost.up.sql:14,20,22), and each is bound from
+// a matching Go int32/int64/string. Their inferred types are already right, so NULLIF is safe.
+func TestInsertNewResultQuery_IntegerParamsStayUncast(t *testing.T) {
+	assert.Contains(t, insertNewResultQuery, "NULLIF($10,0)", "cpc_uom_id is INT — no cast needed")
+	assert.Contains(t, insertNewResultQuery, "NULLIF($16,'')", "cpc_input_hash is VARCHAR — no cast needed")
+	assert.Contains(t, insertNewResultQuery, "NULLIF($18,0)", "cpc_job_id is BIGINT — no cast needed")
 }
