@@ -161,6 +161,35 @@ func TestCostSheetRows_ContainsExpectedAnchors(t *testing.T) {
 	}
 }
 
+// TestCostSheetRow81_WiredToDeliveryCostBeforeQLoss guards the wiring of row 81
+// against a regression to kindMissing. The printed label "Cost lessQL,CO,Frwd."
+// is a historical misnomer: the backing param is DELIVERY_COST_BEFORE_QLOSS,
+// seeded in 000407_seed_oracle_142_params.up.sql:86 with active formula
+// F_YARN_DEL_PRE_QL in 000408_seed_oracle_formulas.up.sql:42. A previous
+// name-based sweep for "less"/"frwd"/"forward" missed it and the row was marked
+// kindMissing; this test fails loudly if that mistake is repeated. The label
+// itself is pinned because it must keep matching the reference workbook.
+func TestCostSheetRow81_WiredToDeliveryCostBeforeQLoss(t *testing.T) {
+	t.Parallel()
+
+	var row81 sheetRow
+	var found bool
+	for _, row := range costSheetRows {
+		if row.Num == "81." {
+			row81, found = row, true
+			break
+		}
+	}
+
+	require.True(t, found, "manifest is missing row 81")
+	assert.Equal(t, "Cost lessQL,CO,Frwd.", row81.Label,
+		"row 81 label must stay verbatim — it is what the reference workbook prints")
+	assert.Equal(t, kindSnapshot, row81.Kind)
+	assert.Equal(t, "DELIVERY_COST_BEFORE_QLOSS", row81.ParamCode,
+		"row 81 is backed by DELIVERY_COST_BEFORE_QLOSS despite its misnomer label")
+	assert.Equal(t, numFmtDecimal4, row81.NumFmt)
+}
+
 // TestCostSheetRow84_StaysUnwiredWhileOperandPending guards the gate documented
 // on row 84 in costsheet_rows.go. The row's value is DOMESTIC_COST +
 // ADD_NON_STD_BC_LOSS (verified against the reference export: 2.075 + 0.231 =

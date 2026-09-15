@@ -226,18 +226,41 @@ var costSheetRows = []sheetRow{
 	// Unnumbered section divider in the source template — printed as a label
 	// with dashed filler cells, not a data row.
 	{Label: "For sale of AX Grade only", Kind: kindSeparator},
-	// "Cost lessQL,CO,Frwd." has NO mst_parameter code — this was settled by
-	// query, not assumed. <repo-root>/docs/export-product-cost/verify-param-rows-81-84.sql
-	// (run 2026-09-11) swept mst_parameter by name for "less"/"frwd"/"forward"/
-	// "domestic"/"AX grade" and found only R_AX, AX_PERC, AX_WT and
-	// WASTE_LESS_MB_OPU — all pre-existing rows in unrelated display groups.
-	// Migrations 000234/000240/000381/000391/000407/000469 were swept too.
-	// The param was never seeded, so it has no formula and never reaches
-	// cpc_param_snapshot: wiring a ParamCode here would still print "-".
-	// Seeding it is a costing-team decision, not an export fix.
-	// NumFmt is carried anyway so the row prints with the template's four
-	// decimals the day a param does exist.
-	{Num: "81.", Label: "Cost lessQL,CO,Frwd.", Kind: kindMissing, NumFmt: numFmtDecimal4},
+	// "Cost lessQL,CO,Frwd." is a HISTORICAL MISNOMER, not a missing param. An
+	// earlier revision of this comment concluded "the param was never seeded";
+	// that conclusion was wrong. It came from a name-based sweep for
+	// "less"/"frwd"/"forward"/"domestic"/"AX grade", and the param simply does
+	// not carry any of those words in its name — it is DELIVERY_COST_BEFORE_QLOSS
+	// ("Delivery Cost Before Quality Loss"), seeded at
+	// migrations/postgres/000407_seed_oracle_142_params.up.sql:86 and computed by
+	// formula F_YARN_DEL_PRE_QL (RM_NORMS * RM_LANDED_COST +
+	// ONLY_CONV_DEL_PACK_EXCL_MB), is_active = TRUE, at
+	// migrations/postgres/000408_seed_oracle_formulas.up.sql:42. Both survive the
+	// DELETE in 000406_clear_old_param_formula_seeds.up.sql, which runs earlier.
+	//
+	// Verified against the second data column of
+	// <repo-root>/data-examples/export-product-cost/example-export-param.txt:
+	// row 81 = 2.0141 and row 77 (BC V Loss (Del)) = 0.023 sum to row 62
+	// (DelCost with Q.Loss) = 2.037 — exactly F_YARN_DEL_FINAL, which is defined
+	// as DELIVERY_COST_BEFORE_QLOSS + QLTY_LOSS_DELIVERY_COST. So the value this
+	// row prints is DELIVERY_COST_BEFORE_QLOSS.
+	//
+	// The label is kept verbatim: it is what the reference workbook prints, and
+	// the export must match the sheet users compare against. numFmtDecimal4 is
+	// the template's four-decimal format for this row (see the row-13 entry).
+	//
+	// Runtime gate — NOT migration 000510. 000510 adds OIL_GAIN as an input to
+	// F_YARN_CONV_CAP/CONV_DEL; it shifts this row's VALUE but is not what makes
+	// it appear. F_YARN_DEL_PRE_QL is already active, so the real gate is CAPP:
+	// loadPerProductFormulas joins mst_formula ON result_param_id =
+	// capp_param_id (internal/application/costcalc/loader.go:565-576), so the
+	// formula only runs for products that have DELIVERY_COST_BEFORE_QLOSS
+	// checklisted in cost_product_applicable_param. No migration in this tree
+	// seeds a CAPP row for it (swept 2026-09-15), so whether products already
+	// carry one is a production question, not a repo one — it is tracked as an
+	// open item and answered by SQL, not by reading migrations. Where the CAPP
+	// row is absent the row still renders "-", exactly as before this wiring.
+	{Num: "81.", Label: "Cost lessQL,CO,Frwd.", ParamCode: "DELIVERY_COST_BEFORE_QLOSS", Kind: kindSnapshot, NumFmt: numFmtDecimal4},
 	{Num: "82.", Label: "NSBC SP.", ParamCode: "NON_STD_BC_SP", Kind: kindSnapshot, NumFmt: numFmtDecimal},
 	{Num: "83.", Label: "Addl. NSBC Loss.", ParamCode: "ADD_NON_STD_BC_LOSS", Kind: kindSnapshot, NumFmt: numFmtDecimal},
 	// "Domestic Cost AX grd only." still prints "-", but NOT for the reason an
