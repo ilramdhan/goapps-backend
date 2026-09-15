@@ -240,11 +240,34 @@ var costSheetRows = []sheetRow{
 	{Num: "81.", Label: "Cost lessQL,CO,Frwd.", Kind: kindMissing, NumFmt: numFmtDecimal4},
 	{Num: "82.", Label: "NSBC SP.", ParamCode: "NON_STD_BC_SP", Kind: kindSnapshot, NumFmt: numFmtDecimal},
 	{Num: "83.", Label: "Addl. NSBC Loss.", ParamCode: "ADD_NON_STD_BC_LOSS", Kind: kindSnapshot, NumFmt: numFmtDecimal},
-	// "Domestic Cost AX grd only." has NO mst_parameter code either — same
-	// sweep, same verdict as row 81 above. ⚠ And it is NOT derivable from its
-	// neighbors: the reference shows 84 = 2.306 while 81 + 83 = 2.0141 + 0.231
-	// = 2.2451, so the obvious sum is wrong. Do not infer a formula from the
-	// template's numbers.
+	// "Domestic Cost AX grd only." still prints "-", but NOT for the reason an
+	// earlier revision of this comment gave. That revision tested the single
+	// hypothesis 81 + 83 (= 2.0141 + 0.231 = 2.2451 against a reference 2.306),
+	// saw it fail, and concluded the row was "not derivable from its
+	// neighbors". The conclusion was too broad: the base is row 67, not row 81.
+	// Verified 2026-09-15 against the second data column of
+	// <repo-root>/data-examples/export-product-cost/example-export-param.txt:
+	// row 67 = 2.075 + row 83 = 0.231 = row 84 = 2.306, exact. So row 84 is
+	// DOMESTIC_COST + ADD_NON_STD_BC_LOSS.
+	//
+	// It is left kindMissing anyway, because seeding it today would print a
+	// plausible but wrong number — three things are missing, not one:
+	//
+	//   1. No mst_parameter exists for row 84's own result. 000407, 000408 and
+	//      000469 were swept; nothing matches "AX_GRADE"/"AX_GRD".
+	//   2. The second operand is not live. ADD_NON_STD_BC_LOSS has a param
+	//      (000407_seed_oracle_142_params.up.sql:73) but its formula
+	//      F_YARN_ADD_NON_STD_BC_LOSS is PENDING with the literal expression
+	//      'TBD' and is_active = FALSE (000408_seed_oracle_formulas.up.sql:85).
+	//      loadPerProductFormulas filters on f.is_active = TRUE
+	//      (internal/application/costcalc/loader.go:576), so it is never
+	//      loaded and buildInitialScope zero-fills the param.
+	//   3. Therefore a seeded row 84 would evaluate to DOMESTIC_COST + 0 —
+	//      an exact duplicate of row 67 that looks legitimate.
+	//
+	// Wiring the row is gated on costing supplying a real expression for
+	// F_YARN_ADD_NON_STD_BC_LOSS, not on export work. Row 83 above has the same
+	// gate, which is why it prints "-" here while the reference shows 0.231.
 	{Num: "84.", Label: "Domestic Cost AX grd only.", Kind: kindMissing},
 	// ── "Others" section ──────────────────────────────────────────────────────
 	// Everything below this labeled separator is CSV rows 85-95. It sits
