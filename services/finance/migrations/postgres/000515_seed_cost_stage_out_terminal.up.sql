@@ -26,10 +26,18 @@
 --
 -- WHY DOMESTIC_COST IS THE PASS-THROUGH SOURCE (user decision 2026-09-17, not inferred here)
 -- Option A (DOMESTIC_COST) was chosen over Option B (VOLUME_BUCKET_4_DEL_COST) because the
--- sink must not be tied to a bucket number that has no documented business basis, and
--- because V-21 showed legacy has NO intermediate VB LOSS step at all (TOP 113-117 carry no
--- formula rows; only TOP 118-122 do), which weakens any argument for anchoring the terminal
--- to one specific bucket.
+-- sink must not be tied to a bucket number that has no documented business basis.
+--
+-- CORRECTION 2026-09-17 (V-22 supersedes V-21): an earlier draft of this header claimed
+-- "V-21 showed legacy has NO intermediate VB LOSS step at all". That claim is WRONG and is
+-- retracted. V22-O1.A proved TOP 113-117 (VOLUME_BUCKET_1..5_LOSS) DO exist, are referenced
+-- as operands by TOP 118-122, and hold 109,370 stored value rows. What is absent is only
+-- their FORMULA rows in cst_yarn_formula_calc -- the values are stored data, not computed
+-- there. The costing team has since confirmed that some params are calculated on a separate
+-- PHP side rather than in Oracle, which explains the missing formula rows.
+-- The Option A decision itself is UNCHANGED: its primary reason (no business basis for
+-- anchoring the sink to a bucket number) stands on its own. Only this supporting argument
+-- is withdrawn.
 -- Legacy Oracle treats TOP 121 = "Final Ex-Factory Cost" = V4 = Dom Cost as the
 -- official cost per unit: PKG_YARN_MARKETING.pkb:1030-1056 and :1171-1177 both read
 -- the same CYCC_TOP_121_DATA_VALUE column.
