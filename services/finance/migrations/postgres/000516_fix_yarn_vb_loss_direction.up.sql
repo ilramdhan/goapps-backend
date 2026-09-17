@@ -20,16 +20,20 @@
 --       of 0.1, e.g. [0.2564,0.1282,0.0855,0.0333,0.0167] -> [3.9,7.8,11.7,30.0,60.0]
 --       — a 3.9 / 7.8 / 11.7 progression plus 30 / 60. The stored values themselves
 --       form no pattern at all.
---   (b) Legacy Oracle data (5 products): K = L_n / QTY_n is CONSTANT across all five
---       buckets (spread 0.0002-0.0035, i.e. 4-decimal rounding noise). A constant
---       L_n / QTY_n is the signature of a MULTIPLY (L_n = K * QTY_n). Under a divide,
---       L_n * QTY_n would be the constant instead.
---   (c) Unit check, product 20210900891: legacy L = [.0997,.0499,.0333,.0130,.0065],
---       kgs_lost_change = 400, implied RM_LANDED_COST = 0.9738 USD/kg.
---           400 kg * 0.9738 USD/kg / 3.9 MT / 1000 kg/MT = 0.09970  vs legacy .0997
---       Expressed directly in the STORED column value (0.2564 = 1/3.9), the same
---       arithmetic is a multiplication:
---           400 * 0.9738 * 0.2564 / 1000 = 0.09988
+--   (b) Legacy Oracle data, now measured on 13,255 products (not 5): K = L_n / QTY_n
+--       is CONSTANT across all five buckets. Median spread within a product is
+--       0.0057 -- 4-decimal rounding noise. A constant L_n / QTY_n is the signature
+--       of a MULTIPLY (L_n = K * QTY_n); under a divide, L_n * QTY_n would be the
+--       constant instead. Measured head to head, the multiply form wins on 13,255
+--       products and the divide form on 0, with no exceptions. This test reads only
+--       TOP 108-117 (the QTY and LOSS columns), so it does not depend on the
+--       identity of any other parameter.
+--
+--   (c) RETRACTED -- this slot previously carried a unit check on product
+--       20210900891 that derived RM_LANDED_COST = 0.9738 by back-fitting it from
+--       the answer the check was meant to confirm, then reported agreement. That is
+--       circular and proves nothing. The real TOP 56 value was never read for that
+--       product. Evidence (a) and (b) stand on their own and do not rely on it.
 --
 -- MAGNITUDE OF THE DEFECT BEING FIXED
 -- Divide-form vs legacy, per bucket: VB1 ~15x, VB2 ~61x, VB3 ~137x, VB4 ~899x,
@@ -54,7 +58,7 @@
 --
 -- ⚠ FLAG — NOT CONFIRMED BEFORE RUNNING THIS
 -- The reciprocal reading is proven against the 000424 SEED (37 machines) and against
--- 5 legacy Oracle products. It has NOT been measured on the production
+-- 13,255 legacy Oracle products. It has NOT been measured on the production
 -- cpc_param_snapshot population. Run docs/superpowers/sql/v-19-dampak-arah-vb-loss-postgres.sql
 -- (read-only) FIRST. Block V19-A in particular confirms that production really is
 -- running the 000465 divide form — if it is not, the .down.sql of this migration
@@ -63,6 +67,17 @@
 -- ⚠ FLAG — 3 of the 37 seeded machines do NOT yield a clean 0.1 multiple under 1/vbN.
 -- Whether that is dirty data or a second convention has not been investigated.
 --
+-- ⚠ FLAG — SCOPE OF THIS FIX: DIRECTION ONLY, NOT NUMERIC FIDELITY.
+-- The operator direction and both operands are confirmed: TOP 56 is RM Landed cost
+-- and TOP 107 is Change over qty loss, under BOTH legacy process types (MARKETING
+-- and VALUATION) -- read from the legacy master CST_YARN_TOP, whose CYT_PARAM_ID
+-- column maps legacy TOP numbers to our param codes directly.
+-- Even so, this expression reproduces only ~1.3% of legacy LOSS rows to within 1%.
+-- The remaining gap is a per-product factor that is NOT any single legacy parameter,
+-- NOT a ratio of two of them, and NOT a scale constant -- all three were measured and
+-- ruled out. The live hypothesis is that legacy does not compute these values in
+-- Oracle at all. Do NOT read this migration as making the formula faithful to legacy;
+-- it makes it directionally correct, which is a strictly smaller claim.
 -- ⚠ NOT DECIDED HERE: whether the engine's terminal expression (000515) should be
 -- DOMESTIC_COST or VOLUME_BUCKET_4_DEL_COST. That is a costing-team decision. It only
 -- matters for BLAST RADIUS: under a VOLUME_BUCKET_4_DEL_COST terminal this correction
