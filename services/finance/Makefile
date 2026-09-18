@@ -94,8 +94,11 @@ test:
 test-unit:
 	go test -v -race -short ./internal/...
 
+# Run all integration-gated tests across internal/... — NOT just internal/infrastructure/...
+# Restricting this to infrastructure/ previously let broken integration tests in
+# internal/application and internal/delivery/grpc go unexecuted (and unnoticed) by this target.
 test-integration:
-	INTEGRATION_TEST=true go test -v -race ./internal/infrastructure/...
+	INTEGRATION_TEST=true go test -v -race ./internal/...
 
 # Run full CI test locally (mimics GitHub Actions)
 test-ci-local:
@@ -109,13 +112,16 @@ test-ci-local:
 	@echo "==> Running migrations on test database..."
 	migrate -path migrations/postgres -database "postgres://finance:finance123@localhost:5434/finance_db_test?sslmode=disable" up
 	@echo "==> Running integration tests..."
+	# Same rationale as test-integration: cover all of internal/..., not just
+	# internal/infrastructure/..., so application/ and delivery/grpc/ integration
+	# tests are not silently skipped here either.
 	INTEGRATION_TEST=true \
 		TEST_DB_HOST=localhost \
 		TEST_DB_PORT=5434 \
 		TEST_DB_USER=finance \
 		TEST_DB_PASSWORD=finance123 \
 		TEST_DB_NAME=finance_db_test \
-		go test -v -race ./internal/infrastructure/...
+		go test -v -race ./internal/...
 	@echo "==> CI tests completed!"
 
 test-e2e:
