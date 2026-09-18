@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 )
@@ -545,6 +544,5 @@ func (r *MBSpinRepository) scanRow(rows *sql.Rows) (*mbspin.Entity, error) {
 }
 
 func isMBSpinUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	return errors.As(err, &pqErr) && pqErr.Code == "23505"
+	return isPGUniqueViolation(err)
 }

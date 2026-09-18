@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/boxbobbincost"
 )
@@ -438,6 +437,5 @@ func (r *BoxBobbinCostRepository) scanRateRow(rows *sql.Rows) (*boxbobbincost.Ra
 }
 
 func isBoxBobbinCostUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	return errors.As(err, &pqErr) && pqErr.Code == "23505"
+	return isPGUniqueViolation(err)
 }

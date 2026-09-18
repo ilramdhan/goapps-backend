@@ -721,11 +721,7 @@ func cpmFromRow(d cpmRow) *costproductmaster.CostProductMaster {
 }
 
 func isProductMasterUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		return pqErr.Code == "23505"
-	}
-	return false
+	return isPGUniqueViolation(err)
 }
 
 // ListAllLegacyIDs returns a map of flex02OrCode → cpm_product_sys_id for all
