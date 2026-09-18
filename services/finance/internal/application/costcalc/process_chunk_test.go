@@ -50,7 +50,7 @@ func (s *ProcessChunkSuite) SetupSuite() {
 	s.period = "999990"
 	s.calcType = costcalcdom.CalcTypeActual
 	s.actor = "process-chunk-test"
-	s.codePrefix = fmt.Sprintf("PC%d", time.Now().UnixNano()%10000)
+	s.codePrefix = uniqueCodePrefix(s.T(), "PC")
 	// Use underscore for the formula-expression-safe code: identifiers can't
 	// contain '-' (expr-lang would parse it as subtraction).
 	s.paramIDs = map[string]string{}

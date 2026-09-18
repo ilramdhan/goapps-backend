@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lib/pq"
-
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductrequest"
 )
 
@@ -542,9 +540,5 @@ func timePtrToNullTime(t *time.Time) sql.NullTime {
 }
 
 func isCprUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		return pqErr.Code == "23505"
-	}
-	return false
+	return isPGUniqueViolation(err)
 }

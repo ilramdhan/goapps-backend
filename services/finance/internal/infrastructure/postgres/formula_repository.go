@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/formula"
 )
@@ -627,9 +626,5 @@ func (r *FormulaRepository) reconstructWithParams(entity *formula.Formula, param
 }
 
 func isFormulaUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		return pqErr.Code == "23505"
-	}
-	return false
+	return isPGUniqueViolation(err)
 }

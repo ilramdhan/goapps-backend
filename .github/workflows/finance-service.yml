@@ -114,7 +114,11 @@ jobs:
           TEST_DB_USER: finance
           TEST_DB_PASSWORD: finance123
           TEST_DB_NAME: finance_db_test
-        run: go test -v -race ./internal/infrastructure/...
+        # Cover all of internal/..., not just internal/infrastructure/... —
+        # restricting to infrastructure/ previously let broken integration
+        # tests in internal/application and internal/delivery/grpc go
+        # unexecuted (and unnoticed) by CI.
+        run: go test -v -race ./internal/...
 
       - name: Run tests with coverage
         working-directory: ${{ env.WORKING_DIR }}

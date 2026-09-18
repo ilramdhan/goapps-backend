@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lib/pq"
-
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costrmtype"
 )
 
@@ -181,9 +179,5 @@ func (r *CostRmTypeRepository) scanRows(rows *sql.Rows) (*costrmtype.CostRmType,
 }
 
 func isRmTypeUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		return pqErr.Code == "23505"
-	}
-	return false
+	return isPGUniqueViolation(err)
 }

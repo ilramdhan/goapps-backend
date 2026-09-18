@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
@@ -152,11 +151,7 @@ func (r *CostRouteRepository) GetActiveByProduct(ctx context.Context, productSys
 }
 
 func isRouteUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		return pgErr.Code == "23505"
-	}
-	return false
+	return isPGUniqueViolation(err)
 }
 
 // =============================================================================

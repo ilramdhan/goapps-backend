@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lib/pq"
-
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproducttype"
 )
 
@@ -188,11 +186,7 @@ func (r *CostProductTypeRepository) scanRows(rows *sql.Rows) (*costproducttype.C
 }
 
 func isProductTypeUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		return pqErr.Code == "23505"
-	}
-	return false
+	return isPGUniqueViolation(err)
 }
 
 // ListAllActive returns all active cost_product_type rows for map preloading.

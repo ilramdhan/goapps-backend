@@ -53,6 +53,10 @@ func (f *spinFakeLoader) LoadFormulas(_ context.Context, _ []int64) (map[int64][
 	return map[int64][]Formula{}, nil
 }
 
+func (f *spinFakeLoader) LoadCalculatedParams(_ context.Context, _ []int64) (map[int64]map[string]bool, error) {
+	return map[int64]map[string]bool{}, nil
+}
+
 func (f *spinFakeLoader) LoadRMCosts(_ context.Context, _ []string, _, _ string) (map[string]float64, error) {
 	return map[string]float64{}, nil
 }

@@ -94,6 +94,13 @@ type ComputeInput struct {
 	// Empty/nil for periods with no mst_spin_fixed_cost row; the pool arm's
 	// SPIN_POY_PRODUCTION > 0 guard then yields 0 rather than dividing by zero.
 	SpinFixedCost map[string]float64
+	// CalculatedParams is the set of this product's applicable param codes whose
+	// mst_parameter.param_category is 'CALCULATED', i.e. params the engine is meant
+	// to produce rather than read. Used by rejectCalculatedParamsWithoutFormula to
+	// fail loudly when one is consumed but no ACTIVE formula produces it (D-02).
+	// Nil/empty disables that guard, preserving pre-guard behavior for callers that
+	// do not supply it.
+	CalculatedParams map[string]bool
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
@@ -185,6 +192,14 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	// pass assigns genuine values, and whatever remains at the end marks
 	// params that must be omitted from ParamSnapshot (see scopeSnapshot).
 	scope, zeroFilled := buildInitialScope(in)
+
+	// 1b. A CALCULATED param that the formula chain consumes but no ACTIVE formula
+	// produces is still sitting in scope as the synthetic 0 that buildInitialScope
+	// wrote. Refuse rather than compute a plausible wrong number (D-02).
+	if err := rejectCalculatedParamsWithoutFormula(in.ProductSysID, in.CalculatedParams, in.Formulas, zeroFilled); err != nil {
+		recordProductSpanError(span, err)
+		return nil, err
+	}
 
 	// 2. Aggregate RM cost across every sequence in the route.
 	totalRM, rmDetail, levelMap, err := aggregateRMCost(in)

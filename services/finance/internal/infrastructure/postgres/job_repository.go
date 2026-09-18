@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 )
@@ -720,10 +719,7 @@ func nullUUIDPtr(nu uuid.NullUUID) *uuid.UUID {
 }
 
 func isDuplicateActiveJob(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		// Check for unique violation on the partial unique index.
-		return pqErr.Code == "23505" && strings.Contains(pqErr.Constraint, "active_unique")
-	}
-	return false
+	sqlState, constraint, ok := pgErrorInfo(err)
+	// Check for unique violation on the partial unique index.
+	return ok && sqlState == sqlStateUniqueViolation && strings.Contains(constraint, "active_unique")
 }

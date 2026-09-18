@@ -378,6 +378,52 @@ func TestComputeProduct_NoFinalCostKey_MultipleTerminals_PicksDeepest(t *testing
 	require.InDelta(t, 10.0, out.CostPerUnit, 0.001)
 }
 
+func TestComputeProduct_CostStageOut_WinsOverDeepestTerminalTieBreak(t *testing.T) {
+	// Regression guard for E-13: when scope["COST_STAGE_OUT"] (ScopeKeyFinalCost)
+	// is produced by an explicit formula, ComputeProduct MUST use it as the
+	// final cost and MUST NOT fall through to resolveFinalCost/findTerminalFormula's
+	// depth + FormulaCode-ASC tie-break (compute.go:868).
+	//
+	// Fixture mirrors TestComputeProduct_NoFinalCostKey_MultipleTerminals_PicksDeepest:
+	// F_DEEP is the deepest terminal candidate (depth 2) and would win the
+	// tie-break heuristic if it ran. But here an explicit F_STAGE_OUT formula
+	// also writes COST_STAGE_OUT, so branch (a) (compute.go:227) must resolve
+	// the cost to F_STAGE_OUT's output (5.0), not F_DEEP's (10.0).
+	in := ComputeInput{
+		ProductSysID: 1,
+		Route:        buildOneStageRoute(1, costroute.RmTypeItem, "X", 1.0),
+		Formulas: []Formula{
+			{
+				FormulaCode:     "F_SHALLOW",
+				Expression:      "COST_RM_TOTAL",
+				ResultParamCode: "OUT_SHALLOW",
+				InputParamCodes: []string{ScopeKeyCostRMTotal},
+			},
+			{
+				// depth=2: the tie-break's would-be winner if COST_STAGE_OUT were absent.
+				FormulaCode:     "F_DEEP",
+				Expression:      "OUT_SHALLOW * 1",
+				ResultParamCode: "OUT_DEEP",
+				InputParamCodes: []string{"OUT_SHALLOW"},
+			},
+			{
+				// Explicit terminal sink — must win regardless of F_DEEP's depth.
+				FormulaCode:     "F_STAGE_OUT",
+				Expression:      "5",
+				ResultParamCode: ScopeKeyFinalCost, // "COST_STAGE_OUT"
+				InputParamCodes: []string{},
+			},
+		},
+		RMCosts:   map[string]float64{"X|": 10.0},
+		EvalCache: evaluator.NewCache(),
+	}
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+	// If this ever regresses to 10.0 (F_DEEP's output), branch (a) died again
+	// and cpc_cost_per_unit is back to being decided by the tie-break heuristic.
+	assert.Equal(t, 5.0, out.CostPerUnit, "COST_STAGE_OUT must win over the deepest-terminal tie-break (E-13)")
+}
+
 func TestComputeProduct_SnapshotIncludesInputs(t *testing.T) {
 	in := ComputeInput{
 		ProductSysID: 1,

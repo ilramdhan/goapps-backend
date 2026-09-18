@@ -72,7 +72,7 @@ func TestV2_EndToEnd_ExcelFixture(t *testing.T) {
 
 	code, err := rmgroupdomain.NewCode("E2E V2 TEST")
 	require.NoError(t, err)
-	head, err := rmgroupdomain.NewHead(code, "E2E V2 Test Group", "", 5, 0.89, "tester")
+	head, err := rmgroupdomain.NewHead(code, "E2E V2 Test Group", "", 0.05, 0.89, "tester")
 	require.NoError(t, err)
 	// Marketing inputs: P5=5, Q5=0.89, L5=15. N5/O5 left empty (nil).
 	mDef := 15.0
@@ -238,7 +238,7 @@ func TestV2_RecalcExisting_HistoryNotBackdated(t *testing.T) {
 
 	code, err := rmgroupdomain.NewCode("E2E V2 TEST")
 	require.NoError(t, err)
-	head, err := rmgroupdomain.NewHead(code, "E2E V2 Test Group", "", 5, 0.89, "tester")
+	head, err := rmgroupdomain.NewHead(code, "E2E V2 Test Group", "", 0.05, 0.89, "tester")
 	require.NoError(t, err)
 	overrideHeadID(t, head, headID)
 	require.NoError(t, groupRepo.CreateHead(ctx, head))

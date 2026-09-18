@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/productgrade"
 )
@@ -327,6 +326,5 @@ func (r *ProductGradeRepository) scanRow(rows *sql.Rows) (*productgrade.Entity, 
 }
 
 func isProductGradeUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	return errors.As(err, &pqErr) && pqErr.Code == "23505"
+	return isPGUniqueViolation(err)
 }

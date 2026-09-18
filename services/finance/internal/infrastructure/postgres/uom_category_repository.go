@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/uomcategory"
 )
@@ -444,9 +443,5 @@ func (d *uomCategoryDTO) ToEntity() (*uomcategory.Category, error) {
 
 // isUOMCategoryUniqueViolation checks if the error is a PostgreSQL unique violation.
 func isUOMCategoryUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		return pqErr.Code == "23505" // unique_violation
-	}
-	return false
+	return isPGUniqueViolation(err)
 }

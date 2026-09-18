@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/parameter"
 )
@@ -668,23 +667,9 @@ func (d *parameterDTO) ToEntity() (*parameter.Parameter, error) {
 	), nil
 }
 
-// isParameterUniqueViolation checks if the error is a PostgreSQL unique violation (code 23505).
-// Handles both lib/pq and pgx/v5/stdlib error types.
+// isParameterUniqueViolation reports whether err is a PostgreSQL unique violation (SQLSTATE 23505).
 func isParameterUniqueViolation(err error) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		return pqErr.Code == "23505" // unique_violation
-	}
-	// pgx/v5/stdlib driver error type (pgconn.PgError).
-	// Use interface matching to avoid importing pgconn directly.
-	type pgError interface {
-		SQLState() string
-	}
-	var pgErr pgError
-	if errors.As(err, &pgErr) {
-		return pgErr.SQLState() == "23505"
-	}
-	return false
+	return isPGUniqueViolation(err)
 }
 
 // trimDecimalZeros trims trailing zeros from a decimal string.

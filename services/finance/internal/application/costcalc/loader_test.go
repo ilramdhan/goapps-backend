@@ -108,7 +108,7 @@ func (s *LoaderSuite) SetupSuite() {
 	s.period = "999999"
 	s.calcType = "ACTUAL"
 	s.actor = "loader-test"
-	s.codePrefix = fmt.Sprintf("LD%d", time.Now().UnixNano()%10000)
+	s.codePrefix = uniqueCodePrefix(s.T(), "LD")
 	s.paramIDs = map[string]string{}
 
 	host := envOr("TEST_DB_HOST", "localhost")
