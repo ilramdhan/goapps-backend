@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -125,9 +126,16 @@ func (s *CostMasterLookupIntegrationSuite) TestListParameters_NonEmpty() {
 }
 
 func (s *CostMasterLookupIntegrationSuite) TestBatchGetParameterValues_Typed() {
-	// Find a product that actually has parameter values.
+	// Find a product that actually has parameter values. A freshly migrated
+	// finance_db carries no cost_product_parameter rows at all (they arrive with
+	// the legacy import), so skip rather than fail — same contract as
+	// TestGetProductRoute_WhenReleasedRouteExists below.
 	var pid int64
 	err := s.db.QueryRowContext(s.ctx, `SELECT cpp_product_sys_id FROM cost_product_parameter LIMIT 1`).Scan(&pid)
+	if errors.Is(err, sql.ErrNoRows) {
+		s.T().Skip("no cost_product_parameter rows in finance_db")
+		return
+	}
 	require.NoError(s.T(), err)
 	resp, err := s.handler.BatchGetProductParameterValues(s.ctx, &financev1.BatchGetProductParameterValuesRequest{
 		ProductSysIds: []int64{pid},
