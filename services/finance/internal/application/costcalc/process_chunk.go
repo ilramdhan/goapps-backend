@@ -129,6 +129,9 @@ type loadedBundle struct {
 	// mbProducts is the set of this chunk's product ids that are MB-typed. Empty when
 	// no MB guard is wired. See computeOne for why they are skipped, not computed.
 	mbProducts map[int64]bool
+	// calculatedParams is the per-product set of CALCULATED-category param codes,
+	// feeding the D-02 guard in ComputeProduct.
+	calculatedParams map[int64]map[string]bool
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -160,6 +163,11 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 	mbProducts, err := s.loadMBProductSet(ctx, in.Products)
 	if err != nil {
 		return nil, err
+	}
+
+	calculatedParams, err := s.loader.LoadCalculatedParams(ctx, in.Products)
+	if err != nil {
+		return nil, fmt.Errorf("load calculated params: %w", err)
 	}
 
 	sellingSnaps, snapErr := s.loader.LoadSellingSnapshots(ctx, in.Products, in.Period)
@@ -199,6 +207,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		sellingSnapshots: sellingSnaps,
 		spinPool:         spinPool,
 		mbProducts:       mbProducts,
+		calculatedParams: calculatedParams,
 	}, nil
 }
 
@@ -264,17 +273,18 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		sellingSnap = map[string]float64{}
 	}
 	out, err := ComputeProduct(ctx, ComputeInput{
-		ProductSysID:    pid,
-		Period:          in.Period,
-		CalcType:        in.CalcType,
-		Route:           route,
-		CAPP:            loaded.capp[pid],
-		Formulas:        loaded.formulas[pid],
-		RMCosts:         loaded.rmCosts,
-		UpstreamCosts:   loaded.upstreamCosts,
-		EvalCache:       s.cache,
-		SellingSnapshot: sellingSnap,
-		SpinFixedCost:   loaded.spinPool.Values,
+		ProductSysID:     pid,
+		Period:           in.Period,
+		CalcType:         in.CalcType,
+		Route:            route,
+		CAPP:             loaded.capp[pid],
+		Formulas:         loaded.formulas[pid],
+		CalculatedParams: loaded.calculatedParams[pid],
+		RMCosts:          loaded.rmCosts,
+		UpstreamCosts:    loaded.upstreamCosts,
+		EvalCache:        s.cache,
+		SellingSnapshot:  sellingSnap,
+		SpinFixedCost:    loaded.spinPool.Values,
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)

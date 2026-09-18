@@ -84,6 +84,10 @@ func (f *fakeLoader) LoadCAPPText(context.Context, []int64) (map[int64]map[strin
 	return map[int64]map[string]string{}, nil
 }
 
+func (f *fakeLoader) LoadCalculatedParams(context.Context, []int64) (map[int64]map[string]bool, error) {
+	return map[int64]map[string]bool{}, nil
+}
+
 func (f *fakeLoader) LoadFormulas(_ context.Context, ids []int64) (map[int64][]costcalc.Formula, error) {
 	out := map[int64][]costcalc.Formula{}
 	for _, id := range ids {

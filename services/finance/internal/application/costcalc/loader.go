@@ -65,6 +65,12 @@ type ProductLoader interface {
 	// active row sits at or before the requested period; the caller treats that as
 	// fatal, because an absent pool would zero POY fixed cost instead of failing.
 	LoadSpinFixedCost(ctx context.Context, period string) (SpinPool, error)
+	// LoadCalculatedParams returns, per product, the set of applicable param codes whose
+	// mst_parameter.param_category is 'CALCULATED' — params the engine must produce, not
+	// read. Feeds ComputeInput.CalculatedParams so the compute pass can refuse a
+	// CALCULATED param that no ACTIVE formula produces instead of using the synthetic 0
+	// buildInitialScope leaves in scope (D-02).
+	LoadCalculatedParams(ctx context.Context, productSysIDs []int64) (map[int64]map[string]bool, error)
 }
 
 // SpinPool is the POY spin fixed-cost pool resolved for a period, together with
@@ -1085,4 +1091,54 @@ func (l *productLoader) LoadSpinFixedCost(ctx context.Context, period string) (S
 	out[ScopeKeySpinOverheadsMonth] = overheads
 	out[ScopeKeySpinConsSprsMonth] = conssprs
 	return SpinPool{Period: poolPeriod, Values: out}, nil
+}
+
+// =============================================================================
+// LoadCalculatedParams
+// =============================================================================
+
+// LoadCalculatedParams returns the per-product set of applicable param codes declared
+// CALCULATED in mst_parameter. Only the category is read — whether a formula actually
+// produces the param is decided in the compute pass, which is the only place that knows
+// which formulas survived the is_active filter.
+func (l *productLoader) LoadCalculatedParams(ctx context.Context, productSysIDs []int64) (map[int64]map[string]bool, error) {
+	out := map[int64]map[string]bool{}
+	if len(productSysIDs) == 0 {
+		return out, nil
+	}
+	const q = `
+		SELECT capp.capp_product_sys_id, mp.param_code
+		FROM cost_product_applicable_param capp
+		JOIN mst_parameter mp ON mp.id = capp.capp_param_id
+		WHERE capp.capp_product_sys_id = ANY($1)
+		  AND mp.param_category = 'CALCULATED'
+		  AND mp.deleted_at IS NULL`
+	rows, err := l.db.QueryContext(ctx, q, pq.Array(productSysIDs))
+	if err != nil {
+		return nil, fmt.Errorf("load calculated params: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	for rows.Next() {
+		var (
+			productSysID int64
+			paramCode    string
+		)
+		if err := rows.Scan(&productSysID, &paramCode); err != nil {
+			return nil, fmt.Errorf("scan calculated param row: %w", err)
+		}
+		inner, ok := out[productSysID]
+		if !ok {
+			inner = map[string]bool{}
+			out[productSysID] = inner
+		}
+		inner[paramCode] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate calculated param rows: %w", err)
+	}
+	return out, nil
 }
