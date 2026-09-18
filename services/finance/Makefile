@@ -97,31 +97,57 @@ test-unit:
 # Run all integration-gated tests across internal/... — NOT just internal/infrastructure/...
 # Restricting this to infrastructure/ previously let broken integration tests in
 # internal/application and internal/delivery/grpc go unexecuted (and unnoticed) by this target.
+# -count=1: the test cache does not key on TEST_DB_*/INTEGRATION_TEST, so a
+# cached result says nothing about which database the run actually used.
 test-integration:
-	INTEGRATION_TEST=true go test -v -race ./internal/...
+	INTEGRATION_TEST=true go test -v -race -count=1 ./internal/...
 
-# Run full CI test locally (mimics GitHub Actions)
+# Run full CI test locally (mimics GitHub Actions).
+#
+# NOTE: This target deliberately does NOT run `docker compose -f
+# deployments/docker-compose.yaml up postgres redis`. That compose file's
+# postgres/redis map to the same host ports (5434/6379) as the shared dev
+# stack started from ../../docker-compose.yaml (containers goapps-finance-postgres,
+# goapps-redis), which developers normally leave running. Starting a second
+# server on the same ports fails with "port is already allocated" and can
+# leave orphaned `Created`-but-never-started finance-postgres/finance-redis
+# containers behind. Instead we reuse the already-running dev postgres
+# container and only rebuild the finance_db_test DATABASE from scratch
+# (DROP + CREATE + migrate) every run — that's what CI actually guarantees
+# too (a clean database, not a clean server). If goapps-finance-postgres is
+# not running, start the shared dev stack first:
+#   docker compose -f ../../docker-compose.yaml up -d finance-postgres
+#
+# Redis is intentionally NOT required here: no *_test.go integration test
+# connects to Redis (grep -rln 'redis' --include='*_test.go' internal/ is
+# empty) — the only Redis code (internal/infrastructure/redis/*.go) is not
+# exercised by this test run.
 test-ci-local:
-	@echo "==> Starting test database..."
-	docker compose -f deployments/docker-compose.yaml up -d postgres redis
-	@echo "==> Waiting for PostgreSQL to be healthy..."
-	@sleep 5
+	@echo "==> Checking dev postgres container is running..."
+	@docker ps --format '{{.Names}}' | grep -qx goapps-finance-postgres || \
+		(echo "goapps-finance-postgres is not running. Start the shared dev stack first: docker compose -f ../../docker-compose.yaml up -d finance-postgres" && exit 1)
 	@echo "==> Creating test database..."
-	docker exec finance-postgres psql -U finance -d postgres -c "DROP DATABASE IF EXISTS finance_db_test;" || true
-	docker exec finance-postgres psql -U finance -d postgres -c "CREATE DATABASE finance_db_test;"
+	docker exec goapps-finance-postgres psql -U finance -d postgres -c "DROP DATABASE IF EXISTS finance_db_test;" || true
+	docker exec goapps-finance-postgres psql -U finance -d postgres -c "CREATE DATABASE finance_db_test;"
 	@echo "==> Running migrations on test database..."
 	migrate -path migrations/postgres -database "postgres://finance:finance123@localhost:5434/finance_db_test?sslmode=disable" up
 	@echo "==> Running integration tests..."
 	# Same rationale as test-integration: cover all of internal/..., not just
 	# internal/infrastructure/..., so application/ and delivery/grpc/ integration
 	# tests are not silently skipped here either.
+	# -count=1 is MANDATORY here. Go's test cache key does NOT include the
+	# TEST_DB_* env vars below, so without it a previous run against
+	# finance_db can be replayed verbatim and reported as a pass against
+	# finance_db_test — the target would return green without ever touching
+	# the freshly migrated database. Real CI never has a warm cache; this
+	# flag is what makes the local target actually mimic it.
 	INTEGRATION_TEST=true \
 		TEST_DB_HOST=localhost \
 		TEST_DB_PORT=5434 \
 		TEST_DB_USER=finance \
 		TEST_DB_PASSWORD=finance123 \
 		TEST_DB_NAME=finance_db_test \
-		go test -v -race ./internal/...
+		go test -v -race -count=1 ./internal/...
 	@echo "==> CI tests completed!"
 
 test-e2e:
