@@ -3,7 +3,9 @@ package postgres_test
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"testing"
@@ -129,7 +131,15 @@ func (s *FillAssignmentRepoSuite) seedRequest() int64 {
 		return 0
 	}
 
-	requestNo := fmt.Sprintf("FILL-INTEG-%d", time.Now().UnixNano()%10_000_000)
+	// Uniqueness via crypto/rand, not time.Now().UnixNano()%N: on darwin/arm64 UnixNano
+	// only advances in whole microseconds, so its low digits are effectively constant
+	// across calls within the same test binary run, which made this collide with
+	// uk_cpr_request_no ("pq: duplicate key value violates unique constraint
+	// uk_cpr_request_no") instead of reliably generating a fresh request number.
+	var suffix [3]byte
+	_, err := rand.Read(suffix[:])
+	require.NoError(s.T(), err)
+	requestNo := fmt.Sprintf("FILL-INTEG-%s", hex.EncodeToString(suffix[:]))
 	var id int64
 	require.NoError(s.T(), s.db.QueryRowContext(s.ctx, `
 		INSERT INTO cost_product_request (
