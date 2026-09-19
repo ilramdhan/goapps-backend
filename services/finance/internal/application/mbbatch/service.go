@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"maps"
 
 	"github.com/rs/zerolog/log"
 
@@ -19,9 +18,10 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
 
-// mbBatchCalcTypes are the 3 calc types computed for every MB, in the order required by
-// step 3-4-5 of design doc §10.3: ACTUAL first (anchors the SHARED formulas), then
-// SELLING/FORECAST (reuse the SHARED outputs via CAPP pre-seeding).
+// mbBatchCalcTypes are the 3 calc types computed for every MB, per step 3-4-5 of design doc
+// §10.3. Each calc type runs all 7 F_MB_* formulas independently, from scratch — none of
+// them shares/copies a value from another calc type's pass (see the doc comment on the
+// FormulaCode* consts in formula.go for why that sharing used to be a bug).
 var mbBatchCalcTypes = []costcalcdom.CalculationType{
 	costcalcdom.CalcTypeActual,
 	costcalcdom.CalcTypeSelling,
@@ -221,14 +221,12 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 		return nil, nil, fmt.Errorf("no COMPLETE/LOCKED route found for product %d", productSysID)
 	}
 
-	allFormulas := formulasByProduct[productSysID]
-	_, perType := partitionFormulas(allFormulas)
+	formulas := formulasByProduct[productSysID]
 	capp := cappByProduct[productSysID]
 	groupCodes := collectGroupCodes(route)
 	nestedMBProducts := collectNestedMBProducts(route)
 
 	outputs := make(map[costcalcdom.CalculationType]*costcalc.ComputeOutput, len(mbBatchCalcTypes))
-	var sharedVals map[string]float64
 
 	for _, calcType := range mbBatchCalcTypes {
 		rmCosts, err := s.loader.LoadRMCosts(ctx, groupCodes, period, string(calcType))
@@ -247,20 +245,12 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 			return nil, nil, err
 		}
 
-		typeCAPP := capp
-		formulas := perType
-		if calcType == costcalcdom.CalcTypeActual {
-			formulas = allFormulas
-		} else {
-			typeCAPP = mergeCAPP(capp, sharedVals)
-		}
-
 		out, err := costcalc.ComputeProduct(ctx, costcalc.ComputeInput{
 			ProductSysID:  productSysID,
 			Period:        period,
 			CalcType:      calcType,
 			Route:         route,
-			CAPP:          typeCAPP,
+			CAPP:          capp,
 			Formulas:      formulas,
 			RMCosts:       rmCosts,
 			UpstreamCosts: upstream,
@@ -270,10 +260,6 @@ func (s *Service) computeAndPersist(ctx context.Context, tx *sql.Tx, c MBHeadCan
 			return nil, nil, fmt.Errorf("compute %s: %w", calcType, err)
 		}
 		outputs[calcType] = out
-
-		if calcType == costcalcdom.CalcTypeActual {
-			sharedVals = sharedOutputs(out.ParamSnapshot)
-		}
 	}
 
 	return s.persistAll(ctx, tx, productSysID, period, route.Head.HeadID, jobID, outputs)
@@ -347,15 +333,6 @@ func (s *Service) warnUnscheduledChildren(in upstreamRequest, upstream map[int64
 			Float64("prior_cost_per_unit", prior).
 			Msg("nested MB child is not VALIDATED so it is not computed in this batch: parent prices it from the previously committed cost, validate the child MB Head to have it recomputed here")
 	}
-}
-
-// mergeCAPP layers sharedVals (the ACTUAL pass's SHARED formula outputs) over base CAPP,
-// producing the CAPP map used for the SELLING/FORECAST passes.
-func mergeCAPP(base, sharedVals map[string]float64) map[string]float64 {
-	out := make(map[string]float64, len(base)+len(sharedVals))
-	maps.Copy(out, base)
-	maps.Copy(out, sharedVals)
-	return out
 }
 
 // persistResult writes one calc-type cost row through tx and APPENDS the aud_cost_history
