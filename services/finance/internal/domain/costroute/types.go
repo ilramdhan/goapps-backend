@@ -66,6 +66,13 @@ type Seq struct {
 	PositionX      float64
 	PositionY      float64
 	Rms            []*Rm
+	// OriginHeadID/OriginProductCode/NestDepth are display-only annotations set
+	// only by NestedMBFlattener.Flatten when this stage was spliced in from a
+	// nested MB's own route graph; zero/empty for every stage native to the
+	// requested head. GetGraph never populates them.
+	OriginHeadID      int64
+	OriginProductCode string
+	NestDepth         int32
 }
 
 // Rm mirrors cost_route_rm columns. Exactly one of the three ref columns is
@@ -93,6 +100,17 @@ type Rm struct {
 	// RmGroupName is a read-time join on cst_rm_group_head.group_code for label
 	// display; empty for non-GROUP rows or unmatched codes.
 	RmGroupName string
+	// OriginHeadID/EffectiveRatio/NestDepth/OriginProductCode/OriginProductName
+	// are display-only annotations set only by NestedMBFlattener.Flatten when
+	// this row was spliced in from a nested MB's own route graph. For every row
+	// native to the requested head (the only case GetGraph ever produces),
+	// OriginHeadID/NestDepth stay zero, OriginProductCode/OriginProductName stay
+	// empty, and EffectiveRatio equals RouteRmRatio.
+	OriginHeadID      int64
+	EffectiveRatio    float64
+	NestDepth         int32
+	OriginProductCode string
+	OriginProductName string
 }
 
 // Graph bundles head + seqs (with rms inline).

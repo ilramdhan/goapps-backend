@@ -150,6 +150,32 @@ func (r *CostRouteRepository) GetActiveByProduct(ctx context.Context, productSys
 	return h, nil
 }
 
+// GetLatestGraphByProduct returns the most-recently-created non-deleted route
+// graph for a product, regardless of crh_routing_status.
+//
+// Unlike GetActiveByProduct this deliberately does NOT exclude LOCKED heads:
+// it exists for NestedMBFlattener, which must be able to read a nested MB's
+// own route even in its normal steady-state LOCKED status. Delegates to the
+// unmodified GetGraph once the head_id is resolved, so it shares GetGraph's
+// exact seq/rm loading behavior.
+func (r *CostRouteRepository) GetLatestGraphByProduct(ctx context.Context, productSysID int64) (*costroute.Graph, error) {
+	const q = `
+		SELECT crh_head_id
+		FROM cost_route_head
+		WHERE crh_product_sys_id = $1 AND crh_deleted_at IS NULL
+		ORDER BY crh_version DESC, crh_created_at DESC
+		LIMIT 1`
+	var headID int64
+	err := r.db.QueryRowContext(ctx, q, productSysID).Scan(&headID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, costroute.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get latest route head by product: %w", err)
+	}
+	return r.GetGraph(ctx, headID)
+}
+
 func isRouteUniqueViolation(err error) bool {
 	return isPGUniqueViolation(err)
 }
