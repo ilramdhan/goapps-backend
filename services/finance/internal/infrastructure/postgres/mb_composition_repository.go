@@ -265,7 +265,7 @@ func (r *MBCompositionRepository) ListByMbhID(ctx context.Context, mbhID string)
 func (r *MBCompositionRepository) ListVersionsByMbhID(ctx context.Context, mbhID string, version int32) ([]mbcomposition.VersionRow, error) {
 	const q = `
 		SELECT mbcv_id, mbcv_mbh_id, mbcv_version, mbcv_validated_at::text, mbcv_validated_by,
-		       mbcv_seq_no, mbcv_group_head_id, mbcv_composition_pct, mbcv_source_type,
+		       mbcv_seq_no, COALESCE(mbcv_group_head_id::text, ''), mbcv_composition_pct, mbcv_source_type,
 		       COALESCE(mbcv_mb_ref_mbh_id::text, ''), mbcv_is_carrier
 		FROM mst_mb_composition_version
 		WHERE mbcv_mbh_id = $1
@@ -423,7 +423,7 @@ func (r *MBCompositionRepository) ListMBEdgesBulk(ctx context.Context, mbhIDs []
 
 func (r *MBCompositionRepository) selectCols() string {
 	return `
-		SELECT mbcm_id, mbcm_mbh_id, mbcm_seq_no, mbcm_group_head_id, mbcm_composition_pct,
+		SELECT mbcm_id, mbcm_mbh_id, mbcm_seq_no, COALESCE(mbcm_group_head_id::text, ''), mbcm_composition_pct,
 		       mbcm_source_type, COALESCE(mbcm_mb_ref_mbh_id::text, ''), mbcm_is_carrier,
 		       COALESCE(mbcm_legacy_sys_id, ''),
 		       mbcm_created_at, mbcm_created_by,
