@@ -34,6 +34,7 @@ import (
 	cpmapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
+	costrouteapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costroute"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupregistry"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
@@ -550,6 +551,10 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// Wire fill-task approval check into the route lock handler.
 	// Only tasks with an approver configured block locking; no-approver levels are ignored.
 	costRouteHandler.WithFillApprovalChecker(fillTaskRepo)
+	// Wire read-time nested-MB flattening into the route graph viewer. Display-only:
+	// SaveRouteGraph never consults this, and no write path is touched by it.
+	nestedMBFlattener := costrouteapp.NewNestedMBFlattener(costRouteRepo, postgres.NewMBTypeChecker(db))
+	costRouteHandler.WithNestedMBFlattener(nestedMBFlattener)
 
 	upsertGlobalHandler := fillapp.NewUpsertGlobalConfigHandler(fillConfigRepo)
 	upsertOverrideHandler := fillapp.NewUpsertOverrideHandler(fillConfigRepo)

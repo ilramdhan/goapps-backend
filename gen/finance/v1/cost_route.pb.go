@@ -261,7 +261,13 @@ type CostRouteSeq struct {
 	PositionX      float64                `protobuf:"fixed64,12,opt,name=position_x,json=positionX,proto3" json:"position_x,omitempty"`
 	PositionY      float64                `protobuf:"fixed64,13,opt,name=position_y,json=positionY,proto3" json:"position_y,omitempty"`
 	// RMs that feed this stage (rendered inline on graph fetch).
-	Rms           []*CostRouteRm `protobuf:"bytes,14,rep,name=rms,proto3" json:"rms,omitempty"`
+	Rms []*CostRouteRm `protobuf:"bytes,14,rep,name=rms,proto3" json:"rms,omitempty"`
+	// Head ID of the nested MB this stage was spliced in from (0 = native to the requested head).
+	OriginHeadId int64 `protobuf:"varint,15,opt,name=origin_head_id,json=originHeadId,proto3" json:"origin_head_id,omitempty"`
+	// Product code of the nested MB this stage was spliced in from (empty = native).
+	OriginProductCode string `protobuf:"bytes,16,opt,name=origin_product_code,json=originProductCode,proto3" json:"origin_product_code,omitempty"`
+	// Flattening depth of this stage (0 = native to the requested head).
+	NestDepth     int32 `protobuf:"varint,17,opt,name=nest_depth,json=nestDepth,proto3" json:"nest_depth,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -394,6 +400,27 @@ func (x *CostRouteSeq) GetRms() []*CostRouteRm {
 	return nil
 }
 
+func (x *CostRouteSeq) GetOriginHeadId() int64 {
+	if x != nil {
+		return x.OriginHeadId
+	}
+	return 0
+}
+
+func (x *CostRouteSeq) GetOriginProductCode() string {
+	if x != nil {
+		return x.OriginProductCode
+	}
+	return ""
+}
+
+func (x *CostRouteSeq) GetNestDepth() int32 {
+	if x != nil {
+		return x.NestDepth
+	}
+	return 0
+}
+
 // CostRouteRm is one input edge feeding a SEQ.
 // Exactly one of (rm_product_sys_id, rm_item_code, rm_group_code) is set,
 // matching rm_type.
@@ -420,9 +447,19 @@ type CostRouteRm struct {
 	// Persisted node Y position on the routing graph.
 	PositionY float64 `protobuf:"fixed64,17,opt,name=position_y,json=positionY,proto3" json:"position_y,omitempty"`
 	// RM group display name (read-time join on rm_group_code).
-	RmGroupName   string `protobuf:"bytes,18,opt,name=rm_group_name,json=rmGroupName,proto3" json:"rm_group_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	RmGroupName string `protobuf:"bytes,18,opt,name=rm_group_name,json=rmGroupName,proto3" json:"rm_group_name,omitempty"`
+	// Head ID of the nested MB this row was flattened in from (0 = native to the requested head).
+	OriginHeadId int64 `protobuf:"varint,19,opt,name=origin_head_id,json=originHeadId,proto3" json:"origin_head_id,omitempty"`
+	// Ratio compounded down through nested-MB flattening (equals route_rm_ratio when native).
+	EffectiveRatio float64 `protobuf:"fixed64,20,opt,name=effective_ratio,json=effectiveRatio,proto3" json:"effective_ratio,omitempty"`
+	// Flattening depth of this row (0 = native to the requested head).
+	NestDepth int32 `protobuf:"varint,21,opt,name=nest_depth,json=nestDepth,proto3" json:"nest_depth,omitempty"`
+	// Product code of the nested MB this row was flattened in from (empty = native).
+	OriginProductCode string `protobuf:"bytes,22,opt,name=origin_product_code,json=originProductCode,proto3" json:"origin_product_code,omitempty"`
+	// Product name of the nested MB this row was flattened in from (empty = native).
+	OriginProductName string `protobuf:"bytes,23,opt,name=origin_product_name,json=originProductName,proto3" json:"origin_product_name,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CostRouteRm) Reset() {
@@ -581,6 +618,41 @@ func (x *CostRouteRm) GetRmGroupName() string {
 	return ""
 }
 
+func (x *CostRouteRm) GetOriginHeadId() int64 {
+	if x != nil {
+		return x.OriginHeadId
+	}
+	return 0
+}
+
+func (x *CostRouteRm) GetEffectiveRatio() float64 {
+	if x != nil {
+		return x.EffectiveRatio
+	}
+	return 0
+}
+
+func (x *CostRouteRm) GetNestDepth() int32 {
+	if x != nil {
+		return x.NestDepth
+	}
+	return 0
+}
+
+func (x *CostRouteRm) GetOriginProductCode() string {
+	if x != nil {
+		return x.OriginProductCode
+	}
+	return ""
+}
+
+func (x *CostRouteRm) GetOriginProductName() string {
+	if x != nil {
+		return x.OriginProductName
+	}
+	return ""
+}
+
 // RouteGraph bundles the head + all seqs (with rms inline).
 type RouteGraph struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -731,10 +803,12 @@ func (x *GetRouteByProductResponse) GetData() *CostRouteHead {
 }
 
 type GetRouteGraphRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	HeadId        int64                  `protobuf:"varint,1,opt,name=head_id,json=headId,proto3" json:"head_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	HeadId int64                  `protobuf:"varint,1,opt,name=head_id,json=headId,proto3" json:"head_id,omitempty"`
+	// When true, recursively flattens nested-MB composition into the returned graph (display-only, read-time).
+	IncludeNestedMb bool `protobuf:"varint,2,opt,name=include_nested_mb,json=includeNestedMb,proto3" json:"include_nested_mb,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetRouteGraphRequest) Reset() {
@@ -772,6 +846,13 @@ func (x *GetRouteGraphRequest) GetHeadId() int64 {
 		return x.HeadId
 	}
 	return 0
+}
+
+func (x *GetRouteGraphRequest) GetIncludeNestedMb() bool {
+	if x != nil {
+		return x.IncludeNestedMb
+	}
+	return false
 }
 
 type GetRouteGraphResponse struct {
@@ -2050,7 +2131,7 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"unlockedBy\x12\x1f\n" +
 	"\vunlocked_at\x18\x14 \x01(\tR\n" +
 	"unlockedAt\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xec\x03\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xe1\x04\n" +
 	"\fCostRouteSeq\x12\x15\n" +
 	"\x06seq_id\x18\x01 \x01(\x03R\x05seqId\x12\x17\n" +
 	"\ahead_id\x18\x02 \x01(\x03R\x06headId\x12$\n" +
@@ -2070,7 +2151,11 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"position_x\x18\f \x01(\x01R\tpositionX\x12\x1d\n" +
 	"\n" +
 	"position_y\x18\r \x01(\x01R\tpositionY\x12)\n" +
-	"\x03rms\x18\x0e \x03(\v2\x17.finance.v1.CostRouteRmR\x03rms\"\xf5\x04\n" +
+	"\x03rms\x18\x0e \x03(\v2\x17.finance.v1.CostRouteRmR\x03rms\x12$\n" +
+	"\x0eorigin_head_id\x18\x0f \x01(\x03R\foriginHeadId\x12.\n" +
+	"\x13origin_product_code\x18\x10 \x01(\tR\x11originProductCode\x12\x1d\n" +
+	"\n" +
+	"nest_depth\x18\x11 \x01(\x05R\tnestDepth\"\xc3\x06\n" +
 	"\vCostRouteRm\x12\x13\n" +
 	"\x05rm_id\x18\x01 \x01(\x03R\x04rmId\x12\x15\n" +
 	"\x06seq_id\x18\x02 \x01(\x03R\x05seqId\x121\n" +
@@ -2093,7 +2178,13 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"position_x\x18\x10 \x01(\x01R\tpositionX\x12\x1d\n" +
 	"\n" +
 	"position_y\x18\x11 \x01(\x01R\tpositionY\x12\"\n" +
-	"\rrm_group_name\x18\x12 \x01(\tR\vrmGroupName\"i\n" +
+	"\rrm_group_name\x18\x12 \x01(\tR\vrmGroupName\x12$\n" +
+	"\x0eorigin_head_id\x18\x13 \x01(\x03R\foriginHeadId\x12'\n" +
+	"\x0feffective_ratio\x18\x14 \x01(\x01R\x0eeffectiveRatio\x12\x1d\n" +
+	"\n" +
+	"nest_depth\x18\x15 \x01(\x05R\tnestDepth\x12.\n" +
+	"\x13origin_product_code\x18\x16 \x01(\tR\x11originProductCode\x12.\n" +
+	"\x13origin_product_name\x18\x17 \x01(\tR\x11originProductName\"i\n" +
 	"\n" +
 	"RouteGraph\x12-\n" +
 	"\x04head\x18\x01 \x01(\v2\x19.finance.v1.CostRouteHeadR\x04head\x12,\n" +
@@ -2102,9 +2193,10 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fproductSysId\"w\n" +
 	"\x19GetRouteByProductResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
-	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.CostRouteHeadR\x04data\"8\n" +
+	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.CostRouteHeadR\x04data\"d\n" +
 	"\x14GetRouteGraphRequest\x12 \n" +
-	"\ahead_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x06headId\"p\n" +
+	"\ahead_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x06headId\x12*\n" +
+	"\x11include_nested_mb\x18\x02 \x01(\bR\x0fincludeNestedMb\"p\n" +
 	"\x15GetRouteGraphResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12*\n" +
 	"\x04data\x18\x02 \x01(\v2\x16.finance.v1.RouteGraphR\x04data\"g\n" +
