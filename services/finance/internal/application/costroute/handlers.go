@@ -45,7 +45,8 @@ func (h *GetByProductHandler) Handle(ctx context.Context, productSysID int64) (*
 
 // GetGraphHandler returns the full graph for a head.
 type GetGraphHandler struct {
-	repo costroute.Repository
+	repo      costroute.Repository
+	flattener *NestedMBFlattener
 }
 
 // NewGetGraphHandler constructs a GetGraphHandler.
@@ -53,9 +54,27 @@ func NewGetGraphHandler(repo costroute.Repository) *GetGraphHandler {
 	return &GetGraphHandler{repo: repo}
 }
 
-// Handle loads the graph.
-func (h *GetGraphHandler) Handle(ctx context.Context, headID int64) (*costroute.Graph, error) {
-	return h.repo.GetGraph(ctx, headID)
+// WithNestedMBFlattener attaches an optional nested-MB flattener, enabling
+// includeNestedMB=true on Handle. Never wire this onto anything but the
+// read-only route viewer's handler instance -- SaveGraphHandler must never
+// see flattened output.
+func (h *GetGraphHandler) WithNestedMBFlattener(f *NestedMBFlattener) *GetGraphHandler {
+	h.flattener = f
+	return h
+}
+
+// Handle loads the graph, optionally flattening nested-MB composition into it
+// for display when includeNestedMB is true and a flattener is wired. When
+// either condition is false, this returns exactly what it always has.
+func (h *GetGraphHandler) Handle(ctx context.Context, headID int64, includeNestedMB bool) (*costroute.Graph, error) {
+	graph, err := h.repo.GetGraph(ctx, headID)
+	if err != nil {
+		return nil, err
+	}
+	if !includeNestedMB || h.flattener == nil {
+		return graph, nil
+	}
+	return h.flattener.Flatten(ctx, graph)
 }
 
 // SaveGraphHandler validates + persists the entire graph in one tx.

@@ -74,6 +74,14 @@ func (h *CostRouteHandler) WithFillApprovalChecker(c FillApprovalChecker) *CostR
 	return h
 }
 
+// WithNestedMBFlattener wires the nested-MB flattener into the graph read
+// path, enabling include_nested_mb=true on GetRouteGraph. SaveRouteGraph
+// never consults this handler's flattener.
+func (h *CostRouteHandler) WithNestedMBFlattener(f *app.NestedMBFlattener) *CostRouteHandler {
+	h.getGraph.WithNestedMBFlattener(f)
+	return h
+}
+
 // GetRouteByProduct returns the active head for a product.
 func (h *CostRouteHandler) GetRouteByProduct(ctx context.Context, req *financev1.GetRouteByProductRequest) (*financev1.GetRouteByProductResponse, error) {
 	head, err := h.getByProduct.Handle(ctx, req.GetProductSysId())
@@ -85,7 +93,7 @@ func (h *CostRouteHandler) GetRouteByProduct(ctx context.Context, req *financev1
 
 // GetRouteGraph returns the full graph (head + seqs + rms inline).
 func (h *CostRouteHandler) GetRouteGraph(ctx context.Context, req *financev1.GetRouteGraphRequest) (*financev1.GetRouteGraphResponse, error) {
-	g, err := h.getGraph.Handle(ctx, req.GetHeadId())
+	g, err := h.getGraph.Handle(ctx, req.GetHeadId(), req.GetIncludeNestedMb())
 	if err != nil {
 		return &financev1.GetRouteGraphResponse{Base: routeErrToBase(err)}, nil
 	}
@@ -307,6 +315,10 @@ func routeGraphToProto(g *costroute.Graph) *financev1.RouteGraph {
 			if rm == nil {
 				continue
 			}
+			effectiveRatio := rm.EffectiveRatio
+			if effectiveRatio == 0 {
+				effectiveRatio = rm.RouteRmRatio
+			}
 			rms = append(rms, &financev1.CostRouteRm{
 				RmId:               rm.RmID,
 				SeqId:              rm.SeqID,
@@ -326,23 +338,31 @@ func routeGraphToProto(g *costroute.Graph) *financev1.RouteGraph {
 				PositionX:          rm.PositionX,
 				PositionY:          rm.PositionY,
 				RmGroupName:        rm.RmGroupName,
+				OriginHeadId:       rm.OriginHeadID,
+				EffectiveRatio:     effectiveRatio,
+				NestDepth:          rm.NestDepth,
+				OriginProductCode:  rm.OriginProductCode,
+				OriginProductName:  rm.OriginProductName,
 			})
 		}
 		seqs = append(seqs, &financev1.CostRouteSeq{
-			SeqId:          s.SeqID,
-			HeadId:         s.HeadID,
-			ProductSysId:   s.ProductSysID,
-			ProductCode:    s.ProductCode,
-			ProductName:    s.ProductName,
-			RouteLevel:     s.RouteLevel,
-			RouteSeq:       s.RouteSeq,
-			RouteName:      s.RouteName,
-			RouteItemCode:  s.RouteItemCode,
-			RouteShadeCode: s.RouteShadeCode,
-			RouteShadeName: s.RouteShadeName,
-			PositionX:      s.PositionX,
-			PositionY:      s.PositionY,
-			Rms:            rms,
+			SeqId:             s.SeqID,
+			HeadId:            s.HeadID,
+			ProductSysId:      s.ProductSysID,
+			ProductCode:       s.ProductCode,
+			ProductName:       s.ProductName,
+			RouteLevel:        s.RouteLevel,
+			RouteSeq:          s.RouteSeq,
+			RouteName:         s.RouteName,
+			RouteItemCode:     s.RouteItemCode,
+			RouteShadeCode:    s.RouteShadeCode,
+			RouteShadeName:    s.RouteShadeName,
+			PositionX:         s.PositionX,
+			PositionY:         s.PositionY,
+			Rms:               rms,
+			OriginHeadId:      s.OriginHeadID,
+			OriginProductCode: s.OriginProductCode,
+			NestDepth:         s.NestDepth,
 		})
 	}
 	return &financev1.RouteGraph{Head: routeHeadToProto(g.Head), Seqs: seqs}
