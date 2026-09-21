@@ -307,6 +307,13 @@
             "required": true,
             "type": "string",
             "format": "int64"
+          },
+          {
+            "name": "includeNestedMb",
+            "description": "When true, recursively flattens nested-MB composition into the returned graph (display-only, read-time).",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -759,6 +766,29 @@
         "rmGroupName": {
           "type": "string",
           "description": "RM group display name (read-time join on rm_group_code)."
+        },
+        "originHeadId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Head ID of the nested MB this row was flattened in from (0 = native to the requested head)."
+        },
+        "effectiveRatio": {
+          "type": "number",
+          "format": "double",
+          "description": "Ratio compounded down through nested-MB flattening (equals route_rm_ratio when native)."
+        },
+        "nestDepth": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Flattening depth of this row (0 = native to the requested head)."
+        },
+        "originProductCode": {
+          "type": "string",
+          "description": "Product code of the nested MB this row was flattened in from (empty = native)."
+        },
+        "originProductName": {
+          "type": "string",
+          "description": "Product name of the nested MB this row was flattened in from (empty = native)."
         }
       },
       "description": "CostRouteRm is one input edge feeding a SEQ.\nExactly one of (rm_product_sys_id, rm_item_code, rm_group_code) is set,\nmatching rm_type."
@@ -823,6 +853,20 @@
             "$ref": "#/definitions/v1CostRouteRm"
           },
           "description": "RMs that feed this stage (rendered inline on graph fetch)."
+        },
+        "originHeadId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Head ID of the nested MB this stage was spliced in from (0 = native to the requested head)."
+        },
+        "originProductCode": {
+          "type": "string",
+          "description": "Product code of the nested MB this stage was spliced in from (empty = native)."
+        },
+        "nestDepth": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Flattening depth of this stage (0 = native to the requested head)."
         }
       },
       "description": "CostRouteSeq is one stage of the route at a given level + ordering."
