@@ -108,6 +108,14 @@ type ComputeInput struct {
 	// back to rmcost's historical CR->SR->PR order in resolveRMUnitCost,
 	// preserving pre-Task-C behavior for callers that do not supply it.
 	RMRateOrder []string
+	// RMLandedOrder is the calc-type-keyed GROUP-RM landed-cost cascade
+	// config (first non-zero of CL/SL/FL for ACTUAL, SP/PP/FP for
+	// FORECAST/SELLING), loaded once per chunk from F_YARN_RM_LANDED's
+	// expression column (migration 000519) via loader.LoadRMLandedOrder.
+	// A calc_type missing from this map (including nil/empty) falls back to
+	// that calc_type's hardcoded default in resolveRMLandedCost, preserving
+	// behavior for callers that do not supply it.
+	RMLandedOrder map[string][]string
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
@@ -209,7 +217,7 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	}
 
 	// 2. Aggregate RM cost across every sequence in the route.
-	totalRM, rmDetail, levelMap, err := aggregateRMCost(in)
+	totalRM, rmDetail, levelMap, err := aggregateRMCost(in, resolveRMUnitCost)
 	if err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
@@ -217,8 +225,22 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	scope[ScopeKeyCostRMTotal] = totalRM
 	delete(zeroFilled, ScopeKeyCostRMTotal)
 
+	// 2b. Aggregate RM_LANDED_COST across every sequence in the route -- a
+	// separate cascade from totalRM/RM_RATE for GROUP-type RMs (see
+	// resolveRMLandedCost). Computed unconditionally alongside totalRM,
+	// mirroring totalRM's own "always computed once, consumed only if a
+	// formula wants it" shape, so evalSingleFormulaStep's F_YARN_RM_LANDED
+	// branch below reuses landedRM instead of recomputing the aggregation.
+	// Its per-line detail/level breakdown is discarded: nothing downstream
+	// persists a separate landed-cost detail/level report today.
+	landedRM, _, _, err := aggregateRMCost(in, resolveRMLandedCost)
+	if err != nil {
+		recordProductSpanError(span, err)
+		return nil, err
+	}
+
 	// 3. Evaluate formulas in topo order (loader pre-sorted).
-	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, in.Formulas, in.ProductSysID, in.MBCosts, in.CalcType, zeroFilled)
+	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, landedRM, in.Formulas, in.ProductSysID, in.MBCosts, in.CalcType, zeroFilled)
 	if err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
@@ -370,6 +392,7 @@ func evalFormulaChain(
 	cache *evaluator.Cache,
 	scope map[string]any,
 	totalRM float64,
+	landedRM float64,
 	formulas []Formula,
 	productSysID int64,
 	mbCosts map[string]float64,
@@ -378,7 +401,7 @@ func evalFormulaChain(
 ) ([]FormulaEvalTrace, error) {
 	trace := make([]FormulaEvalTrace, 0, len(formulas))
 	for _, f := range formulas {
-		t, err := evalSingleFormulaStep(ctx, cache, scope, totalRM, f, productSysID, mbCosts, calcType)
+		t, err := evalSingleFormulaStep(ctx, cache, scope, totalRM, landedRM, f, productSysID, mbCosts, calcType)
 		if err != nil {
 			return nil, err
 		}
@@ -405,6 +428,7 @@ func evalSingleFormulaStep(
 	cache *evaluator.Cache,
 	scope map[string]any,
 	totalRM float64,
+	landedRM float64,
 	f Formula,
 	productSysID int64,
 	mbCosts map[string]float64,
@@ -414,13 +438,20 @@ func evalSingleFormulaStep(
 	case "SNAPSHOT":
 		return evalSnapshotFormula(f, scope), nil
 	case FormulaTypeRMLookup:
-		// Phase-1: RM_LOOKUP -> alias totalRM into result param, for ALL
-		// three RM_LOOKUP formulas (F_YARN_RM_RATE, F_YARN_CAP_CONVERSION,
-		// F_YARN_DEL_CONVERSION -- migration 000408). Each has a distinct
-		// Oracle DSL expression (see loader.go LoadUpstreamCosts doc), but
-		// this switch does not evaluate the DSL at all: it ignores
-		// f.Expression entirely and returns the same totalRM for every one
-		// of them, regardless of which RM_LOOKUP formula is being resolved.
+		// Phase-1: RM_LOOKUP -> alias totalRM into result param, for the
+		// three totalRM-aliased RM_LOOKUP formulas (F_YARN_RM_RATE,
+		// F_YARN_CAP_CONVERSION, F_YARN_DEL_CONVERSION -- migration 000408).
+		// Each has a distinct Oracle DSL expression (see loader.go
+		// LoadUpstreamCosts doc), but this switch does not evaluate the DSL
+		// at all: it ignores f.Expression entirely and returns the same
+		// totalRM for every one of them, regardless of which RM_LOOKUP
+		// formula is being resolved.
+		//
+		// F_YARN_RM_LANDED (RM_LANDED_COST) is the one exception, handled
+		// below: since migration 000519 it runs its own calc-type-dependent
+		// GROUP-RM cascade (resolveRMLandedCost), pre-aggregated once into
+		// landedRM by ComputeProduct alongside totalRM -- it is NOT aliased
+		// to totalRM like the other three.
 		//
 		// aggregateRMCost/resolveRMUnitCost (below) already implement two
 		// real pieces of the DSL correctly: pricing-type selection (ACTUAL /
@@ -439,6 +470,15 @@ func evalSingleFormulaStep(
 		// route has a PRODUCT-type RM. That per-DSL-target split (not
 		// "per-pricing-type", which already works) is the real Phase-2 gap
 		// -- confirm scope with costing before implementing (C10/C11).
+		if f.FormulaCode == rmLandedOrderFormulaCode {
+			return FormulaEvalTrace{
+				FormulaCode:     f.FormulaCode,
+				Expression:      f.Expression,
+				ResultParamCode: f.ResultParamCode,
+				Output:          landedRM,
+				Inputs:          map[string]float64{"COST_RM_LANDED_TOTAL": landedRM},
+			}, nil
+		}
 		return FormulaEvalTrace{
 			FormulaCode:     f.FormulaCode,
 			Expression:      f.Expression,
@@ -508,11 +548,20 @@ func snapshotValue(f Formula, scope map[string]any) float64 {
 	return float64(0)
 }
 
+// rmUnitResolver resolves the per-unit cost for one RM line. aggregateRMCost
+// is calc-agnostic about which cascade it is summing -- resolveRMUnitCost
+// (RM_RATE / COST_RM_TOTAL) and resolveRMLandedCost (RM_LANDED_COST) are its
+// two implementations, called from separate aggregateRMCost invocations in
+// ComputeProduct so each result param gets its own independently-summed
+// total instead of one aliasing the other.
+type rmUnitResolver func(in ComputeInput, rm *costroute.Rm) (float64, error)
+
 // aggregateRMCost iterates every sequence in the route and sums the RM
-// contributions. Note: per the costroute design the level-1 seq produces the
-// FG; we treat every seq as contributing because intermediate seqs feed the FG
-// via their RMs (the formula chain rolls them up — see S8b.7 chunk processor).
-func aggregateRMCost(in ComputeInput) (float64, []RMCostDetail, map[int32]float64, error) {
+// contributions using resolve for each line's per-unit cost. Note: per the
+// costroute design the level-1 seq produces the FG; we treat every seq as
+// contributing because intermediate seqs feed the FG via their RMs (the
+// formula chain rolls them up — see S8b.7 chunk processor).
+func aggregateRMCost(in ComputeInput, resolve rmUnitResolver) (float64, []RMCostDetail, map[int32]float64, error) {
 	var totalRM float64
 	detail := []RMCostDetail{}
 	byLevel := map[int32]float64{}
@@ -532,7 +581,7 @@ func aggregateRMCost(in ComputeInput) (float64, []RMCostDetail, map[int32]float6
 			if rm == nil {
 				continue
 			}
-			unit, err := resolveRMUnitCost(in, rm)
+			unit, err := resolve(in, rm)
 			if err != nil {
 				return 0, nil, nil, fmt.Errorf("product %d level %d: %w", in.ProductSysID, level, err)
 			}
@@ -553,24 +602,44 @@ func aggregateRMCost(in ComputeInput) (float64, []RMCostDetail, map[int32]float6
 	return totalRM, detail, byLevel, nil
 }
 
-// resolveRMUnitCost picks the per-unit cost for a single RM line based on its
-// discriminator. Returns a wrapped sentinel error so the chunk processor can
-// classify the product as BLOCKED.
+// resolveUpstreamProductCost resolves the per-unit cost of a PRODUCT-type RM
+// from already-computed upstream product costs. Shared by resolveRMUnitCost
+// (RM_RATE) and resolveRMLandedCost (RM_LANDED_COST): PRODUCT-type RMs have
+// no distinct "landed" cost concept in the DSL or anywhere else in the
+// codebase, so both read the exact same in.UpstreamCosts[rm.RmProductSysID]
+// value -- RM_LANDED_COST and RM_RATE are identical for PRODUCT-type lines
+// by design, not by coincidence.
+func resolveUpstreamProductCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
+	cost, ok := in.UpstreamCosts[rm.RmProductSysID]
+	if !ok {
+		return 0, fmt.Errorf("%w: upstream product %d", costcalcdom.ErrMissingUpstreamCost, rm.RmProductSysID)
+	}
+	return cost, nil
+}
+
+// resolveItemCostVal resolves the per-unit cost of an ITEM-type RM from the
+// calc-type-selected cost_val snapshot. Shared by resolveRMUnitCost
+// (RM_RATE) and resolveRMLandedCost (RM_LANDED_COST): no distinct ITEM-type
+// "landed" cost mechanism has been defined, so RM_LANDED_COST and RM_RATE
+// stay equal for ITEM-type RM lines by design, matching PRODUCT-type above.
+func resolveItemCostVal(in ComputeInput, rm *costroute.Rm) (float64, error) {
+	key := rm.RmItemCode + "|"
+	rates, ok := in.RMCosts[key]
+	if !ok {
+		return 0, fmt.Errorf("%w: item %s", costcalcdom.ErrMissingRMCost, rm.RmItemCode)
+	}
+	return rates.CostVal, nil
+}
+
+// resolveRMUnitCost picks the per-unit RM_RATE cost for a single RM line
+// based on its discriminator. Returns a wrapped sentinel error so the chunk
+// processor can classify the product as BLOCKED.
 func resolveRMUnitCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
 	switch rm.RmType {
 	case costroute.RmTypeProduct:
-		cost, ok := in.UpstreamCosts[rm.RmProductSysID]
-		if !ok {
-			return 0, fmt.Errorf("%w: upstream product %d", costcalcdom.ErrMissingUpstreamCost, rm.RmProductSysID)
-		}
-		return cost, nil
+		return resolveUpstreamProductCost(in, rm)
 	case costroute.RmTypeItem:
-		key := rm.RmItemCode + "|"
-		rates, ok := in.RMCosts[key]
-		if !ok {
-			return 0, fmt.Errorf("%w: item %s", costcalcdom.ErrMissingRMCost, rm.RmItemCode)
-		}
-		return rates.CostVal, nil
+		return resolveItemCostVal(in, rm)
 	case costroute.RmTypeGroup:
 		key := rm.RmGroupCode + "|"
 		rates, ok := in.RMCosts[key]
@@ -586,6 +655,44 @@ func resolveRMUnitCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
 		// selected. All three zero (or missing) is a valid "no rate yet"
 		// state, not an error — only a missing row (!ok above) is.
 		cost, _ := rmcost.FirstNonZeroWithLabel(rmRateCandidates(in.RMRateOrder, rates))
+		return cost, nil
+	default:
+		return 0, fmt.Errorf("unknown RM type %q", rm.RmType)
+	}
+}
+
+// resolveRMLandedCost picks the per-unit RM_LANDED_COST for a single RM
+// line. PRODUCT- and ITEM-type RMs share resolveRMUnitCost's exact
+// mechanism via resolveUpstreamProductCost/resolveItemCostVal -- no distinct
+// "landed" definition exists for either type, so RM_LANDED_COST and RM_RATE
+// are identical for those two RM types by design. Only GROUP-type RMs
+// diverge: RM_LANDED_COST runs its own calc-type-DEPENDENT cascade (unlike
+// RM_RATE's calc-type-agnostic CR/SR/PR cascade), configured by
+// F_YARN_RM_LANDED's expression column (migration 000519):
+//   - ACTUAL:             first non-zero of CL -> SL -> FL
+//   - FORECAST:           first non-zero of SP -> PP -> FP
+//   - SELLING:            DELIBERATE PLACEHOLDER, no SELLING-specific
+//     landed-cost definition exists anywhere in the codebase today (see
+//     migration 000519's comment for the full rationale) -- treated
+//     identically to FORECAST (SP->PP->FP) until a real definition is
+//     decided. Revisit this branch alongside that decision, not silently.
+//   - unrecognized/other: also falls back to the FORECAST list, for the
+//     same "never hard-fail a cost computation over bad config" reason
+//     RMRateOrder falls back to DefaultRMRateOrder.
+func resolveRMLandedCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
+	switch rm.RmType {
+	case costroute.RmTypeProduct:
+		return resolveUpstreamProductCost(in, rm)
+	case costroute.RmTypeItem:
+		return resolveItemCostVal(in, rm)
+	case costroute.RmTypeGroup:
+		key := rm.RmGroupCode + "|"
+		rates, ok := in.RMCosts[key]
+		if !ok {
+			return 0, fmt.Errorf("%w: group %s", costcalcdom.ErrMissingRMCost, rm.RmGroupCode)
+		}
+		order := rmLandedOrderForCalcType(in.RMLandedOrder, string(in.CalcType))
+		cost, _ := rmcost.FirstNonZeroWithLabel(rmLandedCandidates(order, rates))
 		return cost, nil
 	default:
 		return 0, fmt.Errorf("unknown RM type %q", rm.RmType)
@@ -610,6 +717,34 @@ func rmRateCandidates(order []string, rates RMCostRates) []rmcost.LabeledRate {
 			candidates = append(candidates, rmcost.LabeledRate{Value: rates.SrRate, Label: "SR"})
 		case "PR":
 			candidates = append(candidates, rmcost.LabeledRate{Value: rates.PrRate, Label: "PR"})
+		}
+	}
+	return candidates
+}
+
+// rmLandedCandidates maps a GROUP-RM landed-cost cascade order (tokens
+// CL/SL/FL for ACTUAL, SP/PP/FP for FORECAST/SELLING) onto rates' matching
+// fields, in that order, for rmcost.FirstNonZeroWithLabel. Callers resolve
+// the order itself via rmLandedOrderForCalcType before calling this, so an
+// empty order here (e.g. a caller-constructed empty slice) simply yields no
+// candidates rather than silently defaulting -- keeping the defaulting
+// decision in exactly one place.
+func rmLandedCandidates(order []string, rates RMCostRates) []rmcost.LabeledRate {
+	candidates := make([]rmcost.LabeledRate, 0, len(order))
+	for _, tok := range order {
+		switch tok {
+		case "CL":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.ClRate, Label: "CL"})
+		case "SL":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.SlRate, Label: "SL"})
+		case "FL":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.FlRate, Label: "FL"})
+		case "SP":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.SpRate, Label: "SP"})
+		case "PP":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.PpRate, Label: "PP"})
+		case "FP":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.FpRate, Label: "FP"})
 		}
 	}
 	return candidates

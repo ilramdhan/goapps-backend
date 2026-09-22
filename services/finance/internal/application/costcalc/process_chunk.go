@@ -137,6 +137,12 @@ type loadedBundle struct {
 	// line -- via s.rmRateOrderLoader. Always non-empty: loadRMRateOrder falls
 	// back to DefaultRMRateOrder when the loader is nil or resolves nothing.
 	rmRateOrder []string
+	// rmLandedOrder is the calc-type-keyed GROUP-RM landed-cost cascade config
+	// (first non-zero of CL/SL/FL for ACTUAL, SP/PP/FP for FORECAST/SELLING),
+	// loaded once per chunk via s.rmLandedOrderLoader. May be missing entries
+	// for a given calc_type -- resolveRMLandedCost/rmLandedOrderForCalcType
+	// fall back to that calc_type's hardcoded default independently.
+	rmLandedOrder map[string][]string
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -214,6 +220,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		mbProducts:       mbProducts,
 		calculatedParams: calculatedParams,
 		rmRateOrder:      s.loadRMRateOrder(ctx),
+		rmLandedOrder:    s.loadRMLandedOrder(ctx),
 	}, nil
 }
 
@@ -225,6 +232,17 @@ func (s *Service) loadRMRateOrder(ctx context.Context) []string {
 		return append([]string(nil), DefaultRMRateOrder...)
 	}
 	return s.rmRateOrderLoader.LoadRMRateOrder(ctx)
+}
+
+// loadRMLandedOrder resolves the calc-type-keyed GROUP-RM landed-cost cascade
+// config once per chunk. A nil loader (tests, or wiring that omits
+// WithRMLandedOrderLoader) yields an empty map, which resolveRMLandedCost /
+// rmLandedOrderForCalcType resolve to the hardcoded per-calc_type defaults.
+func (s *Service) loadRMLandedOrder(ctx context.Context) map[string][]string {
+	if s.rmLandedOrderLoader == nil {
+		return map[string][]string{}
+	}
+	return s.rmLandedOrderLoader.LoadRMLandedOrder(ctx)
 }
 
 // loadMBProductSet resolves which of the chunk's products are MB-typed. A nil guard
@@ -302,6 +320,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		SellingSnapshot:  sellingSnap,
 		SpinFixedCost:    loaded.spinPool.Values,
 		RMRateOrder:      loaded.rmRateOrder,
+		RMLandedOrder:    loaded.rmLandedOrder,
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)
