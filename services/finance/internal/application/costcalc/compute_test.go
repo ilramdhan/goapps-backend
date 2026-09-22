@@ -168,6 +168,60 @@ func TestComputeProduct_GroupRM_CascadesCrSrPr(t *testing.T) {
 	})
 }
 
+// TestComputeProduct_GroupRM_RespectsLoadedRMRateOrder proves that a
+// non-default cascade order loaded from F_YARN_RM_RATE's expression
+// (migration 000518, costcalc.ParseRMRateOrder) is actually honored by
+// resolveRMUnitCost, rather than the hardcoded CR->SR->PR order always
+// winning regardless of ComputeInput.RMRateOrder.
+func TestComputeProduct_GroupRM_RespectsLoadedRMRateOrder(t *testing.T) {
+	baseIn := func(rates RMCostRates, order []string) ComputeInput {
+		return ComputeInput{
+			ProductSysID: 1,
+			Period:       "202604",
+			CalcType:     costcalcdom.CalcTypeActual,
+			Route:        buildOneStageRoute(1, costroute.RmTypeGroup, "GRP001", 1.0),
+			CAPP:         map[string]float64{},
+			Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL")},
+			RMCosts:      map[string]RMCostRates{"GRP001|": rates},
+			EvalCache:    evaluator.NewCache(),
+			RMRateOrder:  order,
+		}
+	}
+
+	t.Run("order PR,SR,CR -> pr_rate wins even though cr_rate is also positive", func(t *testing.T) {
+		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+			CostVal: 999.0,
+			CrRate:  3.25,
+			SrRate:  7.5,
+			PrRate:  20.0,
+		}, []string{"PR", "SR", "CR"}))
+		require.NoError(t, err)
+		assert.InDelta(t, 20.0, out.CostPerUnit, 1e-9)
+	})
+
+	t.Run("order SR,PR -> falls to pr_rate when sr_rate is zero, ignoring cr_rate entirely", func(t *testing.T) {
+		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+			CostVal: 999.0,
+			CrRate:  3.25,
+			SrRate:  0,
+			PrRate:  20.0,
+		}, []string{"SR", "PR"}))
+		require.NoError(t, err)
+		assert.InDelta(t, 20.0, out.CostPerUnit, 1e-9)
+	})
+
+	t.Run("nil order -> falls back to default CR,SR,PR", func(t *testing.T) {
+		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+			CostVal: 999.0,
+			CrRate:  0,
+			SrRate:  7.5,
+			PrRate:  20.0,
+		}, nil))
+		require.NoError(t, err)
+		assert.InDelta(t, 7.5, out.CostPerUnit, 1e-9)
+	})
+}
+
 // TestComputeProduct_ItemRM_StillUsesCostVal locks the ITEM-type behavior as
 // unchanged: it reads cost_val exactly as before the GROUP-type cascade was
 // introduced, never cr_rate/sr_rate/pr_rate.

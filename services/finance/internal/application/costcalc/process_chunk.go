@@ -132,6 +132,11 @@ type loadedBundle struct {
 	// calculatedParams is the per-product set of CALCULATED-category param codes,
 	// feeding the D-02 guard in ComputeProduct.
 	calculatedParams map[int64]map[string]bool
+	// rmRateOrder is the GROUP-RM cascade fallback order (first non-zero of
+	// CR/SR/PR wins), loaded once per chunk -- not per product, not per RM
+	// line -- via s.rmRateOrderLoader. Always non-empty: loadRMRateOrder falls
+	// back to DefaultRMRateOrder when the loader is nil or resolves nothing.
+	rmRateOrder []string
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -208,7 +213,18 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		spinPool:         spinPool,
 		mbProducts:       mbProducts,
 		calculatedParams: calculatedParams,
+		rmRateOrder:      s.loadRMRateOrder(ctx),
 	}, nil
+}
+
+// loadRMRateOrder resolves the GROUP-RM cascade order once per chunk. A nil
+// loader (tests, or wiring that omits WithRMRateOrderLoader) yields the
+// pre-Task-C hardcoded CR->SR->PR order, i.e. the pre-guard behavior.
+func (s *Service) loadRMRateOrder(ctx context.Context) []string {
+	if s.rmRateOrderLoader == nil {
+		return append([]string(nil), DefaultRMRateOrder...)
+	}
+	return s.rmRateOrderLoader.LoadRMRateOrder(ctx)
 }
 
 // loadMBProductSet resolves which of the chunk's products are MB-typed. A nil guard
@@ -285,6 +301,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		EvalCache:        s.cache,
 		SellingSnapshot:  sellingSnap,
 		SpinFixedCost:    loaded.spinPool.Values,
+		RMRateOrder:      loaded.rmRateOrder,
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)

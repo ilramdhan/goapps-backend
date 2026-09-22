@@ -102,6 +102,12 @@ type ComputeInput struct {
 	// Nil/empty disables that guard, preserving pre-guard behavior for callers that
 	// do not supply it.
 	CalculatedParams map[string]bool
+	// RMRateOrder is the GROUP-RM cascade fallback order (first non-zero of
+	// CR/SR/PR wins), loaded once per chunk from F_YARN_RM_RATE's expression
+	// column (migration 000518) via loader.LoadRMRateOrder. Nil/empty falls
+	// back to rmcost's historical CR->SR->PR order in resolveRMUnitCost,
+	// preserving pre-Task-C behavior for callers that do not supply it.
+	RMRateOrder []string
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
@@ -572,20 +578,41 @@ func resolveRMUnitCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
 			return 0, fmt.Errorf("%w: group %s", costcalcdom.ErrMissingRMCost, rm.RmGroupCode)
 		}
 		// GROUP-type RMs deliberately override the group's valuation_flag_v2
-		// selection (cost_val) with the first non-zero of cr_rate → sr_rate →
-		// pr_rate. This is a fixed-order cascade independent of ACTUAL/
+		// selection (cost_val) with the first non-zero of cr_rate, sr_rate,
+		// and pr_rate, in the order F_YARN_RM_RATE's expression configures
+		// (migration 000518; in.RMRateOrder, loaded once per chunk -- see
+		// loader.LoadRMRateOrder). This cascade is independent of ACTUAL/
 		// FORECAST/SELLING calc type, unlike cost_val which is calc-type
 		// selected. All three zero (or missing) is a valid "no rate yet"
 		// state, not an error — only a missing row (!ok above) is.
-		cost, _ := rmcost.FirstNonZeroWithLabel([]rmcost.LabeledRate{
-			{Value: rates.CrRate, Label: "CR"},
-			{Value: rates.SrRate, Label: "SR"},
-			{Value: rates.PrRate, Label: "PR"},
-		})
+		cost, _ := rmcost.FirstNonZeroWithLabel(rmRateCandidates(in.RMRateOrder, rates))
 		return cost, nil
 	default:
 		return 0, fmt.Errorf("unknown RM type %q", rm.RmType)
 	}
+}
+
+// rmRateCandidates maps a GROUP-RM cascade order (tokens CR/SR/PR) onto
+// rates' matching fields, in that order, for rmcost.FirstNonZeroWithLabel. An
+// empty/nil order falls back to DefaultRMRateOrder (loader.go), preserving
+// the pre-Task-C hardcoded CR->SR->PR behavior for callers -- including
+// existing tests -- that construct a ComputeInput without RMRateOrder.
+func rmRateCandidates(order []string, rates RMCostRates) []rmcost.LabeledRate {
+	if len(order) == 0 {
+		order = DefaultRMRateOrder
+	}
+	candidates := make([]rmcost.LabeledRate, 0, len(order))
+	for _, tok := range order {
+		switch tok {
+		case "CR":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.CrRate, Label: "CR"})
+		case "SR":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.SrRate, Label: "SR"})
+		case "PR":
+			candidates = append(candidates, rmcost.LabeledRate{Value: rates.PrRate, Label: "PR"})
+		}
+	}
+	return candidates
 }
 
 func rmRefCode(rm *costroute.Rm) string {
