@@ -30,6 +30,7 @@ const (
 	loaderKindMBCosts         = "mb_costs"
 	loaderKindSpinFixedCost   = "spin_fixed_cost"
 	loaderKindRMRateOrder     = "rm_rate_order"
+	loaderKindRMLandedOrder   = "rm_landed_order"
 )
 
 // rmRateOrderFormulaCode is the mst_formula row whose expression column, since
@@ -90,6 +91,139 @@ type RMRateOrderLoader interface {
 	// logged as a warning and resolved to DefaultRMRateOrder internally, per
 	// the "never hard-fail a cost computation over a config typo" contract.
 	LoadRMRateOrder(ctx context.Context) []string
+}
+
+// rmLandedOrderFormulaCode is the mst_formula row whose expression column,
+// since migration 000519, carries the calc-type-keyed GROUP-RM landed-cost
+// cascade order instead of the pass-through "RM_RATE" text it held before
+// (see 000519's comment for the full history). Like F_YARN_RM_RATE, this
+// formula's type is RM_LOOKUP, so its expression is display-only/config
+// text — the expr-lang evaluator never reads it.
+const rmLandedOrderFormulaCode = "F_YARN_RM_LANDED"
+
+// calcTypeActual, calcTypeForecast, calcTypeSelling are the section keys
+// ParseRMLandedOrder recognizes in F_YARN_RM_LANDED's expression column.
+const (
+	calcTypeActual   = "ACTUAL"
+	calcTypeForecast = "FORECAST"
+	calcTypeSelling  = "SELLING"
+)
+
+// DefaultRMLandedOrderActual is the hardcoded fallback GROUP-RM landed-cost
+// cascade for calc_type ACTUAL — first non-zero of CL->SL->FL wins. Used
+// whenever F_YARN_RM_LANDED's expression is missing, empty, or its ACTUAL
+// section fails to parse, so a config typo can never hard-fail a cost
+// computation.
+var DefaultRMLandedOrderActual = []string{"CL", "SL", "FL"}
+
+// DefaultRMLandedOrderForecast is the hardcoded fallback GROUP-RM
+// landed-cost cascade for calc_type FORECAST — first non-zero of
+// SP->PP->FP wins. Also used for SELLING: no SELLING-specific landed-cost
+// definition exists anywhere in the codebase today (see 000519's migration
+// comment), so SELLING is a deliberate placeholder that mirrors FORECAST
+// until a real definition is decided. Revisit alongside that decision.
+var DefaultRMLandedOrderForecast = []string{"SP", "PP", "FP"}
+
+// validRMLandedTokensByCalcType is the closed set of tokens
+// ParseRMLandedOrder accepts per calc_type section.
+var validRMLandedTokensByCalcType = map[string]map[string]bool{
+	calcTypeActual:   {"CL": true, "SL": true, "FL": true},
+	calcTypeForecast: {"SP": true, "PP": true, "FP": true},
+	calcTypeSelling:  {"SP": true, "PP": true, "FP": true},
+}
+
+// ParseRMLandedOrder parses the calc-type-keyed GROUP-RM landed-cost cascade
+// format from F_YARN_RM_LANDED's expression column, e.g.
+// "ACTUAL:CL,SL,FL;FORECAST:SP,PP,FP;SELLING:SP,PP,FP".
+//
+// Each semicolon-separated section is "CALC_TYPE:CSV-of-tokens". Sections are
+// parsed independently: a missing, unparseable, or invalid section for one
+// calc_type does not affect the others — callers resolve each calc_type's
+// entry in the returned map by falling back to that calc_type's hardcoded
+// default whenever it is absent, exactly like ParseRMRateOrder's
+// all-or-nothing contract but scoped per section instead of per whole
+// expression.
+func ParseRMLandedOrder(expr string) map[string][]string {
+	result := make(map[string][]string, len(validRMLandedTokensByCalcType))
+	expr = strings.TrimSpace(expr)
+	if expr == "" {
+		return result
+	}
+
+	for _, section := range strings.Split(expr, ";") {
+		calcType, order, ok := parseRMLandedSection(section)
+		if !ok {
+			continue
+		}
+		result[calcType] = order
+	}
+	return result
+}
+
+// parseRMLandedSection parses a single "CALC_TYPE:CSV-of-tokens" section of
+// the landed-cascade expression. Returns ok=false if the section is
+// malformed, the calc_type key is unrecognized, or any token is invalid for
+// that calc_type or repeats.
+func parseRMLandedSection(section string) (calcType string, order []string, ok bool) {
+	section = strings.TrimSpace(section)
+	if section == "" {
+		return "", nil, false
+	}
+
+	parts := strings.SplitN(section, ":", 2)
+	if len(parts) != 2 {
+		return "", nil, false
+	}
+	calcType = strings.ToUpper(strings.TrimSpace(parts[0]))
+	validTokens, known := validRMLandedTokensByCalcType[calcType]
+	if !known {
+		return "", nil, false
+	}
+
+	tokens := strings.Split(parts[1], ",")
+	seen := make(map[string]bool, len(tokens))
+	order = make([]string, 0, len(tokens))
+	for _, t := range tokens {
+		tok := strings.ToUpper(strings.TrimSpace(t))
+		if !validTokens[tok] || seen[tok] {
+			return "", nil, false
+		}
+		seen[tok] = true
+		order = append(order, tok)
+	}
+	if len(order) == 0 {
+		return "", nil, false
+	}
+	return calcType, order, true
+}
+
+// rmLandedOrderForCalcType resolves the effective GROUP-RM landed-cost
+// cascade order for a given calc_type from a parsed config map, falling back
+// to the hardcoded default for that calc_type when absent. SELLING and any
+// unrecognized calc_type fall back to the FORECAST default — see
+// DefaultRMLandedOrderForecast's doc comment for why.
+func rmLandedOrderForCalcType(cfg map[string][]string, calcType string) []string {
+	if order, ok := cfg[calcType]; ok {
+		return order
+	}
+	if calcType == calcTypeActual {
+		return DefaultRMLandedOrderActual
+	}
+	return DefaultRMLandedOrderForecast
+}
+
+// RMLandedOrderLoader resolves the calc-type-keyed GROUP-RM landed-cost
+// cascade order from F_YARN_RM_LANDED's expression column. Mirrors
+// RMRateOrderLoader's design: a small standalone interface rather than a new
+// ProductLoader method, so existing ProductLoader fakes are unaffected. A nil
+// RMLandedOrderLoader disables it, falling back to the hardcoded defaults for
+// every calc_type.
+type RMLandedOrderLoader interface {
+	// LoadRMLandedOrder returns the current calc-type-keyed GROUP-RM
+	// landed-cost cascade config. It never returns an error: any DB failure
+	// or invalid/unparseable section is logged as a warning and that
+	// section falls back to its hardcoded default internally.
+	LoadRMLandedOrder(ctx context.Context) map[string][]string
 }
 
 // observeLoad observes bulk loader latency under the given kind label.
@@ -886,15 +1020,24 @@ func topoSortFormulas(fs []Formula) ([]Formula, error) { //nolint:gocognit,gocyc
 // LoadRMCosts
 // =============================================================================
 
-// RMCostRates carries every rate resolveRMUnitCost might need for one
-// cst_rm_cost row: the calc-type-selected cost_val (used as-is for ITEM-type
-// RMs) plus the calc-type-agnostic cr_rate/sr_rate/pr_rate snapshot (used by
-// the GROUP-type cascade instead of cost_val — see resolveRMUnitCost).
+// RMCostRates carries every rate resolveRMUnitCost/resolveRMLandedCost might
+// need for one cst_rm_cost row: the calc-type-selected cost_val (used as-is
+// for ITEM-type RMs) plus the calc-type-agnostic cr_rate/sr_rate/pr_rate
+// snapshot (used by RM_RATE's GROUP-type cascade instead of cost_val — see
+// resolveRMUnitCost) and the cl_rate/sl_rate/fl_rate/sp_rate/pp_rate/fp_rate
+// snapshot (used by RM_LANDED_COST's GROUP-type cascade instead — see
+// resolveRMLandedCost).
 type RMCostRates struct {
 	CostVal float64
 	CrRate  float64
 	SrRate  float64
 	PrRate  float64
+	ClRate  float64
+	SlRate  float64
+	FlRate  float64
+	SpRate  float64
+	PpRate  float64
+	FpRate  float64
 }
 
 // LoadRMCosts returns the landed cost per RM identity. The returned map key is
@@ -918,7 +1061,9 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 		           WHEN 'SELLING'  THEN COALESCE(cost_sim,  0)
 		           ELSE COALESCE(cost_val, 0)
 		       END,
-		       COALESCE(cr_rate, 0), COALESCE(sr_rate, 0), COALESCE(pr_rate, 0)
+		       COALESCE(cr_rate, 0), COALESCE(sr_rate, 0), COALESCE(pr_rate, 0),
+		       COALESCE(cl_rate, 0), COALESCE(sl_rate, 0), COALESCE(fl_rate, 0),
+		       COALESCE(sp_rate, 0), COALESCE(pp_rate, 0), COALESCE(fp_rate, 0)
 		FROM cst_rm_cost
 		WHERE period = $1
 		  AND rm_code = ANY($2)`
@@ -937,7 +1082,10 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 			itemCode string
 			rates    RMCostRates
 		)
-		if err := rows.Scan(&rmCode, &itemCode, &rates.CostVal, &rates.CrRate, &rates.SrRate, &rates.PrRate); err != nil {
+		if err := rows.Scan(&rmCode, &itemCode, &rates.CostVal,
+			&rates.CrRate, &rates.SrRate, &rates.PrRate,
+			&rates.ClRate, &rates.SlRate, &rates.FlRate,
+			&rates.SpRate, &rates.PpRate, &rates.FpRate); err != nil {
 			return nil, fmt.Errorf("scan RM cost row: %w", err)
 		}
 		out[rmCode+"|"+itemCode] = rates
@@ -1203,6 +1351,44 @@ func (l *productLoader) LoadRMRateOrder(ctx context.Context) []string {
 		return append([]string(nil), DefaultRMRateOrder...)
 	}
 	return order
+}
+
+// =============================================================================
+// LoadRMLandedOrder
+// =============================================================================
+
+// LoadRMLandedOrder implements RMLandedOrderLoader against F_YARN_RM_LANDED's
+// expression column (repurposed by migration 000519). Never fails: a missing
+// row or query error logs a warning and falls back to the hardcoded defaults
+// for every calc_type; a section that fails to parse is simply absent from
+// the returned map, and rmLandedOrderForCalcType resolves that calc_type to
+// its own hardcoded default independently — a typo in one section must never
+// affect the others.
+func (l *productLoader) LoadRMLandedOrder(ctx context.Context) map[string][]string {
+	defer observeLoad(loaderKindRMLandedOrder, time.Now())
+
+	const q = `
+		SELECT expression
+		FROM mst_formula
+		WHERE formula_code = $1
+		  AND deleted_at IS NULL`
+
+	var expr string
+	err := l.db.QueryRowContext(ctx, q, rmLandedOrderFormulaCode).Scan(&expr)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Warn().Err(err).Str("formula_code", rmLandedOrderFormulaCode).
+				Msg("load GROUP-RM landed cascade order: query failed, falling back to defaults")
+		}
+		return map[string][]string{}
+	}
+
+	cfg := ParseRMLandedOrder(expr)
+	if len(cfg) == 0 {
+		log.Warn().Str("formula_code", rmLandedOrderFormulaCode).Str("expression", expr).
+			Msg("GROUP-RM landed cascade order is empty or invalid, falling back to defaults")
+	}
+	return cfg
 }
 
 // =============================================================================
