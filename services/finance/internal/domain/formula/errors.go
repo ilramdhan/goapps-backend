@@ -27,7 +27,8 @@ var (
 	ErrNameTooLong = errors.New("formula name must be at most 200 characters")
 
 	// ErrInvalidFormulaType is returned when the formula type is invalid.
-	ErrInvalidFormulaType = errors.New("invalid formula type: must be CALCULATION, SQL_QUERY, or CONSTANT")
+	ErrInvalidFormulaType = errors.New("invalid formula type: must be one of CALCULATION, SQL_QUERY, CONSTANT, " +
+		"CONDITIONAL, LOOKUP, RM_LOOKUP, FROM_MARKETING, INTERMINGLING, SNAPSHOT, PENDING, or INITIAL_VALUE")
 
 	// ErrEmptyExpression is returned when the expression is empty.
 	ErrEmptyExpression = errors.New("expression cannot be empty")
