@@ -27,6 +27,11 @@ type Service struct {
 	// to DefaultRMRateOrder, preserving the pre-Task-C hardcoded CR->SR->PR
 	// behavior for callers that don't wire this option (e.g. existing tests).
 	rmRateOrderLoader RMRateOrderLoader
+	// rmLandedOrderLoader resolves the calc-type-keyed GROUP-RM landed-cost
+	// cascade order from F_YARN_RM_LANDED (see loader.go's
+	// RMLandedOrderLoader). nil disables it: bulkLoad falls back to the
+	// hardcoded per-calc_type defaults for every calc_type.
+	rmLandedOrderLoader RMLandedOrderLoader
 }
 
 // MBProductSetChecker resolves which of a chunk's products are MB-typed, so ProcessChunk
@@ -48,6 +53,13 @@ func WithMBProductGuard(c MBProductSetChecker) ServiceOption {
 // this option (nil) keeps the pre-Task-C hardcoded CR->SR->PR order.
 func WithRMRateOrderLoader(l RMRateOrderLoader) ServiceOption {
 	return func(s *Service) { s.rmRateOrderLoader = l }
+}
+
+// WithRMLandedOrderLoader installs the GROUP-RM landed-cost cascade order
+// loader. Omitting this option (nil) keeps the hardcoded per-calc_type
+// defaults (ACTUAL: CL,SL,FL; FORECAST/SELLING: SP,PP,FP).
+func WithRMLandedOrderLoader(l RMLandedOrderLoader) ServiceOption {
+	return func(s *Service) { s.rmLandedOrderLoader = l }
 }
 
 // JobTriggerPublisher signals the orchestrator (via RMQ) to plan + execute a

@@ -475,6 +475,55 @@ func (s *LoaderSuite) TestLoader_LoadRMRateOrder_ReadsMigratedExpression() {
 	require.Equal(s.T(), []string{"CR", "SR", "PR"}, order)
 }
 
+// TestLoader_LoadRMCosts_ClSlFlSpPpFpRates proves LoadRMCosts also surfaces
+// the calc-type-dependent cl_rate/sl_rate/fl_rate/sp_rate/pp_rate/fp_rate
+// snapshot alongside cost_val and cr/sr/pr, since resolveRMLandedCost's
+// GROUP-type cascade reads those six columns.
+func (s *LoaderSuite) TestLoader_LoadRMCosts_ClSlFlSpPpFpRates() {
+	rmCode := s.codePrefix + "-GRP-LANDED-CASCADE"
+	_, err := s.db.ExecContext(s.ctx, `
+		INSERT INTO cst_rm_cost (
+			period, rm_code, rm_type, cost_val,
+			cl_rate, sl_rate, fl_rate, sp_rate, pp_rate, fp_rate,
+			flag_valuation, flag_marketing, flag_simulation,
+			flag_valuation_used, flag_marketing_used, flag_simulation_used,
+			created_by
+		) VALUES ($1, $2, 'GROUP', 55.00,
+			0, 4.25, 11.11, 6.00, 0, 22.22,
+			'CONS','CONS','CONS','CONS','CONS','CONS', $3)`,
+		s.period, rmCode, s.actor)
+	require.NoError(s.T(), err)
+
+	got, err := s.loader.LoadRMCosts(s.ctx, []string{rmCode}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	rates, ok := got[rmCode+"|"]
+	require.True(s.T(), ok)
+	require.InDelta(s.T(), 0, rates.ClRate, 0.01)
+	require.InDelta(s.T(), 4.25, rates.SlRate, 0.01)
+	require.InDelta(s.T(), 11.11, rates.FlRate, 0.01)
+	require.InDelta(s.T(), 6.00, rates.SpRate, 0.01)
+	require.InDelta(s.T(), 0, rates.PpRate, 0.01)
+	require.InDelta(s.T(), 22.22, rates.FpRate, 0.01)
+}
+
+// TestLoader_LoadRMLandedOrder_ReadsMigratedExpression exercises
+// LoadRMLandedOrder against the real F_YARN_RM_LANDED row repurposed by
+// migration 000519 -- proving the query, not just the pure
+// ParseRMLandedOrder parser, works end-to-end against the schema.
+// Deliberately does not seed its own fixture row: F_YARN_RM_LANDED is a
+// fixed formula_code the loader queries by name, and migration 000519
+// already sets its expression to "ACTUAL:CL,SL,FL;FORECAST:SP,PP,FP;
+// SELLING:SP,PP,FP" on any database these integration tests run against.
+func (s *LoaderSuite) TestLoader_LoadRMLandedOrder_ReadsMigratedExpression() {
+	landedLoader, ok := s.loader.(RMLandedOrderLoader)
+	require.True(s.T(), ok, "productLoader must implement RMLandedOrderLoader")
+
+	cfg := landedLoader.LoadRMLandedOrder(s.ctx)
+	require.Equal(s.T(), []string{"CL", "SL", "FL"}, cfg["ACTUAL"])
+	require.Equal(s.T(), []string{"SP", "PP", "FP"}, cfg["FORECAST"])
+	require.Equal(s.T(), []string{"SP", "PP", "FP"}, cfg["SELLING"])
+}
+
 func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_RespectStatus() {
 	got, err := s.loader.LoadUpstreamCosts(s.ctx, []int64{s.upstreamID}, s.period, s.calcType)
 	require.NoError(s.T(), err)

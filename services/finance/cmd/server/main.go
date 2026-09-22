@@ -646,10 +646,17 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// One checker instance serves all three MB guards: the trigger-time scope rejection,
 	// the persist-time refusal inside ProcessChunk, and the manual verify/approve block.
 	mbTypeChecker := postgres.NewMBTypeChecker(db)
+	calcSvcOpts := []costcalc.ServiceOption{costcalc.WithMBProductGuard(mbTypeChecker)}
+	if rmRateLoader, ok := calcLoader.(costcalc.RMRateOrderLoader); ok {
+		calcSvcOpts = append(calcSvcOpts, costcalc.WithRMRateOrderLoader(rmRateLoader))
+	}
+	if rmLandedLoader, ok := calcLoader.(costcalc.RMLandedOrderLoader); ok {
+		calcSvcOpts = append(calcSvcOpts, costcalc.WithRMLandedOrderLoader(rmLandedLoader))
+	}
 	calcSvc := costcalc.NewService(
 		calcJobRepo, calcChunkRepo, calcJobProductRepo, costResultRepo, costAuditHistoryRepo,
 		calcLoader, calcEvalCache, nil, costCalcJobTriggerPub,
-		costcalc.WithMBProductGuard(mbTypeChecker),
+		calcSvcOpts...,
 	)
 	costCalcHandler := grpcdelivery.NewCostCalcHandler(
 		calcSvc,

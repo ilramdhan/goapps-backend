@@ -153,16 +153,25 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	// query, so the costcalc service is built with the two collaborators that
 	// query actually touches (result repo + product/route loader); the trigger
 	// publisher is nil because the worker never queues calc jobs.
+	costSheetLoader := costcalc.NewProductLoader(db.DB)
+	var costSheetSvcOpts []costcalc.ServiceOption
+	if rmRateLoader, ok := costSheetLoader.(costcalc.RMRateOrderLoader); ok {
+		costSheetSvcOpts = append(costSheetSvcOpts, costcalc.WithRMRateOrderLoader(rmRateLoader))
+	}
+	if rmLandedLoader, ok := costSheetLoader.(costcalc.RMLandedOrderLoader); ok {
+		costSheetSvcOpts = append(costSheetSvcOpts, costcalc.WithRMLandedOrderLoader(rmLandedLoader))
+	}
 	calcSvc := costcalc.NewService(
 		postgres.NewCostCalcJobRepository(db),
 		postgres.NewCostCalcChunkRepository(db),
 		postgres.NewCostCalcJobProductRepository(db),
 		postgres.NewCostResultRepository(db),
 		postgres.NewCostAuditHistoryRepository(db),
-		costcalc.NewProductLoader(db.DB),
+		costSheetLoader,
 		evaluator.NewCache(),
 		nil,
 		nil,
+		costSheetSvcOpts...,
 	)
 	costSheetExportHandler := workerinternal.NewCostSheetExportHandler(
 		jobRepo,
