@@ -5405,7 +5405,7 @@
         },
         "groupHeadId": {
           "type": "string",
-          "description": "Updated referenced RM group head UUID."
+          "description": "Updated referenced RM group head UUID. Required (and validated as a UUID) only\nwhen source_type is GROUP; empty for MB/CARRIER rows, so it is ignored when unset."
         },
         "sourceType": {
           "type": "string",
@@ -6554,7 +6554,7 @@
         },
         "groupHeadId": {
           "type": "string",
-          "description": "Referenced RM group head UUID."
+          "description": "Referenced RM group head UUID. Required (and validated as a UUID) only when\nsource_type is GROUP; empty for MB/CARRIER rows, so it is ignored when unset."
         },
         "compositionPct": {
           "type": "string",

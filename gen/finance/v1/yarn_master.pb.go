@@ -14546,7 +14546,8 @@ type CreateMbCompositionRequest struct {
 	MbhId string `protobuf:"bytes,1,opt,name=mbh_id,json=mbhId,proto3" json:"mbh_id,omitempty"`
 	// Display sequence number within the head.
 	SeqNo int32 `protobuf:"varint,2,opt,name=seq_no,json=seqNo,proto3" json:"seq_no,omitempty"`
-	// Referenced RM group head UUID.
+	// Referenced RM group head UUID. Required (and validated as a UUID) only when
+	// source_type is GROUP; empty for MB/CARRIER rows, so it is ignored when unset.
 	GroupHeadId string `protobuf:"bytes,3,opt,name=group_head_id,json=groupHeadId,proto3" json:"group_head_id,omitempty"`
 	// Composition percentage.
 	CompositionPct string `protobuf:"bytes,4,opt,name=composition_pct,json=compositionPct,proto3" json:"composition_pct,omitempty"`
@@ -14701,7 +14702,8 @@ type UpdateMbCompositionRequest struct {
 	MbcmId string `protobuf:"bytes,1,opt,name=mbcm_id,json=mbcmId,proto3" json:"mbcm_id,omitempty"`
 	// Updated composition percentage.
 	CompositionPct string `protobuf:"bytes,2,opt,name=composition_pct,json=compositionPct,proto3" json:"composition_pct,omitempty"`
-	// Updated referenced RM group head UUID.
+	// Updated referenced RM group head UUID. Required (and validated as a UUID) only
+	// when source_type is GROUP; empty for MB/CARRIER rows, so it is ignored when unset.
 	GroupHeadId string `protobuf:"bytes,3,opt,name=group_head_id,json=groupHeadId,proto3" json:"group_head_id,omitempty"`
 	// Updated source type: GROUP/MB/CARRIER.
 	SourceType string `protobuf:"bytes,4,opt,name=source_type,json=sourceType,proto3" json:"source_type,omitempty"`
@@ -21675,11 +21677,11 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\ractor_user_id\x18\x05 \x01(\tR\vactorUserId\x12\x19\n" +
 	"\bactor_at\x18\x06 \x01(\tR\aactorAt\x12\x16\n" +
 	"\x06reason\x18\a \x01(\tR\x06reason\x12\x18\n" +
-	"\aversion\x18\b \x01(\x05R\aversion\"\xbb\x02\n" +
+	"\aversion\x18\b \x01(\x05R\aversion\"\xbe\x02\n" +
 	"\x1aCreateMbCompositionRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1e\n" +
-	"\x06seq_no\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05seqNo\x12,\n" +
-	"\rgroup_head_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x120\n" +
+	"\x06seq_no\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05seqNo\x12/\n" +
+	"\rgroup_head_id\x18\x03 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\vgroupHeadId\x120\n" +
 	"\x0fcomposition_pct\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x0ecompositionPct\x12:\n" +
 	"\vsource_type\x18\x05 \x01(\tB\x19\xbaH\x16r\x14R\x05GROUPR\x02MBR\aCARRIERR\n" +
 	"sourceType\x12!\n" +
@@ -21689,11 +21691,11 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"is_carrier\x18\a \x01(\bR\tisCarrier\"y\n" +
 	"\x1bCreateMbCompositionResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
-	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.MbCompositionR\x04data\"\x9d\x02\n" +
+	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.MbCompositionR\x04data\"\xa0\x02\n" +
 	"\x1aUpdateMbCompositionRequest\x12!\n" +
 	"\ambcm_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06mbcmId\x120\n" +
-	"\x0fcomposition_pct\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x0ecompositionPct\x12,\n" +
-	"\rgroup_head_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x12:\n" +
+	"\x0fcomposition_pct\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x0ecompositionPct\x12/\n" +
+	"\rgroup_head_id\x18\x03 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\vgroupHeadId\x12:\n" +
 	"\vsource_type\x18\x04 \x01(\tB\x19\xbaH\x16r\x14R\x05GROUPR\x02MBR\aCARRIERR\n" +
 	"sourceType\x12!\n" +
 	"\rmb_ref_mbh_id\x18\x05 \x01(\tR\n" +
