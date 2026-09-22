@@ -535,7 +535,7 @@ func (s *CostRouteRepoSuite) computeCost(graph *costroute.Graph, productSysID in
 		// No formulas: per resolveFinalCost's documented fallback (c), a product
 		// with zero formulas resolves its final cost as pure COST_RM_TOTAL --
 		// exactly what this test wants to compare, with no evaluator involved.
-		RMCosts:       map[string]float64{mbItemCode + "|": rmUnitCost},
+		RMCosts:       map[string]costcalc.RMCostRates{mbItemCode + "|": {CostVal: rmUnitCost}},
 		UpstreamCosts: upstreamCosts,
 		EvalCache:     evaluator.NewCache(),
 	}
