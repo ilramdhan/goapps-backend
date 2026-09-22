@@ -119,7 +119,7 @@ type loadedBundle struct {
 	routes           map[int64]*costroute.Graph
 	capp             map[int64]map[string]float64
 	formulas         map[int64][]Formula
-	rmCosts          map[string]float64
+	rmCosts          map[string]RMCostRates
 	upstreamCosts    map[int64]float64
 	sellingSnapshots map[int64]map[string]float64
 	// spinPool is period-global, not per-product: one master row shared by every

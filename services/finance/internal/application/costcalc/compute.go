@@ -18,6 +18,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc/evaluator"
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
 )
 
 // tracerName is the instrumentation scope for cost-calc compute spans.
@@ -79,7 +80,7 @@ type ComputeInput struct {
 	Route         *costroute.Graph
 	CAPP          map[string]float64
 	Formulas      []Formula
-	RMCosts       map[string]float64 // key matches loader.LoadRMCosts: "<rmCode>|<itemCode>"
+	RMCosts       map[string]RMCostRates // key matches loader.LoadRMCosts: "<rmCode>|<itemCode>"
 	UpstreamCosts map[int64]float64
 	EvalCache     *evaluator.Cache
 	// SellingSnapshot holds param values from the SELLING session for this product+period.
@@ -559,17 +560,28 @@ func resolveRMUnitCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
 		return cost, nil
 	case costroute.RmTypeItem:
 		key := rm.RmItemCode + "|"
-		cost, ok := in.RMCosts[key]
+		rates, ok := in.RMCosts[key]
 		if !ok {
 			return 0, fmt.Errorf("%w: item %s", costcalcdom.ErrMissingRMCost, rm.RmItemCode)
 		}
-		return cost, nil
+		return rates.CostVal, nil
 	case costroute.RmTypeGroup:
 		key := rm.RmGroupCode + "|"
-		cost, ok := in.RMCosts[key]
+		rates, ok := in.RMCosts[key]
 		if !ok {
 			return 0, fmt.Errorf("%w: group %s", costcalcdom.ErrMissingRMCost, rm.RmGroupCode)
 		}
+		// GROUP-type RMs deliberately override the group's valuation_flag_v2
+		// selection (cost_val) with the first non-zero of cr_rate → sr_rate →
+		// pr_rate. This is a fixed-order cascade independent of ACTUAL/
+		// FORECAST/SELLING calc type, unlike cost_val which is calc-type
+		// selected. All three zero (or missing) is a valid "no rate yet"
+		// state, not an error — only a missing row (!ok above) is.
+		cost, _ := rmcost.FirstNonZeroWithLabel([]rmcost.LabeledRate{
+			{Value: rates.CrRate, Label: "CR"},
+			{Value: rates.SrRate, Label: "SR"},
+			{Value: rates.PrRate, Label: "PR"},
+		})
 		return cost, nil
 	default:
 		return 0, fmt.Errorf("unknown RM type %q", rm.RmType)

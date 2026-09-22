@@ -48,7 +48,7 @@ type ProductLoader interface {
 	// here instead, straight from current master data.
 	LoadCAPPText(ctx context.Context, productSysIDs []int64) (map[int64]map[string]string, error)
 	LoadFormulas(ctx context.Context, productSysIDs []int64) (map[int64][]Formula, error)
-	LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]float64, error)
+	LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]RMCostRates, error)
 	LoadUpstreamCosts(ctx context.Context, productSysIDs []int64, period, calcType string) (map[int64]float64, error)
 	// LoadSellingSnapshots returns the param_snapshot from the most recent SELLING
 	// calc result for each product+period. Returns empty inner map if no SELLING
@@ -823,6 +823,17 @@ func topoSortFormulas(fs []Formula) ([]Formula, error) { //nolint:gocognit,gocyc
 // LoadRMCosts
 // =============================================================================
 
+// RMCostRates carries every rate resolveRMUnitCost might need for one
+// cst_rm_cost row: the calc-type-selected cost_val (used as-is for ITEM-type
+// RMs) plus the calc-type-agnostic cr_rate/sr_rate/pr_rate snapshot (used by
+// the GROUP-type cascade instead of cost_val — see resolveRMUnitCost).
+type RMCostRates struct {
+	CostVal float64
+	CrRate  float64
+	SrRate  float64
+	PrRate  float64
+}
+
 // LoadRMCosts returns the landed cost per RM identity. The returned map key is
 // "<rm_code>|<item_code>" so callers can look up either a GROUP row (item_code
 // empty → trailing pipe) or a specific ITEM row.
@@ -830,9 +841,9 @@ func topoSortFormulas(fs []Formula) ([]Formula, error) { //nolint:gocognit,gocyc
 // itemCodes here is overloaded for input filtering — the engine passes both
 // item codes (for ITEM-type RMs) and group codes (for GROUP-type RMs) since
 // cst_rm_cost stores them all in rm_code.
-func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]float64, error) {
+func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]RMCostRates, error) {
 	defer observeLoad(loaderKindRMCosts, time.Now())
-	out := map[string]float64{}
+	out := map[string]RMCostRates{}
 	if len(itemCodes) == 0 || period == "" {
 		return out, nil
 	}
@@ -843,7 +854,8 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 		           WHEN 'FORECAST' THEN COALESCE(cost_mark, 0)
 		           WHEN 'SELLING'  THEN COALESCE(cost_sim,  0)
 		           ELSE COALESCE(cost_val, 0)
-		       END
+		       END,
+		       COALESCE(cr_rate, 0), COALESCE(sr_rate, 0), COALESCE(pr_rate, 0)
 		FROM cst_rm_cost
 		WHERE period = $1
 		  AND rm_code = ANY($2)`
@@ -860,12 +872,12 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 		var (
 			rmCode   string
 			itemCode string
-			val      float64
+			rates    RMCostRates
 		)
-		if err := rows.Scan(&rmCode, &itemCode, &val); err != nil {
+		if err := rows.Scan(&rmCode, &itemCode, &rates.CostVal, &rates.CrRate, &rates.SrRate, &rates.PrRate); err != nil {
 			return nil, fmt.Errorf("scan RM cost row: %w", err)
 		}
-		out[rmCode+"|"+itemCode] = val
+		out[rmCode+"|"+itemCode] = rates
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate RM cost rows: %w", err)
