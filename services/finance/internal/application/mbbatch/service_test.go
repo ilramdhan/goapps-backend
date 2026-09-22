@@ -102,8 +102,8 @@ func (f *fakeLoader) LoadFormulas(_ context.Context, ids []int64) (map[int64][]c
 	return out, nil
 }
 
-func (f *fakeLoader) LoadRMCosts(context.Context, []string, string, string) (map[string]float64, error) {
-	return map[string]float64{}, nil
+func (f *fakeLoader) LoadRMCosts(context.Context, []string, string, string) (map[string]costcalc.RMCostRates, error) {
+	return map[string]costcalc.RMCostRates{}, nil
 }
 
 func (f *fakeLoader) LoadUpstreamCosts(context.Context, []int64, string, string) (map[int64]float64, error) {

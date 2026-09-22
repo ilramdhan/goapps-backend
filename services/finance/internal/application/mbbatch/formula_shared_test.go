@@ -133,8 +133,13 @@ func (f *noSharingLoader) LoadFormulas(_ context.Context, ids []int64) (map[int6
 // LoadRMCosts is where the calc types diverge: each calc type's RM_COST is deliberately far
 // apart (100 / 120 / 80) so any accidental copy from another calc type's pass is obvious in
 // the assertions below rather than lost in rounding noise.
-func (f *noSharingLoader) LoadRMCosts(_ context.Context, _ []string, _ string, calcType string) (map[string]float64, error) {
-	return map[string]float64{"RM1|": f.rmCostFor[calcType]}, nil
+//
+// RM1 is a GROUP-type RM (service.go resolves groupCodes for LoadRMCosts), so
+// resolveRMUnitCost's cascade reads CrRate, not CostVal — both are set to the
+// same per-calc-type value here to keep the fixture meaningful.
+func (f *noSharingLoader) LoadRMCosts(_ context.Context, _ []string, _ string, calcType string) (map[string]costcalc.RMCostRates, error) {
+	v := f.rmCostFor[calcType]
+	return map[string]costcalc.RMCostRates{"RM1|": {CostVal: v, CrRate: v}}, nil
 }
 
 func (f *noSharingLoader) LoadUpstreamCosts(context.Context, []int64, string, string) (map[int64]float64, error) {
