@@ -460,6 +460,21 @@ func (s *LoaderSuite) TestLoader_LoadRMCosts_CrSrPrRates() {
 	require.InDelta(s.T(), 9.99, rates.PrRate, 0.01)
 }
 
+// TestLoader_LoadRMRateOrder_ReadsMigratedExpression exercises LoadRMRateOrder
+// against the real F_YARN_RM_RATE row seeded by 000408 and repurposed by
+// migration 000518 -- proving the query, not just the pure ParseRMRateOrder
+// parser, works end-to-end against the schema. Deliberately does not seed its
+// own fixture row: F_YARN_RM_RATE is a fixed formula_code the loader queries
+// by name, and migration 000518 already sets its expression to "CR,SR,PR" on
+// any database these integration tests run against.
+func (s *LoaderSuite) TestLoader_LoadRMRateOrder_ReadsMigratedExpression() {
+	rmLoader, ok := s.loader.(RMRateOrderLoader)
+	require.True(s.T(), ok, "productLoader must implement RMRateOrderLoader")
+
+	order := rmLoader.LoadRMRateOrder(s.ctx)
+	require.Equal(s.T(), []string{"CR", "SR", "PR"}, order)
+}
+
 func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_RespectStatus() {
 	got, err := s.loader.LoadUpstreamCosts(s.ctx, []int64{s.upstreamID}, s.period, s.calcType)
 	require.NoError(s.T(), err)

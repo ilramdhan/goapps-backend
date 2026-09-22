@@ -22,6 +22,11 @@ type Service struct {
 	jobTriggerPub JobTriggerPublisher
 
 	mbProductGuard MBProductSetChecker
+	// rmRateOrderLoader resolves the GROUP-RM cascade order from F_YARN_RM_RATE
+	// (see loader.go's RMRateOrderLoader). nil disables it: bulkLoad falls back
+	// to DefaultRMRateOrder, preserving the pre-Task-C hardcoded CR->SR->PR
+	// behavior for callers that don't wire this option (e.g. existing tests).
+	rmRateOrderLoader RMRateOrderLoader
 }
 
 // MBProductSetChecker resolves which of a chunk's products are MB-typed, so ProcessChunk
@@ -37,6 +42,12 @@ type ServiceOption func(*Service)
 // WithMBProductGuard installs the persist-site MB guard.
 func WithMBProductGuard(c MBProductSetChecker) ServiceOption {
 	return func(s *Service) { s.mbProductGuard = c }
+}
+
+// WithRMRateOrderLoader installs the GROUP-RM cascade order loader. Omitting
+// this option (nil) keeps the pre-Task-C hardcoded CR->SR->PR order.
+func WithRMRateOrderLoader(l RMRateOrderLoader) ServiceOption {
+	return func(s *Service) { s.rmRateOrderLoader = l }
 }
 
 // JobTriggerPublisher signals the orchestrator (via RMQ) to plan + execute a
