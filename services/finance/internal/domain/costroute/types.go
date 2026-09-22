@@ -100,6 +100,12 @@ type Rm struct {
 	// RmGroupName is a read-time join on cst_rm_group_head.group_code for label
 	// display; empty for non-GROUP rows or unmatched codes.
 	RmGroupName string
+	// RmProductCode / RmProductName are a read-time join on cost_product_master
+	// (keyed by rm_product_sys_id) for label display on PRODUCT-type rows (e.g.
+	// a nested-MB composition reference) -- empty for non-PRODUCT rows or
+	// unmatched sys ids. Mirrors RmGroupName's role for GROUP rows.
+	RmProductCode string
+	RmProductName string
 	// OriginHeadID/EffectiveRatio/NestDepth/OriginProductCode/OriginProductName
 	// are display-only annotations set only by NestedMBFlattener.Flatten when
 	// this row was spliced in from a nested MB's own route graph. For every row

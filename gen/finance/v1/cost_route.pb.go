@@ -458,8 +458,14 @@ type CostRouteRm struct {
 	OriginProductCode string `protobuf:"bytes,22,opt,name=origin_product_code,json=originProductCode,proto3" json:"origin_product_code,omitempty"`
 	// Product name of the nested MB this row was flattened in from (empty = native).
 	OriginProductName string `protobuf:"bytes,23,opt,name=origin_product_name,json=originProductName,proto3" json:"origin_product_name,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Product code of the referenced product (read-time join on rm_product_sys_id).
+	// Populated only for PRODUCT-type rows; empty for ITEM/GROUP rows.
+	RmProductCode string `protobuf:"bytes,24,opt,name=rm_product_code,json=rmProductCode,proto3" json:"rm_product_code,omitempty"`
+	// Product name of the referenced product (read-time join on rm_product_sys_id).
+	// Populated only for PRODUCT-type rows; empty for ITEM/GROUP rows.
+	RmProductName string `protobuf:"bytes,25,opt,name=rm_product_name,json=rmProductName,proto3" json:"rm_product_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CostRouteRm) Reset() {
@@ -649,6 +655,20 @@ func (x *CostRouteRm) GetOriginProductCode() string {
 func (x *CostRouteRm) GetOriginProductName() string {
 	if x != nil {
 		return x.OriginProductName
+	}
+	return ""
+}
+
+func (x *CostRouteRm) GetRmProductCode() string {
+	if x != nil {
+		return x.RmProductCode
+	}
+	return ""
+}
+
+func (x *CostRouteRm) GetRmProductName() string {
+	if x != nil {
+		return x.RmProductName
 	}
 	return ""
 }
@@ -2155,7 +2175,7 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\x0eorigin_head_id\x18\x0f \x01(\x03R\foriginHeadId\x12.\n" +
 	"\x13origin_product_code\x18\x10 \x01(\tR\x11originProductCode\x12\x1d\n" +
 	"\n" +
-	"nest_depth\x18\x11 \x01(\x05R\tnestDepth\"\xc3\x06\n" +
+	"nest_depth\x18\x11 \x01(\x05R\tnestDepth\"\x93\a\n" +
 	"\vCostRouteRm\x12\x13\n" +
 	"\x05rm_id\x18\x01 \x01(\x03R\x04rmId\x12\x15\n" +
 	"\x06seq_id\x18\x02 \x01(\x03R\x05seqId\x121\n" +
@@ -2184,7 +2204,9 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\n" +
 	"nest_depth\x18\x15 \x01(\x05R\tnestDepth\x12.\n" +
 	"\x13origin_product_code\x18\x16 \x01(\tR\x11originProductCode\x12.\n" +
-	"\x13origin_product_name\x18\x17 \x01(\tR\x11originProductName\"i\n" +
+	"\x13origin_product_name\x18\x17 \x01(\tR\x11originProductName\x12&\n" +
+	"\x0frm_product_code\x18\x18 \x01(\tR\rrmProductCode\x12&\n" +
+	"\x0frm_product_name\x18\x19 \x01(\tR\rrmProductName\"i\n" +
 	"\n" +
 	"RouteGraph\x12-\n" +
 	"\x04head\x18\x01 \x01(\v2\x19.finance.v1.CostRouteHeadR\x04head\x12,\n" +
