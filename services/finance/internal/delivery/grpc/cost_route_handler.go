@@ -338,6 +338,8 @@ func routeGraphToProto(g *costroute.Graph) *financev1.RouteGraph {
 				PositionX:          rm.PositionX,
 				PositionY:          rm.PositionY,
 				RmGroupName:        rm.RmGroupName,
+				RmProductCode:      rm.RmProductCode,
+				RmProductName:      rm.RmProductName,
 				OriginHeadId:       rm.OriginHeadID,
 				EffectiveRatio:     effectiveRatio,
 				NestDepth:          rm.NestDepth,

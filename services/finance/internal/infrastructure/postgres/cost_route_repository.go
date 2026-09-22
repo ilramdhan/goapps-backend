@@ -293,10 +293,12 @@ func (r *CostRouteRepository) loadRms(ctx context.Context, headID int64) ([]*cos
 		       COALESCE(rm.crm_route_rm_shade_code, ''), COALESCE(rm.crm_route_rm_shade_name, ''),
 		       rm.crm_route_rm_ratio, COALESCE(rm.crm_uom_id, 0), COALESCE(rm.crm_sub_type, ''), COALESCE(rm.crm_notes, ''),
 		       COALESCE(rm.crm_position_x, 0), COALESCE(rm.crm_position_y, 0),
-		       COALESCE(g.group_name, '')
+		       COALESCE(g.group_name, ''),
+		       COALESCE(p.cpm_product_code, ''), COALESCE(p.cpm_product_name, '')
 		FROM cost_route_rm rm
 		JOIN cost_route_seq s ON s.crs_seq_id = rm.crm_seq_id
 		LEFT JOIN cst_rm_group_head g ON g.group_code = rm.crm_rm_group_code AND g.deleted_at IS NULL
+		LEFT JOIN cost_product_master p ON p.cpm_product_sys_id = rm.crm_rm_product_sys_id
 		WHERE s.crs_head_id = $1
 		ORDER BY rm.crm_seq_id, rm.crm_rm_id`
 	rows, err := r.db.QueryContext(ctx, q, headID)
@@ -317,6 +319,7 @@ func (r *CostRouteRepository) loadRms(ctx context.Context, headID int64) ([]*cos
 			&rm.RouteRmRatio, &rm.UomID, &rm.SubType, &rm.Notes,
 			&rm.PositionX, &rm.PositionY,
 			&rm.RmGroupName,
+			&rm.RmProductCode, &rm.RmProductName,
 		); err != nil {
 			return nil, fmt.Errorf("scan route rm: %w", err)
 		}
