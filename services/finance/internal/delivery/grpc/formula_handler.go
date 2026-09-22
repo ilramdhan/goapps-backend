@@ -372,6 +372,25 @@ func protoFormulaTypeToString(ft financev1.FormulaType) string {
 		return "SQL_QUERY"
 	case financev1.FormulaType_FORMULA_TYPE_CONSTANT:
 		return "CONSTANT"
+	case financev1.FormulaType_FORMULA_TYPE_CONDITIONAL:
+		return "CONDITIONAL"
+	case financev1.FormulaType_FORMULA_TYPE_LOOKUP:
+		return "LOOKUP"
+	case financev1.FormulaType_FORMULA_TYPE_RM_LOOKUP:
+		return "RM_LOOKUP"
+	case financev1.FormulaType_FORMULA_TYPE_FROM_MARKETING:
+		return "FROM_MARKETING"
+	case financev1.FormulaType_FORMULA_TYPE_INTERMINGLING:
+		// Use the domain constant rather than a literal: the string "INTERMINGLING"
+		// also occurs as an unrelated yarn-lookup master name elsewhere in this
+		// package, which trips goconst's cross-file duplicate-literal check.
+		return formula.TypeIntermingling.String()
+	case financev1.FormulaType_FORMULA_TYPE_SNAPSHOT:
+		return "SNAPSHOT"
+	case financev1.FormulaType_FORMULA_TYPE_PENDING:
+		return "PENDING"
+	case financev1.FormulaType_FORMULA_TYPE_INITIAL_VALUE:
+		return "INITIAL_VALUE"
 	default:
 		return ""
 	}
@@ -385,6 +404,22 @@ func stringToProtoFormulaType(ft string) financev1.FormulaType {
 		return financev1.FormulaType_FORMULA_TYPE_SQL_QUERY
 	case "CONSTANT":
 		return financev1.FormulaType_FORMULA_TYPE_CONSTANT
+	case "CONDITIONAL":
+		return financev1.FormulaType_FORMULA_TYPE_CONDITIONAL
+	case "LOOKUP":
+		return financev1.FormulaType_FORMULA_TYPE_LOOKUP
+	case "RM_LOOKUP":
+		return financev1.FormulaType_FORMULA_TYPE_RM_LOOKUP
+	case "FROM_MARKETING":
+		return financev1.FormulaType_FORMULA_TYPE_FROM_MARKETING
+	case formula.TypeIntermingling.String():
+		return financev1.FormulaType_FORMULA_TYPE_INTERMINGLING
+	case "SNAPSHOT":
+		return financev1.FormulaType_FORMULA_TYPE_SNAPSHOT
+	case "PENDING":
+		return financev1.FormulaType_FORMULA_TYPE_PENDING
+	case "INITIAL_VALUE":
+		return financev1.FormulaType_FORMULA_TYPE_INITIAL_VALUE
 	default:
 		return financev1.FormulaType_FORMULA_TYPE_UNSPECIFIED
 	}

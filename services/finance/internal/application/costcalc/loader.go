@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mutugading/goapps-backend/pkg/costcalc/metrics"
 	calcdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
@@ -27,7 +29,68 @@ const (
 	loaderKindSellingSnapshot = "selling_snapshot"
 	loaderKindMBCosts         = "mb_costs"
 	loaderKindSpinFixedCost   = "spin_fixed_cost"
+	loaderKindRMRateOrder     = "rm_rate_order"
 )
+
+// rmRateOrderFormulaCode is the mst_formula row whose expression column, since
+// migration 000518, carries the GROUP-RM cascade order instead of the legacy
+// Oracle-DSL text it held before (see 000518's comment for the full history).
+// This formula's type is RM_LOOKUP, which the expr-lang evaluator never runs
+// (see compute.go's FormulaType switch), so its expression was already
+// display-only text -- repurposing it as a small config value changes no
+// evaluator behavior.
+const rmRateOrderFormulaCode = "F_YARN_RM_RATE"
+
+// DefaultRMRateOrder is the historical GROUP-RM cascade fallback order --
+// first non-zero of CR->SR->PR wins. Used whenever F_YARN_RM_RATE's
+// expression is missing, empty, or fails to parse, so a config typo can never
+// hard-fail a cost computation.
+var DefaultRMRateOrder = []string{"CR", "SR", "PR"}
+
+// validRMRateTokens is the closed set of tokens ParseRMRateOrder accepts.
+var validRMRateTokens = map[string]bool{"CR": true, "SR": true, "PR": true}
+
+// ParseRMRateOrder parses a comma-separated GROUP-RM cascade order (e.g.
+// "CR,SR,PR") from F_YARN_RM_RATE's expression column. Tokens are trimmed and
+// upper-cased before matching. Returns the parsed order and true on success;
+// returns (nil, false) when the expression is empty/blank, any token is not
+// one of CR/SR/PR, or a token repeats -- callers should fall back to
+// DefaultRMRateOrder in every false case rather than propagate an error.
+func ParseRMRateOrder(expr string) ([]string, bool) {
+	expr = strings.TrimSpace(expr)
+	if expr == "" {
+		return nil, false
+	}
+
+	parts := strings.Split(expr, ",")
+	order := make([]string, 0, len(parts))
+	seen := make(map[string]bool, len(parts))
+	for _, p := range parts {
+		tok := strings.ToUpper(strings.TrimSpace(p))
+		if !validRMRateTokens[tok] || seen[tok] {
+			return nil, false
+		}
+		seen[tok] = true
+		order = append(order, tok)
+	}
+	return order, true
+}
+
+// RMRateOrderLoader resolves the GROUP-RM cascade fallback order from
+// F_YARN_RM_RATE's expression column. It is deliberately a small standalone
+// interface rather than a new ProductLoader method: ProductLoader already has
+// several fake implementations in this package and in application/mbbatch's
+// tests, and none of them need to know about this narrow, optional config
+// value. A nil RMRateOrderLoader (the zero value of Service.rmRateOrderLoader)
+// disables it, falling back to DefaultRMRateOrder -- mirroring the
+// MBProductSetChecker/mbProductGuard pattern in service.go.
+type RMRateOrderLoader interface {
+	// LoadRMRateOrder returns the current GROUP-RM cascade order. It never
+	// returns an error: any DB failure or invalid/unparseable expression is
+	// logged as a warning and resolved to DefaultRMRateOrder internally, per
+	// the "never hard-fail a cost computation over a config typo" contract.
+	LoadRMRateOrder(ctx context.Context) []string
+}
 
 // observeLoad observes bulk loader latency under the given kind label.
 func observeLoad(kind string, start time.Time) {
@@ -48,7 +111,7 @@ type ProductLoader interface {
 	// here instead, straight from current master data.
 	LoadCAPPText(ctx context.Context, productSysIDs []int64) (map[int64]map[string]string, error)
 	LoadFormulas(ctx context.Context, productSysIDs []int64) (map[int64][]Formula, error)
-	LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]float64, error)
+	LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]RMCostRates, error)
 	LoadUpstreamCosts(ctx context.Context, productSysIDs []int64, period, calcType string) (map[int64]float64, error)
 	// LoadSellingSnapshots returns the param_snapshot from the most recent SELLING
 	// calc result for each product+period. Returns empty inner map if no SELLING
@@ -823,6 +886,17 @@ func topoSortFormulas(fs []Formula) ([]Formula, error) { //nolint:gocognit,gocyc
 // LoadRMCosts
 // =============================================================================
 
+// RMCostRates carries every rate resolveRMUnitCost might need for one
+// cst_rm_cost row: the calc-type-selected cost_val (used as-is for ITEM-type
+// RMs) plus the calc-type-agnostic cr_rate/sr_rate/pr_rate snapshot (used by
+// the GROUP-type cascade instead of cost_val — see resolveRMUnitCost).
+type RMCostRates struct {
+	CostVal float64
+	CrRate  float64
+	SrRate  float64
+	PrRate  float64
+}
+
 // LoadRMCosts returns the landed cost per RM identity. The returned map key is
 // "<rm_code>|<item_code>" so callers can look up either a GROUP row (item_code
 // empty → trailing pipe) or a specific ITEM row.
@@ -830,9 +904,9 @@ func topoSortFormulas(fs []Formula) ([]Formula, error) { //nolint:gocognit,gocyc
 // itemCodes here is overloaded for input filtering — the engine passes both
 // item codes (for ITEM-type RMs) and group codes (for GROUP-type RMs) since
 // cst_rm_cost stores them all in rm_code.
-func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]float64, error) {
+func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, period string, calcType string) (map[string]RMCostRates, error) {
 	defer observeLoad(loaderKindRMCosts, time.Now())
-	out := map[string]float64{}
+	out := map[string]RMCostRates{}
 	if len(itemCodes) == 0 || period == "" {
 		return out, nil
 	}
@@ -843,7 +917,8 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 		           WHEN 'FORECAST' THEN COALESCE(cost_mark, 0)
 		           WHEN 'SELLING'  THEN COALESCE(cost_sim,  0)
 		           ELSE COALESCE(cost_val, 0)
-		       END
+		       END,
+		       COALESCE(cr_rate, 0), COALESCE(sr_rate, 0), COALESCE(pr_rate, 0)
 		FROM cst_rm_cost
 		WHERE period = $1
 		  AND rm_code = ANY($2)`
@@ -860,12 +935,12 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 		var (
 			rmCode   string
 			itemCode string
-			val      float64
+			rates    RMCostRates
 		)
-		if err := rows.Scan(&rmCode, &itemCode, &val); err != nil {
+		if err := rows.Scan(&rmCode, &itemCode, &rates.CostVal, &rates.CrRate, &rates.SrRate, &rates.PrRate); err != nil {
 			return nil, fmt.Errorf("scan RM cost row: %w", err)
 		}
-		out[rmCode+"|"+itemCode] = val
+		out[rmCode+"|"+itemCode] = rates
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate RM cost rows: %w", err)
@@ -1091,6 +1166,43 @@ func (l *productLoader) LoadSpinFixedCost(ctx context.Context, period string) (S
 	out[ScopeKeySpinOverheadsMonth] = overheads
 	out[ScopeKeySpinConsSprsMonth] = conssprs
 	return SpinPool{Period: poolPeriod, Values: out}, nil
+}
+
+// =============================================================================
+// LoadRMRateOrder
+// =============================================================================
+
+// LoadRMRateOrder implements RMRateOrderLoader against F_YARN_RM_RATE's
+// expression column (repurposed by migration 000518). Never fails: a missing
+// row, query error, or unparseable/invalid expression is logged as a warning
+// and resolved to DefaultRMRateOrder, since a config typo here must never
+// block a cost computation.
+func (l *productLoader) LoadRMRateOrder(ctx context.Context) []string {
+	defer observeLoad(loaderKindRMRateOrder, time.Now())
+
+	const q = `
+		SELECT expression
+		FROM mst_formula
+		WHERE formula_code = $1
+		  AND deleted_at IS NULL`
+
+	var expr string
+	err := l.db.QueryRowContext(ctx, q, rmRateOrderFormulaCode).Scan(&expr)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Warn().Err(err).Str("formula_code", rmRateOrderFormulaCode).
+				Msg("load GROUP-RM cascade order: query failed, falling back to default CR,SR,PR order")
+		}
+		return append([]string(nil), DefaultRMRateOrder...)
+	}
+
+	order, ok := ParseRMRateOrder(expr)
+	if !ok {
+		log.Warn().Str("formula_code", rmRateOrderFormulaCode).Str("expression", expr).
+			Msg("GROUP-RM cascade order is empty or invalid, falling back to default CR,SR,PR order")
+		return append([]string(nil), DefaultRMRateOrder...)
+	}
+	return order
 }
 
 // =============================================================================
