@@ -67,7 +67,7 @@ func TestEvalSingleFormulaStep_MBXSectionLookup_ReturnsError(t *testing.T) {
 
 	trace, err := evalSingleFormulaStep(
 		context.Background(), evaluator.NewCache(), map[string]any{},
-		0, f, 4242, nil, costcalcdom.CalcTypeActual,
+		0, 0, f, 4242, nil, costcalcdom.CalcTypeActual,
 	)
 
 	require.Error(t, err, "MB_XSECTION_LOOKUP must NOT silently evaluate to 0")
@@ -95,7 +95,7 @@ func TestEvalSingleFormulaStep_UnimplementedLookupTypes_ReturnError(t *testing.T
 			}
 			_, err := evalSingleFormulaStep(
 				context.Background(), evaluator.NewCache(), map[string]any{},
-				0, f, 7, nil, costcalcdom.CalcTypeActual,
+				0, 0, f, 7, nil, costcalcdom.CalcTypeActual,
 			)
 			require.ErrorIs(t, err, ErrFormulaTypeNotImplemented)
 			assert.Contains(t, err.Error(), ftype)
@@ -149,14 +149,14 @@ func TestEvalSingleFormulaStep_WorkingTypes_Unchanged(t *testing.T) {
 			Expression: "snapshot(SOME_COST) at process start", ResultParamCode: "SOME_COST_SNAP",
 			InputParamCodes: []string{"SOME_COST"},
 		}
-		tr, err := evalSingleFormulaStep(ctx, cache, scope, 0, f, 1, nil, costcalcdom.CalcTypeActual)
+		tr, err := evalSingleFormulaStep(ctx, cache, scope, 0, 0, f, 1, nil, costcalcdom.CalcTypeActual)
 		require.NoError(t, err)
 		assert.InDelta(t, 12.5, tr.Output, 1e-9)
 	})
 
 	t.Run("RM_LOOKUP", func(t *testing.T) {
 		f := Formula{FormulaCode: "F_RM", FormulaType: FormulaTypeRMLookup, ResultParamCode: "COST_RM"}
-		tr, err := evalSingleFormulaStep(ctx, cache, map[string]any{}, 33.25, f, 1, nil, costcalcdom.CalcTypeActual)
+		tr, err := evalSingleFormulaStep(ctx, cache, map[string]any{}, 33.25, 0, f, 1, nil, costcalcdom.CalcTypeActual)
 		require.NoError(t, err)
 		assert.InDelta(t, 33.25, tr.Output, 1e-9)
 	})
@@ -164,7 +164,7 @@ func TestEvalSingleFormulaStep_WorkingTypes_Unchanged(t *testing.T) {
 	t.Run("MB_COST_LOOKUP", func(t *testing.T) {
 		f := Formula{FormulaCode: "F_MB", FormulaType: FormulaTypeMBCostLookup, ResultParamCode: "MB_COST"}
 		mb := map[string]float64{string(costcalcdom.CalcTypeActual): 8.75}
-		tr, err := evalSingleFormulaStep(ctx, cache, map[string]any{}, 0, f, 1, mb, costcalcdom.CalcTypeActual)
+		tr, err := evalSingleFormulaStep(ctx, cache, map[string]any{}, 0, 0, f, 1, mb, costcalcdom.CalcTypeActual)
 		require.NoError(t, err)
 		assert.InDelta(t, 8.75, tr.Output, 1e-9)
 	})
@@ -175,7 +175,7 @@ func TestEvalSingleFormulaStep_WorkingTypes_Unchanged(t *testing.T) {
 			FormulaCode: "F_CALC", FormulaType: "CALCULATION", Expression: "A + B",
 			ResultParamCode: "C", InputParamCodes: []string{"A", "B"},
 		}
-		tr, err := evalSingleFormulaStep(ctx, cache, scope, 0, f, 1, nil, costcalcdom.CalcTypeActual)
+		tr, err := evalSingleFormulaStep(ctx, cache, scope, 0, 0, f, 1, nil, costcalcdom.CalcTypeActual)
 		require.NoError(t, err)
 		assert.InDelta(t, 5.0, tr.Output, 1e-9)
 	})
@@ -188,7 +188,7 @@ func TestEvalSingleFormulaStep_WorkingTypes_Unchanged(t *testing.T) {
 			ResultParamCode: "HEATSET_COST_PER_KG",
 			InputParamCodes: []string{"BATCH_WEIGHT", "HEATSET_COST_PER_BATCH"},
 		}
-		tr, err := evalSingleFormulaStep(ctx, cache, scope, 0, f, 1, nil, costcalcdom.CalcTypeActual)
+		tr, err := evalSingleFormulaStep(ctx, cache, scope, 0, 0, f, 1, nil, costcalcdom.CalcTypeActual)
 		require.NoError(t, err)
 		assert.InDelta(t, 2.0, tr.Output, 1e-9)
 	})
@@ -198,7 +198,7 @@ func TestEvalSingleFormulaStep_WorkingTypes_Unchanged(t *testing.T) {
 			FormulaCode: "F_CONST", FormulaType: "CONSTANT", Expression: "0.024",
 			ResultParamCode: "FORWARDING_COST",
 		}
-		tr, err := evalSingleFormulaStep(ctx, cache, map[string]any{}, 0, f, 1, nil, costcalcdom.CalcTypeActual)
+		tr, err := evalSingleFormulaStep(ctx, cache, map[string]any{}, 0, 0, f, 1, nil, costcalcdom.CalcTypeActual)
 		require.NoError(t, err)
 		assert.InDelta(t, 0.024, tr.Output, 1e-9)
 	})
