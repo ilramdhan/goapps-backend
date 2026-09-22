@@ -26,7 +26,7 @@ func nonFiniteInput(expr string, capp map[string]float64, inputs []string) Compu
 			ResultParamCode: ScopeKeyFinalCost,
 			InputParamCodes: inputs,
 		}},
-		RMCosts:   map[string]float64{"X|": 10.0},
+		RMCosts:   map[string]RMCostRates{"X|": {CostVal: 10.0}},
 		EvalCache: evaluator.NewCache(),
 	}
 }

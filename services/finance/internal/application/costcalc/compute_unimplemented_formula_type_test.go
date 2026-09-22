@@ -125,7 +125,7 @@ func TestComputeProduct_MBXSectionLookup_FailsWholeProduct(t *testing.T) {
 			ResultParamCode: ScopeKeyFinalCost,
 			InputParamCodes: []string{"XSECTION_OP", "LDR_SOURCE", "XSECTION_FACTOR"},
 		}},
-		RMCosts:   map[string]float64{"RM001|": 0},
+		RMCosts:   map[string]RMCostRates{"RM001|": {CostVal: 0}},
 		EvalCache: evaluator.NewCache(),
 	}
 

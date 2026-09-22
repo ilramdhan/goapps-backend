@@ -57,8 +57,8 @@ func (f *spinFakeLoader) LoadCalculatedParams(_ context.Context, _ []int64) (map
 	return map[int64]map[string]bool{}, nil
 }
 
-func (f *spinFakeLoader) LoadRMCosts(_ context.Context, _ []string, _, _ string) (map[string]float64, error) {
-	return map[string]float64{}, nil
+func (f *spinFakeLoader) LoadRMCosts(_ context.Context, _ []string, _, _ string) (map[string]RMCostRates, error) {
+	return map[string]RMCostRates{}, nil
 }
 
 func (f *spinFakeLoader) LoadUpstreamCosts(_ context.Context, _ []int64, _, _ string) (map[int64]float64, error) {

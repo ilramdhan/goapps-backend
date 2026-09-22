@@ -198,7 +198,7 @@ func yarnTerminalInput(withOilGainAsInput bool) ComputeInput {
 		Route:        buildOneStageRoute(7001, costroute.RmTypeItem, "RM_YARN", 1.0),
 		CAPP:         yarnTerminalCAPP(),
 		Formulas:     yarnTerminalFormulas(withOilGainAsInput),
-		RMCosts:      map[string]float64{"RM_YARN|": 50.0},
+		RMCosts:      map[string]RMCostRates{"RM_YARN|": {CostVal: 50.0}},
 		EvalCache:    evaluator.NewCache(),
 	}
 }

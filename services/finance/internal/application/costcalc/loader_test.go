@@ -426,12 +426,38 @@ func (s *LoaderSuite) TestLoader_LoadRMCosts_KeyFormat() {
 	got, err := s.loader.LoadRMCosts(s.ctx, []string{"GRP-AA", "ITM-XX", "ITM-NOPE"}, s.period, s.calcType)
 	require.NoError(s.T(), err)
 	// GROUP has empty item_code → trailing pipe.
-	require.InDelta(s.T(), 12.50, got["GRP-AA|"], 0.01)
+	require.InDelta(s.T(), 12.50, got["GRP-AA|"].CostVal, 0.01)
 	// ITEM has item_code populated.
-	require.InDelta(s.T(), 7.25, got["ITM-XX|ITM-XX"], 0.01)
+	require.InDelta(s.T(), 7.25, got["ITM-XX|ITM-XX"].CostVal, 0.01)
 	// Missing rm_code simply absent.
 	_, has := got["ITM-NOPE|"]
 	require.False(s.T(), has)
+}
+
+// TestLoader_LoadRMCosts_CrSrPrRates proves LoadRMCosts also surfaces the
+// calc-type-agnostic cr_rate/sr_rate/pr_rate snapshot alongside cost_val, since
+// resolveRMUnitCost's GROUP-type cascade reads those instead of cost_val.
+func (s *LoaderSuite) TestLoader_LoadRMCosts_CrSrPrRates() {
+	rmCode := s.codePrefix + "-GRP-CASCADE"
+	_, err := s.db.ExecContext(s.ctx, `
+		INSERT INTO cst_rm_cost (
+			period, rm_code, rm_type, cost_val, cr_rate, sr_rate, pr_rate,
+			flag_valuation, flag_marketing, flag_simulation,
+			flag_valuation_used, flag_marketing_used, flag_simulation_used,
+			created_by
+		) VALUES ($1, $2, 'GROUP', 55.00, 0, 3.75, 9.99,
+			'CONS','CONS','CONS','CONS','CONS','CONS', $3)`,
+		s.period, rmCode, s.actor)
+	require.NoError(s.T(), err)
+
+	got, err := s.loader.LoadRMCosts(s.ctx, []string{rmCode}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	rates, ok := got[rmCode+"|"]
+	require.True(s.T(), ok)
+	require.InDelta(s.T(), 55.00, rates.CostVal, 0.01)
+	require.InDelta(s.T(), 0, rates.CrRate, 0.01)
+	require.InDelta(s.T(), 3.75, rates.SrRate, 0.01)
+	require.InDelta(s.T(), 9.99, rates.PrRate, 0.01)
 }
 
 func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_RespectStatus() {

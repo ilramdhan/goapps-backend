@@ -91,7 +91,7 @@ func TestComputeProduct_HappyPath_OneItem(t *testing.T) {
 		Route:        buildOneStageRoute(42, costroute.RmTypeItem, "RM001", 1.0),
 		CAPP:         map[string]float64{"WASTE_PCT": 5.0},
 		Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL * (1 + WASTE_PCT/100)")},
-		RMCosts:      map[string]float64{"RM001|": 100.0},
+		RMCosts:      map[string]RMCostRates{"RM001|": {CostVal: 100.0}},
 		EvalCache:    evaluator.NewCache(),
 	}
 
@@ -104,6 +104,92 @@ func TestComputeProduct_HappyPath_OneItem(t *testing.T) {
 	assert.Equal(t, "RM001", out.RMCostDetail[0].RefCode)
 	assert.Len(t, out.FormulaTrace, 1)
 	assert.Equal(t, ScopeKeyFinalCost, out.FormulaTrace[0].ResultParamCode)
+}
+
+// TestComputeProduct_GroupRM_CascadesCrSrPr covers resolveRMUnitCost's
+// GROUP-type cascade: cr_rate → sr_rate → pr_rate, in that fixed order,
+// overriding whatever cost_val the group's valuation_flag_v2 selected.
+func TestComputeProduct_GroupRM_CascadesCrSrPr(t *testing.T) {
+	baseIn := func(rates RMCostRates) ComputeInput {
+		return ComputeInput{
+			ProductSysID: 1,
+			Period:       "202604",
+			CalcType:     costcalcdom.CalcTypeActual,
+			Route:        buildOneStageRoute(1, costroute.RmTypeGroup, "GRP001", 1.0),
+			CAPP:         map[string]float64{},
+			Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL")},
+			RMCosts:      map[string]RMCostRates{"GRP001|": rates},
+			EvalCache:    evaluator.NewCache(),
+		}
+	}
+
+	t.Run("cr_rate zero, sr_rate positive -> uses sr_rate", func(t *testing.T) {
+		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+			CostVal: 999.0, // must be ignored for GROUP-type RMs
+			CrRate:  0,
+			SrRate:  7.5,
+			PrRate:  20.0,
+		}))
+		require.NoError(t, err)
+		assert.InDelta(t, 7.5, out.CostPerUnit, 1e-9)
+	})
+
+	t.Run("cr_rate and sr_rate zero, pr_rate positive -> uses pr_rate", func(t *testing.T) {
+		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+			CostVal: 999.0,
+			CrRate:  0,
+			SrRate:  0,
+			PrRate:  20.0,
+		}))
+		require.NoError(t, err)
+		assert.InDelta(t, 20.0, out.CostPerUnit, 1e-9)
+	})
+
+	t.Run("cr_rate positive -> uses cr_rate regardless of sr/pr", func(t *testing.T) {
+		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+			CostVal: 999.0,
+			CrRate:  3.25,
+			SrRate:  7.5,
+			PrRate:  20.0,
+		}))
+		require.NoError(t, err)
+		assert.InDelta(t, 3.25, out.CostPerUnit, 1e-9)
+	})
+
+	t.Run("all three zero -> zero cost, not an error", func(t *testing.T) {
+		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+			CostVal: 999.0,
+			CrRate:  0,
+			SrRate:  0,
+			PrRate:  0,
+		}))
+		require.NoError(t, err)
+		assert.InDelta(t, 0, out.CostPerUnit, 1e-9)
+	})
+}
+
+// TestComputeProduct_ItemRM_StillUsesCostVal locks the ITEM-type behavior as
+// unchanged: it reads cost_val exactly as before the GROUP-type cascade was
+// introduced, never cr_rate/sr_rate/pr_rate.
+func TestComputeProduct_ItemRM_StillUsesCostVal(t *testing.T) {
+	in := ComputeInput{
+		ProductSysID: 1,
+		Period:       "202604",
+		CalcType:     costcalcdom.CalcTypeActual,
+		Route:        buildOneStageRoute(1, costroute.RmTypeItem, "ITM001", 1.0),
+		CAPP:         map[string]float64{},
+		Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL")},
+		RMCosts: map[string]RMCostRates{"ITM001|": {
+			CostVal: 42.0,
+			CrRate:  0,
+			SrRate:  100.0, // must be ignored for ITEM-type RMs
+			PrRate:  200.0, // must be ignored for ITEM-type RMs
+		}},
+		EvalCache: evaluator.NewCache(),
+	}
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+	assert.InDelta(t, 42.0, out.CostPerUnit, 1e-9)
 }
 
 func TestComputeProduct_TwoStage_PRODUCTUpstream(t *testing.T) {
@@ -141,7 +227,7 @@ func TestComputeProduct_MissingCAPP_DefaultsToZero(t *testing.T) {
 				InputParamCodes: []string{"WASTE_PCT"},
 			},
 		},
-		RMCosts:   map[string]float64{"X|": 10.0},
+		RMCosts:   map[string]RMCostRates{"X|": {CostVal: 10.0}},
 		EvalCache: evaluator.NewCache(),
 	}
 	out, err := ComputeProduct(context.Background(), in)
@@ -156,7 +242,7 @@ func TestComputeProduct_MissingRMCost(t *testing.T) {
 		Route:        buildOneStageRoute(1, costroute.RmTypeItem, "RM_MISSING", 1.0),
 		CAPP:         map[string]float64{},
 		Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL")},
-		RMCosts:      map[string]float64{},
+		RMCosts:      map[string]RMCostRates{},
 		EvalCache:    evaluator.NewCache(),
 	}
 	_, err := ComputeProduct(context.Background(), in)
@@ -176,7 +262,7 @@ func TestComputeProduct_MBCostLookup_ResolvesFromPreFetchedMap(t *testing.T) {
 				ResultParamCode: ScopeKeyFinalCost,
 			},
 		},
-		RMCosts:   map[string]float64{"RM001|": 0},
+		RMCosts:   map[string]RMCostRates{"RM001|": {CostVal: 0}},
 		MBCosts:   map[string]float64{"ACTUAL": 42.5, "SELLING": 43.0},
 		EvalCache: evaluator.NewCache(),
 	}
@@ -201,7 +287,7 @@ func TestComputeProduct_MBCostLookup_MissingCostType_ReturnsErrMissingMBCost(t *
 				ResultParamCode: ScopeKeyFinalCost,
 			},
 		},
-		RMCosts:   map[string]float64{"RM001|": 0},
+		RMCosts:   map[string]RMCostRates{"RM001|": {CostVal: 0}},
 		MBCosts:   map[string]float64{"ACTUAL": 42.5}, // no FORECAST entry
 		EvalCache: evaluator.NewCache(),
 	}
@@ -278,7 +364,7 @@ func TestComputeProduct_YarnVB1Loss_FixedFormula(t *testing.T) {
 				InputParamCodes: []string{"DELIVERY_COST_QLTY_LOSS", "VOLUME_BUCKET_1_LOSS"},
 			},
 		},
-		RMCosts:   map[string]float64{"CHIP|": 2.0},
+		RMCosts:   map[string]RMCostRates{"CHIP|": {CostVal: 2.0}},
 		EvalCache: evaluator.NewCache(),
 	}
 	out, err := ComputeProduct(context.Background(), in)
@@ -308,7 +394,7 @@ func TestComputeProduct_DivByZero_ReturnsZeroCost(t *testing.T) {
 			ResultParamCode: ScopeKeyFinalCost,
 			InputParamCodes: []string{ScopeKeyCostRMTotal, "DIVISOR"},
 		}},
-		RMCosts:   map[string]float64{"X|": 10.0},
+		RMCosts:   map[string]RMCostRates{"X|": {CostVal: 10.0}},
 		EvalCache: evaluator.NewCache(),
 	}
 	out, err := ComputeProduct(context.Background(), in)
@@ -329,7 +415,7 @@ func TestComputeProduct_NoFinalCostKey_SingleTerminal_Succeeds(t *testing.T) {
 			ResultParamCode: "SOMETHING_ELSE",
 			InputParamCodes: []string{ScopeKeyCostRMTotal},
 		}},
-		RMCosts:   map[string]float64{"X|": 10.0},
+		RMCosts:   map[string]RMCostRates{"X|": {CostVal: 10.0}},
 		EvalCache: evaluator.NewCache(),
 	}
 	out, err := ComputeProduct(context.Background(), in)
@@ -369,7 +455,7 @@ func TestComputeProduct_NoFinalCostKey_MultipleTerminals_PicksDeepest(t *testing
 				InputParamCodes: []string{ScopeKeyCostRMTotal},
 			},
 		},
-		RMCosts:   map[string]float64{"X|": 10.0},
+		RMCosts:   map[string]RMCostRates{"X|": {CostVal: 10.0}},
 		EvalCache: evaluator.NewCache(),
 	}
 	out, err := ComputeProduct(context.Background(), in)
@@ -414,7 +500,7 @@ func TestComputeProduct_CostStageOut_WinsOverDeepestTerminalTieBreak(t *testing.
 				InputParamCodes: []string{},
 			},
 		},
-		RMCosts:   map[string]float64{"X|": 10.0},
+		RMCosts:   map[string]RMCostRates{"X|": {CostVal: 10.0}},
 		EvalCache: evaluator.NewCache(),
 	}
 	out, err := ComputeProduct(context.Background(), in)
@@ -430,7 +516,7 @@ func TestComputeProduct_SnapshotIncludesInputs(t *testing.T) {
 		Route:        buildOneStageRoute(1, costroute.RmTypeItem, "X", 1.0),
 		CAPP:         map[string]float64{"WASTE_PCT": 5.0, "OTHER": 99.0},
 		Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL * (1 + WASTE_PCT/100)")},
-		RMCosts:      map[string]float64{"X|": 100.0},
+		RMCosts:      map[string]RMCostRates{"X|": {CostVal: 100.0}},
 		EvalCache:    evaluator.NewCache(),
 	}
 	out, err := ComputeProduct(context.Background(), in)
@@ -455,7 +541,7 @@ func TestComputeProduct_InputHashIsStable(t *testing.T) {
 			Route:        buildOneStageRoute(7, costroute.RmTypeItem, "RM", 1.0),
 			CAPP:         map[string]float64{"A": 1.0, "B": 2.0},
 			Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL")},
-			RMCosts:      map[string]float64{"RM|": 50.0},
+			RMCosts:      map[string]RMCostRates{"RM|": {CostVal: 50.0}},
 			EvalCache:    evaluator.NewCache(),
 		}
 	}
@@ -473,9 +559,9 @@ func TestComputeProduct_CostByLevel_Aggregates(t *testing.T) {
 		Route:        multiLevelOnSameProduct(99),
 		CAPP:         map[string]float64{},
 		Formulas:     []Formula{finalCostFormula("COST_RM_TOTAL")},
-		RMCosts: map[string]float64{
-			"RM_A|": 10.0, // contribution = 10 * 1.0 = 10 at level 1
-			"RM_B|": 20.0, // contribution = 20 * 2.0 = 40 at level 2
+		RMCosts: map[string]RMCostRates{
+			"RM_A|": {CostVal: 10.0}, // contribution = 10 * 1.0 = 10 at level 1
+			"RM_B|": {CostVal: 20.0}, // contribution = 20 * 2.0 = 40 at level 2
 		},
 		EvalCache: evaluator.NewCache(),
 	}
@@ -517,7 +603,7 @@ func TestComputeProduct_MarketingResult_UsesSellingSnapshot(t *testing.T) {
 			ResultParamCode: ScopeKeyFinalCost,
 			InputParamCodes: []string{ScopeKeyCostRMTotal},
 		}},
-		RMCosts:         map[string]float64{"RM_X|": 100.0},
+		RMCosts:         map[string]RMCostRates{"RM_X|": {CostVal: 100.0}},
 		EvalCache:       evaluator.NewCache(),
 		SellingSnapshot: map[string]float64{"AX_WT": 4.8},
 	}
@@ -541,7 +627,7 @@ func TestComputeProduct_MarketingResult_EmptySnapshot_ReturnsZero(t *testing.T) 
 			ResultParamCode: ScopeKeyFinalCost,
 			InputParamCodes: []string{ScopeKeyCostRMTotal},
 		}},
-		RMCosts:         map[string]float64{"RM_Y|": 100.0},
+		RMCosts:         map[string]RMCostRates{"RM_Y|": {CostVal: 100.0}},
 		EvalCache:       evaluator.NewCache(),
 		SellingSnapshot: map[string]float64{}, // no SELLING result yet
 	}
@@ -611,13 +697,16 @@ func TestComputePTYMELANGEOracleReference(t *testing.T) {
 	}
 
 	in := ComputeInput{
-		ProductSysID:  productID,
-		Period:        "202606",
-		CalcType:      costcalcdom.CalcTypeActual,
-		Route:         route,
-		CAPP:          capp,
-		Formulas:      buildOracleYarnFormulaChain(),
-		RMCosts:       map[string]float64{"RM_TEST|": 1.85},
+		ProductSysID: productID,
+		Period:       "202606",
+		CalcType:     costcalcdom.CalcTypeActual,
+		Route:        route,
+		CAPP:         capp,
+		Formulas:     buildOracleYarnFormulaChain(),
+		// GROUP-type RM: resolveRMUnitCost cascades cr_rate → sr_rate → pr_rate,
+		// not cost_val. CrRate carries the reference value so this test's
+		// downstream assertions (Oracle formula chain) are unaffected.
+		RMCosts:       map[string]RMCostRates{"RM_TEST|": {CrRate: 1.85}},
 		UpstreamCosts: map[int64]float64{},
 		EvalCache:     evaluator.NewCache(),
 	}
