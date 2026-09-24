@@ -11,13 +11,15 @@ import (
 
 // ListQuery is the paginated list query for heads.
 type ListQuery struct {
-	Page      int
-	PageSize  int
-	Search    string
-	IsActive  *bool
-	Flag      string
-	SortBy    string
-	SortOrder string
+	Page     int
+	PageSize int
+	Search   string
+	IsActive *bool
+	// IsOilGroup filters by the oil-group flag when non-nil.
+	IsOilGroup *bool
+	Flag       string
+	SortBy     string
+	SortOrder  string
 }
 
 // ListResult is the paginated list result.
@@ -43,12 +45,13 @@ func NewListHandler(repo rmgroup.Repository) *ListHandler {
 // treated as "no flag filter"; otherwise the value must parse to a valid Flag.
 func (h *ListHandler) Handle(ctx context.Context, query ListQuery) (*ListResult, error) {
 	filter := rmgroup.ListFilter{
-		Search:    query.Search,
-		IsActive:  query.IsActive,
-		Page:      query.Page,
-		PageSize:  query.PageSize,
-		SortBy:    query.SortBy,
-		SortOrder: query.SortOrder,
+		Search:     query.Search,
+		IsActive:   query.IsActive,
+		IsOilGroup: query.IsOilGroup,
+		Page:       query.Page,
+		PageSize:   query.PageSize,
+		SortBy:     query.SortBy,
+		SortOrder:  query.SortOrder,
 	}
 
 	if query.Flag != "" {

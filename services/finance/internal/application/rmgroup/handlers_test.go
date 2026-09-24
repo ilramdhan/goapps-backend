@@ -167,6 +167,7 @@ func TestDeleteHandler_Success(t *testing.T) {
 	id := uuid.New()
 	repo := new(mockRepo)
 	repo.On("ExistsHeadByID", ctx, id).Return(true, nil)
+	repo.On("IsOilGroupInUse", ctx, id).Return(false, nil)
 	repo.On("SoftDeleteHead", ctx, id, "user:del").Return(nil)
 
 	h := appgroup.NewDeleteHandler(repo, nil)

@@ -133,6 +133,8 @@ func overlayHeadFromSnapshot(head *rmgroup.Head, snap *rmgroup.HeadPeriodSnapsho
 	if err := overlaid.AttachMarketingInputs(snap.MarketingInputs); err != nil {
 		return nil, fmt.Errorf("attach head period overlay marketing inputs: %w", err)
 	}
+	// The oil-group flag is global (anchor-only), never period-scoped.
+	overlaid.SetOilGroup(head.IsOilGroup())
 	return overlaid, nil
 }
 

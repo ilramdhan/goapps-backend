@@ -26,6 +26,8 @@ type CreateCommand struct {
 	MarketingDefaultValue   *float64
 	ValuationFlag           string // "" / "AUTO" / "CR" / ...
 	MarketingFlag           string
+	// IsOilGroup marks the new group as an oil RM group (OIL_NAME option).
+	IsOilGroup bool
 }
 
 // CreateHandler handles CreateHead commands.
@@ -57,6 +59,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*rmgroup
 	if err := applyCreateMarketingInputs(head, cmd); err != nil {
 		return nil, err
 	}
+	head.SetOilGroup(cmd.IsOilGroup)
 	if err := h.repo.CreateHead(ctx, head); err != nil {
 		if errors.Is(err, rmgroup.ErrCodeAlreadyExists) {
 			return nil, rmgroup.ErrCodeAlreadyExists

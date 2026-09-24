@@ -64,6 +64,14 @@ func (h *DeleteHandler) Handle(ctx context.Context, cmd DeleteCommand) error {
 		}
 	}
 
+	inUse, err := h.repo.IsOilGroupInUse(ctx, id)
+	if err != nil {
+		return fmt.Errorf("check oil group usage: %w", err)
+	}
+	if inUse {
+		return rmgroup.ErrOilGroupInUse
+	}
+
 	if err := h.repo.SoftDeleteHead(ctx, id, cmd.DeletedBy); err != nil {
 		return fmt.Errorf("soft delete head: %w", err)
 	}

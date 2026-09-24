@@ -74,6 +74,10 @@ var (
 	// the historical cost audit trail, so the operation is blocked.
 	ErrGroupHasCostData = errors.New("rm group cannot be deleted: cost data has already been generated for this group")
 
+	// ErrOilGroupInUse is returned when un-flagging or deleting an oil group that is
+	// still referenced by a product type's oil-group mapping (oil-cost-rm-group §3.1).
+	ErrOilGroupInUse = errors.New("rm group is used as an oil group by one or more product types; remove it from the product type oil config first")
+
 	// ErrInvalidPeriod is returned when a period string is not a valid YYYYMM value.
 	ErrInvalidPeriod = errors.New("period must be a 6-character YYYYMM string")
 )

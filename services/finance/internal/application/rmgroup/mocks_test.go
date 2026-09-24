@@ -71,6 +71,11 @@ func (m *mockRepo) ExistsHeadByID(ctx context.Context, id uuid.UUID) (bool, erro
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *mockRepo) IsOilGroupInUse(ctx context.Context, id uuid.UUID) (bool, error) {
+	args := m.Called(ctx, id)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *mockRepo) AddDetail(ctx context.Context, detail *rmgroup.Detail) error {
 	return m.Called(ctx, detail).Error(0)
 }
