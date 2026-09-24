@@ -466,6 +466,7 @@ func toStages(in []appcostcalc.RouteCostSheetStage) []Stage {
 			ParamSnapshot: s.ParamSnapshot,
 			LeftSysID:     s.LeftSysID,
 			YarnType:      s.YarnType,
+			OilGroupName:  s.OilGroupName,
 		})
 	}
 	return out

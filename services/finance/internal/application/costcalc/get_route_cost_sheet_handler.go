@@ -7,6 +7,7 @@ import (
 	"maps"
 	"sort"
 	"strconv"
+	"strings"
 
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
@@ -43,6 +44,13 @@ type RouteCostSheetStage struct {
 	// YarnType is the legacy product type label (cpm_flex_03) — "POY",
 	// "MELANGE". The "Yarn Type" column of the flat "all data" sheet.
 	YarnType string
+	// OilGroupName is the display name of the RM group the stage's OIL_NAME
+	// code points at (cst_rm_group_head.group_name), for the flat sheet's
+	// "59.Oil Name" column (D18). Empty when the stage has no OIL_NAME, the
+	// code matches no active group, or the loader cannot resolve names — the
+	// exporter then falls back to the raw code. ParamSnapshot["OIL_NAME"]
+	// keeps the code itself, so the gRPC read model is unchanged.
+	OilGroupName string
 }
 
 // GetRouteCostSheetHandler assembles the full N-column cost sheet for one
@@ -98,11 +106,49 @@ func (h *GetRouteCostSheetHandler) Handle(ctx context.Context, q GetRouteCostShe
 		return nil, fmt.Errorf("load stage text params: %w", err)
 	}
 
+	oilNames, err := h.loadOilGroupNames(ctx, capText)
+	if err != nil {
+		return nil, err
+	}
+
 	out := make([]RouteCostSheetStage, 0, len(seqs))
 	for _, s := range seqs {
-		out = append(out, buildStage(s, costs[s.ProductSysID], products, capText[s.ProductSysID]))
+		stage := buildStage(s, costs[s.ProductSysID], products, capText[s.ProductSysID])
+		stage.OilGroupName = oilNames[strings.TrimSpace(capText[s.ProductSysID][oilNameParamCode])]
+		out = append(out, stage)
 	}
 	return out, nil
+}
+
+// oilNameParamCode is the text param holding a product's oil RM group code.
+const oilNameParamCode = "OIL_NAME"
+
+// loadOilGroupNames resolves every distinct OIL_NAME code among the stages to
+// its RM group name. A loader without the OilGroupNameLoader capability (test
+// fakes) yields an empty map, i.e. the exporter's raw-code fallback.
+func (h *GetRouteCostSheetHandler) loadOilGroupNames(ctx context.Context, capText map[int64]map[string]string) (map[string]string, error) {
+	nl, ok := h.svc.loader.(OilGroupNameLoader)
+	if !ok {
+		return map[string]string{}, nil
+	}
+	seen := map[string]bool{}
+	codes := make([]string, 0, len(capText))
+	for _, texts := range capText {
+		code := strings.TrimSpace(texts[oilNameParamCode])
+		if code == "" || seen[code] {
+			continue
+		}
+		seen[code] = true
+		codes = append(codes, code)
+	}
+	if len(codes) == 0 {
+		return map[string]string{}, nil
+	}
+	names, err := nl.LoadRMGroupNames(ctx, codes)
+	if err != nil {
+		return nil, fmt.Errorf("load oil group names: %w", err)
+	}
+	return names, nil
 }
 
 // resolveStages returns the product's route stages ordered by (level, seq).

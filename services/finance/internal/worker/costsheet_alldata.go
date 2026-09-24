@@ -125,7 +125,7 @@ var allDataColumns = []allDataColumn{
 	{Header: "56.RM Landed cost", Kind: allDataParam, ParamCode: "RM_LANDED_COST"},
 	{Header: "57.RM Norm", Kind: allDataParam, ParamCode: "RM_NORMS"},
 	{Header: "58.Waste LESS Mb doz, opu", Kind: allDataParam, ParamCode: "WASTE_LESS_MB_OPU"},
-	{Header: "59.Oil Name", Kind: allDataParam, ParamCode: "OIL_NAME"},
+	{Header: "59.Oil Name", Kind: allDataParam, ParamCode: paramOilName},
 	{Header: "60.Oil Rate", Kind: allDataParam, ParamCode: "OIL_RATE"},
 	{Header: "61.Oil Cost", Kind: allDataParam, ParamCode: "OIL_COST"},
 	{Header: "62.mb Flag", Kind: allDataParam, ParamCode: "MB_FLAG"},
@@ -247,6 +247,10 @@ const (
 	// paramRawMaterial is the "20.Raw Material" column of the flat sheet, also
 	// used by the per-product sheet's "5.Raw Material." row.
 	paramRawMaterial = "RAW_MATERIAL"
+	// paramOilName is the "59.Oil Name" column. The stored value is an RM
+	// group code (OIL_NAME is a RM_GROUP_OIL master lookup since 000523); the
+	// sheet shows the group NAME instead (D18), falling back to the code.
+	paramOilName = "OIL_NAME"
 )
 
 // WriteAllDataSheet renders the flat "all data" sheet into f: a single header
@@ -367,6 +371,14 @@ func allDataCellValue(col allDataColumn, no int, stage Stage) string {
 		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ShadeCode)
 	case paramShadeName:
 		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ShadeName)
+	case paramOilName:
+		// Same HasCost gate as every snapshot column: only a stage that shows
+		// an OIL_NAME code at all is given the resolved group name.
+		code := snapshotValue(col.ParamCode, stage)
+		if code == "" {
+			return ""
+		}
+		return firstNonEmpty(strings.TrimSpace(stage.OilGroupName), code)
 	default:
 		return snapshotValue(col.ParamCode, stage)
 	}
