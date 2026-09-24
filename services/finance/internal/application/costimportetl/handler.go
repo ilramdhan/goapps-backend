@@ -39,6 +39,7 @@ type StagingPipeline interface {
 	Resolver
 	StagingMaintainer
 	MasterLookupValidator
+	OilGroupValidator
 }
 
 // Handler orchestrates the v2 ETL bulk-import pipeline: stream the uploaded file
@@ -132,6 +133,11 @@ func (h *Handler) run(
 
 	if err := h.validateMasterLookups(ctx, jobID); err != nil {
 		h.fail(ctx, jobID, job, fmt.Sprintf("validate master lookups: %v", err))
+		return err
+	}
+
+	if err := h.validateOilGroups(ctx, jobID); err != nil {
+		h.fail(ctx, jobID, job, fmt.Sprintf("validate oil groups: %v", err))
 		return err
 	}
 
@@ -288,6 +294,19 @@ func (h *Handler) validateMasterLookups(ctx context.Context, jobID int64) error 
 		return fmt.Errorf("reject master-lookup values: %w", err)
 	}
 	h.logger.Info().Int64("job_id", jobID).Int("distinct_rejected", len(rejected)).Int("rows_removed", removed).Msg("etl import: rejected unknown master-lookup values")
+	return nil
+}
+
+// validateOilGroups rejects staged OIL_NAME values not allowed for the
+// product's type (runs after validateMasterLookups, before Layer 2).
+func (h *Handler) validateOilGroups(ctx context.Context, jobID int64) error {
+	removed, err := h.staging.RejectDisallowedOilGroups(ctx, jobID)
+	if err != nil {
+		return fmt.Errorf("reject disallowed oil groups: %w", err)
+	}
+	if removed > 0 {
+		h.logger.Info().Int64("job_id", jobID).Int("rows_removed", removed).Msg("etl import: rejected OIL_NAME values not allowed for product type")
+	}
 	return nil
 }
 

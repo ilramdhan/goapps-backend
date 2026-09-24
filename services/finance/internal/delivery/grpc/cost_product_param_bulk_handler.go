@@ -13,6 +13,7 @@ import (
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/productparambulk"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
+	cpp "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductparameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 )
 
@@ -76,6 +77,8 @@ func productParamBulkErrToBase(err error) *commonv1.BaseResponse {
 		return NotFoundResponse(err.Error())
 	case errors.Is(err, productparambulk.ErrProductNotFound):
 		return NotFoundResponse(err.Error())
+	case errors.Is(err, cpp.ErrOilGroupNotAllowed):
+		return oilGroupValidationResponse(err)
 	case errors.Is(err, productparambulk.ErrNoProducts),
 		errors.Is(err, productparambulk.ErrTooManyProducts),
 		errors.Is(err, productparambulk.ErrNoOperations),

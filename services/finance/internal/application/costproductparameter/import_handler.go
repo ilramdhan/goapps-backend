@@ -30,11 +30,20 @@ type AsyncImportHandler struct {
 	// and cpp_value_text is still written exactly as before this column
 	// existed.
 	mbSpinRepo mbspin.Repository
+	// oilPolicy validates OIL_NAME rows and fills the type default on blank
+	// (oil-cost-rm-group D4). Nil-safe: when nil, OIL_NAME is imported as-is.
+	oilPolicy cpp.OilGroupPolicy
 }
 
 // NewAsyncImportHandler creates a new AsyncImportHandler.
 func NewAsyncImportHandler(repo cpp.Repository, jobRepo costimportjob.Repository, mbSpinRepo mbspin.Repository) *AsyncImportHandler {
 	return &AsyncImportHandler{repo: repo, jobRepo: jobRepo, mbSpinRepo: mbSpinRepo}
+}
+
+// WithOilGroupPolicy attaches the OIL_NAME oil-group policy.
+func (h *AsyncImportHandler) WithOilGroupPolicy(p cpp.OilGroupPolicy) *AsyncImportHandler {
+	h.oilPolicy = p
+	return h
 }
 
 // AsyncImportError is a row-level import error.
@@ -171,6 +180,7 @@ func (h *AsyncImportHandler) processBatch(
 	paramMetaCache map[string]*cpp.ParamMeta,
 	mbSpinCache map[string]*uuid.UUID,
 ) (success, failed, skipped int) {
+	oilRules := h.prefetchOilRules(ctx, rows, productCache)
 	for i, row := range rows {
 		rowNum := safeconv.IntToInt32(startRowNum + i)
 		data := parseCPPRow(row)
@@ -201,6 +211,12 @@ func (h *AsyncImportHandler) processBatch(
 			continue
 		}
 
+		if oilErr := applyOilNameImportRule(&data, oilRules, productSysID); oilErr != nil {
+			failed++
+			log.Warn().Int32("row", rowNum).Str("product_code", data.productCode).Err(oilErr).Msg("cpp import: OIL_NAME rejected")
+			continue
+		}
+
 		valueNumeric, valueText, valueFlag, shapeErr := resolveValueShape(data, meta.DataType)
 		if shapeErr != nil {
 			failed++
@@ -228,6 +244,70 @@ func (h *AsyncImportHandler) processBatch(
 		success++
 	}
 	return success, failed, skipped
+}
+
+// prefetchOilRules resolves, in one RulesForProducts call, the oil-group rules
+// of every product that has an OIL_NAME row in this batch. Returns nil when no
+// policy is configured or the batch has no OIL_NAME rows. A lookup failure is
+// not treated as "no rules" (that would let disallowed values through); the
+// returned cache carries the error so every OIL_NAME row in the batch fails.
+func (h *AsyncImportHandler) prefetchOilRules(ctx context.Context, rows [][]string, productCache map[string]int64) *oilImportRules {
+	if h.oilPolicy == nil {
+		return nil
+	}
+	ids := make([]int64, 0)
+	seen := make(map[int64]bool)
+	for _, row := range rows {
+		data := parseCPPRow(row)
+		if data.paramCode != cpp.OilNameParamCode || data.productCode == "" {
+			continue
+		}
+		pid, err := h.resolveProduct(ctx, data.productCode, productCache)
+		if err != nil || seen[pid] {
+			continue
+		}
+		seen[pid] = true
+		ids = append(ids, pid)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	rules, err := h.oilPolicy.RulesForProducts(ctx, ids)
+	if err != nil {
+		log.Warn().Err(err).Msg("cpp import: resolve oil group rules failed — OIL_NAME rows in this batch are rejected")
+		return &oilImportRules{err: err}
+	}
+	return &oilImportRules{rules: rules}
+}
+
+// oilImportRules is the per-batch OIL_NAME rule cache.
+type oilImportRules struct {
+	rules map[int64]*cpp.OilGroupRule
+	err   error
+}
+
+// applyOilNameImportRule validates an OIL_NAME row and fills the type default
+// into a blank value. Non-OIL_NAME rows and a nil cache are untouched.
+func applyOilNameImportRule(data *cppRowData, cache *oilImportRules, productSysID int64) error {
+	if cache == nil || data.paramCode != cpp.OilNameParamCode {
+		return nil
+	}
+	if cache.err != nil {
+		return fmt.Errorf("resolve oil group rule: %w", cache.err)
+	}
+	rule := cache.rules[productSysID]
+	if rule == nil {
+		return nil
+	}
+	if data.valueText == "" {
+		if rule.Default == "" {
+			return fmt.Errorf("%w: OIL_NAME is blank and product type %s has no default oil group",
+				cpp.ErrOilGroupNotAllowed, rule.TypeCode)
+		}
+		data.valueText = rule.Default
+		return nil
+	}
+	return rule.Validate(data.valueText)
 }
 
 // resolveProduct looks up productSysID from cache or DB.
