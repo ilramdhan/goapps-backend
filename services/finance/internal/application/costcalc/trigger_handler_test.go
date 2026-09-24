@@ -133,7 +133,9 @@ func (s *triggerSuite) TestTrigger_MissingRoute_JobBlocked(_ *testing.T) {
 	// Create a sibling product master row with no route at all.
 	var typeID int
 	require.NoError(s.T(), s.raw.QueryRowContext(s.ctx,
-		`SELECT cpt_type_id FROM cost_product_type ORDER BY cpt_type_id LIMIT 1`,
+		// A non-oil type: since 000521 POY/PTY/TCS/TPS/TTS carry cpt_oil_class and
+		// the engine would block this fixture (no oil RM cost row) — see oil_rate.go.
+		`SELECT cpt_type_id FROM cost_product_type WHERE cpt_oil_class IS NULL AND cpt_type_code <> 'MB' ORDER BY cpt_type_id LIMIT 1`,
 	).Scan(&typeID))
 	var orphanID int64
 	require.NoError(s.T(), s.raw.QueryRowContext(s.ctx, `

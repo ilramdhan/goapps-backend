@@ -136,7 +136,8 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	mbSpinRepo := postgres.NewMBSpinRepository(db)
 	cpmImportHandler := costproductmaster.NewAsyncImportHandler(cpmRepo, cptRepo, costImportJobRepo)
 	cappImportHandler := costproductapplicableparam.NewAsyncImportHandler(cappRepo, costImportJobRepo)
-	cppImportHandler := costproductparameter.NewAsyncImportHandler(cppRepo, costImportJobRepo, mbSpinRepo)
+	cppImportHandler := costproductparameter.NewAsyncImportHandler(cppRepo, costImportJobRepo, mbSpinRepo).
+		WithOilGroupPolicy(postgres.NewOilGroupPolicyRepository(db)) // oil-cost-rm-group: validate OIL_NAME / default on blank
 	bulkExportHandler := costbulkimport.NewExportHandler(
 		cpmRepo, cppRepo, cptRepo, costRouteRepo, costImportJobRepo, storageSvc, log.Logger,
 	)

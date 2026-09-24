@@ -31,6 +31,7 @@ const (
 	loaderKindSpinFixedCost   = "spin_fixed_cost"
 	loaderKindRMRateOrder     = "rm_rate_order"
 	loaderKindRMLandedOrder   = "rm_landed_order"
+	loaderKindOilContext      = "oil_context"
 )
 
 // rmRateOrderFormulaCode is the mst_formula row whose expression column, since
@@ -268,6 +269,12 @@ type ProductLoader interface {
 	// CALCULATED param that no ACTIVE formula produces instead of using the synthetic 0
 	// buildInitialScope leaves in scope (D-02).
 	LoadCalculatedParams(ctx context.Context, productSysIDs []int64) (map[int64]map[string]bool, error)
+	// LoadOilContext returns, per product whose type has an oil class
+	// (cost_product_type.cpt_oil_class), the oil context the engine needs to
+	// resolve OIL_RATE: class, type code, stored OIL_NAME, the type's default
+	// oil RM group and its allowed set. Products whose type has no oil class
+	// are absent from the map (nil *OilInput => no oil resolution).
+	LoadOilContext(ctx context.Context, productSysIDs []int64) (map[int64]*OilInput, error)
 }
 
 // SpinPool is the POY spin fixed-cost pool resolved for a period, together with

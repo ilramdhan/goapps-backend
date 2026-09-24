@@ -800,7 +800,11 @@ func buildOracleYarnFormulaChain() []Formula {
 		{FormulaCode: "F_YARN_C_WT", Expression: "AX_WT * C_PERC / AX_PERC", ResultParamCode: "C_WT"},
 		{FormulaCode: "F_YARN_NET_BOB_WT", Expression: "AX_WT + AE_WT + A9_WT + A_WT + B_WT + C_WT", ResultParamCode: "NET_BOB_WT"},
 		// SEQ 1c
-		{FormulaCode: "F_YARN_OIL_COST", Expression: "OIL_RATE * OPU / 100.0", ResultParamCode: "OIL_COST"},
+		// 000524 by-product-type expression. This fixture supplies no Oil context
+		// (IS_PTY/IS_POY/IS_SUPERBA all injected as 0) and CAPP OIL_RATE is 0, so
+		// OIL_COST stays 0 exactly as under the old 'OIL_RATE * OPU / 100.0' — no
+		// expectation below depended on a non-zero oil cost, none needed recomputing.
+		{FormulaCode: "F_YARN_OIL_COST", Expression: oilCostExpr, ResultParamCode: "OIL_COST", InputParamCodes: []string{"OIL_RATE", "OPU", "WASTE_PERC"}},
 		{FormulaCode: "F_YARN_MB_COST", Expression: "MB_RATE * MB_DOZING_PCT / 100.0", ResultParamCode: "MB_COST"},
 		{FormulaCode: "F_YARN_RP_DOZING", Expression: "MB_DOZING_PCT > 0 ? MB_DOZING_PCT : 0", ResultParamCode: "RP_DOZING"},
 		// SEQ 2

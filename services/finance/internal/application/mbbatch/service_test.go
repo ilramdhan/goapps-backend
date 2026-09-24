@@ -84,6 +84,12 @@ func (f *fakeLoader) LoadCAPPText(context.Context, []int64) (map[int64]map[strin
 	return map[int64]map[string]string{}, nil
 }
 
+// LoadOilContext reports no oil-class products: the fixture exercises no oil
+// resolution, so every product keeps its CAPP OIL_RATE and IS_* flags are 0.
+func (f *fakeLoader) LoadOilContext(context.Context, []int64) (map[int64]*costcalc.OilInput, error) {
+	return map[int64]*costcalc.OilInput{}, nil
+}
+
 func (f *fakeLoader) LoadCalculatedParams(context.Context, []int64) (map[int64]map[string]bool, error) {
 	return map[int64]map[string]bool{}, nil
 }
