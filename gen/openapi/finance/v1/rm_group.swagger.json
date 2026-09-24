@@ -84,6 +84,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "isOilGroup",
+            "description": "Optional oil group filter. Absent = no filter; true = only oil groups;\nfalse = only non-oil groups.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -922,6 +929,10 @@
         "period": {
           "type": "string",
           "description": "Period (YYYYMM) this update targets."
+        },
+        "isOilGroup": {
+          "type": "boolean",
+          "description": "New oil group flag (head-level, global — applies to all periods). Absent\nleaves it unchanged. Un-flagging a group still referenced by product\nOIL_NAME values is rejected by the backend (ErrOilGroupInUse)."
         }
       },
       "description": "Partial update of an RM group head. Absent fields leave state unchanged.\nClear_* booleans explicitly set nullable fields to NULL."
@@ -1128,6 +1139,10 @@
         "marketingFlag": {
           "$ref": "#/definitions/v1RMMarketingFlag",
           "description": "V2: Marketing flag."
+        },
+        "isOilGroup": {
+          "type": "boolean",
+          "description": "Mark the new group as an oil group (global, not per period). Defaults to false."
         }
       },
       "description": "Create a new RM group head."
@@ -1660,6 +1675,10 @@
         "marketingFlag": {
           "$ref": "#/definitions/v1RMMarketingFlag",
           "description": "V2: Marketing flag (SP/PP/FP) — replaces flag_marketing semantics.\nWhen UNSPECIFIED uses AUTO fallback SP→PP→FP."
+        },
+        "isOilGroup": {
+          "type": "boolean",
+          "description": "Oil group flag (head-level, global — NOT period-versioned). When true the\ngroup is selectable as an OIL_NAME option (lookup master RM_GROUP_OIL) and\nits per-period rate drives OIL_RATE in the costing engine."
         }
       },
       "description": "RMGroupHead is the aggregate root representing an RM group's cost configuration."

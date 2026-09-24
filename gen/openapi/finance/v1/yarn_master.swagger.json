@@ -934,6 +934,14 @@
             "required": false,
             "type": "integer",
             "format": "int32"
+          },
+          {
+            "name": "productSysId",
+            "description": "Optional product context (cost_product_master product_sys_id). Only honored\nby master_code \"RM_GROUP_OIL\": when set and the product's type has an oil\nclass, options are restricted to the oil groups allowed for that product\ntype. Ignored by every other master; absent/0 means no product filter.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
