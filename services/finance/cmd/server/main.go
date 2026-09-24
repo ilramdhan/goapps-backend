@@ -180,6 +180,8 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	spinFixedCostRepo := postgres.NewSpinFixedCostRepository(db)
 	productGradeRepo := postgres.NewProductGradeRepository(db)
 	lookupMasterRepo := postgres.NewLookupMasterRepository(db)
+	// oil-cost-rm-group: OIL_NAME allowed/default oil RM groups per product type.
+	oilGroupPolicy := postgres.NewOilGroupPolicyRepository(db)
 	shadeRepo := postgres.NewShadeRepository(db)
 	// NOTE: legacy productRepo / prdRequestRepo wired to dropped tables — removed.
 	// Canonical Phase B (cost_product_master, cost_product_order) wiring added in S2.8-S2.10.
@@ -309,7 +311,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		return err
 	}
 
-	lookupMasterHandler, err := grpcdelivery.NewLookupMasterHandler(lookupMasterRepo)
+	lookupMasterHandler, err := grpcdelivery.NewLookupMasterHandler(lookupMasterRepo, oilGroupPolicy)
 	if err != nil {
 		return fmt.Errorf("new lookup master handler: %w", err)
 	}
@@ -415,6 +417,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return err
 	}
+	costProductTypeHandler.WithOilConfig(costProductTypeRepo) // oil-cost-rm-group: Get/SetCostProductTypeOilConfig
 	costRmTypeHandler, err := grpcdelivery.NewCostRmTypeHandler(costRmTypeRepo)
 	if err != nil {
 		return err
@@ -528,7 +531,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	mbHeadHandler = mbHeadHandler.WithBulkTransition(bulkTransitionHandler, jobRepo, mbHeadRepo)
 	fillIAMNotifier := iamnotifier.NewFillNotifier(iamNotifClient)
 
-	costProductParameterApp := cppapp.New(costProductParameterRepo, mbSpinRepo)
+	costProductParameterApp := cppapp.New(costProductParameterRepo, mbSpinRepo).WithOilGroupPolicy(oilGroupPolicy)
 	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp).
 		WithParamRepo(parameterRepo).
 		WithFormulaRepo(formulaRepo).
@@ -541,7 +544,8 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// into a clean 503 rather than panicking. costProductParameterRepo already
 	// implements ProductChecker (ProductExists); costProductMasterRepo backs
 	// the best-effort product_code lookup in ListBulkProductParamJobFailures.
-	productParamBulkSubmitHandler := productparambulk.NewRequestBulkEditHandler(jobRepo, productParamBulkPublisher, costProductParameterRepo)
+	productParamBulkSubmitHandler := productparambulk.NewRequestBulkEditHandler(jobRepo, productParamBulkPublisher, costProductParameterRepo).
+		WithOilGroupPolicy(oilGroupPolicy, costProductParameterRepo)
 	costProductParamBulkHandler := grpcdelivery.NewCostProductParamBulkHandler().
 		WithSubmitHandler(productParamBulkSubmitHandler, jobRepo, costProductMasterRepo)
 
