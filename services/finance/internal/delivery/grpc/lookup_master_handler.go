@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	cppdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductparameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/lookupmaster"
 	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
@@ -13,11 +14,18 @@ import (
 type LookupMasterHandler struct {
 	financev1.UnimplementedLookupMasterServiceServer
 	repo lookupmaster.Repository
+	// oilPolicy scopes RM_GROUP_OIL options to the product's type when the
+	// request carries product_sys_id (oil-cost-rm-group §4.5). nil = no scoping.
+	oilPolicy cppdomain.OilGroupPolicy
 }
 
-// NewLookupMasterHandler creates a new LookupMasterHandler.
-func NewLookupMasterHandler(repo lookupmaster.Repository) (*LookupMasterHandler, error) {
-	return &LookupMasterHandler{repo: repo}, nil
+// rmGroupOilMasterCode is the lookup master whose options are scoped by the
+// product type's oil-group mapping.
+const rmGroupOilMasterCode = "RM_GROUP_OIL"
+
+// NewLookupMasterHandler creates a new LookupMasterHandler. oilPolicy may be nil.
+func NewLookupMasterHandler(repo lookupmaster.Repository, oilPolicy cppdomain.OilGroupPolicy) (*LookupMasterHandler, error) {
+	return &LookupMasterHandler{repo: repo, oilPolicy: oilPolicy}, nil
 }
 
 // ListLookupMasters returns all registered master lookup codes.
@@ -181,7 +189,11 @@ func (h *LookupMasterHandler) ListTableColumns(ctx context.Context, req *finance
 // from the new server-side default LIMIT (see
 // LookupMasterRepository.ListMasterOptions).
 func (h *LookupMasterHandler) ListMasterOptions(ctx context.Context, req *financev1.ListMasterOptionsRequest) (*financev1.ListMasterOptionsResponse, error) { //nolint:nilerr // BaseResponse pattern
-	opts, err := h.repo.ListMasterOptions(ctx, req.GetMasterCode(), req.GetSearch(), int(req.GetLimit()))
+	restrict, err := h.oilRestriction(ctx, req)
+	if err != nil {
+		return &financev1.ListMasterOptionsResponse{Base: domainErrorToBaseResponse(err)}, nil
+	}
+	opts, err := h.repo.ListMasterOptionsInCodes(ctx, req.GetMasterCode(), req.GetSearch(), int(req.GetLimit()), restrict)
 	if err != nil {
 		return &financev1.ListMasterOptionsResponse{Base: domainErrorToBaseResponse(err)}, nil
 	}
@@ -203,6 +215,27 @@ func (h *LookupMasterHandler) ListMasterOptions(ctx context.Context, req *financ
 		})
 	}
 	return &financev1.ListMasterOptionsResponse{Base: successResponse(""), Data: items}, nil
+}
+
+// oilRestriction returns the allowed oil group codes for RM_GROUP_OIL when the
+// request names a product whose type has an oil class. nil means no
+// restriction (other masters, no product context, or a type without oil class
+// — all oil groups are listed, spec §5).
+func (h *LookupMasterHandler) oilRestriction(ctx context.Context, req *financev1.ListMasterOptionsRequest) ([]string, error) {
+	if h.oilPolicy == nil || req.GetMasterCode() != rmGroupOilMasterCode || req.GetProductSysId() <= 0 {
+		return nil, nil
+	}
+	rule, err := h.oilPolicy.RuleForProduct(ctx, req.GetProductSysId())
+	if err != nil {
+		return nil, fmt.Errorf("resolve oil group rule for product %d: %w", req.GetProductSysId(), err)
+	}
+	if rule == nil {
+		return nil, nil
+	}
+	if rule.Allowed == nil {
+		return []string{}, nil
+	}
+	return rule.Allowed, nil
 }
 
 // masterOptionFilamentPtr converts the domain *int filament value to the *int32

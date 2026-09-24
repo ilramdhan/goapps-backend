@@ -36,6 +36,9 @@ type Repository interface {
 	// added search/limit parameters — see LookupMasterRepository.ListMasterOptions
 	// for the query-building details.
 	ListMasterOptions(ctx context.Context, masterCode, search string, limit int) ([]MasterOption, error)
+	// ListMasterOptionsInCodes is ListMasterOptions restricted to rows whose
+	// value is in restrictCodes. nil = no restriction; empty non-nil = no rows.
+	ListMasterOptionsInCodes(ctx context.Context, masterCode, search string, limit int, restrictCodes []string) ([]MasterOption, error)
 	// ExportMasters exports all masters+columns to an Excel workbook.
 	ExportMasters(ctx context.Context) ([]byte, string, error)
 	// ImportMasters imports masters+columns from an Excel workbook.

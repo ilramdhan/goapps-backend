@@ -338,6 +338,17 @@ func (h *YarnLookupFillHandler) GetLookupFillValues(ctx context.Context, req *fi
 		return h.fillFromMBSpin(ctx, req.GetSelectedKey(), req.GetSourceParamCode())
 	case "BOX_BOBBIN_COST":
 		return h.fillFromBoxBobbinCost(ctx, req.GetSelectedKey(), req.GetSourceParamCode())
+	case rmGroupOilMasterCode:
+		// oil-cost-rm-group D14: OIL_NAME's fill-group children are never filled
+		// from the lookup — OIL_RATE is resolved per calc period by the engine
+		// and OIL_GAIN_POY_DEFAULT is formula-produced. Return success with no
+		// fills so selecting an oil group does not 404.
+		return &financev1.GetLookupFillValuesResponse{
+			Base:         successResponse("RM group (oil) selected — children resolved by the calc engine"),
+			NumericFills: map[string]float64{},
+			TextFills:    map[string]string{},
+			DisplayLabel: req.GetSelectedKey(),
+		}, nil
 	default:
 		return &financev1.GetLookupFillValuesResponse{
 			Base: ErrorResponse("404", fmt.Sprintf("unknown lookup_master_code: %q", req.GetLookupMasterCode())),
