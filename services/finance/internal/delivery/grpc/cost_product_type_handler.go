@@ -22,6 +22,16 @@ type CostProductTypeHandler struct {
 	importHandler   *app.ImportHandler
 	templateHandler *app.TemplateHandler
 	validation      *ValidationHelper
+	// oil-cost-rm-group: oil class + allowed oil groups (nil until WithOilConfig).
+	getOilConfig *app.GetOilConfigHandler
+	setOilConfig *app.SetOilConfigHandler
+}
+
+// WithOilConfig wires the product-type oil-config RPCs.
+func (h *CostProductTypeHandler) WithOilConfig(repo domain.OilConfigRepository) *CostProductTypeHandler {
+	h.getOilConfig = app.NewGetOilConfigHandler(repo)
+	h.setOilConfig = app.NewSetOilConfigHandler(repo)
+	return h
 }
 
 // NewCostProductTypeHandler constructs the handler.
@@ -147,6 +157,7 @@ func costProductTypeToProto(t *domain.CostProductType) *financev1.CostProductTyp
 		TypeCode: t.TypeCode(),
 		TypeName: t.TypeName(),
 		IsActive: t.IsActive(),
+		OilClass: t.OilClass(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: t.CreatedAt().Format(time.RFC3339),
 			UpdatedAt: t.UpdatedAt().Format(time.RFC3339),
@@ -162,6 +173,12 @@ func productTypeErrToBase(err error) *commonv1.BaseResponse {
 		return ConflictResponse(err.Error())
 	case errors.Is(err, domain.ErrInvalidTypeCode), errors.Is(err, domain.ErrInvalidTypeName):
 		return ErrorResponse("400", err.Error())
+	case errors.Is(err, domain.ErrInvalidOilClass):
+		return oilConfigValidationResponse("oil_class", err)
+	case errors.Is(err, domain.ErrOilConfigNoGroups), errors.Is(err, domain.ErrOilConfigDefaultCount),
+		errors.Is(err, domain.ErrOilConfigGroupsWithoutClass), errors.Is(err, domain.ErrOilConfigDuplicateGroup),
+		errors.Is(err, domain.ErrOilConfigGroupNotOil):
+		return oilConfigValidationResponse("groups", err)
 	default:
 		return InternalErrorResponse(err.Error())
 	}
@@ -221,4 +238,80 @@ func (h *CostProductTypeHandler) DownloadCostProductTypeTemplate(_ context.Conte
 		FileContent: result.FileContent,
 		FileName:    result.FileName,
 	}, nil
+}
+
+// oilConfigValidationResponse returns a 400 with one field-level validation error.
+func oilConfigValidationResponse(field string, err error) *commonv1.BaseResponse {
+	return &commonv1.BaseResponse{
+		IsSuccess:  false,
+		StatusCode: "400",
+		Message:    err.Error(),
+		ValidationErrors: []*commonv1.ValidationError{
+			{Field: field, Message: err.Error()},
+		},
+	}
+}
+
+// oilConfigUnavailable is returned when WithOilConfig was never called.
+const oilConfigUnavailable = "product type oil config not configured"
+
+// GetCostProductTypeOilConfig returns the oil class + allowed oil groups of a type.
+func (h *CostProductTypeHandler) GetCostProductTypeOilConfig(ctx context.Context, req *financev1.GetCostProductTypeOilConfigRequest) (*financev1.GetCostProductTypeOilConfigResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.GetCostProductTypeOilConfigResponse{Base: baseResp}, nil
+	}
+	if h.getOilConfig == nil {
+		return &financev1.GetCostProductTypeOilConfigResponse{Base: InternalErrorResponse(oilConfigUnavailable)}, nil
+	}
+	cfg, err := h.getOilConfig.Handle(ctx, req.GetTypeId())
+	if err != nil {
+		return &financev1.GetCostProductTypeOilConfigResponse{Base: productTypeErrToBase(err)}, nil
+	}
+	return &financev1.GetCostProductTypeOilConfigResponse{
+		Base:     successResponse("OK"),
+		TypeId:   cfg.TypeID,
+		OilClass: cfg.OilClass,
+		Groups:   oilGroupsToProto(cfg.Groups),
+	}, nil
+}
+
+// SetCostProductTypeOilConfig replaces the oil class + allowed oil groups of a type.
+func (h *CostProductTypeHandler) SetCostProductTypeOilConfig(ctx context.Context, req *financev1.SetCostProductTypeOilConfigRequest) (*financev1.SetCostProductTypeOilConfigResponse, error) {
+	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
+		return &financev1.SetCostProductTypeOilConfigResponse{Base: baseResp}, nil
+	}
+	if h.setOilConfig == nil {
+		return &financev1.SetCostProductTypeOilConfigResponse{Base: InternalErrorResponse(oilConfigUnavailable)}, nil
+	}
+	groups := make([]domain.OilGroupEntry, 0, len(req.GetGroups()))
+	for _, g := range req.GetGroups() {
+		groups = append(groups, domain.OilGroupEntry{GroupCode: g.GetGroupCode(), GroupName: g.GetGroupName(), IsDefault: g.GetIsDefault()})
+	}
+	cfg, err := h.setOilConfig.Handle(ctx, app.SetOilConfigCommand{
+		TypeID:   req.GetTypeId(),
+		OilClass: req.GetOilClass(),
+		Groups:   groups,
+		Actor:    getUserFromContext(ctx),
+	})
+	if err != nil {
+		return &financev1.SetCostProductTypeOilConfigResponse{Base: productTypeErrToBase(err)}, nil
+	}
+	return &financev1.SetCostProductTypeOilConfigResponse{
+		Base:     successResponse("Product type oil config saved"),
+		TypeId:   cfg.TypeID,
+		OilClass: cfg.OilClass,
+		Groups:   oilGroupsToProto(cfg.Groups),
+	}, nil
+}
+
+func oilGroupsToProto(groups []domain.OilGroupEntry) []*financev1.CostProductTypeOilGroup {
+	out := make([]*financev1.CostProductTypeOilGroup, 0, len(groups))
+	for _, g := range groups {
+		out = append(out, &financev1.CostProductTypeOilGroup{
+			GroupCode: g.GroupCode,
+			GroupName: g.GroupName,
+			IsDefault: g.IsDefault,
+		})
+	}
+	return out
 }
