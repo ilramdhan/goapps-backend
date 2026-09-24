@@ -24,6 +24,8 @@ type recordingStaging struct {
 	collectErrs  []StagingError
 	collectErr   error
 	cleanupCalls int
+	oilCalls     int
+	oilErr       error
 }
 
 func (s *recordingStaging) copyN(token string) (int64, error) {
@@ -90,6 +92,11 @@ func (s *recordingStaging) MasterLookupCandidates(_ context.Context, _ int64) ([
 
 func (s *recordingStaging) RejectMasterLookupValues(_ context.Context, _ int64, _ []MasterLookupCandidate) (int, error) {
 	return 0, nil
+}
+
+func (s *recordingStaging) RejectDisallowedOilGroups(_ context.Context, _ int64) (int, error) {
+	s.oilCalls++
+	return 0, s.oilErr
 }
 
 func (s *recordingStaging) CollectErrors(_ context.Context, _ int64) ([]StagingError, error) {
@@ -248,4 +255,28 @@ func TestHandle_FetchError_Fails(t *testing.T) {
 	require.Equal(t, costimportjob.StatusFailed, job.Status())
 	require.Empty(t, staging.copyCalls, "no layers run when the file cannot be fetched")
 	require.Equal(t, 1, staging.cleanupCalls, "staging is cleaned up even on fatal error")
+}
+
+// TestHandle_OilGroupValidation_RunsBeforeResolve verifies validateOilGroups is
+// invoked once per job, and that its failure fails the job before any layer resolves.
+func TestHandle_OilGroupValidation_RunsBeforeResolve(t *testing.T) {
+	t.Run("invoked on success", func(t *testing.T) {
+		staging := &recordingStaging{}
+		store := &fakeStorage{obj: makeZip(t, "product_parameters.csv", "applicable_params.csv")}
+		job := newJob(costimportjob.EntityBulkParamsOnly, "imports/bulk_params_only/o.zip")
+		h := NewHandler(&fakeJobRepo{job: job}, staging, store, nil, zerolog.Nop())
+		require.NoError(t, h.Handle(context.Background(), 5, costimportjob.EntityBulkParamsOnly))
+		require.Equal(t, 1, staging.oilCalls)
+		require.Equal(t, costimportjob.StatusDone, job.Status())
+	})
+	t.Run("error fails job without resolving", func(t *testing.T) {
+		staging := &recordingStaging{oilErr: errors.New("boom")}
+		store := &fakeStorage{obj: makeZip(t, "product_parameters.csv", "applicable_params.csv")}
+		job := newJob(costimportjob.EntityBulkParamsOnly, "imports/bulk_params_only/p.zip")
+		h := NewHandler(&fakeJobRepo{job: job}, staging, store, nil, zerolog.Nop())
+		require.Error(t, h.Handle(context.Background(), 6, costimportjob.EntityBulkParamsOnly))
+		require.Empty(t, staging.resolveCalls)
+		require.Equal(t, costimportjob.StatusFailed, job.Status())
+		require.Equal(t, 1, staging.cleanupCalls)
+	})
 }

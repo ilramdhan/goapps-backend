@@ -41,6 +41,9 @@ type Head struct {
 	marketingDefaultValue   *float64
 	valuationFlagV2         ValuationFlag
 	marketingFlagV2         MarketingFlag
+	// isOilGroup marks the group as an oil RM group (OIL_NAME option source).
+	// Head-level and global — never period-versioned (oil-cost-rm-group D12).
+	isOilGroup bool
 }
 
 // NewHead creates a new Head with validation. Defaults: flags = CONS, isActive = true.
@@ -231,6 +234,14 @@ func (h *Head) MarketingInputs() MarketingInputs {
 		MarketingFlag:  h.MarketingFlagV2(),
 	}
 }
+
+// IsOilGroup reports whether the group is an oil RM group.
+func (h *Head) IsOilGroup() bool { return h.isOilGroup }
+
+// SetOilGroup sets the oil-group flag (also used by repositories on hydration).
+// The in-use guard for un-flagging lives in the application layer because it
+// needs the product-type oil mapping.
+func (h *Head) SetOilGroup(v bool) { h.isOilGroup = v }
 
 // AttachMarketingInputs sets the V2 marketing inputs on Reconstruct. Used by
 // repositories during entity hydration. Validates that flags (when set) are

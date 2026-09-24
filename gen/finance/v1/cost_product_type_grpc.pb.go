@@ -26,6 +26,8 @@ const (
 	CostProductTypeService_ExportCostProductTypes_FullMethodName          = "/finance.v1.CostProductTypeService/ExportCostProductTypes"
 	CostProductTypeService_ImportCostProductTypes_FullMethodName          = "/finance.v1.CostProductTypeService/ImportCostProductTypes"
 	CostProductTypeService_DownloadCostProductTypeTemplate_FullMethodName = "/finance.v1.CostProductTypeService/DownloadCostProductTypeTemplate"
+	CostProductTypeService_GetCostProductTypeOilConfig_FullMethodName     = "/finance.v1.CostProductTypeService/GetCostProductTypeOilConfig"
+	CostProductTypeService_SetCostProductTypeOilConfig_FullMethodName     = "/finance.v1.CostProductTypeService/SetCostProductTypeOilConfig"
 )
 
 // CostProductTypeServiceClient is the client API for CostProductTypeService service.
@@ -41,6 +43,10 @@ type CostProductTypeServiceClient interface {
 	ExportCostProductTypes(ctx context.Context, in *ExportCostProductTypesRequest, opts ...grpc.CallOption) (*ExportCostProductTypesResponse, error)
 	ImportCostProductTypes(ctx context.Context, in *ImportCostProductTypesRequest, opts ...grpc.CallOption) (*ImportCostProductTypesResponse, error)
 	DownloadCostProductTypeTemplate(ctx context.Context, in *DownloadCostProductTypeTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductTypeTemplateResponse, error)
+	// GetCostProductTypeOilConfig returns the oil class + allowed oil groups (reuses view permission).
+	GetCostProductTypeOilConfig(ctx context.Context, in *GetCostProductTypeOilConfigRequest, opts ...grpc.CallOption) (*GetCostProductTypeOilConfigResponse, error)
+	// SetCostProductTypeOilConfig replaces the oil class + allowed oil groups (reuses update permission).
+	SetCostProductTypeOilConfig(ctx context.Context, in *SetCostProductTypeOilConfigRequest, opts ...grpc.CallOption) (*SetCostProductTypeOilConfigResponse, error)
 }
 
 type costProductTypeServiceClient struct {
@@ -121,6 +127,26 @@ func (c *costProductTypeServiceClient) DownloadCostProductTypeTemplate(ctx conte
 	return out, nil
 }
 
+func (c *costProductTypeServiceClient) GetCostProductTypeOilConfig(ctx context.Context, in *GetCostProductTypeOilConfigRequest, opts ...grpc.CallOption) (*GetCostProductTypeOilConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCostProductTypeOilConfigResponse)
+	err := c.cc.Invoke(ctx, CostProductTypeService_GetCostProductTypeOilConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductTypeServiceClient) SetCostProductTypeOilConfig(ctx context.Context, in *SetCostProductTypeOilConfigRequest, opts ...grpc.CallOption) (*SetCostProductTypeOilConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetCostProductTypeOilConfigResponse)
+	err := c.cc.Invoke(ctx, CostProductTypeService_SetCostProductTypeOilConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostProductTypeServiceServer is the server API for CostProductTypeService service.
 // All implementations must embed UnimplementedCostProductTypeServiceServer
 // for forward compatibility.
@@ -134,6 +160,10 @@ type CostProductTypeServiceServer interface {
 	ExportCostProductTypes(context.Context, *ExportCostProductTypesRequest) (*ExportCostProductTypesResponse, error)
 	ImportCostProductTypes(context.Context, *ImportCostProductTypesRequest) (*ImportCostProductTypesResponse, error)
 	DownloadCostProductTypeTemplate(context.Context, *DownloadCostProductTypeTemplateRequest) (*DownloadCostProductTypeTemplateResponse, error)
+	// GetCostProductTypeOilConfig returns the oil class + allowed oil groups (reuses view permission).
+	GetCostProductTypeOilConfig(context.Context, *GetCostProductTypeOilConfigRequest) (*GetCostProductTypeOilConfigResponse, error)
+	// SetCostProductTypeOilConfig replaces the oil class + allowed oil groups (reuses update permission).
+	SetCostProductTypeOilConfig(context.Context, *SetCostProductTypeOilConfigRequest) (*SetCostProductTypeOilConfigResponse, error)
 	mustEmbedUnimplementedCostProductTypeServiceServer()
 }
 
@@ -164,6 +194,12 @@ func (UnimplementedCostProductTypeServiceServer) ImportCostProductTypes(context.
 }
 func (UnimplementedCostProductTypeServiceServer) DownloadCostProductTypeTemplate(context.Context, *DownloadCostProductTypeTemplateRequest) (*DownloadCostProductTypeTemplateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DownloadCostProductTypeTemplate not implemented")
+}
+func (UnimplementedCostProductTypeServiceServer) GetCostProductTypeOilConfig(context.Context, *GetCostProductTypeOilConfigRequest) (*GetCostProductTypeOilConfigResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCostProductTypeOilConfig not implemented")
+}
+func (UnimplementedCostProductTypeServiceServer) SetCostProductTypeOilConfig(context.Context, *SetCostProductTypeOilConfigRequest) (*SetCostProductTypeOilConfigResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetCostProductTypeOilConfig not implemented")
 }
 func (UnimplementedCostProductTypeServiceServer) mustEmbedUnimplementedCostProductTypeServiceServer() {
 }
@@ -313,6 +349,42 @@ func _CostProductTypeService_DownloadCostProductTypeTemplate_Handler(srv interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductTypeService_GetCostProductTypeOilConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCostProductTypeOilConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductTypeServiceServer).GetCostProductTypeOilConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductTypeService_GetCostProductTypeOilConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductTypeServiceServer).GetCostProductTypeOilConfig(ctx, req.(*GetCostProductTypeOilConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductTypeService_SetCostProductTypeOilConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetCostProductTypeOilConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductTypeServiceServer).SetCostProductTypeOilConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductTypeService_SetCostProductTypeOilConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductTypeServiceServer).SetCostProductTypeOilConfig(ctx, req.(*SetCostProductTypeOilConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostProductTypeService_ServiceDesc is the grpc.ServiceDesc for CostProductTypeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -347,6 +419,14 @@ var CostProductTypeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DownloadCostProductTypeTemplate",
 			Handler:    _CostProductTypeService_DownloadCostProductTypeTemplate_Handler,
+		},
+		{
+			MethodName: "GetCostProductTypeOilConfig",
+			Handler:    _CostProductTypeService_GetCostProductTypeOilConfig_Handler,
+		},
+		{
+			MethodName: "SetCostProductTypeOilConfig",
+			Handler:    _CostProductTypeService_SetCostProductTypeOilConfig_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

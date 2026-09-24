@@ -116,6 +116,13 @@ type ComputeInput struct {
 	// that calc_type's hardcoded default in resolveRMLandedCost, preserving
 	// behavior for callers that do not supply it.
 	RMLandedOrder map[string][]string
+	// Oil is the per-product oil context (product type oil class, stored
+	// OIL_NAME, type default and allowed oil RM groups), loaded once per chunk
+	// via loader.LoadOilContext. Nil means the product type has no oil class:
+	// IS_PTY/IS_POY/IS_SUPERBA are injected as 0 and OIL_RATE keeps its CAPP
+	// value, preserving pre-oil behavior for callers that do not supply it
+	// (e.g. mbbatch).
+	Oil *OilInput
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
@@ -207,6 +214,14 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	// pass assigns genuine values, and whatever remains at the end marks
 	// params that must be omitted from ParamSnapshot (see scopeSnapshot).
 	scope, zeroFilled := buildInitialScope(in)
+
+	// 1a. Oil-class products resolve OIL_RATE from their oil RM group's
+	// cst_rm_cost row for the period, overwriting any imported CAPP value.
+	// A missing/unusable oil rate blocks the product (MISSING_RM_COST).
+	if err := applyOilRate(in, scope, zeroFilled); err != nil {
+		recordProductSpanError(span, err)
+		return nil, err
+	}
 
 	// 1b. A CALCULATED param that the formula chain consumes but no ACTIVE formula
 	// produces is still sitting in scope as the synthetic 0 that buildInitialScope
@@ -334,8 +349,32 @@ func buildInitialScope(in ComputeInput) (map[string]any, map[string]bool) {
 	}
 
 	injectSpinFixedCost(scope, zeroFilled, in.SpinFixedCost)
+	injectProductClassFlags(scope, zeroFilled, in.Oil)
 	injectMarketingResult(scope, in.SellingSnapshot)
 	return scope, zeroFilled
+}
+
+// applyOilRate runs resolveOilRate and, for an oil-class product, writes the
+// resolved OIL_RATE into scope and clears it from zeroFilled so the snapshot
+// records the rate the oil formulas actually used. Non-oil products are a
+// no-op.
+func applyOilRate(in ComputeInput, scope map[string]any, zeroFilled map[string]bool) error {
+	rate, label, applied, err := resolveOilRate(in)
+	if err != nil {
+		return fmt.Errorf("compute product %d: %w", in.ProductSysID, err)
+	}
+	if !applied {
+		return nil
+	}
+	scope[ScopeKeyOilRate] = rate
+	delete(zeroFilled, ScopeKeyOilRate)
+	log.Debug().
+		Int64("product_sys_id", in.ProductSysID).
+		Str("period", in.Period).
+		Float64("oil_rate", rate).
+		Str("oil_rate_source", label).
+		Msg("oil rate resolved from RM group")
+	return nil
 }
 
 // injectSpinFixedCost writes the period's POY spin pool into scope, after the

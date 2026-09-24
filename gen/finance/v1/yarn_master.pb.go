@@ -13240,7 +13240,12 @@ type ListMasterOptionsRequest struct {
 	// optional max rows to return. Absent or 0 falls back to a server-side
 	// default (200 — see LookupMasterRepository.ListMasterOptions) instead of
 	// returning the whole table.
-	Limit         *int32 `protobuf:"varint,3,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	Limit *int32 `protobuf:"varint,3,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	// Optional product context (cost_product_master product_sys_id). Only honored
+	// by master_code "RM_GROUP_OIL": when set and the product's type has an oil
+	// class, options are restricted to the oil groups allowed for that product
+	// type. Ignored by every other master; absent/0 means no product filter.
+	ProductSysId  *int64 `protobuf:"varint,4,opt,name=product_sys_id,json=productSysId,proto3,oneof" json:"product_sys_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -13292,6 +13297,13 @@ func (x *ListMasterOptionsRequest) GetSearch() string {
 func (x *ListMasterOptionsRequest) GetLimit() int32 {
 	if x != nil && x.Limit != nil {
 		return *x.Limit
+	}
+	return 0
+}
+
+func (x *ListMasterOptionsRequest) GetProductSysId() int64 {
+	if x != nil && x.ProductSysId != nil {
+		return *x.ProductSysId
 	}
 	return 0
 }
@@ -21558,15 +21570,17 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\a_denierB\v\n" +
 	"\t_filamentB\v\n" +
 	"\t_ldr_prsnB\x0e\n" +
-	"\f_run_ldr_pctJ\x04\b\x05\x10\x06R\x06dozing\"\xa6\x01\n" +
+	"\f_run_ldr_pctJ\x04\b\x05\x10\x06R\x06dozing\"\xed\x01\n" +
 	"\x18ListMasterOptionsRequest\x12(\n" +
 	"\vmaster_code\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\n" +
 	"masterCode\x12$\n" +
 	"\x06search\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dH\x00R\x06search\x88\x01\x01\x12%\n" +
 	"\x05limit\x18\x03 \x01(\x05B\n" +
-	"\xbaH\a\x1a\x05\x18\xf4\x03(\x00H\x01R\x05limit\x88\x01\x01B\t\n" +
+	"\xbaH\a\x1a\x05\x18\xf4\x03(\x00H\x01R\x05limit\x88\x01\x01\x122\n" +
+	"\x0eproduct_sys_id\x18\x04 \x01(\x03B\a\xbaH\x04\"\x02(\x00H\x02R\fproductSysId\x88\x01\x01B\t\n" +
 	"\a_searchB\b\n" +
-	"\x06_limit\"v\n" +
+	"\x06_limitB\x11\n" +
+	"\x0f_product_sys_id\"v\n" +
 	"\x19ListMasterOptionsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x04data\x18\x02 \x03(\v2\x18.finance.v1.MasterOptionR\x04data\"\x1c\n" +

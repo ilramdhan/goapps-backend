@@ -29,6 +29,11 @@ type fakeRepo struct {
 	removedCapps   []removeKey
 
 	listForProductOut []cpp.RequiredEntry
+
+	// paramCodeByID overrides GetParamCodeByID (default "TEST_PARAM").
+	paramCodeByID string
+	// currentValueText is returned by GetCurrentValueAsText.
+	currentValueText string
 }
 
 type removeKey struct {
@@ -119,11 +124,14 @@ func (f *fakeRepo) ListAllValues(_ context.Context) ([]cpp.CPPRow, error) {
 }
 
 func (f *fakeRepo) GetParamCodeByID(_ context.Context, _ uuid.UUID) (string, error) {
+	if f.paramCodeByID != "" {
+		return f.paramCodeByID, nil
+	}
 	return "TEST_PARAM", nil
 }
 
 func (f *fakeRepo) GetCurrentValueAsText(_ context.Context, _ int64, _ uuid.UUID) (string, error) {
-	return "", nil
+	return f.currentValueText, nil
 }
 
 func (f *fakeRepo) AddApplicableWithChildren(_ context.Context, _ int64, _ uuid.UUID, _ bool, _ string, _ []uuid.UUID) error {

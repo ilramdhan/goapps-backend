@@ -91,14 +91,26 @@ func yarnTerminalFormulas(withOilGainAsInput bool) []Formula {
 	}
 
 	return []Formula{
-		// 000408:28 — literal '0', result param OIL_GAIN, is_active TRUE.
+		// 000524 — new CONSTANT formula feeding the POY arm of F_YARN_OIL_GAIN.
+		// It is consumed by F_YARN_OIL_GAIN, so it never joins the terminal set.
+		{
+			FormulaCode:     "F_YARN_OIL_GAIN_POY_DEFAULT",
+			FormulaName:     "Oil Gain POY Default",
+			FormulaType:     "CONSTANT",
+			Expression:      oilGainPOYDefault,
+			ResultParamCode: "OIL_GAIN_POY_DEFAULT",
+			SortOrder:       0,
+		},
+		// 000408:28 rewritten by 000524 — by-product-type expression with the
+		// OPU / OIL_RATE / OIL_GAIN_POY_DEFAULT input edges 000524 adds. With no
+		// Oil context every IS_* flag is 0, so it still evaluates to 0.
 		{
 			FormulaCode:     "F_YARN_OIL_GAIN",
 			FormulaName:     "Oil Gain",
 			FormulaType:     "CALCULATION",
-			Expression:      "0",
+			Expression:      oilGainExpr,
 			ResultParamCode: "OIL_GAIN",
-			InputParamCodes: nil,
+			InputParamCodes: []string{"OPU", "OIL_RATE", "OIL_GAIN_POY_DEFAULT"},
 			SortOrder:       1,
 		},
 		// 000408:39 — formula_param at 000408:159.
@@ -277,8 +289,9 @@ func TestComputeProduct_OilGainAsInput_DoesNotMoveTerminalFormula(t *testing.T) 
 	assert.Equal(t, termBefore.ResultParamCode, termAfter.ResultParamCode,
 		"terminal result param moved")
 
-	// (a) numeric identity. OIL_GAIN evaluates to the literal 0 (000408:28), so
-	// appending '+ OIL_GAIN' must be arithmetically inert.
+	// (a) numeric identity. With no Oil context OIL_GAIN evaluates to 0 (every
+	// IS_* flag is 0 under the 000524 expression), so appending '+ OIL_GAIN'
+	// must be arithmetically inert.
 	assert.LessOrEqual(t, math.Abs(outBefore.CostPerUnit-outAfter.CostPerUnit), 1e-12,
 		"cost per unit changed: before=%.17g after=%.17g", outBefore.CostPerUnit, outAfter.CostPerUnit)
 
@@ -363,4 +376,37 @@ func stripSQLComments(sql string) string {
 		out = append(out, line)
 	}
 	return strings.Join(out, "\n")
+}
+
+// TestComputeProduct_PTYOilGain_TerminalUnchanged runs the 000510 "after"
+// shape for a PTY product whose OIL_GAIN is genuinely non-zero under 000524.
+// The terminal formula must be the same one the no-oil pass selects, and the
+// cost must move by exactly OIL_GAIN (it is stored negative and ADDED into
+// ONLY_CONV_DEL_PACK_EXCL_MB, which reaches every VB*_DEL terminal once).
+func TestComputeProduct_PTYOilGain_TerminalUnchanged(t *testing.T) {
+	noOil := yarnTerminalInput(true)
+	noOil.CAPP["OPU"] = 2.2
+	outNoOil, err := ComputeProduct(context.Background(), noOil)
+	require.NoError(t, err)
+
+	pty := yarnTerminalInput(true)
+	pty.CAPP["OPU"] = 2.2
+	pty.RMCosts["202006101|"] = RMCostRates{CrRate: 2.2869}
+	pty.Oil = &OilInput{
+		Class: OilClassPTY, TypeCode: "PTY", GroupCode: "202006101",
+		DefaultGroup: "202006101", Allowed: map[string]bool{"202006101": true},
+	}
+	outPTY, err := ComputeProduct(context.Background(), pty)
+	require.NoError(t, err)
+
+	term, err := findTerminalFormula(pty.Formulas)
+	require.NoError(t, err)
+	termNoOil, err := findTerminalFormula(noOil.Formulas)
+	require.NoError(t, err)
+	assert.Equal(t, termNoOil.FormulaCode, term.FormulaCode, "oil wiring must not move the terminal formula")
+
+	gain := outPTY.ParamSnapshot["OIL_GAIN"]
+	assert.InDelta(t, -0.0503118, gain, 1e-9, "PTY OIL_GAIN = -(OPU*OIL_RATE)/100")
+	assert.InDelta(t, outNoOil.CostPerUnit+gain, outPTY.CostPerUnit, 1e-9,
+		"cost per unit must move by exactly OIL_GAIN")
 }

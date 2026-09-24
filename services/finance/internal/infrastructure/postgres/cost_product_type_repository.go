@@ -46,7 +46,7 @@ func (r *CostProductTypeRepository) Create(ctx context.Context, t *costproductty
 // GetByID loads a CostProductType by id.
 func (r *CostProductTypeRepository) GetByID(ctx context.Context, id int32) (*costproducttype.CostProductType, error) {
 	const q = `
-		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at
+		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, '')
 		FROM cost_product_type WHERE cpt_type_id = $1
 	`
 	return r.scanRow(r.db.QueryRowContext(ctx, q, id))
@@ -55,7 +55,7 @@ func (r *CostProductTypeRepository) GetByID(ctx context.Context, id int32) (*cos
 // GetByCode loads a CostProductType by its unique code.
 func (r *CostProductTypeRepository) GetByCode(ctx context.Context, code string) (*costproducttype.CostProductType, error) {
 	const q = `
-		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at
+		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, '')
 		FROM cost_product_type WHERE cpt_type_code = $1
 	`
 	return r.scanRow(r.db.QueryRowContext(ctx, q, code))
@@ -124,7 +124,7 @@ func (r *CostProductTypeRepository) List(ctx context.Context, f costproducttype.
 	offset := (page - 1) * pageSize
 
 	q := `
-		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at
+		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, '')
 		` + where + fmt.Sprintf(" ORDER BY %s %s LIMIT $%d OFFSET $%d", col, dir, idx, idx+1)
 	args = append(args, pageSize, offset)
 
@@ -162,14 +162,17 @@ func (r *CostProductTypeRepository) scanRow(row *sql.Row) (*costproducttype.Cost
 		code, name           string
 		isActive             bool
 		createdAt, updatedAt time.Time
+		oilClass             string
 	)
-	if err := row.Scan(&id, &code, &name, &isActive, &createdAt, &updatedAt); err != nil {
+	if err := row.Scan(&id, &code, &name, &isActive, &createdAt, &updatedAt, &oilClass); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, costproducttype.ErrNotFound
 		}
 		return nil, fmt.Errorf("scan cost_product_type: %w", err)
 	}
-	return costproducttype.Reconstruct(id, code, name, isActive, createdAt, updatedAt), nil
+	t := costproducttype.Reconstruct(id, code, name, isActive, createdAt, updatedAt)
+	t.SetOilClass(oilClass)
+	return t, nil
 }
 
 func (r *CostProductTypeRepository) scanRows(rows *sql.Rows) (*costproducttype.CostProductType, error) {
@@ -178,11 +181,14 @@ func (r *CostProductTypeRepository) scanRows(rows *sql.Rows) (*costproducttype.C
 		code, name           string
 		isActive             bool
 		createdAt, updatedAt time.Time
+		oilClass             string
 	)
-	if err := rows.Scan(&id, &code, &name, &isActive, &createdAt, &updatedAt); err != nil {
+	if err := rows.Scan(&id, &code, &name, &isActive, &createdAt, &updatedAt, &oilClass); err != nil {
 		return nil, fmt.Errorf("scan cost_product_type row: %w", err)
 	}
-	return costproducttype.Reconstruct(id, code, name, isActive, createdAt, updatedAt), nil
+	t := costproducttype.Reconstruct(id, code, name, isActive, createdAt, updatedAt)
+	t.SetOilClass(oilClass)
+	return t, nil
 }
 
 func isProductTypeUniqueViolation(err error) bool {
@@ -191,7 +197,7 @@ func isProductTypeUniqueViolation(err error) bool {
 
 // ListAllActive returns all active cost_product_type rows for map preloading.
 func (r *CostProductTypeRepository) ListAllActive(ctx context.Context) ([]*costproducttype.CostProductType, error) {
-	const q = `SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at
+	const q = `SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, '')
                FROM cost_product_type WHERE cpt_is_active = TRUE ORDER BY cpt_type_code`
 	rows, err := r.db.QueryContext(ctx, q)
 	if err != nil {

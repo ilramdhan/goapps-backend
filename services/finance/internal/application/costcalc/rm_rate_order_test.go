@@ -107,3 +107,29 @@ func TestRMRateCandidates_CustomOrderRespected(t *testing.T) {
 	assert.InDelta(t, 2.0, got[1].Value, 1e-9)
 	assert.InDelta(t, 1.0, got[2].Value, 1e-9)
 }
+
+// TestResolveOilRate_HonorsCustomRMRateOrder proves OIL_RATE shares the
+// GROUP-RM cascade config (F_YARN_RM_RATE expression, 000518) rather than a
+// hardcoded CR->SR->PR: with PR,SR,CR the PR value wins even though CR and SR
+// are non-zero, and the default order still picks CR.
+func TestResolveOilRate_HonorsCustomRMRateOrder(t *testing.T) {
+	t.Parallel()
+	base := ComputeInput{
+		Oil:     &OilInput{Class: OilClassPTY, TypeCode: "PTY", GroupCode: "G1", DefaultGroup: "G1", Allowed: map[string]bool{"G1": true}},
+		RMCosts: map[string]RMCostRates{"G1|": {CrRate: 1, SrRate: 2, PrRate: 3}},
+	}
+
+	custom := base
+	custom.RMRateOrder = []string{"PR", "SR", "CR"}
+	rate, label, applied, err := resolveOilRate(custom)
+	require.NoError(t, err)
+	require.True(t, applied)
+	assert.InDelta(t, 3.0, rate, 1e-9)
+	assert.Equal(t, "PR", label)
+
+	rate, label, applied, err = resolveOilRate(base)
+	require.NoError(t, err)
+	require.True(t, applied)
+	assert.InDelta(t, 1.0, rate, 1e-9)
+	assert.Equal(t, "CR", label)
+}

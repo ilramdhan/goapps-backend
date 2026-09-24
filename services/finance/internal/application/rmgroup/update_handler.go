@@ -51,6 +51,11 @@ type UpdateCommand struct {
 	ClearMarketingFreightRate    bool
 	ClearMarketingAntiDumpingPct bool
 	ClearMarketingDefaultValue   bool
+
+	// IsOilGroup sets the head-level oil-group flag (nil = unchanged). It is
+	// global, never period-versioned: it always writes the anchor head row,
+	// whatever Period is (oil-cost-rm-group D12).
+	IsOilGroup *bool
 }
 
 // UpdateHandler handles UpdateHead commands.
@@ -85,11 +90,23 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*rmgroup
 	if err != nil {
 		return nil, err
 	}
+	if err := h.assertOilFlagChangeAllowed(ctx, head, cmd.IsOilGroup); err != nil {
+		return nil, err
+	}
 
 	// Step 2: resolve the period-scoped working copy (get-or-create semantics).
 	snap, err := h.resolveHeadSnapshot(ctx, id, cmd.Period, head)
 	if err != nil {
 		return nil, err
+	}
+
+	// A flag-only command never touches the period snapshot (no snapshot row
+	// is created just for toggling the global oil-group flag).
+	if !hasPeriodPatch(cmd) {
+		if err := h.writeOilFlagOnly(ctx, head, cmd); err != nil {
+			return nil, err
+		}
+		return snap, nil
 	}
 
 	// Step 3: apply the patch onto the snapshot's fields.
@@ -112,6 +129,8 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*rmgroup
 		if err := h.writeThroughAnchor(ctx, head, cmd); err != nil {
 			return nil, err
 		}
+	} else if err := h.writeOilFlagOnly(ctx, head, cmd); err != nil {
+		return nil, err
 	}
 
 	// Step 6: return the up-to-date view for the requested period.
@@ -148,10 +167,63 @@ func (h *UpdateHandler) writeThroughAnchor(ctx context.Context, head *rmgroup.He
 	if err := applyV2MarketingPatch(head, cmd); err != nil {
 		return err
 	}
+	if cmd.IsOilGroup != nil {
+		head.SetOilGroup(*cmd.IsOilGroup)
+	}
 	if err := h.repo.UpdateHead(ctx, head); err != nil {
 		return fmt.Errorf("persist head update: %w", err)
 	}
 	return nil
+}
+
+// writeOilFlagOnly persists only the oil-group flag onto the anchor head (other
+// anchor fields are written back unchanged). No-op when the flag is absent or
+// unchanged.
+func (h *UpdateHandler) writeOilFlagOnly(ctx context.Context, head *rmgroup.Head, cmd UpdateCommand) error {
+	if cmd.IsOilGroup == nil || *cmd.IsOilGroup == head.IsOilGroup() {
+		return nil
+	}
+	if err := head.Update(rmgroup.UpdateInput{}, cmd.UpdatedBy); err != nil {
+		return err
+	}
+	head.SetOilGroup(*cmd.IsOilGroup)
+	if err := h.repo.UpdateHead(ctx, head); err != nil {
+		return fmt.Errorf("persist head oil-group flag: %w", err)
+	}
+	return nil
+}
+
+// assertOilFlagChangeAllowed rejects un-flagging an oil group that is still
+// referenced by a product type's oil-group mapping (ErrOilGroupInUse).
+func (h *UpdateHandler) assertOilFlagChangeAllowed(ctx context.Context, head *rmgroup.Head, want *bool) error {
+	if want == nil || *want || !head.IsOilGroup() {
+		return nil
+	}
+	inUse, err := h.repo.IsOilGroupInUse(ctx, head.ID())
+	if err != nil {
+		return fmt.Errorf("check oil group usage: %w", err)
+	}
+	if inUse {
+		return rmgroup.ErrOilGroupInUse
+	}
+	return nil
+}
+
+// hasPeriodPatch reports whether the command patches any period-scoped field
+// (everything except the global IsOilGroup flag).
+func hasPeriodPatch(cmd UpdateCommand) bool {
+	return hasTextOrCostPatch(cmd) || hasFlagOrInitPatch(cmd) || cmd.IsActive != nil || hasV2MarketingPatch(cmd)
+}
+
+func hasTextOrCostPatch(cmd UpdateCommand) bool {
+	return cmd.Name != nil || cmd.Description != nil || cmd.Colorant != nil || cmd.CIName != nil ||
+		cmd.CostPercentage != nil || cmd.CostPerKg != nil
+}
+
+func hasFlagOrInitPatch(cmd UpdateCommand) bool {
+	return cmd.FlagValuation != nil || cmd.FlagMarketing != nil || cmd.FlagSimulation != nil ||
+		cmd.InitValValuation != nil || cmd.InitValMarketing != nil || cmd.InitValSimulation != nil ||
+		cmd.ClearInitValValuation || cmd.ClearInitValMarketing || cmd.ClearInitValSimulation
 }
 
 // applyHeadSnapshotPatch applies the command's patch fields directly onto a

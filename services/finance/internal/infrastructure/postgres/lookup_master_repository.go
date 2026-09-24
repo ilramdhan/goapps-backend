@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lib/pq"
 	"github.com/xuri/excelize/v2"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/lookupmaster"
@@ -277,6 +278,15 @@ func mapPGTypeToDataType(pgType string) string {
 
 // ListMasterOptions queries the master's registered table and returns code+label rows.
 func (r *LookupMasterRepository) ListMasterOptions(ctx context.Context, masterCode, search string, limit int) ([]lookupmaster.MasterOption, error) {
+	return r.ListMasterOptionsInCodes(ctx, masterCode, search, limit, nil)
+}
+
+// ListMasterOptionsInCodes is ListMasterOptions with an optional restriction of
+// the value column to restrictCodes. A nil slice means "no restriction"; a
+// non-nil empty slice returns no rows. The codes are bound as a single array
+// parameter (never concatenated). Used for RM_GROUP_OIL scoped to a product's
+// type (oil-cost-rm-group §4.5), following the MB_SPIN per-master branch.
+func (r *LookupMasterRepository) ListMasterOptionsInCodes(ctx context.Context, masterCode, search string, limit int, restrictCodes []string) ([]lookupmaster.MasterOption, error) {
 	var tableName, codeField, labelField string
 	err := r.db.QueryRowContext(ctx,
 		`SELECT COALESCE(lm_table_name,''), lm_code_field, lm_label_field
@@ -337,6 +347,12 @@ func (r *LookupMasterRepository) ListMasterOptions(ctx context.Context, masterCo
 			quoteIdent(codeField), len(args), quoteIdent(labelField), len(args))
 	}
 
+	codesClause := ""
+	if restrictCodes != nil {
+		args = append(args, pq.Array(restrictCodes))
+		codesClause = fmt.Sprintf(" AND %s::text = ANY($%d)", valueExpr, len(args))
+	}
+
 	// limit == 0 (not specified by the caller) falls back to a sane default
 	// rather than returning the whole table; a negative limit (only used by
 	// internal callers, e.g. import validation) means "no LIMIT clause".
@@ -351,11 +367,12 @@ func (r *LookupMasterRepository) ListMasterOptions(ctx context.Context, masterCo
 	}
 
 	q := fmt.Sprintf(
-		`SELECT %s::text, COALESCE(%s::text,'')%s FROM %s WHERE deleted_at IS NULL%s%s ORDER BY %s%s`,
+		`SELECT %s::text, COALESCE(%s::text,'')%s FROM %s WHERE deleted_at IS NULL%s%s%s ORDER BY %s%s`,
 		valueExpr, quoteIdent(labelField), extraCols,
 		quoteIdent(tableName),
 		notNullClause,
 		searchClause,
+		codesClause,
 		quoteIdent(labelField),
 		limitClause,
 	)

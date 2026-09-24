@@ -25,12 +25,15 @@ const (
 )
 
 type CostProductType struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TypeId        int32                  `protobuf:"varint,1,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
-	TypeCode      string                 `protobuf:"bytes,2,opt,name=type_code,json=typeCode,proto3" json:"type_code,omitempty"` // max 5 chars uppercase
-	TypeName      string                 `protobuf:"bytes,3,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
-	IsActive      bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
-	Audit         *v1.AuditInfo          `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TypeId   int32                  `protobuf:"varint,1,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	TypeCode string                 `protobuf:"bytes,2,opt,name=type_code,json=typeCode,proto3" json:"type_code,omitempty"` // max 5 chars uppercase
+	TypeName string                 `protobuf:"bytes,3,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	IsActive bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// Oil class of the product type: "" (no oil), "PTY", "POY" or "SUPERBA".
+	// Drives IS_PTY/IS_POY/IS_SUPERBA flags and OIL_RATE resolution in costing.
+	OilClass      string        `protobuf:"bytes,5,opt,name=oil_class,json=oilClass,proto3" json:"oil_class,omitempty"`
+	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -91,6 +94,13 @@ func (x *CostProductType) GetIsActive() bool {
 		return x.IsActive
 	}
 	return false
+}
+
+func (x *CostProductType) GetOilClass() string {
+	if x != nil {
+		return x.OilClass
+	}
+	return ""
 }
 
 func (x *CostProductType) GetAudit() *v1.AuditInfo {
@@ -894,17 +904,338 @@ func (x *DownloadCostProductTypeTemplateResponse) GetFileName() string {
 	return ""
 }
 
+// CostProductTypeOilGroup is one oil RM group allowed for a product type.
+type CostProductTypeOilGroup struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// RM group code (cst_rm_group_head.group_code; must be an oil group).
+	GroupCode string `protobuf:"bytes,1,opt,name=group_code,json=groupCode,proto3" json:"group_code,omitempty"`
+	// RM group display name (read-only; ignored on Set).
+	GroupName string `protobuf:"bytes,2,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty"`
+	// True for the default oil group of the type (exactly one when groups non-empty).
+	IsDefault     bool `protobuf:"varint,3,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CostProductTypeOilGroup) Reset() {
+	*x = CostProductTypeOilGroup{}
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostProductTypeOilGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostProductTypeOilGroup) ProtoMessage() {}
+
+func (x *CostProductTypeOilGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostProductTypeOilGroup.ProtoReflect.Descriptor instead.
+func (*CostProductTypeOilGroup) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_type_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CostProductTypeOilGroup) GetGroupCode() string {
+	if x != nil {
+		return x.GroupCode
+	}
+	return ""
+}
+
+func (x *CostProductTypeOilGroup) GetGroupName() string {
+	if x != nil {
+		return x.GroupName
+	}
+	return ""
+}
+
+func (x *CostProductTypeOilGroup) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
+// GetCostProductTypeOilConfigRequest fetches the oil class + allowed oil groups of a type.
+type GetCostProductTypeOilConfigRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product type id.
+	TypeId        int32 `protobuf:"varint,1,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCostProductTypeOilConfigRequest) Reset() {
+	*x = GetCostProductTypeOilConfigRequest{}
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCostProductTypeOilConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCostProductTypeOilConfigRequest) ProtoMessage() {}
+
+func (x *GetCostProductTypeOilConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCostProductTypeOilConfigRequest.ProtoReflect.Descriptor instead.
+func (*GetCostProductTypeOilConfigRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_type_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetCostProductTypeOilConfigRequest) GetTypeId() int32 {
+	if x != nil {
+		return x.TypeId
+	}
+	return 0
+}
+
+// GetCostProductTypeOilConfigResponse returns the oil config of a type.
+type GetCostProductTypeOilConfigResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Product type id.
+	TypeId int32 `protobuf:"varint,2,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	// Oil class: "", "PTY", "POY" or "SUPERBA".
+	OilClass string `protobuf:"bytes,3,opt,name=oil_class,json=oilClass,proto3" json:"oil_class,omitempty"`
+	// Allowed oil groups (one flagged default).
+	Groups        []*CostProductTypeOilGroup `protobuf:"bytes,4,rep,name=groups,proto3" json:"groups,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCostProductTypeOilConfigResponse) Reset() {
+	*x = GetCostProductTypeOilConfigResponse{}
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCostProductTypeOilConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCostProductTypeOilConfigResponse) ProtoMessage() {}
+
+func (x *GetCostProductTypeOilConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCostProductTypeOilConfigResponse.ProtoReflect.Descriptor instead.
+func (*GetCostProductTypeOilConfigResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_type_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetCostProductTypeOilConfigResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetCostProductTypeOilConfigResponse) GetTypeId() int32 {
+	if x != nil {
+		return x.TypeId
+	}
+	return 0
+}
+
+func (x *GetCostProductTypeOilConfigResponse) GetOilClass() string {
+	if x != nil {
+		return x.OilClass
+	}
+	return ""
+}
+
+func (x *GetCostProductTypeOilConfigResponse) GetGroups() []*CostProductTypeOilGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+// SetCostProductTypeOilConfigRequest replaces the oil class + allowed oil groups of a type.
+type SetCostProductTypeOilConfigRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product type id.
+	TypeId int32 `protobuf:"varint,1,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	// Oil class: "" clears it (then groups must be empty), else PTY/POY/SUPERBA.
+	OilClass string `protobuf:"bytes,2,opt,name=oil_class,json=oilClass,proto3" json:"oil_class,omitempty"`
+	// Full replacement set of allowed oil groups (max 20; exactly one default when non-empty).
+	Groups        []*CostProductTypeOilGroup `protobuf:"bytes,3,rep,name=groups,proto3" json:"groups,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCostProductTypeOilConfigRequest) Reset() {
+	*x = SetCostProductTypeOilConfigRequest{}
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCostProductTypeOilConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCostProductTypeOilConfigRequest) ProtoMessage() {}
+
+func (x *SetCostProductTypeOilConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCostProductTypeOilConfigRequest.ProtoReflect.Descriptor instead.
+func (*SetCostProductTypeOilConfigRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_type_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *SetCostProductTypeOilConfigRequest) GetTypeId() int32 {
+	if x != nil {
+		return x.TypeId
+	}
+	return 0
+}
+
+func (x *SetCostProductTypeOilConfigRequest) GetOilClass() string {
+	if x != nil {
+		return x.OilClass
+	}
+	return ""
+}
+
+func (x *SetCostProductTypeOilConfigRequest) GetGroups() []*CostProductTypeOilGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+// SetCostProductTypeOilConfigResponse returns the saved oil config.
+type SetCostProductTypeOilConfigResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response envelope.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Product type id.
+	TypeId int32 `protobuf:"varint,2,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	// Oil class after save.
+	OilClass string `protobuf:"bytes,3,opt,name=oil_class,json=oilClass,proto3" json:"oil_class,omitempty"`
+	// Allowed oil groups after save.
+	Groups        []*CostProductTypeOilGroup `protobuf:"bytes,4,rep,name=groups,proto3" json:"groups,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCostProductTypeOilConfigResponse) Reset() {
+	*x = SetCostProductTypeOilConfigResponse{}
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCostProductTypeOilConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCostProductTypeOilConfigResponse) ProtoMessage() {}
+
+func (x *SetCostProductTypeOilConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_cost_product_type_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCostProductTypeOilConfigResponse.ProtoReflect.Descriptor instead.
+func (*SetCostProductTypeOilConfigResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_cost_product_type_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *SetCostProductTypeOilConfigResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *SetCostProductTypeOilConfigResponse) GetTypeId() int32 {
+	if x != nil {
+		return x.TypeId
+	}
+	return 0
+}
+
+func (x *SetCostProductTypeOilConfigResponse) GetOilClass() string {
+	if x != nil {
+		return x.OilClass
+	}
+	return ""
+}
+
+func (x *SetCostProductTypeOilConfigResponse) GetGroups() []*CostProductTypeOilGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
 var File_finance_v1_cost_product_type_proto protoreflect.FileDescriptor
 
 const file_finance_v1_cost_product_type_proto_rawDesc = "" +
 	"\n" +
 	"\"finance/v1/cost_product_type.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xad\x01\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xca\x01\n" +
 	"\x0fCostProductType\x12\x17\n" +
 	"\atype_id\x18\x01 \x01(\x05R\x06typeId\x12\x1b\n" +
 	"\ttype_code\x18\x02 \x01(\tR\btypeCode\x12\x1b\n" +
 	"\ttype_name\x18\x03 \x01(\tR\btypeName\x12\x1b\n" +
-	"\tis_active\x18\x04 \x01(\bR\bisActive\x12*\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\x12\x1b\n" +
+	"\toil_class\x18\x05 \x01(\tR\boilClass\x12*\n" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\x80\x01\n" +
 	"\x1cCreateCostProductTypeRequest\x128\n" +
 	"\ttype_code\x18\x01 \x01(\tB\x1b\xbaH\x18r\x16\x10\x01\x18\x052\x10^[A-Z][A-Z0-9]*$R\btypeCode\x12&\n" +
@@ -961,7 +1292,30 @@ const file_finance_v1_cost_product_type_proto_rawDesc = "" +
 	"'DownloadCostProductTypeTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName2\xa1\t\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\x81\x01\n" +
+	"\x17CostProductTypeOilGroup\x12(\n" +
+	"\n" +
+	"group_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x1eR\tgroupCode\x12\x1d\n" +
+	"\n" +
+	"group_name\x18\x02 \x01(\tR\tgroupName\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\x03 \x01(\bR\tisDefault\"F\n" +
+	"\"GetCostProductTypeOilConfigRequest\x12 \n" +
+	"\atype_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x06typeId\"\xc5\x01\n" +
+	"#GetCostProductTypeOilConfigResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x17\n" +
+	"\atype_id\x18\x02 \x01(\x05R\x06typeId\x12\x1b\n" +
+	"\toil_class\x18\x03 \x01(\tR\boilClass\x12;\n" +
+	"\x06groups\x18\x04 \x03(\v2#.finance.v1.CostProductTypeOilGroupR\x06groups\"\xc6\x01\n" +
+	"\"SetCostProductTypeOilConfigRequest\x12 \n" +
+	"\atype_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x06typeId\x127\n" +
+	"\toil_class\x18\x02 \x01(\tB\x1a\xbaH\x17r\x15R\x00R\x03PTYR\x03POYR\aSUPERBAR\boilClass\x12E\n" +
+	"\x06groups\x18\x03 \x03(\v2#.finance.v1.CostProductTypeOilGroupB\b\xbaH\x05\x92\x01\x02\x10\x14R\x06groups\"\xc5\x01\n" +
+	"#SetCostProductTypeOilConfigResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12\x17\n" +
+	"\atype_id\x18\x02 \x01(\x05R\x06typeId\x12\x1b\n" +
+	"\toil_class\x18\x03 \x01(\tR\boilClass\x12;\n" +
+	"\x06groups\x18\x04 \x03(\v2#.finance.v1.CostProductTypeOilGroupR\x06groups2\xa8\f\n" +
 	"\x16CostProductTypeService\x12\x9b\x01\n" +
 	"\x15CreateCostProductType\x12(.finance.v1.CreateCostProductTypeRequest\x1a).finance.v1.CreateCostProductTypeResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/finance/cost-product-types\x12\x99\x01\n" +
 	"\x12GetCostProductType\x12%.finance.v1.GetCostProductTypeRequest\x1a&.finance.v1.GetCostProductTypeResponse\"4\x82\xd3\xe4\x93\x02.\x12,/api/v1/finance/cost-product-types/{type_id}\x12\xa5\x01\n" +
@@ -969,7 +1323,9 @@ const file_finance_v1_cost_product_type_proto_rawDesc = "" +
 	"\x14ListCostProductTypes\x12'.finance.v1.ListCostProductTypesRequest\x1a(.finance.v1.ListCostProductTypesResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/finance/cost-product-types\x12\xa2\x01\n" +
 	"\x16ExportCostProductTypes\x12).finance.v1.ExportCostProductTypesRequest\x1a*.finance.v1.ExportCostProductTypesResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/finance/cost-product-types/export\x12\xa5\x01\n" +
 	"\x16ImportCostProductTypes\x12).finance.v1.ImportCostProductTypesRequest\x1a*.finance.v1.ImportCostProductTypesResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/finance/cost-product-types/import\x12\xbf\x01\n" +
-	"\x1fDownloadCostProductTypeTemplate\x122.finance.v1.DownloadCostProductTypeTemplateRequest\x1a3.finance.v1.DownloadCostProductTypeTemplateResponse\"3\x82\xd3\xe4\x93\x02-\x12+/api/v1/finance/cost-product-types/templateB\xae\x01\n" +
+	"\x1fDownloadCostProductTypeTemplate\x122.finance.v1.DownloadCostProductTypeTemplateRequest\x1a3.finance.v1.DownloadCostProductTypeTemplateResponse\"3\x82\xd3\xe4\x93\x02-\x12+/api/v1/finance/cost-product-types/template\x12\xbf\x01\n" +
+	"\x1bGetCostProductTypeOilConfig\x12..finance.v1.GetCostProductTypeOilConfigRequest\x1a/.finance.v1.GetCostProductTypeOilConfigResponse\"?\x82\xd3\xe4\x93\x029\x127/api/v1/finance/cost-product-types/{type_id}/oil-config\x12\xc2\x01\n" +
+	"\x1bSetCostProductTypeOilConfig\x12..finance.v1.SetCostProductTypeOilConfigRequest\x1a/.finance.v1.SetCostProductTypeOilConfigResponse\"B\x82\xd3\xe4\x93\x02<:\x01*\x1a7/api/v1/finance/cost-product-types/{type_id}/oil-configB\xae\x01\n" +
 	"\x0ecom.finance.v1B\x14CostProductTypeProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
 	"Finance.V1\xca\x02\n" +
 	"Finance\\V1\xe2\x02\x16Finance\\V1\\GPBMetadata\xea\x02\vFinance::V1b\x06proto3"
@@ -986,7 +1342,7 @@ func file_finance_v1_cost_product_type_proto_rawDescGZIP() []byte {
 	return file_finance_v1_cost_product_type_proto_rawDescData
 }
 
-var file_finance_v1_cost_product_type_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_finance_v1_cost_product_type_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_finance_v1_cost_product_type_proto_goTypes = []any{
 	(*CostProductType)(nil),                         // 0: finance.v1.CostProductType
 	(*CreateCostProductTypeRequest)(nil),            // 1: finance.v1.CreateCostProductTypeRequest
@@ -1003,47 +1359,61 @@ var file_finance_v1_cost_product_type_proto_goTypes = []any{
 	(*ImportCostProductTypesResponse)(nil),          // 12: finance.v1.ImportCostProductTypesResponse
 	(*DownloadCostProductTypeTemplateRequest)(nil),  // 13: finance.v1.DownloadCostProductTypeTemplateRequest
 	(*DownloadCostProductTypeTemplateResponse)(nil), // 14: finance.v1.DownloadCostProductTypeTemplateResponse
-	(*v1.AuditInfo)(nil),                            // 15: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),                         // 16: common.v1.BaseResponse
-	(*v1.PaginationRequest)(nil),                    // 17: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),                   // 18: common.v1.PaginationResponse
-	(*ImportError)(nil),                             // 19: finance.v1.ImportError
+	(*CostProductTypeOilGroup)(nil),                 // 15: finance.v1.CostProductTypeOilGroup
+	(*GetCostProductTypeOilConfigRequest)(nil),      // 16: finance.v1.GetCostProductTypeOilConfigRequest
+	(*GetCostProductTypeOilConfigResponse)(nil),     // 17: finance.v1.GetCostProductTypeOilConfigResponse
+	(*SetCostProductTypeOilConfigRequest)(nil),      // 18: finance.v1.SetCostProductTypeOilConfigRequest
+	(*SetCostProductTypeOilConfigResponse)(nil),     // 19: finance.v1.SetCostProductTypeOilConfigResponse
+	(*v1.AuditInfo)(nil),                            // 20: common.v1.AuditInfo
+	(*v1.BaseResponse)(nil),                         // 21: common.v1.BaseResponse
+	(*v1.PaginationRequest)(nil),                    // 22: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),                   // 23: common.v1.PaginationResponse
+	(*ImportError)(nil),                             // 24: finance.v1.ImportError
 }
 var file_finance_v1_cost_product_type_proto_depIdxs = []int32{
-	15, // 0: finance.v1.CostProductType.audit:type_name -> common.v1.AuditInfo
-	16, // 1: finance.v1.CreateCostProductTypeResponse.base:type_name -> common.v1.BaseResponse
+	20, // 0: finance.v1.CostProductType.audit:type_name -> common.v1.AuditInfo
+	21, // 1: finance.v1.CreateCostProductTypeResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 2: finance.v1.CreateCostProductTypeResponse.data:type_name -> finance.v1.CostProductType
-	16, // 3: finance.v1.GetCostProductTypeResponse.base:type_name -> common.v1.BaseResponse
+	21, // 3: finance.v1.GetCostProductTypeResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 4: finance.v1.GetCostProductTypeResponse.data:type_name -> finance.v1.CostProductType
-	16, // 5: finance.v1.UpdateCostProductTypeResponse.base:type_name -> common.v1.BaseResponse
+	21, // 5: finance.v1.UpdateCostProductTypeResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 6: finance.v1.UpdateCostProductTypeResponse.data:type_name -> finance.v1.CostProductType
-	17, // 7: finance.v1.ListCostProductTypesRequest.pagination:type_name -> common.v1.PaginationRequest
-	16, // 8: finance.v1.ListCostProductTypesResponse.base:type_name -> common.v1.BaseResponse
+	22, // 7: finance.v1.ListCostProductTypesRequest.pagination:type_name -> common.v1.PaginationRequest
+	21, // 8: finance.v1.ListCostProductTypesResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 9: finance.v1.ListCostProductTypesResponse.data:type_name -> finance.v1.CostProductType
-	18, // 10: finance.v1.ListCostProductTypesResponse.pagination:type_name -> common.v1.PaginationResponse
-	16, // 11: finance.v1.ExportCostProductTypesResponse.base:type_name -> common.v1.BaseResponse
-	16, // 12: finance.v1.ImportCostProductTypesResponse.base:type_name -> common.v1.BaseResponse
-	19, // 13: finance.v1.ImportCostProductTypesResponse.errors:type_name -> finance.v1.ImportError
-	16, // 14: finance.v1.DownloadCostProductTypeTemplateResponse.base:type_name -> common.v1.BaseResponse
-	1,  // 15: finance.v1.CostProductTypeService.CreateCostProductType:input_type -> finance.v1.CreateCostProductTypeRequest
-	3,  // 16: finance.v1.CostProductTypeService.GetCostProductType:input_type -> finance.v1.GetCostProductTypeRequest
-	5,  // 17: finance.v1.CostProductTypeService.UpdateCostProductType:input_type -> finance.v1.UpdateCostProductTypeRequest
-	7,  // 18: finance.v1.CostProductTypeService.ListCostProductTypes:input_type -> finance.v1.ListCostProductTypesRequest
-	9,  // 19: finance.v1.CostProductTypeService.ExportCostProductTypes:input_type -> finance.v1.ExportCostProductTypesRequest
-	11, // 20: finance.v1.CostProductTypeService.ImportCostProductTypes:input_type -> finance.v1.ImportCostProductTypesRequest
-	13, // 21: finance.v1.CostProductTypeService.DownloadCostProductTypeTemplate:input_type -> finance.v1.DownloadCostProductTypeTemplateRequest
-	2,  // 22: finance.v1.CostProductTypeService.CreateCostProductType:output_type -> finance.v1.CreateCostProductTypeResponse
-	4,  // 23: finance.v1.CostProductTypeService.GetCostProductType:output_type -> finance.v1.GetCostProductTypeResponse
-	6,  // 24: finance.v1.CostProductTypeService.UpdateCostProductType:output_type -> finance.v1.UpdateCostProductTypeResponse
-	8,  // 25: finance.v1.CostProductTypeService.ListCostProductTypes:output_type -> finance.v1.ListCostProductTypesResponse
-	10, // 26: finance.v1.CostProductTypeService.ExportCostProductTypes:output_type -> finance.v1.ExportCostProductTypesResponse
-	12, // 27: finance.v1.CostProductTypeService.ImportCostProductTypes:output_type -> finance.v1.ImportCostProductTypesResponse
-	14, // 28: finance.v1.CostProductTypeService.DownloadCostProductTypeTemplate:output_type -> finance.v1.DownloadCostProductTypeTemplateResponse
-	22, // [22:29] is the sub-list for method output_type
-	15, // [15:22] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	23, // 10: finance.v1.ListCostProductTypesResponse.pagination:type_name -> common.v1.PaginationResponse
+	21, // 11: finance.v1.ExportCostProductTypesResponse.base:type_name -> common.v1.BaseResponse
+	21, // 12: finance.v1.ImportCostProductTypesResponse.base:type_name -> common.v1.BaseResponse
+	24, // 13: finance.v1.ImportCostProductTypesResponse.errors:type_name -> finance.v1.ImportError
+	21, // 14: finance.v1.DownloadCostProductTypeTemplateResponse.base:type_name -> common.v1.BaseResponse
+	21, // 15: finance.v1.GetCostProductTypeOilConfigResponse.base:type_name -> common.v1.BaseResponse
+	15, // 16: finance.v1.GetCostProductTypeOilConfigResponse.groups:type_name -> finance.v1.CostProductTypeOilGroup
+	15, // 17: finance.v1.SetCostProductTypeOilConfigRequest.groups:type_name -> finance.v1.CostProductTypeOilGroup
+	21, // 18: finance.v1.SetCostProductTypeOilConfigResponse.base:type_name -> common.v1.BaseResponse
+	15, // 19: finance.v1.SetCostProductTypeOilConfigResponse.groups:type_name -> finance.v1.CostProductTypeOilGroup
+	1,  // 20: finance.v1.CostProductTypeService.CreateCostProductType:input_type -> finance.v1.CreateCostProductTypeRequest
+	3,  // 21: finance.v1.CostProductTypeService.GetCostProductType:input_type -> finance.v1.GetCostProductTypeRequest
+	5,  // 22: finance.v1.CostProductTypeService.UpdateCostProductType:input_type -> finance.v1.UpdateCostProductTypeRequest
+	7,  // 23: finance.v1.CostProductTypeService.ListCostProductTypes:input_type -> finance.v1.ListCostProductTypesRequest
+	9,  // 24: finance.v1.CostProductTypeService.ExportCostProductTypes:input_type -> finance.v1.ExportCostProductTypesRequest
+	11, // 25: finance.v1.CostProductTypeService.ImportCostProductTypes:input_type -> finance.v1.ImportCostProductTypesRequest
+	13, // 26: finance.v1.CostProductTypeService.DownloadCostProductTypeTemplate:input_type -> finance.v1.DownloadCostProductTypeTemplateRequest
+	16, // 27: finance.v1.CostProductTypeService.GetCostProductTypeOilConfig:input_type -> finance.v1.GetCostProductTypeOilConfigRequest
+	18, // 28: finance.v1.CostProductTypeService.SetCostProductTypeOilConfig:input_type -> finance.v1.SetCostProductTypeOilConfigRequest
+	2,  // 29: finance.v1.CostProductTypeService.CreateCostProductType:output_type -> finance.v1.CreateCostProductTypeResponse
+	4,  // 30: finance.v1.CostProductTypeService.GetCostProductType:output_type -> finance.v1.GetCostProductTypeResponse
+	6,  // 31: finance.v1.CostProductTypeService.UpdateCostProductType:output_type -> finance.v1.UpdateCostProductTypeResponse
+	8,  // 32: finance.v1.CostProductTypeService.ListCostProductTypes:output_type -> finance.v1.ListCostProductTypesResponse
+	10, // 33: finance.v1.CostProductTypeService.ExportCostProductTypes:output_type -> finance.v1.ExportCostProductTypesResponse
+	12, // 34: finance.v1.CostProductTypeService.ImportCostProductTypes:output_type -> finance.v1.ImportCostProductTypesResponse
+	14, // 35: finance.v1.CostProductTypeService.DownloadCostProductTypeTemplate:output_type -> finance.v1.DownloadCostProductTypeTemplateResponse
+	17, // 36: finance.v1.CostProductTypeService.GetCostProductTypeOilConfig:output_type -> finance.v1.GetCostProductTypeOilConfigResponse
+	19, // 37: finance.v1.CostProductTypeService.SetCostProductTypeOilConfig:output_type -> finance.v1.SetCostProductTypeOilConfigResponse
+	29, // [29:38] is the sub-list for method output_type
+	20, // [20:29] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_product_type_proto_init() }
@@ -1058,7 +1428,7 @@ func file_finance_v1_cost_product_type_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_cost_product_type_proto_rawDesc), len(file_finance_v1_cost_product_type_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -263,9 +263,99 @@
           "CostProductTypeService"
         ]
       }
+    },
+    "/api/v1/finance/cost-product-types/{typeId}/oil-config": {
+      "get": {
+        "summary": "GetCostProductTypeOilConfig returns the oil class + allowed oil groups (reuses view permission).",
+        "operationId": "CostProductTypeService_GetCostProductTypeOilConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCostProductTypeOilConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "typeId",
+            "description": "Product type id.",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "CostProductTypeService"
+        ]
+      },
+      "put": {
+        "summary": "SetCostProductTypeOilConfig replaces the oil class + allowed oil groups (reuses update permission).",
+        "operationId": "CostProductTypeService_SetCostProductTypeOilConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetCostProductTypeOilConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "typeId",
+            "description": "Product type id.",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductTypeServiceSetCostProductTypeOilConfigBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductTypeService"
+        ]
+      }
     }
   },
   "definitions": {
+    "CostProductTypeServiceSetCostProductTypeOilConfigBody": {
+      "type": "object",
+      "properties": {
+        "oilClass": {
+          "type": "string",
+          "description": "Oil class: \"\" clears it (then groups must be empty), else PTY/POY/SUPERBA."
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductTypeOilGroup"
+          },
+          "description": "Full replacement set of allowed oil groups (max 20; exactly one default when non-empty)."
+        }
+      },
+      "description": "SetCostProductTypeOilConfigRequest replaces the oil class + allowed oil groups of a type."
+    },
     "CostProductTypeServiceUpdateCostProductTypeBody": {
       "type": "object",
       "properties": {
@@ -370,10 +460,32 @@
         "isActive": {
           "type": "boolean"
         },
+        "oilClass": {
+          "type": "string",
+          "description": "Oil class of the product type: \"\" (no oil), \"PTY\", \"POY\" or \"SUPERBA\".\nDrives IS_PTY/IS_POY/IS_SUPERBA flags and OIL_RATE resolution in costing."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo"
         }
       }
+    },
+    "v1CostProductTypeOilGroup": {
+      "type": "object",
+      "properties": {
+        "groupCode": {
+          "type": "string",
+          "description": "RM group code (cst_rm_group_head.group_code; must be an oil group)."
+        },
+        "groupName": {
+          "type": "string",
+          "description": "RM group display name (read-only; ignored on Set)."
+        },
+        "isDefault": {
+          "type": "boolean",
+          "description": "True for the default oil group of the type (exactly one when groups non-empty)."
+        }
+      },
+      "description": "CostProductTypeOilGroup is one oil RM group allowed for a product type."
     },
     "v1CreateCostProductTypeRequest": {
       "type": "object",
@@ -426,6 +538,33 @@
           "type": "string"
         }
       }
+    },
+    "v1GetCostProductTypeOilConfigResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "typeId": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Product type id."
+        },
+        "oilClass": {
+          "type": "string",
+          "description": "Oil class: \"\", \"PTY\", \"POY\" or \"SUPERBA\"."
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductTypeOilGroup"
+          },
+          "description": "Allowed oil groups (one flagged default)."
+        }
+      },
+      "description": "GetCostProductTypeOilConfigResponse returns the oil config of a type."
     },
     "v1GetCostProductTypeResponse": {
       "type": "object",
@@ -562,6 +701,33 @@
         }
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1SetCostProductTypeOilConfigResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "typeId": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Product type id."
+        },
+        "oilClass": {
+          "type": "string",
+          "description": "Oil class after save."
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostProductTypeOilGroup"
+          },
+          "description": "Allowed oil groups after save."
+        }
+      },
+      "description": "SetCostProductTypeOilConfigResponse returns the saved oil config."
     },
     "v1UpdateCostProductTypeResponse": {
       "type": "object",

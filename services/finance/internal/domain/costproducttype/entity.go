@@ -29,6 +29,8 @@ type CostProductType struct {
 	isActive  bool
 	createdAt time.Time
 	updatedAt time.Time
+	// oilClass is cpt_oil_class: PTY / POY / SUPERBA, "" = no oil.
+	oilClass string
 }
 
 // New constructs a new CostProductType (typeID is assigned by the database).
@@ -95,3 +97,10 @@ func (c *CostProductType) CreatedAt() time.Time { return c.createdAt }
 
 // UpdatedAt returns the updated at.
 func (c *CostProductType) UpdatedAt() time.Time { return c.updatedAt }
+
+// OilClass returns the oil class (PTY / POY / SUPERBA), "" when the type has no oil.
+func (c *CostProductType) OilClass() string { return c.oilClass }
+
+// SetOilClass sets the oil class on hydration (repositories only). Changes go
+// through the oil-config use case, which validates the class and groups together.
+func (c *CostProductType) SetOilClass(v string) { c.oilClass = v }

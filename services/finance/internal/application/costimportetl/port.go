@@ -115,6 +115,15 @@ type MasterLookupValidator interface {
 	RejectMasterLookupValues(ctx context.Context, jobID int64, rejected []MasterLookupCandidate) (int, error)
 }
 
+// OilGroupValidator enforces the product-type oil-group mapping on staged
+// OIL_NAME values (oil-cost-rm-group D4): a value not allowed for the product's
+// type is recorded in stg_import_error and its staged row removed, so
+// ResolveLayer2Params never imports it.
+type OilGroupValidator interface {
+	// RejectDisallowedOilGroups returns the number of staged rows removed.
+	RejectDisallowedOilGroups(ctx context.Context, jobID int64) (int, error)
+}
+
 // StagingError is one row-level resolve error captured in stg_import_error during
 // set-based resolution. Its fields mirror what the costbulkimport error-report
 // generator consumes (a sheet label, a row number, the offending row's key, and a

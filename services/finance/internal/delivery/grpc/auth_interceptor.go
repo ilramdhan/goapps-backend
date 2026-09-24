@@ -632,6 +632,12 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostProductParamBulkService/GetBulkProductParamJobStatus":    "finance.product.route.view",
 		"/finance.v1.CostProductParamBulkService/ListBulkProductParamJobFailures": "finance.product.route.view",
 
+		// CostProductTypeService oil config (oil-cost-rm-group D15): guarded from birth by the
+		// EXISTING product-type codes seeded in IAM 000038 (view/update, SUPER_ADMIN) and linked
+		// to menu FINANCE_PRODUCT_TYPE in IAM 000066 -- no new IAM code/migration.
+		"/finance.v1.CostProductTypeService/GetCostProductTypeOilConfig": "finance.master.producttype.view",
+		"/finance.v1.CostProductTypeService/SetCostProductTypeOilConfig": "finance.master.producttype.update",
+
 		// CostFillTaskService — authenticated-only (access controlled by fill config domain)
 		"/finance.v1.CostFillTaskService/ListFillTasks":   "",
 		"/finance.v1.CostFillTaskService/ClaimFillTask":   "",

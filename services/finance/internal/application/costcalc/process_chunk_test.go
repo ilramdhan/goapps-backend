@@ -129,7 +129,9 @@ func (s *ProcessChunkSuite) seedAll() {
 func (s *ProcessChunkSuite) seedProduct() {
 	var typeID int
 	require.NoError(s.T(), s.raw.QueryRowContext(s.ctx,
-		`SELECT cpt_type_id FROM cost_product_type ORDER BY cpt_type_id LIMIT 1`,
+		// A non-oil type: since 000521 POY/PTY/TCS/TPS/TTS carry cpt_oil_class and
+		// the engine would block this fixture (no oil RM cost row) — see oil_rate.go.
+		`SELECT cpt_type_id FROM cost_product_type WHERE cpt_oil_class IS NULL AND cpt_type_code <> 'MB' ORDER BY cpt_type_id LIMIT 1`,
 	).Scan(&typeID))
 	require.NoError(s.T(), s.raw.QueryRowContext(s.ctx, `
 		INSERT INTO cost_product_master (cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_created_by, cpm_updated_by)

@@ -584,6 +584,8 @@ func cppSuccessResponse(msg string) *commonv1.BaseResponse {
 
 func cppDomainError(err error) *commonv1.BaseResponse {
 	switch {
+	case errors.Is(err, cpp.ErrOilGroupNotAllowed):
+		return oilGroupValidationResponse(err)
 	case errors.Is(err, cpp.ErrProductNotFound), errors.Is(err, cpp.ErrParamNotFound), errors.Is(err, cpp.ErrNotFound):
 		return NotFoundResponse(err.Error())
 	case errors.Is(err, cpp.ErrInvalidValueShape), errors.Is(err, cpp.ErrInvalidDataType), errors.Is(err, cpp.ErrPeriodDependent), errors.Is(err, cpp.ErrParamNotApplicable):
@@ -592,5 +594,19 @@ func cppDomainError(err error) *commonv1.BaseResponse {
 		return ConflictResponse(err.Error())
 	default:
 		return InternalErrorResponse(err.Error())
+	}
+}
+
+// oilGroupValidationResponse maps cpp.ErrOilGroupNotAllowed to a 400 with a
+// field-level validation error on OIL_NAME (oil-cost-rm-group §4.5).
+func oilGroupValidationResponse(err error) *commonv1.BaseResponse {
+	msg := err.Error()
+	return &commonv1.BaseResponse{
+		IsSuccess:  false,
+		StatusCode: "400",
+		Message:    msg,
+		ValidationErrors: []*commonv1.ValidationError{
+			{Field: cpp.OilNameParamCode, Message: msg},
+		},
 	}
 }

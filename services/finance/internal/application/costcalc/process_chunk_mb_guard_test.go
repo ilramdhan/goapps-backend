@@ -51,6 +51,12 @@ func (f *mbGuardLoader) LoadFormulas(_ context.Context, _ []int64) (map[int64][]
 	return map[int64][]Formula{}, nil
 }
 
+// LoadOilContext reports no oil-class products: the fixture exercises no oil
+// resolution, so every product keeps its CAPP OIL_RATE and IS_* flags are 0.
+func (f *mbGuardLoader) LoadOilContext(context.Context, []int64) (map[int64]*OilInput, error) {
+	return map[int64]*OilInput{}, nil
+}
+
 func (f *mbGuardLoader) LoadCalculatedParams(_ context.Context, _ []int64) (map[int64]map[string]bool, error) {
 	return map[int64]map[string]bool{}, nil
 }

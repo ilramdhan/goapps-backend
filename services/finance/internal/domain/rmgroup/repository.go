@@ -40,6 +40,10 @@ type Repository interface {
 	// ExistsHeadByID reports whether a non-deleted head with this ID exists.
 	ExistsHeadByID(ctx context.Context, id uuid.UUID) (bool, error)
 
+	// IsOilGroupInUse reports whether the head is referenced by any product
+	// type's oil-group mapping (cost_product_type_oil_group).
+	IsOilGroupInUse(ctx context.Context, id uuid.UUID) (bool, error)
+
 	// ---------- Detail operations ----------
 
 	// AddDetail persists a new Detail row.
@@ -103,6 +107,9 @@ type ListFilter struct {
 
 	// IsActive filters by the is_active flag when non-nil.
 	IsActive *bool
+
+	// IsOilGroup filters by the is_oil_group flag when non-nil.
+	IsOilGroup *bool
 
 	// Flag filter — when non-empty, matches heads where ANY of the three flag_*
 	// columns equals this value. Empty disables the filter.

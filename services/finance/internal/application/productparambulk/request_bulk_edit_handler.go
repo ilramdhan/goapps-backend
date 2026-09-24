@@ -12,10 +12,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
+	cppdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductparameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 )
 
@@ -98,16 +100,33 @@ type RequestBulkEditResult struct {
 	Execution *job.Execution
 }
 
+// ParamCodeResolver resolves an mst_parameter UUID to its param_code, used to
+// detect bulk ops that target OIL_NAME.
+type ParamCodeResolver interface {
+	GetParamCodeByID(ctx context.Context, paramID uuid.UUID) (string, error)
+}
+
 // RequestBulkEditHandler queues an asynchronous bulk product param edit job.
 type RequestBulkEditHandler struct {
 	jobRepo   job.Repository
 	publisher BulkEditJobPublisher
 	products  ProductChecker
+	// oilPolicy + paramCodes validate UPSERT_VALUE ops on OIL_NAME against every
+	// target product's allowed oil groups (oil-cost-rm-group D4). Both nil-safe.
+	oilPolicy  cppdomain.OilGroupPolicy
+	paramCodes ParamCodeResolver
 }
 
 // NewRequestBulkEditHandler constructs the handler.
 func NewRequestBulkEditHandler(jobRepo job.Repository, publisher BulkEditJobPublisher, products ProductChecker) *RequestBulkEditHandler {
 	return &RequestBulkEditHandler{jobRepo: jobRepo, publisher: publisher, products: products}
+}
+
+// WithOilGroupPolicy enables OIL_NAME validation for UPSERT_VALUE ops.
+func (h *RequestBulkEditHandler) WithOilGroupPolicy(p cppdomain.OilGroupPolicy, codes ParamCodeResolver) *RequestBulkEditHandler {
+	h.oilPolicy = p
+	h.paramCodes = codes
+	return h
 }
 
 // childParams is the JSON shape persisted on each child job.Execution's
@@ -229,7 +248,70 @@ func (h *RequestBulkEditHandler) validate(ctx context.Context, cmd RequestBulkEd
 			return err
 		}
 	}
-	return h.checkProductsExist(ctx, cmd.ProductSysIDs)
+	if err := h.checkProductsExist(ctx, cmd.ProductSysIDs); err != nil {
+		return err
+	}
+	return h.checkOilGroups(ctx, cmd)
+}
+
+// checkOilGroups rejects the whole request when any UPSERT_VALUE op on
+// OIL_NAME sets a value not allowed for one or more target products' types.
+// The error lists every offending product (spec §5: whole request rejected,
+// per-product list). Blank values are left to the calc-time default.
+func (h *RequestBulkEditHandler) checkOilGroups(ctx context.Context, cmd RequestBulkEditCommand) error {
+	if h.oilPolicy == nil || h.paramCodes == nil {
+		return nil
+	}
+	values, err := h.oilNameValues(ctx, cmd.Operations)
+	if err != nil || len(values) == 0 {
+		return err
+	}
+	rules, err := h.oilPolicy.RulesForProducts(ctx, cmd.ProductSysIDs)
+	if err != nil {
+		return fmt.Errorf("resolve oil group rules: %w", err)
+	}
+	var problems []string
+	for _, id := range cmd.ProductSysIDs {
+		for _, v := range values {
+			if vErr := rules[id].Validate(v); vErr != nil {
+				problems = append(problems, fmt.Sprintf("product %d: %s", id, vErr.Error()))
+			}
+		}
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	return &cppdomain.OilGroupError{Message: fmt.Sprintf("%d product(s) rejected — %s",
+		len(problems), strings.Join(problems, "; "))}
+}
+
+// oilNameValues returns the non-blank value_text of every UPSERT_VALUE op whose
+// param is OIL_NAME (param codes resolved once per distinct param id).
+func (h *RequestBulkEditHandler) oilNameValues(ctx context.Context, ops []OperationDTO) ([]string, error) {
+	codeByID := make(map[string]string)
+	var out []string
+	for _, op := range ops {
+		if op.Kind != OpUpsertValue || op.ValueText == nil || strings.TrimSpace(*op.ValueText) == "" {
+			continue
+		}
+		code, ok := codeByID[op.ParamID]
+		if !ok {
+			id, parseErr := uuid.Parse(op.ParamID)
+			if parseErr != nil {
+				return nil, fmt.Errorf("%w: invalid param_id %q", ErrInvalidOperation, op.ParamID)
+			}
+			resolved, resErr := h.paramCodes.GetParamCodeByID(ctx, id)
+			if resErr != nil {
+				return nil, fmt.Errorf("resolve param %s: %w", op.ParamID, resErr)
+			}
+			code = resolved
+			codeByID[op.ParamID] = code
+		}
+		if code == cppdomain.OilNameParamCode {
+			out = append(out, strings.TrimSpace(*op.ValueText))
+		}
+	}
+	return out, nil
 }
 
 // checkProductsExist rejects the whole batch if any product_sys_id is unknown.

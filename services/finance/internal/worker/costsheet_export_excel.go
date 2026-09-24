@@ -46,6 +46,9 @@ type Stage struct {
 	// YarnType is the legacy product type label (cpm_flex_03) — "POY",
 	// "MELANGE". The "Yarn Type" column of the flat "all data" sheet.
 	YarnType string
+	// OilGroupName is the RM group name behind the stage's OIL_NAME code
+	// (D18). Empty means "not resolved"; the flat sheet then shows the code.
+	OilGroupName string
 }
 
 // Rendering constants for the sheet's fixed look.

@@ -143,6 +143,9 @@ type loadedBundle struct {
 	// for a given calc_type -- resolveRMLandedCost/rmLandedOrderForCalcType
 	// fall back to that calc_type's hardcoded default independently.
 	rmLandedOrder map[string][]string
+	// oil is the per-product oil context (LoadOilContext). Products whose type
+	// has no oil class are absent, which ComputeProduct treats as "no oil".
+	oil map[int64]*OilInput
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -159,7 +162,15 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		return nil, fmt.Errorf("load formulas: %w", err)
 	}
 
-	itemCodes := collectRMCodes(routes)
+	// Oil-class products resolve OIL_RATE from their oil RM group's
+	// cst_rm_cost row, so those group codes must ride the same LoadRMCosts
+	// query as the route RM codes (deduped).
+	oil, err := s.loader.LoadOilContext(ctx, in.Products)
+	if err != nil {
+		return nil, fmt.Errorf("load oil context: %w", err)
+	}
+
+	itemCodes := oilGroupCodes(oil, collectRMCodes(routes))
 	rmCosts, err := s.loader.LoadRMCosts(ctx, itemCodes, in.Period, string(in.CalcType))
 	if err != nil {
 		return nil, fmt.Errorf("load RM costs: %w", err)
@@ -221,6 +232,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		calculatedParams: calculatedParams,
 		rmRateOrder:      s.loadRMRateOrder(ctx),
 		rmLandedOrder:    s.loadRMLandedOrder(ctx),
+		oil:              oil,
 	}, nil
 }
 
@@ -321,6 +333,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		SpinFixedCost:    loaded.spinPool.Values,
 		RMRateOrder:      loaded.rmRateOrder,
 		RMLandedOrder:    loaded.rmLandedOrder,
+		Oil:              loaded.oil[pid],
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)

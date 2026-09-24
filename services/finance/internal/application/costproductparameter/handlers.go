@@ -4,6 +4,7 @@ package costproductparameter
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -24,11 +25,21 @@ type Handlers struct {
 	// as before this field existed (ValueMBSpinID stays nil, cpp_value_text is
 	// still written as usual).
 	mbSpinRepo mbspin.Repository
+	// oilPolicy validates OIL_NAME against the product type's allowed oil
+	// groups and supplies the default on CAPP add (oil-cost-rm-group D4).
+	// Nil-safe: when nil, OIL_NAME behaves like any other param.
+	oilPolicy cpp.OilGroupPolicy
 }
 
 // New wires the handlers.
 func New(repo cpp.Repository, mbSpinRepo mbspin.Repository) *Handlers {
 	return &Handlers{repo: repo, mbSpinRepo: mbSpinRepo}
+}
+
+// WithOilGroupPolicy attaches the OIL_NAME oil-group policy.
+func (h *Handlers) WithOilGroupPolicy(p cpp.OilGroupPolicy) *Handlers {
+	h.oilPolicy = p
+	return h
 }
 
 // ListProductRequiredParams returns the parameter form contents for a product.
@@ -120,14 +131,8 @@ func (h *Handlers) Upsert(ctx context.Context, cmd UpsertCommand) (*cpp.Value, e
 		return nil, cpp.ErrProductLocked
 	}
 
-	meta, err := h.repo.GetMeta(ctx, cmd.ParamID)
+	meta, err := h.validatedMeta(ctx, cmd)
 	if err != nil {
-		return nil, err
-	}
-	if meta.IsPeriodDependent {
-		return nil, cpp.ErrPeriodDependent
-	}
-	if err := cpp.EnsureValueShape(meta.DataType, cmd.ValueNumeric, cmd.ValueText, cmd.ValueFlag); err != nil {
 		return nil, err
 	}
 
@@ -165,6 +170,83 @@ func (h *Handlers) Upsert(ctx context.Context, cmd UpsertCommand) (*cpp.Value, e
 		return nil, fmt.Errorf("upsert cpp: %w", err)
 	}
 	return v, nil
+}
+
+// validatedMeta loads the param meta and applies the per-param value rules
+// (period dependency, value shape, OIL_NAME oil-group policy).
+func (h *Handlers) validatedMeta(ctx context.Context, cmd UpsertCommand) (*cpp.ParamMeta, error) {
+	meta, err := h.repo.GetMeta(ctx, cmd.ParamID)
+	if err != nil {
+		return nil, err
+	}
+	if meta.IsPeriodDependent {
+		return nil, cpp.ErrPeriodDependent
+	}
+	if err := cpp.EnsureValueShape(meta.DataType, cmd.ValueNumeric, cmd.ValueText, cmd.ValueFlag); err != nil {
+		return nil, err
+	}
+	if meta.ParamCode == cpp.OilNameParamCode {
+		if err := h.validateOilName(ctx, cmd.ProductSysID, cmd.ValueText); err != nil {
+			return nil, err
+		}
+	}
+	return meta, nil
+}
+
+// validateOilName rejects an OIL_NAME value not allowed for the product's type
+// (ErrOilGroupNotAllowed). Products whose type has no oil class, and a nil
+// policy, pass through (the generic master-lookup existence rule applies).
+func (h *Handlers) validateOilName(ctx context.Context, productSysID int64, valueText *string) error {
+	if h.oilPolicy == nil || valueText == nil {
+		return nil
+	}
+	rule, err := h.oilPolicy.RuleForProduct(ctx, productSysID)
+	if err != nil {
+		return fmt.Errorf("resolve oil group rule: %w", err)
+	}
+	return rule.Validate(*valueText)
+}
+
+// applyOilNameDefault writes the product type's default oil group as the
+// OIL_NAME value when paramID is OIL_NAME, the type has a default and the
+// product has no value yet (spec §3.3 "Default"). Best-effort guards (nil
+// policy, other params) return nil without I/O beyond the param-code lookup.
+func (h *Handlers) applyOilNameDefault(ctx context.Context, productSysID int64, paramID uuid.UUID, actor string) error {
+	if h.oilPolicy == nil {
+		return nil
+	}
+	code, err := h.repo.GetParamCodeByID(ctx, paramID)
+	if err != nil {
+		return fmt.Errorf("resolve param code: %w", err)
+	}
+	if code != cpp.OilNameParamCode {
+		return nil
+	}
+	rule, err := h.oilPolicy.RuleForProduct(ctx, productSysID)
+	if err != nil {
+		return fmt.Errorf("resolve oil group rule: %w", err)
+	}
+	if rule == nil || rule.Default == "" {
+		return nil
+	}
+	current, err := h.repo.GetCurrentValueAsText(ctx, productSysID, paramID)
+	if err != nil {
+		return fmt.Errorf("read current OIL_NAME: %w", err)
+	}
+	if strings.TrimSpace(current) != "" {
+		return nil
+	}
+	def := rule.Default
+	if err := h.repo.Upsert(ctx, &cpp.Value{
+		ProductSysID: productSysID,
+		ParamID:      paramID,
+		ValueText:    &def,
+		FilledBy:     actor,
+		CreatedBy:    actor,
+	}); err != nil {
+		return fmt.Errorf("write default OIL_NAME: %w", err)
+	}
+	return nil
 }
 
 // resolveMBSpinID resolves an MB_SPIN lookup parameter's incoming text value to
@@ -289,7 +371,10 @@ func (h *Handlers) AddApplicable(ctx context.Context, productSysID int64, paramI
 		DisplayOrder: displayOrder,
 		CreatedBy:    actor,
 	}
-	return h.repo.AddApplicable(ctx, a)
+	if err := h.repo.AddApplicable(ctx, a); err != nil {
+		return err
+	}
+	return h.applyOilNameDefault(ctx, productSysID, paramID, actor)
 }
 
 // RemoveApplicable removes a param from a product (and its stored value).
@@ -360,7 +445,10 @@ func (h *Handlers) AddApplicableWithChildren(ctx context.Context, productSysID i
 	if locked {
 		return cpp.ErrProductLocked
 	}
-	return h.repo.AddApplicableWithChildren(ctx, productSysID, triggerParamID, isRequired, createdBy, fillGroupChildren)
+	if err := h.repo.AddApplicableWithChildren(ctx, productSysID, triggerParamID, isRequired, createdBy, fillGroupChildren); err != nil {
+		return err
+	}
+	return h.applyOilNameDefault(ctx, productSysID, triggerParamID, createdBy)
 }
 
 // GetRemovePreview returns trigger + child param info for the confirm dialog.

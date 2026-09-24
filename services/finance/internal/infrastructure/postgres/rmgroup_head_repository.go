@@ -39,8 +39,8 @@ func (r *RMGroupRepository) CreateHead(ctx context.Context, head *rmgroup.Head) 
 				init_val_valuation, init_val_marketing, init_val_simulation,
 				is_active, created_at, created_by,
 				marketing_freight_rate, marketing_anti_dumping_pct, marketing_default_value,
-				valuation_flag, marketing_flag
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+				valuation_flag, marketing_flag, is_oil_group
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
 		`
 		mi := head.MarketingInputs()
 		_, err := tx.ExecContext(ctx, query,
@@ -52,6 +52,7 @@ func (r *RMGroupRepository) CreateHead(ctx context.Context, head *rmgroup.Head) 
 			head.IsActive(), head.CreatedAt(), head.CreatedBy(),
 			mi.FreightRate, mi.AntiDumpingPct, mi.DefaultValue,
 			nullableFlagString(string(mi.ValuationFlag)), nullableFlagString(string(mi.MarketingFlag)),
+			head.IsOilGroup(),
 		)
 		if err != nil {
 			if isUniqueViolation(err) {
@@ -90,6 +91,11 @@ func (r *RMGroupRepository) ListHeads(ctx context.Context, filter rmgroup.ListFi
 	if filter.IsActive != nil {
 		base += fmt.Sprintf(` AND is_active = $%d`, argIdx)
 		args = append(args, *filter.IsActive)
+		argIdx++
+	}
+	if filter.IsOilGroup != nil {
+		base += fmt.Sprintf(` AND is_oil_group = $%d`, argIdx)
+		args = append(args, *filter.IsOilGroup)
 		argIdx++
 	}
 	if filter.Flag != "" {
@@ -182,7 +188,7 @@ func (r *RMGroupRepository) UpdateHead(ctx context.Context, head *rmgroup.Head) 
 				init_val_valuation = $11, init_val_marketing = $12, init_val_simulation = $13,
 				is_active = $14, updated_at = $15, updated_by = $16,
 				marketing_freight_rate = $17, marketing_anti_dumping_pct = $18, marketing_default_value = $19,
-				valuation_flag = $20, marketing_flag = $21
+				valuation_flag = $20, marketing_flag = $21, is_oil_group = $22
 			WHERE group_head_id = $1 AND deleted_at IS NULL
 		`
 		mi := head.MarketingInputs()
@@ -195,6 +201,7 @@ func (r *RMGroupRepository) UpdateHead(ctx context.Context, head *rmgroup.Head) 
 			head.IsActive(), head.UpdatedAt(), head.UpdatedBy(),
 			mi.FreightRate, mi.AntiDumpingPct, mi.DefaultValue,
 			nullableFlagString(string(mi.ValuationFlag)), nullableFlagString(string(mi.MarketingFlag)),
+			head.IsOilGroup(),
 		)
 		if err != nil {
 			return fmt.Errorf("update rm group head: %w", err)
@@ -291,6 +298,18 @@ func (r *RMGroupRepository) ExistsHeadByID(ctx context.Context, id uuid.UUID) (b
 	return exists, nil
 }
 
+// IsOilGroupInUse reports whether the head is referenced by any product type's
+// oil-group mapping (oil-cost-rm-group §3.1 un-flag / delete guard).
+func (r *RMGroupRepository) IsOilGroupInUse(ctx context.Context, id uuid.UUID) (bool, error) {
+	var inUse bool
+	if err := r.db.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM cost_product_type_oil_group WHERE cptog_group_head_id = $1)`, id,
+	).Scan(&inUse); err != nil {
+		return false, fmt.Errorf("check oil group usage: %w", err)
+	}
+	return inUse, nil
+}
+
 // =============================================================================
 // Head scanning helpers
 // =============================================================================
@@ -302,7 +321,7 @@ const headSelectSQL = `
 	       init_val_valuation, init_val_marketing, init_val_simulation,
 	       is_active, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by,
 	       marketing_freight_rate, marketing_anti_dumping_pct, marketing_default_value,
-	       valuation_flag, marketing_flag
+	       valuation_flag, marketing_flag, is_oil_group
 	FROM cst_rm_group_head`
 
 type headDTO struct {
@@ -332,6 +351,7 @@ type headDTO struct {
 	MarketingDefaultValue   sql.NullFloat64
 	ValuationFlagV2         sql.NullString
 	MarketingFlagV2         sql.NullString
+	IsOilGroup              bool
 }
 
 func (d *headDTO) toEntity() (*rmgroup.Head, error) {
@@ -378,6 +398,7 @@ func (d *headDTO) toEntity() (*rmgroup.Head, error) {
 	}); err != nil {
 		return nil, fmt.Errorf("attach marketing inputs from db: %w", err)
 	}
+	head.SetOilGroup(d.IsOilGroup)
 	return head, nil
 }
 
@@ -391,7 +412,7 @@ func (r *RMGroupRepository) scanHead(row *sql.Row) (*rmgroup.Head, error) {
 		&d.IsActive, &d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 		&d.MarketingFreightRate, &d.MarketingAntiDumpingPct, &d.MarketingDefaultValue,
-		&d.ValuationFlagV2, &d.MarketingFlagV2,
+		&d.ValuationFlagV2, &d.MarketingFlagV2, &d.IsOilGroup,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, rmgroup.ErrNotFound
@@ -412,7 +433,7 @@ func (r *RMGroupRepository) scanHeadRow(rows *sql.Rows) (*rmgroup.Head, error) {
 		&d.IsActive, &d.CreatedAt, &d.CreatedBy,
 		&d.UpdatedAt, &d.UpdatedBy, &d.DeletedAt, &d.DeletedBy,
 		&d.MarketingFreightRate, &d.MarketingAntiDumpingPct, &d.MarketingDefaultValue,
-		&d.ValuationFlagV2, &d.MarketingFlagV2,
+		&d.ValuationFlagV2, &d.MarketingFlagV2, &d.IsOilGroup,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan rm group head row: %w", err)

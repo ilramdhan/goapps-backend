@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -273,6 +274,7 @@ func (h *RMGroupHandler) CreateRMGroup(ctx context.Context, req *financev1.Creat
 		MarketingDefaultValue:   req.MarketingDefaultValue,
 		ValuationFlag:           protoValuationFlagToString(req.ValuationFlag),
 		MarketingFlag:           protoMarketingFlagToString(req.MarketingFlag),
+		IsOilGroup:              req.GetIsOilGroup(),
 	})
 	if err != nil {
 		RecordRMGroupOperation(opCreate, false)
@@ -358,6 +360,7 @@ func (h *RMGroupHandler) UpdateRMGroup(ctx context.Context, req *financev1.Updat
 		ClearInitValMarketing:  req.ClearInitValMarketing,
 		ClearInitValSimulation: req.ClearInitValSimulation,
 		IsActive:               req.IsActive,
+		IsOilGroup:             req.IsOilGroup,
 		UpdatedBy:              getUserFromContext(ctx),
 	}
 	if req.FlagValuation != nil {
@@ -390,7 +393,7 @@ func (h *RMGroupHandler) UpdateRMGroup(ctx context.Context, req *financev1.Updat
 
 	if _, err := h.updateHandler.Handle(ctx, cmd); err != nil {
 		RecordRMGroupOperation(opUpdate, false)
-		return &financev1.UpdateRMGroupResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.UpdateRMGroupResponse{Base: rmGroupWriteErrToBase(err)}, nil
 	}
 
 	// UpdateHandler.Handle now returns the period-scoped *rmgroup.HeadPeriodSnapshot
@@ -441,7 +444,7 @@ func (h *RMGroupHandler) DeleteRMGroup(ctx context.Context, req *financev1.Delet
 		DeletedBy: getUserFromContext(ctx),
 	}); err != nil {
 		RecordRMGroupOperation(opDelete, false)
-		return &financev1.DeleteRMGroupResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.DeleteRMGroupResponse{Base: rmGroupWriteErrToBase(err)}, nil
 	}
 
 	RecordRMGroupOperation(opDelete, true)
@@ -463,6 +466,8 @@ func (h *RMGroupHandler) ListRMGroups(ctx context.Context, req *financev1.ListRM
 		Search:    req.Search,
 		SortBy:    req.SortBy,
 		SortOrder: req.SortOrder,
+		// oil-cost-rm-group: optional oil-group list filter.
+		IsOilGroup: req.IsOilGroup,
 	}
 	switch req.ActiveFilter {
 	case financev1.ActiveFilter_ACTIVE_FILTER_ACTIVE:
@@ -759,6 +764,23 @@ func groupItemRatesToProto(r *appgroup.GroupItemRates) *financev1.RMGroupItemRat
 	}
 }
 
+// rmGroupWriteErrToBase maps update/delete errors, giving ErrOilGroupInUse a 400
+// with an is_oil_group validation error; everything else falls back to the
+// generic message-based mapping.
+func rmGroupWriteErrToBase(err error) *commonv1.BaseResponse {
+	if errors.Is(err, rmgroupdomain.ErrOilGroupInUse) {
+		return &commonv1.BaseResponse{
+			IsSuccess:  false,
+			StatusCode: "400",
+			Message:    err.Error(),
+			ValidationErrors: []*commonv1.ValidationError{
+				{Field: "is_oil_group", Message: err.Error()},
+			},
+		}
+	}
+	return domainErrorToBaseResponse(err)
+}
+
 // =============================================================================
 // Entity → proto mappers
 // =============================================================================
@@ -780,6 +802,7 @@ func rmGroupHeadToProto(h *rmgroupdomain.Head) *financev1.RMGroupHead {
 		InitValMarketing:  h.InitValMarketing(),
 		InitValSimulation: h.InitValSimulation(),
 		IsActive:          h.IsActive(),
+		IsOilGroup:        h.IsOilGroup(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: h.CreatedAt().Format(time.RFC3339),
 			CreatedBy: h.CreatedBy(),
