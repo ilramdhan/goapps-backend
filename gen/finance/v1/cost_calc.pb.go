@@ -1083,8 +1083,25 @@ type CostResult struct {
 	ProductTypeId int32 `protobuf:"varint,22,opt,name=product_type_id,json=productTypeId,proto3" json:"product_type_id,omitempty"`
 	// Resolved product type code (never the raw id in the UI).
 	ProductTypeCode string `protobuf:"bytes,23,opt,name=product_type_code,json=productTypeCode,proto3" json:"product_type_code,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Resolved ERP item code (from cost_erp_item, matched via
+	// cost_product_master.cpm_erp_item_code; falls back to the denormalized
+	// cpm_erp_item_code when no cost_erp_item row matches).
+	ItemCode string `protobuf:"bytes,24,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty"`
+	// Resolved ERP item name (from cost_erp_item.cei_item_name).
+	ItemName string `protobuf:"bytes,25,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty"`
+	// Shade code (from cost_product_master.cpm_shade_code).
+	ShadeCode string `protobuf:"bytes,26,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
+	// Shade name (from cost_product_master.cpm_shade_name).
+	ShadeName string `protobuf:"bytes,27,opt,name=shade_name,json=shadeName,proto3" json:"shade_name,omitempty"`
+	// Reference code of the raw material with the highest contribution among
+	// cpc_rm_cost_detail entries.
+	PrimaryRmCode string `protobuf:"bytes,28,opt,name=primary_rm_code,json=primaryRmCode,proto3" json:"primary_rm_code,omitempty"`
+	// Resolved display label of the primary raw material.
+	PrimaryRmName string `protobuf:"bytes,29,opt,name=primary_rm_name,json=primaryRmName,proto3" json:"primary_rm_name,omitempty"`
+	// Count of raw material entries in cpc_rm_cost_detail.
+	RmCount       int32 `protobuf:"varint,30,opt,name=rm_count,json=rmCount,proto3" json:"rm_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CostResult) Reset() {
@@ -1276,6 +1293,55 @@ func (x *CostResult) GetProductTypeCode() string {
 		return x.ProductTypeCode
 	}
 	return ""
+}
+
+func (x *CostResult) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *CostResult) GetItemName() string {
+	if x != nil {
+		return x.ItemName
+	}
+	return ""
+}
+
+func (x *CostResult) GetShadeCode() string {
+	if x != nil {
+		return x.ShadeCode
+	}
+	return ""
+}
+
+func (x *CostResult) GetShadeName() string {
+	if x != nil {
+		return x.ShadeName
+	}
+	return ""
+}
+
+func (x *CostResult) GetPrimaryRmCode() string {
+	if x != nil {
+		return x.PrimaryRmCode
+	}
+	return ""
+}
+
+func (x *CostResult) GetPrimaryRmName() string {
+	if x != nil {
+		return x.PrimaryRmName
+	}
+	return ""
+}
+
+func (x *CostResult) GetRmCount() int32 {
+	if x != nil {
+		return x.RmCount
+	}
+	return 0
 }
 
 // CostBreakdown is the full drill-down for one CostResult.
@@ -2692,7 +2758,13 @@ type ListCostResultsRequest struct {
 	// matching every other finance list RPC — the repository compares with
 	// EqualFold, so the uppercase spellings were accepted-but-redundant surface
 	// area.
-	SortOrder     string `protobuf:"bytes,8,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	SortOrder string `protobuf:"bytes,8,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	// Shade code filter (empty = no filter). Matches
+	// cost_product_master.cpm_shade_code.
+	ShadeCode string `protobuf:"bytes,9,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
+	// Raw material search (empty = no filter). Matches ref_code or ref_label of
+	// any entry in cpc_rm_cost_detail.
+	RawMaterial   string `protobuf:"bytes,10,opt,name=raw_material,json=rawMaterial,proto3" json:"raw_material,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2779,6 +2851,20 @@ func (x *ListCostResultsRequest) GetSortBy() string {
 func (x *ListCostResultsRequest) GetSortOrder() string {
 	if x != nil {
 		return x.SortOrder
+	}
+	return ""
+}
+
+func (x *ListCostResultsRequest) GetShadeCode() string {
+	if x != nil {
+		return x.ShadeCode
+	}
+	return ""
+}
+
+func (x *ListCostResultsRequest) GetRawMaterial() string {
+	if x != nil {
+		return x.RawMaterial
 	}
 	return ""
 }
@@ -5122,7 +5208,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"durationMs\x12\x17\n" +
 	"\acost_id\x18\x0e \x01(\x03R\x06costId\x12#\n" +
 	"\rerror_message\x18\x0f \x01(\tR\ferrorMessage\x120\n" +
-	"\x14calculation_log_json\x18\x10 \x01(\tR\x12calculationLogJson\"\xfd\x06\n" +
+	"\x14calculation_log_json\x18\x10 \x01(\tR\x12calculationLogJson\"\xe0\b\n" +
 	"\n" +
 	"CostResult\x12\x17\n" +
 	"\acost_id\x18\x01 \x01(\x03R\x06costId\x12$\n" +
@@ -5151,7 +5237,16 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\vverified_by\x18\x15 \x01(\tR\n" +
 	"verifiedBy\x12&\n" +
 	"\x0fproduct_type_id\x18\x16 \x01(\x05R\rproductTypeId\x12*\n" +
-	"\x11product_type_code\x18\x17 \x01(\tR\x0fproductTypeCode\"\x86\x03\n" +
+	"\x11product_type_code\x18\x17 \x01(\tR\x0fproductTypeCode\x12\x1b\n" +
+	"\titem_code\x18\x18 \x01(\tR\bitemCode\x12\x1b\n" +
+	"\titem_name\x18\x19 \x01(\tR\bitemName\x12\x1d\n" +
+	"\n" +
+	"shade_code\x18\x1a \x01(\tR\tshadeCode\x12\x1d\n" +
+	"\n" +
+	"shade_name\x18\x1b \x01(\tR\tshadeName\x12&\n" +
+	"\x0fprimary_rm_code\x18\x1c \x01(\tR\rprimaryRmCode\x12&\n" +
+	"\x0fprimary_rm_name\x18\x1d \x01(\tR\rprimaryRmName\x12\x19\n" +
+	"\brm_count\x18\x1e \x01(\x05R\armCount\"\x86\x03\n" +
 	"\rCostBreakdown\x120\n" +
 	"\asummary\x18\x01 \x01(\v2\x16.finance.v1.CostResultR\asummary\x125\n" +
 	"\bby_level\x18\x02 \x03(\v2\x1a.finance.v1.LevelBreakdownR\abyLevel\x127\n" +
@@ -5272,7 +5367,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x10calculation_type\x18\x03 \x01(\x0e2\x1b.finance.v1.CalculationTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x0fcalculationType\"t\n" +
 	"\x15GetCostResultResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
-	"\x06result\x18\x02 \x01(\v2\x16.finance.v1.CostResultR\x06result\"\x8f\x04\n" +
+	"\x06result\x18\x02 \x01(\v2\x16.finance.v1.CostResultR\x06result\"\xe3\x04\n" +
 	"\x16ListCostResultsRequest\x12<\n" +
 	"\n" +
 	"pagination\x18\x01 \x01(\v2\x1c.common.v1.PaginationRequestR\n" +
@@ -5284,7 +5379,11 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x10product_type_ids\x18\x06 \x03(\x05B\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x0eproductTypeIds\x12\x81\x01\n" +
 	"\asort_by\x18\a \x01(\tBh\xbaHercR\x00R\vproductCodeR\vproductNameR\x06periodR\x0fcalculationTypeR\vcostPerUnitR\ttotalCostR\x06statusR\fcalculatedAtR\x06sortBy\x121\n" +
 	"\n" +
-	"sort_order\x18\b \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\"\xdc\x01\n" +
+	"sort_order\x18\b \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\x12&\n" +
+	"\n" +
+	"shade_code\x18\t \x01(\tB\a\xbaH\x04r\x02\x182R\tshadeCode\x12*\n" +
+	"\fraw_material\x18\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x18dR\vrawMaterial\"\xdc\x01\n" +
 	"\x17ListCostResultsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x05items\x18\x02 \x03(\v2\x16.finance.v1.CostResultR\x05items\x12=\n" +

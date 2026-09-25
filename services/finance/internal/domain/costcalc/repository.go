@@ -96,6 +96,8 @@ type ResultListFilter struct {
 	SortOrder      string
 	Page           int
 	PageSize       int
+	ShadeCode      string
+	RawMaterial    string
 }
 
 // ResultSummary is a flat, list-friendly projection of a cost result with the
@@ -123,6 +125,20 @@ type ResultSummary struct {
 	// zero/empty when the product row is missing.
 	ProductTypeID   int32
 	ProductTypeCode string
+	// ItemCode / ItemName resolve cost_erp_item via the denormalized
+	// cost_product_master.cpm_erp_item_code, falling back to the raw
+	// cpm_erp_item_code when no cost_erp_item row matches.
+	ItemCode string
+	ItemName string
+	// ShadeCode / ShadeName come from cost_product_master.
+	ShadeCode string
+	ShadeName string
+	// PrimaryRMCode / PrimaryRMName / RMCount are derived from
+	// cpc_rm_cost_detail: the RM entry with the highest contribution, and the
+	// total entry count.
+	PrimaryRMCode string
+	PrimaryRMName string
+	RMCount       int32
 }
 
 // AuditHistoryRepository persists AuditHistoryEntry rows.

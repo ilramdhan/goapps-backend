@@ -624,6 +624,8 @@ func (h *CostCalcHandler) ListCostResults(ctx context.Context, req *financev1.Li
 		SortOrder:      req.GetSortOrder(),
 		Page:           int(req.GetPagination().GetPage()),
 		PageSize:       int(req.GetPagination().GetPageSize()),
+		ShadeCode:      req.GetShadeCode(),
+		RawMaterial:    req.GetRawMaterial(),
 	})
 	if err != nil {
 		return &financev1.ListCostResultsResponse{Base: costCalcErrToBase(err)}, nil
@@ -1035,6 +1037,13 @@ func summaryToProto(s *costcalcdom.ResultSummary) *financev1.CostResult {
 		CalculatedBy:    s.CalculatedBy,
 		ProductTypeId:   s.ProductTypeID,
 		ProductTypeCode: s.ProductTypeCode,
+		ItemCode:        s.ItemCode,
+		ItemName:        s.ItemName,
+		ShadeCode:       s.ShadeCode,
+		ShadeName:       s.ShadeName,
+		PrimaryRmCode:   s.PrimaryRMCode,
+		PrimaryRmName:   s.PrimaryRMName,
+		RmCount:         s.RMCount,
 	}
 }
 
