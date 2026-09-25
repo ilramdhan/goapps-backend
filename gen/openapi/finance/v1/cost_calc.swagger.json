@@ -455,6 +455,20 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "shadeCode",
+            "description": "Shade code filter (empty = no filter). Matches\ncost_product_master.cpm_shade_code.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rawMaterial",
+            "description": "Raw material search (empty = no filter). Matches ref_code or ref_label of\nany entry in cpc_rm_cost_detail.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1708,6 +1722,35 @@
         "productTypeCode": {
           "type": "string",
           "description": "Resolved product type code (never the raw id in the UI)."
+        },
+        "itemCode": {
+          "type": "string",
+          "description": "Resolved ERP item code (from cost_erp_item, matched via\ncost_product_master.cpm_erp_item_code; falls back to the denormalized\ncpm_erp_item_code when no cost_erp_item row matches)."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Resolved ERP item name (from cost_erp_item.cei_item_name)."
+        },
+        "shadeCode": {
+          "type": "string",
+          "description": "Shade code (from cost_product_master.cpm_shade_code)."
+        },
+        "shadeName": {
+          "type": "string",
+          "description": "Shade name (from cost_product_master.cpm_shade_name)."
+        },
+        "primaryRmCode": {
+          "type": "string",
+          "description": "Reference code of the raw material with the highest contribution among\ncpc_rm_cost_detail entries."
+        },
+        "primaryRmName": {
+          "type": "string",
+          "description": "Resolved display label of the primary raw material."
+        },
+        "rmCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Count of raw material entries in cpc_rm_cost_detail."
         }
       },
       "description": "CostResult is the persisted cost summary for a product/period/type."

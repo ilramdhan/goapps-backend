@@ -430,12 +430,32 @@ func cpcListWhere(f costcalc.ResultListFilter, period string) (string, []any) {
 	}
 	if f.Search != "" {
 		args = append(args, "%"+f.Search+"%")
+		n := len(args)
 		where = append(where, fmt.Sprintf(
-			"(cpm.cpm_product_code ILIKE $%d OR cpm.cpm_product_name ILIKE $%d)", len(args), len(args)))
+			`(cpm.cpm_product_code ILIKE $%[1]d OR cpm.cpm_product_name ILIKE $%[1]d
+			  OR cei.cei_item_code ILIKE $%[1]d OR cei.cei_item_name ILIKE $%[1]d
+			  OR cpm.cpm_shade_code ILIKE $%[1]d OR cpm.cpm_shade_name ILIKE $%[1]d
+			  OR EXISTS (
+			       SELECT 1 FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
+			        WHERE elem->>'refCode' ILIKE $%[1]d OR elem->>'refLabel' ILIKE $%[1]d
+			     ))`, n))
 	}
 	if len(f.ProductTypeIDs) > 0 {
 		args = append(args, pq.Array(f.ProductTypeIDs))
 		where = append(where, fmt.Sprintf("cpm.cpm_product_type_id = ANY($%d)", len(args)))
+	}
+	if f.ShadeCode != "" {
+		args = append(args, f.ShadeCode)
+		where = append(where, fmt.Sprintf("cpm.cpm_shade_code = $%d", len(args)))
+	}
+	if f.RawMaterial != "" {
+		args = append(args, "%"+f.RawMaterial+"%")
+		n := len(args)
+		where = append(where, fmt.Sprintf(
+			`EXISTS (
+			     SELECT 1 FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
+			      WHERE elem->>'refCode' ILIKE $%[1]d OR elem->>'refLabel' ILIKE $%[1]d
+			   )`, n))
 	}
 	return " WHERE " + strings.Join(where, " AND "), args
 }
@@ -459,7 +479,8 @@ func (r *CostResultRepository) ListResults(
 
 	whereSQL, args := cpcListWhere(f, period)
 	from := ` FROM cst_product_cost cpc
-		LEFT JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = cpc.cpc_product_sys_id`
+		LEFT JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = cpc.cpc_product_sys_id
+		LEFT JOIN cost_erp_item cei ON cei.cei_item_code = cpm.cpm_erp_item_code`
 
 	page, pageSize := f.Page, f.PageSize
 	if page < 1 {
@@ -487,6 +508,14 @@ func (r *CostResultRepository) ListResults(
 			COALESCE(cpm.cpm_product_type_id, 0),
 			COALESCE((SELECT cpt_type_code FROM cost_product_type
 			           WHERE cpt_type_id = cpm.cpm_product_type_id), ''),
+			COALESCE(cei.cei_item_code, cpm.cpm_erp_item_code, ''),
+			COALESCE(cei.cei_item_name, ''),
+			COALESCE(cpm.cpm_shade_code, ''), COALESCE(cpm.cpm_shade_name, ''),
+			(SELECT elem->>'refCode' FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
+			   ORDER BY NULLIF(elem->>'contribution','')::numeric DESC NULLS LAST LIMIT 1),
+			(SELECT elem->>'refLabel' FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
+			   ORDER BY NULLIF(elem->>'contribution','')::numeric DESC NULLS LAST LIMIT 1),
+			jsonb_array_length(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)),
 			COUNT(*) OVER() AS full_count` +
 		from + whereSQL +
 		` ORDER BY ` + cpcOrderBy(f.SortBy, f.SortOrder) +
@@ -504,16 +533,23 @@ func (r *CostResultRepository) ListResults(
 	for rows.Next() {
 		var s costcalc.ResultSummary
 		var calcType string
+		var primaryRMCode, primaryRMName sql.NullString
+		var rmCount int32
 		if scanErr := rows.Scan(
 			&s.CostID, &s.ProductSysID, &s.ProductCode, &s.ProductName,
 			&s.Period, &calcType, &s.RouteHeadID, &s.Version,
 			&s.CostPerUnit, &s.TotalRMCost, &s.TotalConv, &s.TotalCost,
 			&s.UOMID, &s.CurrencyCode, &s.Status, &s.JobID, &s.CalculatedAt, &s.CalculatedBy,
-			&s.ProductTypeID, &s.ProductTypeCode, &total,
+			&s.ProductTypeID, &s.ProductTypeCode,
+			&s.ItemCode, &s.ItemName, &s.ShadeCode, &s.ShadeName,
+			&primaryRMCode, &primaryRMName, &rmCount, &total,
 		); scanErr != nil {
 			return nil, 0, "", fmt.Errorf("scan cost result row: %w", scanErr)
 		}
 		s.CalcType = costcalc.CalculationType(calcType)
+		s.PrimaryRMCode = primaryRMCode.String
+		s.PrimaryRMName = primaryRMName.String
+		s.RMCount = rmCount
 		out = append(out, &s)
 	}
 	if err := rows.Err(); err != nil {
