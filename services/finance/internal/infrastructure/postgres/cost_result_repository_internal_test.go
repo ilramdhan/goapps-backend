@@ -83,14 +83,14 @@ func TestCPCOrderBy_AlwaysTieBreaks(t *testing.T) {
 
 func TestCPCListWhere_ProductTypeFilter(t *testing.T) {
 	t.Run("empty type list adds no clause", func(t *testing.T) {
-		sql, args := cpcListWhere(costcalc.ResultListFilter{}, "", "2026")
+		sql, args := cpcListWhere(costcalc.ResultListFilter{}, "202606")
 		assert.NotContains(t, sql, "cpm_product_type_id")
-		assert.Len(t, args, 1) // year only
+		assert.Len(t, args, 1) // period only
 	})
 
 	t.Run("non-empty type list adds ANY clause", func(t *testing.T) {
 		sql, args := cpcListWhere(
-			costcalc.ResultListFilter{ProductTypeIDs: []int32{1, 2, 3}}, "202606", "")
+			costcalc.ResultListFilter{ProductTypeIDs: []int32{1, 2, 3}}, "202606")
 		assert.Contains(t, sql, "cpm.cpm_product_type_id = ANY($2)")
 		assert.Len(t, args, 2) // period + type array
 	})
@@ -101,7 +101,7 @@ func TestCPCListWhere_ProductTypeFilter(t *testing.T) {
 			CalcType:       costcalc.CalcTypeActual,
 			Search:         "abc",
 			ProductTypeIDs: []int32{9},
-		}, "202606", "")
+		}, "202606")
 		assert.Len(t, args, 5)
 		for i := 1; i <= 5; i++ {
 			assert.Contains(t, sql, "$"+strconv.Itoa(i))
@@ -110,8 +110,14 @@ func TestCPCListWhere_ProductTypeFilter(t *testing.T) {
 	})
 
 	t.Run("unset status excludes superseded", func(t *testing.T) {
-		sql, _ := cpcListWhere(costcalc.ResultListFilter{}, "202606", "")
+		sql, _ := cpcListWhere(costcalc.ResultListFilter{}, "202606")
 		assert.Contains(t, sql, "cpc.cpc_status != 'SUPERSEDED'")
+	})
+
+	t.Run("period is always an exact-match predicate", func(t *testing.T) {
+		sql, _ := cpcListWhere(costcalc.ResultListFilter{}, "202606")
+		assert.Contains(t, sql, "cpc.cpc_period = $1")
+		assert.NotContains(t, sql, "LEFT(cpc.cpc_period")
 	})
 }
 

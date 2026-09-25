@@ -408,19 +408,16 @@ func cpcOrderBy(sortBy, sortOrder string) string {
 	return col + " " + dir + ", cpc.cpc_cost_id DESC"
 }
 
-// cpcListWhere builds the WHERE body and positional args shared by the count
-// and page queries in ListResults. Exactly one of period/yearFilter is used:
-// an empty filter Period falls back to "all periods in the current year".
-func cpcListWhere(f costcalc.ResultListFilter, period, yearFilter string) (string, []any) {
+// cpcListWhere builds the WHERE body and positional args shared by the page
+// query in ListResults. period is always an exact cpc_period value by this
+// point — when the caller's filter Period was empty, ListResults has already
+// resolved it to the latest period present in cst_product_cost — so the
+// predicate is always an equality match that can use idx_cpc_period_type_status.
+func cpcListWhere(f costcalc.ResultListFilter, period string) (string, []any) {
 	where := []string{}
 	args := []any{}
-	if period != "" {
-		args = append(args, period)
-		where = append(where, fmt.Sprintf("cpc.cpc_period = $%d", len(args)))
-	} else {
-		args = append(args, yearFilter)
-		where = append(where, fmt.Sprintf("LEFT(cpc.cpc_period, 4) = $%d", len(args)))
-	}
+	args = append(args, period)
+	where = append(where, fmt.Sprintf("cpc.cpc_period = $%d", len(args)))
 	if f.Status != "" {
 		args = append(args, f.Status)
 		where = append(where, fmt.Sprintf("cpc.cpc_status = $%d", len(args)))
@@ -445,25 +442,24 @@ func cpcListWhere(f costcalc.ResultListFilter, period, yearFilter string) (strin
 
 // ListResults lists active cost results across products for a filter, joining
 // cost_product_master for the resolved product code/name. When the filter
-// Period is empty it resolves the latest period present in cst_product_cost.
+// Period is empty it resolves the latest period present in cst_product_cost
+// and filters on that single period only (an exact match on cpc_period, able
+// to use idx_cpc_period_type_status) rather than the whole current year.
 func (r *CostResultRepository) ListResults(
 	ctx context.Context, f costcalc.ResultListFilter,
 ) ([]*costcalc.ResultSummary, int, string, error) {
 	period := f.Period
-	// yearFilter is set when no exact period is given — we show all periods in the current year.
-	yearFilter := ""
 	if period == "" {
-		yearFilter = fmt.Sprintf("%d", currentYear())
+		resolved, err := r.latestPeriod(ctx)
+		if err != nil {
+			return nil, 0, "", err
+		}
+		period = resolved
 	}
 
-	whereSQL, args := cpcListWhere(f, period, yearFilter)
+	whereSQL, args := cpcListWhere(f, period)
 	from := ` FROM cst_product_cost cpc
 		LEFT JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = cpc.cpc_product_sys_id`
-
-	var total int
-	if err := r.db.QueryRowContext(ctx, `SELECT count(*)`+from+whereSQL, args...).Scan(&total); err != nil {
-		return nil, 0, "", fmt.Errorf("count cost results: %w", err)
-	}
 
 	page, pageSize := f.Page, f.PageSize
 	if page < 1 {
@@ -477,6 +473,10 @@ func (r *CostResultRepository) ListResults(
 	}
 	offset := (page - 1) * pageSize
 
+	// COUNT(*) OVER() rides along with the page query so the total item count
+	// and the page of rows come back from a single round trip instead of two
+	// separate full WHERE/JOIN evaluations (a plain count(*) query plus this
+	// paged SELECT).
 	listSQL := `SELECT cpc.cpc_cost_id, cpc.cpc_product_sys_id,
 			COALESCE(cpm.cpm_product_code, ''), COALESCE(cpm.cpm_product_name, ''),
 			cpc.cpc_period, cpc.cpc_calculation_type, cpc.cpc_route_head_id, cpc.cpc_version,
@@ -486,7 +486,8 @@ func (r *CostResultRepository) ListResults(
 			COALESCE(cpc.cpc_job_id, 0), cpc.cpc_calculated_at, cpc.cpc_calculated_by,
 			COALESCE(cpm.cpm_product_type_id, 0),
 			COALESCE((SELECT cpt_type_code FROM cost_product_type
-			           WHERE cpt_type_id = cpm.cpm_product_type_id), '')` +
+			           WHERE cpt_type_id = cpm.cpm_product_type_id), ''),
+			COUNT(*) OVER() AS full_count` +
 		from + whereSQL +
 		` ORDER BY ` + cpcOrderBy(f.SortBy, f.SortOrder) +
 		fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
@@ -499,6 +500,7 @@ func (r *CostResultRepository) ListResults(
 	defer closeRows(rows)
 
 	out := []*costcalc.ResultSummary{}
+	total := 0
 	for rows.Next() {
 		var s costcalc.ResultSummary
 		var calcType string
@@ -507,7 +509,7 @@ func (r *CostResultRepository) ListResults(
 			&s.Period, &calcType, &s.RouteHeadID, &s.Version,
 			&s.CostPerUnit, &s.TotalRMCost, &s.TotalConv, &s.TotalCost,
 			&s.UOMID, &s.CurrencyCode, &s.Status, &s.JobID, &s.CalculatedAt, &s.CalculatedBy,
-			&s.ProductTypeID, &s.ProductTypeCode,
+			&s.ProductTypeID, &s.ProductTypeCode, &total,
 		); scanErr != nil {
 			return nil, 0, "", fmt.Errorf("scan cost result row: %w", scanErr)
 		}
@@ -517,16 +519,29 @@ func (r *CostResultRepository) ListResults(
 	if err := rows.Err(); err != nil {
 		return nil, 0, "", fmt.Errorf("iterate cost results: %w", err)
 	}
-	resolvedPeriod := period
-	if resolvedPeriod == "" {
-		resolvedPeriod = yearFilter
-	}
-	return out, total, resolvedPeriod, nil
+	return out, total, period, nil
 }
 
-// currentYear returns the 4-digit current calendar year.
-func currentYear() int {
-	return time.Now().UTC().Year()
+// latestPeriod resolves the single most recent period present in
+// cst_product_cost. It reuses ListDistinctPeriods' "plausible business
+// period" filter (year 2000-2099, month 01-12) so synthetic fixture periods
+// (e.g. "999992", left behind by integration tests — see ListDistinctPeriods)
+// never win just because they sort higher as strings than a real YYYYMM
+// value. Returns "" when no plausible period exists yet.
+func (r *CostResultRepository) latestPeriod(ctx context.Context) (string, error) {
+	var period string
+	err := r.db.QueryRowContext(ctx,
+		`SELECT cpc_period FROM cst_product_cost
+		  WHERE cpc_period ~ '^20[0-9]{2}(0[1-9]|1[0-2])$'
+		  ORDER BY cpc_period DESC LIMIT 1`,
+	).Scan(&period)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("resolve latest cost result period: %w", err)
+	}
+	return period, nil
 }
 
 // MarkVerified transitions a CALCULATED row to VERIFIED.
