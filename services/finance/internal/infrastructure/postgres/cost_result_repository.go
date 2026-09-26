@@ -449,22 +449,44 @@ func rmDetailExistsClause(n int) string {
 		   )`, n)
 }
 
-// rmGroupCodeExistsClause builds an EXISTS(...) predicate matching
-// placeholder $n (a text[] array of RM group codes) against any
-// cpc_rm_cost_detail entry whose rm_type is GROUP and whose ref_code (the
-// same key rmDetailExistsClause resolves via cst_rm_group_head.group_code)
-// is one of the given codes. Scoped to GROUP-type entries only, per the
-// filter's intent: some product routes reference an RM group (e.g. "BRT"),
-// others reference a prior intermediate product — this filter targets the
-// former specifically, not arbitrary RM text (that stays covered by the
-// broader ILIKE/EXISTS match in the `search` param via rmDetailExistsClause).
-func rmGroupCodeExistsClause(n int) string {
-	return fmt.Sprintf(`EXISTS (
-		     SELECT 1
-		       FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
-		      WHERE elem->>'rm_type' = 'GROUP'
-		        AND elem->>'ref_code' = ANY($%[1]d::text[])
-		   )`, n)
+// jsonStringEscape escapes s for embedding inside a hand-built JSON string
+// literal (backslash and double-quote only — RM group codes never contain
+// control characters). Used by rmGroupCodeContainsClause instead of
+// json.Marshal so building the containment literal never needs an ignored
+// error return.
+func jsonStringEscape(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	return strings.ReplaceAll(s, `"`, `\"`)
+}
+
+// rmGroupCodeContainsClause builds an OR-chain of jsonb containment (`@>`)
+// predicates, one per RM group code starting at placeholder offset+1, each
+// binding a `[{"rm_type": "GROUP", "ref_code": "<code>"}]` JSON literal.
+// Returns the SQL fragment plus the values to append to the query's args.
+//
+// This replaces the previous `jsonb_array_elements(cpc_rm_cost_detail) elem
+// WHERE elem->>'rm_type' = 'GROUP' AND elem->>'ref_code' = ANY($n::text[])`
+// shape, which unnests and re-scans the whole JSONB array for every
+// candidate row with no index support at all. `@>` containment on the whole
+// column, by contrast, is exactly what a GIN(jsonb_path_ops) index accelerates
+// — see migrations/postgres/000527_add_cpc_rm_cost_detail_gin_index.up.sql —
+// so Postgres can use a Bitmap Index Scan on cst_product_cost instead of a
+// per-row jsonb_array_elements scan. Scoped to GROUP-type entries only, per
+// the filter's intent: some product routes reference an RM group (e.g.
+// "BRT"), others reference a prior intermediate product — this filter
+// targets the former specifically, not arbitrary RM text (that stays
+// covered by the broader ILIKE/EXISTS match in the `search` param via
+// rmDetailExistsClause, which cannot use this index — see that function's
+// comment).
+func rmGroupCodeContainsClause(codes []string, offset int) (string, []any) {
+	parts := make([]string, 0, len(codes))
+	vals := make([]any, 0, len(codes))
+	for i, code := range codes {
+		payload := fmt.Sprintf(`[{"rm_type": "GROUP", "ref_code": "%s"}]`, jsonStringEscape(code))
+		vals = append(vals, payload)
+		parts = append(parts, fmt.Sprintf("cpc.cpc_rm_cost_detail @> $%d::jsonb", offset+i+1))
+	}
+	return "(" + strings.Join(parts, " OR ") + ")", vals
 }
 
 func cpcListWhere(f costcalc.ResultListFilter, period string) (string, []any) {
@@ -513,8 +535,9 @@ func cpcListWhere(f costcalc.ResultListFilter, period string) (string, []any) {
 		where = append(where, fmt.Sprintf("cpm.cpm_shade_code = ANY($%d)", len(args)))
 	}
 	if len(f.RMGroupCodes) > 0 {
-		args = append(args, pq.Array(f.RMGroupCodes))
-		where = append(where, rmGroupCodeExistsClause(len(args)))
+		clause, vals := rmGroupCodeContainsClause(f.RMGroupCodes, len(args))
+		args = append(args, vals...)
+		where = append(where, clause)
 	}
 	return " WHERE " + strings.Join(where, " AND "), args
 }
@@ -537,13 +560,70 @@ func (r *CostResultRepository) ListResults(
 	}
 
 	whereSQL, args := cpcListWhere(f, period)
+
+	page, pageSize := f.Page, f.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 50
+	}
+	if pageSize > 500 {
+		pageSize = 500
+	}
+	offset := (page - 1) * pageSize
+
+	orderBy := cpcOrderBy(f.SortBy, f.SortOrder)
+
+	// filtered resolves which page of cpc_cost_ids match the filter, ordered
+	// and limited, using ONLY the cheap joins the WHERE/ORDER BY actually
+	// need (cpm for product/shade/type columns, cei for the item-code
+	// search fallback) plus the two RM filter predicates
+	// (rmDetailExistsClause / rmGroupCodeContainsClause), which are
+	// self-contained EXISTS/@> checks against cpc.cpc_rm_cost_detail
+	// directly — neither needs the expensive per-row RM name-resolution
+	// LATERAL joins reattached below.
+	//
+	// COUNT(*) OVER() forces Postgres to materialize every row matching
+	// whereSQL before ORDER BY + LIMIT can be applied (a window function
+	// can't be evaluated without seeing its whole partition first). Before
+	// this CTE split, that same COUNT(*) OVER() sat in a SELECT whose FROM
+	// also carried the top_rm/rm_all LATERAL joins below — rm_all alone
+	// does jsonb_array_elements(cpc_rm_cost_detail) + 3 more LEFT JOINs +
+	// jsonb_agg PER ROW — so that O(rows × RM-lines-per-row) work ran for
+	// the ENTIRE filtered set (every row for the period/status, not just
+	// the requested page) on every single list request, regardless of
+	// which filter was applied. That is the root cause of the list staying
+	// slow no matter which filter changes: period/status alone are rarely
+	// selective enough on a large production table to keep the
+	// pre-LIMIT row count small, and once it isn't, the per-row LATERAL
+	// cost dominates. Splitting the window function into this CTE (no
+	// LATERAL) bounds the materialize-before-LIMIT cost to the filter's
+	// selectivity on plain/indexed columns only; the LATERAL name
+	// resolution is re-attached in the outer SELECT, where it only ever
+	// runs for the `pageSize` rows `filtered` already picked out.
+	filteredSQL := `WITH filtered AS (
+		SELECT cpc.cpc_cost_id, COUNT(*) OVER() AS full_count
+		  FROM cst_product_cost cpc
+		  LEFT JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = cpc.cpc_product_sys_id
+		  LEFT JOIN cost_erp_item cei ON cei.cei_item_code = cpm.cpm_erp_item_code` +
+		whereSQL +
+		` ORDER BY ` + orderBy +
+		fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2) + `
+	)
+	`
+	args = append(args, pageSize, offset)
+
 	// top_rm resolves the single highest-contribution cpc_rm_cost_detail line
 	// (LATERAL + LIMIT 1, so it can never multiply outer rows despite the
 	// LEFT JOIN). rm_group/rm_item/rm_product resolve that line's display
 	// name depending on its rm_type discriminator — see rmDetailExistsClause's
 	// comment for why the JSON keys are ref_code/rm_type (not refCode/refLabel)
-	// and why a PRODUCT-type ref_code needs the "product:<id>" parse.
-	from := ` FROM cst_product_cost cpc
+	// and why a PRODUCT-type ref_code needs the "product:<id>" parse. Both
+	// LATERAL joins here now run only against `filtered`'s page of rows, not
+	// every row matching whereSQL — see filteredSQL's comment above.
+	from := ` FROM filtered
+		JOIN cst_product_cost cpc ON cpc.cpc_cost_id = filtered.cpc_cost_id
 		LEFT JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = cpc.cpc_product_sys_id
 		LEFT JOIN cost_erp_item cei ON cei.cei_item_code = cpm.cpm_erp_item_code
 		LEFT JOIN LATERAL (
@@ -587,23 +667,11 @@ func (r *CostResultRepository) ListResults(
 			         ON e.rm_type = 'PRODUCT' AND pm2.cpm_product_sys_id = NULLIF(substring(e.ref_code FROM 'product:(\d+)'), '')::bigint
 		) rm_all ON true`
 
-	page, pageSize := f.Page, f.PageSize
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 50
-	}
-	if pageSize > 500 {
-		pageSize = 500
-	}
-	offset := (page - 1) * pageSize
-
-	// COUNT(*) OVER() rides along with the page query so the total item count
-	// and the page of rows come back from a single round trip instead of two
-	// separate full WHERE/JOIN evaluations (a plain count(*) query plus this
-	// paged SELECT).
-	listSQL := `SELECT cpc.cpc_cost_id, cpc.cpc_product_sys_id,
+	// full_count now comes from filtered.full_count (computed once, cheaply,
+	// inside the CTE) instead of a second COUNT(*) OVER() out here — the
+	// outer query only ever sees `filtered`'s page-sized row set, so a
+	// window function here would just repeat the same number.
+	listSQL := filteredSQL + `SELECT cpc.cpc_cost_id, cpc.cpc_product_sys_id,
 			COALESCE(cpm.cpm_product_code, ''), COALESCE(cpm.cpm_product_name, ''),
 			cpc.cpc_period, cpc.cpc_calculation_type, cpc.cpc_route_head_id, cpc.cpc_version,
 			cpc.cpc_cost_per_unit, COALESCE(cpc.cpc_total_rm_cost, 0),
@@ -621,11 +689,9 @@ func (r *CostResultRepository) ListResults(
 			COALESCE(top_rm_group.group_name, top_rm_item.cei_item_name, top_rm_product.cpm_product_name, ''),
 			jsonb_array_length(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)),
 			COALESCE(rm_all.details_json, '[]'::jsonb),
-			COUNT(*) OVER() AS full_count` +
-		from + whereSQL +
-		` ORDER BY ` + cpcOrderBy(f.SortBy, f.SortOrder) +
-		fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
-	args = append(args, pageSize, offset)
+			filtered.full_count` +
+		from +
+		` ORDER BY ` + orderBy
 
 	rows, err := r.db.QueryContext(ctx, listSQL, args...)
 	if err != nil {
