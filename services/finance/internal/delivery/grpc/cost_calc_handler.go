@@ -333,6 +333,8 @@ func (h *CostCalcHandler) RequestProductCostSheetExport(
 		ProductTypeIDs:   req.GetProductTypeIds(),
 		Search:           req.GetSearch(),
 		Status:           protoToResultStatusString(req.GetStatus()),
+		ShadeCodes:       req.GetShadeCodes(),
+		RMGroupCodes:     req.GetRmGroupCodes(),
 		ProductSysIDs:    req.GetProductSysIds(),
 		RequestingUserID: userID,
 		CreatedBy:        getUserFromContext(ctx),

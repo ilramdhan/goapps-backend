@@ -3436,6 +3436,11 @@ type RequestProductCostSheetExportRequest struct {
 	// request is rejected at the edge instead of silently truncated deep in the
 	// handler. Keep the two numbers in sync.
 	ProductSysIds []int64 `protobuf:"varint,6,rep,packed,name=product_sys_ids,json=productSysIds,proto3" json:"product_sys_ids,omitempty"`
+	// Shade code filter (empty = all shades).
+	ShadeCodes []string `protobuf:"bytes,7,rep,name=shade_codes,json=shadeCodes,proto3" json:"shade_codes,omitempty"`
+	// Raw-material group code filter, matched against GROUP-type RM lines
+	// (empty = all raw materials).
+	RmGroupCodes  []string `protobuf:"bytes,8,rep,name=rm_group_codes,json=rmGroupCodes,proto3" json:"rm_group_codes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3508,6 +3513,20 @@ func (x *RequestProductCostSheetExportRequest) GetStatus() CostResultStatus {
 func (x *RequestProductCostSheetExportRequest) GetProductSysIds() []int64 {
 	if x != nil {
 		return x.ProductSysIds
+	}
+	return nil
+}
+
+func (x *RequestProductCostSheetExportRequest) GetShadeCodes() []string {
+	if x != nil {
+		return x.ShadeCodes
+	}
+	return nil
+}
+
+func (x *RequestProductCostSheetExportRequest) GetRmGroupCodes() []string {
+	if x != nil {
+		return x.RmGroupCodes
 	}
 	return nil
 }
@@ -5445,7 +5464,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x10calculation_type\x18\x03 \x01(\x0e2\x1b.finance.v1.CalculationTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x0fcalculationType\"\x81\x01\n" +
 	"\x19GetRouteCostSheetResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x127\n" +
-	"\x06stages\x18\x02 \x03(\v2\x1f.finance.v1.RouteCostSheetStageR\x06stages\"\xd8\x02\n" +
+	"\x06stages\x18\x02 \x03(\v2\x1f.finance.v1.RouteCostSheetStageR\x06stages\"\xb5\x03\n" +
 	"$RequestProductCostSheetExportRequest\x12)\n" +
 	"\x06period\x18\x01 \x01(\tB\x11\xbaH\x0er\f2\n" +
 	"^[0-9]{6}$R\x06period\x12F\n" +
@@ -5453,7 +5472,10 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x10product_type_ids\x18\x03 \x03(\x05B\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x0eproductTypeIds\x12\x1f\n" +
 	"\x06search\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06search\x124\n" +
 	"\x06status\x18\x05 \x01(\x0e2\x1c.finance.v1.CostResultStatusR\x06status\x121\n" +
-	"\x0fproduct_sys_ids\x18\x06 \x03(\x03B\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\rproductSysIds\"\x93\x01\n" +
+	"\x0fproduct_sys_ids\x18\x06 \x03(\x03B\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\rproductSysIds\x12*\n" +
+	"\vshade_codes\x18\a \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"shadeCodes\x12/\n" +
+	"\x0erm_group_codes\x18\b \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\frmGroupCodes\"\x93\x01\n" +
 	"%RequestProductCostSheetExportResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12=\n" +
 	"\x04data\x18\x02 \x01(\v2).finance.v1.ProductCostSheetExportJobInfoR\x04data\"\x83\x02\n" +

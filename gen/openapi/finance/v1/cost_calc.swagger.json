@@ -2410,6 +2410,20 @@
             "format": "int64"
           },
           "description": "Explicit product selection; when non-empty the filters above are ignored.\nCapped at the export handler's own maxExportProducts so an oversized\nrequest is rejected at the edge instead of silently truncated deep in the\nhandler. Keep the two numbers in sync."
+        },
+        "shadeCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Shade code filter (empty = all shades)."
+        },
+        "rmGroupCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Raw-material group code filter, matched against GROUP-type RM lines\n(empty = all raw materials)."
         }
       },
       "description": "RequestProductCostSheetExportRequest queues an async product-cost-sheet\nexport job. Carries the same filter shape as ListCostResultsRequest, plus an\noptional explicit product selection that overrides the filter when non-empty."
