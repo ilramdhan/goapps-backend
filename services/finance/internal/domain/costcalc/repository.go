@@ -136,9 +136,33 @@ type ResultSummary struct {
 	// PrimaryRMCode / PrimaryRMName / RMCount are derived from
 	// cpc_rm_cost_detail: the RM entry with the highest contribution, and the
 	// total entry count.
+	//
+	// Superseded by RMDetails, which carries every line (not just the top
+	// contributor) — kept alongside it for existing consumers that only need
+	// the top contributor, not marked as deprecated since this repository's
+	// own code still populates it directly.
 	PrimaryRMCode string
 	PrimaryRMName string
 	RMCount       int32
+	// RMDetails is the full cpc_rm_cost_detail array, ordered by contribution
+	// descending, with each line's ref_code/ref_name resolved to a display
+	// name per its rm_type (GROUP -> cst_rm_group_head, ITEM -> cost_erp_item,
+	// PRODUCT -> cost_product_master).
+	RMDetails []RMDetailSummary
+}
+
+// RMDetailSummary is one resolved line of cpc_rm_cost_detail, ready for
+// display (unlike the raw JSON, whose ref_code is an opaque
+// "product:<sys_id>" string for PRODUCT-type lines).
+type RMDetailSummary struct {
+	RouteLevel   int32   `json:"route_level"`
+	RMType       string  `json:"rm_type"`
+	RefCode      string  `json:"ref_code"`
+	RefName      string  `json:"ref_name"`
+	ShadeCode    string  `json:"shade_code"`
+	UnitCost     float64 `json:"unit_cost"`
+	Ratio        float64 `json:"ratio"`
+	Contribution float64 `json:"contribution"`
 }
 
 // AuditHistoryRepository persists AuditHistoryEntry rows.
