@@ -247,9 +247,11 @@ func (h *CostCalcHandler) GetCostResult(ctx context.Context, req *financev1.GetC
 	if err != nil {
 		return &financev1.GetCostResultResponse{Base: costCalcErrToBase(err)}, nil
 	}
+	pb := resultToProto(r.Result)
+	applyResultDisplay(pb, r.ResultDisplay)
 	return &financev1.GetCostResultResponse{
 		Base:   successResponse("OK"),
-		Result: resultToProto(r),
+		Result: pb,
 	}, nil
 }
 
@@ -331,6 +333,8 @@ func (h *CostCalcHandler) RequestProductCostSheetExport(
 		ProductTypeIDs:   req.GetProductTypeIds(),
 		Search:           req.GetSearch(),
 		Status:           protoToResultStatusString(req.GetStatus()),
+		ShadeCodes:       req.GetShadeCodes(),
+		RMGroupCodes:     req.GetRmGroupCodes(),
 		ProductSysIDs:    req.GetProductSysIds(),
 		RequestingUserID: userID,
 		CreatedBy:        getUserFromContext(ctx),
@@ -624,8 +628,8 @@ func (h *CostCalcHandler) ListCostResults(ctx context.Context, req *financev1.Li
 		SortOrder:      req.GetSortOrder(),
 		Page:           int(req.GetPagination().GetPage()),
 		PageSize:       int(req.GetPagination().GetPageSize()),
-		ShadeCode:      req.GetShadeCode(),
-		RawMaterial:    req.GetRawMaterial(),
+		ShadeCodes:     req.GetShadeCodes(),
+		RMGroupCodes:   req.GetRmGroupCodes(),
 	})
 	if err != nil {
 		return &financev1.ListCostResultsResponse{Base: costCalcErrToBase(err)}, nil
@@ -1044,6 +1048,7 @@ func summaryToProto(s *costcalcdom.ResultSummary) *financev1.CostResult {
 		PrimaryRmCode:   s.PrimaryRMCode,
 		PrimaryRmName:   s.PrimaryRMName,
 		RmCount:         s.RMCount,
+		RmDetails:       rmDetailsToProto(s.RMDetails),
 	}
 }
 
@@ -1096,17 +1101,11 @@ func breakdownToProto(view *costcalc.CostBreakdownView) *financev1.CostBreakdown
 		}
 		byLevel = append(byLevel, lb)
 	}
-	rmDetails := make([]*financev1.CostRMDetail, 0, len(view.RMCostDetail))
-	for _, d := range view.RMCostDetail {
-		rmDetails = append(rmDetails, &financev1.CostRMDetail{
-			RmType:       d.RMType,
-			RefCode:      d.RefCode,
-			ShadeCode:    d.ShadeCode,
-			UnitCost:     formatNumeric(d.UnitCost),
-			Ratio:        formatNumeric(d.Ratio),
-			Contribution: formatNumeric(d.Contribution),
-		})
-	}
+	// view.Display.RMDetails (not the raw view.RMCostDetail) is used here so
+	// RefLabel and RouteLevel are populated — see resolveResultDisplay for why
+	// the raw JSONB blob alone cannot supply a display name (GROUP/ITEM/PRODUCT
+	// refs all need a resolved join, exactly as ListCostResults does in SQL).
+	rmDetails := rmDetailsToProto(view.Display.RMDetails)
 	formulaTrace := make([]*financev1.FormulaEval, 0, len(view.FormulaTrace))
 	for _, ft := range view.FormulaTrace {
 		inputs := make(map[string]string, len(ft.Inputs))
@@ -1125,13 +1124,53 @@ func breakdownToProto(view *costcalc.CostBreakdownView) *financev1.CostBreakdown
 	for k, v := range view.ParamSnapshot {
 		paramSnapshot[k] = formatNumeric(v)
 	}
+	summary := resultToProto(view.Result)
+	applyResultDisplay(summary, view.Display)
 	return &financev1.CostBreakdown{
-		Summary:       resultToProto(view.Result),
+		Summary:       summary,
 		ByLevel:       byLevel,
 		RmDetails:     rmDetails,
 		FormulaTrace:  formulaTrace,
 		ParamSnapshot: paramSnapshot,
 	}
+}
+
+// applyResultDisplay overlays the Go-side-resolved display fields (item/shade
+// identity, primary RM, full RM breakdown) onto an already-built CostResult
+// proto. Used by the single-result paths (GetCostResult, GetCostBreakdown's
+// Summary), which have no SQL join to source these from — unlike
+// summaryToProto, which reads them straight off ResultSummary.
+func applyResultDisplay(pb *financev1.CostResult, d costcalc.ResultDisplay) {
+	if pb == nil {
+		return
+	}
+	pb.ItemCode = d.ItemCode
+	pb.ItemName = d.ItemName
+	pb.ShadeCode = d.ShadeCode
+	pb.ShadeName = d.ShadeName
+	pb.PrimaryRmCode = d.PrimaryRMCode
+	pb.PrimaryRmName = d.PrimaryRMName
+	pb.RmCount = d.RMCount
+	pb.RmDetails = rmDetailsToProto(d.RMDetails)
+}
+
+// rmDetailsToProto maps a resolved RM breakdown to the repeated CostRMDetail
+// proto shape shared by CostResult.rm_details and CostBreakdown.rm_details.
+func rmDetailsToProto(details []costcalcdom.RMDetailSummary) []*financev1.CostRMDetail {
+	out := make([]*financev1.CostRMDetail, 0, len(details))
+	for _, d := range details {
+		out = append(out, &financev1.CostRMDetail{
+			RmType:       d.RMType,
+			RefCode:      d.RefCode,
+			RefLabel:     d.RefName,
+			ShadeCode:    d.ShadeCode,
+			UnitCost:     formatNumeric(d.UnitCost),
+			Ratio:        formatNumeric(d.Ratio),
+			Contribution: formatNumeric(d.Contribution),
+			RouteLevel:   d.RouteLevel,
+		})
+	}
+	return out
 }
 
 func historyEntryToProto(r *costcalcdom.Result) *financev1.CostHistoryEntry {

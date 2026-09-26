@@ -18,8 +18,8 @@ type ListCostResultsQuery struct {
 	SortOrder      string
 	Page           int
 	PageSize       int
-	ShadeCode      string
-	RawMaterial    string
+	ShadeCodes     []string
+	RMGroupCodes   []string
 }
 
 // ListCostResultsResult is the paginated cross-product result list.

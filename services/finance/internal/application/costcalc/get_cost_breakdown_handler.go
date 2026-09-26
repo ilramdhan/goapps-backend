@@ -31,6 +31,11 @@ type CostBreakdownView struct {
 	FormulaTrace  []FormulaEvalTrace
 	// LevelProducts maps product_sys_id → product code+name for the by-level tab.
 	LevelProducts map[int64]LevelProductInfo
+	// Display carries the same item/shade identity + name-resolved RM
+	// breakdown as CostResultView, for the drawer's header and RM tab (a RM
+	// group/item/product ref_code alone is not a useful display label — see
+	// ResultDisplay / resolveResultDisplay).
+	Display ResultDisplay
 }
 
 // GetCostBreakdownHandler loads the active result and decodes every JSONB blob
@@ -97,6 +102,12 @@ func (h *GetCostBreakdownHandler) Handle(ctx context.Context, q GetCostBreakdown
 			}
 		}
 	}
+
+	disp, err := h.svc.resolveResultDisplay(ctx, q.ProductSysID, view.RMCostDetail)
+	if err != nil {
+		return nil, fmt.Errorf("resolve result display: %w", err)
+	}
+	view.Display = disp
 
 	return view, nil
 }

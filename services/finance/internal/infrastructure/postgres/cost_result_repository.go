@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -413,6 +414,59 @@ func cpcOrderBy(sortBy, sortOrder string) string {
 // point — when the caller's filter Period was empty, ListResults has already
 // resolved it to the latest period present in cst_product_cost — so the
 // predicate is always an equality match that can use idx_cpc_period_type_status.
+// rmDetailExistsClause builds an EXISTS(...) predicate matching placeholder
+// $n against any cpc_rm_cost_detail line's ref_code OR its resolved display
+// name (RM group name for GROUP lines, ERP item name for ITEM lines, product
+// code/name for PRODUCT lines).
+//
+// The JSON keys here MUST match the actual shape written by
+// aggregateRMCost/RMCostDetail (services/finance/internal/application/costcalc/compute.go):
+// snake_case `ref_code`/`rm_type`, not the camelCase `refCode`/`refLabel` this
+// query used before — those keys never existed in the persisted JSON, so this
+// EXISTS clause (and the primary-RM extraction below) silently matched
+// nothing. There is also no `refLabel`/label field at all in the persisted
+// JSON: a human-readable name has to be resolved separately per RM kind,
+// which is what the joins below do. A PRODUCT-type line's ref_code is the
+// literal string "product:<product_sys_id>" (see rmRefCode in compute.go),
+// so resolving its code/name requires parsing that id back out and joining
+// cost_product_master.
+func rmDetailExistsClause(n int) string {
+	return fmt.Sprintf(`EXISTS (
+		     SELECT 1
+		       FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
+		       LEFT JOIN cst_rm_group_head rmg_s
+		              ON elem->>'rm_type' = 'GROUP' AND rmg_s.group_code = elem->>'ref_code' AND rmg_s.deleted_at IS NULL
+		       LEFT JOIN cost_erp_item cei_s
+		              ON elem->>'rm_type' = 'ITEM' AND cei_s.cei_item_code = elem->>'ref_code'
+		       LEFT JOIN cost_product_master cpm_s
+		              ON elem->>'rm_type' = 'PRODUCT'
+		             AND cpm_s.cpm_product_sys_id = NULLIF(substring(elem->>'ref_code' FROM 'product:(\d+)'), '')::bigint
+		      WHERE elem->>'ref_code' ILIKE $%[1]d
+		         OR rmg_s.group_name ILIKE $%[1]d
+		         OR cei_s.cei_item_name ILIKE $%[1]d
+		         OR cpm_s.cpm_product_code ILIKE $%[1]d
+		         OR cpm_s.cpm_product_name ILIKE $%[1]d
+		   )`, n)
+}
+
+// rmGroupCodeExistsClause builds an EXISTS(...) predicate matching
+// placeholder $n (a text[] array of RM group codes) against any
+// cpc_rm_cost_detail entry whose rm_type is GROUP and whose ref_code (the
+// same key rmDetailExistsClause resolves via cst_rm_group_head.group_code)
+// is one of the given codes. Scoped to GROUP-type entries only, per the
+// filter's intent: some product routes reference an RM group (e.g. "BRT"),
+// others reference a prior intermediate product — this filter targets the
+// former specifically, not arbitrary RM text (that stays covered by the
+// broader ILIKE/EXISTS match in the `search` param via rmDetailExistsClause).
+func rmGroupCodeExistsClause(n int) string {
+	return fmt.Sprintf(`EXISTS (
+		     SELECT 1
+		       FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
+		      WHERE elem->>'rm_type' = 'GROUP'
+		        AND elem->>'ref_code' = ANY($%[1]d::text[])
+		   )`, n)
+}
+
 func cpcListWhere(f costcalc.ResultListFilter, period string) (string, []any) {
 	where := []string{}
 	args := []any{}
@@ -431,31 +485,36 @@ func cpcListWhere(f costcalc.ResultListFilter, period string) (string, []any) {
 	if f.Search != "" {
 		args = append(args, "%"+f.Search+"%")
 		n := len(args)
+		// Item-code search bug: this branch used to search cei.cei_item_code
+		// ONLY. cei is reached via `LEFT JOIN cost_erp_item cei ON cei.cei_item_code =
+		// cpm.cpm_erp_item_code`, which fails to match whenever
+		// cost_product_master.cpm_erp_item_code carries content cost_erp_item
+		// doesn't have byte-for-byte — e.g. the descriptive-suffix values migration
+		// 000409 widened the column for ("POY0000350-for selling"). When that join
+		// misses, cei.* is NULL for the row, so the OLD `cei.cei_item_code ILIKE`
+		// predicate could never match even though the item code IS visible in the
+		// UI (via COALESCE(cei.cei_item_code, cpm.cpm_erp_item_code, '') in the
+		// SELECT list below). Adding cpm.cpm_erp_item_code ILIKE here makes search
+		// match on exactly what is displayed, independent of whether the cei join
+		// happened to resolve.
 		where = append(where, fmt.Sprintf(
 			`(cpm.cpm_product_code ILIKE $%[1]d OR cpm.cpm_product_name ILIKE $%[1]d
 			  OR cei.cei_item_code ILIKE $%[1]d OR cei.cei_item_name ILIKE $%[1]d
+			  OR cpm.cpm_erp_item_code ILIKE $%[1]d
 			  OR cpm.cpm_shade_code ILIKE $%[1]d OR cpm.cpm_shade_name ILIKE $%[1]d
-			  OR EXISTS (
-			       SELECT 1 FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
-			        WHERE elem->>'refCode' ILIKE $%[1]d OR elem->>'refLabel' ILIKE $%[1]d
-			     ))`, n))
+			  OR `+rmDetailExistsClause(n)+`)`, n))
 	}
 	if len(f.ProductTypeIDs) > 0 {
 		args = append(args, pq.Array(f.ProductTypeIDs))
 		where = append(where, fmt.Sprintf("cpm.cpm_product_type_id = ANY($%d)", len(args)))
 	}
-	if f.ShadeCode != "" {
-		args = append(args, f.ShadeCode)
-		where = append(where, fmt.Sprintf("cpm.cpm_shade_code = $%d", len(args)))
+	if len(f.ShadeCodes) > 0 {
+		args = append(args, pq.Array(f.ShadeCodes))
+		where = append(where, fmt.Sprintf("cpm.cpm_shade_code = ANY($%d)", len(args)))
 	}
-	if f.RawMaterial != "" {
-		args = append(args, "%"+f.RawMaterial+"%")
-		n := len(args)
-		where = append(where, fmt.Sprintf(
-			`EXISTS (
-			     SELECT 1 FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
-			      WHERE elem->>'refCode' ILIKE $%[1]d OR elem->>'refLabel' ILIKE $%[1]d
-			   )`, n))
+	if len(f.RMGroupCodes) > 0 {
+		args = append(args, pq.Array(f.RMGroupCodes))
+		where = append(where, rmGroupCodeExistsClause(len(args)))
 	}
 	return " WHERE " + strings.Join(where, " AND "), args
 }
@@ -478,9 +537,55 @@ func (r *CostResultRepository) ListResults(
 	}
 
 	whereSQL, args := cpcListWhere(f, period)
+	// top_rm resolves the single highest-contribution cpc_rm_cost_detail line
+	// (LATERAL + LIMIT 1, so it can never multiply outer rows despite the
+	// LEFT JOIN). rm_group/rm_item/rm_product resolve that line's display
+	// name depending on its rm_type discriminator — see rmDetailExistsClause's
+	// comment for why the JSON keys are ref_code/rm_type (not refCode/refLabel)
+	// and why a PRODUCT-type ref_code needs the "product:<id>" parse.
 	from := ` FROM cst_product_cost cpc
 		LEFT JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = cpc.cpc_product_sys_id
-		LEFT JOIN cost_erp_item cei ON cei.cei_item_code = cpm.cpm_erp_item_code`
+		LEFT JOIN cost_erp_item cei ON cei.cei_item_code = cpm.cpm_erp_item_code
+		LEFT JOIN LATERAL (
+			SELECT elem->>'ref_code' AS ref_code, elem->>'rm_type' AS rm_type
+			  FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
+			 ORDER BY NULLIF(elem->>'contribution','')::numeric DESC NULLS LAST
+			 LIMIT 1
+		) top_rm ON true
+		LEFT JOIN cst_rm_group_head top_rm_group
+		       ON top_rm.rm_type = 'GROUP' AND top_rm_group.group_code = top_rm.ref_code AND top_rm_group.deleted_at IS NULL
+		LEFT JOIN cost_erp_item top_rm_item
+		       ON top_rm.rm_type = 'ITEM' AND top_rm_item.cei_item_code = top_rm.ref_code
+		LEFT JOIN cost_product_master top_rm_product
+		       ON top_rm.rm_type = 'PRODUCT'
+		      AND top_rm_product.cpm_product_sys_id = NULLIF(substring(top_rm.ref_code FROM 'product:(\d+)'), '')::bigint
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+			         jsonb_build_object(
+			           'route_level', e.route_level,
+			           'rm_type', e.rm_type,
+			           'ref_code', CASE WHEN e.rm_type = 'PRODUCT' THEN COALESCE(pm2.cpm_product_code, e.ref_code) ELSE e.ref_code END,
+			           'ref_name', COALESCE(g2.group_name, i2.cei_item_name, pm2.cpm_product_name, ''),
+			           'shade_code', COALESCE(e.shade_code, ''),
+			           'unit_cost', e.unit_cost,
+			           'ratio', e.ratio,
+			           'contribution', e.contribution
+			         ) ORDER BY e.contribution DESC NULLS LAST
+			       ) AS details_json
+			  FROM (
+			    SELECT elem->>'rm_type' AS rm_type, elem->>'ref_code' AS ref_code,
+			           elem->>'shade_code' AS shade_code,
+			           NULLIF(elem->>'unit_cost','')::numeric AS unit_cost,
+			           NULLIF(elem->>'ratio','')::numeric AS ratio,
+			           NULLIF(elem->>'contribution','')::numeric AS contribution,
+			           NULLIF(elem->>'route_level','')::int AS route_level
+			      FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
+			  ) e
+			  LEFT JOIN cst_rm_group_head g2 ON e.rm_type = 'GROUP' AND g2.group_code = e.ref_code AND g2.deleted_at IS NULL
+			  LEFT JOIN cost_erp_item i2 ON e.rm_type = 'ITEM' AND i2.cei_item_code = e.ref_code
+			  LEFT JOIN cost_product_master pm2
+			         ON e.rm_type = 'PRODUCT' AND pm2.cpm_product_sys_id = NULLIF(substring(e.ref_code FROM 'product:(\d+)'), '')::bigint
+		) rm_all ON true`
 
 	page, pageSize := f.Page, f.PageSize
 	if page < 1 {
@@ -511,11 +616,11 @@ func (r *CostResultRepository) ListResults(
 			COALESCE(cei.cei_item_code, cpm.cpm_erp_item_code, ''),
 			COALESCE(cei.cei_item_name, ''),
 			COALESCE(cpm.cpm_shade_code, ''), COALESCE(cpm.cpm_shade_name, ''),
-			(SELECT elem->>'refCode' FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
-			   ORDER BY NULLIF(elem->>'contribution','')::numeric DESC NULLS LAST LIMIT 1),
-			(SELECT elem->>'refLabel' FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
-			   ORDER BY NULLIF(elem->>'contribution','')::numeric DESC NULLS LAST LIMIT 1),
+			CASE WHEN top_rm.rm_type = 'PRODUCT' THEN COALESCE(top_rm_product.cpm_product_code, top_rm.ref_code)
+			     ELSE top_rm.ref_code END,
+			COALESCE(top_rm_group.group_name, top_rm_item.cei_item_name, top_rm_product.cpm_product_name, ''),
 			jsonb_array_length(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)),
+			COALESCE(rm_all.details_json, '[]'::jsonb),
 			COUNT(*) OVER() AS full_count` +
 		from + whereSQL +
 		` ORDER BY ` + cpcOrderBy(f.SortBy, f.SortOrder) +
@@ -535,6 +640,7 @@ func (r *CostResultRepository) ListResults(
 		var calcType string
 		var primaryRMCode, primaryRMName sql.NullString
 		var rmCount int32
+		var rmDetailsJSON []byte
 		if scanErr := rows.Scan(
 			&s.CostID, &s.ProductSysID, &s.ProductCode, &s.ProductName,
 			&s.Period, &calcType, &s.RouteHeadID, &s.Version,
@@ -542,7 +648,7 @@ func (r *CostResultRepository) ListResults(
 			&s.UOMID, &s.CurrencyCode, &s.Status, &s.JobID, &s.CalculatedAt, &s.CalculatedBy,
 			&s.ProductTypeID, &s.ProductTypeCode,
 			&s.ItemCode, &s.ItemName, &s.ShadeCode, &s.ShadeName,
-			&primaryRMCode, &primaryRMName, &rmCount, &total,
+			&primaryRMCode, &primaryRMName, &rmCount, &rmDetailsJSON, &total,
 		); scanErr != nil {
 			return nil, 0, "", fmt.Errorf("scan cost result row: %w", scanErr)
 		}
@@ -550,6 +656,13 @@ func (r *CostResultRepository) ListResults(
 		s.PrimaryRMCode = primaryRMCode.String
 		s.PrimaryRMName = primaryRMName.String
 		s.RMCount = rmCount
+		if len(rmDetailsJSON) > 0 {
+			var details []costcalc.RMDetailSummary
+			if err := json.Unmarshal(rmDetailsJSON, &details); err != nil {
+				return nil, 0, "", fmt.Errorf("unmarshal rm details: %w", err)
+			}
+			s.RMDetails = details
+		}
 		out = append(out, &s)
 	}
 	if err := rows.Err(); err != nil {

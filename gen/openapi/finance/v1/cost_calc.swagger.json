@@ -457,18 +457,26 @@
             "type": "string"
           },
           {
-            "name": "shadeCode",
-            "description": "Shade code filter (empty = no filter). Matches\ncost_product_master.cpm_shade_code.",
+            "name": "shadeCodes",
+            "description": "Shade code multi-select filter (empty = no filter). A result matches when\ncost_product_master.cpm_shade_code is one of the given codes.",
             "in": "query",
             "required": false,
-            "type": "string"
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
           },
           {
-            "name": "rawMaterial",
-            "description": "Raw material search (empty = no filter). Matches ref_code or ref_label of\nany entry in cpc_rm_cost_detail.",
+            "name": "rmGroupCodes",
+            "description": "RM group multi-select filter (empty = no filter). A result matches when\nany cpc_rm_cost_detail entry has rm_type = \"GROUP\" and its group\nreference code (ref_code, matching cst_rm_group_head.group_code) is one\nof the given codes. Free-text RM search across all RM kinds (GROUP,\nITEM, PRODUCT) stays covered by the `search` field above.",
             "in": "query",
             "required": false,
-            "type": "string"
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
           }
         ],
         "tags": [
@@ -1751,6 +1759,14 @@
           "type": "integer",
           "format": "int32",
           "description": "Count of raw material entries in cpc_rm_cost_detail."
+        },
+        "rmDetails": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostRMDetail"
+          },
+          "description": "Full raw material breakdown (every cpc_rm_cost_detail line, ordered by\ncontribution descending), so a UI can show more than just the primary\ncontributor. Reuses CostRMDetail (already defined for CostBreakdown)."
         }
       },
       "description": "CostResult is the persisted cost summary for a product/period/type."
@@ -2394,6 +2410,20 @@
             "format": "int64"
           },
           "description": "Explicit product selection; when non-empty the filters above are ignored.\nCapped at the export handler's own maxExportProducts so an oversized\nrequest is rejected at the edge instead of silently truncated deep in the\nhandler. Keep the two numbers in sync."
+        },
+        "shadeCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Shade code filter (empty = all shades)."
+        },
+        "rmGroupCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Raw-material group code filter, matched against GROUP-type RM lines\n(empty = all raw materials)."
         }
       },
       "description": "RequestProductCostSheetExportRequest queues an async product-cost-sheet\nexport job. Carries the same filter shape as ListCostResultsRequest, plus an\noptional explicit product selection that overrides the filter when non-empty."

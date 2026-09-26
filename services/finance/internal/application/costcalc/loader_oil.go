@@ -147,3 +147,46 @@ func (l *productLoader) LoadRMGroupNames(ctx context.Context, codes []string) (m
 	}
 	return out, nil
 }
+
+// RMItemNameLoader resolves ERP item codes to their display names. Same
+// optional-capability shape as OilGroupNameLoader: a single-result cost
+// result view (GetCostResultHandler/GetCostBreakdownHandler) type-checks the
+// loader for it to resolve ITEM-type cpc_rm_cost_detail lines to a readable
+// name, mirroring what the ListCostResults SQL path already does via a join.
+type RMItemNameLoader interface {
+	// LoadItemNames returns cei_item_name keyed by cei_item_code for the given
+	// codes. Codes with no cost_erp_item row are simply absent.
+	LoadItemNames(ctx context.Context, codes []string) (map[string]string, error)
+}
+
+// LoadItemNames implements RMItemNameLoader.
+func (l *productLoader) LoadItemNames(ctx context.Context, codes []string) (map[string]string, error) {
+	out := map[string]string{}
+	if len(codes) == 0 {
+		return out, nil
+	}
+	const q = `
+		SELECT cei_item_code, cei_item_name
+		FROM cost_erp_item
+		WHERE cei_item_code = ANY($1)`
+	rows, err := l.db.QueryContext(ctx, q, pq.Array(codes))
+	if err != nil {
+		return nil, fmt.Errorf("load RM item names: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	for rows.Next() {
+		var code, name string
+		if err := rows.Scan(&code, &name); err != nil {
+			return nil, fmt.Errorf("scan RM item name row: %w", err)
+		}
+		out[code] = name
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate RM item name rows: %w", err)
+	}
+	return out, nil
+}

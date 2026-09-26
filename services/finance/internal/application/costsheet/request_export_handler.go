@@ -61,6 +61,8 @@ type RequestExportCommand struct {
 	ProductTypeIDs   []int32
 	Search           string
 	Status           string
+	ShadeCodes       []string
+	RMGroupCodes     []string
 	ProductSysIDs    []int64
 	RequestingUserID string // recipient for the EXPORT_READY notification
 	CreatedBy        string // audit identity (typically "user:<uuid>" or username)
@@ -246,6 +248,8 @@ func (h *RequestExportHandler) resolveProducts(ctx context.Context, cmd RequestE
 			Status:         cmd.Status,
 			Search:         cmd.Search,
 			ProductTypeIDs: cmd.ProductTypeIDs,
+			ShadeCodes:     cmd.ShadeCodes,
+			RMGroupCodes:   cmd.RMGroupCodes,
 			Page:           page,
 			PageSize:       resolvePageSize,
 		}
@@ -289,6 +293,8 @@ func buildParams(cmd RequestExportCommand, productSysIDs []int64) (json.RawMessa
 		"product_type_ids":   cmd.ProductTypeIDs,
 		"search":             cmd.Search,
 		"status":             cmd.Status,
+		"shade_codes":        cmd.ShadeCodes,
+		"rm_group_codes":     cmd.RMGroupCodes,
 		"product_sys_ids":    productSysIDs,
 		"requesting_user_id": cmd.RequestingUserID,
 	}
