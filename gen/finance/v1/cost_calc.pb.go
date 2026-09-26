@@ -1099,7 +1099,11 @@ type CostResult struct {
 	// Resolved display label of the primary raw material.
 	PrimaryRmName string `protobuf:"bytes,29,opt,name=primary_rm_name,json=primaryRmName,proto3" json:"primary_rm_name,omitempty"`
 	// Count of raw material entries in cpc_rm_cost_detail.
-	RmCount       int32 `protobuf:"varint,30,opt,name=rm_count,json=rmCount,proto3" json:"rm_count,omitempty"`
+	RmCount int32 `protobuf:"varint,30,opt,name=rm_count,json=rmCount,proto3" json:"rm_count,omitempty"`
+	// Full raw material breakdown (every cpc_rm_cost_detail line, ordered by
+	// contribution descending), so a UI can show more than just the primary
+	// contributor. Reuses CostRMDetail (already defined for CostBreakdown).
+	RmDetails     []*CostRMDetail `protobuf:"bytes,31,rep,name=rm_details,json=rmDetails,proto3" json:"rm_details,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1342,6 +1346,13 @@ func (x *CostResult) GetRmCount() int32 {
 		return x.RmCount
 	}
 	return 0
+}
+
+func (x *CostResult) GetRmDetails() []*CostRMDetail {
+	if x != nil {
+		return x.RmDetails
+	}
+	return nil
 }
 
 // CostBreakdown is the full drill-down for one CostResult.
@@ -2759,12 +2770,15 @@ type ListCostResultsRequest struct {
 	// EqualFold, so the uppercase spellings were accepted-but-redundant surface
 	// area.
 	SortOrder string `protobuf:"bytes,8,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	// Shade code filter (empty = no filter). Matches
-	// cost_product_master.cpm_shade_code.
-	ShadeCode string `protobuf:"bytes,9,opt,name=shade_code,json=shadeCode,proto3" json:"shade_code,omitempty"`
-	// Raw material search (empty = no filter). Matches ref_code or ref_label of
-	// any entry in cpc_rm_cost_detail.
-	RawMaterial   string `protobuf:"bytes,10,opt,name=raw_material,json=rawMaterial,proto3" json:"raw_material,omitempty"`
+	// Shade code multi-select filter (empty = no filter). A result matches when
+	// cost_product_master.cpm_shade_code is one of the given codes.
+	ShadeCodes []string `protobuf:"bytes,9,rep,name=shade_codes,json=shadeCodes,proto3" json:"shade_codes,omitempty"`
+	// RM group multi-select filter (empty = no filter). A result matches when
+	// any cpc_rm_cost_detail entry has rm_type = "GROUP" and its group
+	// reference code (ref_code, matching cst_rm_group_head.group_code) is one
+	// of the given codes. Free-text RM search across all RM kinds (GROUP,
+	// ITEM, PRODUCT) stays covered by the `search` field above.
+	RmGroupCodes  []string `protobuf:"bytes,10,rep,name=rm_group_codes,json=rmGroupCodes,proto3" json:"rm_group_codes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2855,18 +2869,18 @@ func (x *ListCostResultsRequest) GetSortOrder() string {
 	return ""
 }
 
-func (x *ListCostResultsRequest) GetShadeCode() string {
+func (x *ListCostResultsRequest) GetShadeCodes() []string {
 	if x != nil {
-		return x.ShadeCode
+		return x.ShadeCodes
 	}
-	return ""
+	return nil
 }
 
-func (x *ListCostResultsRequest) GetRawMaterial() string {
+func (x *ListCostResultsRequest) GetRmGroupCodes() []string {
 	if x != nil {
-		return x.RawMaterial
+		return x.RmGroupCodes
 	}
-	return ""
+	return nil
 }
 
 // ListCostResultsResponse returns a page of cost results across products.
@@ -5208,7 +5222,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"durationMs\x12\x17\n" +
 	"\acost_id\x18\x0e \x01(\x03R\x06costId\x12#\n" +
 	"\rerror_message\x18\x0f \x01(\tR\ferrorMessage\x120\n" +
-	"\x14calculation_log_json\x18\x10 \x01(\tR\x12calculationLogJson\"\xe0\b\n" +
+	"\x14calculation_log_json\x18\x10 \x01(\tR\x12calculationLogJson\"\x99\t\n" +
 	"\n" +
 	"CostResult\x12\x17\n" +
 	"\acost_id\x18\x01 \x01(\x03R\x06costId\x12$\n" +
@@ -5246,7 +5260,9 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"shade_name\x18\x1b \x01(\tR\tshadeName\x12&\n" +
 	"\x0fprimary_rm_code\x18\x1c \x01(\tR\rprimaryRmCode\x12&\n" +
 	"\x0fprimary_rm_name\x18\x1d \x01(\tR\rprimaryRmName\x12\x19\n" +
-	"\brm_count\x18\x1e \x01(\x05R\armCount\"\x86\x03\n" +
+	"\brm_count\x18\x1e \x01(\x05R\armCount\x127\n" +
+	"\n" +
+	"rm_details\x18\x1f \x03(\v2\x18.finance.v1.CostRMDetailR\trmDetails\"\x86\x03\n" +
 	"\rCostBreakdown\x120\n" +
 	"\asummary\x18\x01 \x01(\v2\x16.finance.v1.CostResultR\asummary\x125\n" +
 	"\bby_level\x18\x02 \x03(\v2\x1a.finance.v1.LevelBreakdownR\abyLevel\x127\n" +
@@ -5367,7 +5383,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x10calculation_type\x18\x03 \x01(\x0e2\x1b.finance.v1.CalculationTypeB\b\xbaH\x05\x82\x01\x02 \x00R\x0fcalculationType\"t\n" +
 	"\x15GetCostResultResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12.\n" +
-	"\x06result\x18\x02 \x01(\v2\x16.finance.v1.CostResultR\x06result\"\xe3\x04\n" +
+	"\x06result\x18\x02 \x01(\v2\x16.finance.v1.CostResultR\x06result\"\xec\x04\n" +
 	"\x16ListCostResultsRequest\x12<\n" +
 	"\n" +
 	"pagination\x18\x01 \x01(\v2\x1c.common.v1.PaginationRequestR\n" +
@@ -5379,11 +5395,11 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x10product_type_ids\x18\x06 \x03(\x05B\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x0eproductTypeIds\x12\x81\x01\n" +
 	"\asort_by\x18\a \x01(\tBh\xbaHercR\x00R\vproductCodeR\vproductNameR\x06periodR\x0fcalculationTypeR\vcostPerUnitR\ttotalCostR\x06statusR\fcalculatedAtR\x06sortBy\x121\n" +
 	"\n" +
-	"sort_order\x18\b \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\x12&\n" +
-	"\n" +
-	"shade_code\x18\t \x01(\tB\a\xbaH\x04r\x02\x182R\tshadeCode\x12*\n" +
-	"\fraw_material\x18\n" +
-	" \x01(\tB\a\xbaH\x04r\x02\x18dR\vrawMaterial\"\xdc\x01\n" +
+	"sort_order\x18\b \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\x12*\n" +
+	"\vshade_codes\x18\t \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"shadeCodes\x12/\n" +
+	"\x0erm_group_codes\x18\n" +
+	" \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\frmGroupCodes\"\xdc\x01\n" +
 	"\x17ListCostResultsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12,\n" +
 	"\x05items\x18\x02 \x03(\v2\x16.finance.v1.CostResultR\x05items\x12=\n" +
@@ -5728,131 +5744,132 @@ var file_finance_v1_cost_calc_proto_depIdxs = []int32{
 	5,   // 15: finance.v1.CostResult.status:type_name -> finance.v1.CostResultStatus
 	67,  // 16: finance.v1.CostResult.calculated_at:type_name -> google.protobuf.Timestamp
 	67,  // 17: finance.v1.CostResult.verified_at:type_name -> google.protobuf.Timestamp
-	9,   // 18: finance.v1.CostBreakdown.summary:type_name -> finance.v1.CostResult
-	11,  // 19: finance.v1.CostBreakdown.by_level:type_name -> finance.v1.LevelBreakdown
-	12,  // 20: finance.v1.CostBreakdown.rm_details:type_name -> finance.v1.CostRMDetail
-	13,  // 21: finance.v1.CostBreakdown.formula_trace:type_name -> finance.v1.FormulaEval
-	64,  // 22: finance.v1.CostBreakdown.param_snapshot:type_name -> finance.v1.CostBreakdown.ParamSnapshotEntry
-	65,  // 23: finance.v1.FormulaEval.inputs:type_name -> finance.v1.FormulaEval.InputsEntry
-	0,   // 24: finance.v1.CostHistoryEntry.calculation_type:type_name -> finance.v1.CalculationType
-	5,   // 25: finance.v1.CostHistoryEntry.status:type_name -> finance.v1.CostResultStatus
-	67,  // 26: finance.v1.CostHistoryEntry.calculated_at:type_name -> google.protobuf.Timestamp
-	0,   // 27: finance.v1.TriggerCalcJobRequest.calculation_type:type_name -> finance.v1.CalculationType
-	2,   // 28: finance.v1.TriggerCalcJobRequest.scope:type_name -> finance.v1.CalcJobScope
-	68,  // 29: finance.v1.TriggerCalcJobResponse.base:type_name -> common.v1.BaseResponse
-	6,   // 30: finance.v1.TriggerCalcJobResponse.job:type_name -> finance.v1.CalJob
-	68,  // 31: finance.v1.GetCalcJobResponse.base:type_name -> common.v1.BaseResponse
-	6,   // 32: finance.v1.GetCalcJobResponse.job:type_name -> finance.v1.CalJob
-	69,  // 33: finance.v1.ListCalcJobsRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,   // 34: finance.v1.ListCalcJobsRequest.calculation_type:type_name -> finance.v1.CalculationType
-	1,   // 35: finance.v1.ListCalcJobsRequest.status:type_name -> finance.v1.CalcJobStatus
-	68,  // 36: finance.v1.ListCalcJobsResponse.base:type_name -> common.v1.BaseResponse
-	6,   // 37: finance.v1.ListCalcJobsResponse.items:type_name -> finance.v1.CalJob
-	70,  // 38: finance.v1.ListCalcJobsResponse.pagination:type_name -> common.v1.PaginationResponse
-	69,  // 39: finance.v1.ListCalcJobChunksRequest.pagination:type_name -> common.v1.PaginationRequest
-	3,   // 40: finance.v1.ListCalcJobChunksRequest.status:type_name -> finance.v1.ChunkStatus
-	68,  // 41: finance.v1.ListCalcJobChunksResponse.base:type_name -> common.v1.BaseResponse
-	7,   // 42: finance.v1.ListCalcJobChunksResponse.items:type_name -> finance.v1.CalJobChunk
-	70,  // 43: finance.v1.ListCalcJobChunksResponse.pagination:type_name -> common.v1.PaginationResponse
-	69,  // 44: finance.v1.ListCalcJobProductsRequest.pagination:type_name -> common.v1.PaginationRequest
-	4,   // 45: finance.v1.ListCalcJobProductsRequest.status:type_name -> finance.v1.JobProductStatus
-	68,  // 46: finance.v1.ListCalcJobProductsResponse.base:type_name -> common.v1.BaseResponse
-	8,   // 47: finance.v1.ListCalcJobProductsResponse.items:type_name -> finance.v1.CalJobProduct
-	70,  // 48: finance.v1.ListCalcJobProductsResponse.pagination:type_name -> common.v1.PaginationResponse
-	68,  // 49: finance.v1.CancelCalcJobResponse.base:type_name -> common.v1.BaseResponse
-	6,   // 50: finance.v1.CancelCalcJobResponse.job:type_name -> finance.v1.CalJob
-	0,   // 51: finance.v1.GetCostResultRequest.calculation_type:type_name -> finance.v1.CalculationType
-	68,  // 52: finance.v1.GetCostResultResponse.base:type_name -> common.v1.BaseResponse
-	9,   // 53: finance.v1.GetCostResultResponse.result:type_name -> finance.v1.CostResult
-	69,  // 54: finance.v1.ListCostResultsRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,   // 55: finance.v1.ListCostResultsRequest.calculation_type:type_name -> finance.v1.CalculationType
-	5,   // 56: finance.v1.ListCostResultsRequest.status:type_name -> finance.v1.CostResultStatus
-	68,  // 57: finance.v1.ListCostResultsResponse.base:type_name -> common.v1.BaseResponse
-	9,   // 58: finance.v1.ListCostResultsResponse.items:type_name -> finance.v1.CostResult
-	70,  // 59: finance.v1.ListCostResultsResponse.pagination:type_name -> common.v1.PaginationResponse
-	68,  // 60: finance.v1.ListCostResultPeriodsResponse.base:type_name -> common.v1.BaseResponse
-	0,   // 61: finance.v1.GetCostBreakdownRequest.calculation_type:type_name -> finance.v1.CalculationType
-	68,  // 62: finance.v1.GetCostBreakdownResponse.base:type_name -> common.v1.BaseResponse
-	10,  // 63: finance.v1.GetCostBreakdownResponse.breakdown:type_name -> finance.v1.CostBreakdown
-	66,  // 64: finance.v1.RouteCostSheetStage.param_snapshot:type_name -> finance.v1.RouteCostSheetStage.ParamSnapshotEntry
-	0,   // 65: finance.v1.GetRouteCostSheetRequest.calculation_type:type_name -> finance.v1.CalculationType
-	68,  // 66: finance.v1.GetRouteCostSheetResponse.base:type_name -> common.v1.BaseResponse
-	35,  // 67: finance.v1.GetRouteCostSheetResponse.stages:type_name -> finance.v1.RouteCostSheetStage
-	0,   // 68: finance.v1.RequestProductCostSheetExportRequest.calculation_type:type_name -> finance.v1.CalculationType
-	5,   // 69: finance.v1.RequestProductCostSheetExportRequest.status:type_name -> finance.v1.CostResultStatus
-	68,  // 70: finance.v1.RequestProductCostSheetExportResponse.base:type_name -> common.v1.BaseResponse
-	40,  // 71: finance.v1.RequestProductCostSheetExportResponse.data:type_name -> finance.v1.ProductCostSheetExportJobInfo
-	68,  // 72: finance.v1.GetProductCostSheetDownloadURLResponse.base:type_name -> common.v1.BaseResponse
-	43,  // 73: finance.v1.GetProductCostSheetDownloadURLResponse.data:type_name -> finance.v1.ProductCostSheetDownloadInfo
-	68,  // 74: finance.v1.ListCostSheetExportBatchChildrenResponse.base:type_name -> common.v1.BaseResponse
-	46,  // 75: finance.v1.ListCostSheetExportBatchChildrenResponse.children:type_name -> finance.v1.CostSheetExportBatchChildInfo
-	68,  // 76: finance.v1.GetProductCostSheetExportJobStatusResponse.base:type_name -> common.v1.BaseResponse
-	69,  // 77: finance.v1.ListCostHistoryRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,   // 78: finance.v1.ListCostHistoryRequest.calculation_type:type_name -> finance.v1.CalculationType
-	68,  // 79: finance.v1.ListCostHistoryResponse.base:type_name -> common.v1.BaseResponse
-	14,  // 80: finance.v1.ListCostHistoryResponse.items:type_name -> finance.v1.CostHistoryEntry
-	70,  // 81: finance.v1.ListCostHistoryResponse.pagination:type_name -> common.v1.PaginationResponse
-	68,  // 82: finance.v1.VerifyCostResultResponse.base:type_name -> common.v1.BaseResponse
-	9,   // 83: finance.v1.VerifyCostResultResponse.result:type_name -> finance.v1.CostResult
-	68,  // 84: finance.v1.ApproveCostResultResponse.base:type_name -> common.v1.BaseResponse
-	9,   // 85: finance.v1.ApproveCostResultResponse.result:type_name -> finance.v1.CostResult
-	0,   // 86: finance.v1.ProcessChunkInternalRequest.calculation_type:type_name -> finance.v1.CalculationType
-	68,  // 87: finance.v1.ProcessChunkInternalResponse.base:type_name -> common.v1.BaseResponse
-	68,  // 88: finance.v1.GetBatchChildDownloadUrlResponse.base:type_name -> common.v1.BaseResponse
-	69,  // 89: finance.v1.ListExportJobsRequest.pagination:type_name -> common.v1.PaginationRequest
-	68,  // 90: finance.v1.ListExportJobsResponse.base:type_name -> common.v1.BaseResponse
-	63,  // 91: finance.v1.ListExportJobsResponse.jobs:type_name -> finance.v1.ExportJobSummary
-	70,  // 92: finance.v1.ListExportJobsResponse.pagination:type_name -> common.v1.PaginationResponse
-	67,  // 93: finance.v1.ExportJobSummary.queued_at:type_name -> google.protobuf.Timestamp
-	15,  // 94: finance.v1.CostCalcService.TriggerCalcJob:input_type -> finance.v1.TriggerCalcJobRequest
-	17,  // 95: finance.v1.CostCalcService.GetCalcJob:input_type -> finance.v1.GetCalcJobRequest
-	19,  // 96: finance.v1.CostCalcService.ListCalcJobs:input_type -> finance.v1.ListCalcJobsRequest
-	21,  // 97: finance.v1.CostCalcService.ListCalcJobChunks:input_type -> finance.v1.ListCalcJobChunksRequest
-	23,  // 98: finance.v1.CostCalcService.ListCalcJobProducts:input_type -> finance.v1.ListCalcJobProductsRequest
-	25,  // 99: finance.v1.CostCalcService.CancelCalcJob:input_type -> finance.v1.CancelCalcJobRequest
-	27,  // 100: finance.v1.CostCalcService.GetCostResult:input_type -> finance.v1.GetCostResultRequest
-	29,  // 101: finance.v1.CostCalcService.ListCostResults:input_type -> finance.v1.ListCostResultsRequest
-	31,  // 102: finance.v1.CostCalcService.ListCostResultPeriods:input_type -> finance.v1.ListCostResultPeriodsRequest
-	33,  // 103: finance.v1.CostCalcService.GetCostBreakdown:input_type -> finance.v1.GetCostBreakdownRequest
-	49,  // 104: finance.v1.CostCalcService.ListCostHistory:input_type -> finance.v1.ListCostHistoryRequest
-	51,  // 105: finance.v1.CostCalcService.VerifyCostResult:input_type -> finance.v1.VerifyCostResultRequest
-	53,  // 106: finance.v1.CostCalcService.ApproveCostResult:input_type -> finance.v1.ApproveCostResultRequest
-	36,  // 107: finance.v1.CostCalcService.GetRouteCostSheet:input_type -> finance.v1.GetRouteCostSheetRequest
-	38,  // 108: finance.v1.CostCalcService.RequestProductCostSheetExport:input_type -> finance.v1.RequestProductCostSheetExportRequest
-	41,  // 109: finance.v1.CostCalcService.GetProductCostSheetDownloadURL:input_type -> finance.v1.GetProductCostSheetDownloadURLRequest
-	44,  // 110: finance.v1.CostCalcService.ListCostSheetExportBatchChildren:input_type -> finance.v1.ListCostSheetExportBatchChildrenRequest
-	47,  // 111: finance.v1.CostCalcService.GetProductCostSheetExportJobStatus:input_type -> finance.v1.GetProductCostSheetExportJobStatusRequest
-	55,  // 112: finance.v1.CostCalcService.ProcessChunkInternal:input_type -> finance.v1.ProcessChunkInternalRequest
-	57,  // 113: finance.v1.CostCalcService.GetBatchChildDownloadUrl:input_type -> finance.v1.GetBatchChildDownloadUrlRequest
-	59,  // 114: finance.v1.CostCalcService.DownloadExportBatchZip:input_type -> finance.v1.DownloadExportBatchZipRequest
-	61,  // 115: finance.v1.CostCalcService.ListExportJobs:input_type -> finance.v1.ListExportJobsRequest
-	16,  // 116: finance.v1.CostCalcService.TriggerCalcJob:output_type -> finance.v1.TriggerCalcJobResponse
-	18,  // 117: finance.v1.CostCalcService.GetCalcJob:output_type -> finance.v1.GetCalcJobResponse
-	20,  // 118: finance.v1.CostCalcService.ListCalcJobs:output_type -> finance.v1.ListCalcJobsResponse
-	22,  // 119: finance.v1.CostCalcService.ListCalcJobChunks:output_type -> finance.v1.ListCalcJobChunksResponse
-	24,  // 120: finance.v1.CostCalcService.ListCalcJobProducts:output_type -> finance.v1.ListCalcJobProductsResponse
-	26,  // 121: finance.v1.CostCalcService.CancelCalcJob:output_type -> finance.v1.CancelCalcJobResponse
-	28,  // 122: finance.v1.CostCalcService.GetCostResult:output_type -> finance.v1.GetCostResultResponse
-	30,  // 123: finance.v1.CostCalcService.ListCostResults:output_type -> finance.v1.ListCostResultsResponse
-	32,  // 124: finance.v1.CostCalcService.ListCostResultPeriods:output_type -> finance.v1.ListCostResultPeriodsResponse
-	34,  // 125: finance.v1.CostCalcService.GetCostBreakdown:output_type -> finance.v1.GetCostBreakdownResponse
-	50,  // 126: finance.v1.CostCalcService.ListCostHistory:output_type -> finance.v1.ListCostHistoryResponse
-	52,  // 127: finance.v1.CostCalcService.VerifyCostResult:output_type -> finance.v1.VerifyCostResultResponse
-	54,  // 128: finance.v1.CostCalcService.ApproveCostResult:output_type -> finance.v1.ApproveCostResultResponse
-	37,  // 129: finance.v1.CostCalcService.GetRouteCostSheet:output_type -> finance.v1.GetRouteCostSheetResponse
-	39,  // 130: finance.v1.CostCalcService.RequestProductCostSheetExport:output_type -> finance.v1.RequestProductCostSheetExportResponse
-	42,  // 131: finance.v1.CostCalcService.GetProductCostSheetDownloadURL:output_type -> finance.v1.GetProductCostSheetDownloadURLResponse
-	45,  // 132: finance.v1.CostCalcService.ListCostSheetExportBatchChildren:output_type -> finance.v1.ListCostSheetExportBatchChildrenResponse
-	48,  // 133: finance.v1.CostCalcService.GetProductCostSheetExportJobStatus:output_type -> finance.v1.GetProductCostSheetExportJobStatusResponse
-	56,  // 134: finance.v1.CostCalcService.ProcessChunkInternal:output_type -> finance.v1.ProcessChunkInternalResponse
-	58,  // 135: finance.v1.CostCalcService.GetBatchChildDownloadUrl:output_type -> finance.v1.GetBatchChildDownloadUrlResponse
-	60,  // 136: finance.v1.CostCalcService.DownloadExportBatchZip:output_type -> finance.v1.DownloadExportBatchZipResponse
-	62,  // 137: finance.v1.CostCalcService.ListExportJobs:output_type -> finance.v1.ListExportJobsResponse
-	116, // [116:138] is the sub-list for method output_type
-	94,  // [94:116] is the sub-list for method input_type
-	94,  // [94:94] is the sub-list for extension type_name
-	94,  // [94:94] is the sub-list for extension extendee
-	0,   // [0:94] is the sub-list for field type_name
+	12,  // 18: finance.v1.CostResult.rm_details:type_name -> finance.v1.CostRMDetail
+	9,   // 19: finance.v1.CostBreakdown.summary:type_name -> finance.v1.CostResult
+	11,  // 20: finance.v1.CostBreakdown.by_level:type_name -> finance.v1.LevelBreakdown
+	12,  // 21: finance.v1.CostBreakdown.rm_details:type_name -> finance.v1.CostRMDetail
+	13,  // 22: finance.v1.CostBreakdown.formula_trace:type_name -> finance.v1.FormulaEval
+	64,  // 23: finance.v1.CostBreakdown.param_snapshot:type_name -> finance.v1.CostBreakdown.ParamSnapshotEntry
+	65,  // 24: finance.v1.FormulaEval.inputs:type_name -> finance.v1.FormulaEval.InputsEntry
+	0,   // 25: finance.v1.CostHistoryEntry.calculation_type:type_name -> finance.v1.CalculationType
+	5,   // 26: finance.v1.CostHistoryEntry.status:type_name -> finance.v1.CostResultStatus
+	67,  // 27: finance.v1.CostHistoryEntry.calculated_at:type_name -> google.protobuf.Timestamp
+	0,   // 28: finance.v1.TriggerCalcJobRequest.calculation_type:type_name -> finance.v1.CalculationType
+	2,   // 29: finance.v1.TriggerCalcJobRequest.scope:type_name -> finance.v1.CalcJobScope
+	68,  // 30: finance.v1.TriggerCalcJobResponse.base:type_name -> common.v1.BaseResponse
+	6,   // 31: finance.v1.TriggerCalcJobResponse.job:type_name -> finance.v1.CalJob
+	68,  // 32: finance.v1.GetCalcJobResponse.base:type_name -> common.v1.BaseResponse
+	6,   // 33: finance.v1.GetCalcJobResponse.job:type_name -> finance.v1.CalJob
+	69,  // 34: finance.v1.ListCalcJobsRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,   // 35: finance.v1.ListCalcJobsRequest.calculation_type:type_name -> finance.v1.CalculationType
+	1,   // 36: finance.v1.ListCalcJobsRequest.status:type_name -> finance.v1.CalcJobStatus
+	68,  // 37: finance.v1.ListCalcJobsResponse.base:type_name -> common.v1.BaseResponse
+	6,   // 38: finance.v1.ListCalcJobsResponse.items:type_name -> finance.v1.CalJob
+	70,  // 39: finance.v1.ListCalcJobsResponse.pagination:type_name -> common.v1.PaginationResponse
+	69,  // 40: finance.v1.ListCalcJobChunksRequest.pagination:type_name -> common.v1.PaginationRequest
+	3,   // 41: finance.v1.ListCalcJobChunksRequest.status:type_name -> finance.v1.ChunkStatus
+	68,  // 42: finance.v1.ListCalcJobChunksResponse.base:type_name -> common.v1.BaseResponse
+	7,   // 43: finance.v1.ListCalcJobChunksResponse.items:type_name -> finance.v1.CalJobChunk
+	70,  // 44: finance.v1.ListCalcJobChunksResponse.pagination:type_name -> common.v1.PaginationResponse
+	69,  // 45: finance.v1.ListCalcJobProductsRequest.pagination:type_name -> common.v1.PaginationRequest
+	4,   // 46: finance.v1.ListCalcJobProductsRequest.status:type_name -> finance.v1.JobProductStatus
+	68,  // 47: finance.v1.ListCalcJobProductsResponse.base:type_name -> common.v1.BaseResponse
+	8,   // 48: finance.v1.ListCalcJobProductsResponse.items:type_name -> finance.v1.CalJobProduct
+	70,  // 49: finance.v1.ListCalcJobProductsResponse.pagination:type_name -> common.v1.PaginationResponse
+	68,  // 50: finance.v1.CancelCalcJobResponse.base:type_name -> common.v1.BaseResponse
+	6,   // 51: finance.v1.CancelCalcJobResponse.job:type_name -> finance.v1.CalJob
+	0,   // 52: finance.v1.GetCostResultRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 53: finance.v1.GetCostResultResponse.base:type_name -> common.v1.BaseResponse
+	9,   // 54: finance.v1.GetCostResultResponse.result:type_name -> finance.v1.CostResult
+	69,  // 55: finance.v1.ListCostResultsRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,   // 56: finance.v1.ListCostResultsRequest.calculation_type:type_name -> finance.v1.CalculationType
+	5,   // 57: finance.v1.ListCostResultsRequest.status:type_name -> finance.v1.CostResultStatus
+	68,  // 58: finance.v1.ListCostResultsResponse.base:type_name -> common.v1.BaseResponse
+	9,   // 59: finance.v1.ListCostResultsResponse.items:type_name -> finance.v1.CostResult
+	70,  // 60: finance.v1.ListCostResultsResponse.pagination:type_name -> common.v1.PaginationResponse
+	68,  // 61: finance.v1.ListCostResultPeriodsResponse.base:type_name -> common.v1.BaseResponse
+	0,   // 62: finance.v1.GetCostBreakdownRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 63: finance.v1.GetCostBreakdownResponse.base:type_name -> common.v1.BaseResponse
+	10,  // 64: finance.v1.GetCostBreakdownResponse.breakdown:type_name -> finance.v1.CostBreakdown
+	66,  // 65: finance.v1.RouteCostSheetStage.param_snapshot:type_name -> finance.v1.RouteCostSheetStage.ParamSnapshotEntry
+	0,   // 66: finance.v1.GetRouteCostSheetRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 67: finance.v1.GetRouteCostSheetResponse.base:type_name -> common.v1.BaseResponse
+	35,  // 68: finance.v1.GetRouteCostSheetResponse.stages:type_name -> finance.v1.RouteCostSheetStage
+	0,   // 69: finance.v1.RequestProductCostSheetExportRequest.calculation_type:type_name -> finance.v1.CalculationType
+	5,   // 70: finance.v1.RequestProductCostSheetExportRequest.status:type_name -> finance.v1.CostResultStatus
+	68,  // 71: finance.v1.RequestProductCostSheetExportResponse.base:type_name -> common.v1.BaseResponse
+	40,  // 72: finance.v1.RequestProductCostSheetExportResponse.data:type_name -> finance.v1.ProductCostSheetExportJobInfo
+	68,  // 73: finance.v1.GetProductCostSheetDownloadURLResponse.base:type_name -> common.v1.BaseResponse
+	43,  // 74: finance.v1.GetProductCostSheetDownloadURLResponse.data:type_name -> finance.v1.ProductCostSheetDownloadInfo
+	68,  // 75: finance.v1.ListCostSheetExportBatchChildrenResponse.base:type_name -> common.v1.BaseResponse
+	46,  // 76: finance.v1.ListCostSheetExportBatchChildrenResponse.children:type_name -> finance.v1.CostSheetExportBatchChildInfo
+	68,  // 77: finance.v1.GetProductCostSheetExportJobStatusResponse.base:type_name -> common.v1.BaseResponse
+	69,  // 78: finance.v1.ListCostHistoryRequest.pagination:type_name -> common.v1.PaginationRequest
+	0,   // 79: finance.v1.ListCostHistoryRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 80: finance.v1.ListCostHistoryResponse.base:type_name -> common.v1.BaseResponse
+	14,  // 81: finance.v1.ListCostHistoryResponse.items:type_name -> finance.v1.CostHistoryEntry
+	70,  // 82: finance.v1.ListCostHistoryResponse.pagination:type_name -> common.v1.PaginationResponse
+	68,  // 83: finance.v1.VerifyCostResultResponse.base:type_name -> common.v1.BaseResponse
+	9,   // 84: finance.v1.VerifyCostResultResponse.result:type_name -> finance.v1.CostResult
+	68,  // 85: finance.v1.ApproveCostResultResponse.base:type_name -> common.v1.BaseResponse
+	9,   // 86: finance.v1.ApproveCostResultResponse.result:type_name -> finance.v1.CostResult
+	0,   // 87: finance.v1.ProcessChunkInternalRequest.calculation_type:type_name -> finance.v1.CalculationType
+	68,  // 88: finance.v1.ProcessChunkInternalResponse.base:type_name -> common.v1.BaseResponse
+	68,  // 89: finance.v1.GetBatchChildDownloadUrlResponse.base:type_name -> common.v1.BaseResponse
+	69,  // 90: finance.v1.ListExportJobsRequest.pagination:type_name -> common.v1.PaginationRequest
+	68,  // 91: finance.v1.ListExportJobsResponse.base:type_name -> common.v1.BaseResponse
+	63,  // 92: finance.v1.ListExportJobsResponse.jobs:type_name -> finance.v1.ExportJobSummary
+	70,  // 93: finance.v1.ListExportJobsResponse.pagination:type_name -> common.v1.PaginationResponse
+	67,  // 94: finance.v1.ExportJobSummary.queued_at:type_name -> google.protobuf.Timestamp
+	15,  // 95: finance.v1.CostCalcService.TriggerCalcJob:input_type -> finance.v1.TriggerCalcJobRequest
+	17,  // 96: finance.v1.CostCalcService.GetCalcJob:input_type -> finance.v1.GetCalcJobRequest
+	19,  // 97: finance.v1.CostCalcService.ListCalcJobs:input_type -> finance.v1.ListCalcJobsRequest
+	21,  // 98: finance.v1.CostCalcService.ListCalcJobChunks:input_type -> finance.v1.ListCalcJobChunksRequest
+	23,  // 99: finance.v1.CostCalcService.ListCalcJobProducts:input_type -> finance.v1.ListCalcJobProductsRequest
+	25,  // 100: finance.v1.CostCalcService.CancelCalcJob:input_type -> finance.v1.CancelCalcJobRequest
+	27,  // 101: finance.v1.CostCalcService.GetCostResult:input_type -> finance.v1.GetCostResultRequest
+	29,  // 102: finance.v1.CostCalcService.ListCostResults:input_type -> finance.v1.ListCostResultsRequest
+	31,  // 103: finance.v1.CostCalcService.ListCostResultPeriods:input_type -> finance.v1.ListCostResultPeriodsRequest
+	33,  // 104: finance.v1.CostCalcService.GetCostBreakdown:input_type -> finance.v1.GetCostBreakdownRequest
+	49,  // 105: finance.v1.CostCalcService.ListCostHistory:input_type -> finance.v1.ListCostHistoryRequest
+	51,  // 106: finance.v1.CostCalcService.VerifyCostResult:input_type -> finance.v1.VerifyCostResultRequest
+	53,  // 107: finance.v1.CostCalcService.ApproveCostResult:input_type -> finance.v1.ApproveCostResultRequest
+	36,  // 108: finance.v1.CostCalcService.GetRouteCostSheet:input_type -> finance.v1.GetRouteCostSheetRequest
+	38,  // 109: finance.v1.CostCalcService.RequestProductCostSheetExport:input_type -> finance.v1.RequestProductCostSheetExportRequest
+	41,  // 110: finance.v1.CostCalcService.GetProductCostSheetDownloadURL:input_type -> finance.v1.GetProductCostSheetDownloadURLRequest
+	44,  // 111: finance.v1.CostCalcService.ListCostSheetExportBatchChildren:input_type -> finance.v1.ListCostSheetExportBatchChildrenRequest
+	47,  // 112: finance.v1.CostCalcService.GetProductCostSheetExportJobStatus:input_type -> finance.v1.GetProductCostSheetExportJobStatusRequest
+	55,  // 113: finance.v1.CostCalcService.ProcessChunkInternal:input_type -> finance.v1.ProcessChunkInternalRequest
+	57,  // 114: finance.v1.CostCalcService.GetBatchChildDownloadUrl:input_type -> finance.v1.GetBatchChildDownloadUrlRequest
+	59,  // 115: finance.v1.CostCalcService.DownloadExportBatchZip:input_type -> finance.v1.DownloadExportBatchZipRequest
+	61,  // 116: finance.v1.CostCalcService.ListExportJobs:input_type -> finance.v1.ListExportJobsRequest
+	16,  // 117: finance.v1.CostCalcService.TriggerCalcJob:output_type -> finance.v1.TriggerCalcJobResponse
+	18,  // 118: finance.v1.CostCalcService.GetCalcJob:output_type -> finance.v1.GetCalcJobResponse
+	20,  // 119: finance.v1.CostCalcService.ListCalcJobs:output_type -> finance.v1.ListCalcJobsResponse
+	22,  // 120: finance.v1.CostCalcService.ListCalcJobChunks:output_type -> finance.v1.ListCalcJobChunksResponse
+	24,  // 121: finance.v1.CostCalcService.ListCalcJobProducts:output_type -> finance.v1.ListCalcJobProductsResponse
+	26,  // 122: finance.v1.CostCalcService.CancelCalcJob:output_type -> finance.v1.CancelCalcJobResponse
+	28,  // 123: finance.v1.CostCalcService.GetCostResult:output_type -> finance.v1.GetCostResultResponse
+	30,  // 124: finance.v1.CostCalcService.ListCostResults:output_type -> finance.v1.ListCostResultsResponse
+	32,  // 125: finance.v1.CostCalcService.ListCostResultPeriods:output_type -> finance.v1.ListCostResultPeriodsResponse
+	34,  // 126: finance.v1.CostCalcService.GetCostBreakdown:output_type -> finance.v1.GetCostBreakdownResponse
+	50,  // 127: finance.v1.CostCalcService.ListCostHistory:output_type -> finance.v1.ListCostHistoryResponse
+	52,  // 128: finance.v1.CostCalcService.VerifyCostResult:output_type -> finance.v1.VerifyCostResultResponse
+	54,  // 129: finance.v1.CostCalcService.ApproveCostResult:output_type -> finance.v1.ApproveCostResultResponse
+	37,  // 130: finance.v1.CostCalcService.GetRouteCostSheet:output_type -> finance.v1.GetRouteCostSheetResponse
+	39,  // 131: finance.v1.CostCalcService.RequestProductCostSheetExport:output_type -> finance.v1.RequestProductCostSheetExportResponse
+	42,  // 132: finance.v1.CostCalcService.GetProductCostSheetDownloadURL:output_type -> finance.v1.GetProductCostSheetDownloadURLResponse
+	45,  // 133: finance.v1.CostCalcService.ListCostSheetExportBatchChildren:output_type -> finance.v1.ListCostSheetExportBatchChildrenResponse
+	48,  // 134: finance.v1.CostCalcService.GetProductCostSheetExportJobStatus:output_type -> finance.v1.GetProductCostSheetExportJobStatusResponse
+	56,  // 135: finance.v1.CostCalcService.ProcessChunkInternal:output_type -> finance.v1.ProcessChunkInternalResponse
+	58,  // 136: finance.v1.CostCalcService.GetBatchChildDownloadUrl:output_type -> finance.v1.GetBatchChildDownloadUrlResponse
+	60,  // 137: finance.v1.CostCalcService.DownloadExportBatchZip:output_type -> finance.v1.DownloadExportBatchZipResponse
+	62,  // 138: finance.v1.CostCalcService.ListExportJobs:output_type -> finance.v1.ListExportJobsResponse
+	117, // [117:139] is the sub-list for method output_type
+	95,  // [95:117] is the sub-list for method input_type
+	95,  // [95:95] is the sub-list for extension type_name
+	95,  // [95:95] is the sub-list for extension extendee
+	0,   // [0:95] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_cost_calc_proto_init() }

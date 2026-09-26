@@ -626,8 +626,8 @@ func (h *CostCalcHandler) ListCostResults(ctx context.Context, req *financev1.Li
 		SortOrder:      req.GetSortOrder(),
 		Page:           int(req.GetPagination().GetPage()),
 		PageSize:       int(req.GetPagination().GetPageSize()),
-		ShadeCode:      req.GetShadeCode(),
-		RawMaterial:    req.GetRawMaterial(),
+		ShadeCodes:     req.GetShadeCodes(),
+		RMGroupCodes:   req.GetRmGroupCodes(),
 	})
 	if err != nil {
 		return &financev1.ListCostResultsResponse{Base: costCalcErrToBase(err)}, nil

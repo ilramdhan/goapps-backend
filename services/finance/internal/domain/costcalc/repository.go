@@ -96,8 +96,8 @@ type ResultListFilter struct {
 	SortOrder      string
 	Page           int
 	PageSize       int
-	ShadeCode      string
-	RawMaterial    string
+	ShadeCodes     []string
+	RMGroupCodes   []string
 }
 
 // ResultSummary is a flat, list-friendly projection of a cost result with the
