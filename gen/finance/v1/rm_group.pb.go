@@ -402,9 +402,14 @@ type RMGroupHead struct {
 	// Oil group flag (head-level, global — NOT period-versioned). When true the
 	// group is selectable as an OIL_NAME option (lookup master RM_GROUP_OIL) and
 	// its per-period rate drives OIL_RATE in the costing engine.
-	IsOilGroup    bool `protobuf:"varint,22,opt,name=is_oil_group,json=isOilGroup,proto3" json:"is_oil_group,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	IsOilGroup bool `protobuf:"varint,22,opt,name=is_oil_group,json=isOilGroup,proto3" json:"is_oil_group,omitempty"`
+	// Carry-forward provenance of the per-period values overlaid on this head
+	// (only meaningful when the head is read for a specific period).
+	// Empty = an exact row exists for the requested period; "ANCHOR" = values
+	// fell back to the anchor row; otherwise the YYYYMM of the earlier source period.
+	InheritedFromPeriod string `protobuf:"bytes,23,opt,name=inherited_from_period,json=inheritedFromPeriod,proto3" json:"inherited_from_period,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RMGroupHead) Reset() {
@@ -591,6 +596,13 @@ func (x *RMGroupHead) GetIsOilGroup() bool {
 	return false
 }
 
+func (x *RMGroupHead) GetInheritedFromPeriod() string {
+	if x != nil {
+		return x.InheritedFromPeriod
+	}
+	return ""
+}
+
 // RMGroupDetail is one item's membership in an RM group.
 type RMGroupDetail struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -632,8 +644,13 @@ type RMGroupDetail struct {
 	ValuationTransportRate *float64 `protobuf:"fixed64,18,opt,name=valuation_transport_rate,json=valuationTransportRate,proto3,oneof" json:"valuation_transport_rate,omitempty"`
 	// V2: Valuation default value (per detail; drives FL).
 	ValuationDefaultValue *float64 `protobuf:"fixed64,19,opt,name=valuation_default_value,json=valuationDefaultValue,proto3,oneof" json:"valuation_default_value,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Carry-forward provenance of the per-period values overlaid on this detail
+	// (only meaningful when the detail is read for a specific period).
+	// Empty = an exact row exists for the requested period; "ANCHOR" = values
+	// fell back to the anchor row; otherwise the YYYYMM of the earlier source period.
+	InheritedFromPeriod string `protobuf:"bytes,20,opt,name=inherited_from_period,json=inheritedFromPeriod,proto3" json:"inherited_from_period,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RMGroupDetail) Reset() {
@@ -797,6 +814,13 @@ func (x *RMGroupDetail) GetValuationDefaultValue() float64 {
 		return *x.ValuationDefaultValue
 	}
 	return 0
+}
+
+func (x *RMGroupDetail) GetInheritedFromPeriod() string {
+	if x != nil {
+		return x.InheritedFromPeriod
+	}
+	return ""
 }
 
 // RMGroupHeadWithDetails bundles a head and its details for the Get response.
@@ -3891,7 +3915,7 @@ var File_finance_v1_rm_group_proto protoreflect.FileDescriptor
 const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\n" +
 	"\x19finance/v1/rm_group.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xb7\t\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xeb\t\n" +
 	"\vRMGroupHead\x12\"\n" +
 	"\rgroup_head_id\x18\x01 \x01(\tR\vgroupHeadId\x12\x1d\n" +
 	"\n" +
@@ -3918,13 +3942,14 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x0evaluation_flag\x18\x14 \x01(\x0e2\x1b.finance.v1.RMValuationFlagR\rvaluationFlag\x12B\n" +
 	"\x0emarketing_flag\x18\x15 \x01(\x0e2\x1b.finance.v1.RMMarketingFlagR\rmarketingFlag\x12 \n" +
 	"\fis_oil_group\x18\x16 \x01(\bR\n" +
-	"isOilGroupB\x15\n" +
+	"isOilGroup\x122\n" +
+	"\x15inherited_from_period\x18\x17 \x01(\tR\x13inheritedFromPeriodB\x15\n" +
 	"\x13_init_val_valuationB\x15\n" +
 	"\x13_init_val_marketingB\x16\n" +
 	"\x14_init_val_simulationB\x19\n" +
 	"\x17_marketing_freight_rateB\x1d\n" +
 	"\x1b_marketing_anti_dumping_pctB\x1a\n" +
-	"\x18_marketing_default_value\"\xd6\a\n" +
+	"\x18_marketing_default_value\"\x8a\b\n" +
 	"\rRMGroupDetail\x12&\n" +
 	"\x0fgroup_detail_id\x18\x01 \x01(\tR\rgroupDetailId\x12\"\n" +
 	"\rgroup_head_id\x18\x02 \x01(\tR\vgroupHeadId\x12\x1b\n" +
@@ -3948,7 +3973,8 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x121\n" +
 	"\x12valuation_duty_pct\x18\x11 \x01(\x01H\x04R\x10valuationDutyPct\x88\x01\x01\x12=\n" +
 	"\x18valuation_transport_rate\x18\x12 \x01(\x01H\x05R\x16valuationTransportRate\x88\x01\x01\x12;\n" +
-	"\x17valuation_default_value\x18\x13 \x01(\x01H\x06R\x15valuationDefaultValue\x88\x01\x01B\x14\n" +
+	"\x17valuation_default_value\x18\x13 \x01(\x01H\x06R\x15valuationDefaultValue\x88\x01\x01\x122\n" +
+	"\x15inherited_from_period\x18\x14 \x01(\tR\x13inheritedFromPeriodB\x14\n" +
 	"\x12_market_percentageB\x12\n" +
 	"\x10_market_value_rpB\x19\n" +
 	"\x17_valuation_freight_rateB\x1d\n" +
