@@ -111,6 +111,7 @@ func TestUpdateHandler_Success(t *testing.T) {
 	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
 	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202604").
 		Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202604").Return(nil, rmgroup.ErrNotFound)
 	repo.On("UpsertHeadPeriod", ctx, mock.AnythingOfType("*rmgroup.HeadPeriodSnapshot")).Return(nil)
 	repo.On("LatestSyncPeriod", ctx).Return("202604", nil)
 	repo.On("UpdateHead", ctx, head).Return(nil)
@@ -134,6 +135,7 @@ func TestUpdateHandler_InvalidFlag(t *testing.T) {
 	repo.On("GetHeadByID", mock.Anything, head.ID()).Return(head, nil)
 	repo.On("GetHeadPeriodSnapshot", mock.Anything, head.ID(), "202604").
 		Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", mock.Anything, head.ID(), "202604").Return(nil, rmgroup.ErrNotFound)
 
 	bad := "BOGUS"
 	h := appgroup.NewUpdateHandler(repo)

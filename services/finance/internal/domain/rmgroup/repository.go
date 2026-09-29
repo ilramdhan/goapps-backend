@@ -94,6 +94,26 @@ type Repository interface {
 	// UpsertDetailPeriod writes the snapshot keyed on (period, group_detail_id).
 	UpsertDetailPeriod(ctx context.Context, snap *DetailPeriodSnapshot) error
 
+	// GetLatestHeadPeriodSnapshotBefore returns the head's snapshot with the
+	// greatest period strictly earlier than period (carry-forward source).
+	// Returns ErrNotFound when no earlier snapshot exists.
+	GetLatestHeadPeriodSnapshotBefore(ctx context.Context, headID uuid.UUID, period string) (*HeadPeriodSnapshot, error)
+
+	// GetLatestDetailPeriodSnapshotsBefore returns, for every detail of the
+	// head, the snapshot with the greatest period strictly earlier than period,
+	// keyed by group_detail_id. Details with no earlier snapshot are absent
+	// from the map (an empty map, never ErrNotFound, when none exist).
+	GetLatestDetailPeriodSnapshotsBefore(ctx context.Context, headID uuid.UUID, period string) (map[uuid.UUID]*DetailPeriodSnapshot, error)
+
+	// InsertHeadPeriodIfAbsent inserts the snapshot only when no row exists yet
+	// for (period, group_head_id) — never overwrites an exact row. Used by
+	// freeze-on-calc. Reports whether a row was inserted.
+	InsertHeadPeriodIfAbsent(ctx context.Context, snap *HeadPeriodSnapshot) (bool, error)
+
+	// InsertDetailPeriodIfAbsent is the detail counterpart of
+	// InsertHeadPeriodIfAbsent, keyed on (period, group_detail_id).
+	InsertDetailPeriodIfAbsent(ctx context.Context, snap *DetailPeriodSnapshot) (bool, error)
+
 	// LatestSyncPeriod returns the most recent period known to the system (reuses
 	// the same source of truth as rmcost.ListDistinctPeriods / useSyncPeriods),
 	// used by the update handlers to decide whether to write-through to the anchor row.

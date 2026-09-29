@@ -4,7 +4,6 @@ package rmgroup
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -80,7 +79,7 @@ func (h *UpdateItemHandler) Handle(ctx context.Context, cmd UpdateItemCommand) (
 	}
 
 	// Step 2: resolve the period-scoped working copy (get-or-create semantics).
-	snap, err := h.resolveDetailSnapshot(ctx, detailID, cmd.Period, d)
+	snap, err := h.resolveDetailSnapshot(ctx, cmd.Period, d)
 	if err != nil {
 		return nil, err
 	}
@@ -111,21 +110,15 @@ func (h *UpdateItemHandler) Handle(ctx context.Context, cmd UpdateItemCommand) (
 	return snap, nil
 }
 
-// resolveDetailSnapshot loads the (detailID, period) snapshot, falling back
-// to a fresh snapshot built from the anchor detail's current values when
-// none exists yet (get-or-create baseline, design §2.3).
+// resolveDetailSnapshot resolves the (detail, period) working copy through
+// the shared carry-forward chain (ResolveDetailSnapshot): the exact period
+// row when present, otherwise a copy seeded from the latest earlier period's
+// row, and only when no earlier row exists either, from the anchor detail.
 func (h *UpdateItemHandler) resolveDetailSnapshot(
-	ctx context.Context, detailID uuid.UUID, period string, detail *rmgroup.Detail,
+	ctx context.Context, period string, detail *rmgroup.Detail,
 ) (*rmgroup.DetailPeriodSnapshot, error) {
-	snap, err := h.repo.GetDetailPeriodSnapshot(ctx, detailID, period)
-	if err == nil {
-		return snap, nil
-	}
-	if !errors.Is(err, rmgroup.ErrNotFound) {
-		return nil, fmt.Errorf("load detail period snapshot: %w", err)
-	}
-	fresh := rmgroup.NewDetailPeriodSnapshotFromDetail(period, detail)
-	return &fresh, nil
+	snap, _, err := ResolveDetailSnapshot(ctx, h.repo, detail, period)
+	return snap, err
 }
 
 // writeThroughAnchorDetail re-applies the same command patch to the anchor

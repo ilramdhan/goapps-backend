@@ -146,6 +146,33 @@ func (m *mockRepo) UpsertDetailPeriod(ctx context.Context, snap *rmgroup.DetailP
 	return m.Called(ctx, snap).Error(0)
 }
 
+func (m *mockRepo) GetLatestHeadPeriodSnapshotBefore(ctx context.Context, headID uuid.UUID, period string) (*rmgroup.HeadPeriodSnapshot, error) {
+	args := m.Called(ctx, headID, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*rmgroup.HeadPeriodSnapshot), args.Error(1)
+}
+
+func (m *mockRepo) GetLatestDetailPeriodSnapshotsBefore(ctx context.Context, headID uuid.UUID, period string) (map[uuid.UUID]*rmgroup.DetailPeriodSnapshot, error) {
+	args := m.Called(ctx, headID, period)
+	var out map[uuid.UUID]*rmgroup.DetailPeriodSnapshot
+	if v := args.Get(0); v != nil {
+		out = v.(map[uuid.UUID]*rmgroup.DetailPeriodSnapshot)
+	}
+	return out, args.Error(1)
+}
+
+func (m *mockRepo) InsertHeadPeriodIfAbsent(ctx context.Context, snap *rmgroup.HeadPeriodSnapshot) (bool, error) {
+	args := m.Called(ctx, snap)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockRepo) InsertDetailPeriodIfAbsent(ctx context.Context, snap *rmgroup.DetailPeriodSnapshot) (bool, error) {
+	args := m.Called(ctx, snap)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *mockRepo) LatestSyncPeriod(ctx context.Context) (string, error) {
 	args := m.Called(ctx)
 	return args.String(0), args.Error(1)

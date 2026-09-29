@@ -3,7 +3,6 @@ package rmgroup
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -95,7 +94,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*rmgroup
 	}
 
 	// Step 2: resolve the period-scoped working copy (get-or-create semantics).
-	snap, err := h.resolveHeadSnapshot(ctx, id, cmd.Period, head)
+	snap, err := h.resolveHeadSnapshot(ctx, cmd.Period, head)
 	if err != nil {
 		return nil, err
 	}
@@ -137,21 +136,15 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*rmgroup
 	return snap, nil
 }
 
-// resolveHeadSnapshot loads the (headID, period) snapshot, falling back to a
-// fresh snapshot built from the anchor head's current values when none exists
-// yet (get-or-create baseline, design §2.3).
+// resolveHeadSnapshot resolves the (headID, period) working copy through the
+// shared carry-forward chain (ResolveHeadSnapshot): the exact period row when
+// present, otherwise a copy seeded from the latest earlier period's row, and
+// only when no earlier row exists either, from the anchor head.
 func (h *UpdateHandler) resolveHeadSnapshot(
-	ctx context.Context, headID uuid.UUID, period string, head *rmgroup.Head,
+	ctx context.Context, period string, head *rmgroup.Head,
 ) (*rmgroup.HeadPeriodSnapshot, error) {
-	snap, err := h.repo.GetHeadPeriodSnapshot(ctx, headID, period)
-	if err == nil {
-		return snap, nil
-	}
-	if !errors.Is(err, rmgroup.ErrNotFound) {
-		return nil, fmt.Errorf("load head period snapshot: %w", err)
-	}
-	fresh := rmgroup.NewHeadPeriodSnapshotFromHead(period, head)
-	return &fresh, nil
+	snap, _, err := ResolveHeadSnapshot(ctx, h.repo, head, period)
+	return snap, err
 }
 
 // writeThroughAnchor re-applies the same command patch to the anchor Head and
