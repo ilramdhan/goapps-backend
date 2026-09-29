@@ -97,6 +97,9 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 	if err := financev1.RegisterSpinFixedCostServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register SpinFixedCost gateway: %w", err)
 	}
+	if err := financev1.RegisterYarnTxWeightServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register YarnTxWeight gateway: %w", err)
+	}
 	if err := financev1.RegisterProductGradeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register ProductGrade gateway: %w", err)
 	}

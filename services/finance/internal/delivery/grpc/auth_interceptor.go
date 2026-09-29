@@ -668,6 +668,15 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.ShadeService/ListShades":      "finance.master.shade.view",
 		"/finance.v1.ShadeService/SyncShades":      "finance.master.shade.sync",
 
+		// YarnTxWeightService (TX Weight master, backlog1 T5) — guarded FROM BIRTH
+		// by finance.master.yarntxweight.* (seeded by iam migration 000093,
+		// SUPER_ADMIN only, like the sibling yarn masters).
+		"/finance.v1.YarnTxWeightService/CreateYarnTxWeight": "finance.master.yarntxweight.create",
+		"/finance.v1.YarnTxWeightService/GetYarnTxWeight":    "finance.master.yarntxweight.view",
+		"/finance.v1.YarnTxWeightService/UpdateYarnTxWeight": "finance.master.yarntxweight.update",
+		"/finance.v1.YarnTxWeightService/DeleteYarnTxWeight": "finance.master.yarntxweight.delete",
+		"/finance.v1.YarnTxWeightService/ListYarnTxWeights":  "finance.master.yarntxweight.view",
+
 		// UOMCategoryService — mutating RPCs guarded with the pre-seeded
 		// finance.master.uomcategory.* codes (K-34 fail-open closure).
 		"/finance.v1.UOMCategoryService/UpdateUOMCategory": "finance.master.uomcategory.update",

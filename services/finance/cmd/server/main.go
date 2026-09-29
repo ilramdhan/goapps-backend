@@ -178,6 +178,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	machineRepo := postgres.NewMachineRepository(db)
 	interminglingRepo := postgres.NewInterminglingRepository(db)
 	spinFixedCostRepo := postgres.NewSpinFixedCostRepository(db)
+	yarnTxWeightRepo := postgres.NewYarnTxWeightRepository(db)
 	productGradeRepo := postgres.NewProductGradeRepository(db)
 	lookupMasterRepo := postgres.NewLookupMasterRepository(db)
 	// oil-cost-rm-group: OIL_NAME allowed/default oil RM groups per product type.
@@ -302,6 +303,11 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	}
 
 	spinFixedCostHandler, err := grpcdelivery.NewSpinFixedCostHandler(spinFixedCostRepo)
+	if err != nil {
+		return err
+	}
+
+	yarnTxWeightHandler, err := grpcdelivery.NewYarnTxWeightHandler(yarnTxWeightRepo)
 	if err != nil {
 		return err
 	}
@@ -832,7 +838,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		mbCompositionHandler, mbParamHandler, mbLustureHandler, mbWorkflowLogHandler, mbPushHandler,
 		mbCrossSectionHandler, mbCrossSectionFactorHandler, mbDozingHandler,
 		mbBatchHandler,
-		machineHandler, interminglingHandler, spinFixedCostHandler, productGradeHandler, lookupMasterHandler, yarnLookupFillHandler,
+		machineHandler, interminglingHandler, spinFixedCostHandler, yarnTxWeightHandler, productGradeHandler, lookupMasterHandler, yarnLookupFillHandler,
 		shadeHandler,
 		oracleSyncHandler, rmGroupHandler, rmCostHandler,
 		costProductTypeHandler, costRmTypeHandler, costErpHandler, costProductMasterHandler, costRouteHandler,
@@ -964,6 +970,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	machineHandler *grpcdelivery.MachineHandler,
 	interminglingHandler *grpcdelivery.InterminglingHandler,
 	spinFixedCostHandler *grpcdelivery.SpinFixedCostHandler,
+	yarnTxWeightHandler *grpcdelivery.YarnTxWeightHandler,
 	productGradeHandler *grpcdelivery.ProductGradeHandler,
 	lookupMasterHandler *grpcdelivery.LookupMasterHandler,
 	yarnLookupFillHandler *grpcdelivery.YarnLookupFillHandler,
@@ -1026,6 +1033,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterMachineServiceServer(grpcServer.GRPCServer(), machineHandler)
 	financev1.RegisterInterminglingServiceServer(grpcServer.GRPCServer(), interminglingHandler)
 	financev1.RegisterSpinFixedCostServiceServer(grpcServer.GRPCServer(), spinFixedCostHandler)
+	financev1.RegisterYarnTxWeightServiceServer(grpcServer.GRPCServer(), yarnTxWeightHandler)
 	financev1.RegisterProductGradeServiceServer(grpcServer.GRPCServer(), productGradeHandler)
 	financev1.RegisterLookupMasterServiceServer(grpcServer.GRPCServer(), lookupMasterHandler)
 	financev1.RegisterYarnLookupFillServiceServer(grpcServer.GRPCServer(), yarnLookupFillHandler)
