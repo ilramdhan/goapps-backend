@@ -21,6 +21,9 @@ database:
   max_open_conns: 25
   max_idle_conns: 5
   conn_max_lifetime: 5m
+  # Must stay true whenever the connection goes through PgBouncer in
+  # transaction pooling mode (all K8s environments). See DatabaseConfig.
+  binary_parameters: true
 
 jwt:
   access_token_secret: "dev-access-secret-change-in-production"
