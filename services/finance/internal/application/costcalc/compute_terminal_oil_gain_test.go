@@ -54,6 +54,9 @@ func yarnTerminalCAPP() map[string]float64 {
 		// (000408:41,42; params :163,:165).
 		"RM_NORMS":       1.05,
 		"RM_LANDED_COST": 100.0,
+		// MB cost term added by 000532. F_YARN_MB_COST is not part of this
+		// fixture, so the value arrives as a leaf.
+		"MB_COST_MKT": 0.375,
 		// Leaves of F_YARN_CAP_FINAL / F_YARN_DEL_FINAL
 		// (000408:48,49; params :179,:181). The QLOSS producers are deliberately
 		// left out of the fixture — the point under test is terminal selection,
@@ -68,6 +71,14 @@ func yarnTerminalCAPP() map[string]float64 {
 		"VOLUME_BUCKET_5_LOSS": 5.5,
 	}
 }
+
+// Pre-quality-loss expressions (Top Check 94 / 95) exactly as migration 000532
+// writes them: the 000408:41-42 text with " + MB_COST_MKT" appended. Asserted
+// against the migration file by TestMigration000532_MatchesFixtureExpressions.
+const (
+	capPreQLExpr = "RM_NORMS * RM_LANDED_COST + ONLY_CONV_CAP_PACK_EXCL_MB + MB_COST_MKT"
+	delPreQLExpr = "RM_NORMS * RM_LANDED_COST + ONLY_CONV_DEL_PACK_EXCL_MB + MB_COST_MKT"
+)
 
 // yarnTerminalFormulas builds the yarn formula chain in topological order
 // (the loader pre-sorts; see Formula.SortOrder in formula.go).
@@ -133,24 +144,26 @@ func yarnTerminalFormulas(withOilGainAsInput bool) []Formula {
 			InputParamCodes: convDelInputs,
 			SortOrder:       3,
 		},
-		// 000408:41 — formula_param at 000408:163.
+		// 000408:41 as rewritten by 000532 (+ MB_COST_MKT) — formula_param at
+		// 000408:163 plus the 000532 edge.
 		{
 			FormulaCode:     "F_YARN_CAP_PRE_QL",
 			FormulaName:     "Captive Cost Before Quality Loss",
 			FormulaType:     "CALCULATION",
-			Expression:      "RM_NORMS * RM_LANDED_COST + ONLY_CONV_CAP_PACK_EXCL_MB",
+			Expression:      capPreQLExpr,
 			ResultParamCode: "CAPTIVE_COST_BEFORE_QLOSS",
-			InputParamCodes: []string{"RM_NORMS", "RM_LANDED_COST", "ONLY_CONV_CAP_PACK_EXCL_MB"},
+			InputParamCodes: []string{"RM_NORMS", "RM_LANDED_COST", "ONLY_CONV_CAP_PACK_EXCL_MB", "MB_COST_MKT"},
 			SortOrder:       4,
 		},
-		// 000408:42 — formula_param at 000408:165.
+		// 000408:42 as rewritten by 000532 (+ MB_COST_MKT) — formula_param at
+		// 000408:165 plus the 000532 edge.
 		{
 			FormulaCode:     "F_YARN_DEL_PRE_QL",
 			FormulaName:     "Delivery Cost Before Quality Loss",
 			FormulaType:     "CALCULATION",
-			Expression:      "RM_NORMS * RM_LANDED_COST + ONLY_CONV_DEL_PACK_EXCL_MB",
+			Expression:      delPreQLExpr,
 			ResultParamCode: "DELIVERY_COST_BEFORE_QLOSS",
-			InputParamCodes: []string{"RM_NORMS", "RM_LANDED_COST", "ONLY_CONV_DEL_PACK_EXCL_MB"},
+			InputParamCodes: []string{"RM_NORMS", "RM_LANDED_COST", "ONLY_CONV_DEL_PACK_EXCL_MB", "MB_COST_MKT"},
 			SortOrder:       5,
 		},
 		// 000408:48 — formula_param at 000408:179.

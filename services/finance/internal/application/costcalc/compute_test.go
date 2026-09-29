@@ -384,17 +384,18 @@ func TestComputeProduct_YarnVB1Loss_FixedFormula(t *testing.T) {
 			"RM_LANDED_COST":             2,
 			"RM_NORMS":                   1,
 			"ONLY_CONV_DEL_PACK_EXCL_MB": 0.5,
+			"MB_COST_MKT":                0,
 			"DELIVERY_COST_BEFORE_QLOSS": 2.5,
 			"QLTY_LOSS_DELIVERY_COST":    0.1,
 		},
 		Formulas: []Formula{
 			// F_YARN_RM_LANDED: pass-through RM_RATE → RM_LANDED_COST (already in CAPP, skipped)
-			// F_YARN_DEL_PRE_QL: RM_NORMS * RM_LANDED_COST + ONLY_CONV_DEL_PACK_EXCL_MB
+			// F_YARN_DEL_PRE_QL (000532): RM_NORMS * RM_LANDED_COST + ONLY_CONV_DEL_PACK_EXCL_MB + MB_COST_MKT
 			{
 				FormulaCode:     "F_YARN_DEL_PRE_QL",
-				Expression:      "RM_NORMS * RM_LANDED_COST + ONLY_CONV_DEL_PACK_EXCL_MB",
+				Expression:      delPreQLExpr,
 				ResultParamCode: "DELIVERY_COST_BEFORE_QLOSS",
-				InputParamCodes: []string{"RM_NORMS", "RM_LANDED_COST", "ONLY_CONV_DEL_PACK_EXCL_MB"},
+				InputParamCodes: []string{"RM_NORMS", "RM_LANDED_COST", "ONLY_CONV_DEL_PACK_EXCL_MB", "MB_COST_MKT"},
 			},
 			// F_YARN_DEL_FINAL: DELIVERY_COST_BEFORE_QLOSS + QLTY_LOSS_DELIVERY_COST
 			{
