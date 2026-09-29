@@ -123,6 +123,11 @@ type ComputeInput struct {
 	// value, preserving pre-oil behavior for callers that do not supply it
 	// (e.g. mbbatch).
 	Oil *OilInput
+	// TxWeight holds this product type's live mst_yarn_tx_weight rules keyed
+	// by grade (AE/A9/A/B/C), loaded once per chunk via TxWeightLoader. Nil
+	// makes tx_weight() return its fallback (the ratio formula), preserving
+	// pre-TX-Weight behavior for callers that do not supply it (e.g. mbbatch).
+	TxWeight map[string]TxWeightRule
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
@@ -351,6 +356,7 @@ func buildInitialScope(in ComputeInput) (map[string]any, map[string]bool) {
 	injectSpinFixedCost(scope, zeroFilled, in.SpinFixedCost)
 	injectProductClassFlags(scope, zeroFilled, in.Oil)
 	injectMarketingResult(scope, in.SellingSnapshot)
+	injectTxWeight(scope, in.TxWeight)
 	return scope, zeroFilled
 }
 

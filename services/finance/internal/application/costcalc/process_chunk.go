@@ -146,6 +146,9 @@ type loadedBundle struct {
 	// oil is the per-product oil context (LoadOilContext). Products whose type
 	// has no oil class are absent, which ComputeProduct treats as "no oil".
 	oil map[int64]*OilInput
+	// txWeight is the per-product TX Weight rules (TxWeightLoader), keyed by
+	// grade. Products whose type has no rule are absent (fallback formula).
+	txWeight map[int64]map[string]TxWeightRule
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -220,7 +223,13 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 			Msg("spin fixed cost pool is stale: no master row for the requested period, POY fixed cost computed from an older month's pool")
 	}
 
+	txWeight, err := s.loadTxWeightRules(ctx, in.Products)
+	if err != nil {
+		return nil, err
+	}
+
 	return &loadedBundle{
+		txWeight:         txWeight,
 		routes:           routes,
 		capp:             capp,
 		formulas:         formulas,
@@ -334,6 +343,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		RMRateOrder:      loaded.rmRateOrder,
 		RMLandedOrder:    loaded.rmLandedOrder,
 		Oil:              loaded.oil[pid],
+		TxWeight:         loaded.txWeight[pid],
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)
