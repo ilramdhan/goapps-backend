@@ -265,3 +265,30 @@ func TestWriteAllDataSheet_IdentityParamFallback(t *testing.T) {
 		require.Empty(t, got, "cell %s must be blank", cell)
 	}
 }
+
+// TestAllDataColumns_VLossSources pins the 000546 source swap: the NS/BC SP
+// columns read the grade auto-fill children, not the retired *_SPECIAL_PROD
+// params, and the headers are unchanged.
+func TestAllDataColumns_VLossSources(t *testing.T) {
+	want := map[string]string{
+		"96.Std Val. Loss": "NS_LOSS_TYPE",
+		"97.Value loss":    "BC_LOSS_TYPE",
+		"98.NS SP":         "NS_LOSS",
+		"99.BC SP":         "STD_SP_BC",
+	}
+	found := 0
+	for _, col := range allDataColumns {
+		code, ok := want[col.Header]
+		if !ok {
+			continue
+		}
+		found++
+		require.Equal(t, code, col.ParamCode, "column %q", col.Header)
+	}
+	require.Equal(t, len(want), found, "all V-loss source headers must be present")
+	for _, col := range allDataColumns {
+		for _, legacy := range []string{"STD_VALUE_LOSS", "VALUE_LOSS", "NON_STD_SPECIAL_PROD", "BC_SPECIAL_PROD"} {
+			require.NotEqual(t, legacy, col.ParamCode, "column %q must not read retired param", col.Header)
+		}
+	}
+}
