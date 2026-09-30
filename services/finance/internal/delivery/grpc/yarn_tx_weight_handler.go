@@ -16,7 +16,6 @@ import (
 // YarnTxWeightHandler implements financev1.YarnTxWeightServiceServer.
 type YarnTxWeightHandler struct {
 	financev1.UnimplementedYarnTxWeightServiceServer
-	createHandler *appyarntxweight.CreateHandler
 	getHandler    *appyarntxweight.GetHandler
 	listHandler   *appyarntxweight.ListHandler
 	updateHandler *appyarntxweight.UpdateHandler
@@ -31,7 +30,6 @@ func NewYarnTxWeightHandler(repo yarntxweight.Repository) (*YarnTxWeightHandler,
 		return nil, err
 	}
 	return &YarnTxWeightHandler{
-		createHandler: appyarntxweight.NewCreateHandler(repo),
 		getHandler:    appyarntxweight.NewGetHandler(repo),
 		listHandler:   appyarntxweight.NewListHandler(repo),
 		updateHandler: appyarntxweight.NewUpdateHandler(repo),
@@ -40,30 +38,20 @@ func NewYarnTxWeightHandler(repo yarntxweight.Repository) (*YarnTxWeightHandler,
 	}, nil
 }
 
-// CreateYarnTxWeight creates a new TX Weight rule.
-func (h *YarnTxWeightHandler) CreateYarnTxWeight(ctx context.Context, req *financev1.CreateYarnTxWeightRequest) (*financev1.CreateYarnTxWeightResponse, error) {
-	if baseResp := h.validation.ValidateRequest(req); baseResp != nil {
-		RecordYarnTxWeightOperation("create", false)
-		return &financev1.CreateYarnTxWeightResponse{Base: baseResp}, nil
-	}
+// yarnTxWeightCreateDeprecatedMsg is returned by the deprecated per product
+// type CreateYarnTxWeight. Since 000536 the engine reads rules through a TX
+// Weight group, so a group-less rule row would silently have no effect.
+const yarnTxWeightCreateDeprecatedMsg = "creating per product type TX weight rules is no longer supported: " +
+	"use YarnTxWeightGroupService (/api/v1/finance/yarn-tx-weight-groups)"
 
-	entity, err := h.createHandler.Handle(ctx, appyarntxweight.CreateCommand{
-		ProductTypeID: req.ProductTypeId,
-		Grade:         yarnTxWeightGradeFromProto(req.Grade),
-		Mode:          yarnTxWeightModeFromProto(req.Mode),
-		Value:         req.Value,
-		Description:   req.Description,
-		CreatedBy:     getUserFromContext(ctx),
-	})
-	if err != nil {
-		RecordYarnTxWeightOperation("create", false)
-		return &financev1.CreateYarnTxWeightResponse{Base: domainErrorToBaseResponse(err)}, nil
-	}
-
-	RecordYarnTxWeightOperation("create", true)
+// CreateYarnTxWeight is deprecated: it always answers FailedPrecondition (412)
+// and points callers to YarnTxWeightGroupService. Rules now belong to a TX
+// Weight group (migration 000536); a per-type row written here would carry no
+// ytw_group_id and be ignored by the tx_weight() engine.
+func (h *YarnTxWeightHandler) CreateYarnTxWeight(_ context.Context, _ *financev1.CreateYarnTxWeightRequest) (*financev1.CreateYarnTxWeightResponse, error) {
+	RecordYarnTxWeightOperation("create", false)
 	return &financev1.CreateYarnTxWeightResponse{
-		Base: successResponse("TX weight rule created successfully"),
-		Data: yarnTxWeightEntityToProto(entity),
+		Base: ErrorResponse("412", yarnTxWeightCreateDeprecatedMsg),
 	}, nil
 }
 

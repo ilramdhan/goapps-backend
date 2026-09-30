@@ -206,6 +206,14 @@ var (
 		[]string{"operation", "status"},
 	)
 
+	yarnTxWeightGroupOperationsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "yarn_tx_weight_group_operations_total",
+			Help: "Total number of Yarn TX Weight group operations.",
+		},
+		[]string{"operation", "status"},
+	)
+
 	spinFixedCostOperationsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "spin_fixed_cost_operations_total",
@@ -304,6 +312,11 @@ func RecordInterminglingOperation(operation string, success bool) {
 // RecordYarnTxWeightOperation records a Yarn TX Weight operation metric.
 func RecordYarnTxWeightOperation(operation string, success bool) {
 	yarnTxWeightOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// RecordYarnTxWeightGroupOperation records a Yarn TX Weight group operation metric.
+func RecordYarnTxWeightGroupOperation(operation string, success bool) {
+	yarnTxWeightGroupOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
 }
 
 // RecordSpinFixedCostOperation records a Spin Fixed Cost operation metric.

@@ -677,6 +677,14 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.YarnTxWeightService/DeleteYarnTxWeight": "finance.master.yarntxweight.delete",
 		"/finance.v1.YarnTxWeightService/ListYarnTxWeights":  "finance.master.yarntxweight.view",
 
+		// YarnTxWeightGroupService (TX Weight groups, backlog1 T24/T25) — reuses
+		// finance.master.yarntxweight.* so no new IAM seed is needed.
+		"/finance.v1.YarnTxWeightGroupService/CreateYarnTxWeightGroup": "finance.master.yarntxweight.create",
+		"/finance.v1.YarnTxWeightGroupService/GetYarnTxWeightGroup":    "finance.master.yarntxweight.view",
+		"/finance.v1.YarnTxWeightGroupService/UpdateYarnTxWeightGroup": "finance.master.yarntxweight.update",
+		"/finance.v1.YarnTxWeightGroupService/DeleteYarnTxWeightGroup": "finance.master.yarntxweight.delete",
+		"/finance.v1.YarnTxWeightGroupService/ListYarnTxWeightGroups":  "finance.master.yarntxweight.view",
+
 		// UOMCategoryService — mutating RPCs guarded with the pre-seeded
 		// finance.master.uomcategory.* codes (K-34 fail-open closure).
 		"/finance.v1.UOMCategoryService/UpdateUOMCategory": "finance.master.uomcategory.update",

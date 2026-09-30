@@ -69,6 +69,7 @@ func registeredServiceDescs() []grpc.ServiceDesc {
 		financev1.InterminglingService_ServiceDesc,
 		financev1.SpinFixedCostService_ServiceDesc,
 		financev1.YarnTxWeightService_ServiceDesc,
+		financev1.YarnTxWeightGroupService_ServiceDesc,
 		financev1.ProductGradeService_ServiceDesc,
 		financev1.LookupMasterService_ServiceDesc,
 		financev1.YarnLookupFillService_ServiceDesc,
@@ -692,7 +693,9 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// submit/status/failures RPCs.
 	// 52 -> 53: YarnTxWeightService (backlog1 T5, TX Weight master) newly
 	// registered in cmd/server/main.go.
-	assert.Len(t, registeredServiceDescs(), 53,
+	// 53 -> 54: YarnTxWeightGroupService (backlog1 T24/T25, shared TX Weight
+	// groups) newly registered in cmd/server/main.go.
+	assert.Len(t, registeredServiceDescs(), 54,
 		"service count changed — reconcile registeredServiceDescs() with cmd/server/main.go")
 	// 374 -> 375: RPC BARU DuplicateMBSpin (P8, gerbang G16 opsi (a)), 392 in gen - 17
 	// 375 -> 378: TIGA RPC BARU unlock MBHeadService (P10-b): RequestUnlockMBHead,
@@ -723,11 +726,12 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 396 -> 398: TWO new CostProductTypeService RPCs (oil-cost-rm-group P1/P4):
 	// GetCostProductTypeOilConfig, SetCostProductTypeOilConfig.
 	// 398 -> 403: FIVE new YarnTxWeightService CRUD RPCs (backlog1 T5).
-	assert.Len(t, reachable, 403,
+	// 403 -> 408: FIVE new YarnTxWeightGroupService CRUD RPCs (backlog1 T25).
+	assert.Len(t, reachable, 408,
 		"reachable RPC count changed (398 in gen − 17 on the 3 unregistered services + 6 for the "+
 			"previously-omitted-from-this-list ShadeService + 5 new Bulk MB Head Regenerate RPCs + 1 new "+
 			"DuplicateProduct RPC + 3 new CostProductParamBulkService RPCs, product-route-fork-attach-bulk "+
-			"F2/B2/F4/B4 + 1 new ExportMBCostCalcDetail RPC + 2 new CostProductTypeService oil-config RPCs + 5 new YarnTxWeightService RPCs)")
+			"F2/B2/F4/B4 + 1 new ExportMBCostCalcDetail RPC + 2 new CostProductTypeService oil-config RPCs + 5 new YarnTxWeightService RPCs + 5 new YarnTxWeightGroupService RPCs)")
 	// 130 -> 132: dua kunci basi UOM (ImportUOM/ExportUOM) dibetulkan jadi ImportUOMs/ExportUOMs, K-36
 	// 132 -> 135: tiga bulk RPC CostProductMasterService (Export/Import/DownloadTemplate) dijaga, K-43
 	// 135 -> 136: DuplicateMBSpin dijaga finance.yarnmaster.mbspin.create (di-seed iam 000057:47), P8
@@ -777,7 +781,9 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 172 -> 177: FIVE YarnTxWeightService RPCs guarded FROM BIRTH by the new
 	// finance.master.yarntxweight.{create,view,update,delete} codes (seeded by
 	// iam 000093). knownFailOpen does NOT grow.
-	assert.Equal(t, 177, guarded, "number of properly guarded RPCs changed")
+	// 177 -> 182: FIVE YarnTxWeightGroupService RPCs guarded FROM BIRTH by the
+	// same finance.master.yarntxweight.* codes. knownFailOpen does NOT grow.
+	assert.Equal(t, 182, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43
