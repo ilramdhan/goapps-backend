@@ -100,16 +100,16 @@ func (e *Entity) BCRecoveryRate() float64 { return e.bcRecoveryRate }
 // PgDetailProduct returns the Oracle CMPG_DETAIL_PRODUCT pattern key.
 func (e *Entity) PgDetailProduct() string { return e.pgDetailProduct }
 
-// PgGradeLabel returns the grade label for STD_VALUE_LOSS.
+// PgGradeLabel returns the display grade label.
 func (e *Entity) PgGradeLabel() string { return e.pgGradeLabel }
 
-// StdSellingPrice returns the BC_SPECIAL_PROD rate.
+// StdSellingPrice returns the standard selling price (auto-fills STD_SP_AX via BC_LOSS_TYPE).
 func (e *Entity) StdSellingPrice() float64 { return e.stdSellingPrice }
 
-// SpValue returns the VALUE_LOSS rate.
+// SpValue returns the BC selling price (auto-fills STD_SP_BC via BC_LOSS_TYPE).
 func (e *Entity) SpValue() float64 { return e.spValue }
 
-// LossPct returns the optional loss factor.
+// LossPct returns the optional loss factor (auto-fills NS_LOSS via NS_LOSS_TYPE).
 func (e *Entity) LossPct() *float64 { return e.lossPct }
 
 // SeqNo returns the optional display sequence number.

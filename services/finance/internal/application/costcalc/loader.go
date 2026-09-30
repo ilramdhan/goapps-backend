@@ -684,6 +684,12 @@ func (l *productLoader) LoadCAPP(ctx context.Context, productSysIDs []int64) (ma
 // The tradeoff is that these columns show *current* names rather than the names
 // as of calculation time — acceptable for labels, and it is the only option
 // short of a new snapshot column plus a full re-run.
+//
+// PRODUCT_GRADE lookups (NS_LOSS_TYPE / BC_LOSS_TYPE) store the grade CODE
+// (pg_code, the combobox value since 000546) but the sheet prints the grade
+// NAME, so they are resolved to pg_name here. A value that is not a known code
+// (a legacy row still holding the name, or an unmatched text) passes through
+// unchanged, so both shapes render the same label.
 func (l *productLoader) LoadCAPPText(ctx context.Context, productSysIDs []int64) (map[int64]map[string]string, error) {
 	defer observeLoad(loaderKindCAPP, time.Now())
 	out := map[int64]map[string]string{}
@@ -691,12 +697,17 @@ func (l *productLoader) LoadCAPPText(ctx context.Context, productSysIDs []int64)
 		return out, nil
 	}
 	const q = `
-		SELECT capp.capp_product_sys_id, mp.param_code, cpp.cpp_value_text
+		SELECT capp.capp_product_sys_id, mp.param_code,
+		       COALESCE(g.pg_name, cpp.cpp_value_text)
 		FROM cost_product_applicable_param capp
 		JOIN mst_parameter mp ON mp.id = capp.capp_param_id
 		JOIN cost_product_parameter cpp
 		     ON cpp.cpp_product_sys_id = capp.capp_product_sys_id
 		    AND cpp.cpp_param_id = capp.capp_param_id
+		LEFT JOIN mst_product_grade g
+		     ON mp.lookup_master_code = 'PRODUCT_GRADE'
+		    AND g.pg_code = TRIM(cpp.cpp_value_text)
+		    AND g.deleted_at IS NULL
 		WHERE capp.capp_product_sys_id = ANY($1)
 		  AND cpp.cpp_value_text IS NOT NULL
 		  AND cpp.cpp_value_text <> ''

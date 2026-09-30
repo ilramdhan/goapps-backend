@@ -5601,22 +5601,22 @@
         },
         "pgGradeLabel": {
           "type": "string",
-          "description": "Optional grade label for STD_VALUE_LOSS (max 50 chars)."
+          "description": "Optional display grade label (max 50 chars; informational, not copied to a param)."
         },
         "stdSellingPrice": {
           "type": "number",
           "format": "double",
-          "description": "Optional BC_SPECIAL_PROD rate (≥ 0)."
+          "description": "Optional standard selling price, auto-fills STD_SP_AX (≥ 0)."
         },
         "spValue": {
           "type": "number",
           "format": "double",
-          "description": "Optional VALUE_LOSS rate (≥ 0)."
+          "description": "Optional BC selling price, auto-fills STD_SP_BC via BC_LOSS_TYPE (≥ 0)."
         },
         "lossPct": {
           "type": "number",
           "format": "double",
-          "description": "Optional updated loss factor (≥ 0)."
+          "description": "Optional updated NS loss factor, auto-fills NS_LOSS via NS_LOSS_TYPE (≥ 0)."
         },
         "seqNo": {
           "type": "integer",
@@ -6870,22 +6870,22 @@
         },
         "pgGradeLabel": {
           "type": "string",
-          "description": "Grade label for STD_VALUE_LOSS (max 50 chars)."
+          "description": "Display grade label (max 50 chars; informational, not copied to a param)."
         },
         "stdSellingPrice": {
           "type": "number",
           "format": "double",
-          "description": "BC_SPECIAL_PROD rate (≥ 0)."
+          "description": "Standard selling price, auto-fills STD_SP_AX (≥ 0)."
         },
         "spValue": {
           "type": "number",
           "format": "double",
-          "description": "VALUE_LOSS rate (≥ 0)."
+          "description": "BC selling price, auto-fills STD_SP_BC via BC_LOSS_TYPE (≥ 0)."
         },
         "lossPct": {
           "type": "number",
           "format": "double",
-          "description": "Optional loss factor (≥ 0)."
+          "description": "Optional NS loss factor, auto-fills NS_LOSS via NS_LOSS_TYPE (≥ 0)."
         },
         "seqNo": {
           "type": "integer",
@@ -9766,22 +9766,22 @@
         },
         "pgGradeLabel": {
           "type": "string",
-          "description": "Grade label for STD_VALUE_LOSS."
+          "description": "Display grade label (informational; no longer copied to a cost param —\nproducts reference the grade by pg_code via NS_LOSS_TYPE / BC_LOSS_TYPE)."
         },
         "stdSellingPrice": {
           "type": "number",
           "format": "double",
-          "description": "BC_SPECIAL_PROD rate."
+          "description": "Standard selling price; auto-fills param STD_SP_AX."
         },
         "spValue": {
           "type": "number",
           "format": "double",
-          "description": "VALUE_LOSS rate."
+          "description": "BC selling price; auto-fills param STD_SP_BC via BC_LOSS_TYPE\n(BC V-Loss = (cost before QLoss − STD_SP_BC) × (B+C) / 100)."
         },
         "lossPct": {
           "type": "number",
           "format": "double",
-          "description": "Optional loss factor (param NON_STD_SPECIAL_PROD, from Oracle CMPG_LOSS)."
+          "description": "Optional NS loss factor (from Oracle CMPG_LOSS); auto-fills param NS_LOSS via\nNS_LOSS_TYPE (NS V-Loss = (AE + A9 + A) / 100 × NS_LOSS)."
         },
         "seqNo": {
           "type": "integer",

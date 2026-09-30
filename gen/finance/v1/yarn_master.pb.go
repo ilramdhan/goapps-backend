@@ -4539,13 +4539,16 @@ type ProductGrade struct {
 	Notes string `protobuf:"bytes,9,opt,name=notes,proto3" json:"notes,omitempty"`
 	// Pattern match key (e.g., "DBR <=600D").
 	PgDetailProduct string `protobuf:"bytes,10,opt,name=pg_detail_product,json=pgDetailProduct,proto3" json:"pg_detail_product,omitempty"`
-	// Grade label for STD_VALUE_LOSS.
+	// Display grade label (informational; no longer copied to a cost param —
+	// products reference the grade by pg_code via NS_LOSS_TYPE / BC_LOSS_TYPE).
 	PgGradeLabel string `protobuf:"bytes,11,opt,name=pg_grade_label,json=pgGradeLabel,proto3" json:"pg_grade_label,omitempty"`
-	// BC_SPECIAL_PROD rate.
+	// Standard selling price; auto-fills param STD_SP_AX.
 	StdSellingPrice float64 `protobuf:"fixed64,12,opt,name=std_selling_price,json=stdSellingPrice,proto3" json:"std_selling_price,omitempty"`
-	// VALUE_LOSS rate.
+	// BC selling price; auto-fills param STD_SP_BC via BC_LOSS_TYPE
+	// (BC V-Loss = (cost before QLoss − STD_SP_BC) × (B+C) / 100).
 	SpValue float64 `protobuf:"fixed64,13,opt,name=sp_value,json=spValue,proto3" json:"sp_value,omitempty"`
-	// Optional loss factor (param NON_STD_SPECIAL_PROD, from Oracle CMPG_LOSS).
+	// Optional NS loss factor (from Oracle CMPG_LOSS); auto-fills param NS_LOSS via
+	// NS_LOSS_TYPE (NS V-Loss = (AE + A9 + A) / 100 × NS_LOSS).
 	LossPct *float64 `protobuf:"fixed64,14,opt,name=loss_pct,json=lossPct,proto3,oneof" json:"loss_pct,omitempty"`
 	// Optional display sequence number (from Oracle CMPG_SEQ_NO).
 	SeqNo *int32 `protobuf:"varint,15,opt,name=seq_no,json=seqNo,proto3,oneof" json:"seq_no,omitempty"`
@@ -4716,13 +4719,13 @@ type CreateProductGradeRequest struct {
 	Notes string `protobuf:"bytes,7,opt,name=notes,proto3" json:"notes,omitempty"`
 	// Pattern match key (max 100 chars).
 	PgDetailProduct string `protobuf:"bytes,8,opt,name=pg_detail_product,json=pgDetailProduct,proto3" json:"pg_detail_product,omitempty"`
-	// Grade label for STD_VALUE_LOSS (max 50 chars).
+	// Display grade label (max 50 chars; informational, not copied to a param).
 	PgGradeLabel string `protobuf:"bytes,9,opt,name=pg_grade_label,json=pgGradeLabel,proto3" json:"pg_grade_label,omitempty"`
-	// BC_SPECIAL_PROD rate (≥ 0).
+	// Standard selling price, auto-fills STD_SP_AX (≥ 0).
 	StdSellingPrice float64 `protobuf:"fixed64,10,opt,name=std_selling_price,json=stdSellingPrice,proto3" json:"std_selling_price,omitempty"`
-	// VALUE_LOSS rate (≥ 0).
+	// BC selling price, auto-fills STD_SP_BC via BC_LOSS_TYPE (≥ 0).
 	SpValue float64 `protobuf:"fixed64,11,opt,name=sp_value,json=spValue,proto3" json:"sp_value,omitempty"`
-	// Optional loss factor (≥ 0).
+	// Optional NS loss factor, auto-fills NS_LOSS via NS_LOSS_TYPE (≥ 0).
 	LossPct *float64 `protobuf:"fixed64,12,opt,name=loss_pct,json=lossPct,proto3,oneof" json:"loss_pct,omitempty"`
 	// Optional display sequence number (≥ 0).
 	SeqNo         *int32 `protobuf:"varint,13,opt,name=seq_no,json=seqNo,proto3,oneof" json:"seq_no,omitempty"`
@@ -5028,13 +5031,13 @@ type UpdateProductGradeRequest struct {
 	IsActive *bool `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	// Optional pattern match key (max 100 chars).
 	PgDetailProduct *string `protobuf:"bytes,9,opt,name=pg_detail_product,json=pgDetailProduct,proto3,oneof" json:"pg_detail_product,omitempty"`
-	// Optional grade label for STD_VALUE_LOSS (max 50 chars).
+	// Optional display grade label (max 50 chars; informational, not copied to a param).
 	PgGradeLabel *string `protobuf:"bytes,10,opt,name=pg_grade_label,json=pgGradeLabel,proto3,oneof" json:"pg_grade_label,omitempty"`
-	// Optional BC_SPECIAL_PROD rate (≥ 0).
+	// Optional standard selling price, auto-fills STD_SP_AX (≥ 0).
 	StdSellingPrice *float64 `protobuf:"fixed64,11,opt,name=std_selling_price,json=stdSellingPrice,proto3,oneof" json:"std_selling_price,omitempty"`
-	// Optional VALUE_LOSS rate (≥ 0).
+	// Optional BC selling price, auto-fills STD_SP_BC via BC_LOSS_TYPE (≥ 0).
 	SpValue *float64 `protobuf:"fixed64,12,opt,name=sp_value,json=spValue,proto3,oneof" json:"sp_value,omitempty"`
-	// Optional updated loss factor (≥ 0).
+	// Optional updated NS loss factor, auto-fills NS_LOSS via NS_LOSS_TYPE (≥ 0).
 	LossPct *float64 `protobuf:"fixed64,13,opt,name=loss_pct,json=lossPct,proto3,oneof" json:"loss_pct,omitempty"`
 	// Optional updated display sequence number (≥ 0).
 	SeqNo         *int32 `protobuf:"varint,14,opt,name=seq_no,json=seqNo,proto3,oneof" json:"seq_no,omitempty"`
