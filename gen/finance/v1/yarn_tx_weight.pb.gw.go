@@ -220,6 +220,191 @@ func local_request_YarnTxWeightService_ListYarnTxWeights_0(ctx context.Context, 
 	return msg, metadata, err
 }
 
+func request_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0(ctx context.Context, marshaler runtime.Marshaler, client YarnTxWeightGroupServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateYarnTxWeightGroupRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.CreateYarnTxWeightGroup(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0(ctx context.Context, marshaler runtime.Marshaler, server YarnTxWeightGroupServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateYarnTxWeightGroupRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.CreateYarnTxWeightGroup(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_YarnTxWeightGroupService_GetYarnTxWeightGroup_0(ctx context.Context, marshaler runtime.Marshaler, client YarnTxWeightGroupServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetYarnTxWeightGroupRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["group_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "group_id")
+	}
+	protoReq.GroupId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "group_id", err)
+	}
+	msg, err := client.GetYarnTxWeightGroup(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_YarnTxWeightGroupService_GetYarnTxWeightGroup_0(ctx context.Context, marshaler runtime.Marshaler, server YarnTxWeightGroupServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetYarnTxWeightGroupRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["group_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "group_id")
+	}
+	protoReq.GroupId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "group_id", err)
+	}
+	msg, err := server.GetYarnTxWeightGroup(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0(ctx context.Context, marshaler runtime.Marshaler, client YarnTxWeightGroupServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateYarnTxWeightGroupRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["group_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "group_id")
+	}
+	protoReq.GroupId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "group_id", err)
+	}
+	msg, err := client.UpdateYarnTxWeightGroup(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0(ctx context.Context, marshaler runtime.Marshaler, server YarnTxWeightGroupServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateYarnTxWeightGroupRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["group_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "group_id")
+	}
+	protoReq.GroupId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "group_id", err)
+	}
+	msg, err := server.UpdateYarnTxWeightGroup(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0(ctx context.Context, marshaler runtime.Marshaler, client YarnTxWeightGroupServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteYarnTxWeightGroupRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["group_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "group_id")
+	}
+	protoReq.GroupId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "group_id", err)
+	}
+	msg, err := client.DeleteYarnTxWeightGroup(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0(ctx context.Context, marshaler runtime.Marshaler, server YarnTxWeightGroupServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteYarnTxWeightGroupRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["group_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "group_id")
+	}
+	protoReq.GroupId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "group_id", err)
+	}
+	msg, err := server.DeleteYarnTxWeightGroup(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_YarnTxWeightGroupService_ListYarnTxWeightGroups_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_YarnTxWeightGroupService_ListYarnTxWeightGroups_0(ctx context.Context, marshaler runtime.Marshaler, client YarnTxWeightGroupServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListYarnTxWeightGroupsRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_YarnTxWeightGroupService_ListYarnTxWeightGroups_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.ListYarnTxWeightGroups(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_YarnTxWeightGroupService_ListYarnTxWeightGroups_0(ctx context.Context, marshaler runtime.Marshaler, server YarnTxWeightGroupServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListYarnTxWeightGroupsRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_YarnTxWeightGroupService_ListYarnTxWeightGroups_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.ListYarnTxWeightGroups(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 // RegisterYarnTxWeightServiceHandlerServer registers the http handlers for service YarnTxWeightService to "mux".
 // UnaryRPC     :call YarnTxWeightServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -325,6 +510,116 @@ func RegisterYarnTxWeightServiceHandlerServer(ctx context.Context, mux *runtime.
 			return
 		}
 		forward_YarnTxWeightService_ListYarnTxWeights_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+
+	return nil
+}
+
+// RegisterYarnTxWeightGroupServiceHandlerServer registers the http handlers for service YarnTxWeightGroupService to "mux".
+// UnaryRPC     :call YarnTxWeightGroupServiceServer directly.
+// StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterYarnTxWeightGroupServiceHandlerFromEndpoint instead.
+// GRPC interceptors will not work for this type of registration. To use interceptors, you must use the "runtime.WithMiddlewares" option in the "runtime.NewServeMux" call.
+func RegisterYarnTxWeightGroupServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server YarnTxWeightGroupServiceServer) error {
+	mux.Handle(http.MethodPost, pattern_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/CreateYarnTxWeightGroup", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_YarnTxWeightGroupService_GetYarnTxWeightGroup_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/GetYarnTxWeightGroup", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups/{group_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_YarnTxWeightGroupService_GetYarnTxWeightGroup_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_GetYarnTxWeightGroup_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPut, pattern_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/UpdateYarnTxWeightGroup", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups/{group_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/DeleteYarnTxWeightGroup", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups/{group_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_YarnTxWeightGroupService_ListYarnTxWeightGroups_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/ListYarnTxWeightGroups", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_YarnTxWeightGroupService_ListYarnTxWeightGroups_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_ListYarnTxWeightGroups_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 
 	return nil
@@ -468,4 +763,144 @@ var (
 	forward_YarnTxWeightService_UpdateYarnTxWeight_0 = runtime.ForwardResponseMessage
 	forward_YarnTxWeightService_DeleteYarnTxWeight_0 = runtime.ForwardResponseMessage
 	forward_YarnTxWeightService_ListYarnTxWeights_0  = runtime.ForwardResponseMessage
+)
+
+// RegisterYarnTxWeightGroupServiceHandlerFromEndpoint is same as RegisterYarnTxWeightGroupServiceHandler but
+// automatically dials to "endpoint" and closes the connection when "ctx" gets done.
+func RegisterYarnTxWeightGroupServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+	conn, err := grpc.NewClient(endpoint, opts...)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			if cerr := conn.Close(); cerr != nil {
+				grpclog.Errorf("Failed to close conn to %s: %v", endpoint, cerr)
+			}
+			return
+		}
+		go func() {
+			<-ctx.Done()
+			if cerr := conn.Close(); cerr != nil {
+				grpclog.Errorf("Failed to close conn to %s: %v", endpoint, cerr)
+			}
+		}()
+	}()
+	return RegisterYarnTxWeightGroupServiceHandler(ctx, mux, conn)
+}
+
+// RegisterYarnTxWeightGroupServiceHandler registers the http handlers for service YarnTxWeightGroupService to "mux".
+// The handlers forward requests to the grpc endpoint over "conn".
+func RegisterYarnTxWeightGroupServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterYarnTxWeightGroupServiceHandlerClient(ctx, mux, NewYarnTxWeightGroupServiceClient(conn))
+}
+
+// RegisterYarnTxWeightGroupServiceHandlerClient registers the http handlers for service YarnTxWeightGroupService
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "YarnTxWeightGroupServiceClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "YarnTxWeightGroupServiceClient"
+// doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
+// "YarnTxWeightGroupServiceClient" to call the correct interceptors. This client ignores the HTTP middlewares.
+func RegisterYarnTxWeightGroupServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client YarnTxWeightGroupServiceClient) error {
+	mux.Handle(http.MethodPost, pattern_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/CreateYarnTxWeightGroup", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_YarnTxWeightGroupService_GetYarnTxWeightGroup_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/GetYarnTxWeightGroup", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups/{group_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_YarnTxWeightGroupService_GetYarnTxWeightGroup_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_GetYarnTxWeightGroup_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPut, pattern_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/UpdateYarnTxWeightGroup", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups/{group_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/DeleteYarnTxWeightGroup", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups/{group_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_YarnTxWeightGroupService_ListYarnTxWeightGroups_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.YarnTxWeightGroupService/ListYarnTxWeightGroups", runtime.WithHTTPPathPattern("/api/v1/finance/yarn-tx-weight-groups"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_YarnTxWeightGroupService_ListYarnTxWeightGroups_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_YarnTxWeightGroupService_ListYarnTxWeightGroups_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	return nil
+}
+
+var (
+	pattern_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "yarn-tx-weight-groups"}, ""))
+	pattern_YarnTxWeightGroupService_GetYarnTxWeightGroup_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "finance", "yarn-tx-weight-groups", "group_id"}, ""))
+	pattern_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "finance", "yarn-tx-weight-groups", "group_id"}, ""))
+	pattern_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "finance", "yarn-tx-weight-groups", "group_id"}, ""))
+	pattern_YarnTxWeightGroupService_ListYarnTxWeightGroups_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "finance", "yarn-tx-weight-groups"}, ""))
+)
+
+var (
+	forward_YarnTxWeightGroupService_CreateYarnTxWeightGroup_0 = runtime.ForwardResponseMessage
+	forward_YarnTxWeightGroupService_GetYarnTxWeightGroup_0    = runtime.ForwardResponseMessage
+	forward_YarnTxWeightGroupService_UpdateYarnTxWeightGroup_0 = runtime.ForwardResponseMessage
+	forward_YarnTxWeightGroupService_DeleteYarnTxWeightGroup_0 = runtime.ForwardResponseMessage
+	forward_YarnTxWeightGroupService_ListYarnTxWeightGroups_0  = runtime.ForwardResponseMessage
 )

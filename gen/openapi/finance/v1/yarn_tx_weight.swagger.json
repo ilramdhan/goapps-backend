@@ -7,6 +7,9 @@
   "tags": [
     {
       "name": "YarnTxWeightService"
+    },
+    {
+      "name": "YarnTxWeightGroupService"
     }
   ],
   "consumes": [
@@ -16,6 +19,208 @@
     "application/json"
   ],
   "paths": {
+    "/api/v1/finance/yarn-tx-weight-groups": {
+      "get": {
+        "summary": "ListYarnTxWeightGroups lists TX Weight groups with search, filter, and pagination.",
+        "operationId": "YarnTxWeightGroupService_ListYarnTxWeightGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListYarnTxWeightGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, default 1, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100, default 10).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in group code/name/description and mapped product type code/name).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "productTypeId",
+            "description": "Filter by mapped product type id (0 = all).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"code\", \"name\", \"created_at\", \"updated_at\" (default: \"code\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "YarnTxWeightGroupService"
+        ]
+      },
+      "post": {
+        "summary": "CreateYarnTxWeightGroup creates a new TX Weight group with its types and rules.",
+        "operationId": "YarnTxWeightGroupService_CreateYarnTxWeightGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateYarnTxWeightGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateYarnTxWeightGroupRequest is the request for creating a TX Weight group.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateYarnTxWeightGroupRequest"
+            }
+          }
+        ],
+        "tags": [
+          "YarnTxWeightGroupService"
+        ]
+      }
+    },
+    "/api/v1/finance/yarn-tx-weight-groups/{groupId}": {
+      "get": {
+        "summary": "GetYarnTxWeightGroup retrieves a TX Weight group by ID.",
+        "operationId": "YarnTxWeightGroupService_GetYarnTxWeightGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetYarnTxWeightGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupId",
+            "description": "Group ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "YarnTxWeightGroupService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteYarnTxWeightGroup soft deletes a TX Weight group and frees its product types.",
+        "operationId": "YarnTxWeightGroupService_DeleteYarnTxWeightGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteYarnTxWeightGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupId",
+            "description": "Group ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "YarnTxWeightGroupService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateYarnTxWeightGroup updates a TX Weight group, replacing its type set\nand rules in one transaction.",
+        "operationId": "YarnTxWeightGroupService_UpdateYarnTxWeightGroup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateYarnTxWeightGroupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "groupId",
+            "description": "Group ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/YarnTxWeightGroupServiceUpdateYarnTxWeightGroupBody"
+            }
+          }
+        ],
+        "tags": [
+          "YarnTxWeightGroupService"
+        ]
+      }
+    },
     "/api/v1/finance/yarn-tx-weights": {
       "get": {
         "summary": "ListYarnTxWeights lists TX Weight rules with search, filter, and pagination.",
@@ -236,6 +441,40 @@
     }
   },
   "definitions": {
+    "YarnTxWeightGroupServiceUpdateYarnTxWeightGroupBody": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Group code (required, 1-30 chars, uppercase letters/digits/underscore)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Group name (required, 1-100 chars)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 200 chars)."
+        },
+        "productTypeIds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Full replacement set of product type ids (min 1, unique, each \u003e= 1)."
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1YarnTxWeightRule"
+          },
+          "description": "Full replacement set of grade rules (1-5, unique grade)."
+        }
+      },
+      "description": "UpdateYarnTxWeightGroupRequest is the request for updating a TX Weight group.\nThe product type set and the rules are replaced in one transaction."
+    },
     "YarnTxWeightServiceUpdateYarnTxWeightBody": {
       "type": "object",
       "properties": {
@@ -331,6 +570,54 @@
       },
       "description": "BaseResponse is the standard response wrapper for all API responses."
     },
+    "v1CreateYarnTxWeightGroupRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Group code (required, 1-30 chars, uppercase letters/digits/underscore)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Group name (required, 1-100 chars)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 200 chars)."
+        },
+        "productTypeIds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Product type ids mapped to this group (min 1, unique, each \u003e= 1).\nEach type may belong to at most one group."
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1YarnTxWeightRule"
+          },
+          "description": "Grade rules (1-5, unique grade)."
+        }
+      },
+      "description": "CreateYarnTxWeightGroupRequest is the request for creating a TX Weight group."
+    },
+    "v1CreateYarnTxWeightGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1YarnTxWeightGroup",
+          "description": "Created TX Weight group."
+        }
+      },
+      "description": "CreateYarnTxWeightGroupResponse is the response for creating a TX Weight group."
+    },
     "v1CreateYarnTxWeightRequest": {
       "type": "object",
       "properties": {
@@ -373,6 +660,16 @@
       },
       "description": "CreateYarnTxWeightResponse is the response for creating a TX Weight rule."
     },
+    "v1DeleteYarnTxWeightGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteYarnTxWeightGroupResponse is the response for deleting a TX Weight group."
+    },
     "v1DeleteYarnTxWeightResponse": {
       "type": "object",
       "properties": {
@@ -382,6 +679,20 @@
         }
       },
       "description": "DeleteYarnTxWeightResponse is the response for deleting a TX Weight rule."
+    },
+    "v1GetYarnTxWeightGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1YarnTxWeightGroup",
+          "description": "TX Weight group data."
+        }
+      },
+      "description": "GetYarnTxWeightGroupResponse is the response for getting a TX Weight group."
     },
     "v1GetYarnTxWeightResponse": {
       "type": "object",
@@ -396,6 +707,28 @@
         }
       },
       "description": "GetYarnTxWeightResponse is the response for getting a TX Weight rule."
+    },
+    "v1ListYarnTxWeightGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1YarnTxWeightGroup"
+          },
+          "description": "List of TX Weight groups."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListYarnTxWeightGroupsResponse is the response for listing TX Weight groups."
     },
     "v1ListYarnTxWeightsResponse": {
       "type": "object",
@@ -444,6 +777,20 @@
         }
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1UpdateYarnTxWeightGroupResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1YarnTxWeightGroup",
+          "description": "Updated TX Weight group."
+        }
+      },
+      "description": "UpdateYarnTxWeightGroupResponse is the response for updating a TX Weight group."
     },
     "v1UpdateYarnTxWeightResponse": {
       "type": "object",
@@ -534,6 +881,48 @@
       "default": "YARN_TX_WEIGHT_GRADE_UNSPECIFIED",
       "description": "YarnTxWeightGrade is the yarn grade a TX Weight row applies to.\n\n - YARN_TX_WEIGHT_GRADE_UNSPECIFIED: Default -- used as \"no filter\" in list requests.\n - YARN_TX_WEIGHT_GRADE_AE: Grade AE.\n - YARN_TX_WEIGHT_GRADE_A9: Grade A9.\n - YARN_TX_WEIGHT_GRADE_A: Grade A.\n - YARN_TX_WEIGHT_GRADE_B: Grade B.\n - YARN_TX_WEIGHT_GRADE_C: Grade C."
     },
+    "v1YarnTxWeightGroup": {
+      "type": "object",
+      "properties": {
+        "groupId": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "code": {
+          "type": "string",
+          "description": "Group code (unique among live groups, e.g. \"TTY\")."
+        },
+        "name": {
+          "type": "string",
+          "description": "Group name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "productTypes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1YarnTxWeightProductTypeRef"
+          },
+          "description": "Product types mapped to this group."
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1YarnTxWeightRule"
+          },
+          "description": "Grade rules of this group (at most one per grade)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "YarnTxWeightGroup is one TX Weight config shared by one or more product types."
+    },
     "v1YarnTxWeightMode": {
       "type": "string",
       "enum": [
@@ -544,6 +933,48 @@
       ],
       "default": "YARN_TX_WEIGHT_MODE_UNSPECIFIED",
       "description": "YarnTxWeightMode is how the value is applied to the AX weight.\n\n - YARN_TX_WEIGHT_MODE_UNSPECIFIED: Default -- used as \"no filter\" in list requests.\n - YARN_TX_WEIGHT_MODE_LESS_BY: Result = AX_WT - value.\n - YARN_TX_WEIGHT_MODE_MULTIPLY: Result = AX_WT * value.\n - YARN_TX_WEIGHT_MODE_FIXED: Result = value (independent of AX_WT)."
+    },
+    "v1YarnTxWeightProductTypeRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Product type id (cost_product_type.cpt_type_id)."
+        },
+        "code": {
+          "type": "string",
+          "description": "Product type code (e.g. \"TTY\")."
+        },
+        "name": {
+          "type": "string",
+          "description": "Product type name."
+        }
+      },
+      "description": "YarnTxWeightProductTypeRef is a product type mapped to a TX Weight group."
+    },
+    "v1YarnTxWeightRule": {
+      "type": "object",
+      "properties": {
+        "grade": {
+          "$ref": "#/definitions/v1YarnTxWeightGrade",
+          "description": "Grade the rule applies to (cannot be UNSPECIFIED)."
+        },
+        "mode": {
+          "$ref": "#/definitions/v1YarnTxWeightMode",
+          "description": "How value is applied to AX_WT (cannot be UNSPECIFIED)."
+        },
+        "value": {
+          "type": "number",
+          "format": "double",
+          "description": "Rule value (subtrahend, multiplier, or fixed weight depending on mode)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 200 chars)."
+        }
+      },
+      "description": "YarnTxWeightRule is one grade rule inside a TX Weight group."
     }
   }
 }

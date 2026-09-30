@@ -898,6 +898,878 @@ func (x *ListYarnTxWeightsResponse) GetPagination() *v1.PaginationResponse {
 	return nil
 }
 
+// YarnTxWeightProductTypeRef is a product type mapped to a TX Weight group.
+type YarnTxWeightProductTypeRef struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product type id (cost_product_type.cpt_type_id).
+	Id int32 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Product type code (e.g. "TTY").
+	Code string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	// Product type name.
+	Name          string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *YarnTxWeightProductTypeRef) Reset() {
+	*x = YarnTxWeightProductTypeRef{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *YarnTxWeightProductTypeRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*YarnTxWeightProductTypeRef) ProtoMessage() {}
+
+func (x *YarnTxWeightProductTypeRef) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use YarnTxWeightProductTypeRef.ProtoReflect.Descriptor instead.
+func (*YarnTxWeightProductTypeRef) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *YarnTxWeightProductTypeRef) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *YarnTxWeightProductTypeRef) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *YarnTxWeightProductTypeRef) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// YarnTxWeightRule is one grade rule inside a TX Weight group.
+type YarnTxWeightRule struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Grade the rule applies to (cannot be UNSPECIFIED).
+	Grade YarnTxWeightGrade `protobuf:"varint,1,opt,name=grade,proto3,enum=finance.v1.YarnTxWeightGrade" json:"grade,omitempty"`
+	// How value is applied to AX_WT (cannot be UNSPECIFIED).
+	Mode YarnTxWeightMode `protobuf:"varint,2,opt,name=mode,proto3,enum=finance.v1.YarnTxWeightMode" json:"mode,omitempty"`
+	// Rule value (subtrahend, multiplier, or fixed weight depending on mode).
+	Value float64 `protobuf:"fixed64,3,opt,name=value,proto3" json:"value,omitempty"`
+	// Optional description (max 200 chars).
+	Description   string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *YarnTxWeightRule) Reset() {
+	*x = YarnTxWeightRule{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *YarnTxWeightRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*YarnTxWeightRule) ProtoMessage() {}
+
+func (x *YarnTxWeightRule) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use YarnTxWeightRule.ProtoReflect.Descriptor instead.
+func (*YarnTxWeightRule) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *YarnTxWeightRule) GetGrade() YarnTxWeightGrade {
+	if x != nil {
+		return x.Grade
+	}
+	return YarnTxWeightGrade_YARN_TX_WEIGHT_GRADE_UNSPECIFIED
+}
+
+func (x *YarnTxWeightRule) GetMode() YarnTxWeightMode {
+	if x != nil {
+		return x.Mode
+	}
+	return YarnTxWeightMode_YARN_TX_WEIGHT_MODE_UNSPECIFIED
+}
+
+func (x *YarnTxWeightRule) GetValue() float64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+func (x *YarnTxWeightRule) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+// YarnTxWeightGroup is one TX Weight config shared by one or more product types.
+type YarnTxWeightGroup struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique identifier (UUID).
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// Group code (unique among live groups, e.g. "TTY").
+	Code string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	// Group name.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional description.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// Product types mapped to this group.
+	ProductTypes []*YarnTxWeightProductTypeRef `protobuf:"bytes,5,rep,name=product_types,json=productTypes,proto3" json:"product_types,omitempty"`
+	// Grade rules of this group (at most one per grade).
+	Rules []*YarnTxWeightRule `protobuf:"bytes,6,rep,name=rules,proto3" json:"rules,omitempty"`
+	// Audit information.
+	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *YarnTxWeightGroup) Reset() {
+	*x = YarnTxWeightGroup{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *YarnTxWeightGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*YarnTxWeightGroup) ProtoMessage() {}
+
+func (x *YarnTxWeightGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use YarnTxWeightGroup.ProtoReflect.Descriptor instead.
+func (*YarnTxWeightGroup) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *YarnTxWeightGroup) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *YarnTxWeightGroup) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *YarnTxWeightGroup) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *YarnTxWeightGroup) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *YarnTxWeightGroup) GetProductTypes() []*YarnTxWeightProductTypeRef {
+	if x != nil {
+		return x.ProductTypes
+	}
+	return nil
+}
+
+func (x *YarnTxWeightGroup) GetRules() []*YarnTxWeightRule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
+func (x *YarnTxWeightGroup) GetAudit() *v1.AuditInfo {
+	if x != nil {
+		return x.Audit
+	}
+	return nil
+}
+
+// CreateYarnTxWeightGroupRequest is the request for creating a TX Weight group.
+type CreateYarnTxWeightGroupRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Group code (required, 1-30 chars, uppercase letters/digits/underscore).
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// Group name (required, 1-100 chars).
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional description (max 200 chars).
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Product type ids mapped to this group (min 1, unique, each >= 1).
+	// Each type may belong to at most one group.
+	ProductTypeIds []int32 `protobuf:"varint,4,rep,packed,name=product_type_ids,json=productTypeIds,proto3" json:"product_type_ids,omitempty"`
+	// Grade rules (1-5, unique grade).
+	Rules         []*YarnTxWeightRule `protobuf:"bytes,5,rep,name=rules,proto3" json:"rules,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateYarnTxWeightGroupRequest) Reset() {
+	*x = CreateYarnTxWeightGroupRequest{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateYarnTxWeightGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateYarnTxWeightGroupRequest) ProtoMessage() {}
+
+func (x *CreateYarnTxWeightGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateYarnTxWeightGroupRequest.ProtoReflect.Descriptor instead.
+func (*CreateYarnTxWeightGroupRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CreateYarnTxWeightGroupRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *CreateYarnTxWeightGroupRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateYarnTxWeightGroupRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateYarnTxWeightGroupRequest) GetProductTypeIds() []int32 {
+	if x != nil {
+		return x.ProductTypeIds
+	}
+	return nil
+}
+
+func (x *CreateYarnTxWeightGroupRequest) GetRules() []*YarnTxWeightRule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
+// CreateYarnTxWeightGroupResponse is the response for creating a TX Weight group.
+type CreateYarnTxWeightGroupResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Created TX Weight group.
+	Data          *YarnTxWeightGroup `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateYarnTxWeightGroupResponse) Reset() {
+	*x = CreateYarnTxWeightGroupResponse{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateYarnTxWeightGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateYarnTxWeightGroupResponse) ProtoMessage() {}
+
+func (x *CreateYarnTxWeightGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateYarnTxWeightGroupResponse.ProtoReflect.Descriptor instead.
+func (*CreateYarnTxWeightGroupResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CreateYarnTxWeightGroupResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *CreateYarnTxWeightGroupResponse) GetData() *YarnTxWeightGroup {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// GetYarnTxWeightGroupRequest is the request for getting a TX Weight group by ID.
+type GetYarnTxWeightGroupRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Group ID (UUID format).
+	GroupId       string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetYarnTxWeightGroupRequest) Reset() {
+	*x = GetYarnTxWeightGroupRequest{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetYarnTxWeightGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetYarnTxWeightGroupRequest) ProtoMessage() {}
+
+func (x *GetYarnTxWeightGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetYarnTxWeightGroupRequest.ProtoReflect.Descriptor instead.
+func (*GetYarnTxWeightGroupRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetYarnTxWeightGroupRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+// GetYarnTxWeightGroupResponse is the response for getting a TX Weight group.
+type GetYarnTxWeightGroupResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// TX Weight group data.
+	Data          *YarnTxWeightGroup `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetYarnTxWeightGroupResponse) Reset() {
+	*x = GetYarnTxWeightGroupResponse{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetYarnTxWeightGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetYarnTxWeightGroupResponse) ProtoMessage() {}
+
+func (x *GetYarnTxWeightGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetYarnTxWeightGroupResponse.ProtoReflect.Descriptor instead.
+func (*GetYarnTxWeightGroupResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetYarnTxWeightGroupResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *GetYarnTxWeightGroupResponse) GetData() *YarnTxWeightGroup {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// UpdateYarnTxWeightGroupRequest is the request for updating a TX Weight group.
+// The product type set and the rules are replaced in one transaction.
+type UpdateYarnTxWeightGroupRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Group ID to update (UUID format).
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// Group code (required, 1-30 chars, uppercase letters/digits/underscore).
+	Code string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	// Group name (required, 1-100 chars).
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional description (max 200 chars).
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// Full replacement set of product type ids (min 1, unique, each >= 1).
+	ProductTypeIds []int32 `protobuf:"varint,5,rep,packed,name=product_type_ids,json=productTypeIds,proto3" json:"product_type_ids,omitempty"`
+	// Full replacement set of grade rules (1-5, unique grade).
+	Rules         []*YarnTxWeightRule `protobuf:"bytes,6,rep,name=rules,proto3" json:"rules,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateYarnTxWeightGroupRequest) Reset() {
+	*x = UpdateYarnTxWeightGroupRequest{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateYarnTxWeightGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateYarnTxWeightGroupRequest) ProtoMessage() {}
+
+func (x *UpdateYarnTxWeightGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateYarnTxWeightGroupRequest.ProtoReflect.Descriptor instead.
+func (*UpdateYarnTxWeightGroupRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *UpdateYarnTxWeightGroupRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *UpdateYarnTxWeightGroupRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *UpdateYarnTxWeightGroupRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateYarnTxWeightGroupRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *UpdateYarnTxWeightGroupRequest) GetProductTypeIds() []int32 {
+	if x != nil {
+		return x.ProductTypeIds
+	}
+	return nil
+}
+
+func (x *UpdateYarnTxWeightGroupRequest) GetRules() []*YarnTxWeightRule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
+// UpdateYarnTxWeightGroupResponse is the response for updating a TX Weight group.
+type UpdateYarnTxWeightGroupResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// Updated TX Weight group.
+	Data          *YarnTxWeightGroup `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateYarnTxWeightGroupResponse) Reset() {
+	*x = UpdateYarnTxWeightGroupResponse{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateYarnTxWeightGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateYarnTxWeightGroupResponse) ProtoMessage() {}
+
+func (x *UpdateYarnTxWeightGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateYarnTxWeightGroupResponse.ProtoReflect.Descriptor instead.
+func (*UpdateYarnTxWeightGroupResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UpdateYarnTxWeightGroupResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *UpdateYarnTxWeightGroupResponse) GetData() *YarnTxWeightGroup {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+// DeleteYarnTxWeightGroupRequest is the request for deleting (soft delete) a TX Weight group.
+// The product type mappings are removed so the types become free again.
+type DeleteYarnTxWeightGroupRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Group ID to delete (UUID format).
+	GroupId       string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteYarnTxWeightGroupRequest) Reset() {
+	*x = DeleteYarnTxWeightGroupRequest{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteYarnTxWeightGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteYarnTxWeightGroupRequest) ProtoMessage() {}
+
+func (x *DeleteYarnTxWeightGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteYarnTxWeightGroupRequest.ProtoReflect.Descriptor instead.
+func (*DeleteYarnTxWeightGroupRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *DeleteYarnTxWeightGroupRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+// DeleteYarnTxWeightGroupResponse is the response for deleting a TX Weight group.
+type DeleteYarnTxWeightGroupResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base          *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteYarnTxWeightGroupResponse) Reset() {
+	*x = DeleteYarnTxWeightGroupResponse{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteYarnTxWeightGroupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteYarnTxWeightGroupResponse) ProtoMessage() {}
+
+func (x *DeleteYarnTxWeightGroupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteYarnTxWeightGroupResponse.ProtoReflect.Descriptor instead.
+func (*DeleteYarnTxWeightGroupResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *DeleteYarnTxWeightGroupResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+// ListYarnTxWeightGroupsRequest is the request for listing TX Weight groups
+// with search, filter, and pagination.
+type ListYarnTxWeightGroupsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Page number (1-indexed, default 1, min 1).
+	Page int32 `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	// Items per page (1-100, default 10).
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Search query (searches in group code/name/description and mapped product type code/name).
+	Search string `protobuf:"bytes,3,opt,name=search,proto3" json:"search,omitempty"`
+	// Filter by mapped product type id (0 = all).
+	ProductTypeId int32 `protobuf:"varint,4,opt,name=product_type_id,json=productTypeId,proto3" json:"product_type_id,omitempty"`
+	// Sort field: "code", "name", "created_at", "updated_at" (default: "code").
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// Sort order: "asc", "desc" (default: "asc").
+	SortOrder     string `protobuf:"bytes,6,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListYarnTxWeightGroupsRequest) Reset() {
+	*x = ListYarnTxWeightGroupsRequest{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListYarnTxWeightGroupsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListYarnTxWeightGroupsRequest) ProtoMessage() {}
+
+func (x *ListYarnTxWeightGroupsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListYarnTxWeightGroupsRequest.ProtoReflect.Descriptor instead.
+func (*ListYarnTxWeightGroupsRequest) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ListYarnTxWeightGroupsRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListYarnTxWeightGroupsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListYarnTxWeightGroupsRequest) GetSearch() string {
+	if x != nil {
+		return x.Search
+	}
+	return ""
+}
+
+func (x *ListYarnTxWeightGroupsRequest) GetProductTypeId() int32 {
+	if x != nil {
+		return x.ProductTypeId
+	}
+	return 0
+}
+
+func (x *ListYarnTxWeightGroupsRequest) GetSortBy() string {
+	if x != nil {
+		return x.SortBy
+	}
+	return ""
+}
+
+func (x *ListYarnTxWeightGroupsRequest) GetSortOrder() string {
+	if x != nil {
+		return x.SortOrder
+	}
+	return ""
+}
+
+// ListYarnTxWeightGroupsResponse is the response for listing TX Weight groups.
+type ListYarnTxWeightGroupsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Standard response metadata.
+	Base *v1.BaseResponse `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
+	// List of TX Weight groups.
+	Data []*YarnTxWeightGroup `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+	// Pagination metadata.
+	Pagination    *v1.PaginationResponse `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListYarnTxWeightGroupsResponse) Reset() {
+	*x = ListYarnTxWeightGroupsResponse{}
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListYarnTxWeightGroupsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListYarnTxWeightGroupsResponse) ProtoMessage() {}
+
+func (x *ListYarnTxWeightGroupsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_v1_yarn_tx_weight_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListYarnTxWeightGroupsResponse.ProtoReflect.Descriptor instead.
+func (*ListYarnTxWeightGroupsResponse) Descriptor() ([]byte, []int) {
+	return file_finance_v1_yarn_tx_weight_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ListYarnTxWeightGroupsResponse) GetBase() *v1.BaseResponse {
+	if x != nil {
+		return x.Base
+	}
+	return nil
+}
+
+func (x *ListYarnTxWeightGroupsResponse) GetData() []*YarnTxWeightGroup {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *ListYarnTxWeightGroupsResponse) GetPagination() *v1.PaginationResponse {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 var File_finance_v1_yarn_tx_weight_proto protoreflect.FileDescriptor
 
 const file_finance_v1_yarn_tx_weight_proto_rawDesc = "" +
@@ -963,6 +1835,73 @@ const file_finance_v1_yarn_tx_weight_proto_rawDesc = "" +
 	"\x04data\x18\x02 \x03(\v2\x18.finance.v1.YarnTxWeightR\x04data\x12=\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
+	"pagination\"T\n" +
+	"\x1aYarnTxWeightProductTypeRef\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\"\xdc\x01\n" +
+	"\x10YarnTxWeightRule\x12?\n" +
+	"\x05grade\x18\x01 \x01(\x0e2\x1d.finance.v1.YarnTxWeightGradeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05grade\x12<\n" +
+	"\x04mode\x18\x02 \x01(\x0e2\x1c.finance.v1.YarnTxWeightModeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04mode\x12\x1d\n" +
+	"\x05value\x18\x03 \x01(\x01B\a\xbaH\x04\x12\x02@\x01R\x05value\x12*\n" +
+	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\vdescription\"\xa5\x02\n" +
+	"\x11YarnTxWeightGroup\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12K\n" +
+	"\rproduct_types\x18\x05 \x03(\v2&.finance.v1.YarnTxWeightProductTypeRefR\fproductTypes\x122\n" +
+	"\x05rules\x18\x06 \x03(\v2\x1c.finance.v1.YarnTxWeightRuleR\x05rules\x12*\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xf4\x02\n" +
+	"\x1eCreateYarnTxWeightGroupRequest\x120\n" +
+	"\x04code\x18\x01 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18\x1e2\x11^[A-Z][A-Z0-9_]*$R\x04code\x12\x1d\n" +
+	"\x04name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\x04name\x12*\n" +
+	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\vdescription\x12:\n" +
+	"\x10product_type_ids\x18\x04 \x03(\x05B\x10\xbaH\r\x92\x01\n" +
+	"\b\x01\x18\x01\"\x04\x1a\x02(\x01R\x0eproductTypeIds\x12\x98\x01\n" +
+	"\x05rules\x18\x05 \x03(\v2\x1c.finance.v1.YarnTxWeightRuleBd\xbaHa\xba\x01W\n" +
+	"\x12rules.unique_grade\x12\"each grade may appear at most once\x1a\x1dthis.map(r, r.grade).unique()\x92\x01\x04\b\x01\x10\x05R\x05rules\"\x81\x01\n" +
+	"\x1fCreateYarnTxWeightGroupResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
+	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.YarnTxWeightGroupR\x04data\"B\n" +
+	"\x1bGetYarnTxWeightGroupRequest\x12#\n" +
+	"\bgroup_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\agroupId\"~\n" +
+	"\x1cGetYarnTxWeightGroupResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
+	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.YarnTxWeightGroupR\x04data\"\x99\x03\n" +
+	"\x1eUpdateYarnTxWeightGroupRequest\x12#\n" +
+	"\bgroup_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\agroupId\x120\n" +
+	"\x04code\x18\x02 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18\x1e2\x11^[A-Z][A-Z0-9_]*$R\x04code\x12\x1d\n" +
+	"\x04name\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\x04name\x12*\n" +
+	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\vdescription\x12:\n" +
+	"\x10product_type_ids\x18\x05 \x03(\x05B\x10\xbaH\r\x92\x01\n" +
+	"\b\x01\x18\x01\"\x04\x1a\x02(\x01R\x0eproductTypeIds\x12\x98\x01\n" +
+	"\x05rules\x18\x06 \x03(\v2\x1c.finance.v1.YarnTxWeightRuleBd\xbaHa\xba\x01W\n" +
+	"\x12rules.unique_grade\x12\"each grade may appear at most once\x1a\x1dthis.map(r, r.grade).unique()\x92\x01\x04\b\x01\x10\x05R\x05rules\"\x81\x01\n" +
+	"\x1fUpdateYarnTxWeightGroupResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
+	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.YarnTxWeightGroupR\x04data\"E\n" +
+	"\x1eDeleteYarnTxWeightGroupRequest\x12#\n" +
+	"\bgroup_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\agroupId\"N\n" +
+	"\x1fDeleteYarnTxWeightGroupResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xaf\x02\n" +
+	"\x1dListYarnTxWeightGroupsRequest\x12\x1b\n" +
+	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\x12\x1f\n" +
+	"\x06search\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06search\x12/\n" +
+	"\x0fproduct_type_id\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\rproductTypeId\x12D\n" +
+	"\asort_by\x18\x05 \x01(\tB+\xbaH(r&R\x00R\x04codeR\x04nameR\n" +
+	"created_atR\n" +
+	"updated_atR\x06sortBy\x121\n" +
+	"\n" +
+	"sort_order\x18\x06 \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\"\xbf\x01\n" +
+	"\x1eListYarnTxWeightGroupsResponse\x12+\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
+	"\x04data\x18\x02 \x03(\v2\x1d.finance.v1.YarnTxWeightGroupR\x04data\x12=\n" +
+	"\n" +
+	"pagination\x18\x03 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
 	"pagination*\xc7\x01\n" +
 	"\x11YarnTxWeightGrade\x12$\n" +
 	" YARN_TX_WEIGHT_GRADE_UNSPECIFIED\x10\x00\x12\x1b\n" +
@@ -981,7 +1920,13 @@ const file_finance_v1_yarn_tx_weight_proto_rawDesc = "" +
 	"\x0fGetYarnTxWeight\x12\".finance.v1.GetYarnTxWeightRequest\x1a#.finance.v1.GetYarnTxWeightResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/finance/yarn-tx-weights/{id}\x12\x94\x01\n" +
 	"\x12UpdateYarnTxWeight\x12%.finance.v1.UpdateYarnTxWeightRequest\x1a&.finance.v1.UpdateYarnTxWeightResponse\"/\x82\xd3\xe4\x93\x02):\x01*\x1a$/api/v1/finance/yarn-tx-weights/{id}\x12\x91\x01\n" +
 	"\x12DeleteYarnTxWeight\x12%.finance.v1.DeleteYarnTxWeightRequest\x1a&.finance.v1.DeleteYarnTxWeightResponse\",\x82\xd3\xe4\x93\x02&*$/api/v1/finance/yarn-tx-weights/{id}\x12\x89\x01\n" +
-	"\x11ListYarnTxWeights\x12$.finance.v1.ListYarnTxWeightsRequest\x1a%.finance.v1.ListYarnTxWeightsResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/finance/yarn-tx-weightsB\xab\x01\n" +
+	"\x11ListYarnTxWeights\x12$.finance.v1.ListYarnTxWeightsRequest\x1a%.finance.v1.ListYarnTxWeightsResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/finance/yarn-tx-weights2\xe9\x06\n" +
+	"\x18YarnTxWeightGroupService\x12\xa4\x01\n" +
+	"\x17CreateYarnTxWeightGroup\x12*.finance.v1.CreateYarnTxWeightGroupRequest\x1a+.finance.v1.CreateYarnTxWeightGroupResponse\"0\x82\xd3\xe4\x93\x02*:\x01*\"%/api/v1/finance/yarn-tx-weight-groups\x12\xa3\x01\n" +
+	"\x14GetYarnTxWeightGroup\x12'.finance.v1.GetYarnTxWeightGroupRequest\x1a(.finance.v1.GetYarnTxWeightGroupResponse\"8\x82\xd3\xe4\x93\x022\x120/api/v1/finance/yarn-tx-weight-groups/{group_id}\x12\xaf\x01\n" +
+	"\x17UpdateYarnTxWeightGroup\x12*.finance.v1.UpdateYarnTxWeightGroupRequest\x1a+.finance.v1.UpdateYarnTxWeightGroupResponse\";\x82\xd3\xe4\x93\x025:\x01*\x1a0/api/v1/finance/yarn-tx-weight-groups/{group_id}\x12\xac\x01\n" +
+	"\x17DeleteYarnTxWeightGroup\x12*.finance.v1.DeleteYarnTxWeightGroupRequest\x1a+.finance.v1.DeleteYarnTxWeightGroupResponse\"8\x82\xd3\xe4\x93\x022*0/api/v1/finance/yarn-tx-weight-groups/{group_id}\x12\x9e\x01\n" +
+	"\x16ListYarnTxWeightGroups\x12).finance.v1.ListYarnTxWeightGroupsRequest\x1a*.finance.v1.ListYarnTxWeightGroupsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/finance/yarn-tx-weight-groupsB\xab\x01\n" +
 	"\x0ecom.finance.v1B\x11YarnTxWeightProtoP\x01Z=github.com/mutugading/goapps-backend/gen/finance/v1;financev1\xa2\x02\x03FXX\xaa\x02\n" +
 	"Finance.V1\xca\x02\n" +
 	"Finance\\V1\xe2\x02\x16Finance\\V1\\GPBMetadata\xea\x02\vFinance::V1b\x06proto3"
@@ -999,58 +1944,98 @@ func file_finance_v1_yarn_tx_weight_proto_rawDescGZIP() []byte {
 }
 
 var file_finance_v1_yarn_tx_weight_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_finance_v1_yarn_tx_weight_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_finance_v1_yarn_tx_weight_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_finance_v1_yarn_tx_weight_proto_goTypes = []any{
-	(YarnTxWeightGrade)(0),             // 0: finance.v1.YarnTxWeightGrade
-	(YarnTxWeightMode)(0),              // 1: finance.v1.YarnTxWeightMode
-	(*YarnTxWeight)(nil),               // 2: finance.v1.YarnTxWeight
-	(*CreateYarnTxWeightRequest)(nil),  // 3: finance.v1.CreateYarnTxWeightRequest
-	(*CreateYarnTxWeightResponse)(nil), // 4: finance.v1.CreateYarnTxWeightResponse
-	(*GetYarnTxWeightRequest)(nil),     // 5: finance.v1.GetYarnTxWeightRequest
-	(*GetYarnTxWeightResponse)(nil),    // 6: finance.v1.GetYarnTxWeightResponse
-	(*UpdateYarnTxWeightRequest)(nil),  // 7: finance.v1.UpdateYarnTxWeightRequest
-	(*UpdateYarnTxWeightResponse)(nil), // 8: finance.v1.UpdateYarnTxWeightResponse
-	(*DeleteYarnTxWeightRequest)(nil),  // 9: finance.v1.DeleteYarnTxWeightRequest
-	(*DeleteYarnTxWeightResponse)(nil), // 10: finance.v1.DeleteYarnTxWeightResponse
-	(*ListYarnTxWeightsRequest)(nil),   // 11: finance.v1.ListYarnTxWeightsRequest
-	(*ListYarnTxWeightsResponse)(nil),  // 12: finance.v1.ListYarnTxWeightsResponse
-	(*v1.AuditInfo)(nil),               // 13: common.v1.AuditInfo
-	(*v1.BaseResponse)(nil),            // 14: common.v1.BaseResponse
-	(*v1.PaginationResponse)(nil),      // 15: common.v1.PaginationResponse
+	(YarnTxWeightGrade)(0),                  // 0: finance.v1.YarnTxWeightGrade
+	(YarnTxWeightMode)(0),                   // 1: finance.v1.YarnTxWeightMode
+	(*YarnTxWeight)(nil),                    // 2: finance.v1.YarnTxWeight
+	(*CreateYarnTxWeightRequest)(nil),       // 3: finance.v1.CreateYarnTxWeightRequest
+	(*CreateYarnTxWeightResponse)(nil),      // 4: finance.v1.CreateYarnTxWeightResponse
+	(*GetYarnTxWeightRequest)(nil),          // 5: finance.v1.GetYarnTxWeightRequest
+	(*GetYarnTxWeightResponse)(nil),         // 6: finance.v1.GetYarnTxWeightResponse
+	(*UpdateYarnTxWeightRequest)(nil),       // 7: finance.v1.UpdateYarnTxWeightRequest
+	(*UpdateYarnTxWeightResponse)(nil),      // 8: finance.v1.UpdateYarnTxWeightResponse
+	(*DeleteYarnTxWeightRequest)(nil),       // 9: finance.v1.DeleteYarnTxWeightRequest
+	(*DeleteYarnTxWeightResponse)(nil),      // 10: finance.v1.DeleteYarnTxWeightResponse
+	(*ListYarnTxWeightsRequest)(nil),        // 11: finance.v1.ListYarnTxWeightsRequest
+	(*ListYarnTxWeightsResponse)(nil),       // 12: finance.v1.ListYarnTxWeightsResponse
+	(*YarnTxWeightProductTypeRef)(nil),      // 13: finance.v1.YarnTxWeightProductTypeRef
+	(*YarnTxWeightRule)(nil),                // 14: finance.v1.YarnTxWeightRule
+	(*YarnTxWeightGroup)(nil),               // 15: finance.v1.YarnTxWeightGroup
+	(*CreateYarnTxWeightGroupRequest)(nil),  // 16: finance.v1.CreateYarnTxWeightGroupRequest
+	(*CreateYarnTxWeightGroupResponse)(nil), // 17: finance.v1.CreateYarnTxWeightGroupResponse
+	(*GetYarnTxWeightGroupRequest)(nil),     // 18: finance.v1.GetYarnTxWeightGroupRequest
+	(*GetYarnTxWeightGroupResponse)(nil),    // 19: finance.v1.GetYarnTxWeightGroupResponse
+	(*UpdateYarnTxWeightGroupRequest)(nil),  // 20: finance.v1.UpdateYarnTxWeightGroupRequest
+	(*UpdateYarnTxWeightGroupResponse)(nil), // 21: finance.v1.UpdateYarnTxWeightGroupResponse
+	(*DeleteYarnTxWeightGroupRequest)(nil),  // 22: finance.v1.DeleteYarnTxWeightGroupRequest
+	(*DeleteYarnTxWeightGroupResponse)(nil), // 23: finance.v1.DeleteYarnTxWeightGroupResponse
+	(*ListYarnTxWeightGroupsRequest)(nil),   // 24: finance.v1.ListYarnTxWeightGroupsRequest
+	(*ListYarnTxWeightGroupsResponse)(nil),  // 25: finance.v1.ListYarnTxWeightGroupsResponse
+	(*v1.AuditInfo)(nil),                    // 26: common.v1.AuditInfo
+	(*v1.BaseResponse)(nil),                 // 27: common.v1.BaseResponse
+	(*v1.PaginationResponse)(nil),           // 28: common.v1.PaginationResponse
 }
 var file_finance_v1_yarn_tx_weight_proto_depIdxs = []int32{
 	0,  // 0: finance.v1.YarnTxWeight.grade:type_name -> finance.v1.YarnTxWeightGrade
 	1,  // 1: finance.v1.YarnTxWeight.mode:type_name -> finance.v1.YarnTxWeightMode
-	13, // 2: finance.v1.YarnTxWeight.audit:type_name -> common.v1.AuditInfo
+	26, // 2: finance.v1.YarnTxWeight.audit:type_name -> common.v1.AuditInfo
 	0,  // 3: finance.v1.CreateYarnTxWeightRequest.grade:type_name -> finance.v1.YarnTxWeightGrade
 	1,  // 4: finance.v1.CreateYarnTxWeightRequest.mode:type_name -> finance.v1.YarnTxWeightMode
-	14, // 5: finance.v1.CreateYarnTxWeightResponse.base:type_name -> common.v1.BaseResponse
+	27, // 5: finance.v1.CreateYarnTxWeightResponse.base:type_name -> common.v1.BaseResponse
 	2,  // 6: finance.v1.CreateYarnTxWeightResponse.data:type_name -> finance.v1.YarnTxWeight
-	14, // 7: finance.v1.GetYarnTxWeightResponse.base:type_name -> common.v1.BaseResponse
+	27, // 7: finance.v1.GetYarnTxWeightResponse.base:type_name -> common.v1.BaseResponse
 	2,  // 8: finance.v1.GetYarnTxWeightResponse.data:type_name -> finance.v1.YarnTxWeight
 	1,  // 9: finance.v1.UpdateYarnTxWeightRequest.mode:type_name -> finance.v1.YarnTxWeightMode
-	14, // 10: finance.v1.UpdateYarnTxWeightResponse.base:type_name -> common.v1.BaseResponse
+	27, // 10: finance.v1.UpdateYarnTxWeightResponse.base:type_name -> common.v1.BaseResponse
 	2,  // 11: finance.v1.UpdateYarnTxWeightResponse.data:type_name -> finance.v1.YarnTxWeight
-	14, // 12: finance.v1.DeleteYarnTxWeightResponse.base:type_name -> common.v1.BaseResponse
+	27, // 12: finance.v1.DeleteYarnTxWeightResponse.base:type_name -> common.v1.BaseResponse
 	0,  // 13: finance.v1.ListYarnTxWeightsRequest.grade:type_name -> finance.v1.YarnTxWeightGrade
-	14, // 14: finance.v1.ListYarnTxWeightsResponse.base:type_name -> common.v1.BaseResponse
+	27, // 14: finance.v1.ListYarnTxWeightsResponse.base:type_name -> common.v1.BaseResponse
 	2,  // 15: finance.v1.ListYarnTxWeightsResponse.data:type_name -> finance.v1.YarnTxWeight
-	15, // 16: finance.v1.ListYarnTxWeightsResponse.pagination:type_name -> common.v1.PaginationResponse
-	3,  // 17: finance.v1.YarnTxWeightService.CreateYarnTxWeight:input_type -> finance.v1.CreateYarnTxWeightRequest
-	5,  // 18: finance.v1.YarnTxWeightService.GetYarnTxWeight:input_type -> finance.v1.GetYarnTxWeightRequest
-	7,  // 19: finance.v1.YarnTxWeightService.UpdateYarnTxWeight:input_type -> finance.v1.UpdateYarnTxWeightRequest
-	9,  // 20: finance.v1.YarnTxWeightService.DeleteYarnTxWeight:input_type -> finance.v1.DeleteYarnTxWeightRequest
-	11, // 21: finance.v1.YarnTxWeightService.ListYarnTxWeights:input_type -> finance.v1.ListYarnTxWeightsRequest
-	4,  // 22: finance.v1.YarnTxWeightService.CreateYarnTxWeight:output_type -> finance.v1.CreateYarnTxWeightResponse
-	6,  // 23: finance.v1.YarnTxWeightService.GetYarnTxWeight:output_type -> finance.v1.GetYarnTxWeightResponse
-	8,  // 24: finance.v1.YarnTxWeightService.UpdateYarnTxWeight:output_type -> finance.v1.UpdateYarnTxWeightResponse
-	10, // 25: finance.v1.YarnTxWeightService.DeleteYarnTxWeight:output_type -> finance.v1.DeleteYarnTxWeightResponse
-	12, // 26: finance.v1.YarnTxWeightService.ListYarnTxWeights:output_type -> finance.v1.ListYarnTxWeightsResponse
-	22, // [22:27] is the sub-list for method output_type
-	17, // [17:22] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	28, // 16: finance.v1.ListYarnTxWeightsResponse.pagination:type_name -> common.v1.PaginationResponse
+	0,  // 17: finance.v1.YarnTxWeightRule.grade:type_name -> finance.v1.YarnTxWeightGrade
+	1,  // 18: finance.v1.YarnTxWeightRule.mode:type_name -> finance.v1.YarnTxWeightMode
+	13, // 19: finance.v1.YarnTxWeightGroup.product_types:type_name -> finance.v1.YarnTxWeightProductTypeRef
+	14, // 20: finance.v1.YarnTxWeightGroup.rules:type_name -> finance.v1.YarnTxWeightRule
+	26, // 21: finance.v1.YarnTxWeightGroup.audit:type_name -> common.v1.AuditInfo
+	14, // 22: finance.v1.CreateYarnTxWeightGroupRequest.rules:type_name -> finance.v1.YarnTxWeightRule
+	27, // 23: finance.v1.CreateYarnTxWeightGroupResponse.base:type_name -> common.v1.BaseResponse
+	15, // 24: finance.v1.CreateYarnTxWeightGroupResponse.data:type_name -> finance.v1.YarnTxWeightGroup
+	27, // 25: finance.v1.GetYarnTxWeightGroupResponse.base:type_name -> common.v1.BaseResponse
+	15, // 26: finance.v1.GetYarnTxWeightGroupResponse.data:type_name -> finance.v1.YarnTxWeightGroup
+	14, // 27: finance.v1.UpdateYarnTxWeightGroupRequest.rules:type_name -> finance.v1.YarnTxWeightRule
+	27, // 28: finance.v1.UpdateYarnTxWeightGroupResponse.base:type_name -> common.v1.BaseResponse
+	15, // 29: finance.v1.UpdateYarnTxWeightGroupResponse.data:type_name -> finance.v1.YarnTxWeightGroup
+	27, // 30: finance.v1.DeleteYarnTxWeightGroupResponse.base:type_name -> common.v1.BaseResponse
+	27, // 31: finance.v1.ListYarnTxWeightGroupsResponse.base:type_name -> common.v1.BaseResponse
+	15, // 32: finance.v1.ListYarnTxWeightGroupsResponse.data:type_name -> finance.v1.YarnTxWeightGroup
+	28, // 33: finance.v1.ListYarnTxWeightGroupsResponse.pagination:type_name -> common.v1.PaginationResponse
+	3,  // 34: finance.v1.YarnTxWeightService.CreateYarnTxWeight:input_type -> finance.v1.CreateYarnTxWeightRequest
+	5,  // 35: finance.v1.YarnTxWeightService.GetYarnTxWeight:input_type -> finance.v1.GetYarnTxWeightRequest
+	7,  // 36: finance.v1.YarnTxWeightService.UpdateYarnTxWeight:input_type -> finance.v1.UpdateYarnTxWeightRequest
+	9,  // 37: finance.v1.YarnTxWeightService.DeleteYarnTxWeight:input_type -> finance.v1.DeleteYarnTxWeightRequest
+	11, // 38: finance.v1.YarnTxWeightService.ListYarnTxWeights:input_type -> finance.v1.ListYarnTxWeightsRequest
+	16, // 39: finance.v1.YarnTxWeightGroupService.CreateYarnTxWeightGroup:input_type -> finance.v1.CreateYarnTxWeightGroupRequest
+	18, // 40: finance.v1.YarnTxWeightGroupService.GetYarnTxWeightGroup:input_type -> finance.v1.GetYarnTxWeightGroupRequest
+	20, // 41: finance.v1.YarnTxWeightGroupService.UpdateYarnTxWeightGroup:input_type -> finance.v1.UpdateYarnTxWeightGroupRequest
+	22, // 42: finance.v1.YarnTxWeightGroupService.DeleteYarnTxWeightGroup:input_type -> finance.v1.DeleteYarnTxWeightGroupRequest
+	24, // 43: finance.v1.YarnTxWeightGroupService.ListYarnTxWeightGroups:input_type -> finance.v1.ListYarnTxWeightGroupsRequest
+	4,  // 44: finance.v1.YarnTxWeightService.CreateYarnTxWeight:output_type -> finance.v1.CreateYarnTxWeightResponse
+	6,  // 45: finance.v1.YarnTxWeightService.GetYarnTxWeight:output_type -> finance.v1.GetYarnTxWeightResponse
+	8,  // 46: finance.v1.YarnTxWeightService.UpdateYarnTxWeight:output_type -> finance.v1.UpdateYarnTxWeightResponse
+	10, // 47: finance.v1.YarnTxWeightService.DeleteYarnTxWeight:output_type -> finance.v1.DeleteYarnTxWeightResponse
+	12, // 48: finance.v1.YarnTxWeightService.ListYarnTxWeights:output_type -> finance.v1.ListYarnTxWeightsResponse
+	17, // 49: finance.v1.YarnTxWeightGroupService.CreateYarnTxWeightGroup:output_type -> finance.v1.CreateYarnTxWeightGroupResponse
+	19, // 50: finance.v1.YarnTxWeightGroupService.GetYarnTxWeightGroup:output_type -> finance.v1.GetYarnTxWeightGroupResponse
+	21, // 51: finance.v1.YarnTxWeightGroupService.UpdateYarnTxWeightGroup:output_type -> finance.v1.UpdateYarnTxWeightGroupResponse
+	23, // 52: finance.v1.YarnTxWeightGroupService.DeleteYarnTxWeightGroup:output_type -> finance.v1.DeleteYarnTxWeightGroupResponse
+	25, // 53: finance.v1.YarnTxWeightGroupService.ListYarnTxWeightGroups:output_type -> finance.v1.ListYarnTxWeightGroupsResponse
+	44, // [44:54] is the sub-list for method output_type
+	34, // [34:44] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_finance_v1_yarn_tx_weight_proto_init() }
@@ -1065,9 +2050,9 @@ func file_finance_v1_yarn_tx_weight_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_v1_yarn_tx_weight_proto_rawDesc), len(file_finance_v1_yarn_tx_weight_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   11,
+			NumMessages:   24,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
 		GoTypes:           file_finance_v1_yarn_tx_weight_proto_goTypes,
 		DependencyIndexes: file_finance_v1_yarn_tx_weight_proto_depIdxs,
