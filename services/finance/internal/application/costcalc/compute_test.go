@@ -644,8 +644,10 @@ func TestComputeProduct_CostByLevel_Aggregates(t *testing.T) {
 //	VB1_DEL_COST   ≈ 3.264    (COST_DEL_FINAL + 100/5000)
 //	VB2_DEL_COST   ≈ 3.254    (COST_DEL_FINAL + 100/10000)
 func TestComputeProduct_MarketingResult_UsesSellingSnapshot(t *testing.T) {
-	// Formula calls marketing_result(product,'AX_WT',period).
-	// SellingSnapshot has AX_WT=4.8 → COST_STAGE_OUT = 100 + 4.8 = 104.8.
+	// Formula calls marketing_result(product,'CAPTIVE_NO_OF_BOB',period).
+	// SellingSnapshot has CAPTIVE_NO_OF_BOB=4.8 → COST_STAGE_OUT = 100 + 4.8 = 104.8.
+	// (AX_WT is deliberately not used here: it is manual-input-only and never
+	// read from the snapshot — see TestComputeProduct_AXWT_ManualInputBeatsSellingSnapshot.)
 	in := ComputeInput{
 		ProductSysID: 55,
 		Period:       "202606",
@@ -653,14 +655,14 @@ func TestComputeProduct_MarketingResult_UsesSellingSnapshot(t *testing.T) {
 		Route:        buildOneStageRoute(55, costroute.RmTypeItem, "RM_X", 1.0),
 		CAPP:         map[string]float64{},
 		Formulas: []Formula{{
-			FormulaCode:     "F_YARN_AX_WT_FROM_MKT",
-			Expression:      "COST_RM_TOTAL + marketing_result(1, \"AX_WT\", \"202606\")",
+			FormulaCode:     "F_YARN_CAP_NO_BOB_FROM_MKT",
+			Expression:      "COST_RM_TOTAL + marketing_result(1, \"CAPTIVE_NO_OF_BOB\", \"202606\")",
 			ResultParamCode: ScopeKeyFinalCost,
 			InputParamCodes: []string{ScopeKeyCostRMTotal},
 		}},
 		RMCosts:         map[string]RMCostRates{"RM_X|": {CostVal: 100.0}},
 		EvalCache:       evaluator.NewCache(),
-		SellingSnapshot: map[string]float64{"AX_WT": 4.8},
+		SellingSnapshot: map[string]float64{"CAPTIVE_NO_OF_BOB": 4.8},
 	}
 	out, err := ComputeProduct(context.Background(), in)
 	require.NoError(t, err)
@@ -677,8 +679,8 @@ func TestComputeProduct_MarketingResult_EmptySnapshot_ReturnsZero(t *testing.T) 
 		Route:        buildOneStageRoute(56, costroute.RmTypeItem, "RM_Y", 1.0),
 		CAPP:         map[string]float64{},
 		Formulas: []Formula{{
-			FormulaCode:     "F_YARN_AX_WT_FROM_MKT",
-			Expression:      "COST_RM_TOTAL + marketing_result(1, \"AX_WT\", \"202606\")",
+			FormulaCode:     "F_YARN_CAP_NO_BOB_FROM_MKT",
+			Expression:      "COST_RM_TOTAL + marketing_result(1, \"CAPTIVE_NO_OF_BOB\", \"202606\")",
 			ResultParamCode: ScopeKeyFinalCost,
 			InputParamCodes: []string{ScopeKeyCostRMTotal},
 		}},

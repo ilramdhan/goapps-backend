@@ -397,10 +397,25 @@ func injectSpinFixedCost(scope map[string]any, zeroFilled map[string]bool, pool 
 	}
 }
 
+// manualInputOnlyParams lists param codes that are a manual product-parameter
+// input for EVERY calc type (ACTUAL, FORECAST, SELLING, MB batch) and must never
+// be sourced from a SELLING session snapshot, even if a FROM_MARKETING formula for
+// them is (re)activated in Master Formula.
+//
+// AX_WT (user-confirmed business rule 2026-09-30): the AX bobbin weight is typed
+// in cost_product_parameter and the grade weights AE..C are derived from it via
+// tx_weight(). The old F_YARN_AX_WT_FROM_MKT formula (000408) let a stale SELLING
+// snapshot override the manual value; migration 000534 deactivates it, and this
+// set keeps the engine correct even on a database where that guard did not fire.
+var manualInputOnlyParams = map[string]bool{
+	"AX_WT": true,
+}
+
 // injectMarketingResult adds the marketing_result() built-in function to scope.
 // Priority: (1) SELLING session snapshot, (2) existing CAPP scope value, (3) 0.
 // Falling back to CAPP preserves the imported param value when no SELLING session
 // has run yet — prevents FROM_MARKETING formulas from zeroing out user-supplied data.
+// Params in manualInputOnlyParams skip (1): they always resolve to the CAPP value.
 // Signature matches expr-lang's Function type alias: func(...any) (any, error).
 func injectMarketingResult(scope map[string]any, sellingSnap map[string]float64) {
 	scope["marketing_result"] = func(args ...any) (any, error) {
@@ -412,7 +427,7 @@ func injectMarketingResult(scope map[string]any, sellingSnap map[string]float64)
 		if !ok {
 			return float64(0), nil
 		}
-		if v, found := sellingSnap[paramCode]; found {
+		if v, found := sellingSnap[paramCode]; found && !manualInputOnlyParams[paramCode] {
 			return v, nil
 		}
 		// Fallback to CAPP scope value — preserves imported param when no SELLING session exists.
