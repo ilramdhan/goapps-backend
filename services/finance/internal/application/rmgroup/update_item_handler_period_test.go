@@ -35,6 +35,8 @@ func TestUpdateItemHandler_LatestPeriod_WritesThroughAnchorRow(t *testing.T) {
 	repo.On("GetDetailByID", ctx, detail.ID()).Return(detail, nil)
 	repo.On("GetDetailPeriodSnapshot", ctx, detail.ID(), "202604").
 		Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestDetailPeriodSnapshotsBefore", ctx, mock.Anything, "202604").
+		Return(map[uuid.UUID]*rmgroup.DetailPeriodSnapshot{}, nil)
 	repo.On("UpsertDetailPeriod", ctx, mock.MatchedBy(func(snap *rmgroup.DetailPeriodSnapshot) bool {
 		return snap.Period == "202604" && snap.SortOrder == sortOrder
 	})).Return(nil)
@@ -70,6 +72,8 @@ func TestUpdateItemHandler_OlderPeriod_AnchorRowUntouched(t *testing.T) {
 	repo.On("GetDetailByID", ctx, detail.ID()).Return(detail, nil)
 	repo.On("GetDetailPeriodSnapshot", ctx, detail.ID(), "202503").
 		Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestDetailPeriodSnapshotsBefore", ctx, mock.Anything, "202503").
+		Return(map[uuid.UUID]*rmgroup.DetailPeriodSnapshot{}, nil)
 	repo.On("UpsertDetailPeriod", ctx, mock.MatchedBy(func(snap *rmgroup.DetailPeriodSnapshot) bool {
 		return snap.Period == "202503" && snap.SortOrder == sortOrder
 	})).Return(nil)

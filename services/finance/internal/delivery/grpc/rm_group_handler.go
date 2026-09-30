@@ -310,13 +310,16 @@ func (h *RMGroupHandler) GetRMGroup(ctx context.Context, req *financev1.GetRMGro
 	details := make([]*financev1.RMGroupDetail, len(result.Details))
 	for i, d := range result.Details {
 		details[i] = rmGroupDetailToProto(d)
+		details[i].InheritedFromPeriod = result.DetailInheritedFrom[d.ID()]
 	}
+	head := rmGroupHeadToProto(result.Head)
+	head.InheritedFromPeriod = result.HeadInheritedFrom
 
 	RecordRMGroupOperation(opGet, true)
 	return &financev1.GetRMGroupResponse{
 		Base: successResponse(msgRMGroupSuccess),
 		Data: &financev1.RMGroupHeadWithDetails{
-			Head:    rmGroupHeadToProto(result.Head),
+			Head:    head,
 			Details: details,
 		},
 	}, nil
@@ -412,9 +415,11 @@ func (h *RMGroupHandler) UpdateRMGroup(ctx context.Context, req *financev1.Updat
 
 	RecordRMGroupOperation(opUpdate, true)
 	h.recalc.Publish(ctx, result.Head.ID(), string(apprmcost.TriggerGroupUpdate), getUserFromContext(ctx))
+	headOut := rmGroupHeadToProto(result.Head)
+	headOut.InheritedFromPeriod = result.HeadInheritedFrom
 	return &financev1.UpdateRMGroupResponse{
 		Base: successResponse("RM Group updated successfully"),
-		Data: rmGroupHeadToProto(result.Head),
+		Data: headOut,
 	}, nil
 }
 
@@ -628,7 +633,7 @@ func (h *RMGroupHandler) UpdateGroupItem(ctx context.Context, req *financev1.Upd
 	// (design §5.2 step 6), so the response's full Detail view (identity +
 	// audit fields, per design §2.3) is rebuilt via the same period-aware
 	// read path GetRMGroup uses.
-	detail, err := h.findUpdatedDetail(ctx, req.GroupHeadId, req.GroupDetailId, period)
+	detail, inheritedFrom, err := h.findUpdatedDetail(ctx, req.GroupHeadId, req.GroupDetailId, period)
 	if err != nil {
 		RecordRMGroupOperation(opUpdate, false)
 		return &financev1.UpdateGroupItemResponse{Base: domainErrorToBaseResponse(err)}, nil
@@ -638,33 +643,36 @@ func (h *RMGroupHandler) UpdateGroupItem(ctx context.Context, req *financev1.Upd
 	if headID, parseErr := uuid.Parse(req.GroupHeadId); parseErr == nil {
 		h.recalc.Publish(ctx, headID, string(apprmcost.TriggerDetailChange), getUserFromContext(ctx))
 	}
+	detailOut := rmGroupDetailToProto(detail)
+	detailOut.InheritedFromPeriod = inheritedFrom
 	return &financev1.UpdateGroupItemResponse{
 		Base: successResponse("Group item updated"),
-		Data: rmGroupDetailToProto(detail),
+		Data: detailOut,
 	}, nil
 }
 
 // findUpdatedDetail re-reads the head's details overlaid with period and
-// returns the one matching groupDetailID, for building the UpdateGroupItem
-// response after the write path stopped returning the anchor *rmgroup.Detail
-// directly (see the comment at its call site).
+// returns the one matching groupDetailID plus its inherited_from_period
+// marker, for building the UpdateGroupItem response after the write path
+// stopped returning the anchor *rmgroup.Detail directly (see the comment at
+// its call site).
 func (h *RMGroupHandler) findUpdatedDetail(
 	ctx context.Context, groupHeadID, groupDetailID, period string,
-) (*rmgroupdomain.Detail, error) {
+) (*rmgroupdomain.Detail, string, error) {
 	result, err := h.getHandler.Handle(ctx, appgroup.GetQuery{
 		HeadID:      groupHeadID,
 		WithDetails: true,
 		Period:      period,
 	})
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	for _, d := range result.Details {
 		if d.ID().String() == groupDetailID {
-			return d, nil
+			return d, result.DetailInheritedFrom[d.ID()], nil
 		}
 	}
-	return nil, rmgroupdomain.ErrDetailNotFound
+	return nil, "", rmgroupdomain.ErrDetailNotFound
 }
 
 // ListUngroupedItems returns items from the sync feed with no active group.

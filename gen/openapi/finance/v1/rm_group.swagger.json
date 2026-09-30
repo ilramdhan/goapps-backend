@@ -1562,6 +1562,10 @@
           "type": "number",
           "format": "double",
           "description": "V2: Valuation default value (per detail; drives FL)."
+        },
+        "inheritedFromPeriod": {
+          "type": "string",
+          "description": "Carry-forward provenance of the per-period values overlaid on this detail\n(only meaningful when the detail is read for a specific period).\nEmpty = an exact row exists for the requested period; \"ANCHOR\" = values\nfell back to the anchor row; otherwise the YYYYMM of the earlier source period."
         }
       },
       "description": "RMGroupDetail is one item's membership in an RM group."
@@ -1679,6 +1683,10 @@
         "isOilGroup": {
           "type": "boolean",
           "description": "Oil group flag (head-level, global — NOT period-versioned). When true the\ngroup is selectable as an OIL_NAME option (lookup master RM_GROUP_OIL) and\nits per-period rate drives OIL_RATE in the costing engine."
+        },
+        "inheritedFromPeriod": {
+          "type": "string",
+          "description": "Carry-forward provenance of the per-period values overlaid on this head\n(only meaningful when the head is read for a specific period).\nEmpty = an exact row exists for the requested period; \"ANCHOR\" = values\nfell back to the anchor row; otherwise the YYYYMM of the earlier source period."
         }
       },
       "description": "RMGroupHead is the aggregate root representing an RM group's cost configuration."

@@ -1,0 +1,549 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/yarn_tx_weight.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "YarnTxWeightService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/yarn-tx-weights": {
+      "get": {
+        "summary": "ListYarnTxWeights lists TX Weight rules with search, filter, and pagination.",
+        "operationId": "YarnTxWeightService_ListYarnTxWeights",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListYarnTxWeightsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Page number (1-indexed, default 1, min 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Items per page (1-100, default 10).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search query (searches in product type code/name and description).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "productTypeId",
+            "description": "Filter by product type id (0 = all product types).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "grade",
+            "description": "Filter by grade (UNSPECIFIED = all grades).\n\n - YARN_TX_WEIGHT_GRADE_UNSPECIFIED: Default -- used as \"no filter\" in list requests.\n - YARN_TX_WEIGHT_GRADE_AE: Grade AE.\n - YARN_TX_WEIGHT_GRADE_A9: Grade A9.\n - YARN_TX_WEIGHT_GRADE_A: Grade A.\n - YARN_TX_WEIGHT_GRADE_B: Grade B.\n - YARN_TX_WEIGHT_GRADE_C: Grade C.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "YARN_TX_WEIGHT_GRADE_UNSPECIFIED",
+              "YARN_TX_WEIGHT_GRADE_AE",
+              "YARN_TX_WEIGHT_GRADE_A9",
+              "YARN_TX_WEIGHT_GRADE_A",
+              "YARN_TX_WEIGHT_GRADE_B",
+              "YARN_TX_WEIGHT_GRADE_C"
+            ],
+            "default": "YARN_TX_WEIGHT_GRADE_UNSPECIFIED"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field: \"product_type\", \"grade\", \"created_at\", \"updated_at\" (default: \"product_type\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort order: \"asc\", \"desc\" (default: \"asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "YarnTxWeightService"
+        ]
+      },
+      "post": {
+        "summary": "CreateYarnTxWeight creates a new TX Weight rule.",
+        "operationId": "YarnTxWeightService_CreateYarnTxWeight",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateYarnTxWeightResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateYarnTxWeightRequest is the request for creating a TX Weight rule.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateYarnTxWeightRequest"
+            }
+          }
+        ],
+        "tags": [
+          "YarnTxWeightService"
+        ]
+      }
+    },
+    "/api/v1/finance/yarn-tx-weights/{id}": {
+      "get": {
+        "summary": "GetYarnTxWeight retrieves a TX Weight rule by ID.",
+        "operationId": "YarnTxWeightService_GetYarnTxWeight",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetYarnTxWeightResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "TX Weight rule ID (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "YarnTxWeightService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteYarnTxWeight soft deletes a TX Weight rule.",
+        "operationId": "YarnTxWeightService_DeleteYarnTxWeight",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteYarnTxWeightResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "TX Weight rule ID to delete (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "YarnTxWeightService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateYarnTxWeight updates an existing TX Weight rule.\nNote: product_type_id and grade are immutable.",
+        "operationId": "YarnTxWeightService_UpdateYarnTxWeight",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateYarnTxWeightResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "TX Weight rule ID to update (UUID format).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/YarnTxWeightServiceUpdateYarnTxWeightBody"
+            }
+          }
+        ],
+        "tags": [
+          "YarnTxWeightService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "YarnTxWeightServiceUpdateYarnTxWeightBody": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/definitions/v1YarnTxWeightMode",
+          "description": "New mode (optional, cannot be UNSPECIFIED if provided)."
+        },
+        "value": {
+          "type": "number",
+          "format": "double",
+          "description": "New value (optional)."
+        },
+        "description": {
+          "type": "string",
+          "description": "New description (optional, max 200 chars)."
+        }
+      },
+      "description": "UpdateYarnTxWeightRequest is the request for updating a TX Weight rule.\nNote: product_type_id and grade are immutable (they form the natural key)."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateYarnTxWeightRequest": {
+      "type": "object",
+      "properties": {
+        "productTypeId": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Product type id (required, \u003e= 1)."
+        },
+        "grade": {
+          "$ref": "#/definitions/v1YarnTxWeightGrade",
+          "description": "Grade (required, cannot be UNSPECIFIED)."
+        },
+        "mode": {
+          "$ref": "#/definitions/v1YarnTxWeightMode",
+          "description": "Mode (required, cannot be UNSPECIFIED)."
+        },
+        "value": {
+          "type": "number",
+          "format": "double",
+          "description": "Rule value."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description (max 200 chars)."
+        }
+      },
+      "description": "CreateYarnTxWeightRequest is the request for creating a TX Weight rule."
+    },
+    "v1CreateYarnTxWeightResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1YarnTxWeight",
+          "description": "Created TX Weight rule."
+        }
+      },
+      "description": "CreateYarnTxWeightResponse is the response for creating a TX Weight rule."
+    },
+    "v1DeleteYarnTxWeightResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        }
+      },
+      "description": "DeleteYarnTxWeightResponse is the response for deleting a TX Weight rule."
+    },
+    "v1GetYarnTxWeightResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1YarnTxWeight",
+          "description": "TX Weight rule data."
+        }
+      },
+      "description": "GetYarnTxWeightResponse is the response for getting a TX Weight rule."
+    },
+    "v1ListYarnTxWeightsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1YarnTxWeight"
+          },
+          "description": "List of TX Weight rules."
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse",
+          "description": "Pagination metadata."
+        }
+      },
+      "description": "ListYarnTxWeightsResponse is the response for listing TX Weight rules."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1UpdateYarnTxWeightResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response metadata."
+        },
+        "data": {
+          "$ref": "#/definitions/v1YarnTxWeight",
+          "description": "Updated TX Weight rule."
+        }
+      },
+      "description": "UpdateYarnTxWeightResponse is the response for updating a TX Weight rule."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    },
+    "v1YarnTxWeight": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier (UUID)."
+        },
+        "productTypeId": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Product type id (cost_product_type.cpt_type_id)."
+        },
+        "productTypeCode": {
+          "type": "string",
+          "description": "Product type code (display only, e.g. \"POY\")."
+        },
+        "productTypeName": {
+          "type": "string",
+          "description": "Product type name (display only)."
+        },
+        "grade": {
+          "$ref": "#/definitions/v1YarnTxWeightGrade",
+          "description": "Grade the rule applies to."
+        },
+        "mode": {
+          "$ref": "#/definitions/v1YarnTxWeightMode",
+          "description": "How value is applied to AX_WT."
+        },
+        "value": {
+          "type": "number",
+          "format": "double",
+          "description": "Rule value (subtrahend, multiplier, or fixed weight depending on mode)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description."
+        },
+        "oracleSysId": {
+          "type": "string",
+          "description": "Legacy Oracle CST_YARN_TX_WEIGHT.CYTW_SYS_ID (empty for rows created in GoApps)."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit information."
+        }
+      },
+      "description": "YarnTxWeight is one (product type, grade) weight rule.\nAt most one live row exists per (product_type_id, grade)."
+    },
+    "v1YarnTxWeightGrade": {
+      "type": "string",
+      "enum": [
+        "YARN_TX_WEIGHT_GRADE_UNSPECIFIED",
+        "YARN_TX_WEIGHT_GRADE_AE",
+        "YARN_TX_WEIGHT_GRADE_A9",
+        "YARN_TX_WEIGHT_GRADE_A",
+        "YARN_TX_WEIGHT_GRADE_B",
+        "YARN_TX_WEIGHT_GRADE_C"
+      ],
+      "default": "YARN_TX_WEIGHT_GRADE_UNSPECIFIED",
+      "description": "YarnTxWeightGrade is the yarn grade a TX Weight row applies to.\n\n - YARN_TX_WEIGHT_GRADE_UNSPECIFIED: Default -- used as \"no filter\" in list requests.\n - YARN_TX_WEIGHT_GRADE_AE: Grade AE.\n - YARN_TX_WEIGHT_GRADE_A9: Grade A9.\n - YARN_TX_WEIGHT_GRADE_A: Grade A.\n - YARN_TX_WEIGHT_GRADE_B: Grade B.\n - YARN_TX_WEIGHT_GRADE_C: Grade C."
+    },
+    "v1YarnTxWeightMode": {
+      "type": "string",
+      "enum": [
+        "YARN_TX_WEIGHT_MODE_UNSPECIFIED",
+        "YARN_TX_WEIGHT_MODE_LESS_BY",
+        "YARN_TX_WEIGHT_MODE_MULTIPLY",
+        "YARN_TX_WEIGHT_MODE_FIXED"
+      ],
+      "default": "YARN_TX_WEIGHT_MODE_UNSPECIFIED",
+      "description": "YarnTxWeightMode is how the value is applied to the AX weight.\n\n - YARN_TX_WEIGHT_MODE_UNSPECIFIED: Default -- used as \"no filter\" in list requests.\n - YARN_TX_WEIGHT_MODE_LESS_BY: Result = AX_WT - value.\n - YARN_TX_WEIGHT_MODE_MULTIPLY: Result = AX_WT * value.\n - YARN_TX_WEIGHT_MODE_FIXED: Result = value (independent of AX_WT)."
+    }
+  }
+}

@@ -3,7 +3,6 @@ package rmgroup
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -30,9 +29,18 @@ type GetQuery struct {
 // otherwise (period never edited, or a brand-new period with no snapshot
 // yet). Identity fields -- ID, Code, item code, created_at/by -- always come
 // from the anchor row regardless of Period.
+//
+// HeadInheritedFrom / DetailInheritedFrom report where the period overlay was
+// resolved from (carry-forward chain, see period_resolver.go): "" = exact
+// period row, InheritedFromAnchor = anchor row, otherwise the YYYYMM of the
+// earlier period the values were inherited from. Both are empty when no
+// Period was requested.
 type GetResult struct {
 	Head    *rmgroup.Head
 	Details []*rmgroup.Detail
+
+	HeadInheritedFrom   string
+	DetailInheritedFrom map[uuid.UUID]string
 }
 
 // GetHandler handles GetHead queries.
@@ -62,14 +70,15 @@ func (h *GetHandler) Handle(ctx context.Context, query GetQuery) (*GetResult, er
 		return nil, err
 	}
 
+	var headInherited string
 	if query.Period != "" {
-		head, err = h.overlayHeadPeriod(ctx, head, query.Period)
+		head, headInherited, err = h.overlayHeadPeriod(ctx, head, query.Period)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	result := &GetResult{Head: head}
+	result := &GetResult{Head: head, HeadInheritedFrom: headInherited}
 	if !query.WithDetails {
 		return result, nil
 	}
@@ -79,7 +88,7 @@ func (h *GetHandler) Handle(ctx context.Context, query GetQuery) (*GetResult, er
 		return nil, fmt.Errorf("load details: %w", err)
 	}
 	if query.Period != "" {
-		details, err = h.overlayDetailsPeriod(ctx, details, query.Period)
+		details, result.DetailInheritedFrom, err = h.overlayDetailsPeriod(ctx, id, details, query.Period)
 		if err != nil {
 			return nil, err
 		}
@@ -95,30 +104,30 @@ func (h *GetHandler) loadDetails(ctx context.Context, headID uuid.UUID, activeOn
 	return h.repo.ListDetailsByHeadID(ctx, headID)
 }
 
-// overlayHeadPeriod resolves the (head.ID(), period) snapshot -- falling back
-// to a fresh snapshot built from the anchor head's current values when none
-// exists yet (get-or-create baseline, design §2.3) -- and merges it onto a new
-// Head value so the anchor entity itself is never mutated.
-func (h *GetHandler) overlayHeadPeriod(ctx context.Context, head *rmgroup.Head, period string) (*rmgroup.Head, error) {
+// overlayHeadPeriod resolves the (head.ID(), period) snapshot through the
+// carry-forward chain (exact -> latest earlier period -> anchor, see
+// ResolveHeadSnapshot) and merges it onto a new Head value so the anchor
+// entity itself is never mutated. Also returns where the values came from.
+func (h *GetHandler) overlayHeadPeriod(ctx context.Context, head *rmgroup.Head, period string) (*rmgroup.Head, string, error) {
 	if err := rmgroup.ValidatePeriodFormat(period); err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	snap, err := h.repo.GetHeadPeriodSnapshot(ctx, head.ID(), period)
+	snap, inheritedFrom, err := ResolveHeadSnapshot(ctx, h.repo, head, period)
 	if err != nil {
-		if !errors.Is(err, rmgroup.ErrNotFound) {
-			return nil, fmt.Errorf("load head period snapshot: %w", err)
-		}
-		fresh := rmgroup.NewHeadPeriodSnapshotFromHead(period, head)
-		snap = &fresh
+		return nil, "", err
 	}
-	return overlayHeadFromSnapshot(head, snap)
+	overlaid, err := OverlayHeadFromSnapshot(head, snap)
+	if err != nil {
+		return nil, "", err
+	}
+	return overlaid, inheritedFrom, nil
 }
 
-// overlayHeadFromSnapshot builds a new Head carrying the anchor row's
+// OverlayHeadFromSnapshot builds a new Head carrying the anchor row's
 // identity/audit/activity fields plus the snapshot's editable fields. IsActive
 // is intentionally taken from the anchor, not the snapshot -- activity status
 // is not period-scoped (design §4).
-func overlayHeadFromSnapshot(head *rmgroup.Head, snap *rmgroup.HeadPeriodSnapshot) (*rmgroup.Head, error) {
+func OverlayHeadFromSnapshot(head *rmgroup.Head, snap *rmgroup.HeadPeriodSnapshot) (*rmgroup.Head, error) {
 	overlaid := rmgroup.ReconstructHead(
 		head.ID(), head.Code(),
 		snap.Name, snap.Description, snap.Colorant, snap.CIName,
@@ -138,35 +147,34 @@ func overlayHeadFromSnapshot(head *rmgroup.Head, snap *rmgroup.HeadPeriodSnapsho
 	return overlaid, nil
 }
 
-// overlayDetailsPeriod overlays every detail row with its (detailID, period)
-// snapshot, applying the same get-or-create fallback as overlayHeadPeriod.
+// overlayDetailsPeriod overlays every detail row with its effective period
+// snapshot resolved through the same carry-forward chain as
+// overlayHeadPeriod, returning the per-detail inheritedFrom markers.
 func (h *GetHandler) overlayDetailsPeriod(
-	ctx context.Context, details []*rmgroup.Detail, period string,
-) ([]*rmgroup.Detail, error) {
+	ctx context.Context, headID uuid.UUID, details []*rmgroup.Detail, period string,
+) ([]*rmgroup.Detail, map[uuid.UUID]string, error) {
+	resolved, err := ResolveDetailSnapshots(ctx, h.repo, headID, details, period)
+	if err != nil {
+		return nil, nil, err
+	}
 	overlaid := make([]*rmgroup.Detail, len(details))
+	inherited := make(map[uuid.UUID]string, len(details))
 	for i, d := range details {
-		snap, err := h.repo.GetDetailPeriodSnapshot(ctx, d.ID(), period)
+		merged, err := OverlayDetailFromSnapshot(d, resolved[i].Snapshot)
 		if err != nil {
-			if !errors.Is(err, rmgroup.ErrNotFound) {
-				return nil, fmt.Errorf("load detail period snapshot: %w", err)
-			}
-			fresh := rmgroup.NewDetailPeriodSnapshotFromDetail(period, d)
-			snap = &fresh
-		}
-		merged, err := overlayDetailFromSnapshot(d, snap)
-		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		overlaid[i] = merged
+		inherited[d.ID()] = resolved[i].InheritedFrom
 	}
-	return overlaid, nil
+	return overlaid, inherited, nil
 }
 
-// overlayDetailFromSnapshot builds a new Detail carrying the anchor row's
+// OverlayDetailFromSnapshot builds a new Detail carrying the anchor row's
 // identity/audit fields plus the snapshot's editable fields (including
 // IsActive/IsDummy/SortOrder, which -- unlike Head's IsActive -- are
 // period-scoped per design §3).
-func overlayDetailFromSnapshot(detail *rmgroup.Detail, snap *rmgroup.DetailPeriodSnapshot) (*rmgroup.Detail, error) {
+func OverlayDetailFromSnapshot(detail *rmgroup.Detail, snap *rmgroup.DetailPeriodSnapshot) (*rmgroup.Detail, error) {
 	overlaid := rmgroup.ReconstructDetail(
 		detail.ID(), detail.HeadID(), detail.ItemCode(),
 		detail.ItemName(), detail.ItemTypeCode(), detail.GradeCode(), detail.ItemGrade(), detail.UOMCode(),

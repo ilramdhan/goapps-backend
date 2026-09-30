@@ -37,6 +37,7 @@ func TestUpdateHandler_OilFlagOnly_OlderPeriod_WritesAnchorWithoutSnapshot(t *te
 	repo := new(mockRepo)
 	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
 	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202503").Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202503").Return(nil, rmgroup.ErrNotFound)
 	repo.On("UpdateHead", ctx, mock.MatchedBy(func(h *rmgroup.Head) bool { return h.IsOilGroup() })).Return(nil)
 
 	h := appgroup.NewUpdateHandler(repo)
@@ -58,6 +59,7 @@ func TestUpdateHandler_OilFlagWithPeriodPatch_OlderPeriod_AnchorFlagOnly(t *test
 	repo := new(mockRepo)
 	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
 	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202503").Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202503").Return(nil, rmgroup.ErrNotFound)
 	repo.On("UpsertHeadPeriod", ctx, mock.Anything).Return(nil)
 	repo.On("LatestSyncPeriod", ctx).Return("202604", nil)
 	repo.On("UpdateHead", ctx, head).Return(nil)
@@ -99,6 +101,7 @@ func TestUpdateHandler_UnflagUnusedOilGroup_Allowed(t *testing.T) {
 	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
 	repo.On("IsOilGroupInUse", ctx, head.ID()).Return(false, nil)
 	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202604").Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202604").Return(nil, rmgroup.ErrNotFound)
 	repo.On("UpdateHead", ctx, head).Return(nil)
 
 	h := appgroup.NewUpdateHandler(repo)

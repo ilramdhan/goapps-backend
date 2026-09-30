@@ -24,6 +24,7 @@ func TestUpdateHandler_LatestPeriod_WritesThroughAnchorRow(t *testing.T) {
 	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
 	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202604").
 		Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202604").Return(nil, rmgroup.ErrNotFound)
 	repo.On("UpsertHeadPeriod", ctx, mock.MatchedBy(func(snap *rmgroup.HeadPeriodSnapshot) bool {
 		return snap.Period == "202604" && snap.Name == "Latest Name"
 	})).Return(nil)
@@ -59,6 +60,7 @@ func TestUpdateHandler_OlderPeriod_AnchorRowUntouched(t *testing.T) {
 	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
 	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202503").
 		Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202503").Return(nil, rmgroup.ErrNotFound)
 	repo.On("UpsertHeadPeriod", ctx, mock.MatchedBy(func(snap *rmgroup.HeadPeriodSnapshot) bool {
 		return snap.Period == "202503" && snap.Name == "Old Period Name"
 	})).Return(nil)

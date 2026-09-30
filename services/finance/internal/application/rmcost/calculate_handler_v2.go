@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	appgroup "github.com/mutugading/goapps-backend/services/finance/internal/application/rmgroup"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmgroup"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
@@ -88,7 +89,7 @@ func (h *CalculateHandlerV2) HandleOneGroup(
 	if err := h.validateInputs(period, calculatedBy); err != nil {
 		return nil, err
 	}
-	head, details, err := h.loadHeadAndDetails(ctx, headID, period)
+	head, details, freeze, err := h.loadHeadAndDetails(ctx, headID, period)
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +130,9 @@ func (h *CalculateHandlerV2) HandleOneGroup(
 	if err := h.costDetailRepo.UpsertAll(ctx, cost.ID(), costDetails); err != nil {
 		return nil, fmt.Errorf("upsert cost details: %w", err)
 	}
+	if err := h.freezeInheritedSnapshots(ctx, freeze, calculatedBy); err != nil {
+		return nil, err
+	}
 	return cost, nil
 }
 
@@ -142,96 +146,95 @@ func (h *CalculateHandlerV2) validateInputs(period, calculatedBy string) error {
 	return nil
 }
 
+// periodFreeze carries the resolved-but-inherited snapshots of one
+// calculation: the snapshots the period read fell back to because period P
+// had no exact row yet. Freeze-on-calc persists them as P's exact rows once
+// the calculation has been stored.
+type periodFreeze struct {
+	head             *rmgroup.HeadPeriodSnapshot
+	headInherited    string
+	details          []*rmgroup.DetailPeriodSnapshot
+	detailsInherited []string
+}
+
 // loadHeadAndDetails loads the group config used to calculate one period.
-// Per design §2.2/§2.3, this is a period-aware read: for the given period it
-// first tries the period-scoped snapshot (cst_rm_group_head_period /
-// cst_rm_group_detail_period), falling back to the anchor row when no
-// snapshot exists yet for that period. For the latest period this is
+// It is a period-aware read through the shared carry-forward chain
+// (appgroup.ResolveHeadSnapshot / ResolveDetailSnapshots): the exact period
+// snapshot when present, otherwise the latest earlier period's snapshot,
+// otherwise the anchor row. For the latest period with an exact row this is
 // byte-identical to reading the anchor row directly, because the
 // write-through rule (update_handler.go / update_item_handler.go) keeps the
-// anchor row and the latest-period snapshot in sync on every edit.
-func (h *CalculateHandlerV2) loadHeadAndDetails(ctx context.Context, headID uuid.UUID, period string) (*rmgroup.Head, []*rmgroup.Detail, error) {
-	head, err := h.groupRepo.GetHeadByID(ctx, headID)
+// anchor row and the latest-period snapshot in sync on every edit. The
+// returned periodFreeze lists every inherited snapshot for freeze-on-calc.
+func (h *CalculateHandlerV2) loadHeadAndDetails(
+	ctx context.Context, headID uuid.UUID, period string,
+) (*rmgroup.Head, []*rmgroup.Detail, *periodFreeze, error) {
+	anchor, err := h.groupRepo.GetHeadByID(ctx, headID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("load head: %w", err)
+		return nil, nil, nil, fmt.Errorf("load head: %w", err)
 	}
-	head, err = h.overlayHeadForPeriod(ctx, head, period)
+	headSnap, headInherited, err := appgroup.ResolveHeadSnapshot(ctx, h.groupRepo, anchor, period)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	details, err := h.groupRepo.ListActiveDetailsByHeadID(ctx, headID)
+	head, err := appgroup.OverlayHeadFromSnapshot(anchor, headSnap)
 	if err != nil {
-		return nil, nil, fmt.Errorf("list details: %w", err)
+		return nil, nil, nil, err
 	}
-	details, err = h.overlayDetailsForPeriod(ctx, details, period)
-	if err != nil {
-		return nil, nil, err
+	freeze := &periodFreeze{}
+	if headInherited != "" {
+		freeze.head, freeze.headInherited = headSnap, headInherited
 	}
-	return head, details, nil
-}
 
-// overlayHeadForPeriod resolves the (head.ID(), period) snapshot, falling
-// back to a fresh snapshot built from the anchor head's current values when
-// none exists yet (get-or-create baseline, same fallback rule as
-// rmgroup.GetHandler.overlayHeadPeriod), and merges it onto a new Head value
-// so the anchor entity itself is never mutated.
-func (h *CalculateHandlerV2) overlayHeadForPeriod(ctx context.Context, head *rmgroup.Head, period string) (*rmgroup.Head, error) {
-	snap, err := h.groupRepo.GetHeadPeriodSnapshot(ctx, head.ID(), period)
+	anchorDetails, err := h.groupRepo.ListActiveDetailsByHeadID(ctx, headID)
 	if err != nil {
-		if !errors.Is(err, rmgroup.ErrNotFound) {
-			return nil, fmt.Errorf("load head period snapshot: %w", err)
-		}
-		fresh := rmgroup.NewHeadPeriodSnapshotFromHead(period, head)
-		snap = &fresh
+		return nil, nil, nil, fmt.Errorf("list details: %w", err)
 	}
-	overlaid := rmgroup.ReconstructHead(
-		head.ID(), head.Code(),
-		snap.Name, snap.Description, snap.Colorant, snap.CIName,
-		snap.CostPercentage, snap.CostPerKg,
-		snap.FlagValuation, snap.FlagMarketing, snap.FlagSimulation,
-		snap.InitValValuation, snap.InitValMarketing, snap.InitValSimulation,
-		head.IsActive(),
-		head.CreatedAt(), head.CreatedBy(),
-		head.UpdatedAt(), head.UpdatedBy(),
-		head.DeletedAt(), head.DeletedBy(),
-	)
-	if err := overlaid.AttachMarketingInputs(snap.MarketingInputs); err != nil {
-		return nil, fmt.Errorf("attach head period overlay marketing inputs: %w", err)
+	resolved, err := appgroup.ResolveDetailSnapshots(ctx, h.groupRepo, headID, anchorDetails, period)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	return overlaid, nil
-}
-
-// overlayDetailsForPeriod overlays every detail row with its (detailID,
-// period) snapshot, applying the same get-or-create fallback as
-// overlayHeadForPeriod.
-func (h *CalculateHandlerV2) overlayDetailsForPeriod(
-	ctx context.Context, details []*rmgroup.Detail, period string,
-) ([]*rmgroup.Detail, error) {
-	overlaid := make([]*rmgroup.Detail, len(details))
-	for i, d := range details {
-		snap, err := h.groupRepo.GetDetailPeriodSnapshot(ctx, d.ID(), period)
+	details := make([]*rmgroup.Detail, len(anchorDetails))
+	for i, d := range anchorDetails {
+		merged, err := appgroup.OverlayDetailFromSnapshot(d, resolved[i].Snapshot)
 		if err != nil {
-			if !errors.Is(err, rmgroup.ErrNotFound) {
-				return nil, fmt.Errorf("load detail period snapshot: %w", err)
-			}
-			fresh := rmgroup.NewDetailPeriodSnapshotFromDetail(period, d)
-			snap = &fresh
+			return nil, nil, nil, err
 		}
-		merged := rmgroup.ReconstructDetail(
-			d.ID(), d.HeadID(), d.ItemCode(),
-			d.ItemName(), d.ItemTypeCode(), d.GradeCode(), d.ItemGrade(), d.UOMCode(),
-			snap.MarketPercentage, snap.MarketValueRp,
-			snap.SortOrder, snap.IsActive, snap.IsDummy,
-			d.CreatedAt(), d.CreatedBy(),
-			d.UpdatedAt(), d.UpdatedBy(),
-			d.DeletedAt(), d.DeletedBy(),
-		)
-		if err := merged.AttachValuationInputs(snap.ValuationInputs); err != nil {
-			return nil, fmt.Errorf("attach detail period overlay valuation inputs: %w", err)
+		details[i] = merged
+		if resolved[i].InheritedFrom != "" {
+			freeze.details = append(freeze.details, resolved[i].Snapshot)
+			freeze.detailsInherited = append(freeze.detailsInherited, resolved[i].InheritedFrom)
 		}
-		overlaid[i] = merged
 	}
-	return overlaid, nil
+	return head, details, freeze, nil
+}
+
+// freezeInheritedSnapshots persists every inherited snapshot used by this
+// calculation as the exact row for its period (is_backfilled = true,
+// carried_from_period = source period, NULL when inherited from the anchor),
+// so later edits to earlier periods or to the anchor no longer change an
+// already-calculated period. Runs after the cost rows are stored, and uses
+// insert-if-absent so it is idempotent across recalculations and never
+// overwrites an exact row written concurrently by a real edit.
+func (h *CalculateHandlerV2) freezeInheritedSnapshots(ctx context.Context, f *periodFreeze, frozenBy string) error {
+	if f == nil {
+		return nil
+	}
+	if frozen := appgroup.FrozenHeadCopy(f.head, f.headInherited, frozenBy); frozen != nil {
+		if _, err := h.groupRepo.InsertHeadPeriodIfAbsent(ctx, frozen); err != nil {
+			return fmt.Errorf("freeze head period snapshot: %w", err)
+		}
+	}
+	for i, snap := range f.details {
+		frozen := appgroup.FrozenDetailCopy(snap, f.detailsInherited[i], frozenBy)
+		if frozen == nil {
+			continue
+		}
+		if _, err := h.groupRepo.InsertDetailPeriodIfAbsent(ctx, frozen); err != nil {
+			return fmt.Errorf("freeze detail period snapshot: %w", err)
+		}
+	}
+	return nil
 }
 
 // computeDetailOutputs builds the per-(item, grade) source-key list, fetches

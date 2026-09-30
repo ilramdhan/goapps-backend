@@ -817,8 +817,13 @@ type HeadPeriodSnapshot struct {
 	MarketingInputs MarketingInputs
 
 	// IsBackfilled distinguishes a real per-period edit from a row produced by
-	// the one-time historical backfill migration.
+	// the one-time historical backfill migration or a freeze-on-calc copy.
 	IsBackfilled bool
+
+	// CarriedFromPeriod is the source period (YYYYMM) a freeze-on-calc row was
+	// copied from. Nil for real edits, historical backfill rows, and rows
+	// frozen from the anchor.
+	CarriedFromPeriod *string
 
 	CreatedAt time.Time
 	CreatedBy string
@@ -877,8 +882,13 @@ type DetailPeriodSnapshot struct {
 	ValuationInputs ValuationInputs
 
 	// IsBackfilled distinguishes a real per-period edit from a row produced by
-	// the one-time historical backfill migration.
+	// the one-time historical backfill migration or a freeze-on-calc copy.
 	IsBackfilled bool
+
+	// CarriedFromPeriod is the source period (YYYYMM) a freeze-on-calc row was
+	// copied from. Nil for real edits, historical backfill rows, and rows
+	// frozen from the anchor.
+	CarriedFromPeriod *string
 
 	CreatedAt time.Time
 	CreatedBy string
@@ -904,4 +914,61 @@ func NewDetailPeriodSnapshotFromDetail(period string, detail *Detail) DetailPeri
 		CreatedAt:        time.Now(),
 		CreatedBy:        detail.CreatedBy(),
 	}
+}
+
+// =============================================================================
+// Carry-forward helpers
+// =============================================================================
+
+// CarryForwardTo returns a copy of the snapshot re-keyed for targetPeriod: a
+// fresh ID, Period = targetPeriod, provenance cleared (IsBackfilled false,
+// CarriedFromPeriod nil) and audit reset to "created now by the source's
+// creator". Pointer fields are deep-copied so patching the copy never mutates
+// the source snapshot. Used when a period without its own row inherits the
+// latest earlier period's values.
+func (s HeadPeriodSnapshot) CarryForwardTo(targetPeriod string) HeadPeriodSnapshot {
+	out := s
+	out.ID = uuid.New()
+	out.Period = targetPeriod
+	out.InitValValuation = copyFloatPtr(s.InitValValuation)
+	out.InitValMarketing = copyFloatPtr(s.InitValMarketing)
+	out.InitValSimulation = copyFloatPtr(s.InitValSimulation)
+	out.MarketingInputs.FreightRate = copyFloatPtr(s.MarketingInputs.FreightRate)
+	out.MarketingInputs.AntiDumpingPct = copyFloatPtr(s.MarketingInputs.AntiDumpingPct)
+	out.MarketingInputs.DefaultValue = copyFloatPtr(s.MarketingInputs.DefaultValue)
+	out.IsBackfilled = false
+	out.CarriedFromPeriod = nil
+	out.CreatedAt = time.Now()
+	out.UpdatedAt = nil
+	out.UpdatedBy = nil
+	return out
+}
+
+// CarryForwardTo returns a copy of the detail snapshot re-keyed for
+// targetPeriod — same semantics as HeadPeriodSnapshot.CarryForwardTo.
+func (s DetailPeriodSnapshot) CarryForwardTo(targetPeriod string) DetailPeriodSnapshot {
+	out := s
+	out.ID = uuid.New()
+	out.Period = targetPeriod
+	out.MarketPercentage = copyFloatPtr(s.MarketPercentage)
+	out.MarketValueRp = copyFloatPtr(s.MarketValueRp)
+	out.ValuationInputs.FreightRate = copyFloatPtr(s.ValuationInputs.FreightRate)
+	out.ValuationInputs.AntiDumpingPct = copyFloatPtr(s.ValuationInputs.AntiDumpingPct)
+	out.ValuationInputs.DutyPct = copyFloatPtr(s.ValuationInputs.DutyPct)
+	out.ValuationInputs.TransportRate = copyFloatPtr(s.ValuationInputs.TransportRate)
+	out.ValuationInputs.DefaultValue = copyFloatPtr(s.ValuationInputs.DefaultValue)
+	out.IsBackfilled = false
+	out.CarriedFromPeriod = nil
+	out.CreatedAt = time.Now()
+	out.UpdatedAt = nil
+	out.UpdatedBy = nil
+	return out
+}
+
+func copyFloatPtr(p *float64) *float64 {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
 }

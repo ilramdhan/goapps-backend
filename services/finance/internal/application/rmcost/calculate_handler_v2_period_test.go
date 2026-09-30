@@ -153,6 +153,33 @@ func (m *mockGroupRepo) UpsertDetailPeriod(ctx context.Context, snap *rmgroup.De
 	return m.Called(ctx, snap).Error(0)
 }
 
+func (m *mockGroupRepo) GetLatestHeadPeriodSnapshotBefore(ctx context.Context, headID uuid.UUID, period string) (*rmgroup.HeadPeriodSnapshot, error) {
+	args := m.Called(ctx, headID, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*rmgroup.HeadPeriodSnapshot), args.Error(1)
+}
+
+func (m *mockGroupRepo) GetLatestDetailPeriodSnapshotsBefore(ctx context.Context, headID uuid.UUID, period string) (map[uuid.UUID]*rmgroup.DetailPeriodSnapshot, error) {
+	args := m.Called(ctx, headID, period)
+	var out map[uuid.UUID]*rmgroup.DetailPeriodSnapshot
+	if v := args.Get(0); v != nil {
+		out = v.(map[uuid.UUID]*rmgroup.DetailPeriodSnapshot)
+	}
+	return out, args.Error(1)
+}
+
+func (m *mockGroupRepo) InsertHeadPeriodIfAbsent(ctx context.Context, snap *rmgroup.HeadPeriodSnapshot) (bool, error) {
+	args := m.Called(ctx, snap)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockGroupRepo) InsertDetailPeriodIfAbsent(ctx context.Context, snap *rmgroup.DetailPeriodSnapshot) (bool, error) {
+	args := m.Called(ctx, snap)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *mockGroupRepo) LatestSyncPeriod(ctx context.Context) (string, error) {
 	args := m.Called(ctx)
 	return args.String(0), args.Error(1)
@@ -200,7 +227,7 @@ func TestCalculateHandlerV2_LoadHeadAndDetails_UsesSnapshotWhenPresent(t *testin
 	repo.On("GetDetailPeriodSnapshot", ctx, detail.ID(), "202503").Return(&detailSnap, nil)
 
 	h := NewCalculateHandlerV2(repo, nil, nil, nil, nil)
-	gotHead, gotDetails, err := h.loadHeadAndDetails(ctx, head.ID(), "202503")
+	gotHead, gotDetails, _, err := h.loadHeadAndDetails(ctx, head.ID(), "202503")
 	require.NoError(t, err)
 
 	assert.InEpsilon(t, 99.0, gotHead.CostPercentage(), 1e-9)
@@ -226,17 +253,121 @@ func TestCalculateHandlerV2_LoadHeadAndDetails_FallsBackToAnchorRow(t *testing.T
 	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
 	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202601").
 		Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202601").Return(nil, rmgroup.ErrNotFound)
 	repo.On("ListActiveDetailsByHeadID", ctx, head.ID()).Return([]*rmgroup.Detail{detail}, nil)
 	repo.On("GetDetailPeriodSnapshot", ctx, detail.ID(), "202601").
 		Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestDetailPeriodSnapshotsBefore", ctx, mock.Anything, "202601").
+		Return(map[uuid.UUID]*rmgroup.DetailPeriodSnapshot{}, nil)
 
 	h := NewCalculateHandlerV2(repo, nil, nil, nil, nil)
-	gotHead, gotDetails, err := h.loadHeadAndDetails(ctx, head.ID(), "202601")
+	gotHead, gotDetails, _, err := h.loadHeadAndDetails(ctx, head.ID(), "202601")
 	require.NoError(t, err)
 
 	assert.Equal(t, head.CostPercentage(), gotHead.CostPercentage())
 	assert.Equal(t, head.Name(), gotHead.Name())
 	require.Len(t, gotDetails, 1)
 	assert.Equal(t, detail.ValuationInputs(), gotDetails[0].ValuationInputs())
+	repo.AssertExpectations(t)
+}
+
+// TestCalculateHandlerV2_FreezeOnCalc_CarriesFromEarlierPeriod locks
+// freeze-on-calc: calculating a period with no exact row uses the latest
+// earlier period's values and persists them as that period's own row
+// (is_backfilled = true, carried_from_period = source period) via
+// insert-if-absent, so later edits to the earlier period do not drift it.
+func TestCalculateHandlerV2_FreezeOnCalc_CarriesFromEarlierPeriod(t *testing.T) {
+	ctx := context.Background()
+	head := newCalcTestHead(t)
+	detail := newCalcTestDetail(t, head.ID())
+
+	prevHead := rmgroup.NewHeadPeriodSnapshotFromHead("202603", head)
+	prevHead.CostPercentage = 55.0
+	prevDetail := rmgroup.NewDetailPeriodSnapshotFromDetail("202603", detail)
+	prevFreight := 3.25
+	prevDetail.ValuationInputs.FreightRate = &prevFreight
+
+	repo := new(mockGroupRepo)
+	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
+	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202605").Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202605").Return(&prevHead, nil)
+	repo.On("ListActiveDetailsByHeadID", ctx, head.ID()).Return([]*rmgroup.Detail{detail}, nil)
+	repo.On("GetDetailPeriodSnapshot", ctx, detail.ID(), "202605").Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestDetailPeriodSnapshotsBefore", ctx, head.ID(), "202605").
+		Return(map[uuid.UUID]*rmgroup.DetailPeriodSnapshot{detail.ID(): &prevDetail}, nil)
+	repo.On("InsertHeadPeriodIfAbsent", ctx, mock.MatchedBy(func(s *rmgroup.HeadPeriodSnapshot) bool {
+		return s.Period == "202605" && s.IsBackfilled &&
+			s.CarriedFromPeriod != nil && *s.CarriedFromPeriod == "202603" &&
+			s.CostPercentage == 55.0 && s.CreatedBy == "calc-user"
+	})).Return(true, nil).Once()
+	repo.On("InsertDetailPeriodIfAbsent", ctx, mock.MatchedBy(func(s *rmgroup.DetailPeriodSnapshot) bool {
+		return s.Period == "202605" && s.IsBackfilled &&
+			s.CarriedFromPeriod != nil && *s.CarriedFromPeriod == "202603" &&
+			s.ValuationInputs.FreightRate != nil && *s.ValuationInputs.FreightRate == 3.25
+	})).Return(true, nil).Once()
+
+	h := NewCalculateHandlerV2(repo, nil, nil, nil, nil)
+	gotHead, gotDetails, freeze, err := h.loadHeadAndDetails(ctx, head.ID(), "202605")
+	require.NoError(t, err)
+	assert.InEpsilon(t, 55.0, gotHead.CostPercentage(), 1e-9)
+	require.Len(t, gotDetails, 1)
+	require.NotNil(t, gotDetails[0].ValuationInputs().FreightRate)
+	assert.InEpsilon(t, 3.25, *gotDetails[0].ValuationInputs().FreightRate, 1e-9)
+
+	require.NoError(t, h.freezeInheritedSnapshots(ctx, freeze, "calc-user"))
+	repo.AssertExpectations(t)
+}
+
+// TestCalculateHandlerV2_FreezeOnCalc_AnchorHasNilCarriedFrom locks the
+// anchor branch: the frozen row is still backfilled, but carried_from_period
+// is NULL because no earlier period existed.
+func TestCalculateHandlerV2_FreezeOnCalc_AnchorHasNilCarriedFrom(t *testing.T) {
+	ctx := context.Background()
+	head := newCalcTestHead(t)
+	detail := newCalcTestDetail(t, head.ID())
+
+	repo := new(mockGroupRepo)
+	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
+	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202601").Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestHeadPeriodSnapshotBefore", ctx, head.ID(), "202601").Return(nil, rmgroup.ErrNotFound)
+	repo.On("ListActiveDetailsByHeadID", ctx, head.ID()).Return([]*rmgroup.Detail{detail}, nil)
+	repo.On("GetDetailPeriodSnapshot", ctx, detail.ID(), "202601").Return(nil, rmgroup.ErrNotFound)
+	repo.On("GetLatestDetailPeriodSnapshotsBefore", ctx, head.ID(), "202601").
+		Return(map[uuid.UUID]*rmgroup.DetailPeriodSnapshot{}, nil)
+	repo.On("InsertHeadPeriodIfAbsent", ctx, mock.MatchedBy(func(s *rmgroup.HeadPeriodSnapshot) bool {
+		return s.Period == "202601" && s.IsBackfilled && s.CarriedFromPeriod == nil
+	})).Return(true, nil).Once()
+	repo.On("InsertDetailPeriodIfAbsent", ctx, mock.MatchedBy(func(s *rmgroup.DetailPeriodSnapshot) bool {
+		return s.Period == "202601" && s.IsBackfilled && s.CarriedFromPeriod == nil
+	})).Return(false, nil).Once() // already present (concurrent edit) — not an error
+
+	h := NewCalculateHandlerV2(repo, nil, nil, nil, nil)
+	_, _, freeze, err := h.loadHeadAndDetails(ctx, head.ID(), "202601")
+	require.NoError(t, err)
+	require.NoError(t, h.freezeInheritedSnapshots(ctx, freeze, "calc-user"))
+	repo.AssertExpectations(t)
+}
+
+// TestCalculateHandlerV2_FreezeOnCalc_ExactRowsNotTouched locks that
+// freeze-on-calc never writes when exact period rows already exist.
+func TestCalculateHandlerV2_FreezeOnCalc_ExactRowsNotTouched(t *testing.T) {
+	ctx := context.Background()
+	head := newCalcTestHead(t)
+	detail := newCalcTestDetail(t, head.ID())
+	headSnap := rmgroup.NewHeadPeriodSnapshotFromHead("202503", head)
+	detailSnap := rmgroup.NewDetailPeriodSnapshotFromDetail("202503", detail)
+
+	repo := new(mockGroupRepo)
+	repo.On("GetHeadByID", ctx, head.ID()).Return(head, nil)
+	repo.On("GetHeadPeriodSnapshot", ctx, head.ID(), "202503").Return(&headSnap, nil)
+	repo.On("ListActiveDetailsByHeadID", ctx, head.ID()).Return([]*rmgroup.Detail{detail}, nil)
+	repo.On("GetDetailPeriodSnapshot", ctx, detail.ID(), "202503").Return(&detailSnap, nil)
+
+	h := NewCalculateHandlerV2(repo, nil, nil, nil, nil)
+	_, _, freeze, err := h.loadHeadAndDetails(ctx, head.ID(), "202503")
+	require.NoError(t, err)
+	require.NoError(t, h.freezeInheritedSnapshots(ctx, freeze, "calc-user"))
+	repo.AssertNotCalled(t, "InsertHeadPeriodIfAbsent", mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "InsertDetailPeriodIfAbsent", mock.Anything, mock.Anything)
 	repo.AssertExpectations(t)
 }
