@@ -123,9 +123,10 @@ type ComputeInput struct {
 	// value, preserving pre-oil behavior for callers that do not supply it
 	// (e.g. mbbatch).
 	Oil *OilInput
-	// TxWeight holds this product type's live mst_yarn_tx_weight rules keyed
-	// by grade (AE/A9/A/B/C), loaded once per chunk via TxWeightLoader. Nil
-	// makes tx_weight() return its fallback (the ratio formula), preserving
+	// TxWeight holds the live mst_yarn_tx_weight rules of this product type's
+	// TX Weight group (mst_yarn_tx_weight_group, 000536), keyed by grade
+	// (AE/A9/A/B/C), loaded once per chunk via TxWeightLoader. Nil makes
+	// tx_weight() return its fallback (the ratio formula), preserving
 	// pre-TX-Weight behavior for callers that do not supply it (e.g. mbbatch).
 	TxWeight map[string]TxWeightRule
 }

@@ -24,7 +24,8 @@ type TxWeightRule struct {
 	Value float64
 }
 
-// TxWeightLoader loads the TX Weight rules of each product's type. It is an
+// TxWeightLoader loads the TX Weight rules of each product's type (via the
+// type's TX Weight group). It is an
 // optional capability (same shape as OilGroupNameLoader) rather than a
 // ProductLoader method, so existing ProductLoader fakes are unaffected: a
 // loader without it yields no rules, and tx_weight() then returns its
@@ -35,11 +36,21 @@ type TxWeightLoader interface {
 	LoadTxWeightRules(ctx context.Context, productSysIDs []int64) (map[int64]map[string]TxWeightRule, error)
 }
 
+// loadTxWeightRulesQuery resolves a product's rules through its type's TX
+// Weight group (migration 000536): product type -> mst_yarn_tx_weight_group_type
+// -> live mst_yarn_tx_weight_group -> live mst_yarn_tx_weight rows owned by
+// that group. A type maps to at most one group (UNIQUE product_type_id), so
+// each product still gets at most one rule per grade.
 const loadTxWeightRulesQuery = `
 	SELECT pm.cpm_product_sys_id, tw.ytw_grade, tw.ytw_mode, tw.ytw_value
 	FROM cost_product_master pm
+	JOIN mst_yarn_tx_weight_group_type gt
+	     ON gt.product_type_id = pm.cpm_product_type_id
+	JOIN mst_yarn_tx_weight_group g
+	     ON g.ytwg_id = gt.ytwg_id
+	    AND g.deleted_at IS NULL
 	JOIN mst_yarn_tx_weight tw
-	     ON tw.ytw_product_type_id = pm.cpm_product_type_id
+	     ON tw.ytw_group_id = g.ytwg_id
 	    AND tw.deleted_at IS NULL
 	WHERE pm.cpm_product_sys_id = ANY($1)`
 

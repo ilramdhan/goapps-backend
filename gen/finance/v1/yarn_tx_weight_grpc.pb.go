@@ -32,6 +32,12 @@ const (
 //
 // YarnTxWeightService provides CRUD operations for the global TX Weight master
 // (per product type, per grade weight rules).
+// DEPRECATED — superseded by YarnTxWeightGroupService (one config shared by many
+// product types). Kept compiling for backward compatibility: per-row List/Get/Update
+// keep working on rule rows and Delete of a single rule row is allowed, but Create may
+// return FailedPrecondition ("use YarnTxWeightGroupService"). The frontend no longer
+// uses this service. (Intentionally not using the Go "Deprecated:" doc marker: it would
+// propagate into generated code and trip staticcheck SA1019 in existing handlers.)
 type YarnTxWeightServiceClient interface {
 	// CreateYarnTxWeight creates a new TX Weight rule.
 	CreateYarnTxWeight(ctx context.Context, in *CreateYarnTxWeightRequest, opts ...grpc.CallOption) (*CreateYarnTxWeightResponse, error)
@@ -110,6 +116,12 @@ func (c *yarnTxWeightServiceClient) ListYarnTxWeights(ctx context.Context, in *L
 //
 // YarnTxWeightService provides CRUD operations for the global TX Weight master
 // (per product type, per grade weight rules).
+// DEPRECATED — superseded by YarnTxWeightGroupService (one config shared by many
+// product types). Kept compiling for backward compatibility: per-row List/Get/Update
+// keep working on rule rows and Delete of a single rule row is allowed, but Create may
+// return FailedPrecondition ("use YarnTxWeightGroupService"). The frontend no longer
+// uses this service. (Intentionally not using the Go "Deprecated:" doc marker: it would
+// propagate into generated code and trip staticcheck SA1019 in existing handlers.)
 type YarnTxWeightServiceServer interface {
 	// CreateYarnTxWeight creates a new TX Weight rule.
 	CreateYarnTxWeight(context.Context, *CreateYarnTxWeightRequest) (*CreateYarnTxWeightResponse, error)
@@ -284,6 +296,283 @@ var YarnTxWeightService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListYarnTxWeights",
 			Handler:    _YarnTxWeightService_ListYarnTxWeights_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "finance/v1/yarn_tx_weight.proto",
+}
+
+const (
+	YarnTxWeightGroupService_CreateYarnTxWeightGroup_FullMethodName = "/finance.v1.YarnTxWeightGroupService/CreateYarnTxWeightGroup"
+	YarnTxWeightGroupService_GetYarnTxWeightGroup_FullMethodName    = "/finance.v1.YarnTxWeightGroupService/GetYarnTxWeightGroup"
+	YarnTxWeightGroupService_UpdateYarnTxWeightGroup_FullMethodName = "/finance.v1.YarnTxWeightGroupService/UpdateYarnTxWeightGroup"
+	YarnTxWeightGroupService_DeleteYarnTxWeightGroup_FullMethodName = "/finance.v1.YarnTxWeightGroupService/DeleteYarnTxWeightGroup"
+	YarnTxWeightGroupService_ListYarnTxWeightGroups_FullMethodName  = "/finance.v1.YarnTxWeightGroupService/ListYarnTxWeightGroups"
+)
+
+// YarnTxWeightGroupServiceClient is the client API for YarnTxWeightGroupService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// YarnTxWeightGroupService provides CRUD operations for TX Weight groups: one
+// config (grade rules) shared by many product types. Mapping a product type
+// already owned by another group fails with FailedPrecondition/AlreadyExists
+// naming the type code and the other group's code.
+type YarnTxWeightGroupServiceClient interface {
+	// CreateYarnTxWeightGroup creates a new TX Weight group with its types and rules.
+	CreateYarnTxWeightGroup(ctx context.Context, in *CreateYarnTxWeightGroupRequest, opts ...grpc.CallOption) (*CreateYarnTxWeightGroupResponse, error)
+	// GetYarnTxWeightGroup retrieves a TX Weight group by ID.
+	GetYarnTxWeightGroup(ctx context.Context, in *GetYarnTxWeightGroupRequest, opts ...grpc.CallOption) (*GetYarnTxWeightGroupResponse, error)
+	// UpdateYarnTxWeightGroup updates a TX Weight group, replacing its type set
+	// and rules in one transaction.
+	UpdateYarnTxWeightGroup(ctx context.Context, in *UpdateYarnTxWeightGroupRequest, opts ...grpc.CallOption) (*UpdateYarnTxWeightGroupResponse, error)
+	// DeleteYarnTxWeightGroup soft deletes a TX Weight group and frees its product types.
+	DeleteYarnTxWeightGroup(ctx context.Context, in *DeleteYarnTxWeightGroupRequest, opts ...grpc.CallOption) (*DeleteYarnTxWeightGroupResponse, error)
+	// ListYarnTxWeightGroups lists TX Weight groups with search, filter, and pagination.
+	ListYarnTxWeightGroups(ctx context.Context, in *ListYarnTxWeightGroupsRequest, opts ...grpc.CallOption) (*ListYarnTxWeightGroupsResponse, error)
+}
+
+type yarnTxWeightGroupServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewYarnTxWeightGroupServiceClient(cc grpc.ClientConnInterface) YarnTxWeightGroupServiceClient {
+	return &yarnTxWeightGroupServiceClient{cc}
+}
+
+func (c *yarnTxWeightGroupServiceClient) CreateYarnTxWeightGroup(ctx context.Context, in *CreateYarnTxWeightGroupRequest, opts ...grpc.CallOption) (*CreateYarnTxWeightGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateYarnTxWeightGroupResponse)
+	err := c.cc.Invoke(ctx, YarnTxWeightGroupService_CreateYarnTxWeightGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *yarnTxWeightGroupServiceClient) GetYarnTxWeightGroup(ctx context.Context, in *GetYarnTxWeightGroupRequest, opts ...grpc.CallOption) (*GetYarnTxWeightGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetYarnTxWeightGroupResponse)
+	err := c.cc.Invoke(ctx, YarnTxWeightGroupService_GetYarnTxWeightGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *yarnTxWeightGroupServiceClient) UpdateYarnTxWeightGroup(ctx context.Context, in *UpdateYarnTxWeightGroupRequest, opts ...grpc.CallOption) (*UpdateYarnTxWeightGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateYarnTxWeightGroupResponse)
+	err := c.cc.Invoke(ctx, YarnTxWeightGroupService_UpdateYarnTxWeightGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *yarnTxWeightGroupServiceClient) DeleteYarnTxWeightGroup(ctx context.Context, in *DeleteYarnTxWeightGroupRequest, opts ...grpc.CallOption) (*DeleteYarnTxWeightGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteYarnTxWeightGroupResponse)
+	err := c.cc.Invoke(ctx, YarnTxWeightGroupService_DeleteYarnTxWeightGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *yarnTxWeightGroupServiceClient) ListYarnTxWeightGroups(ctx context.Context, in *ListYarnTxWeightGroupsRequest, opts ...grpc.CallOption) (*ListYarnTxWeightGroupsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListYarnTxWeightGroupsResponse)
+	err := c.cc.Invoke(ctx, YarnTxWeightGroupService_ListYarnTxWeightGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// YarnTxWeightGroupServiceServer is the server API for YarnTxWeightGroupService service.
+// All implementations must embed UnimplementedYarnTxWeightGroupServiceServer
+// for forward compatibility.
+//
+// YarnTxWeightGroupService provides CRUD operations for TX Weight groups: one
+// config (grade rules) shared by many product types. Mapping a product type
+// already owned by another group fails with FailedPrecondition/AlreadyExists
+// naming the type code and the other group's code.
+type YarnTxWeightGroupServiceServer interface {
+	// CreateYarnTxWeightGroup creates a new TX Weight group with its types and rules.
+	CreateYarnTxWeightGroup(context.Context, *CreateYarnTxWeightGroupRequest) (*CreateYarnTxWeightGroupResponse, error)
+	// GetYarnTxWeightGroup retrieves a TX Weight group by ID.
+	GetYarnTxWeightGroup(context.Context, *GetYarnTxWeightGroupRequest) (*GetYarnTxWeightGroupResponse, error)
+	// UpdateYarnTxWeightGroup updates a TX Weight group, replacing its type set
+	// and rules in one transaction.
+	UpdateYarnTxWeightGroup(context.Context, *UpdateYarnTxWeightGroupRequest) (*UpdateYarnTxWeightGroupResponse, error)
+	// DeleteYarnTxWeightGroup soft deletes a TX Weight group and frees its product types.
+	DeleteYarnTxWeightGroup(context.Context, *DeleteYarnTxWeightGroupRequest) (*DeleteYarnTxWeightGroupResponse, error)
+	// ListYarnTxWeightGroups lists TX Weight groups with search, filter, and pagination.
+	ListYarnTxWeightGroups(context.Context, *ListYarnTxWeightGroupsRequest) (*ListYarnTxWeightGroupsResponse, error)
+	mustEmbedUnimplementedYarnTxWeightGroupServiceServer()
+}
+
+// UnimplementedYarnTxWeightGroupServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedYarnTxWeightGroupServiceServer struct{}
+
+func (UnimplementedYarnTxWeightGroupServiceServer) CreateYarnTxWeightGroup(context.Context, *CreateYarnTxWeightGroupRequest) (*CreateYarnTxWeightGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateYarnTxWeightGroup not implemented")
+}
+func (UnimplementedYarnTxWeightGroupServiceServer) GetYarnTxWeightGroup(context.Context, *GetYarnTxWeightGroupRequest) (*GetYarnTxWeightGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetYarnTxWeightGroup not implemented")
+}
+func (UnimplementedYarnTxWeightGroupServiceServer) UpdateYarnTxWeightGroup(context.Context, *UpdateYarnTxWeightGroupRequest) (*UpdateYarnTxWeightGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateYarnTxWeightGroup not implemented")
+}
+func (UnimplementedYarnTxWeightGroupServiceServer) DeleteYarnTxWeightGroup(context.Context, *DeleteYarnTxWeightGroupRequest) (*DeleteYarnTxWeightGroupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteYarnTxWeightGroup not implemented")
+}
+func (UnimplementedYarnTxWeightGroupServiceServer) ListYarnTxWeightGroups(context.Context, *ListYarnTxWeightGroupsRequest) (*ListYarnTxWeightGroupsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListYarnTxWeightGroups not implemented")
+}
+func (UnimplementedYarnTxWeightGroupServiceServer) mustEmbedUnimplementedYarnTxWeightGroupServiceServer() {
+}
+func (UnimplementedYarnTxWeightGroupServiceServer) testEmbeddedByValue() {}
+
+// UnsafeYarnTxWeightGroupServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to YarnTxWeightGroupServiceServer will
+// result in compilation errors.
+type UnsafeYarnTxWeightGroupServiceServer interface {
+	mustEmbedUnimplementedYarnTxWeightGroupServiceServer()
+}
+
+func RegisterYarnTxWeightGroupServiceServer(s grpc.ServiceRegistrar, srv YarnTxWeightGroupServiceServer) {
+	// If the following call panics, it indicates UnimplementedYarnTxWeightGroupServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&YarnTxWeightGroupService_ServiceDesc, srv)
+}
+
+func _YarnTxWeightGroupService_CreateYarnTxWeightGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateYarnTxWeightGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(YarnTxWeightGroupServiceServer).CreateYarnTxWeightGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: YarnTxWeightGroupService_CreateYarnTxWeightGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(YarnTxWeightGroupServiceServer).CreateYarnTxWeightGroup(ctx, req.(*CreateYarnTxWeightGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _YarnTxWeightGroupService_GetYarnTxWeightGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetYarnTxWeightGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(YarnTxWeightGroupServiceServer).GetYarnTxWeightGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: YarnTxWeightGroupService_GetYarnTxWeightGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(YarnTxWeightGroupServiceServer).GetYarnTxWeightGroup(ctx, req.(*GetYarnTxWeightGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _YarnTxWeightGroupService_UpdateYarnTxWeightGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateYarnTxWeightGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(YarnTxWeightGroupServiceServer).UpdateYarnTxWeightGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: YarnTxWeightGroupService_UpdateYarnTxWeightGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(YarnTxWeightGroupServiceServer).UpdateYarnTxWeightGroup(ctx, req.(*UpdateYarnTxWeightGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _YarnTxWeightGroupService_DeleteYarnTxWeightGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteYarnTxWeightGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(YarnTxWeightGroupServiceServer).DeleteYarnTxWeightGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: YarnTxWeightGroupService_DeleteYarnTxWeightGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(YarnTxWeightGroupServiceServer).DeleteYarnTxWeightGroup(ctx, req.(*DeleteYarnTxWeightGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _YarnTxWeightGroupService_ListYarnTxWeightGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListYarnTxWeightGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(YarnTxWeightGroupServiceServer).ListYarnTxWeightGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: YarnTxWeightGroupService_ListYarnTxWeightGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(YarnTxWeightGroupServiceServer).ListYarnTxWeightGroups(ctx, req.(*ListYarnTxWeightGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// YarnTxWeightGroupService_ServiceDesc is the grpc.ServiceDesc for YarnTxWeightGroupService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var YarnTxWeightGroupService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "finance.v1.YarnTxWeightGroupService",
+	HandlerType: (*YarnTxWeightGroupServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateYarnTxWeightGroup",
+			Handler:    _YarnTxWeightGroupService_CreateYarnTxWeightGroup_Handler,
+		},
+		{
+			MethodName: "GetYarnTxWeightGroup",
+			Handler:    _YarnTxWeightGroupService_GetYarnTxWeightGroup_Handler,
+		},
+		{
+			MethodName: "UpdateYarnTxWeightGroup",
+			Handler:    _YarnTxWeightGroupService_UpdateYarnTxWeightGroup_Handler,
+		},
+		{
+			MethodName: "DeleteYarnTxWeightGroup",
+			Handler:    _YarnTxWeightGroupService_DeleteYarnTxWeightGroup_Handler,
+		},
+		{
+			MethodName: "ListYarnTxWeightGroups",
+			Handler:    _YarnTxWeightGroupService_ListYarnTxWeightGroups_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

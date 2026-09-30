@@ -30,8 +30,10 @@ var _ yarntxweight.Repository = (*YarnTxWeightRepository)(nil)
 
 // yarnTxWeightSelect joins cost_product_type so the entity carries the type
 // code/name for display. Filters are appended after the FROM/JOIN.
+// Since 000536 group-owned rule rows carry a NULL ytw_product_type_id, so it
+// is COALESCEd to 0 to keep the int32 scan safe for this legacy view.
 const yarnTxWeightSelect = `
-	SELECT w.ytw_id, w.ytw_product_type_id, COALESCE(pt.cpt_type_code, ''), COALESCE(pt.cpt_type_name, ''),
+	SELECT w.ytw_id, COALESCE(w.ytw_product_type_id, 0), COALESCE(pt.cpt_type_code, ''), COALESCE(pt.cpt_type_name, ''),
 	       w.ytw_grade, w.ytw_mode, w.ytw_value, w.ytw_description, w.ytw_oracle_sys_id,
 	       w.created_at, w.created_by, w.updated_at, w.updated_by, w.deleted_at, w.deleted_by
 	FROM mst_yarn_tx_weight w
