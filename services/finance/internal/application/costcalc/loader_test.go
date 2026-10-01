@@ -351,6 +351,19 @@ func (s *LoaderSuite) seedUpstreamCost() {
 	// s.upstreamMBNone deliberately gets NO cst_product_cost row: an MB with no
 	// calculated cost must leave the map key absent so compute raises
 	// ErrMissingUpstreamCost instead of silently contributing 0.
+
+	// VB loss inheritance fixtures (LoadUpstreamParamSnapshots). The CALCULATED
+	// and SUPERSEDED rows of upstreamID carry different VOLUME_BUCKET_1_LOSS
+	// values so a test reading the wrong row fails. upstreamNil keeps a NULL
+	// snapshot (must be absent).
+	_, err = s.db.ExecContext(s.ctx, `
+		UPDATE cst_product_cost
+		   SET cpc_param_snapshot = CASE cpc_status
+		       WHEN 'SUPERSEDED' THEN '{"VOLUME_BUCKET_1_LOSS": 9.99}'::jsonb
+		       ELSE '{"VOLUME_BUCKET_1_LOSS": 0.0123, "VOLUME_BUCKET_5_LOSS": 0.0045}'::jsonb END
+		 WHERE cpc_product_sys_id = $1 AND cpc_period = $2 AND cpc_calculation_type = $3`,
+		s.upstreamID, s.period, s.calcType)
+	require.NoError(s.T(), err)
 }
 
 // ---------- Tests ----------
@@ -583,6 +596,55 @@ func (s *LoaderSuite) TestLoader_LoadUpstreamCosts_MBWithoutCostRowIsAbsent() {
 	require.NoError(s.T(), err)
 	_, has := got[s.upstreamMBNone]
 	require.False(s.T(), has, "an uncalculated MB must be absent, not present-with-zero")
+}
+
+// VB loss inheritance: the snapshot comes from the same committed
+// (non-SUPERSEDED) row LoadUpstreamCosts reads.
+func (s *LoaderSuite) TestLoader_LoadUpstreamParamSnapshots_RespectStatus() {
+	got, err := s.loader.LoadUpstreamParamSnapshots(s.ctx, []int64{s.upstreamID}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), got, 1)
+	require.InDelta(s.T(), 0.0123, got[s.upstreamID]["VOLUME_BUCKET_1_LOSS"], 1e-9, "must not read the SUPERSEDED row")
+	require.InDelta(s.T(), 0.0045, got[s.upstreamID]["VOLUME_BUCKET_5_LOSS"], 1e-9)
+}
+
+// NULL snapshot, no row at all, wrong calc type, wrong period -> absent.
+func (s *LoaderSuite) TestLoader_LoadUpstreamParamSnapshots_AbsentCases() {
+	got, err := s.loader.LoadUpstreamParamSnapshots(s.ctx, []int64{s.upstreamNil, s.upstreamMBNone}, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	require.Empty(s.T(), got, "NULL snapshot and missing row must both be absent")
+
+	other := "BUDGET"
+	if s.calcType == other {
+		other = "ACTUAL"
+	}
+	got, err = s.loader.LoadUpstreamParamSnapshots(s.ctx, []int64{s.upstreamID}, s.period, other)
+	require.NoError(s.T(), err)
+	require.Empty(s.T(), got, "calc type filter must apply")
+
+	got, err = s.loader.LoadUpstreamParamSnapshots(s.ctx, []int64{s.upstreamID}, "999998", s.calcType)
+	require.NoError(s.T(), err)
+	require.Empty(s.T(), got, "period filter must apply")
+
+	got, err = s.loader.LoadUpstreamParamSnapshots(s.ctx, nil, s.period, s.calcType)
+	require.NoError(s.T(), err)
+	require.Empty(s.T(), got)
+
+	_, err = s.loader.LoadUpstreamParamSnapshots(s.ctx, []int64{s.upstreamID}, "", s.calcType)
+	require.Error(s.T(), err)
+}
+
+func (s *LoaderSuite) TestLoader_LoadProductTypeCodes() {
+	got, err := s.loader.LoadProductTypeCodes(s.ctx, []int64{s.upstreamID, s.upstreamMB, -1})
+	require.NoError(s.T(), err)
+	require.Len(s.T(), got, 2, "unknown id must be absent")
+	require.Equal(s.T(), "MB", got[s.upstreamMB])
+	require.NotEmpty(s.T(), got[s.upstreamID])
+	require.NotEqual(s.T(), "MB", got[s.upstreamID])
+
+	got, err = s.loader.LoadProductTypeCodes(s.ctx, nil)
+	require.NoError(s.T(), err)
+	require.Empty(s.T(), got)
 }
 
 // ---------- helpers ----------

@@ -32,6 +32,8 @@ const (
 	loaderKindRMRateOrder     = "rm_rate_order"
 	loaderKindRMLandedOrder   = "rm_landed_order"
 	loaderKindOilContext      = "oil_context"
+	loaderKindUpstreamSnap    = "upstream_param_snapshot"
+	loaderKindProductType     = "product_type_code"
 )
 
 // rmRateOrderFormulaCode is the mst_formula row whose expression column, since
@@ -275,6 +277,15 @@ type ProductLoader interface {
 	// oil RM group and its allowed set. Products whose type has no oil class
 	// are absent from the map (nil *OilInput => no oil resolution).
 	LoadOilContext(ctx context.Context, productSysIDs []int64) (map[int64]*OilInput, error)
+	// LoadUpstreamParamSnapshots returns, per upstream product, the committed
+	// cpc_param_snapshot for the period + calc type (same row filter as
+	// LoadUpstreamCosts). Products with no committed row are absent. Feeds the
+	// POY-only VB loss inheritance (see applyInheritedVBLoss).
+	LoadUpstreamParamSnapshots(ctx context.Context, productSysIDs []int64, period, calcType string) (map[int64]map[string]float64, error)
+	// LoadProductTypeCodes returns cost_product_type.cpt_type_code per product
+	// for every product type, unlike LoadOilContext which only covers types with
+	// an oil class. Products not found are absent.
+	LoadProductTypeCodes(ctx context.Context, productSysIDs []int64) (map[int64]string, error)
 }
 
 // SpinPool is the POY spin fixed-cost pool resolved for a period, together with

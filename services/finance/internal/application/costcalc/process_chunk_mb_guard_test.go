@@ -69,6 +69,17 @@ func (f *mbGuardLoader) LoadUpstreamCosts(_ context.Context, _ []int64, _, _ str
 	return map[int64]float64{}, nil
 }
 
+// LoadUpstreamParamSnapshots reports no committed upstream snapshots.
+func (f *mbGuardLoader) LoadUpstreamParamSnapshots(context.Context, []int64, string, string) (map[int64]map[string]float64, error) {
+	return map[int64]map[string]float64{}, nil
+}
+
+// LoadProductTypeCodes reports no type codes, so the VB loss rule falls back
+// to computing (pre-rule behavior).
+func (f *mbGuardLoader) LoadProductTypeCodes(context.Context, []int64) (map[int64]string, error) {
+	return map[int64]string{}, nil
+}
+
 func (f *mbGuardLoader) LoadSellingSnapshots(_ context.Context, _ []int64, _ string) (map[int64]map[string]float64, error) {
 	return map[int64]map[string]float64{}, nil
 }
