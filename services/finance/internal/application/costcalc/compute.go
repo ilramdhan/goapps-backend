@@ -129,6 +129,12 @@ type ComputeInput struct {
 	// tx_weight() return its fallback (the ratio formula), preserving
 	// pre-TX-Weight behavior for callers that do not supply it (e.g. mbbatch).
 	TxWeight map[string]TxWeightRule
+	// VBLoss is the POY-only VB loss context (product type code, upstream type
+	// codes and upstream param snapshots), loaded once per chunk by bulkLoad.
+	// Nil disables the rule: VOLUME_BUCKET_n_LOSS is computed by the product's
+	// own F_YARN_VBn_LOSS formulas, preserving pre-rule behavior for callers
+	// that do not supply it (e.g. mbbatch). See applyInheritedVBLoss.
+	VBLoss *VBLossInheritance
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
@@ -221,6 +227,12 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	// params that must be omitted from ParamSnapshot (see scopeSnapshot).
 	scope, zeroFilled := buildInitialScope(in)
 
+	// 1-. Non-POY yarn stages inherit VOLUME_BUCKET_1..5_LOSS from their direct
+	// upstream PRODUCT RMs instead of recomputing them (VB loss is a POY-only
+	// concept). inherited names the params whose producing formulas the chain
+	// below must skip; nil means "compute as before".
+	inherited := applyInheritedVBLoss(in, scope, zeroFilled)
+
 	// 1a. Oil-class products resolve OIL_RATE from their oil RM group's
 	// cst_rm_cost row for the period, overwriting any imported CAPP value.
 	// A missing/unusable oil rate blocks the product (MISSING_RM_COST).
@@ -261,7 +273,7 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	}
 
 	// 3. Evaluate formulas in topo order (loader pre-sorted).
-	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, landedRM, in.Formulas, in.ProductSysID, in.MBCosts, in.CalcType, zeroFilled)
+	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, landedRM, in.Formulas, in.ProductSysID, in.MBCosts, in.CalcType, zeroFilled, inherited)
 	if err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
@@ -448,6 +460,9 @@ func injectMarketingResult(scope map[string]any, sellingSnap map[string]float64)
 // by calcType — see Task 21 (design addendum §10.3): mbh_id resolution into a chunk's
 // products is not yet wired, so mbCosts is nil for any product without one resolved.
 // CALCULATION formulas are evaluated by the expr-lang evaluator.
+// Formulas whose ResultParamCode is in inherited are NOT evaluated: their value
+// was injected by applyInheritedVBLoss and must survive, so only a trace entry
+// documenting the inheritance is recorded for them.
 func evalFormulaChain(
 	ctx context.Context,
 	cache *evaluator.Cache,
@@ -459,9 +474,14 @@ func evalFormulaChain(
 	mbCosts map[string]float64,
 	calcType costcalcdom.CalculationType,
 	zeroFilled map[string]bool,
+	inherited map[string]bool,
 ) ([]FormulaEvalTrace, error) {
 	trace := make([]FormulaEvalTrace, 0, len(formulas))
 	for _, f := range formulas {
+		if inherited[f.ResultParamCode] {
+			trace = append(trace, inheritedFormulaTrace(f, scope))
+			continue
+		}
 		t, err := evalSingleFormulaStep(ctx, cache, scope, totalRM, landedRM, f, productSysID, mbCosts, calcType)
 		if err != nil {
 			return nil, err

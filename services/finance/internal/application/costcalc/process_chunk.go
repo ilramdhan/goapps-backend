@@ -149,6 +149,28 @@ type loadedBundle struct {
 	// txWeight is the per-product TX Weight rules (TxWeightLoader), keyed by
 	// grade. Products whose type has no rule are absent (fallback formula).
 	txWeight map[int64]map[string]TxWeightRule
+	// typeCodes is cpt_type_code for every chunk product AND every upstream
+	// PRODUCT RM (one query). Feeds the POY-only VB loss rule.
+	typeCodes map[int64]string
+	// upstreamSnapshots is the committed cpc_param_snapshot of every upstream
+	// PRODUCT RM (same row filter as upstreamCosts). Feeds VB loss inheritance.
+	upstreamSnapshots map[int64]map[string]float64
+}
+
+// loadVBLossInputs loads what the POY-only VB loss rule needs for a chunk:
+// cpt_type_code for every chunk product and every upstream product (the same
+// map serves both the "is this product POY/MB" decision and the "skip MB
+// upstreams" filter), plus every upstream's committed cpc_param_snapshot.
+func (s *Service) loadVBLossInputs(ctx context.Context, in ProcessChunkInput, upstreamIDs []int64) (map[int64]string, map[int64]map[string]float64, error) {
+	upstreamSnapshots, err := s.loader.LoadUpstreamParamSnapshots(ctx, upstreamIDs, in.Period, string(in.CalcType))
+	if err != nil {
+		return nil, nil, fmt.Errorf("load upstream param snapshots: %w", err)
+	}
+	typeCodes, err := s.loader.LoadProductTypeCodes(ctx, append(append([]int64(nil), in.Products...), upstreamIDs...))
+	if err != nil {
+		return nil, nil, fmt.Errorf("load product type codes: %w", err)
+	}
+	return typeCodes, upstreamSnapshots, nil
 }
 
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
@@ -183,6 +205,13 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 	upstreamCosts, err := s.loader.LoadUpstreamCosts(ctx, upstreamIDs, in.Period, string(in.CalcType))
 	if err != nil {
 		return nil, fmt.Errorf("load upstream costs: %w", err)
+	}
+
+	// VB loss is computed at POY only; later stages inherit it from their
+	// upstream's committed snapshot (orchestrator waves commit upstream first).
+	typeCodes, upstreamSnapshots, err := s.loadVBLossInputs(ctx, in, upstreamIDs)
+	if err != nil {
+		return nil, err
 	}
 
 	mbProducts, err := s.loadMBProductSet(ctx, in.Products)
@@ -229,19 +258,21 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 	}
 
 	return &loadedBundle{
-		txWeight:         txWeight,
-		routes:           routes,
-		capp:             capp,
-		formulas:         formulas,
-		rmCosts:          rmCosts,
-		upstreamCosts:    upstreamCosts,
-		sellingSnapshots: sellingSnaps,
-		spinPool:         spinPool,
-		mbProducts:       mbProducts,
-		calculatedParams: calculatedParams,
-		rmRateOrder:      s.loadRMRateOrder(ctx),
-		rmLandedOrder:    s.loadRMLandedOrder(ctx),
-		oil:              oil,
+		txWeight:          txWeight,
+		routes:            routes,
+		capp:              capp,
+		formulas:          formulas,
+		rmCosts:           rmCosts,
+		upstreamCosts:     upstreamCosts,
+		sellingSnapshots:  sellingSnaps,
+		spinPool:          spinPool,
+		mbProducts:        mbProducts,
+		calculatedParams:  calculatedParams,
+		rmRateOrder:       s.loadRMRateOrder(ctx),
+		rmLandedOrder:     s.loadRMLandedOrder(ctx),
+		oil:               oil,
+		typeCodes:         typeCodes,
+		upstreamSnapshots: upstreamSnapshots,
 	}, nil
 }
 
@@ -344,6 +375,11 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		RMLandedOrder:    loaded.rmLandedOrder,
 		Oil:              loaded.oil[pid],
 		TxWeight:         loaded.txWeight[pid],
+		VBLoss: &VBLossInheritance{
+			ProductTypeCode:        loaded.typeCodes[pid],
+			UpstreamTypeCodes:      loaded.typeCodes,
+			UpstreamParamSnapshots: loaded.upstreamSnapshots,
+		},
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)
