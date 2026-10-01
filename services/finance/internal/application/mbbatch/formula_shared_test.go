@@ -152,6 +152,17 @@ func (f *noSharingLoader) LoadUpstreamCosts(context.Context, []int64, string, st
 	return map[int64]float64{}, nil
 }
 
+// LoadUpstreamParamSnapshots reports no committed upstream snapshots.
+func (f *noSharingLoader) LoadUpstreamParamSnapshots(context.Context, []int64, string, string) (map[int64]map[string]float64, error) {
+	return map[int64]map[string]float64{}, nil
+}
+
+// LoadProductTypeCodes reports no type codes, so the VB loss rule falls back
+// to computing (pre-rule behavior).
+func (f *noSharingLoader) LoadProductTypeCodes(context.Context, []int64) (map[int64]string, error) {
+	return map[int64]string{}, nil
+}
+
 func (f *noSharingLoader) LoadSellingSnapshots(context.Context, []int64, string) (map[int64]map[string]float64, error) {
 	return map[int64]map[string]float64{}, nil
 }

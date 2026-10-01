@@ -71,6 +71,17 @@ func (f *spinFakeLoader) LoadUpstreamCosts(_ context.Context, _ []int64, _, _ st
 	return map[int64]float64{}, nil
 }
 
+// LoadUpstreamParamSnapshots reports no committed upstream snapshots.
+func (f *spinFakeLoader) LoadUpstreamParamSnapshots(context.Context, []int64, string, string) (map[int64]map[string]float64, error) {
+	return map[int64]map[string]float64{}, nil
+}
+
+// LoadProductTypeCodes reports no type codes, so the VB loss rule falls back
+// to computing (pre-rule behavior).
+func (f *spinFakeLoader) LoadProductTypeCodes(context.Context, []int64) (map[int64]string, error) {
+	return map[int64]string{}, nil
+}
+
 func (f *spinFakeLoader) LoadSellingSnapshots(_ context.Context, _ []int64, _ string) (map[int64]map[string]float64, error) {
 	return map[int64]map[string]float64{}, nil
 }
