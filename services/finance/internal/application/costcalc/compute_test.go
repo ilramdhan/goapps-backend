@@ -2,6 +2,8 @@ package costcalc
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -852,5 +854,309 @@ func buildOracleYarnFormulaChain() []Formula {
 		{FormulaCode: "F_YARN_VB5_DEL", Expression: "COST_DEL_FINAL + VB5_LOSS", ResultParamCode: "VB5_DEL_COST"},
 		// Terminal: COST_STAGE_OUT = engine ScopeKeyFinalCost.
 		{FormulaCode: "F_YARN_STAGE_OUT", Expression: "COST_DEL_FINAL", ResultParamCode: "COST_STAGE_OUT"},
+	}
+}
+
+// --- POY-only VB loss inheritance (vb_loss_inheritance.go) -------------------
+
+// vbLossFormulas is the F_YARN_VB1..5_LOSS (000516 multiply form) +
+// F_YARN_VB1..5_DEL (000408) chain, plus an explicit COST_STAGE_OUT sink so the
+// final cost does not depend on terminal selection.
+func vbLossFormulas() []Formula {
+	fs := make([]Formula, 0, 11)
+	for i, code := range vbLossParamCodes {
+		n := i + 1
+		qty := fmt.Sprintf("VOLUME_BUCKET_%d_QTY", n)
+		fs = append(fs, Formula{
+			FormulaCode:     fmt.Sprintf("F_YARN_VB%d_LOSS", n),
+			FormulaType:     "CALCULATION",
+			Expression:      fmt.Sprintf("%s > 0 ? (CHANGE_OVER_QLTY_LOSS * RM_LANDED_COST * %s) / 1000 : 0", qty, qty),
+			ResultParamCode: code,
+			InputParamCodes: []string{"RM_LANDED_COST", "CHANGE_OVER_QLTY_LOSS", qty},
+		})
+	}
+	for i, code := range vbLossParamCodes {
+		fs = append(fs, Formula{
+			FormulaCode:     fmt.Sprintf("F_YARN_VB%d_DEL", i+1),
+			FormulaType:     "CALCULATION",
+			Expression:      "DELIVERY_COST_QLTY_LOSS + " + code,
+			ResultParamCode: snapKeysVolumeBucketDelCost[i],
+			InputParamCodes: []string{"DELIVERY_COST_QLTY_LOSS", code},
+		})
+	}
+	return append(fs, Formula{
+		FormulaCode:     "F_STAGE_OUT",
+		FormulaType:     "CALCULATION",
+		Expression:      "COST_RM_TOTAL",
+		ResultParamCode: ScopeKeyFinalCost,
+		InputParamCodes: []string{ScopeKeyCostRMTotal},
+	})
+}
+
+// vbLossCAPP returns machine inputs for the VB loss formulas. qtyScale lets a
+// test give a downstream stage inputs that would compute a different VB loss.
+func vbLossCAPP(changeOver, qtyScale float64) map[string]float64 {
+	return map[string]float64{
+		"CHANGE_OVER_QLTY_LOSS":   changeOver,
+		"RM_LANDED_COST":          2.0,
+		"DELIVERY_COST_QLTY_LOSS": 3.0,
+		"VOLUME_BUCKET_1_QTY":     0.25 * qtyScale,
+		"VOLUME_BUCKET_2_QTY":     0.125 * qtyScale,
+		"VOLUME_BUCKET_3_QTY":     0.08 * qtyScale,
+		"VOLUME_BUCKET_4_QTY":     0.04 * qtyScale,
+		"VOLUME_BUCKET_5_QTY":     0.02 * qtyScale,
+	}
+}
+
+// vbSnap builds an upstream param snapshot carrying the five VB loss values.
+func vbSnap(v [5]float64) map[string]float64 {
+	out := make(map[string]float64, 5)
+	for i, code := range vbLossParamCodes {
+		out[code] = v[i]
+	}
+	return out
+}
+
+// buildMultiUpstreamRoute builds a route where fg consumes each upstream
+// product as a PRODUCT RM with the given ratio.
+func buildMultiUpstreamRoute(fg int64, upstream map[int64]float64) *costroute.Graph {
+	rms := make([]*costroute.Rm, 0, len(upstream))
+	seqs := []*costroute.Seq{{SeqID: 1, HeadID: 1, ProductSysID: fg, RouteLevel: 1, RouteSeq: 1}}
+	rmID := int64(1)
+	for id, ratio := range upstream {
+		rms = append(rms, &costroute.Rm{RmID: rmID, SeqID: 1, RmType: costroute.RmTypeProduct, RmProductSysID: id, RouteRmRatio: ratio})
+		seqs = append(seqs, &costroute.Seq{SeqID: rmID + 1, HeadID: 1, ProductSysID: id, RouteLevel: 2, RouteSeq: int32(rmID)})
+		rmID++
+	}
+	seqs[0].Rms = rms
+	return &costroute.Graph{Head: &costroute.Head{HeadID: 1, ProductSysID: fg, RoutingStatus: costroute.StatusComplete}, Seqs: seqs}
+}
+
+// expectedOwnVBLoss is what F_YARN_VBn_LOSS computes from vbLossCAPP.
+func expectedOwnVBLoss(capp map[string]float64) [5]float64 {
+	var out [5]float64
+	for i := range out {
+		qty := capp[fmt.Sprintf("VOLUME_BUCKET_%d_QTY", i+1)]
+		out[i] = capp["CHANGE_OVER_QLTY_LOSS"] * capp["RM_LANDED_COST"] * qty / 1000
+	}
+	return out
+}
+
+func assertVBLoss(t *testing.T, out *ComputeOutput, want [5]float64, delCostQL float64) {
+	t.Helper()
+	for i, code := range vbLossParamCodes {
+		got, ok := out.ParamSnapshot[code]
+		require.True(t, ok, "%s must be persisted in ParamSnapshot", code)
+		assert.InDelta(t, want[i], got, 1e-9, code)
+		assert.InDelta(t, delCostQL+want[i], out.ParamSnapshot[snapKeysVolumeBucketDelCost[i]], 1e-9,
+			"%s must use the VB loss value", snapKeysVolumeBucketDelCost[i])
+	}
+}
+
+func TestComputeProduct_VBLoss_POYComputesOwnFormula(t *testing.T) {
+	capp := vbLossCAPP(40, 1)
+	out, err := ComputeProduct(context.Background(), ComputeInput{
+		ProductSysID: 20,
+		CalcType:     costcalcdom.CalcTypeActual,
+		Route:        buildOneStageRoute(20, costroute.RmTypeItem, "CHIP", 1.0),
+		CAPP:         capp,
+		Formulas:     vbLossFormulas(),
+		RMCosts:      map[string]RMCostRates{"CHIP|": {CostVal: 2.0}},
+		EvalCache:    evaluator.NewCache(),
+		VBLoss:       &VBLossInheritance{ProductTypeCode: "POY"},
+	})
+	require.NoError(t, err)
+	assertVBLoss(t, out, expectedOwnVBLoss(capp), 3.0)
+	assert.InDelta(t, 0.02, out.ParamSnapshot["VOLUME_BUCKET_1_LOSS"], 1e-9) // 40*2*0.25/1000
+}
+
+func TestComputeProduct_VBLoss_DTYInheritsPOYNotRecomputed(t *testing.T) {
+	poy := [5]float64{0.02, 0.01, 0.0064, 0.0032, 0.0016}
+	// The DTY's own machine inputs would compute a very different VB loss.
+	capp := vbLossCAPP(90, 3)
+	require.NotEqual(t, poy, expectedOwnVBLoss(capp))
+
+	out, err := ComputeProduct(context.Background(), ComputeInput{
+		ProductSysID:  10,
+		CalcType:      costcalcdom.CalcTypeActual,
+		Route:         buildTwoStageRoute(10, 20, 1.05),
+		CAPP:          capp,
+		Formulas:      vbLossFormulas(),
+		UpstreamCosts: map[int64]float64{20: 5.0},
+		EvalCache:     evaluator.NewCache(),
+		VBLoss: &VBLossInheritance{
+			ProductTypeCode:        "DTY",
+			UpstreamTypeCodes:      map[int64]string{20: "POY"},
+			UpstreamParamSnapshots: map[int64]map[string]float64{20: vbSnap(poy)},
+		},
+	})
+	require.NoError(t, err)
+	assertVBLoss(t, out, poy, 3.0)
+	assert.InDelta(t, 5.25, out.CostPerUnit, 1e-9, "final cost path is untouched")
+
+	// The skipped VB loss formulas are traced as inherited, not evaluated.
+	for _, tr := range out.FormulaTrace {
+		if slices.Contains(vbLossParamCodes[:], tr.ResultParamCode) {
+			assert.Equal(t, inheritedVBLossExpression, tr.Expression, tr.FormulaCode)
+		}
+	}
+}
+
+func TestComputeProduct_VBLoss_FGInheritsThroughDTYChain(t *testing.T) {
+	poy := [5]float64{0.02, 0.01, 0.0064, 0.0032, 0.0016}
+	dtyOut, err := ComputeProduct(context.Background(), ComputeInput{
+		ProductSysID:  10,
+		CalcType:      costcalcdom.CalcTypeActual,
+		Route:         buildTwoStageRoute(10, 20, 1.0),
+		CAPP:          vbLossCAPP(70, 2),
+		Formulas:      vbLossFormulas(),
+		UpstreamCosts: map[int64]float64{20: 5.0},
+		EvalCache:     evaluator.NewCache(),
+		VBLoss: &VBLossInheritance{
+			ProductTypeCode:        "DTY",
+			UpstreamTypeCodes:      map[int64]string{20: "POY"},
+			UpstreamParamSnapshots: map[int64]map[string]float64{20: vbSnap(poy)},
+		},
+	})
+	require.NoError(t, err)
+
+	// The FG has neither the VB params in CAPP nor any VB formula: the
+	// inherited values must still land in its snapshot so a further stage
+	// could inherit them in turn.
+	fgOut, err := ComputeProduct(context.Background(), ComputeInput{
+		ProductSysID:  5,
+		CalcType:      costcalcdom.CalcTypeActual,
+		Route:         buildTwoStageRoute(5, 10, 1.0),
+		CAPP:          map[string]float64{"WASTE_PCT": 0},
+		Formulas:      []Formula{finalCostFormula("COST_RM_TOTAL")},
+		UpstreamCosts: map[int64]float64{10: 6.0},
+		EvalCache:     evaluator.NewCache(),
+		VBLoss: &VBLossInheritance{
+			ProductTypeCode:        "FG",
+			UpstreamTypeCodes:      map[int64]string{10: "DTY"},
+			UpstreamParamSnapshots: map[int64]map[string]float64{10: dtyOut.ParamSnapshot},
+		},
+	})
+	require.NoError(t, err)
+	for i, code := range vbLossParamCodes {
+		assert.InDelta(t, poy[i], fgOut.ParamSnapshot[code], 1e-9, code)
+	}
+}
+
+func TestComputeProduct_VBLoss_BlendIsRatioWeightedAverage(t *testing.T) {
+	a := [5]float64{0.10, 0.20, 0.30, 0.40, 0.50}
+	b := [5]float64{0.20, 0.40, 0.60, 0.80, 1.00}
+	out, err := ComputeProduct(context.Background(), ComputeInput{
+		ProductSysID:  10,
+		CalcType:      costcalcdom.CalcTypeActual,
+		Route:         buildMultiUpstreamRoute(10, map[int64]float64{21: 0.75, 22: 0.25}),
+		CAPP:          vbLossCAPP(40, 1),
+		Formulas:      vbLossFormulas(),
+		UpstreamCosts: map[int64]float64{21: 4.0, 22: 8.0},
+		EvalCache:     evaluator.NewCache(),
+		VBLoss: &VBLossInheritance{
+			ProductTypeCode:        "DTY",
+			UpstreamTypeCodes:      map[int64]string{21: "POY", 22: "POY"},
+			UpstreamParamSnapshots: map[int64]map[string]float64{21: vbSnap(a), 22: vbSnap(b)},
+		},
+	})
+	require.NoError(t, err)
+	var want [5]float64
+	for i := range want {
+		want[i] = (a[i]*0.75 + b[i]*0.25) / 1.0
+	}
+	assertVBLoss(t, out, want, 3.0)
+	assert.InDelta(t, 0.125, out.ParamSnapshot["VOLUME_BUCKET_1_LOSS"], 1e-9)
+}
+
+func TestComputeProduct_VBLoss_MissingUpstreamCountsAsZeroKeepsWeight(t *testing.T) {
+	a := [5]float64{0.10, 0.20, 0.30, 0.40, 0.50}
+	partial := vbSnap(a)
+	delete(partial, "VOLUME_BUCKET_5_LOSS") // key missing on the one present upstream
+	out, err := ComputeProduct(context.Background(), ComputeInput{
+		ProductSysID:  10,
+		CalcType:      costcalcdom.CalcTypeActual,
+		Route:         buildMultiUpstreamRoute(10, map[int64]float64{21: 0.5, 22: 1.5}),
+		CAPP:          vbLossCAPP(40, 1),
+		Formulas:      vbLossFormulas(),
+		UpstreamCosts: map[int64]float64{21: 4.0, 22: 8.0},
+		EvalCache:     evaluator.NewCache(),
+		VBLoss: &VBLossInheritance{
+			ProductTypeCode:   "DTY",
+			UpstreamTypeCodes: map[int64]string{21: "POY", 22: "POY"},
+			// 22 has no committed snapshot at all.
+			UpstreamParamSnapshots: map[int64]map[string]float64{21: partial},
+		},
+	})
+	require.NoError(t, err)
+	want := [5]float64{0.10 * 0.5 / 2, 0.20 * 0.5 / 2, 0.30 * 0.5 / 2, 0.40 * 0.5 / 2, 0}
+	assertVBLoss(t, out, want, 3.0)
+}
+
+func TestComputeProduct_VBLoss_NoUpstreamProductIsZero(t *testing.T) {
+	// FDY spun from chips: no PRODUCT RM, so nothing to inherit -> 0, and the
+	// zeros are real values persisted in the snapshot (not zero-fill).
+	out, err := ComputeProduct(context.Background(), ComputeInput{
+		ProductSysID: 30,
+		CalcType:     costcalcdom.CalcTypeActual,
+		Route:        buildOneStageRoute(30, costroute.RmTypeItem, "CHIP", 1.0),
+		CAPP:         vbLossCAPP(40, 1),
+		Formulas:     vbLossFormulas(),
+		RMCosts:      map[string]RMCostRates{"CHIP|": {CostVal: 2.0}},
+		EvalCache:    evaluator.NewCache(),
+		VBLoss:       &VBLossInheritance{ProductTypeCode: "FDY"},
+	})
+	require.NoError(t, err)
+	assertVBLoss(t, out, [5]float64{}, 3.0)
+}
+
+func TestComputeProduct_VBLoss_MBUpstreamIsSkipped(t *testing.T) {
+	poy := [5]float64{0.10, 0.20, 0.30, 0.40, 0.50}
+	out, err := ComputeProduct(context.Background(), ComputeInput{
+		ProductSysID:  10,
+		CalcType:      costcalcdom.CalcTypeActual,
+		Route:         buildMultiUpstreamRoute(10, map[int64]float64{20: 0.98, 90: 0.02}),
+		CAPP:          vbLossCAPP(40, 1),
+		Formulas:      vbLossFormulas(),
+		UpstreamCosts: map[int64]float64{20: 4.0, 90: 30.0},
+		EvalCache:     evaluator.NewCache(),
+		VBLoss: &VBLossInheritance{
+			ProductTypeCode:   "DTY",
+			UpstreamTypeCodes: map[int64]string{20: "POY", 90: "MB"},
+			// The MB carries no VB loss; it must neither contribute nor dilute.
+			UpstreamParamSnapshots: map[int64]map[string]float64{20: vbSnap(poy)},
+		},
+	})
+	require.NoError(t, err)
+	assertVBLoss(t, out, poy, 3.0)
+}
+
+func TestComputeProduct_VBLoss_MBUnknownAndNilComputeAsBefore(t *testing.T) {
+	cases := map[string]*VBLossInheritance{
+		"MB product":             {ProductTypeCode: "MB"},
+		"unknown type code":      {ProductTypeCode: ""},
+		"no inheritance context": nil, // mbbatch / pre-rule callers
+	}
+	for name, vb := range cases {
+		t.Run(name, func(t *testing.T) {
+			capp := vbLossCAPP(40, 1)
+			if vb != nil {
+				// Present upstream values that must NOT be picked up.
+				vb.UpstreamTypeCodes = map[int64]string{20: "POY"}
+				vb.UpstreamParamSnapshots = map[int64]map[string]float64{20: vbSnap([5]float64{9, 9, 9, 9, 9})}
+			}
+			out, err := ComputeProduct(context.Background(), ComputeInput{
+				ProductSysID:  10,
+				CalcType:      costcalcdom.CalcTypeActual,
+				Route:         buildTwoStageRoute(10, 20, 1.0),
+				CAPP:          capp,
+				Formulas:      vbLossFormulas(),
+				UpstreamCosts: map[int64]float64{20: 5.0},
+				EvalCache:     evaluator.NewCache(),
+				VBLoss:        vb,
+			})
+			require.NoError(t, err)
+			assertVBLoss(t, out, expectedOwnVBLoss(capp), 3.0)
+		})
 	}
 }
