@@ -58,6 +58,41 @@ oracle:
   max_open_conns: 5
   conn_max_lifetime: 10m
 
+# ERP interface account (GOAPPS_IF) — separate from the legacy oracle block.
+# Credentials via env only: ORACLE_IF_HOST/PORT/SERVICE/USER/PASSWORD.
+oracle_if:
+  host: ""
+  port: 1521
+  service: ""
+  user: ""
+  password: ""    # ORACLE_IF_PASSWORD env var only — never set here
+  max_open_conns: 2
+  max_idle_conns: 1
+  conn_max_lifetime: 10m
+  call_timeout: 30s
+
+# ERP cost integration. All flags default off; writer_mode stays "disabled"
+# until P8-T2 (allowed: disabled | fake | oracle; fake refused in production).
+erp_integration:
+  writer_mode: disabled
+  push_enabled: false
+  valuation_enabled: false
+  adj_approve_enabled: false
+  preview_ttl: 30m
+  demand_max_age: 24h
+  busy_retries: 3
+  demand_source: view
+  call_timeout: 120s
+  schedule:
+    enabled: false
+    cron: ""
+    run_day_of_month: 0
+    run_time: "03:00"
+    timezone: Asia/Jakarta
+    target_period: previous
+  backtest:
+    enabled: false
+
 rabbitmq:
   url: "amqp://guest:guest@localhost:5672/"  # Override via RABBITMQ_URL env var
   prefetch_count: 1

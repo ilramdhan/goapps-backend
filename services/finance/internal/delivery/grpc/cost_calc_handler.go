@@ -1011,6 +1011,8 @@ func resultToProto(r *costcalcdom.Result) *financev1.CostResult {
 		CalculatedBy:    r.CalculatedBy(),
 		VerifiedAt:      timePtrToProto(r.VerifiedAt()),
 		VerifiedBy:      r.VerifiedBy(),
+		ApprovedAt:      erpRuleTimePtr(r.ApprovedAt()),
+		ApprovedBy:      r.ApprovedBy(),
 	}
 }
 

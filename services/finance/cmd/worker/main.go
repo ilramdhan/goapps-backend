@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	auditapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costauditlog"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costbulkimport"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc/evaluator"
@@ -19,12 +20,15 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductapplicableparam"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
+	erpapp "github.com/mutugading/goapps-backend/services/finance/internal/application/erpintegration"
 	appmbhead "github.com/mutugading/goapps-backend/services/finance/internal/application/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
+	erpdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/erpintegration"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamclient"
+	erpmetrics "github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/metrics"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/oracle"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
@@ -204,10 +208,29 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	// import handlers — it already implements cpp.Repository.ApplyBulkOperations.
 	productParamBulkHandler := workerinternal.NewProductParamBulkHandler(jobRepo, cppRepo, log.Logger)
 
+	// ERP master replica sync (P0-T15/T15b). Read-only on Oracle: the reader
+	// only sees the ReadOnlyGuard-wrapped querier. Nil when Oracle is absent,
+	// in which case erp_master_sync messages are acked and skipped.
+	var erpMasterSync *erpapp.MasterSyncHandler
+	if oracleClient != nil {
+		erpMasterRepo := postgres.NewErpMasterRepository(db)
+		erpGradeApply := erpapp.NewGradeGroupApplyHandler(
+			erpMasterRepo, auditapp.NewEmitter(postgres.NewCostAuditLogRepository(db)),
+		)
+		erpMasterSync = erpapp.NewMasterSyncHandler(
+			oracle.NewErpMasterReader(oracleClient.ReadOnly()), erpMasterRepo, erpGradeApply,
+		)
+	}
+
+	erpExec, stopErpScheduler := buildErpIntegrationExecutor(ctx, cfg, db, jobRepo, oracleClient, rmqJobPub)
+	defer stopErpScheduler()
+
 	consumers := buildConsumers(
 		rmqConn, syncHandler, rmCostExec, rmCostExportHandler, costingImportHandler, costSheetExportHandler,
 		mbBulkTransitionHandler,
 		productParamBulkHandler,
+		erpMasterSync,
+		erpExec,
 		cfg.RabbitMQ.ExportWorkerConcurrency,
 	)
 
@@ -265,6 +288,8 @@ func buildConsumers(
 	costSheetExportHandler *workerinternal.CostSheetExportHandler,
 	mbBulkTransitionHandler *workerinternal.MBBulkTransitionHandler,
 	productParamBulkHandler *workerinternal.ProductParamBulkHandler,
+	erpMasterSync *erpapp.MasterSyncHandler,
+	erpIntegration *erpapp.JobExecutor,
 	exportConcurrency int,
 ) []*rabbitmq.Consumer {
 	syncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
@@ -288,6 +313,12 @@ func buildConsumers(
 	productParamBulkMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return productParamBulkHandler.Handle(ctx, msg)
 	}
+	erpMasterSyncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		return runErpMasterSyncJob(ctx, erpMasterSync, msg)
+	}
+	erpIntegrationMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		return runErpIntegrationJob(ctx, erpIntegration, msg)
+	}
 	return []*rabbitmq.Consumer{
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueOracleSync, syncMsgHandler, log.Logger),
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueRMCostCalc, rmCostMsgHandler, log.Logger),
@@ -299,6 +330,12 @@ func buildConsumers(
 		// across children of the same batch (e.g. two children referencing the
 		// same lookup_fill_group_code trigger param). Left sequential.
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueProductParamBulk, productParamBulkMsgHandler, log.Logger),
+		// erp_master_sync: full-table upserts of the same replica tables — must
+		// never overlap, so strictly sequential.
+		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueErpMasterSync, erpMasterSyncMsgHandler, log.Logger),
+		// erp_integration: batch steps run under the G11 per-batch advisory
+		// lock; design §10 fixes concurrency at 1, so strictly sequential.
+		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueErpIntegration, erpIntegrationMsgHandler, log.Logger),
 		rabbitmq.NewConcurrentConsumer(
 			rmqConn, rabbitmq.QueueProductCostSheetExport, costSheetExportMsgHandler, log.Logger, exportConcurrency,
 		),
@@ -315,6 +352,106 @@ func runOracleSyncJob(ctx context.Context, h *oraclesync.SyncHandler, msg rabbit
 	if parseErr != nil {
 		log.Error().Err(parseErr).Str("job_id", msg.JobID).Msg("Invalid job ID in message")
 		return parseErr
+	}
+	return h.Execute(ctx, jobID)
+}
+
+// runErpMasterSyncJob dispatches an erp_master_sync message. Subtype is ""
+// (all), om_item, om_grade or apply_grade_groups.
+func runErpMasterSyncJob(ctx context.Context, h *erpapp.MasterSyncHandler, msg rabbitmq.JobMessage) error {
+	if h == nil {
+		log.Warn().Str("job_id", msg.JobID).Msg("ERP master sync job received but Oracle unavailable; skipping")
+		return nil
+	}
+	res, err := h.Handle(ctx, msg.Subtype, msg.CreatedBy)
+	if err != nil {
+		log.Error().Err(err).Str("job_id", msg.JobID).Str("subtype", msg.Subtype).Msg("ERP master sync failed")
+		return err
+	}
+	ev := log.Info().Str("job_id", msg.JobID).Str("subtype", msg.Subtype)
+	if res.Items != nil {
+		ev = ev.Interface("items", *res.Items)
+	}
+	if res.Grades != nil {
+		ev = ev.Interface("grades", *res.Grades)
+	}
+	if res.GradeGroups != nil {
+		ev = ev.Interface("grade_groups", *res.GradeGroups)
+	}
+	ev.Msg("ERP master sync completed")
+	return nil
+}
+
+// buildErpIntegrationExecutor wires the erp_integration batch-step executor
+// (plan-04 P3-T4). Oracle is reached only through the ReadOnlyGuard querier
+// (SELECT only). Without Oracle (or with an invalid demand_source) the
+// load_demand step fails its job; coverage and derive are PG-only and still
+// run (plan-05 P4-T4: derive reads the active rule set in one snapshot).
+//
+// It also wires the W2 steps (plan-06 P5-T5: adj_execute, lock_batch) and
+// the scheduled read/compute chain (P5-T11). The returned stop func stops the
+// scheduler.
+func buildErpIntegrationExecutor(ctx context.Context, cfg *config.Config, db *postgres.DB, jobRepo *postgres.JobRepository,
+	oracleClient *oracle.Client, publisher *rabbitmq.JobPublisherAdapter,
+) (*erpapp.JobExecutor, func()) {
+	runner := postgres.NewErpBatchTxRunner(db)
+	var load *erpapp.LoadDemandStep
+	// legacyReader stays a true nil interface without Oracle, so attr_backfill
+	// jobs fail closed (ErrAttrBackfillNotConfigured). FG_PRD_PER_DAY is not
+	// read (WithPrdPerDay unset: column unconfirmed).
+	var legacyReader erpdomain.LegacyStdReader
+	// prober stays a true nil interface without Oracle, so validate reports
+	// V-10 as an error (posted-head probe not configured: fail closed).
+	var prober erpdomain.ErpAdjHeadProber
+	if oracleClient != nil {
+		legacyReader = oracle.NewLegacyStdReader(oracleClient.ReadOnly())
+		prober = oracle.NewErpAdjReader(oracleClient.ReadOnly())
+		reader, err := oracle.NewErpDemandReader(oracleClient.ReadOnly(), cfg.ERP.DemandSource, cfg.App.Env)
+		if err != nil {
+			log.Error().Err(err).Msg("ERP demand reader disabled; load_demand jobs will fail")
+		} else {
+			load = erpapp.NewLoadDemandStep(runner, reader, oracle.NewErpAdjReader(oracleClient.ReadOnly()))
+		}
+	}
+	coverage := erpapp.NewCoverageStep(runner, postgres.NewErpCoverageSourceRepository(db), cfg.ERP.DemandMaxAge)
+	backfill := erpapp.NewBackfillAttributesHandler(legacyReader, postgres.NewErpAttrBackfillRepository(db),
+		auditapp.NewEmitter(postgres.NewCostAuditLogRepository(db)))
+	derive := erpapp.NewDeriveStep(runner, postgres.NewErpRuleSetLoader(db), cfg.ERP.DemandMaxAge)
+	validate := erpapp.NewValidateStep(runner, prober, cfg.ERP.DemandMaxAge)
+	// W1 push (plan-06 P5-T3): the writer comes from the fail-closed factory
+	// (disabled by default; fake refused in production; oracle maps to
+	// disabled until P8-T2). A factory error leaves the disabled writer, so
+	// push jobs fail G2 with no Oracle call.
+	writer, writerMode, werr := oracle.NewErpWriter(cfg.ERP, cfg.OracleIF, cfg.App.Env, log.Logger)
+	if werr != nil {
+		log.Warn().Err(werr).Str("erp_writer_mode", string(writerMode)).Msg("ERP writer not available; push jobs will fail closed")
+	}
+	gate := erpapp.WriterGate{Writer: writer, Mode: writerMode}
+	push := erpapp.NewPushStep(runner, gate,
+		erpmetrics.NewInstrumentedCallLog(postgres.NewErpOracleCallRepository(db)), auditapp.NewEmitter(postgres.NewCostAuditLogRepository(db)),
+		cfg.ERP.PushEnabled, cfg.ERP.CallTimeout)
+	// Backtest (plan-06 P5-T10b): SHADOW only, no writer. The legacy reader
+	// stays a true nil interface without Oracle, so the handler fails closed.
+	var btReader erpdomain.LegacyAdjRateReader
+	if oracleClient != nil {
+		btReader = oracle.NewLegacyAdjRateReader(oracleClient.ReadOnly())
+	}
+	backtest := erpapp.NewBacktestHandler(erpapp.NewCreateBatchHandler(postgres.NewErpIntBatchRepository(db), nil, nil),
+		load, coverage, derive, validate, postgres.NewErpStdCostRepository(db), btReader)
+	exec := erpapp.NewJobExecutor(jobRepo, runner, load, coverage).WithDerive(derive).WithValidate(validate).
+		WithAttrBackfill(backfill).WithPush(push).
+		WithBacktest(backtest, postgres.NewErpBacktestReportRepository(db))
+	wireErpAdjSteps(exec, cfg, db, runner, gate, oracleClient, prober)
+	stop := wireErpScheduler(ctx, exec, cfg, db, jobRepo, prober, publisher)
+	return exec, stop
+}
+
+// runErpIntegrationJob dispatches an erp_integration message to the executor.
+func runErpIntegrationJob(ctx context.Context, h *erpapp.JobExecutor, msg rabbitmq.JobMessage) error {
+	jobID, err := uuid.Parse(msg.JobID)
+	if err != nil {
+		log.Error().Err(err).Str("job_id", msg.JobID).Msg("Invalid erp_integration job ID")
+		return err
 	}
 	return h.Execute(ctx, jobID)
 }
