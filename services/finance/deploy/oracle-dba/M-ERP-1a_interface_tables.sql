@@ -1,0 +1,164 @@
+-- ============================================================================
+-- M-ERP-1a: GoApps interface tables, guard triggers, ADJ backup logs
+-- Purpose        : create NEW objects only (no legacy object is touched)
+-- Target schema  : MGTDAT (Oracle 11.2.0.4, no IDENTITY)
+-- Executed by    : DBA (GoApps never runs this script)
+-- Prerequisite   : 00_preflight_readonly.sql reviewed; tablespace decided (T-1)
+-- Rollback twin  : M-ERP-1a_interface_tables_rollback.sql
+-- Re-runnable    : plain CREATEs are wrapped (ignore ORA-00955); triggers use
+--                  CREATE OR REPLACE. No DML, no COMMIT.
+-- T-1 (open DBA question): replace <TABLESPACE> below with the agreed tablespace
+--                  before running. Index/PK/UQ segments use the same tablespace.
+-- ============================================================================
+WHENEVER SQLERROR EXIT FAILURE ROLLBACK
+SET DEFINE ON
+DEFINE ts = <TABLESPACE>
+
+-- 1. Batch header (one row per GoApps push)
+BEGIN EXECUTE IMMEDIATE q'[
+CREATE TABLE MGTDAT.CST_GOAPPS_STD_BATCH (
+  GSB_BATCH_ID     NUMBER(18)   PRIMARY KEY,     -- = GoApps ceib_batch_id
+  GSB_PERIOD       VARCHAR2(6)  NOT NULL,        -- YYYYMM
+  GSB_SEQ          NUMBER(4)    NOT NULL,        -- = ceib_seq
+  GSB_STATUS       VARCHAR2(12) NOT NULL,        -- PUSHED|VALUATED|APPROVED|LOCKED|FAILED|SUPERSEDED
+  GSB_RULE_HASH    VARCHAR2(64),                 -- = ceib_rule_hash (rule snapshot)
+  GSB_ROW_COUNT    NUMBER       NOT NULL,        -- control totals declared by GoApps;
+  GSB_SUM_STD      NUMBER       NOT NULL,        -- SUM(GSC_STD_COST)
+  GSB_SUM_CONV     NUMBER       NOT NULL,        -- SUM(NVL(GSC_CONV_COST,0))
+  GSB_SUM_PVL      NUMBER       NOT NULL,        -- SUM(NVL(GSC_PROD_VAL_LOSS,0))
+  GSB_PUSHED_BY    VARCHAR2(64),                 -- GoApps user (not an Oracle user)
+  GSB_PUSHED_DT    DATE DEFAULT SYSDATE,
+  GSB_VALUATED_DT  DATE,
+  GSB_LOCKED_DT    DATE,
+  GSB_SUMMARY      VARCHAR2(4000),
+  GSB_ERROR        VARCHAR2(4000),
+  CONSTRAINT UQ_GSB_PERIOD_SEQ UNIQUE (GSB_PERIOD, GSB_SEQ),
+  CONSTRAINT CK_GSB_STATUS CHECK (GSB_STATUS IN ('PUSHED','VALUATED','APPROVED','LOCKED','FAILED','SUPERSEDED'))
+) TABLESPACE &ts ]';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;
+/
+
+-- 2. Std cost copy (insert-only; re-push = new batch). Legacy FG_* column types:
+--    verify against 00_preflight_readonly.sql output before deploy.
+BEGIN EXECUTE IMMEDIATE q'[
+CREATE TABLE MGTDAT.CST_GOAPPS_STD_COST (
+  GSC_BATCH_ID        NUMBER(18)   NOT NULL,
+  GSC_PERIOD          VARCHAR2(6)  NOT NULL,
+  GSC_ITEM_CODE       VARCHAR2(12) NOT NULL,     -- FG_ITEM_CODE
+  GSC_GRADE_CODE      VARCHAR2(12) NOT NULL,     -- FG_ITEM_GRADE
+  GSC_SHADE_CODE      VARCHAR2(12) NOT NULL,     -- FG_ITEM_SHADE
+  GSC_ITEM_NAME       VARCHAR2(240),
+  GSC_SHADE_NAME      VARCHAR2(240),
+  GSC_SOURCE          VARCHAR2(16) NOT NULL,     -- GOAPPS_AX|GOAPPS_DERIVED|GOAPPS_MB -> FLEX_14
+  GSC_STD_COST        NUMBER(20,5) NOT NULL,     -- FG_COST_PER_KG -> ADJI_RATE
+  GSC_CONV_COST       NUMBER(20,5),              -- FG_CONVER_COST -> FLEX_01
+  GSC_CONV_COST1      NUMBER(20,5),              -- FG_CONVER_COST1 (SO qty tier, T-4; legacy unit)
+  GSC_CONV_COST2      NUMBER(20,5),              -- FG_CONVER_COST2
+  GSC_CONV_COST4      NUMBER(20,5),              -- FG_CONVER_COST4
+  GSC_CONV_COST5      NUMBER(20,5),              -- FG_CONVER_COST5
+  GSC_CHP_CON_KG      NUMBER(20,5),              -- FG_CHP_CON_KG -> FLEX_02
+  GSC_CHP_COST        NUMBER(20,5),              -- FG_CHP_COST -> FLEX_03
+  GSC_CHP_ITEM_CODE   VARCHAR2(50),              -- FG_CHP_ITEM_CODE -> FLEX_04
+  GSC_FG_TYPE         VARCHAR2(15),              -- FG_TYPE -> FLEX_05
+  GSC_BASIS           VARCHAR2(15),              -- FG_BASIS -> FLEX_06
+  GSC_SELLING_PRICE   NUMBER(20,5),              -- -> FLEX_07
+  GSC_AX_COST         NUMBER(20,5),              -- -> FLEX_08
+  GSC_AX_CONV_COST    NUMBER(20,5),              -- -> FLEX_09
+  GSC_VALUE_LOSS      NUMBER(20,5),              -- -> FLEX_10
+  GSC_PROD_VAL_LOSS   NUMBER(20,5),              -- FG_PROD_VALUE_LOSS -> FLEX_11
+  GSC_MS_BATCH_ITEM   VARCHAR2(12),              -- FG_MS_BATCH_ITEM -> FLEX_12
+  GSC_ITEM_TYPE       VARCHAR2(20),              -- FG_ITEM_TYPE (compat)
+  GSC_PRD_PER_DAY     NUMBER,                    -- FG_PRD_PER_DAY (compat)
+  GSC_AX_COST_SYS_ID  NUMBER(18),                -- audit: source cst_product_cost
+  GSC_AX_COST_VERSION NUMBER(6),
+  GSC_PUSHED_DT       DATE DEFAULT SYSDATE,
+  CONSTRAINT PK_CST_GOAPPS_STD_COST PRIMARY KEY (GSC_BATCH_ID, GSC_ITEM_CODE, GSC_GRADE_CODE, GSC_SHADE_CODE),
+  CONSTRAINT FK_GSC_BATCH FOREIGN KEY (GSC_BATCH_ID) REFERENCES MGTDAT.CST_GOAPPS_STD_BATCH,
+  CONSTRAINT CK_GSC_STD CHECK (GSC_STD_COST > 0)
+) TABLESPACE &ts ]';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;
+/
+
+BEGIN EXECUTE IMMEDIATE q'[
+CREATE INDEX MGTDAT.IX_GSC_KEY ON MGTDAT.CST_GOAPPS_STD_COST
+  (GSC_ITEM_CODE, GSC_GRADE_CODE, GSC_SHADE_CODE, GSC_PERIOD) TABLESPACE &ts ]';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;
+/
+
+-- 3. Single-source guard (D-1): only the GOAPPS_IF session may run DML.
+--    USER = session user, also inside AUTHID DEFINER packages.
+--    Emergency bypass only via DBA change control (ALTER TRIGGER ... DISABLE).
+--    Codes: 20910 not GOAPPS_IF, 20911 update/delete of std rows,
+--           20912 insert into a non-PUSHED batch.
+CREATE OR REPLACE TRIGGER MGTDAT.TRG_GSB_GUARD
+BEFORE INSERT OR UPDATE OR DELETE ON MGTDAT.CST_GOAPPS_STD_BATCH
+BEGIN
+  IF USER <> 'GOAPPS_IF' THEN
+    RAISE_APPLICATION_ERROR(-20910, 'CST_GOAPPS_STD_BATCH may only be modified by goapps (GOAPPS_IF).');
+  END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER MGTDAT.TRG_GSC_GUARD
+BEFORE INSERT OR UPDATE OR DELETE ON MGTDAT.CST_GOAPPS_STD_COST
+FOR EACH ROW
+DECLARE
+  v_status VARCHAR2(12);
+BEGIN
+  IF USER <> 'GOAPPS_IF' THEN
+    RAISE_APPLICATION_ERROR(-20910, 'CST_GOAPPS_STD_COST may only be modified by goapps (GOAPPS_IF).');
+  END IF;
+  IF UPDATING OR DELETING THEN
+    RAISE_APPLICATION_ERROR(-20911, 'CST_GOAPPS_STD_COST is insert-only; a correction = push a new batch.');
+  END IF;
+  SELECT GSB_STATUS INTO v_status FROM MGTDAT.CST_GOAPPS_STD_BATCH WHERE GSB_BATCH_ID = :NEW.GSC_BATCH_ID;
+  IF v_status <> 'PUSHED' THEN
+    RAISE_APPLICATION_ERROR(-20912, 'Batch '||:NEW.GSC_BATCH_ID||' has status '||v_status||'; rows may not be added.');
+  END IF;
+END;
+/
+
+-- 4. ADJ item before-values (rollback before posting). Design s12 additions:
+--    GAL_ADJH_SYS_ID, OLD_ITEM_DESC, UNIQUE (batch, adji_sys_id) for idempotency (G9).
+--    OLD_ITEM_DESC width: match OT_ADJ_ITEM.ADJI_ITEM_DESC from the preflight output.
+BEGIN EXECUTE IMMEDIATE 'CREATE SEQUENCE MGTDAT.SEQ_GOAPPS_ADJ_LOG';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;
+/
+
+BEGIN EXECUTE IMMEDIATE q'[
+CREATE TABLE MGTDAT.CST_GOAPPS_ADJ_LOG (
+  GAL_ID          NUMBER(18)  PRIMARY KEY,
+  GAL_BATCH_ID    NUMBER(18)  NOT NULL,
+  GAL_ADJH_SYS_ID NUMBER      NOT NULL,
+  GAL_ADJI_SYS_ID NUMBER      NOT NULL,
+  OLD_ITEM_DESC   VARCHAR2(240),
+  OLD_RATE NUMBER, OLD_VAL NUMBER,
+  OLD_FLEX_01 VARCHAR2(240), OLD_FLEX_02 VARCHAR2(240), OLD_FLEX_03 VARCHAR2(240), OLD_FLEX_04 VARCHAR2(240),
+  OLD_FLEX_05 VARCHAR2(240), OLD_FLEX_06 VARCHAR2(240), OLD_FLEX_07 VARCHAR2(240), OLD_FLEX_08 VARCHAR2(240),
+  OLD_FLEX_09 VARCHAR2(240), OLD_FLEX_10 VARCHAR2(240), OLD_FLEX_11 VARCHAR2(240), OLD_FLEX_12 VARCHAR2(240),
+  OLD_FLEX_13 VARCHAR2(240), OLD_FLEX_14 VARCHAR2(240),
+  GAL_DT DATE DEFAULT SYSDATE,
+  CONSTRAINT UQ_GAL_BATCH_ADJI UNIQUE (GAL_BATCH_ID, GAL_ADJI_SYS_ID)
+) TABLESPACE &ts ]';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;
+/
+
+BEGIN EXECUTE IMMEDIATE q'[
+CREATE INDEX MGTDAT.IX_GAL_BATCH ON MGTDAT.CST_GOAPPS_ADJ_LOG (GAL_BATCH_ID) TABLESPACE &ts ]';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;
+/
+
+-- 5. ADJ head approval before-values (new). PK (batch, head) = one backup per head per batch.
+BEGIN EXECUTE IMMEDIATE q'[
+CREATE TABLE MGTDAT.CST_GOAPPS_ADJ_HEAD_LOG (
+  GHL_BATCH_ID      NUMBER(18)   NOT NULL,
+  GHL_ADJH_SYS_ID   NUMBER       NOT NULL,
+  OLD_APPR_STATUS   NUMBER,
+  OLD_APPR_UID      VARCHAR2(64),
+  OLD_APPR_DT       DATE,
+  GHL_LOGGED_AT     DATE DEFAULT SYSDATE NOT NULL,
+  CONSTRAINT PK_GOAPPS_ADJ_HEAD_LOG PRIMARY KEY (GHL_BATCH_ID, GHL_ADJH_SYS_ID)
+) TABLESPACE &ts ]';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;
+/
+-- No COMMIT: DDL commits implicitly; nothing else to commit.

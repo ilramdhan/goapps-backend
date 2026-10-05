@@ -1,0 +1,19 @@
+-- ============================================================================
+-- Target schema  : MGTDAT
+-- M-ERP-3: operating agreement (COMMENTS ONLY, no executable statements)
+-- Purpose        : record the rules between GoApps, the ERP team and the DBA
+-- Executed by    : nobody needs to run it; kept for lint/ordering consistency
+-- Rollback twin  : none (nothing executable)
+--
+-- 1. ADJI_FLEX_13 / ADJI_FLEX_14 on OT_ADJ_ITEM are reserved for GoApps (OQ-E):
+--    FLEX_13 = GoApps batch id, FLEX_14 = GSC_SOURCE. No other process may write them.
+-- 2. ADJ posting (ADJH_POST_STATUS) happens only AFTER GoApps VALUATE_ADJ + APPROVE_ADJ
+--    for the period. The package refuses a period that already has posted heads (ORA-20901).
+-- 3. From cutover the legacy table OT_STD_COST_PRODUCTS_MGT is FROZEN: its writers
+--    (STD_FG_VALUE_INSERT, STD_FG_COST_UPD_PRD, CHP_WAC_UPD, ODBTRG_FG_STD_COST and
+--    cost triggers) are disabled by M-ERP-4c; readers are repointed by M-ERP-4b to
+--    V_GOAPPS_STD_COST_CUR.
+-- 4. Period lock: once ADJ is posted GoApps calls LOCK_BATCH; a LOCKED batch is never
+--    re-valuated; corrections require a new batch in a later (open) period.
+-- ============================================================================
+WHENEVER SQLERROR EXIT FAILURE ROLLBACK
