@@ -1,0 +1,2783 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/erp_integration.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ErpIntegrationService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/erp-integration/adj-previews/{previewId}": {
+      "get": {
+        "summary": "GetErpAdjPreview returns totals, excluded count, the V-07 result and a paged head list.\nPermission: finance.cost.erpintegration.view, or .valuate / .approve / .restore per operation",
+        "operationId": "ErpIntegrationService_GetErpAdjPreview",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetErpAdjPreviewResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "previewId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/adj-previews/{previewId}/execute": {
+      "post": {
+        "summary": "ExecuteErpAdjOperation executes a previewed ADJ operation (gates G1-G11).\nPermission: finance.cost.erpintegration.valuate / .approve / .restore per operation",
+        "operationId": "ErpIntegrationService_ExecuteErpAdjOperation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExecuteErpAdjOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "previewId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceExecuteErpAdjOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/attr-backfill": {
+      "post": {
+        "summary": "RunErpAttributeBackfill backfills empty attributes on linked products (dry_run default true).\nPermission: finance.cost.erpintegration.update",
+        "operationId": "ErpIntegrationService_RunErpAttributeBackfill",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RunErpAttributeBackfillResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RunErpAttributeBackfillRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/backtests": {
+      "post": {
+        "summary": "RunErpBacktest runs a SHADOW batch for a closed period.\nPermission: finance.cost.erpintegration.trigger",
+        "operationId": "ErpIntegrationService_RunErpBacktest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RunErpBacktestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RunErpBacktestRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/backtests/{batchId}/report": {
+      "get": {
+        "summary": "GetErpBacktestReport returns the per-period diff report.\nPermission: finance.cost.erpintegration.view + finance.cost.erpintegration.export",
+        "operationId": "ErpIntegrationService_GetErpBacktestReport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetErpBacktestReportResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches": {
+      "get": {
+        "summary": "ListErpBatches lists batches filtered by period/status.\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_ListErpBatches",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListErpBatchesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ERP_BATCH_STATUS_UNSPECIFIED",
+              "ERP_BATCH_STATUS_DRAFT",
+              "ERP_BATCH_STATUS_DEMAND_LOADED",
+              "ERP_BATCH_STATUS_COVERED",
+              "ERP_BATCH_STATUS_DERIVED",
+              "ERP_BATCH_STATUS_VALIDATED",
+              "ERP_BATCH_STATUS_PUSHED",
+              "ERP_BATCH_STATUS_VALUATED",
+              "ERP_BATCH_STATUS_RECONCILED",
+              "ERP_BATCH_STATUS_LOCKED",
+              "ERP_BATCH_STATUS_FAILED",
+              "ERP_BATCH_STATUS_SUPERSEDED"
+            ],
+            "default": "ERP_BATCH_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ERP_BATCH_MODE_UNSPECIFIED",
+              "ERP_BATCH_MODE_LIVE",
+              "ERP_BATCH_MODE_SHADOW"
+            ],
+            "default": "ERP_BATCH_MODE_UNSPECIFIED"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      },
+      "post": {
+        "summary": "CreateErpBatch creates a batch for a period (refused if one is in flight).\nPermission: finance.cost.erpintegration.trigger",
+        "operationId": "ErpIntegrationService_CreateErpBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateErpBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateErpBatchRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}": {
+      "get": {
+        "summary": "GetErpBatch returns a batch with summary, progress and allowed actions.\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_GetErpBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetErpBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/abandon": {
+      "post": {
+        "summary": "AbandonErpBatch moves a batch to FAILED (PG only).\nPermission: finance.cost.erpintegration.trigger",
+        "operationId": "ErpIntegrationService_AbandonErpBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AbandonErpBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceAbandonErpBatchBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/ack-warnings": {
+      "post": {
+        "summary": "AckErpWarnings acknowledges validation warnings (audit ERP_WARN_ACK).\nPermission: finance.cost.erpintegration.approve",
+        "operationId": "ErpIntegrationService_AckErpWarnings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AckErpWarningsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceAckErpWarningsBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/adj-preview": {
+      "post": {
+        "summary": "PreviewErpAdjOperation snapshots and previews an ADJ operation (read-only Oracle).\nPermission: finance.cost.erpintegration.valuate / .approve / .restore per operation",
+        "operationId": "ErpIntegrationService_PreviewErpAdjOperation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PreviewErpAdjOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServicePreviewErpAdjOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/coverage": {
+      "get": {
+        "summary": "ListErpCoverage lists coverage lines.\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_ListErpCoverage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListErpCoverageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ERP_COVERAGE_STATUS_UNSPECIFIED",
+              "ERP_COVERAGE_STATUS_OK",
+              "ERP_COVERAGE_STATUS_NO_MAPPING",
+              "ERP_COVERAGE_STATUS_DUP_MAPPING",
+              "ERP_COVERAGE_STATUS_NO_COST",
+              "ERP_COVERAGE_STATUS_NOT_APPROVED",
+              "ERP_COVERAGE_STATUS_NOT_USD",
+              "ERP_COVERAGE_STATUS_INVALID"
+            ],
+            "default": "ERP_COVERAGE_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      },
+      "post": {
+        "summary": "RunErpCoverage computes mapping/cost coverage.\nPermission: finance.cost.erpintegration.trigger",
+        "operationId": "ErpIntegrationService_RunErpCoverage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RunErpCoverageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceRunErpCoverageBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/coverage/export": {
+      "get": {
+        "summary": "ExportErpCoverage exports coverage as xlsx.\nPermission: finance.cost.erpintegration.export",
+        "operationId": "ErpIntegrationService_ExportErpCoverage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportErpCoverageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/coverage/{cecId}/create-product": {
+      "post": {
+        "summary": "CreateCostProductFromDemand creates a Yarn product from a demand line (MB is FailedPrecondition).\nPermission: finance.cost.erpintegration.update + existing product-master create",
+        "operationId": "ErpIntegrationService_CreateCostProductFromDemand",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateCostProductFromDemandResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "cecId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceCreateCostProductFromDemandBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/derive": {
+      "post": {
+        "summary": "RunErpDerive derives standard costs (G10).\nPermission: finance.cost.erpintegration.trigger",
+        "operationId": "ErpIntegrationService_RunErpDerive",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RunErpDeriveResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceRunErpDeriveBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/load-demand": {
+      "post": {
+        "summary": "LoadErpDemand loads ERP demand rows (read-only Oracle).\nPermission: finance.cost.erpintegration.trigger",
+        "operationId": "ErpIntegrationService_LoadErpDemand",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoadErpDemandResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceLoadErpDemandBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/lock": {
+      "post": {
+        "summary": "LockErpBatch locks the batch (LOCK_BATCH single call).\nPermission: finance.cost.erpintegration.lock",
+        "operationId": "ErpIntegrationService_LockErpBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LockErpBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceLockErpBatchBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/manual-sample": {
+      "get": {
+        "summary": "ExportErpManualSample exports a stratified manual check sample (\u003e=30 combos).\nPermission: finance.cost.erpintegration.export",
+        "operationId": "ErpIntegrationService_ExportErpManualSample",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportErpManualSampleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/oracle-calls": {
+      "get": {
+        "summary": "ListErpOracleCalls returns the Oracle call audit log.\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_ListErpOracleCalls",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListErpOracleCallsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/push": {
+      "post": {
+        "summary": "PushErpBatch pushes the batch to Oracle (flag push_enabled).\nPermission: finance.cost.erpintegration.push",
+        "operationId": "ErpIntegrationService_PushErpBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PushErpBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServicePushErpBatchBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/push/preview": {
+      "get": {
+        "summary": "PreviewErpPush returns control totals, row count and hash (no Oracle I/O).\nPermission: finance.cost.erpintegration.push",
+        "operationId": "ErpIntegrationService_PreviewErpPush",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PreviewErpPushResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/recon": {
+      "post": {
+        "summary": "ReconErpBatch reconciles against the Oracle adjustment set (read-only).\nPermission: finance.cost.erpintegration.trigger",
+        "operationId": "ErpIntegrationService_ReconErpBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReconErpBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceReconErpBatchBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/recon/export": {
+      "get": {
+        "summary": "ExportErpRecon exports the recon outcome of a batch as xlsx.\nPermission: finance.cost.erpintegration.export",
+        "operationId": "ErpIntegrationService_ExportErpRecon",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportErpReconResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/std-cost": {
+      "get": {
+        "summary": "ListErpStdCost lists derived standard cost rows.\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_ListErpStdCost",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListErpStdCostResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ERP_STD_SOURCE_UNSPECIFIED",
+              "ERP_STD_SOURCE_GOAPPS_AX",
+              "ERP_STD_SOURCE_GOAPPS_DERIVED",
+              "ERP_STD_SOURCE_GOAPPS_MB"
+            ],
+            "default": "ERP_STD_SOURCE_UNSPECIFIED"
+          },
+          {
+            "name": "reconStatus",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ERP_RECON_STATUS_UNSPECIFIED",
+              "ERP_RECON_STATUS_MATCH",
+              "ERP_RECON_STATUS_DIFF",
+              "ERP_RECON_STATUS_NOT_IN_ADJ",
+              "ERP_RECON_STATUS_NOT_COVERED"
+            ],
+            "default": "ERP_RECON_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "basis",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/batches/{batchId}/validate": {
+      "post": {
+        "summary": "ValidateErpBatch runs pre-push validations.\nPermission: finance.cost.erpintegration.validate",
+        "operationId": "ErpIntegrationService_ValidateErpBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ValidateErpBatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceValidateErpBatchBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/config": {
+      "get": {
+        "summary": "GetErpIntegrationConfig returns flags, writer mode and Oracle IF configured (never secrets).\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_GetErpIntegrationConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetErpIntegrationConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/link-report": {
+      "get": {
+        "summary": "GetErpItemLinkReport reports duplicate, unlinked and no-fg_type items.\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_GetErpItemLinkReport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetErpItemLinkReportResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "description": "Page number (1-indexed).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.pageSize",
+            "description": "Number of items per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/links": {
+      "post": {
+        "summary": "LinkErpToProduct links an ERP item to a product (V-04/V-06/V-11/V-12; never writes grade codes).\nPermission: finance.cost.erpintegration.update",
+        "operationId": "ErpIntegrationService_LinkErpToProduct",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LinkErpToProductResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LinkErpToProductRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/master-sync": {
+      "post": {
+        "summary": "RunErpMasterSync syncs OM_ITEM / OM_GRADE_CODE_1 into replicas (read-only Oracle).\nPermission: finance.cost.erpintegration.sync",
+        "operationId": "ErpIntegrationService_RunErpMasterSync",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RunErpMasterSyncResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/periods/{period}/currency-sanity": {
+      "get": {
+        "summary": "GetErpCurrencySanity returns currency rate sanity checks for a period.\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_GetErpCurrencySanity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetErpCurrencySanityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/periods/{period}/lock": {
+      "get": {
+        "summary": "GetErpPeriodLock returns the period lock state (used by the orchestrator cron).\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_GetErpPeriodLock",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetErpPeriodLockResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      },
+      "post": {
+        "summary": "LockErpPeriod locks a period.\nPermission: finance.cost.erpintegration.lock",
+        "operationId": "ErpIntegrationService_LockErpPeriod",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LockErpPeriodResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceLockErpPeriodBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/periods/{period}/unlock": {
+      "post": {
+        "summary": "UnlockErpPeriod unlocks a period.\nPermission: finance.cost.erpintegration.unlock",
+        "operationId": "ErpIntegrationService_UnlockErpPeriod",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnlockErpPeriodResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "period",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ErpIntegrationServiceUnlockErpPeriodBody"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    },
+    "/api/v1/finance/erp-integration/schedule": {
+      "get": {
+        "summary": "GetErpIntegrationSchedule returns the effective schedule and next run.\nPermission: finance.cost.erpintegration.view",
+        "operationId": "ErpIntegrationService_GetErpIntegrationSchedule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetErpIntegrationScheduleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateErpIntegrationSchedule edits the settings-row schedule (cron validated server-side).\nPermission: finance.cost.erpintegration.update",
+        "operationId": "ErpIntegrationService_UpdateErpIntegrationSchedule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateErpIntegrationScheduleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateErpIntegrationScheduleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ErpIntegrationService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ErpIntegrationServiceAbandonErpBatchBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "ErpIntegrationServiceAckErpWarningsBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "warningSetHash": {
+          "type": "string",
+          "description": "sha256 hex of the warning set being acknowledged (stale-ack guard)."
+        }
+      }
+    },
+    "ErpIntegrationServiceCreateCostProductFromDemandBody": {
+      "type": "object"
+    },
+    "ErpIntegrationServiceExecuteErpAdjOperationBody": {
+      "type": "object",
+      "properties": {
+        "confirmSetHash": {
+          "type": "string"
+        },
+        "confirmText": {
+          "type": "string"
+        }
+      }
+    },
+    "ErpIntegrationServiceLoadErpDemandBody": {
+      "type": "object"
+    },
+    "ErpIntegrationServiceLockErpBatchBody": {
+      "type": "object"
+    },
+    "ErpIntegrationServiceLockErpPeriodBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "ErpIntegrationServicePreviewErpAdjOperationBody": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "$ref": "#/definitions/v1ErpAdjOperation"
+        }
+      }
+    },
+    "ErpIntegrationServicePushErpBatchBody": {
+      "type": "object",
+      "properties": {
+        "confirmRowCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "confirmSumStd": {
+          "type": "string"
+        }
+      }
+    },
+    "ErpIntegrationServiceReconErpBatchBody": {
+      "type": "object"
+    },
+    "ErpIntegrationServiceRunErpCoverageBody": {
+      "type": "object"
+    },
+    "ErpIntegrationServiceRunErpDeriveBody": {
+      "type": "object"
+    },
+    "ErpIntegrationServiceUnlockErpPeriodBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "ErpIntegrationServiceValidateErpBatchBody": {
+      "type": "object"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AbandonErpBatchResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpBatch"
+        }
+      }
+    },
+    "v1AckErpWarningsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpBatch"
+        }
+      }
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateCostProductFromDemandResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1CreateErpBatchRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/v1ErpBatchMode"
+        }
+      }
+    },
+    "v1CreateErpBatchResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpBatch"
+        }
+      }
+    },
+    "v1ErpAdjHead": {
+      "type": "object",
+      "properties": {
+        "headId": {
+          "type": "string"
+        },
+        "itemCode": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "excluded": {
+          "type": "boolean"
+        },
+        "excludeReason": {
+          "type": "string"
+        }
+      },
+      "description": "ErpAdjHead is one ADJ head in a preview."
+    },
+    "v1ErpAdjOperation": {
+      "type": "string",
+      "enum": [
+        "ERP_ADJ_OPERATION_UNSPECIFIED",
+        "ERP_ADJ_OPERATION_VALUATE",
+        "ERP_ADJ_OPERATION_APPROVE",
+        "ERP_ADJ_OPERATION_RESTORE"
+      ],
+      "default": "ERP_ADJ_OPERATION_UNSPECIFIED",
+      "description": "ErpAdjOperation is an Oracle adjustment operation."
+    },
+    "v1ErpAdjPreview": {
+      "type": "object",
+      "properties": {
+        "previewId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "operation": {
+          "$ref": "#/definitions/v1ErpAdjOperation"
+        },
+        "setHash": {
+          "type": "string"
+        },
+        "headCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "excludedCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalAmount": {
+          "type": "string"
+        },
+        "v07": {
+          "$ref": "#/definitions/v1ErpV07Result"
+        },
+        "heads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpAdjHead"
+          }
+        },
+        "confirmText": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "title": "ISO-8601; preview is unusable after this"
+        }
+      },
+      "description": "ErpAdjPreview is a snapshot preview of an ADJ operation."
+    },
+    "v1ErpBacktestClass": {
+      "type": "string",
+      "enum": [
+        "ERP_BACKTEST_CLASS_UNSPECIFIED",
+        "ERP_BACKTEST_CLASS_MATCH",
+        "ERP_BACKTEST_CLASS_DIFF",
+        "ERP_BACKTEST_CLASS_ONLY_GOAPPS",
+        "ERP_BACKTEST_CLASS_ONLY_LEGACY"
+      ],
+      "default": "ERP_BACKTEST_CLASS_UNSPECIFIED",
+      "description": "ErpBacktestClass classifies a backtest line."
+    },
+    "v1ErpBacktestLine": {
+      "type": "object",
+      "properties": {
+        "erpItemCode": {
+          "type": "string"
+        },
+        "basis": {
+          "type": "string"
+        },
+        "class": {
+          "$ref": "#/definitions/v1ErpBacktestClass"
+        },
+        "goappsStd": {
+          "type": "string"
+        },
+        "legacyStd": {
+          "type": "string"
+        },
+        "diff": {
+          "type": "string"
+        },
+        "deltaPct": {
+          "type": "string",
+          "description": "delta_pct is diff / legacy * 100 (Round5); empty when legacy is 0 or NULL."
+        },
+        "fail": {
+          "type": "boolean",
+          "description": "fail is true for an SP* basis line that is not MATCH (FAIL rule)."
+        }
+      },
+      "description": "ErpBacktestLine is one backtest comparison line."
+    },
+    "v1ErpBacktestReport": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "period": {
+          "type": "string"
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "int64"
+          }
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpBacktestLine"
+          }
+        },
+        "failed": {
+          "type": "boolean"
+        }
+      },
+      "description": "ErpBacktestReport is the per-period backtest diff report."
+    },
+    "v1ErpBatch": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "period": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/v1ErpBatchMode"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ErpBatchStatus"
+        },
+        "seq": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "summaryJson": {
+          "type": "string",
+          "description": "Raw JSON of ceib_summary."
+        },
+        "progress": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "allowedActions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failedReason": {
+          "type": "string"
+        }
+      },
+      "description": "ErpBatch is one integration run for a period."
+    },
+    "v1ErpBatchMode": {
+      "type": "string",
+      "enum": [
+        "ERP_BATCH_MODE_UNSPECIFIED",
+        "ERP_BATCH_MODE_LIVE",
+        "ERP_BATCH_MODE_SHADOW"
+      ],
+      "default": "ERP_BATCH_MODE_UNSPECIFIED",
+      "description": "ErpBatchMode distinguishes pushable LIVE batches from SHADOW (never pushed)."
+    },
+    "v1ErpBatchStatus": {
+      "type": "string",
+      "enum": [
+        "ERP_BATCH_STATUS_UNSPECIFIED",
+        "ERP_BATCH_STATUS_DRAFT",
+        "ERP_BATCH_STATUS_DEMAND_LOADED",
+        "ERP_BATCH_STATUS_COVERED",
+        "ERP_BATCH_STATUS_DERIVED",
+        "ERP_BATCH_STATUS_VALIDATED",
+        "ERP_BATCH_STATUS_PUSHED",
+        "ERP_BATCH_STATUS_VALUATED",
+        "ERP_BATCH_STATUS_RECONCILED",
+        "ERP_BATCH_STATUS_LOCKED",
+        "ERP_BATCH_STATUS_FAILED",
+        "ERP_BATCH_STATUS_SUPERSEDED"
+      ],
+      "default": "ERP_BATCH_STATUS_UNSPECIFIED"
+    },
+    "v1ErpCoverageLine": {
+      "type": "object",
+      "properties": {
+        "cecId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "erpItemCode": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "string"
+        },
+        "costUsd": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ErpCoverageStatus"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "description": "ErpCoverageLine is one demand line with its coverage result."
+    },
+    "v1ErpCoverageStatus": {
+      "type": "string",
+      "enum": [
+        "ERP_COVERAGE_STATUS_UNSPECIFIED",
+        "ERP_COVERAGE_STATUS_OK",
+        "ERP_COVERAGE_STATUS_NO_MAPPING",
+        "ERP_COVERAGE_STATUS_DUP_MAPPING",
+        "ERP_COVERAGE_STATUS_NO_COST",
+        "ERP_COVERAGE_STATUS_NOT_APPROVED",
+        "ERP_COVERAGE_STATUS_NOT_USD",
+        "ERP_COVERAGE_STATUS_INVALID"
+      ],
+      "default": "ERP_COVERAGE_STATUS_UNSPECIFIED",
+      "description": "ErpCoverageStatus is the coverage result of a demand line."
+    },
+    "v1ErpCurrencySanityRow": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "rate": {
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "description": "ErpCurrencySanityRow is one currency rate check."
+    },
+    "v1ErpDeriveStatus": {
+      "type": "string",
+      "enum": [
+        "ERP_DERIVE_STATUS_UNSPECIFIED",
+        "ERP_DERIVE_STATUS_OK",
+        "ERP_DERIVE_STATUS_NO_AX",
+        "ERP_DERIVE_STATUS_NO_RULE",
+        "ERP_DERIVE_STATUS_NO_FG_TYPE",
+        "ERP_DERIVE_STATUS_NO_GRADE_GROUP",
+        "ERP_DERIVE_STATUS_NO_SELL_PRICE",
+        "ERP_DERIVE_STATUS_INVALID"
+      ],
+      "default": "ERP_DERIVE_STATUS_UNSPECIFIED",
+      "description": "ErpDeriveStatus is the derive result of a std-cost row."
+    },
+    "v1ErpIntegrationConfig": {
+      "type": "object",
+      "properties": {
+        "pushEnabled": {
+          "type": "boolean",
+          "description": "Flags mirror config erp_integration.* (all default false)."
+        },
+        "valuationEnabled": {
+          "type": "boolean"
+        },
+        "adjApproveEnabled": {
+          "type": "boolean"
+        },
+        "writerMode": {
+          "type": "string",
+          "description": "writer_mode is disabled | fake | oracle."
+        },
+        "oracleIfConfigured": {
+          "type": "boolean"
+        }
+      },
+      "description": "ErpIntegrationConfig exposes read-only flags (never secrets)."
+    },
+    "v1ErpLinkReportRow": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "erpItemCode": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      },
+      "description": "ErpLinkReportRow is one item-link issue."
+    },
+    "v1ErpOracleCall": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "callType": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "error": {
+          "type": "string"
+        },
+        "oraCode": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "finishedAt": {
+          "type": "string"
+        }
+      },
+      "description": "ErpOracleCall is one audited Oracle call."
+    },
+    "v1ErpPeriodLock": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "lockedBy": {
+          "type": "string"
+        },
+        "lockedAt": {
+          "type": "string"
+        }
+      },
+      "description": "ErpPeriodLock is the lock state of a period."
+    },
+    "v1ErpReconStatus": {
+      "type": "string",
+      "enum": [
+        "ERP_RECON_STATUS_UNSPECIFIED",
+        "ERP_RECON_STATUS_MATCH",
+        "ERP_RECON_STATUS_DIFF",
+        "ERP_RECON_STATUS_NOT_IN_ADJ",
+        "ERP_RECON_STATUS_NOT_COVERED"
+      ],
+      "default": "ERP_RECON_STATUS_UNSPECIFIED",
+      "description": "ErpReconStatus is the reconciliation result vs the ADJ set."
+    },
+    "v1ErpSchedule": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "cron": {
+          "type": "string"
+        },
+        "runDayOfMonth": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "runTime": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "nextRunAt": {
+          "type": "string"
+        },
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mode": {
+          "$ref": "#/definitions/v1ErpScheduleMode"
+        },
+        "runDate": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      },
+      "description": "ErpSchedule is the effective integration schedule."
+    },
+    "v1ErpScheduleMode": {
+      "type": "string",
+      "enum": [
+        "ERP_SCHEDULE_MODE_UNSPECIFIED",
+        "ERP_SCHEDULE_MODE_END_OF_MONTH",
+        "ERP_SCHEDULE_MODE_START_OF_MONTH",
+        "ERP_SCHEDULE_MODE_DAY_OF_MONTH",
+        "ERP_SCHEDULE_MODE_SPECIFIC_DATE",
+        "ERP_SCHEDULE_MODE_CRON"
+      ],
+      "default": "ERP_SCHEDULE_MODE_UNSPECIFIED",
+      "description": "ErpBatchStatus is the batch lifecycle status.\nErpScheduleMode is how the integration schedule picks its run time."
+    },
+    "v1ErpStdCostRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "erpItemCode": {
+          "type": "string"
+        },
+        "basis": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/definitions/v1ErpStdSource"
+        },
+        "deriveStatus": {
+          "$ref": "#/definitions/v1ErpDeriveStatus"
+        },
+        "reconStatus": {
+          "$ref": "#/definitions/v1ErpReconStatus"
+        },
+        "stdCost": {
+          "type": "string"
+        },
+        "oracleStdCost": {
+          "type": "string"
+        },
+        "diff": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "gradeCode": {
+          "type": "string"
+        },
+        "shadeCode": {
+          "type": "string"
+        }
+      },
+      "description": "ErpStdCostRow is one derived standard cost row."
+    },
+    "v1ErpStdSource": {
+      "type": "string",
+      "enum": [
+        "ERP_STD_SOURCE_UNSPECIFIED",
+        "ERP_STD_SOURCE_GOAPPS_AX",
+        "ERP_STD_SOURCE_GOAPPS_DERIVED",
+        "ERP_STD_SOURCE_GOAPPS_MB"
+      ],
+      "default": "ERP_STD_SOURCE_UNSPECIFIED",
+      "description": "ErpStdSource is the origin of a standard cost."
+    },
+    "v1ErpV07Result": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "offendingHeadIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "ErpV07Result is the V-07 pre-validation result."
+    },
+    "v1ExecuteErpAdjOperationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ExportErpCoverageResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExportErpManualSampleResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExportErpReconResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "fileContent": {
+          "type": "string",
+          "format": "byte"
+        },
+        "fileName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GetErpAdjPreviewResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpAdjPreview"
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1GetErpBacktestReportResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpBacktestReport"
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1GetErpBatchResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpBatch"
+        }
+      }
+    },
+    "v1GetErpCurrencySanityResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpCurrencySanityRow"
+          }
+        }
+      }
+    },
+    "v1GetErpIntegrationConfigResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpIntegrationConfig"
+        }
+      }
+    },
+    "v1GetErpIntegrationScheduleResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpSchedule"
+        }
+      }
+    },
+    "v1GetErpItemLinkReportResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpLinkReportRow"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1GetErpPeriodLockResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpPeriodLock"
+        }
+      }
+    },
+    "v1LinkErpToProductRequest": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "erpItemCode": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LinkErpToProductResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "erpItemCode": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListErpBatchesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpBatch"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListErpCoverageResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpCoverageLine"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListErpOracleCallsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpOracleCall"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1ListErpStdCostResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ErpStdCostRow"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      }
+    },
+    "v1LoadErpDemandResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1LockErpBatchResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpBatch"
+        }
+      }
+    },
+    "v1LockErpPeriodResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpPeriodLock"
+        }
+      }
+    },
+    "v1PaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Page number (1-indexed)."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        }
+      },
+      "description": "PaginationRequest contains pagination parameters for list requests."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1PreviewErpAdjOperationResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "previewId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1PreviewErpPushResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "rowCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sumStd": {
+          "type": "string"
+        },
+        "setHash": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1PushErpBatchResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ReconErpBatchResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1RunErpAttributeBackfillRequest": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1RunErpAttributeBackfillResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RunErpBacktestRequest": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RunErpBacktestResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1RunErpCoverageResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1RunErpDeriveResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1RunErpMasterSyncResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UnlockErpPeriodResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpPeriodLock"
+        }
+      }
+    },
+    "v1UpdateErpIntegrationScheduleRequest": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "cron": {
+          "type": "string"
+        },
+        "runDayOfMonth": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "runTime": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/v1ErpScheduleMode"
+        },
+        "runDate": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UpdateErpIntegrationScheduleResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1ErpSchedule"
+        }
+      }
+    },
+    "v1ValidateErpBatchResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}

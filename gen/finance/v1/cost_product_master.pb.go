@@ -48,6 +48,11 @@ type CostProductMaster struct {
 	Flex_03         string                 `protobuf:"bytes,20,opt,name=flex_03,json=flex03,proto3" json:"flex_03,omitempty"`
 	Source          string                 `protobuf:"bytes,21,opt,name=source,proto3" json:"source,omitempty"`                      // origin marker, e.g. "MB_RECIPE" when auto-generated; empty if manually created
 	IsLocked        bool                   `protobuf:"varint,22,opt,name=is_locked,json=isLocked,proto3" json:"is_locked,omitempty"` // true blocks manual edits to route/params; escape hatch via UnlockCostProductMaster
+	ErpFgType       string                 `protobuf:"bytes,23,opt,name=erp_fg_type,json=erpFgType,proto3" json:"erp_fg_type,omitempty"`
+	ErpChpItemCode  string                 `protobuf:"bytes,24,opt,name=erp_chp_item_code,json=erpChpItemCode,proto3" json:"erp_chp_item_code,omitempty"`
+	ErpMsBatchItem  string                 `protobuf:"bytes,25,opt,name=erp_ms_batch_item,json=erpMsBatchItem,proto3" json:"erp_ms_batch_item,omitempty"`
+	ErpItemType     string                 `protobuf:"bytes,26,opt,name=erp_item_type,json=erpItemType,proto3" json:"erp_item_type,omitempty"`
+	ErpPrdPerDay    string                 `protobuf:"bytes,27,opt,name=erp_prd_per_day,json=erpPrdPerDay,proto3" json:"erp_prd_per_day,omitempty"` // decimal string
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -236,6 +241,41 @@ func (x *CostProductMaster) GetIsLocked() bool {
 	return false
 }
 
+func (x *CostProductMaster) GetErpFgType() string {
+	if x != nil {
+		return x.ErpFgType
+	}
+	return ""
+}
+
+func (x *CostProductMaster) GetErpChpItemCode() string {
+	if x != nil {
+		return x.ErpChpItemCode
+	}
+	return ""
+}
+
+func (x *CostProductMaster) GetErpMsBatchItem() string {
+	if x != nil {
+		return x.ErpMsBatchItem
+	}
+	return ""
+}
+
+func (x *CostProductMaster) GetErpItemType() string {
+	if x != nil {
+		return x.ErpItemType
+	}
+	return ""
+}
+
+func (x *CostProductMaster) GetErpPrdPerDay() string {
+	if x != nil {
+		return x.ErpPrdPerDay
+	}
+	return ""
+}
+
 type CreateCostProductMasterRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProductTypeId int32                  `protobuf:"varint,1,opt,name=product_type_id,json=productTypeId,proto3" json:"product_type_id,omitempty"`
@@ -244,11 +284,17 @@ type CreateCostProductMasterRequest struct {
 	GradeCode     string                 `protobuf:"bytes,4,opt,name=grade_code,json=gradeCode,proto3" json:"grade_code,omitempty"`
 	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	// Legacy / import identifiers — plain text, no validation constraint.
-	Flex_01       string `protobuf:"bytes,6,opt,name=flex_01,json=flex01,proto3" json:"flex_01,omitempty"` // legacy_erp_compound_key
-	Flex_02       string `protobuf:"bytes,7,opt,name=flex_02,json=flex02,proto3" json:"flex_02,omitempty"` // legacy_oracle_sys_id
-	Flex_03       string `protobuf:"bytes,8,opt,name=flex_03,json=flex03,proto3" json:"flex_03,omitempty"` // legacy_type_label
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Flex_01 string `protobuf:"bytes,6,opt,name=flex_01,json=flex01,proto3" json:"flex_01,omitempty"` // legacy_erp_compound_key
+	Flex_02 string `protobuf:"bytes,7,opt,name=flex_02,json=flex02,proto3" json:"flex_02,omitempty"` // legacy_oracle_sys_id
+	Flex_03 string `protobuf:"bytes,8,opt,name=flex_03,json=flex03,proto3" json:"flex_03,omitempty"` // legacy_type_label
+	// ERP linkage identifiers (optional, empty = unset).
+	ErpFgType      string `protobuf:"bytes,9,opt,name=erp_fg_type,json=erpFgType,proto3" json:"erp_fg_type,omitempty"`
+	ErpChpItemCode string `protobuf:"bytes,10,opt,name=erp_chp_item_code,json=erpChpItemCode,proto3" json:"erp_chp_item_code,omitempty"`
+	ErpMsBatchItem string `protobuf:"bytes,11,opt,name=erp_ms_batch_item,json=erpMsBatchItem,proto3" json:"erp_ms_batch_item,omitempty"`
+	ErpItemType    string `protobuf:"bytes,12,opt,name=erp_item_type,json=erpItemType,proto3" json:"erp_item_type,omitempty"`
+	ErpPrdPerDay   string `protobuf:"bytes,13,opt,name=erp_prd_per_day,json=erpPrdPerDay,proto3" json:"erp_prd_per_day,omitempty"` // decimal string
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CreateCostProductMasterRequest) Reset() {
@@ -333,6 +379,41 @@ func (x *CreateCostProductMasterRequest) GetFlex_02() string {
 func (x *CreateCostProductMasterRequest) GetFlex_03() string {
 	if x != nil {
 		return x.Flex_03
+	}
+	return ""
+}
+
+func (x *CreateCostProductMasterRequest) GetErpFgType() string {
+	if x != nil {
+		return x.ErpFgType
+	}
+	return ""
+}
+
+func (x *CreateCostProductMasterRequest) GetErpChpItemCode() string {
+	if x != nil {
+		return x.ErpChpItemCode
+	}
+	return ""
+}
+
+func (x *CreateCostProductMasterRequest) GetErpMsBatchItem() string {
+	if x != nil {
+		return x.ErpMsBatchItem
+	}
+	return ""
+}
+
+func (x *CreateCostProductMasterRequest) GetErpItemType() string {
+	if x != nil {
+		return x.ErpItemType
+	}
+	return ""
+}
+
+func (x *CreateCostProductMasterRequest) GetErpPrdPerDay() string {
+	if x != nil {
+		return x.ErpPrdPerDay
 	}
 	return ""
 }
@@ -589,11 +670,17 @@ type UpdateCostProductMasterRequest struct {
 	GradeCode    string                 `protobuf:"bytes,4,opt,name=grade_code,json=gradeCode,proto3" json:"grade_code,omitempty"`
 	Description  string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	// Legacy / import identifiers — plain text, no validation constraint.
-	Flex_01       string `protobuf:"bytes,6,opt,name=flex_01,json=flex01,proto3" json:"flex_01,omitempty"` // legacy_erp_compound_key
-	Flex_02       string `protobuf:"bytes,7,opt,name=flex_02,json=flex02,proto3" json:"flex_02,omitempty"` // legacy_oracle_sys_id
-	Flex_03       string `protobuf:"bytes,8,opt,name=flex_03,json=flex03,proto3" json:"flex_03,omitempty"` // legacy_type_label
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Flex_01 string `protobuf:"bytes,6,opt,name=flex_01,json=flex01,proto3" json:"flex_01,omitempty"` // legacy_erp_compound_key
+	Flex_02 string `protobuf:"bytes,7,opt,name=flex_02,json=flex02,proto3" json:"flex_02,omitempty"` // legacy_oracle_sys_id
+	Flex_03 string `protobuf:"bytes,8,opt,name=flex_03,json=flex03,proto3" json:"flex_03,omitempty"` // legacy_type_label
+	// ERP linkage identifiers (optional, empty = unset).
+	ErpFgType      string `protobuf:"bytes,9,opt,name=erp_fg_type,json=erpFgType,proto3" json:"erp_fg_type,omitempty"`
+	ErpChpItemCode string `protobuf:"bytes,10,opt,name=erp_chp_item_code,json=erpChpItemCode,proto3" json:"erp_chp_item_code,omitempty"`
+	ErpMsBatchItem string `protobuf:"bytes,11,opt,name=erp_ms_batch_item,json=erpMsBatchItem,proto3" json:"erp_ms_batch_item,omitempty"`
+	ErpItemType    string `protobuf:"bytes,12,opt,name=erp_item_type,json=erpItemType,proto3" json:"erp_item_type,omitempty"`
+	ErpPrdPerDay   string `protobuf:"bytes,13,opt,name=erp_prd_per_day,json=erpPrdPerDay,proto3" json:"erp_prd_per_day,omitempty"` // decimal string
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateCostProductMasterRequest) Reset() {
@@ -682,6 +769,41 @@ func (x *UpdateCostProductMasterRequest) GetFlex_03() string {
 	return ""
 }
 
+func (x *UpdateCostProductMasterRequest) GetErpFgType() string {
+	if x != nil {
+		return x.ErpFgType
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetErpChpItemCode() string {
+	if x != nil {
+		return x.ErpChpItemCode
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetErpMsBatchItem() string {
+	if x != nil {
+		return x.ErpMsBatchItem
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetErpItemType() string {
+	if x != nil {
+		return x.ErpItemType
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetErpPrdPerDay() string {
+	if x != nil {
+		return x.ErpPrdPerDay
+	}
+	return ""
+}
+
 type UpdateCostProductMasterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
@@ -740,6 +862,12 @@ type UpdateCostProductMasterErpLinkageRequest struct {
 	ErpItemCode    string                 `protobuf:"bytes,2,opt,name=erp_item_code,json=erpItemCode,proto3" json:"erp_item_code,omitempty"`
 	ErpGradeCode_1 string                 `protobuf:"bytes,3,opt,name=erp_grade_code_1,json=erpGradeCode1,proto3" json:"erp_grade_code_1,omitempty"`
 	ErpGradeCode_2 string                 `protobuf:"bytes,4,opt,name=erp_grade_code_2,json=erpGradeCode2,proto3" json:"erp_grade_code_2,omitempty"`
+	// ERP linkage identifiers (optional, empty = unset).
+	ErpFgType      string `protobuf:"bytes,5,opt,name=erp_fg_type,json=erpFgType,proto3" json:"erp_fg_type,omitempty"`
+	ErpChpItemCode string `protobuf:"bytes,6,opt,name=erp_chp_item_code,json=erpChpItemCode,proto3" json:"erp_chp_item_code,omitempty"`
+	ErpMsBatchItem string `protobuf:"bytes,7,opt,name=erp_ms_batch_item,json=erpMsBatchItem,proto3" json:"erp_ms_batch_item,omitempty"`
+	ErpItemType    string `protobuf:"bytes,8,opt,name=erp_item_type,json=erpItemType,proto3" json:"erp_item_type,omitempty"`
+	ErpPrdPerDay   string `protobuf:"bytes,9,opt,name=erp_prd_per_day,json=erpPrdPerDay,proto3" json:"erp_prd_per_day,omitempty"` // decimal string
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -798,6 +926,41 @@ func (x *UpdateCostProductMasterErpLinkageRequest) GetErpGradeCode_1() string {
 func (x *UpdateCostProductMasterErpLinkageRequest) GetErpGradeCode_2() string {
 	if x != nil {
 		return x.ErpGradeCode_2
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterErpLinkageRequest) GetErpFgType() string {
+	if x != nil {
+		return x.ErpFgType
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterErpLinkageRequest) GetErpChpItemCode() string {
+	if x != nil {
+		return x.ErpChpItemCode
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterErpLinkageRequest) GetErpMsBatchItem() string {
+	if x != nil {
+		return x.ErpMsBatchItem
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterErpLinkageRequest) GetErpItemType() string {
+	if x != nil {
+		return x.ErpItemType
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterErpLinkageRequest) GetErpPrdPerDay() string {
+	if x != nil {
+		return x.ErpPrdPerDay
 	}
 	return ""
 }
@@ -1659,7 +1822,7 @@ var File_finance_v1_cost_product_master_proto protoreflect.FileDescriptor
 const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\n" +
 	"$finance/v1/cost_product_master.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\x85\x06\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xc6\a\n" +
 	"\x11CostProductMaster\x12$\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03R\fproductSysId\x12!\n" +
 	"\fproduct_code\x18\x02 \x01(\tR\vproductCode\x12&\n" +
@@ -1686,7 +1849,12 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\aflex_02\x18\x13 \x01(\tR\x06flex02\x12\x17\n" +
 	"\aflex_03\x18\x14 \x01(\tR\x06flex03\x12\x16\n" +
 	"\x06source\x18\x15 \x01(\tR\x06source\x12\x1b\n" +
-	"\tis_locked\x18\x16 \x01(\bR\bisLocked\"\xe5\x02\n" +
+	"\tis_locked\x18\x16 \x01(\bR\bisLocked\x12\x1e\n" +
+	"\verp_fg_type\x18\x17 \x01(\tR\terpFgType\x12)\n" +
+	"\x11erp_chp_item_code\x18\x18 \x01(\tR\x0eerpChpItemCode\x12)\n" +
+	"\x11erp_ms_batch_item\x18\x19 \x01(\tR\x0eerpMsBatchItem\x12\"\n" +
+	"\rerp_item_type\x18\x1a \x01(\tR\verpItemType\x12%\n" +
+	"\x0ferp_prd_per_day\x18\x1b \x01(\tR\ferpPrdPerDay\"\xf2\x04\n" +
 	"\x1eCreateCostProductMasterRequest\x12/\n" +
 	"\x0fproduct_type_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rproductTypeId\x12-\n" +
 	"\fproduct_name\x18\x02 \x01(\tB\n" +
@@ -1698,7 +1866,13 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\x12!\n" +
 	"\aflex_01\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x06flex01\x12 \n" +
 	"\aflex_02\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex02\x12 \n" +
-	"\aflex_03\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex03\"\x81\x01\n" +
+	"\aflex_03\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex03\x12'\n" +
+	"\verp_fg_type\x18\t \x01(\tB\a\xbaH\x04r\x02\x18\x0fR\terpFgType\x122\n" +
+	"\x11erp_chp_item_code\x18\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x182R\x0eerpChpItemCode\x122\n" +
+	"\x11erp_ms_batch_item\x18\v \x01(\tB\a\xbaH\x04r\x02\x18\fR\x0eerpMsBatchItem\x12+\n" +
+	"\rerp_item_type\x18\f \x01(\tB\a\xbaH\x04r\x02\x18\x14R\verpItemType\x12M\n" +
+	"\x0ferp_prd_per_day\x18\r \x01(\tB&\xbaH#r!2\x1f^([0-9]{1,12}(\\.[0-9]{1,6})?)?$R\ferpPrdPerDay\"\x81\x01\n" +
 	"\x1fCreateCostProductMasterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
 	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"L\n" +
@@ -1711,7 +1885,7 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\fproduct_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\vproductCode\"\x84\x01\n" +
 	"\"GetCostProductMasterByCodeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
-	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xe3\x02\n" +
+	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xf0\x04\n" +
 	"\x1eUpdateCostProductMasterRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\fproductSysId\x12-\n" +
 	"\fproduct_name\x18\x02 \x01(\tB\n" +
@@ -1723,15 +1897,26 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\vdescription\x12!\n" +
 	"\aflex_01\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x06flex01\x12 \n" +
 	"\aflex_02\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex02\x12 \n" +
-	"\aflex_03\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex03\"\x81\x01\n" +
+	"\aflex_03\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\x06flex03\x12'\n" +
+	"\verp_fg_type\x18\t \x01(\tB\a\xbaH\x04r\x02\x18\x0fR\terpFgType\x122\n" +
+	"\x11erp_chp_item_code\x18\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x182R\x0eerpChpItemCode\x122\n" +
+	"\x11erp_ms_batch_item\x18\v \x01(\tB\a\xbaH\x04r\x02\x18\fR\x0eerpMsBatchItem\x12+\n" +
+	"\rerp_item_type\x18\f \x01(\tB\a\xbaH\x04r\x02\x18\x14R\verpItemType\x12M\n" +
+	"\x0ferp_prd_per_day\x18\r \x01(\tB&\xbaH#r!2\x1f^([0-9]{1,12}(\\.[0-9]{1,6})?)?$R\ferpPrdPerDay\"\x81\x01\n" +
 	"\x1fUpdateCostProductMasterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
-	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xea\x01\n" +
+	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xf7\x03\n" +
 	"(UpdateCostProductMasterErpLinkageRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\fproductSysId\x12+\n" +
 	"\rerp_item_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x182R\verpItemCode\x120\n" +
 	"\x10erp_grade_code_1\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\rerpGradeCode1\x120\n" +
-	"\x10erp_grade_code_2\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\rerpGradeCode2\"\x8b\x01\n" +
+	"\x10erp_grade_code_2\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\rerpGradeCode2\x12'\n" +
+	"\verp_fg_type\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18\x0fR\terpFgType\x122\n" +
+	"\x11erp_chp_item_code\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x182R\x0eerpChpItemCode\x122\n" +
+	"\x11erp_ms_batch_item\x18\a \x01(\tB\a\xbaH\x04r\x02\x18\fR\x0eerpMsBatchItem\x12+\n" +
+	"\rerp_item_type\x18\b \x01(\tB\a\xbaH\x04r\x02\x18\x14R\verpItemType\x12M\n" +
+	"\x0ferp_prd_per_day\x18\t \x01(\tB&\xbaH#r!2\x1f^([0-9]{1,12}(\\.[0-9]{1,6})?)?$R\ferpPrdPerDay\"\x8b\x01\n" +
 	")UpdateCostProductMasterErpLinkageResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
 	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"S\n" +

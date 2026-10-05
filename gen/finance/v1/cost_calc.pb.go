@@ -1103,7 +1103,10 @@ type CostResult struct {
 	// Full raw material breakdown (every cpc_rm_cost_detail line, ordered by
 	// contribution descending), so a UI can show more than just the primary
 	// contributor. Reuses CostRMDetail (already defined for CostBreakdown).
-	RmDetails     []*CostRMDetail `protobuf:"bytes,31,rep,name=rm_details,json=rmDetails,proto3" json:"rm_details,omitempty"`
+	RmDetails []*CostRMDetail `protobuf:"bytes,31,rep,name=rm_details,json=rmDetails,proto3" json:"rm_details,omitempty"`
+	// Approval stamp (empty until approved).
+	ApprovedAt    string `protobuf:"bytes,32,opt,name=approved_at,json=approvedAt,proto3" json:"approved_at,omitempty"`
+	ApprovedBy    string `protobuf:"bytes,33,opt,name=approved_by,json=approvedBy,proto3" json:"approved_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1353,6 +1356,20 @@ func (x *CostResult) GetRmDetails() []*CostRMDetail {
 		return x.RmDetails
 	}
 	return nil
+}
+
+func (x *CostResult) GetApprovedAt() string {
+	if x != nil {
+		return x.ApprovedAt
+	}
+	return ""
+}
+
+func (x *CostResult) GetApprovedBy() string {
+	if x != nil {
+		return x.ApprovedBy
+	}
+	return ""
 }
 
 // CostBreakdown is the full drill-down for one CostResult.
@@ -5241,7 +5258,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"durationMs\x12\x17\n" +
 	"\acost_id\x18\x0e \x01(\x03R\x06costId\x12#\n" +
 	"\rerror_message\x18\x0f \x01(\tR\ferrorMessage\x120\n" +
-	"\x14calculation_log_json\x18\x10 \x01(\tR\x12calculationLogJson\"\x99\t\n" +
+	"\x14calculation_log_json\x18\x10 \x01(\tR\x12calculationLogJson\"\xdb\t\n" +
 	"\n" +
 	"CostResult\x12\x17\n" +
 	"\acost_id\x18\x01 \x01(\x03R\x06costId\x12$\n" +
@@ -5281,7 +5298,11 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x0fprimary_rm_name\x18\x1d \x01(\tR\rprimaryRmName\x12\x19\n" +
 	"\brm_count\x18\x1e \x01(\x05R\armCount\x127\n" +
 	"\n" +
-	"rm_details\x18\x1f \x03(\v2\x18.finance.v1.CostRMDetailR\trmDetails\"\x86\x03\n" +
+	"rm_details\x18\x1f \x03(\v2\x18.finance.v1.CostRMDetailR\trmDetails\x12\x1f\n" +
+	"\vapproved_at\x18  \x01(\tR\n" +
+	"approvedAt\x12\x1f\n" +
+	"\vapproved_by\x18! \x01(\tR\n" +
+	"approvedBy\"\x86\x03\n" +
 	"\rCostBreakdown\x120\n" +
 	"\asummary\x18\x01 \x01(\v2\x16.finance.v1.CostResultR\asummary\x125\n" +
 	"\bby_level\x18\x02 \x03(\v2\x1a.finance.v1.LevelBreakdownR\abyLevel\x127\n" +
