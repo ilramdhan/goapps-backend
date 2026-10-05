@@ -46,7 +46,15 @@ linters:
     - unconvert
     - unparam
     - whitespace
+    - forbidigo
   settings:
+    # forbidigo is path-scoped (see exclusions below): ERP integration money
+    # math must use shopspring/decimal, never binary floats (design §6.1-6.3).
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: ^float(32|64)$
+          msg: "use github.com/shopspring/decimal in ERP integration code (no float32/float64)"
     errcheck:
       check-type-assertions: true
       check-blank: true
@@ -80,6 +88,12 @@ linters:
       - gen/
       - ".*_test\\.go$"
     rules:
+      # forbidigo applies ONLY to the ERP integration domain packages
+      # (erpintegration, erprule) and the application-layer derive* files;
+      # everywhere else it is excluded.
+      - path-except: (internal/domain/erpintegration/|internal/domain/erprule/|internal/application/erpintegration/derive[^/]*\.go$)
+        linters:
+          - forbidigo
       - path: _test\.go
         linters:
           - dupl

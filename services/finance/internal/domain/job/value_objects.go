@@ -67,6 +67,13 @@ const (
 	// fans out one child per cost_product_master.cpm_product_sys_id, each child applying
 	// the same ordered list of add/remove/upsert param operations to its one product.
 	TypeProductParamBulk Type = "product_param_bulk"
+	// TypeErpIntegration is the ERP cost integration batch-step job type (design
+	// Part 1 §4.8, D-J1; migration 000555).
+	TypeErpIntegration Type = "erp_integration"
+	// TypeErpMasterSync is the read-only OM_ITEM / OM_GRADE_CODE_1 replica sync
+	// job type (P0-T15; migration 000555). Subtypes: "" (all), om_item,
+	// om_grade, apply_grade_groups.
+	TypeErpMasterSync Type = "erp_master_sync"
 )
 
 // String returns the string representation.

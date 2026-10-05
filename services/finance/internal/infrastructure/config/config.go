@@ -12,19 +12,21 @@ import (
 
 // Config holds all configuration for the service.
 type Config struct {
-	App       AppConfig       `mapstructure:"app"`
-	Server    ServerConfig    `mapstructure:"server"`
-	Database  DatabaseConfig  `mapstructure:"database"`
-	Redis     RedisConfig     `mapstructure:"redis"`
-	AuthRedis AuthRedisConfig `mapstructure:"auth_redis"`
-	JWT       JWTConfig       `mapstructure:"jwt"`
-	CORS      CORSConfig      `mapstructure:"cors"`
-	Oracle    OracleConfig    `mapstructure:"oracle"`
-	RabbitMQ  RabbitMQConfig  `mapstructure:"rabbitmq"`
-	Tracing   TracingConfig   `mapstructure:"tracing"`
-	Logger    LoggerConfig    `mapstructure:"logger"`
-	Storage   StorageConfig   `mapstructure:"storage"`
-	IAMClient IAMClientConfig `mapstructure:"iam_client"`
+	App       AppConfig            `mapstructure:"app"`
+	Server    ServerConfig         `mapstructure:"server"`
+	Database  DatabaseConfig       `mapstructure:"database"`
+	Redis     RedisConfig          `mapstructure:"redis"`
+	AuthRedis AuthRedisConfig      `mapstructure:"auth_redis"`
+	JWT       JWTConfig            `mapstructure:"jwt"`
+	CORS      CORSConfig           `mapstructure:"cors"`
+	Oracle    OracleConfig         `mapstructure:"oracle"`
+	OracleIF  OracleIFConfig       `mapstructure:"oracle_if"`
+	ERP       ErpIntegrationConfig `mapstructure:"erp_integration"`
+	RabbitMQ  RabbitMQConfig       `mapstructure:"rabbitmq"`
+	Tracing   TracingConfig        `mapstructure:"tracing"`
+	Logger    LoggerConfig         `mapstructure:"logger"`
+	Storage   StorageConfig        `mapstructure:"storage"`
+	IAMClient IAMClientConfig      `mapstructure:"iam_client"`
 }
 
 // IAMClientConfig configures the gRPC client used by the worker to call IAM
@@ -287,6 +289,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("oracle.password", "")
 	v.SetDefault("oracle.max_open_conns", 5)
 	v.SetDefault("oracle.conn_max_lifetime", 10*time.Minute)
+	setErpDefaults(v)
 
 	// RabbitMQ defaults (URL must come from env var — never hardcode credentials)
 	v.SetDefault("rabbitmq.url", "")
@@ -390,4 +393,5 @@ func bindEnvVars(v *viper.Viper) {
 			fmt.Printf("Warning: failed to bind env %s: %v\n", binding.envName, err)
 		}
 	}
+	bindErpEnvVars(v)
 }
