@@ -38,13 +38,18 @@ type Result struct {
 	calculatedBy  string
 	verifiedAt    *time.Time
 	verifiedBy    string
-	captiveCost   float64
-	deliveryCost  float64
-	vb1DelCost    float64
-	vb2DelCost    float64
-	vb3DelCost    float64
-	vb4DelCost    float64
-	vb5DelCost    float64
+	// approvedAt/approvedBy are the dedicated approval trail (cpc_approved_*,
+	// migration 000552). They are set only on the APPROVED transition; the
+	// legacy verified* pair keeps its historical "last verifier/approver" meaning.
+	approvedAt   *time.Time
+	approvedBy   string
+	captiveCost  float64
+	deliveryCost float64
+	vb1DelCost   float64
+	vb2DelCost   float64
+	vb3DelCost   float64
+	vb4DelCost   float64
+	vb5DelCost   float64
 }
 
 // NewResult constructs a fresh CALCULATED Result.
@@ -162,6 +167,22 @@ func (r *Result) VerifiedAt() *time.Time { return r.verifiedAt }
 // VerifiedBy returns the verifier/approver.
 func (r *Result) VerifiedBy() string { return r.verifiedBy }
 
+// ApprovedAt returns the approval timestamp (cpc_approved_at), nil when the
+// row has never been approved.
+func (r *Result) ApprovedAt() *time.Time { return r.approvedAt }
+
+// ApprovedBy returns the approver (cpc_approved_by), empty when never approved.
+func (r *Result) ApprovedBy() string { return r.approvedBy }
+
+// WithApprovedTrail sets the hydrated approval trail read from the DB and
+// returns r for chaining. It is a hydration helper only (additive to
+// HydrateResult, whose signature is unchanged).
+func (r *Result) WithApprovedTrail(approvedAt *time.Time, approvedBy string) *Result {
+	r.approvedAt = approvedAt
+	r.approvedBy = approvedBy
+	return r
+}
+
 // CaptiveCost returns CAPTIVE_COST_QLTY_LOSS — captive packaging cost per kg.
 func (r *Result) CaptiveCost() float64 { return r.captiveCost }
 
@@ -204,6 +225,8 @@ func (r *Result) MarkApproved(by string) error {
 	now := time.Now()
 	r.verifiedAt = &now
 	r.verifiedBy = by
+	r.approvedAt = &now
+	r.approvedBy = by
 	return nil
 }
 

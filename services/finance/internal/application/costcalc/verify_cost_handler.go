@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 )
 
 // auditEntityKindCost is the EntityKind value for COST_RESULT_* audit events.
@@ -17,8 +19,9 @@ type VerifyCostCommand struct {
 
 // VerifyCostHandler transitions a CALCULATED result to VERIFIED.
 type VerifyCostHandler struct {
-	svc     *Service
-	mbGuard MBCostRowChecker
+	svc        *Service
+	mbGuard    MBCostRowChecker
+	periodLock costcalcdom.PeriodLockChecker
 }
 
 // VerifyOption customizes the handler at construction.
@@ -28,6 +31,13 @@ type VerifyOption func(*VerifyCostHandler)
 // disabled; tests omit it.
 func WithVerifyMBGuard(c MBCostRowChecker) VerifyOption {
 	return func(h *VerifyCostHandler) { h.mbGuard = c }
+}
+
+// WithVerifyPeriodLock installs the period-lock guard (plan-02 P1-T3): the target row's
+// (period, calc type) is refused with ErrPeriodLocked when ACTUAL and locked.
+// Omitting it (nil) keeps the pre-lock behavior; tests omit it.
+func WithVerifyPeriodLock(c costcalcdom.PeriodLockChecker) VerifyOption {
+	return func(h *VerifyCostHandler) { h.periodLock = c }
 }
 
 // NewVerifyCostHandler constructs the handler.
@@ -48,6 +58,9 @@ func (h *VerifyCostHandler) Handle(ctx context.Context, cmd VerifyCostCommand) e
 		return errors.New(errMsgActorRequired)
 	}
 	if err := rejectMBCostRow(ctx, h.mbGuard, cmd.CostID); err != nil {
+		return err
+	}
+	if err := rejectLockedCostRow(ctx, h.periodLock, h.svc.resultRepo, cmd.CostID); err != nil {
 		return err
 	}
 	if err := h.svc.resultRepo.MarkVerified(ctx, cmd.CostID, cmd.Actor); err != nil {

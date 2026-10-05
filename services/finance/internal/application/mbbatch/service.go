@@ -402,7 +402,7 @@ func newMBResult(productSysID int64, period string, calcType costcalcdom.Calcula
 	return costcalcdom.NewResult(
 		productSysID, period, calcType, routeHeadID, 1,
 		out.CostPerUnit, out.TotalRMCost, out.TotalConversion, out.TotalCost,
-		0, "IDR",
+		0, costcalcdom.ResultCurrencyFor(calcType), // label only: ACTUAL -> "USD" (P0-T10b)
 		jsonOrNil(out.CostByLevel), jsonOrNil(out.RMCostDetail),
 		jsonOrNil(out.ParamSnapshot), jsonOrNil(out.FormulaTrace),
 		out.InputHash,

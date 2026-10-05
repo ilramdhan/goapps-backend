@@ -30,6 +30,18 @@ const (
 	OpRuleCreate             = "RULE_CREATE"
 	OpRuleUpdate             = "RULE_UPDATE"
 	OpRuleDelete             = "RULE_DELETE"
+
+	// ERP cost integration operations (migration 000553 widened chk_cal_operation).
+	OpErpLink         = "ERP_LINK"
+	OpErpPeriodLock   = "ERP_PERIOD_LOCK"
+	OpErpPeriodUnlock = "ERP_PERIOD_UNLOCK"
+	OpErpPush         = "ERP_PUSH"
+	OpErpValuate      = "ERP_VALUATE"
+	OpErpAdjApprove   = "ERP_ADJ_APPROVE"
+	OpErpRestore      = "ERP_RESTORE"
+	OpErpBatchLock    = "ERP_BATCH_LOCK"
+	OpErpAttrBackfill = "ERP_ATTR_BACKFILL"
+	OpErpWarnAck      = "ERP_WARN_ACK" //nolint:gosec // G101 false positive: audit operation name, not a credential
 )
 
 var allowedOperations = map[string]struct{}{
@@ -37,6 +49,9 @@ var allowedOperations = map[string]struct{}{
 	OpStatusChange: {}, OpFeasibility: {}, OpClassificationOverride: {},
 	OpAssign: {}, OpPromote: {}, OpHide: {}, OpUnhide: {},
 	OpRuleCreate: {}, OpRuleUpdate: {}, OpRuleDelete: {},
+	OpErpLink: {}, OpErpPeriodLock: {}, OpErpPeriodUnlock: {},
+	OpErpPush: {}, OpErpValuate: {}, OpErpAdjApprove: {}, OpErpRestore: {}, OpErpBatchLock: {},
+	OpErpAttrBackfill: {}, OpErpWarnAck: {},
 }
 
 // Log is a single audit row.

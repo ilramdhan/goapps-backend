@@ -29,18 +29,38 @@ type TriggerResult struct {
 // computes all 3 calc types per MB and cal_job has no multi-type representation (design
 // addendum leaves this an implementer choice; ACTUAL avoids a further migration).
 type TriggerHandler struct {
-	svc     *Service
-	jobRepo costcalcdom.JobRepository
+	svc        *Service
+	jobRepo    costcalcdom.JobRepository
+	periodLock costcalcdom.PeriodLockChecker
+}
+
+// TriggerOption customizes the handler at construction.
+type TriggerOption func(*TriggerHandler)
+
+// WithPeriodLock installs the period-lock guard (design §5.5, plan-02 P1-T3).
+// An MB_BATCH run always recomputes ACTUAL together with SELLING/FORECAST in
+// one transaction per MB, so a locked (period, ACTUAL) refuses the whole run
+// with ErrPeriodLocked before the cal_job row is created. Omitting it (nil)
+// keeps the pre-lock behavior exactly; tests omit it.
+func WithPeriodLock(c costcalcdom.PeriodLockChecker) TriggerOption {
+	return func(h *TriggerHandler) { h.periodLock = c }
 }
 
 // NewTriggerHandler constructs a TriggerHandler.
-func NewTriggerHandler(svc *Service, jobRepo costcalcdom.JobRepository) *TriggerHandler {
-	return &TriggerHandler{svc: svc, jobRepo: jobRepo}
+func NewTriggerHandler(svc *Service, jobRepo costcalcdom.JobRepository, opts ...TriggerOption) *TriggerHandler {
+	h := &TriggerHandler{svc: svc, jobRepo: jobRepo}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // Handle creates a cal_job row scoped MB_BATCH, drives it through
 // PLANNING -> PROCESSING -> SUCCESS/PARTIAL_FAILED/FAILED, and runs the batch compute in between.
 func (h *TriggerHandler) Handle(ctx context.Context, period, actor string) (*TriggerResult, error) {
+	if err := costcalcdom.CheckPeriodUnlocked(ctx, h.periodLock, period, costcalcdom.CalcTypeActual); err != nil {
+		return nil, fmt.Errorf("mb batch period %s: %w", period, err)
+	}
 	job, err := costcalcdom.NewJob(period, costcalcdom.CalcTypeActual, costcalcdom.ScopeMBBatch, nil, triggeredByMBBatch, actor)
 	if err != nil {
 		return nil, fmt.Errorf("new job: %w", err)

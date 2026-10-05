@@ -145,11 +145,12 @@ func countTopLevelColumns(sel string) int {
 // The 7 captive/delivery cost columns were selected nowhere before T2.3, so
 // HydrateResult returned 0 for them on every read.
 func TestResultColumns_MatchesScanArity(t *testing.T) {
-	assert.Equal(t, 30, countTopLevelColumns(resultColumns),
-		"resultColumns must select 30 columns (23 base + 7 captive/delivery cost cols)")
+	assert.Equal(t, 32, countTopLevelColumns(resultColumns),
+		"resultColumns must select 32 columns (23 base + 7 captive/delivery cost cols + 2 approved trail cols)")
 	for _, col := range []string{
 		"cpc_captive_cost", "cpc_delivery_cost", "cpc_vb1_del_cost",
 		"cpc_vb2_del_cost", "cpc_vb3_del_cost", "cpc_vb4_del_cost", "cpc_vb5_del_cost",
+		"cpc_approved_at", "cpc_approved_by",
 	} {
 		assert.Contains(t, resultColumns, col)
 	}
@@ -210,4 +211,27 @@ func TestInsertNewResultQuery_IntegerParamsStayUncast(t *testing.T) {
 	assert.Contains(t, insertNewResultQuery, "NULLIF($10,0)", "cpc_uom_id is INT — no cast needed")
 	assert.Contains(t, insertNewResultQuery, "NULLIF($16,'')", "cpc_input_hash is VARCHAR — no cast needed")
 	assert.Contains(t, insertNewResultQuery, "NULLIF($18,0)", "cpc_job_id is BIGINT — no cast needed")
+}
+
+// --- approved trail (P0-T8, migration 000552) -------------------------------------
+
+// Both approve paths must stamp cpc_approved_* AND keep the legacy cpc_verified_*
+// writes; the verify-only path (transitionStatus) must never touch cpc_approved_*.
+func TestApproveQueries_WriteApprovedTrail(t *testing.T) {
+	for name, q := range map[string]string{
+		"fromVerified":   approveFromVerifiedQuery,
+		"fromCalculated": approveFromCalculatedQuery,
+	} {
+		t.Run(name, func(t *testing.T) {
+			for _, frag := range []string{
+				"cpc_verified_at = now()", "cpc_verified_by = $",
+				"cpc_approved_at = now()", "cpc_approved_by = $",
+			} {
+				assert.Contains(t, q, frag)
+			}
+		})
+	}
+	assert.Contains(t, approveFromCalculatedQuery, "cpc_status = 'CALCULATED'")
+	assert.Contains(t, approveFromCalculatedQuery, "cpc_approved_by = $2")
+	assert.Contains(t, approveFromVerifiedQuery, "cpc_approved_by = $4")
 }

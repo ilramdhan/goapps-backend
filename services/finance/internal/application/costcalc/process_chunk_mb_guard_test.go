@@ -136,11 +136,13 @@ func (r *recordingProductRepo) MarkFailed(_ context.Context, _, pid int64, msg s
 // recordingResultRepo captures which products were persisted into cst_product_cost.
 type recordingResultRepo struct {
 	costcalcdom.ResultRepository
-	upserted []int64
+	upserted   []int64
+	currencies []string
 }
 
 func (r *recordingResultRepo) UpsertWithSupersede(_ context.Context, res *costcalcdom.Result) (int64, int, float64, int64, error) {
 	r.upserted = append(r.upserted, res.ProductSysID())
+	r.currencies = append(r.currencies, res.Currency())
 	return 1, 0, 0, 0, nil
 }
 

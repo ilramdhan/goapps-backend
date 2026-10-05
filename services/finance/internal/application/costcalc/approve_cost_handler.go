@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 )
 
 // ApproveCostCommand carries inputs for approving a verified cost.
@@ -14,8 +16,9 @@ type ApproveCostCommand struct {
 
 // ApproveCostHandler transitions a VERIFIED result to APPROVED.
 type ApproveCostHandler struct {
-	svc     *Service
-	mbGuard MBCostRowChecker
+	svc        *Service
+	mbGuard    MBCostRowChecker
+	periodLock costcalcdom.PeriodLockChecker
 }
 
 // ApproveOption customizes the handler at construction.
@@ -25,6 +28,13 @@ type ApproveOption func(*ApproveCostHandler)
 // disabled; tests omit it.
 func WithApproveMBGuard(c MBCostRowChecker) ApproveOption {
 	return func(h *ApproveCostHandler) { h.mbGuard = c }
+}
+
+// WithApprovePeriodLock installs the period-lock guard (plan-02 P1-T3): the target row's
+// (period, calc type) is refused with ErrPeriodLocked when ACTUAL and locked.
+// Omitting it (nil) keeps the pre-lock behavior; tests omit it.
+func WithApprovePeriodLock(c costcalcdom.PeriodLockChecker) ApproveOption {
+	return func(h *ApproveCostHandler) { h.periodLock = c }
 }
 
 // NewApproveCostHandler constructs the handler.
@@ -45,6 +55,9 @@ func (h *ApproveCostHandler) Handle(ctx context.Context, cmd ApproveCostCommand)
 		return errors.New(errMsgActorRequired)
 	}
 	if err := rejectMBCostRow(ctx, h.mbGuard, cmd.CostID); err != nil {
+		return err
+	}
+	if err := rejectLockedCostRow(ctx, h.periodLock, h.svc.resultRepo, cmd.CostID); err != nil {
 		return err
 	}
 	if err := h.svc.resultRepo.MarkApproved(ctx, cmd.CostID, cmd.Actor); err != nil {
