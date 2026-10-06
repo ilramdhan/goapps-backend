@@ -71,11 +71,11 @@ FINANCE_DIR := services/finance
 
 finance-run:
 	@echo "🚀 Running finance service..."
-	cd $(FINANCE_DIR) && go run cmd/server/main.go
+	cd $(FINANCE_DIR) && go run ./cmd/server
 
 finance-build:
 	@echo "🔨 Building finance service..."
-	cd $(FINANCE_DIR) && go build -o bin/finance-service cmd/server/main.go
+	cd $(FINANCE_DIR) && go build -o bin/finance-service ./cmd/server
 	@echo "✅ Built: $(FINANCE_DIR)/bin/finance-service"
 
 finance-migrate:

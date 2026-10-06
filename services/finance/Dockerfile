@@ -36,13 +36,13 @@ ARG BUILD_TIME
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME}" \
     -o /bin/finance-service \
-    ./cmd/server/main.go
+    ./cmd/server
 
 # Build worker binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME}" \
     -o /bin/finance-worker \
-    ./cmd/worker/main.go
+    ./cmd/worker
 
 # Build seeder binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \

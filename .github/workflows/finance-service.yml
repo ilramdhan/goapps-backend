@@ -154,7 +154,7 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
             -ldflags="-s -w -X main.Version=${{ github.sha }}" \
             -o ./bin/${{ env.SERVICE_NAME }} \
-            ./cmd/server/main.go
+            ./cmd/server
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -261,7 +261,7 @@ jobs:
       - name: Build and start finance service
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          go build -o ./bin/finance-service ./cmd/server/main.go
+          go build -o ./bin/finance-service ./cmd/server
           ./bin/finance-service &
           echo "Waiting for service to start..."
           sleep 5
