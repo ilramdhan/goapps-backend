@@ -219,6 +219,25 @@ func (r *JobRepo) CreateAutoJob(ctx context.Context, period, calcType, scope, tr
 	return id, nil
 }
 
+// isPeriodLockedSQL mirrors the finance PeriodLockRepository.IsLocked read of
+// cst_period_lock (finance migration 000531): a lock is in force while
+// cpl_unlocked_at IS NULL. Read-only, no row lock.
+const isPeriodLockedSQL = `
+		SELECT EXISTS (
+			SELECT 1 FROM cst_period_lock
+			 WHERE cpl_period = $1 AND cpl_calc_type = $2 AND cpl_unlocked_at IS NULL)`
+
+// IsPeriodLocked reports whether (period, calcType) is frozen for costing
+// (design §5.5, N-6; plan-02 P1-T5). SELECT only, through the existing
+// *sql.DB (I-8).
+func (r *JobRepo) IsPeriodLocked(ctx context.Context, period, calcType string) (bool, error) {
+	var locked bool
+	if err := r.db.QueryRowContext(ctx, isPeriodLockedSQL, period, calcType).Scan(&locked); err != nil {
+		return false, fmt.Errorf("is period locked: %w", err)
+	}
+	return locked, nil
+}
+
 // ChunkRepo is the orchestrator-side facade over cal_job_chunk.
 type ChunkRepo struct{ db *sql.DB }
 

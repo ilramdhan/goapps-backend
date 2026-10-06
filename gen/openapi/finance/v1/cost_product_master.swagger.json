@@ -523,6 +523,23 @@
         "flex03": {
           "type": "string",
           "title": "legacy_type_label"
+        },
+        "erpFgType": {
+          "type": "string",
+          "description": "ERP linkage identifiers (optional, empty = unset)."
+        },
+        "erpChpItemCode": {
+          "type": "string"
+        },
+        "erpMsBatchItem": {
+          "type": "string"
+        },
+        "erpItemType": {
+          "type": "string"
+        },
+        "erpPrdPerDay": {
+          "type": "string",
+          "title": "decimal string"
         }
       }
     },
@@ -537,6 +554,23 @@
         },
         "erpGradeCode2": {
           "type": "string"
+        },
+        "erpFgType": {
+          "type": "string",
+          "description": "ERP linkage identifiers (optional, empty = unset)."
+        },
+        "erpChpItemCode": {
+          "type": "string"
+        },
+        "erpMsBatchItem": {
+          "type": "string"
+        },
+        "erpItemType": {
+          "type": "string"
+        },
+        "erpPrdPerDay": {
+          "type": "string",
+          "title": "decimal string"
         }
       }
     },
@@ -691,6 +725,22 @@
         "isLocked": {
           "type": "boolean",
           "title": "true blocks manual edits to route/params; escape hatch via UnlockCostProductMaster"
+        },
+        "erpFgType": {
+          "type": "string"
+        },
+        "erpChpItemCode": {
+          "type": "string"
+        },
+        "erpMsBatchItem": {
+          "type": "string"
+        },
+        "erpItemType": {
+          "type": "string"
+        },
+        "erpPrdPerDay": {
+          "type": "string",
+          "title": "decimal string"
         }
       }
     },
@@ -724,6 +774,23 @@
         "flex03": {
           "type": "string",
           "title": "legacy_type_label"
+        },
+        "erpFgType": {
+          "type": "string",
+          "description": "ERP linkage identifiers (optional, empty = unset)."
+        },
+        "erpChpItemCode": {
+          "type": "string"
+        },
+        "erpMsBatchItem": {
+          "type": "string"
+        },
+        "erpItemType": {
+          "type": "string"
+        },
+        "erpPrdPerDay": {
+          "type": "string",
+          "title": "decimal string"
         }
       }
     },

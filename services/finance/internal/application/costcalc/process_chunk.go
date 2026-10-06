@@ -506,7 +506,7 @@ func (s *Service) persistResult(ctx context.Context, in ProcessChunkInput, pid i
 	r := costcalcdom.NewResult(
 		pid, in.Period, in.CalcType, route.Head.HeadID, 1,
 		out.CostPerUnit, out.TotalRMCost, out.TotalConversion, out.TotalCost,
-		0, "IDR",
+		0, costcalcdom.ResultCurrencyFor(in.CalcType), // label only: ACTUAL -> "USD" (P0-T10b)
 		jsonOrNil(out.CostByLevel), jsonOrNil(out.RMCostDetail),
 		jsonOrNil(snap), jsonOrNil(out.FormulaTrace),
 		out.InputHash,

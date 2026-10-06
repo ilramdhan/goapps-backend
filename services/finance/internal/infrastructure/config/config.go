@@ -12,19 +12,21 @@ import (
 
 // Config holds all configuration for the service.
 type Config struct {
-	App       AppConfig       `mapstructure:"app"`
-	Server    ServerConfig    `mapstructure:"server"`
-	Database  DatabaseConfig  `mapstructure:"database"`
-	Redis     RedisConfig     `mapstructure:"redis"`
-	AuthRedis AuthRedisConfig `mapstructure:"auth_redis"`
-	JWT       JWTConfig       `mapstructure:"jwt"`
-	CORS      CORSConfig      `mapstructure:"cors"`
-	Oracle    OracleConfig    `mapstructure:"oracle"`
-	RabbitMQ  RabbitMQConfig  `mapstructure:"rabbitmq"`
-	Tracing   TracingConfig   `mapstructure:"tracing"`
-	Logger    LoggerConfig    `mapstructure:"logger"`
-	Storage   StorageConfig   `mapstructure:"storage"`
-	IAMClient IAMClientConfig `mapstructure:"iam_client"`
+	App       AppConfig            `mapstructure:"app"`
+	Server    ServerConfig         `mapstructure:"server"`
+	Database  DatabaseConfig       `mapstructure:"database"`
+	Redis     RedisConfig          `mapstructure:"redis"`
+	AuthRedis AuthRedisConfig      `mapstructure:"auth_redis"`
+	JWT       JWTConfig            `mapstructure:"jwt"`
+	CORS      CORSConfig           `mapstructure:"cors"`
+	Oracle    OracleConfig         `mapstructure:"oracle"`
+	OracleIF  OracleIFConfig       `mapstructure:"oracle_if"`
+	ERP       ErpIntegrationConfig `mapstructure:"erp_integration"`
+	RabbitMQ  RabbitMQConfig       `mapstructure:"rabbitmq"`
+	Tracing   TracingConfig        `mapstructure:"tracing"`
+	Logger    LoggerConfig         `mapstructure:"logger"`
+	Storage   StorageConfig        `mapstructure:"storage"`
+	IAMClient IAMClientConfig      `mapstructure:"iam_client"`
 }
 
 // IAMClientConfig configures the gRPC client used by the worker to call IAM
@@ -123,14 +125,31 @@ type DatabaseConfig struct {
 	MaxOpenConns    int           `mapstructure:"max_open_conns"`
 	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	// BinaryParameters makes lib/pq send Parse+Bind+Describe+Execute+Sync as ONE
+	// packet with an unnamed statement, instead of a separate Parse round trip
+	// followed by a later Bind. This is REQUIRED when connecting through
+	// PgBouncer in transaction pooling mode: there, the pooler may hand the
+	// server connection to another client in between the Parse and the Bind, so
+	// the unnamed statement "" that gets bound belongs to a different query.
+	// Symptoms of running without it are cross-wired parameters:
+	//   pq: unnamed prepared statement does not exist (26000)
+	//   pq: bind message supplies 4 parameters, but prepared statement "" requires 2 (08P01)
+	//   pq: invalid input syntax for type bigint: "DISPATCHED" (22P02)
+	// Defaults to true; set DATABASE_BINARY_PARAMETERS=false only when talking
+	// straight to PostgreSQL and you specifically want the extended protocol.
+	BinaryParameters bool `mapstructure:"binary_parameters"`
 }
 
 // ConnectionString returns the PostgreSQL connection string.
 func (c *DatabaseConfig) ConnectionString() string {
-	return fmt.Sprintf(
+	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.Name, c.SSLMode,
 	)
+	if c.BinaryParameters {
+		dsn += " binary_parameters=yes"
+	}
+	return dsn
 }
 
 // RedisConfig holds Redis configuration.
@@ -239,6 +258,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.max_open_conns", 25)
 	v.SetDefault("database.max_idle_conns", 5)
 	v.SetDefault("database.conn_max_lifetime", 5*time.Minute)
+	// Required for PgBouncer transaction pooling — see DatabaseConfig.BinaryParameters.
+	v.SetDefault("database.binary_parameters", true)
 
 	// JWT defaults (must match IAM service secret for token validation)
 	v.SetDefault("jwt.access_token_secret", "change-this-in-production")
@@ -268,6 +289,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("oracle.password", "")
 	v.SetDefault("oracle.max_open_conns", 5)
 	v.SetDefault("oracle.conn_max_lifetime", 10*time.Minute)
+	setErpDefaults(v)
 
 	// RabbitMQ defaults (URL must come from env var — never hardcode credentials)
 	v.SetDefault("rabbitmq.url", "")
@@ -322,6 +344,7 @@ func bindEnvVars(v *viper.Viper) {
 		{"database.password", "DATABASE_PASSWORD"},
 		{"database.name", "DATABASE_NAME"},
 		{"database.ssl_mode", "DATABASE_SSLMODE"},
+		{"database.binary_parameters", "DATABASE_BINARY_PARAMETERS"},
 		// JWT (shared secret with IAM)
 		{"jwt.access_token_secret", "JWT_ACCESS_SECRET"},
 		// Redis (UOM cache)
@@ -370,4 +393,5 @@ func bindEnvVars(v *viper.Viper) {
 			fmt.Printf("Warning: failed to bind env %s: %v\n", binding.envName, err)
 		}
 	}
+	bindErpEnvVars(v)
 }

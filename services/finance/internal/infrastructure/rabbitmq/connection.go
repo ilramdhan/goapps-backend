@@ -45,6 +45,17 @@ const (
 	QueueProductParamBulk = "finance.jobs.product_param_bulk"
 	// RoutingKeyProductParamBulk is the routing key for Bulk Edit Product Params messages.
 	RoutingKeyProductParamBulk = "product_param_bulk"
+	// QueueErpMasterSync is the queue for ERP master replica sync jobs
+	// (OM_ITEM / OM_GRADE_CODE_1 read-only sync, grade-group apply).
+	QueueErpMasterSync = "finance.jobs.erp_master_sync"
+	// RoutingKeyErpMasterSync is the routing key for ERP master sync messages.
+	RoutingKeyErpMasterSync = "erp_master_sync"
+	// QueueErpIntegration is the queue for ERP cost integration batch-step
+	// jobs (load_demand, coverage, ...; plan-04 P3-T4). Consumed with
+	// concurrency 1.
+	QueueErpIntegration = "finance.jobs.erp_integration"
+	// RoutingKeyErpIntegration is the routing key for ERP integration messages.
+	RoutingKeyErpIntegration = "erp_integration"
 	// DeadLetterExchange is the dead letter exchange for failed messages.
 	DeadLetterExchange = "finance.jobs.dlx"
 	// DeadLetterQueue is the dead letter queue.
@@ -367,6 +378,8 @@ func (c *Connection) declareTopology() error {
 		{QueueImportJob, RoutingKeyImportJob},
 		{QueueMBBulkTransition, RoutingKeyMBBulkTransition},
 		{QueueProductParamBulk, RoutingKeyProductParamBulk},
+		{QueueErpMasterSync, RoutingKeyErpMasterSync},
+		{QueueErpIntegration, RoutingKeyErpIntegration},
 	}
 	for _, q := range queues {
 		if err := c.declareJobQueue(q.name, q.routingKey, args); err != nil {

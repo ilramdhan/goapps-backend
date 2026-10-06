@@ -64,7 +64,7 @@ type OilFormulaE2ESuite struct {
 	groupOil2  uuid.UUID // 202006077-equivalent: POY + Superba's default oil group
 	groupOil2C string
 
-	ptyType, poyType, tcsType, dtyType int32
+	ptyType, poyType, tcsType, dtyType             int32
 	ptyProduct, poyProduct, tcsProduct, dtyProduct int64
 }
 

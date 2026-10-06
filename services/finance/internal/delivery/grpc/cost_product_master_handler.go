@@ -37,6 +37,38 @@ type CostProductMasterHandler struct {
 	importPublisher   *rabbitmq.JobPublisherAdapter
 	validation        *ValidationHelper
 	auditRepo         costauditlog.Repository // optional; nil means no audit
+	erpAttrs          erpAttrUpdater          // optional; nil ignores ERP attribute fields
+}
+
+// erpAttrUpdater is the seam over app.UpdateErpAttributesHandler.
+type erpAttrUpdater interface {
+	Handle(ctx context.Context, cmd app.UpdateErpAttributesCommand) (*domain.CostProductMaster, error)
+}
+
+// WithErpAttributes enables persisting the 5 ERP attribute fields carried by Create/Update.
+func (h *CostProductMasterHandler) WithErpAttributes(u erpAttrUpdater) { h.erpAttrs = u }
+
+// erpAttrPatch builds a patch from the request fields; an empty string means no change.
+func erpAttrPatch(fgType, chp, msBatch, itemType, prdPerDay string) domain.ErpAttributesPatch {
+	opt := func(v string) *string {
+		if v == "" {
+			return nil
+		}
+		return &v
+	}
+	return domain.ErpAttributesPatch{FgType: opt(fgType), ChpItemCode: opt(chp), MsBatchItem: opt(msBatch), ItemType: opt(itemType), PrdPerDay: opt(prdPerDay)}
+}
+
+// applyErpAttrs applies a non-empty patch after the main write succeeded.
+func (h *CostProductMasterHandler) applyErpAttrs(ctx context.Context, cur *domain.CostProductMaster, patch domain.ErpAttributesPatch, actor string) (*domain.CostProductMaster, error) {
+	if h.erpAttrs == nil || patch.IsEmpty() {
+		return cur, nil
+	}
+	up, err := h.erpAttrs.Handle(ctx, app.UpdateErpAttributesCommand{ProductSysID: cur.ProductSysID(), Patch: patch, ActorUserID: actor})
+	if err != nil || up == nil {
+		return cur, err
+	}
+	return up, nil
 }
 
 // NewCostProductMasterHandler constructs the handler. typeRepo is used by the create path
@@ -112,6 +144,11 @@ func (h *CostProductMasterHandler) CreateCostProductMaster(ctx context.Context, 
 	if err != nil {
 		return &financev1.CreateCostProductMasterResponse{Base: productMasterErrToBase(err)}, nil
 	}
+	up, aerr := h.applyErpAttrs(ctx, p, erpAttrPatch(req.GetErpFgType(), req.GetErpChpItemCode(), req.GetErpMsBatchItem(), req.GetErpItemType(), req.GetErpPrdPerDay()), actor)
+	if aerr != nil {
+		return &financev1.CreateCostProductMasterResponse{Base: productMasterErrToBase(aerr)}, nil
+	}
+	p = up
 	h.emitAudit(ctx, costauditlog.OpInsert, p.ProductSysID(), actor)
 	return &financev1.CreateCostProductMasterResponse{
 		Base: successResponse("Cost product master created"),
@@ -169,6 +206,11 @@ func (h *CostProductMasterHandler) UpdateCostProductMaster(ctx context.Context, 
 	if err != nil {
 		return &financev1.UpdateCostProductMasterResponse{Base: productMasterErrToBase(err)}, nil
 	}
+	up, aerr := h.applyErpAttrs(ctx, p, erpAttrPatch(req.GetErpFgType(), req.GetErpChpItemCode(), req.GetErpMsBatchItem(), req.GetErpItemType(), req.GetErpPrdPerDay()), actor)
+	if aerr != nil {
+		return &financev1.UpdateCostProductMasterResponse{Base: productMasterErrToBase(aerr)}, nil
+	}
+	p = up
 	h.emitAudit(ctx, costauditlog.OpUpdate, p.ProductSysID(), actor)
 	return &financev1.UpdateCostProductMasterResponse{
 		Base: successResponse("Cost product master updated"),
@@ -381,6 +423,11 @@ func costProductMasterToProto(p *domain.CostProductMaster) *financev1.CostProduc
 		Flex_02:        p.Flex02(),
 		Flex_03:        p.Flex03(),
 		ErpItemCode:    p.ErpItemCode(),
+		ErpFgType:      p.ErpAttributes().FgType,
+		ErpChpItemCode: p.ErpAttributes().ChpItemCode,
+		ErpMsBatchItem: p.ErpAttributes().MsBatchItem,
+		ErpItemType:    p.ErpAttributes().ItemType,
+		ErpPrdPerDay:   erpPrdPerDayString(p.ErpAttributes()),
 		ErpGradeCode_1: p.ErpGradeCode1(),
 		ErpGradeCode_2: p.ErpGradeCode2(),
 		ErpLinkedAt:    erpLinkedAt,
@@ -417,4 +464,13 @@ func productMasterErrToBase(err error) *commonv1.BaseResponse {
 	default:
 		return InternalErrorResponse(err.Error())
 	}
+}
+
+// erpPrdPerDayString renders the optional prd-per-day as a decimal string
+// ("" when NULL).
+func erpPrdPerDayString(a domain.ErpAttributes) string {
+	if !a.PrdPerDay.Valid {
+		return ""
+	}
+	return a.PrdPerDay.Decimal.String()
 }

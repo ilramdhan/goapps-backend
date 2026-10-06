@@ -28,8 +28,9 @@ type TriggerCommand struct {
 // engine. Other scopes will land in S8c when the orchestrator + RMQ worker
 // machinery exists.
 type TriggerJobHandler struct {
-	svc     *Service
-	mbGuard MBTypeChecker
+	svc        *Service
+	mbGuard    MBTypeChecker
+	periodLock costcalcdom.PeriodLockChecker
 }
 
 // MBTypeChecker answers whether a product / product type is Master Batch, so the
@@ -55,6 +56,14 @@ type TriggerOption func(*TriggerJobHandler)
 // correct, just less immediate. Tests omit it.
 func WithMBGuard(c MBTypeChecker) TriggerOption {
 	return func(h *TriggerJobHandler) { h.mbGuard = c }
+}
+
+// WithTriggerPeriodLock installs the period-lock guard (design §5.5, plan-02
+// P1-T3): an ACTUAL trigger for a locked period returns ErrPeriodLocked before
+// any cal_job row is written or any event is published. Omitting it (nil)
+// keeps the pre-lock behavior exactly; tests omit it.
+func WithTriggerPeriodLock(c costcalcdom.PeriodLockChecker) TriggerOption {
+	return func(h *TriggerJobHandler) { h.periodLock = c }
 }
 
 // NewTriggerJobHandler constructs the handler.
@@ -93,7 +102,7 @@ var ErrMBNotCalcJobEligible = errors.New(
 // there too — the orchestrator walks the full upstream DAG and computes
 // intermediates first. Only fall back to the inline path when RMQ is offline.
 func (h *TriggerJobHandler) Handle(ctx context.Context, cmd TriggerCommand) (*costcalcdom.Job, error) {
-	if err := h.rejectMBScope(ctx, cmd); err != nil {
+	if err := h.preflight(ctx, cmd); err != nil {
 		return nil, err
 	}
 	if cmd.Scope != costcalcdom.ScopeSingleProduct {
@@ -160,6 +169,16 @@ func (h *TriggerJobHandler) Handle(ctx context.Context, cmd TriggerCommand) (*co
 		return nil, err
 	}
 	return job, nil
+}
+
+// preflight runs the write-free guards, in order: the period lock (a locked
+// ACTUAL period returns ErrPeriodLocked before any cal_job row or event,
+// plan-02 P1-T3), then the MB scope rejection.
+func (h *TriggerJobHandler) preflight(ctx context.Context, cmd TriggerCommand) error {
+	if err := costcalcdom.CheckPeriodUnlocked(ctx, h.periodLock, cmd.Period, cmd.CalcType); err != nil {
+		return fmt.Errorf("trigger period %s %s: %w", cmd.Period, cmd.CalcType, err)
+	}
+	return h.rejectMBScope(ctx, cmd)
 }
 
 // resolveRouteHead returns the active route head_id for the product. ok=false

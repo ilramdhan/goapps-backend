@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbpushlog"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
@@ -36,22 +37,43 @@ type ExecuteHandler struct {
 	costReader   CostReader
 	mbCostWriter MBCostWriter
 	pushLogRepo  mbpushlog.Repository
+	periodLock   costcalcdom.PeriodLockChecker
+}
+
+// ExecuteOption customizes the handler at construction.
+type ExecuteOption func(*ExecuteHandler)
+
+// WithPeriodLock installs the period-lock guard (design §5.5, plan-02 P1-T3).
+// A push flips the period's ACTUAL cst_product_cost rows to APPROVED, so a
+// locked (period, ACTUAL) refuses the whole push with ErrPeriodLocked: once
+// before any read or write, and again inside the push transaction under a
+// FOR SHARE row lock, so a lock taken concurrently cannot slip through.
+// Omitting it (nil) keeps the pre-lock behavior exactly; tests omit it.
+func WithPeriodLock(c costcalcdom.PeriodLockChecker) ExecuteOption {
+	return func(h *ExecuteHandler) { h.periodLock = c }
 }
 
 // NewExecuteHandler constructs an ExecuteHandler.
-func NewExecuteHandler(db *postgres.DB, mbHeadReader MBHeadReader, costReader CostReader, mbCostWriter MBCostWriter, pushLogRepo mbpushlog.Repository) *ExecuteHandler {
-	return &ExecuteHandler{
+func NewExecuteHandler(db *postgres.DB, mbHeadReader MBHeadReader, costReader CostReader, mbCostWriter MBCostWriter, pushLogRepo mbpushlog.Repository, opts ...ExecuteOption) *ExecuteHandler {
+	h := &ExecuteHandler{
 		db:           db,
 		mbHeadReader: mbHeadReader,
 		costReader:   costReader,
 		mbCostWriter: mbCostWriter,
 		pushLogRepo:  pushLogRepo,
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // Execute runs the push-to-head batch for period across mbhIDs, per PR-01 (bulk-only) and PR-03
 // (idempotent re-push via UPSERT).
 func (h *ExecuteHandler) Execute(ctx context.Context, period string, mbhIDs []string, actorUserID string) (*ExecuteResult, error) {
+	if err := costcalcdom.CheckPeriodUnlocked(ctx, h.periodLock, period, costcalcdom.CalcTypeActual); err != nil {
+		return nil, fmt.Errorf("push to head period %s: %w", period, err)
+	}
 	candidates, err := h.mbHeadReader.ListValidated(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list validated mb heads: %w", err)
@@ -74,6 +96,9 @@ func (h *ExecuteHandler) Execute(ctx context.Context, period string, mbhIDs []st
 func (h *ExecuteHandler) executeBatch(ctx context.Context, tx *sql.Tx, byID map[string]MBHeadCandidate, mbhIDs []string, period, actorUserID string, result *ExecuteResult) error {
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, period); err != nil {
 		return fmt.Errorf("acquire push lock for period %s: %w", period, err)
+	}
+	if err := h.checkLockInTx(ctx, tx, period); err != nil {
+		return err
 	}
 	for _, mbhID := range mbhIDs {
 		c, ok := byID[mbhID]
@@ -134,6 +159,24 @@ func (h *ExecuteHandler) pushOneMBInner(ctx context.Context, tx *sql.Tx, c MBHea
 		if err := h.costReader.MarkApprovedFromCalculatedTx(ctx, tx, costID, actorUserID); err != nil {
 			return fmt.Errorf("mark %s approved: %w", costType, err)
 		}
+	}
+	return nil
+}
+
+// checkLockInTx re-checks the period lock inside the push transaction with
+// FOR SHARE, closing the window between the pre-check in Execute and a lock
+// taken concurrently. It runs only when the guard is installed, so an
+// unguarded handler issues exactly the pre-lock SQL.
+func (h *ExecuteHandler) checkLockInTx(ctx context.Context, tx *sql.Tx, period string) error {
+	if h.periodLock == nil {
+		return nil
+	}
+	locked, err := postgres.IsPeriodLockedForShare(ctx, tx, period, string(costcalcdom.CalcTypeActual))
+	if err != nil {
+		return err
+	}
+	if locked {
+		return fmt.Errorf("push to head period %s: %w", period, costcalcdom.ErrPeriodLocked)
 	}
 	return nil
 }

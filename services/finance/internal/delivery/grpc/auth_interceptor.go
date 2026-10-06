@@ -351,6 +351,60 @@ func getRequiredPermission(fullMethod string) string {
 	// Permission mapping for Finance service.
 	// Format: {service}.{module}.{entity}.{action}
 	permissions := map[string]string{
+		// ErpIntegrationService
+		"/finance.v1.ErpIntegrationService/CreateErpBatch":               "finance.cost.erpintegration.trigger",
+		"/finance.v1.ErpIntegrationService/ListErpBatches":               "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/GetErpBatch":                  "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/AbandonErpBatch":              "finance.cost.erpintegration.trigger",
+		"/finance.v1.ErpIntegrationService/LoadErpDemand":                "finance.cost.erpintegration.trigger",
+		"/finance.v1.ErpIntegrationService/RunErpCoverage":               "finance.cost.erpintegration.trigger",
+		"/finance.v1.ErpIntegrationService/RunErpDerive":                 "finance.cost.erpintegration.trigger",
+		"/finance.v1.ErpIntegrationService/ValidateErpBatch":             "finance.cost.erpintegration.validate",
+		"/finance.v1.ErpIntegrationService/ReconErpBatch":                "finance.cost.erpintegration.trigger",
+		"/finance.v1.ErpIntegrationService/ListErpCoverage":              "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/ExportErpCoverage":            "finance.cost.erpintegration.export",
+		"/finance.v1.ErpIntegrationService/ExportErpRecon":               "finance.cost.erpintegration.export",
+		"/finance.v1.ErpIntegrationService/AckErpWarnings":               "finance.cost.erpintegration.approve",
+		"/finance.v1.ErpIntegrationService/ListErpStdCost":               "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/PreviewErpPush":               "finance.cost.erpintegration.push",
+		"/finance.v1.ErpIntegrationService/PushErpBatch":                 "finance.cost.erpintegration.push",
+		"/finance.v1.ErpIntegrationService/PreviewErpAdjOperation":       "finance.cost.erpintegration.approve",
+		"/finance.v1.ErpIntegrationService/GetErpAdjPreview":             "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/ExecuteErpAdjOperation":       "finance.cost.erpintegration.approve",
+		"/finance.v1.ErpIntegrationService/LockErpBatch":                 "finance.cost.erpintegration.lock",
+		"/finance.v1.ErpIntegrationService/ListErpOracleCalls":           "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/LockErpPeriod":                "finance.cost.erpintegration.lock",
+		"/finance.v1.ErpIntegrationService/UnlockErpPeriod":              "finance.cost.erpintegration.unlock",
+		"/finance.v1.ErpIntegrationService/GetErpPeriodLock":             "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/LinkErpToProduct":             "finance.cost.erpintegration.update",
+		"/finance.v1.ErpIntegrationService/CreateCostProductFromDemand":  "finance.cost.erpintegration.update",
+		"/finance.v1.ErpIntegrationService/GetErpItemLinkReport":         "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/RunErpAttributeBackfill":      "finance.cost.erpintegration.update",
+		"/finance.v1.ErpIntegrationService/RunErpMasterSync":             "finance.cost.erpintegration.sync",
+		"/finance.v1.ErpIntegrationService/ExportErpManualSample":        "finance.cost.erpintegration.export",
+		"/finance.v1.ErpIntegrationService/GetErpCurrencySanity":         "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/GetErpIntegrationConfig":      "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/GetErpIntegrationSchedule":    "finance.cost.erpintegration.view",
+		"/finance.v1.ErpIntegrationService/UpdateErpIntegrationSchedule": "finance.cost.erpintegration.update",
+		"/finance.v1.ErpIntegrationService/RunErpBacktest":               "finance.cost.erpintegration.trigger",
+		"/finance.v1.ErpIntegrationService/GetErpBacktestReport":         "finance.cost.erpintegration.view",
+
+		// ErpRuleService
+		"/finance.v1.ErpRuleService/ListValLossRules":    "finance.cost.erprule.view",
+		"/finance.v1.ErpRuleService/CreateValLossRule":   "finance.cost.erprule.create",
+		"/finance.v1.ErpRuleService/UpdateValLossRule":   "finance.cost.erprule.update",
+		"/finance.v1.ErpRuleService/DeleteValLossRule":   "finance.cost.erprule.delete",
+		"/finance.v1.ErpRuleService/ListSellPrices":      "finance.cost.erprule.view",
+		"/finance.v1.ErpRuleService/UpsertSellPrice":     "finance.cost.erprule.update",
+		"/finance.v1.ErpRuleService/ListGradeGroups":     "finance.cost.erprule.view",
+		"/finance.v1.ErpRuleService/UpdateGradeGroup":    "finance.cost.erprule.update",
+		"/finance.v1.ErpRuleService/GetRuleSnapshotDiff": "finance.cost.erprule.view",
+		"/finance.v1.ErpRuleService/ExportErpRules":      "finance.cost.erprule.export",
+
+		// ErpIntegrationService
+
+		// ErpRuleService
+
 		// UOM Service
 		"/finance.v1.UOMService/CreateUOM":  "finance.master.uom.create",
 		"/finance.v1.UOMService/GetUOM":     "finance.master.uom.view",

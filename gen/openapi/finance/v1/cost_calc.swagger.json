@@ -1767,6 +1767,13 @@
             "$ref": "#/definitions/v1CostRMDetail"
           },
           "description": "Full raw material breakdown (every cpc_rm_cost_detail line, ordered by\ncontribution descending), so a UI can show more than just the primary\ncontributor. Reuses CostRMDetail (already defined for CostBreakdown)."
+        },
+        "approvedAt": {
+          "type": "string",
+          "description": "Approval stamp (empty until approved)."
+        },
+        "approvedBy": {
+          "type": "string"
         }
       },
       "description": "CostResult is the persisted cost summary for a product/period/type."

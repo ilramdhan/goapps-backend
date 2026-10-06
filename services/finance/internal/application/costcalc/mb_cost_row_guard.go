@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 )
 
 // MBCostRowChecker answers whether a cst_product_cost row belongs to a Master Batch
@@ -43,6 +45,29 @@ func rejectMBCostRow(ctx context.Context, guard MBCostRowChecker, costID int64) 
 	}
 	if isMB {
 		return fmt.Errorf("cost %d: %w", costID, ErrMBCostNotManuallyTransitionable)
+	}
+	return nil
+}
+
+// rejectLockedCostRow fails a manual verify / approve whose target row is an
+// ACTUAL result of a locked period (design §5.5, plan-02 P1-T3). A nil checker
+// disables the guard and skips the row lookup, so behavior is then byte-identical
+// to the pre-lock code. A missing row is left to the status transition, which
+// already reports it (ErrCostInvalidStatus); any other lookup or checker error
+// is propagated so a database blip cannot let a locked transition through.
+func rejectLockedCostRow(ctx context.Context, checker costcalcdom.PeriodLockChecker, results costcalcdom.ResultRepository, costID int64) error {
+	if checker == nil {
+		return nil
+	}
+	res, err := results.GetByID(ctx, costID)
+	if err != nil {
+		if errors.Is(err, costcalcdom.ErrCostNotFound) {
+			return nil
+		}
+		return fmt.Errorf("load cost %d for period lock check: %w", costID, err)
+	}
+	if err := costcalcdom.CheckPeriodUnlocked(ctx, checker, res.Period(), res.CalcType()); err != nil {
+		return fmt.Errorf("cost %d period %s: %w", costID, res.Period(), err)
 	}
 	return nil
 }

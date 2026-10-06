@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductmaster"
 )
@@ -31,7 +32,9 @@ const cpmColumns = `
 	cpm_is_active,
 	cpm_created_at,cpm_created_by,cpm_updated_at,cpm_updated_by,
 	COALESCE(cpm_shade_name,''),COALESCE(cpm_flex_01,''),COALESCE(cpm_flex_02,''),COALESCE(cpm_flex_03,''),
-	COALESCE(cpm_source,''),cpm_is_locked`
+	COALESCE(cpm_source,''),cpm_is_locked,
+	COALESCE(cpm_erp_fg_type,''),COALESCE(cpm_erp_chp_item_code,''),COALESCE(cpm_erp_ms_batch_item,''),
+	COALESCE(cpm_erp_item_type,''),cpm_erp_prd_per_day`
 
 // Create inserts the product. product_code is generated atomically via generate_cost_product_code()
 // inside the same INSERT, returning the new sys_id and code.
@@ -651,6 +654,12 @@ type cpmRow struct {
 	flex03       string
 	source       string
 	locked       bool
+	// 000551 ERP attributes (P3-T5).
+	erpFgType      string
+	erpChpItemCode string
+	erpMsBatchItem string
+	erpItemType    string
+	erpPrdPerDay   decimal.NullDecimal
 }
 
 func (r *CostProductMasterRepository) scanRow(row *sql.Row) (*costproductmaster.CostProductMaster, error) {
@@ -664,6 +673,7 @@ func (r *CostProductMasterRepository) scanRow(row *sql.Row) (*costproductmaster.
 		&d.createdAt, &d.createdBy, &d.updatedAt, &d.updatedBy,
 		&d.shadeName, &d.flex01, &d.flex02, &d.flex03,
 		&d.source, &d.locked,
+		&d.erpFgType, &d.erpChpItemCode, &d.erpMsBatchItem, &d.erpItemType, &d.erpPrdPerDay,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, costproductmaster.ErrNotFound
@@ -684,6 +694,7 @@ func (r *CostProductMasterRepository) scanRows(rows *sql.Rows) (*costproductmast
 		&d.createdAt, &d.createdBy, &d.updatedAt, &d.updatedBy,
 		&d.shadeName, &d.flex01, &d.flex02, &d.flex03,
 		&d.source, &d.locked,
+		&d.erpFgType, &d.erpChpItemCode, &d.erpMsBatchItem, &d.erpItemType, &d.erpPrdPerDay,
 	); err != nil {
 		return nil, fmt.Errorf("scan cost_product_master row: %w", err)
 	}
@@ -708,7 +719,7 @@ func cpmFromRow(d cpmRow) *costproductmaster.CostProductMaster {
 	if grade == "" && d.source != mbCostProductSource {
 		grade = "AX"
 	}
-	return costproductmaster.Reconstruct(
+	p := costproductmaster.Reconstruct(
 		d.sysID, d.code, d.typeID,
 		d.name, d.shade.String, grade, d.desc.String,
 		d.erpItem.String, d.erpG1.String, d.erpG2.String,
@@ -718,6 +729,11 @@ func cpmFromRow(d cpmRow) *costproductmaster.CostProductMaster {
 		d.shadeName, d.flex01, d.flex02, d.flex03,
 		d.source, d.locked,
 	)
+	p.RestoreErpAttributes(costproductmaster.ErpAttributes{
+		FgType: d.erpFgType, ChpItemCode: d.erpChpItemCode, MsBatchItem: d.erpMsBatchItem,
+		ItemType: d.erpItemType, PrdPerDay: d.erpPrdPerDay,
+	})
+	return p
 }
 
 func isProductMasterUniqueViolation(err error) bool {

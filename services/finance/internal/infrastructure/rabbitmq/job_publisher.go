@@ -148,3 +148,28 @@ func (a *JobPublisherAdapter) PublishProductParamBulk(
 	}
 	return a.publisher.PublishJob(ctx, RoutingKeyProductParamBulk, msg)
 }
+
+// PublishErpIntegration publishes an ERP integration batch-step job
+// (plan-04 P3-T4); subtype is the step (load_demand, coverage, ...).
+func (a *JobPublisherAdapter) PublishErpIntegration(ctx context.Context, jobID, subtype, period, createdBy string) error {
+	msg := JobMessage{
+		JobID:     jobID,
+		JobType:   "erp_integration",
+		Subtype:   subtype,
+		Period:    period,
+		CreatedBy: createdBy,
+	}
+	return a.publisher.PublishJob(ctx, RoutingKeyErpIntegration, msg)
+}
+
+// PublishErpMasterSync publishes an ERP master replica sync job (P6-T3d);
+// subtype is "" (all), om_item, om_grade or apply_grade_groups.
+func (a *JobPublisherAdapter) PublishErpMasterSync(ctx context.Context, jobID, subtype, createdBy string) error {
+	msg := JobMessage{
+		JobID:     jobID,
+		JobType:   "erp_master_sync",
+		Subtype:   subtype,
+		CreatedBy: createdBy,
+	}
+	return a.publisher.PublishJob(ctx, RoutingKeyErpMasterSync, msg)
+}

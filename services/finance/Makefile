@@ -55,7 +55,7 @@ help:
 # =============================================================================
 
 run:
-	go run cmd/server/main.go
+	go run ./cmd/server
 
 # run-worker kills any existing worker FIRST to avoid duplicate RabbitMQ consumers
 # (an orphaned old binary keeps consuming finance.jobs.rm_cost_calc and round-robins
@@ -67,18 +67,18 @@ run-worker:
 	@pkill -f '[b]in/finance-worker' 2>/dev/null || true
 	@sleep 1
 	@mkdir -p bin
-	go build -o bin/finance-worker cmd/worker/main.go
+	go build -o bin/finance-worker ./cmd/worker
 	@echo ">> Starting bin/finance-worker (Ctrl+C to stop)"
 	exec bin/finance-worker
 
 build:
 	@mkdir -p bin
-	CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=$(VERSION)" -o $(BINARY) cmd/server/main.go
+	CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=$(VERSION)" -o $(BINARY) ./cmd/server
 	@echo "Built $(BINARY)"
 
 build-worker:
 	@mkdir -p bin
-	CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/finance-worker cmd/worker/main.go
+	CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/finance-worker ./cmd/worker
 	@echo "Built bin/finance-worker"
 
 dev:

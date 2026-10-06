@@ -238,3 +238,15 @@ func TestNewMBResult_LeavesYarnOnlyCostSheetFieldsZero(t *testing.T) {
 	require.Zero(t, r.DeliveryCost())
 	require.Zero(t, r.VB1DelCost())
 }
+
+// P0-T10b: MB ACTUAL rows carry the USD label (label only; numbers unchanged),
+// non-ACTUAL passes keep the historical IDR label.
+func TestNewMBResult_CurrencyLabel(t *testing.T) {
+	out := &costcalc.ComputeOutput{CostPerUnit: 10, TotalRMCost: 8, TotalConversion: 2, TotalCost: 10}
+	actual := newMBResult(1, "202607", costcalcdom.CalcTypeActual, 900, 77, out)
+	require.Equal(t, "USD", actual.Currency())
+	require.InDelta(t, 10.0, actual.CostPerUnit(), 0)
+	require.InDelta(t, 10.0, actual.TotalCost(), 0)
+	require.Equal(t, "IDR", newMBResult(1, "202607", costcalcdom.CalcTypeForecast, 900, 77, out).Currency())
+	require.Equal(t, "IDR", newMBResult(1, "202607", costcalcdom.CalcTypeSelling, 900, 77, out).Currency())
+}

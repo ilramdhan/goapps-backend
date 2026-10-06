@@ -142,6 +142,12 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 	if err := financev1.RegisterCostRmTypeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register CostRmType gateway: %w", err)
 	}
+	if err := financev1.RegisterErpIntegrationServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register ErpIntegration gateway: %w", err)
+	}
+	if err := financev1.RegisterErpRuleServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register ErpRule gateway: %w", err)
+	}
 	if err := financev1.RegisterCostErpLookupServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register CostErpLookup gateway: %w", err)
 	}

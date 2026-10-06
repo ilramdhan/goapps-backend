@@ -1,0 +1,12 @@
+# CODEOWNERS — ERP cost integration Oracle safety rails (plan P0-T12, PR-7).
+# Any change to the Oracle write allowlist, the read-only guard or the SQL
+# safety scans needs review from the owners below.
+# NOTE: owner handle is a placeholder pending admin confirmation.
+
+/services/finance/internal/infrastructure/oracle/erp_writer_allowlist.go       @ilramdhan
+/services/finance/internal/infrastructure/oracle/erp_writer_allowlist_test.go  @ilramdhan
+/services/finance/internal/infrastructure/oracle/readonly_guard.go             @ilramdhan
+/services/finance/internal/infrastructure/oracle/readonly_guard_test.go        @ilramdhan
+/services/finance/internal/infrastructure/oracle/sql_safety_test.go            @ilramdhan
+/services/finance/internal/infrastructure/oracle/erp_writer_factory.go         @ilramdhan
+/services/finance/internal/domain/erpintegration/oracle_writer_port.go         @ilramdhan
