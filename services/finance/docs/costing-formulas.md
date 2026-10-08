@@ -33,7 +33,9 @@ Engine behaviour (all in `internal/application/costcalc/`):
   `cost_product_type.cpt_oil_class`: `IS_PTY`, `IS_POY`, `IS_SUPERBA`
   (`oil_rate.go:29,31,33`; injected by `injectProductClassFlags`, `oil_rate.go:63`, called from
   `compute.go` `buildInitialScope`). They need no edge. A product with no oil class gets all three
-  as 0. `OIL_RATE` is also engine-injected per period (`oil_rate.go` `resolveOilRate`).
+  as 0. `IS_ACTUAL` (1 for the ACTUAL calc type, 0 for FORECAST/SELLING; `oil_rate.go`
+  `injectCalcTypeFlags`, also from `buildInitialScope`) is injected the same way, per `ComputeInput.CalcType`
+  (the eval cache only memoises compiled expressions, so it is safe across calc types). `OIL_RATE` is also engine-injected per period (`oil_rate.go` `resolveOilRate`).
   See also the header of migration `000524`.
 
 ## 2. Change policy
@@ -158,7 +160,35 @@ Gotchas:
   (section 1), `F_YARN_CAP_PACK_POY_DEFAULT` loads whenever `F_YARN_CAP_PACK` loads. `000561`'s
   attach is harmless. The same applies to `OIL_GAIN_POY_DEFAULT` (`F_YARN_OIL_GAIN_POY_DEFAULT`
   used by `F_YARN_OIL_GAIN`).
-- Row 43 (`F_YARN_DEL_PACK`) is unchanged: `DELIVERY_BOX_WT > 0 ? (DELIVERY_NO_OF_BOB * DELIVERY_BOB_RATE + DELIVERY_BOX_RATE) / DELIVERY_BOX_WT : 0` for all types.
+- Rows 42 and 43 pack rates depend on the calc type since `000564`, see below.
+
+### Pack rates by calc type (since `000564`)
+
+ACTUAL uses VAL rates (master `bobin_cost_val` / `box_cost_val`); FORECAST and SELLING use MKT rates
+(master `bobin_cost` / `box_cost`, "Bobbin/Box Rate MKT"). Selected by the engine flag `IS_ACTUAL`.
+
+```
+F_YARN_CAP_PACK = IS_POY == 1 ? CAP_PACK_POY_DEFAULT : (CAPTIVE_BOX_WT > 0 ?
+    (IS_ACTUAL == 1 ? (CAPTIVE_NO_OF_BOB * CAP_BOB_RATE_VAL + CAP_BOX_RATE_VAL)
+                    : (CAPTIVE_NO_OF_BOB * CAPTIVE_BOB_RATE + CAPTIVE_BOX_RATE)) / CAPTIVE_BOX_WT : 0)
+F_YARN_DEL_PACK = DELIVERY_BOX_WT > 0 ?
+    (IS_ACTUAL == 1 ? (DELIVERY_NO_OF_BOB * DELIVERY_BOB_RATE + DELIVERY_BOX_RATE)
+                    : (DELIVERY_NO_OF_BOB * DEL_BOB_RATE_MKT + DEL_BOX_RATE_MKT)) / DELIVERY_BOX_WT : 0
+```
+
+| Param | Fill group | Source column | Used for |
+|---|---|---|---|
+| `CAPTIVE_BOB_RATE` / `CAPTIVE_BOX_RATE` (existing) | `CAPTIVE_PACK_CODE` | `bbcr_bob_rate_mkt` / `bbcr_box_rate_mkt` | captive MKT |
+| `CAP_BOB_RATE_VAL` / `CAP_BOX_RATE_VAL` (new) | `CAPTIVE_PACK_CODE` | `bobin_cost_val` / `box_cost_val` | captive ACTUAL |
+| `DELIVERY_BOB_RATE` / `DELIVERY_BOX_RATE` (existing) | `DELIVERY_PACK_CODE` | `bobin_cost_val` / `box_cost_val` | delivery ACTUAL |
+| `DEL_BOB_RATE_MKT` / `DEL_BOX_RATE_MKT` (new) | `DELIVERY_PACK_CODE` | `bobin_cost` / `box_cost` | delivery FORECAST/SELLING |
+
+Asymmetry: captive MKT reads the latest-period rate history (`bbcr_*_mkt`), delivery MKT reads the
+master columns directly. To change a source: Master Parameter -> edit the param -> Source Column (web,
+no migration), then re-save the pack code on products (or rely on the migration backfill) and recalc.
+A recalculation is required for existing results to change. A guarded migration (`000564`) attached the
+new params to every product having the parent pack code and backfilled their values; attaching a pack
+code in the UI auto-attaches all active fill-group children, so new products get them too.
 
 Upstream chain (prod expressions as of 2026-10; prod is ahead of the `000408` seed text for the
 box/bobbin weights, so check Q1-style SQL before writing a guard):
