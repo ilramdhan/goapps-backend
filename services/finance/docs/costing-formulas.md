@@ -16,6 +16,12 @@ Engine behaviour (all in `internal/application/costcalc/`):
   formulas whose result param is in the product's `cost_product_applicable_param` (CAPP) AND
   `f.is_active = TRUE` (~line 808). A formula whose result param is not attached to the product
   silently does not run, so new result params must be attached to products (see `000525`).
+- CONSTANT formulas referenced by a loaded formula are auto-loaded WITHOUT a CAPP attach
+  (`appendReferencedConstants`, `loader.go`): for every input of a loaded formula that no loaded
+  formula produces and that is not attached to the product, an active CONSTANT formula producing
+  that param is added (one batched query, no recursion since CONSTANTs have no inputs). CAPP still
+  wins if the param is attached. Unreferenced CONSTANTs are never loaded. Only CONSTANT: other
+  formula types still require the CAPP attach. Applies to the batch calc and `mbbatch` (same loader).
 - `topoSortFormulas` (`loader.go` ~983, Kahn) orders formulas by the `formula_param` edges.
 - `buildInitialScope` (`compute.go` ~334-373) zero-fills every edge param missing from the scope
   (and the formula's own result param) with `0`, silently.
@@ -148,7 +154,10 @@ Gotchas:
 - `IS_POY` is engine-injected from `cost_product_type.cpt_oil_class` (`oil_rate.go` `injectProductClassFlags`), not an `mst_parameter` row: no edge needed for it.
 - A formula only runs if its result param is in the product's applicable params. `000561` attached
   `CAP_PACK_POY_DEFAULT` to existing POY products (excl. MB, marker `seed_cap_pack_poy_000561`).
-  **POY products created later must get it attached (manual / bulk attach), otherwise row 42 = 0.**
+  No attach is needed for new POY products: since the auto-load of referenced CONSTANT formulas
+  (section 1), `F_YARN_CAP_PACK_POY_DEFAULT` loads whenever `F_YARN_CAP_PACK` loads. `000561`'s
+  attach is harmless. The same applies to `OIL_GAIN_POY_DEFAULT` (`F_YARN_OIL_GAIN_POY_DEFAULT`
+  used by `F_YARN_OIL_GAIN`).
 - Row 43 (`F_YARN_DEL_PACK`) is unchanged: `DELIVERY_BOX_WT > 0 ? (DELIVERY_NO_OF_BOB * DELIVERY_BOB_RATE + DELIVERY_BOX_RATE) / DELIVERY_BOX_WT : 0` for all types.
 
 Upstream chain (prod expressions as of 2026-10; prod is ahead of the `000408` seed text for the
