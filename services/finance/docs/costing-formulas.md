@@ -123,4 +123,42 @@ Recipe:
 
 ## 5. Rows 42 / 43: Cap-/Del-Pack cost
 
-(Section to be added once the CAP_PACK POY default change from branch `feat/cap-pack-poy-default` is merged.)
+Params `CAPTIVE_PACK_COST` (42) / `DELIVERY_PACK_COST` (43), formulas `F_YARN_CAP_PACK` /
+`F_YARN_DEL_PACK`. Both feed rows 92 / 93 (section 3) and the box-weight chain below.
+
+**Row 42 (since `000561`, Finance requirement 2026-10-08):** POY products get a configurable
+default instead of the box formula; every other product type keeps the formula.
+
+```
+F_YARN_CAP_PACK = IS_POY == 1 ? CAP_PACK_POY_DEFAULT
+                : (CAPTIVE_BOX_WT > 0 ? (CAPTIVE_NO_OF_BOB * CAPTIVE_BOB_RATE + CAPTIVE_BOX_RATE) / CAPTIVE_BOX_WT : 0)
+F_YARN_CAP_PACK_POY_DEFAULT (CONSTANT) = 0.0078  -> CAP_PACK_POY_DEFAULT
+```
+
+Same pattern as `OIL_GAIN_POY_DEFAULT` (`000524` / `000525`): the value lives in its own CONSTANT
+formula, never as a literal inside `F_YARN_CAP_PACK`.
+
+| Change wanted | How |
+|---|---|
+| New POY value (e.g. 0.0078 -> 0.0080) | Edit expression of `F_YARN_CAP_PACK_POY_DEFAULT` in Master Formula (web). No migration needed for a value-only change, then recalc. |
+| POY back to the box formula | Remove the `IS_POY == 1 ? CAP_PACK_POY_DEFAULT : ( ... )` wrapper from `F_YARN_CAP_PACK`, then follow up with a guarded migration (section 2). The `CAP_PACK_POY_DEFAULT` edge/param can stay; unused edges are harmless. |
+| Other product type gets its own default | Add another CONSTANT formula + param (`CAP_PACK_<TYPE>_DEFAULT`), nest another ternary branch, add the `formula_param` edge, attach the param to those products. |
+
+Gotchas:
+- `IS_POY` is engine-injected from `cost_product_type.cpt_oil_class` (`oil_rate.go` `injectProductClassFlags`), not an `mst_parameter` row: no edge needed for it.
+- A formula only runs if its result param is in the product's applicable params. `000561` attached
+  `CAP_PACK_POY_DEFAULT` to existing POY products (excl. MB, marker `seed_cap_pack_poy_000561`).
+  **POY products created later must get it attached (manual / bulk attach), otherwise row 42 = 0.**
+- Row 43 (`F_YARN_DEL_PACK`) is unchanged: `DELIVERY_BOX_WT > 0 ? (DELIVERY_NO_OF_BOB * DELIVERY_BOB_RATE + DELIVERY_BOX_RATE) / DELIVERY_BOX_WT : 0` for all types.
+
+Upstream chain (prod expressions as of 2026-10; prod is ahead of the `000408` seed text for the
+box/bobbin weights, so check Q1-style SQL before writing a guard):
+
+```
+CAPTIVE_BOX_WT   = CAPTIVE_NO_OF_BOB * NET_BOB_WT
+NET_BOB_WT       = (AX_WT*AX_PERC/100) + (AE_WT*AE_PERC/100) + (A9_WT*A9_PERC/100)
+                 + (A_WT*A_PERC/100) + (B_WT*B_PERC/100) + (C_WT*C_PERC/100)
+CAPTIVE_NO_OF_BOB = marketing_result(product,'CAPTIVE_NO_OF_BOB',period)   -- F_YARN_CAP_NO_BOB_FROM_MKT
+```
+
+Test model: `internal/application/costcalc/compute_cap_pack_poy_test.go`.
