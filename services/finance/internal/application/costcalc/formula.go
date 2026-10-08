@@ -1,4 +1,6 @@
 // Package costcalc contains the application-layer logic for the cost calculation engine.
+// Formula semantics, change policy and pending TODOs (e.g. STEAM_COST_CNG/WASHING_COST):
+// see services/finance/docs/costing-formulas.md
 package costcalc
 
 import "errors"
