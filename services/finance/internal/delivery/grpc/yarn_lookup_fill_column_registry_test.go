@@ -88,18 +88,6 @@ var t6Exceptions = map[masterColumn]string{
 	{"MACHINE", "mc_box_cost"}:           "registered by 000425 ahead of its reader — no machine.Entity getter yet",
 	{"MACHINE", "mc_captive_per_bobbin"}: "registered by 000425 ahead of its reader — no machine.Entity getter yet",
 
-	// Registered by 000412 (which also removed the stale bbcr_* rows) and 000421.
-	// fillFromBoxBobbinCost still reads rates off the *rate* rows via ListRates
-	// and knows nothing about these per-master Oracle columns.
-	{"BOX_BOBBIN_COST", "bbn_reuse"}:      "registered by 000412 — fillFromBoxBobbinCost has no case for it",
-	{"BOX_BOBBIN_COST", "box_reuse"}:      "registered by 000412 — fillFromBoxBobbinCost has no case for it",
-	{"BOX_BOBBIN_COST", "box_cost"}:       "registered by 000412 — fillFromBoxBobbinCost has no case for it",
-	{"BOX_BOBBIN_COST", "bobin_cost"}:     "registered by 000412 — fillFromBoxBobbinCost has no case for it",
-	{"BOX_BOBBIN_COST", "box_cost_val"}:   "registered by 000412 — fillFromBoxBobbinCost has no case for it",
-	{"BOX_BOBBIN_COST", "bobin_cost_val"}: "registered by 000412 — fillFromBoxBobbinCost has no case for it",
-	{"BOX_BOBBIN_COST", "bbn_reuse_val"}:  "registered by 000421/000425 — fillFromBoxBobbinCost has no case for it",
-	{"BOX_BOBBIN_COST", "box_reuse_val"}:  "registered by 000421/000425 — fillFromBoxBobbinCost has no case for it",
-
 	// Registered by 000412 for the product-grade master; no productgrade.Entity
 	// getter exists for either, so no reader can be written yet.
 	{"PRODUCT_GRADE", "loss_pct"}: "registered by 000412 — no productgrade.Entity getter yet",
@@ -130,6 +118,8 @@ var t7Exceptions = map[masterColumn]string{
 	// at them; they resolve from the rate rows, not from a master column.
 	{"BOX_BOBBIN_COST", "bbcr_bob_rate_mkt"}: "de-registered by 000412; switch case kept for legacy params — resolved from rate rows, not a master column",
 	{"BOX_BOBBIN_COST", "bbcr_box_rate_mkt"}: "de-registered by 000412; switch case kept for legacy params — resolved from rate rows, not a master column",
+	{"BOX_BOBBIN_COST", "bbcr_bob_rate_val"}: "legacy alias seeded by 000407 for DELIVERY_BOB_RATE (never a real column); aliased to bobin_cost_val; repointed by 000562",
+	{"BOX_BOBBIN_COST", "bbcr_box_rate_val"}: "legacy alias seeded by 000407 for DELIVERY_BOX_RATE (never a real column); aliased to box_cost_val; repointed by 000562",
 }
 
 // ─── Go-side inventory ──────────────────────────────────────────────────────
