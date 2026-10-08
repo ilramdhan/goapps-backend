@@ -31,6 +31,10 @@ const (
 	ScopeKeyIsPOY = "IS_POY"
 	// ScopeKeyIsSuperba is 1 for a Superba-class product, 0 otherwise.
 	ScopeKeyIsSuperba = "IS_SUPERBA"
+	// ScopeKeyIsActual is 1 when the run's calculation type is ACTUAL
+	// (valuation), 0 for FORECAST / SELLING (marketing). Formulas use it to
+	// pick VAL vs MKT pack rates (migration 000564).
+	ScopeKeyIsActual = "IS_ACTUAL"
 	// ScopeKeyOilRate is the OIL_RATE param. For an oil-class product the
 	// engine overwrites whatever CAPP carried with the RM group's rate for the
 	// calc period (CR -> SR -> PR by default, see resolveOilRate).
@@ -78,6 +82,18 @@ func injectProductClassFlags(scope map[string]any, zeroFilled map[string]bool, o
 		scope[key] = v
 		delete(zeroFilled, key)
 	}
+}
+
+// injectCalcTypeFlags writes IS_ACTUAL into scope (1 for ACTUAL, else 0) and
+// removes it from zeroFilled so it is recorded in the snapshot. Like IS_POY it
+// is engine-injected, not an mst_parameter row.
+func injectCalcTypeFlags(scope map[string]any, zeroFilled map[string]bool, calcType costcalcdom.CalculationType) {
+	v := float64(0)
+	if calcType == costcalcdom.CalcTypeActual {
+		v = 1
+	}
+	scope[ScopeKeyIsActual] = v
+	delete(zeroFilled, ScopeKeyIsActual)
 }
 
 // resolveOilRate resolves OIL_RATE for an oil-class product from the oil RM
