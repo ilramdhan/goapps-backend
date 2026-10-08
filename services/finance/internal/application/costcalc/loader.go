@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -882,6 +883,160 @@ func (l *productLoader) loadPerProductFormulas(ctx context.Context, productSysID
 			})
 		}
 		out[productSysID] = formulas
+	}
+	if err := l.appendReferencedConstants(ctx, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// missingConstantInputs returns the input param codes of fs that no formula in fs
+// produces and that are not attached to the product (attached = CAPP param
+// codes). Those are the candidates for CONSTANT auto-loading. Result is sorted
+// and deduped.
+func missingConstantInputs(fs []Formula, attached map[string]bool) []string {
+	produced := make(map[string]bool, len(fs))
+	for _, f := range fs {
+		produced[f.ResultParamCode] = true
+	}
+	seen := map[string]bool{}
+	var missing []string
+	for _, f := range fs {
+		for _, code := range f.InputParamCodes {
+			if produced[code] || attached[code] || seen[code] {
+				continue
+			}
+			seen[code] = true
+			missing = append(missing, code)
+		}
+	}
+	sort.Strings(missing)
+	return missing
+}
+
+// appendReferencedConstants adds, per product, active CONSTANT formulas whose
+// result param is an input of a loaded formula but is neither produced by a
+// loaded formula nor attached to the product via CAPP (CAPP wins). This makes
+// defaults such as CAP_PACK_POY_DEFAULT / OIL_GAIN_POY_DEFAULT apply to new
+// products without a manual attach. CONSTANT formulas have no inputs, so no
+// recursion is needed; unreferenced CONSTANTs are never loaded.
+func (l *productLoader) appendReferencedConstants(ctx context.Context, byProduct map[int64][]Formula) error {
+	if len(byProduct) == 0 {
+		return nil
+	}
+	productIDs := make([]int64, 0, len(byProduct))
+	for id := range byProduct {
+		productIDs = append(productIDs, id)
+	}
+	attached, err := l.loadAttachedParamCodes(ctx, productIDs)
+	if err != nil {
+		return err
+	}
+	missingByProduct := make(map[int64][]string, len(byProduct))
+	codeSet := map[string]bool{}
+	for id, fs := range byProduct {
+		missing := missingConstantInputs(fs, attached[id])
+		missingByProduct[id] = missing
+		for _, c := range missing {
+			codeSet[c] = true
+		}
+	}
+	if len(codeSet) == 0 {
+		return nil
+	}
+	codes := make([]string, 0, len(codeSet))
+	for c := range codeSet {
+		codes = append(codes, c)
+	}
+	sort.Strings(codes)
+	constByResult, err := l.loadConstantFormulasByResultCodes(ctx, codes)
+	if err != nil {
+		return err
+	}
+	for id, missing := range missingByProduct {
+		for _, code := range missing {
+			cf, ok := constByResult[code]
+			if !ok {
+				continue
+			}
+			cf.SortOrder = len(byProduct[id])
+			byProduct[id] = append(byProduct[id], cf)
+		}
+	}
+	return nil
+}
+
+// loadAttachedParamCodes returns product → set of param codes attached via
+// cost_product_applicable_param.
+func (l *productLoader) loadAttachedParamCodes(ctx context.Context, productSysIDs []int64) (map[int64]map[string]bool, error) {
+	const q = `
+		SELECT capp.capp_product_sys_id, mp.param_code
+		FROM cost_product_applicable_param capp
+		JOIN mst_parameter mp ON mp.id = capp.capp_param_id AND mp.deleted_at IS NULL
+		WHERE capp.capp_product_sys_id = ANY($1)`
+	rows, err := l.db.QueryContext(ctx, q, pq.Array(productSysIDs))
+	if err != nil {
+		return nil, fmt.Errorf("load attached param codes: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	out := map[int64]map[string]bool{}
+	for rows.Next() {
+		var (
+			productSysID int64
+			code         string
+		)
+		if err := rows.Scan(&productSysID, &code); err != nil {
+			return nil, fmt.Errorf("scan attached param code: %w", err)
+		}
+		if out[productSysID] == nil {
+			out[productSysID] = map[string]bool{}
+		}
+		out[productSysID][code] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate attached param codes: %w", err)
+	}
+	return out, nil
+}
+
+// loadConstantFormulasByResultCodes returns active CONSTANT formulas keyed by
+// their result param code, restricted to the given codes.
+func (l *productLoader) loadConstantFormulasByResultCodes(ctx context.Context, codes []string) (map[string]Formula, error) {
+	const q = `
+		SELECT f.formula_code, f.formula_name, f.formula_type, f.expression, p.param_code
+		FROM mst_formula f
+		JOIN mst_parameter p ON p.id = f.result_param_id
+		WHERE f.formula_type = 'CONSTANT'
+		  AND f.is_active = TRUE
+		  AND f.deleted_at IS NULL
+		  AND p.deleted_at IS NULL
+		  AND p.param_code = ANY($1)
+		ORDER BY f.formula_code`
+	rows, err := l.db.QueryContext(ctx, q, pq.Array(codes))
+	if err != nil {
+		return nil, fmt.Errorf("load referenced constant formulas: %w", err)
+	}
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			_ = cerr
+		}
+	}()
+	out := map[string]Formula{}
+	for rows.Next() {
+		var f Formula
+		if err := rows.Scan(&f.FormulaCode, &f.FormulaName, &f.FormulaType, &f.Expression, &f.ResultParamCode); err != nil {
+			return nil, fmt.Errorf("scan referenced constant formula: %w", err)
+		}
+		if _, dup := out[f.ResultParamCode]; !dup {
+			out[f.ResultParamCode] = f
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate referenced constant formulas: %w", err)
 	}
 	return out, nil
 }

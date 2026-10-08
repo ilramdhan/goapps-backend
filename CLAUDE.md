@@ -390,6 +390,10 @@ if err == nil {
 - Every up migration must have a corresponding down migration
 - Tool: golang-migrate v4
 
+### Costing formulas
+
+Formula engine semantics, change policy (web edit -> guarded migration) and pending TODOs (e.g. STEAM_COST_CNG / WASHING_COST): see `services/finance/docs/costing-formulas.md`.
+
 ### Seed Migration Guardrails
 
 **Permission codes** must match the `chk_permission_code_format` CHECK constraint:
