@@ -241,6 +241,16 @@ var boxBobbinCostColumns = []string{
 	"no_of_bob",
 	"bbcr_bob_rate_mkt",
 	"bbcr_box_rate_mkt",
+	"bbn_reuse",
+	"box_reuse",
+	"box_cost",
+	"bobin_cost",
+	"box_cost_val",
+	"bobin_cost_val",
+	"bbn_reuse_val",
+	"box_reuse_val",
+	"bbcr_bob_rate_val",
+	"bbcr_box_rate_val",
 }
 
 // LookupReaderColumns returns every lookup_source_column the fill handler can
@@ -525,6 +535,7 @@ func (h *YarnLookupFillHandler) fillFromMBHead(ctx context.Context, mbCosting, t
 	}, nil
 }
 
+//nolint:gocyclo // flat column switch; TestBoxBobbinSwitchColumnsMatchSource parses its case labels, so it cannot be split.
 func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCode, triggerParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
 	bbc, err := h.boxBobbinRepo.GetByCode(ctx, bbcCode)
 	if err != nil {
@@ -562,6 +573,30 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 			if latestBoxRateMkt > 0 {
 				nums[p.Code().String()] = latestBoxRateMkt
 			}
+		// Per-master Oracle columns on mst_box_bobbin_cost (registered by 000412/000421).
+		// bbcr_*_val is the legacy name 000407 seeded for DELIVERY_BOB/BOX_RATE; it never
+		// existed as a column, so it is aliased to the VAL master columns (same intent,
+		// see 000411 column comments).
+		case "bbn_reuse":
+			putOpt(nums, p.Code().String(), bbc.BbnReuse())
+		case "box_reuse":
+			putOpt(nums, p.Code().String(), bbc.BoxReuse())
+		case "box_cost":
+			putOpt(nums, p.Code().String(), bbc.BoxCost())
+		case "bobin_cost":
+			putOpt(nums, p.Code().String(), bbc.BobinCost())
+		case "box_cost_val":
+			putOpt(nums, p.Code().String(), bbc.BoxCostVal())
+		case "bbcr_box_rate_val":
+			putOpt(nums, p.Code().String(), bbc.BoxCostVal())
+		case "bobin_cost_val":
+			putOpt(nums, p.Code().String(), bbc.BobinCostVal())
+		case "bbcr_bob_rate_val":
+			putOpt(nums, p.Code().String(), bbc.BobinCostVal())
+		case "bbn_reuse_val":
+			putOpt(nums, p.Code().String(), bbc.BbnReuseVal())
+		case "box_reuse_val":
+			putOpt(nums, p.Code().String(), bbc.BoxReuseVal())
 		default:
 			warnNoReader(ctx, "Box bobbin cost", col, p.Code().String(), triggerParamCode)
 		}
@@ -574,6 +609,13 @@ func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCo
 		TextFills:    map[string]string{},
 		DisplayLabel: label,
 	}, nil
+}
+
+// putOpt stores v under code when the nullable master column has a value.
+func putOpt(m map[string]float64, code string, v *float64) {
+	if v != nil {
+		m[code] = *v
+	}
 }
 
 func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
