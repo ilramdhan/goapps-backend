@@ -368,6 +368,7 @@ func buildInitialScope(in ComputeInput) (map[string]any, map[string]bool) {
 
 	injectSpinFixedCost(scope, zeroFilled, in.SpinFixedCost)
 	injectProductClassFlags(scope, zeroFilled, in.Oil)
+	injectCalcTypeFlags(scope, zeroFilled, in.CalcType)
 	injectMarketingResult(scope, in.SellingSnapshot)
 	injectTxWeight(scope, in.TxWeight)
 	return scope, zeroFilled
