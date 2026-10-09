@@ -1,0 +1,616 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/superba_cost_sp.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "SuperbaCostSpService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/superba-cost-sps": {
+      "get": {
+        "summary": "ListSuperbaCostSps lists rows with search, filter, sort and pagination.",
+        "operationId": "SuperbaCostSpService_ListSuperbaCostSps",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSuperbaCostSpsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "search",
+            "description": "Search across shade code and colour name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeFilter",
+            "description": "Filter by active status.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE_FILTER_UNSPECIFIED",
+              "ACTIVE_FILTER_ACTIVE",
+              "ACTIVE_FILTER_INACTIVE"
+            ],
+            "default": "ACTIVE_FILTER_UNSPECIFIED"
+          },
+          {
+            "name": "sourceFilter",
+            "description": "Filter by provenance. Empty = all.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortBy",
+            "description": "Sort field.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sortOrder",
+            "description": "Sort direction.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SuperbaCostSpService"
+        ]
+      },
+      "post": {
+        "summary": "CreateSuperbaCostSp creates a hand-authored (MANUAL) row.",
+        "operationId": "SuperbaCostSpService_CreateSuperbaCostSp",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateSuperbaCostSpResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateSuperbaCostSpRequest creates a hand-authored (MANUAL) row.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSuperbaCostSpRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SuperbaCostSpService"
+        ]
+      }
+    },
+    "/api/v1/finance/superba-cost-sps/sync": {
+      "post": {
+        "summary": "SyncSuperbaCostSps pulls the master from the Oracle legacy source and\nupserts by legacy_sys_id.",
+        "operationId": "SuperbaCostSpService_SyncSuperbaCostSps",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncSuperbaCostSpsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "SyncSuperbaCostSpsRequest triggers an Oracle legacy to Postgres sync. Upserts\nby legacy_sys_id: new rows are inserted, existing rows are updated (including\nMANUAL ones, whose source becomes ORACLE). Runs synchronously.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SyncSuperbaCostSpsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SuperbaCostSpService"
+        ]
+      }
+    },
+    "/api/v1/finance/superba-cost-sps/{id}": {
+      "get": {
+        "summary": "GetSuperbaCostSp retrieves a row by id.",
+        "operationId": "SuperbaCostSpService_GetSuperbaCostSp",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSuperbaCostSpResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SuperbaCostSpService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteSuperbaCostSp soft-deletes a row.",
+        "operationId": "SuperbaCostSpService_DeleteSuperbaCostSp",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSuperbaCostSpResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SuperbaCostSpService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateSuperbaCostSp updates a row.",
+        "operationId": "SuperbaCostSpService_UpdateSuperbaCostSp",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateSuperbaCostSpResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SuperbaCostSpServiceUpdateSuperbaCostSpBody"
+            }
+          }
+        ],
+        "tags": [
+          "SuperbaCostSpService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "SuperbaCostSpServiceUpdateSuperbaCostSpBody": {
+      "type": "object",
+      "properties": {
+        "shadeCode": {
+          "type": "string",
+          "description": "Updated shade code (max 50 chars)."
+        },
+        "colourName": {
+          "type": "string",
+          "description": "Updated colour name (max 200 chars)."
+        },
+        "oldValue": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated old value."
+        },
+        "newValue": {
+          "type": "number",
+          "format": "double",
+          "description": "Updated new value."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Updated active status."
+        }
+      },
+      "description": "UpdateSuperbaCostSpRequest updates a row. legacy_sys_id is immutable."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ActiveFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE_FILTER_UNSPECIFIED",
+        "ACTIVE_FILTER_ACTIVE",
+        "ACTIVE_FILTER_INACTIVE"
+      ],
+      "default": "ACTIVE_FILTER_UNSPECIFIED",
+      "description": "ActiveFilter represents filter options for is_active field.\n\n - ACTIVE_FILTER_UNSPECIFIED: Show all records regardless of active status (default).\n - ACTIVE_FILTER_ACTIVE: Show only active records.\n - ACTIVE_FILTER_INACTIVE: Show only inactive records."
+    },
+    "v1AuditInfo": {
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the record was created (ISO 8601)."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "User who created the record."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the record was last updated (ISO 8601)."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "User who last updated the record."
+        }
+      },
+      "description": "AuditInfo contains audit trail information."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1CreateSuperbaCostSpRequest": {
+      "type": "object",
+      "properties": {
+        "legacySysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Legacy Sys Id (unique)."
+        },
+        "shadeCode": {
+          "type": "string",
+          "description": "Shade code (max 50 chars)."
+        },
+        "colourName": {
+          "type": "string",
+          "description": "Colour name (max 200 chars)."
+        },
+        "oldValue": {
+          "type": "number",
+          "format": "double",
+          "description": "Old value (used by calculation)."
+        },
+        "newValue": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional new value (information only)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the row is active."
+        }
+      },
+      "description": "CreateSuperbaCostSpRequest creates a hand-authored (MANUAL) row."
+    },
+    "v1CreateSuperbaCostSpResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1SuperbaCostSp"
+        }
+      },
+      "description": "CreateSuperbaCostSpResponse is the response for creating a row."
+    },
+    "v1DeleteSuperbaCostSpResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        }
+      },
+      "description": "DeleteSuperbaCostSpResponse is the response for deleting a row."
+    },
+    "v1GetSuperbaCostSpResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1SuperbaCostSp"
+        }
+      },
+      "description": "GetSuperbaCostSpResponse is the response for retrieving a row."
+    },
+    "v1ListSuperbaCostSpsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SuperbaCostSp"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        },
+        "lastSyncedAt": {
+          "type": "string",
+          "description": "Timestamp (ISO 8601) of the last Oracle sync, empty if never synced."
+        }
+      },
+      "description": "ListSuperbaCostSpsResponse is the response for listing rows."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1SuperbaCostSp": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "UUID primary key."
+        },
+        "legacySysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Legacy (Oracle) Sys Id — the upsert key for sync."
+        },
+        "shadeCode": {
+          "type": "string",
+          "description": "Shade code, stored trimmed. Matched case-insensitively to the product shade."
+        },
+        "colourName": {
+          "type": "string",
+          "description": "Superba colour name (shown for TOP 64 MB_SP_DYE)."
+        },
+        "oldValue": {
+          "type": "number",
+          "format": "double",
+          "description": "Value used by the calculation as MB cost marketing."
+        },
+        "newValue": {
+          "type": "number",
+          "format": "double",
+          "description": "Informational value only; never used in calculation. Unset when absent."
+        },
+        "source": {
+          "type": "string",
+          "description": "Provenance: \"MANUAL\", \"ORACLE\" or \"SEED\"."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the row is active."
+        },
+        "effective": {
+          "type": "boolean",
+          "description": "True when this row is the one selected for its shade code (largest\nlegacy_sys_id among active rows). Read-only, derived."
+        },
+        "audit": {
+          "$ref": "#/definitions/v1AuditInfo",
+          "description": "Audit metadata."
+        }
+      },
+      "description": "SuperbaCostSp represents one row of the Superba Cost SP master."
+    },
+    "v1SyncSuperbaCostSpsRequest": {
+      "type": "object",
+      "description": "SyncSuperbaCostSpsRequest triggers an Oracle legacy to Postgres sync. Upserts\nby legacy_sys_id: new rows are inserted, existing rows are updated (including\nMANUAL ones, whose source becomes ORACLE). Runs synchronously."
+    },
+    "v1SyncSuperbaCostSpsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "totalRows": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total rows read from the source."
+        },
+        "inserted": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows newly inserted."
+        },
+        "updated": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows whose values changed and were updated."
+        },
+        "unchanged": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows already identical to the source."
+        },
+        "skipped": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows ignored (e.g. empty shade code or missing value)."
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64",
+          "description": "Wall-clock duration of the sync, in milliseconds."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable summary."
+        }
+      },
+      "description": "SyncSuperbaCostSpsResponse reports the outcome of one sync run."
+    },
+    "v1UpdateSuperbaCostSpResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1SuperbaCostSp"
+        }
+      },
+      "description": "UpdateSuperbaCostSpResponse is the response for updating a row."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}
