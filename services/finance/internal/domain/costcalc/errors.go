@@ -14,6 +14,10 @@ var (
 	ErrMissingRMCost       = errors.New("missing RM cost for item")
 	ErrMissingUpstreamCost = errors.New("missing upstream product cost")
 	ErrMissingMBCost       = errors.New("missing MB cost lookup value")
+	// ErrMissingSuperbaCost is returned when a SUPERBA-class product has no active
+	// cost_superba_cost_sp row matching its shade code. Blocks the product
+	// (MISSING_SUPERBA_COST) rather than costing MB at a fabricated 0.
+	ErrMissingSuperbaCost = errors.New("missing superba cost sp for shade")
 	// ErrMissingSpinFixedCost is returned when no active mst_spin_fixed_cost row
 	// exists at or before the requested period. Proceeding would zero-fill the POY
 	// spin pool and silently understate fixed cost rather than fail.

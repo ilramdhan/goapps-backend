@@ -29,6 +29,9 @@ const (
 	blockReasonMissingUpstream = "MISSING_UPSTREAM_COST"
 	blockReasonMissingMBCost   = "MISSING_MB_COST"
 	blockReasonFormulaError    = "FORMULA_ERROR"
+	// blockReasonMissingSuperba marks a SUPERBA product whose shade has no active
+	// Superba Cost SP master row.
+	blockReasonMissingSuperba = "MISSING_SUPERBA_COST"
 	// blockReasonMBOwnedByBatch marks an MB product that reached a generic calc chunk as a
 	// dependency node rather than as a job target. See computeOne.
 	blockReasonMBOwnedByBatch = "MB_OWNED_BY_MB_BATCH"
@@ -428,6 +431,13 @@ func (s *Service) recordComputeError(ctx context.Context, in ProcessChunkInput, 
 		}
 		s.emitProductBlocked(ctx, in, pid, blockReasonMissingMBCost, err)
 		metrics.ProductsTotal.WithLabelValues(productStatusBlocked, blockReasonMissingMBCost).Inc()
+		return productOutcomeBlocked
+	case errors.Is(err, costcalcdom.ErrMissingSuperbaCost):
+		if e := s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonMissingSuperba, logBytes(err)); e != nil {
+			_ = e
+		}
+		s.emitProductBlocked(ctx, in, pid, blockReasonMissingSuperba, err)
+		metrics.ProductsTotal.WithLabelValues(productStatusBlocked, blockReasonMissingSuperba).Inc()
 		return productOutcomeBlocked
 	case errors.Is(err, costcalcdom.ErrFormulaEval):
 		if e := s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonFormulaError, logBytes(err)); e != nil {
