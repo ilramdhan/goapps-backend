@@ -134,6 +134,12 @@ func (l *productLoader) LoadSuperbaColours(ctx context.Context, productSysIDs []
 	return out, nil
 }
 
+// NewSuperbaColourLoader returns the default SuperbaColourLoader over db, for
+// callers outside the calc engine (e.g. the Param tab read model).
+func NewSuperbaColourLoader(db *sql.DB) SuperbaColourLoader {
+	return &productLoader{db: db}
+}
+
 // ParamCodeMBSpDye is the TOP 64 text param whose displayed value is replaced by
 // the Superba colour name for SUPERBA products (display only, never stored).
 const ParamCodeMBSpDye = "MB_SP_DYE"

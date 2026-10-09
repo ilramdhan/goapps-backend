@@ -551,7 +551,8 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp).
 		WithParamRepo(parameterRepo).
 		WithFormulaRepo(formulaRepo).
-		WithAuditSupport(costAuditLogRepo)
+		WithAuditSupport(costAuditLogRepo).
+		WithSuperbaColours(costcalc.NewSuperbaColourLoader(db.DB))
 
 	// Bulk Edit Product Params (F4, B4). productParamBulkPublisher is the SAME
 	// rmqAdapter every other job publisher above uses — nil when RabbitMQ is

@@ -10,6 +10,7 @@ import (
 
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	costcalcapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
 	cppapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	cprapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costproductrequest"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costauditlog"
@@ -26,7 +27,15 @@ type CostProductParameterHandler struct {
 	editLogRepo cprapp.ParamEditLogByLevelReader
 	paramRepo   parameter.Repository
 	formulaRepo formula.Repository
-	auditRepo   costauditlog.Repository // optional; nil = no audit
+	auditRepo   costauditlog.Repository         // optional; nil = no audit
+	superba     costcalcapp.SuperbaColourLoader // optional; nil = no display override
+}
+
+// WithSuperbaColours attaches the optional Superba colour resolver used to fill
+// RequiredParamEntry.display_value for MB_SP_DYE on SUPERBA products.
+func (h *CostProductParameterHandler) WithSuperbaColours(l costcalcapp.SuperbaColourLoader) *CostProductParameterHandler {
+	h.superba = l
+	return h
 }
 
 // NewCostProductParameterHandler wires the handler.
@@ -115,10 +124,44 @@ func (h *CostProductParameterHandler) ListProductRequiredParams(ctx context.Cont
 	for _, e := range entries {
 		out = append(out, requiredEntryToProto(e))
 	}
+	h.applySuperbaDisplay(ctx, req.ProductSysId, out)
 	return &financev1.ListProductRequiredParamsResponse{
 		Base: cppSuccessResponse("Product required params loaded"),
 		Data: out,
 	}, nil
+}
+
+// applySuperbaDisplay sets display_value = Superba colour name on the MB_SP_DYE
+// entry when the product is SUPERBA and resolves to a master row. Display only:
+// the stored value is never touched. A resolver failure degrades silently to no
+// override (the stored value still shows).
+func (h *CostProductParameterHandler) applySuperbaDisplay(ctx context.Context, productSysID int64, entries []*financev1.RequiredParamEntry) {
+	if h.superba == nil {
+		return
+	}
+	has := false
+	for _, e := range entries {
+		if e.ParamCode == costcalcapp.ParamCodeMBSpDye {
+			has = true
+			break
+		}
+	}
+	if !has {
+		return
+	}
+	colours, err := h.superba.LoadSuperbaColours(ctx, []int64{productSysID})
+	if err != nil {
+		return
+	}
+	name, ok := colours[productSysID]
+	if !ok {
+		return
+	}
+	for _, e := range entries {
+		if e.ParamCode == costcalcapp.ParamCodeMBSpDye {
+			e.DisplayValue = name
+		}
+	}
 }
 
 // UpsertProductParamValue writes a single value.
