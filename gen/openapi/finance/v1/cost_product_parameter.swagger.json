@@ -1120,6 +1120,10 @@
         },
         "filledBy": {
           "type": "string"
+        },
+        "displayValue": {
+          "type": "string",
+          "description": "Optional read-time display text that replaces/augments the stored value in\nthe UI (e.g. Superba colour name for MB_SP_DYE on SUPERBA products). Empty =\nnone. Never stored; the stored value stays editable."
         }
       },
       "description": "RequiredParamEntry surfaces a required mst_parameter row that may or may not\nyet have a value bound for the product (used by ListProductRequiredParams)."

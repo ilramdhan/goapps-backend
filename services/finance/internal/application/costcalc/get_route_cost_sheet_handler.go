@@ -106,6 +106,10 @@ func (h *GetRouteCostSheetHandler) Handle(ctx context.Context, q GetRouteCostShe
 		return nil, fmt.Errorf("load stage text params: %w", err)
 	}
 
+	if err := h.overrideSuperbaColours(ctx, stageIDs, capText); err != nil {
+		return nil, err
+	}
+
 	oilNames, err := h.loadOilGroupNames(ctx, capText)
 	if err != nil {
 		return nil, err
@@ -118,6 +122,28 @@ func (h *GetRouteCostSheetHandler) Handle(ctx context.Context, q GetRouteCostShe
 		out = append(out, stage)
 	}
 	return out, nil
+}
+
+// overrideSuperbaColours replaces capText[pid][MB_SP_DYE] with the Superba colour
+// name for SUPERBA products that resolve to a master row (display only: stored
+// params are untouched). A loader without SuperbaColourLoader (test fakes) or a
+// product without a resolved row keeps its stored value.
+func (h *GetRouteCostSheetHandler) overrideSuperbaColours(ctx context.Context, stageIDs []int64, capText map[int64]map[string]string) error {
+	cl, ok := h.svc.loader.(SuperbaColourLoader)
+	if !ok {
+		return nil
+	}
+	names, err := cl.LoadSuperbaColours(ctx, stageIDs)
+	if err != nil {
+		return fmt.Errorf("load superba names: %w", err)
+	}
+	for pid, name := range names {
+		if capText[pid] == nil {
+			capText[pid] = map[string]string{}
+		}
+		capText[pid][ParamCodeMBSpDye] = name
+	}
+	return nil
 }
 
 // oilNameParamCode is the text param holding a product's oil RM group code.

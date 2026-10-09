@@ -201,3 +201,46 @@ CAPTIVE_NO_OF_BOB = marketing_result(product,'CAPTIVE_NO_OF_BOB',period)   -- F_
 ```
 
 Test model: `internal/application/costcalc/compute_cap_pack_poy_test.go`.
+
+## 6. Row 73 MB Cost Marketing for SUPERBA (Superba Cost SP master)
+
+`MB_COST_MKT` (row 73, formula `F_YARN_MB_COST`) is overridden for SUPERBA-class products only
+(`cost_product_type.cpt_oil_class = 'SUPERBA'`) by migration `000567`:
+
+```
+F_YARN_MB_COST = IS_SUPERBA == 1 ? SUPERBA_MB_COST : (MB_RATE_MKT * MB_SP_DOZING / 100.0)
+```
+
+- `SUPERBA_MB_COST` is an **engine-injected** scope key (like `IS_POY` / `IS_ACTUAL`): no `mst_parameter`
+  row, no `formula_param` edge. Loader `LoadSuperbaCost` (`internal/application/costcalc/loader_superba.go`)
+  resolves it, `applySuperbaMBCost` (`compute.go`, right after `applyOilRate`) injects it.
+- Source: table `cost_superba_cost_sp` (master page `/finance/master/superba-cost-sps`). Link =
+  `cost_product_master.cpm_shade_code` = `shade_code`, compared `UPPER(TRIM())`, active + not deleted only.
+  Duplicate shade code → row with the largest `legacy_sys_id`. Value used = `old_value` always
+  (`new_value` is informational).
+- Missing row for a SUPERBA product → product **BLOCKED** with reason `MISSING_SUPERBA_COST` (never silent 0).
+- Non-SUPERBA products and the MB batch path (`ComputeInput.Oil == nil`) get `SUPERBA_MB_COST = 0`, are never
+  looked up or blocked, and keep the old formula arm. Test model: `compute_superba_mb_cost_test.go`.
+- Row 64 `MB_SP_DYE`: for SUPERBA products the costing export and the product-master Param tab
+  (`RequiredParamEntry.display_value`) show the master's colour name. Display only; the stored param is untouched.
+- Seed: `000566` (644 rows from `docs/SUPERBA_COST_SP.CSV`, cp1252 → UTF-8, `source='SEED'`), generator
+  `scripts/gen_superba_cost_sp_seed.py`.
+- **Sync**: `SyncSuperbaCostSps` upserts by `legacy_sys_id` and overwrites MANUAL rows (source → ORACLE). The Oracle
+  source is **not configured yet** (as of 2026-10-09 no `MGTDAT` table holds the CSV's Sys Id + OLD Value;
+  `MGT_CDM_SHADE_SUPERBA`, `MGT_CST_MKT.MKTCST_MBCOST`, `OT_STD_COST_PRODUCTS_MGT.FG_MB` were checked and ruled
+  out). Until the legacy team names the source, Sync returns "not configured" (409) and values are maintained via
+  seed + manual edit.
+- **Future superba formula**: implement the `SuperbaCostSource` seam in costcalc instead of the master lookup;
+  `F_YARN_MB_COST` does not need to change.
+- **Rollout rule**: before applying `000567` in an environment, run the coverage query below; every row returned
+  will be BLOCKED after the migration.
+
+```sql
+SELECT pm.cpm_product_sys_id, pm.cpm_product_code, pm.cpm_shade_code
+FROM cost_product_master pm
+JOIN cost_product_type pt ON pt.cpt_type_id = pm.cpm_product_type_id AND pt.cpt_oil_class = 'SUPERBA'
+WHERE NOT EXISTS (
+  SELECT 1 FROM cost_superba_cost_sp s
+  WHERE s.is_active AND s.deleted_at IS NULL
+    AND UPPER(TRIM(s.shade_code)) = UPPER(TRIM(pm.cpm_shade_code)));
+```

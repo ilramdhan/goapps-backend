@@ -109,6 +109,9 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 	if err := financev1.RegisterShadeServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register Shade gateway: %w", err)
 	}
+	if err := financev1.RegisterSuperbaCostSpServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register SuperbaCostSp gateway: %w", err)
+	}
 	if err := financev1.RegisterMBHeadServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register MBHead gateway: %w", err)
 	}

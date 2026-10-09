@@ -722,6 +722,15 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.ShadeService/ListShades":      "finance.master.shade.view",
 		"/finance.v1.ShadeService/SyncShades":      "finance.master.shade.sync",
 
+		// SuperbaCostSpService (topic superba-mb-cost-sp) — permissions seeded by
+		// iam migration 000095.
+		"/finance.v1.SuperbaCostSpService/CreateSuperbaCostSp": "finance.master.superbacostsp.create",
+		"/finance.v1.SuperbaCostSpService/GetSuperbaCostSp":    "finance.master.superbacostsp.view",
+		"/finance.v1.SuperbaCostSpService/UpdateSuperbaCostSp": "finance.master.superbacostsp.update",
+		"/finance.v1.SuperbaCostSpService/DeleteSuperbaCostSp": "finance.master.superbacostsp.delete",
+		"/finance.v1.SuperbaCostSpService/ListSuperbaCostSps":  "finance.master.superbacostsp.view",
+		"/finance.v1.SuperbaCostSpService/SyncSuperbaCostSps":  "finance.master.superbacostsp.sync",
+
 		// YarnTxWeightService (TX Weight master, backlog1 T5) — guarded FROM BIRTH
 		// by finance.master.yarntxweight.* (seeded by iam migration 000093,
 		// SUPER_ADMIN only, like the sibling yarn masters).

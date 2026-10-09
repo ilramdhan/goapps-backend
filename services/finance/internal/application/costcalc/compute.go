@@ -123,6 +123,11 @@ type ComputeInput struct {
 	// value, preserving pre-oil behavior for callers that do not supply it
 	// (e.g. mbbatch).
 	Oil *OilInput
+	// Superba is the product's resolved Superba Cost SP row (SUPERBA-class
+	// only, loaded via loader.LoadSuperbaCost). Nil for non-SUPERBA products
+	// and for callers that do not supply it (e.g. mbbatch): nothing is looked
+	// up or blocked for them.
+	Superba *SuperbaCost
 	// TxWeight holds the live mst_yarn_tx_weight rules of this product type's
 	// TX Weight group (mst_yarn_tx_weight_group, 000536), keyed by grade
 	// (AE/A9/A/B/C), loaded once per chunk via TxWeightLoader. Nil makes
@@ -237,6 +242,14 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	// cst_rm_cost row for the period, overwriting any imported CAPP value.
 	// A missing/unusable oil rate blocks the product (MISSING_RM_COST).
 	if err := applyOilRate(in, scope, zeroFilled); err != nil {
+		recordProductSpanError(span, err)
+		return nil, err
+	}
+
+	// 1a'. SUPERBA products take MB cost marketing from the Superba Cost SP
+	// master (SUPERBA_MB_COST); a missing master row blocks the product
+	// (MISSING_SUPERBA_COST). Non-SUPERBA products are untouched.
+	if err := applySuperbaMBCost(in, scope, zeroFilled); err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
 	}
@@ -394,6 +407,34 @@ func applyOilRate(in ComputeInput, scope map[string]any, zeroFilled map[string]b
 		Float64("oil_rate", rate).
 		Str("oil_rate_source", label).
 		Msg("oil rate resolved from RM group")
+	return nil
+}
+
+// applySuperbaMBCost injects the reserved SUPERBA_MB_COST key consumed by
+// F_YARN_MB_COST (migration 000567).
+//
+//   - SUPERBA-class product (in.Oil.Class == SUPERBA, the same check that sets
+//     IS_SUPERBA=1): the resolved master old_value is written and cleared from
+//     zeroFilled so cpc_param_snapshot records it. No resolved row returns
+//     ErrMissingSuperbaCost (-> BLOCKED / MISSING_SUPERBA_COST), never a 0.
+//   - Everyone else (PTY/POY/no oil class, and mbbatch where Oil is nil): the
+//     key is set to 0 so the expression never sees nil, but it stays in
+//     zeroFilled so it is kept OUT of the snapshot. No lookup, no block.
+func applySuperbaMBCost(in ComputeInput, scope map[string]any, zeroFilled map[string]bool) error {
+	if in.Oil == nil || in.Oil.Class != OilClassSuperba {
+		scope[ScopeKeySuperbaMBCost] = float64(0)
+		zeroFilled[ScopeKeySuperbaMBCost] = true
+		return nil
+	}
+	if in.Superba == nil || !in.Superba.Found {
+		shade := ""
+		if in.Superba != nil {
+			shade = in.Superba.ShadeCode
+		}
+		return fmt.Errorf("compute product %d: %w: shade %q", in.ProductSysID, costcalcdom.ErrMissingSuperbaCost, shade)
+	}
+	scope[ScopeKeySuperbaMBCost] = in.Superba.OldValue
+	delete(zeroFilled, ScopeKeySuperbaMBCost)
 	return nil
 }
 

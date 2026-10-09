@@ -127,3 +127,8 @@ func TestBulkLoad_OilContextError_AbortsChunk(t *testing.T) {
 	assert.ErrorIs(t, err, sentinel)
 	assert.Contains(t, err.Error(), "load oil context")
 }
+
+// LoadSuperbaCost reports no SUPERBA-class products.
+func (f *oilChunkLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*SuperbaCost, error) {
+	return map[int64]*SuperbaCost{}, nil
+}

@@ -29,6 +29,9 @@ const (
 	blockReasonMissingUpstream = "MISSING_UPSTREAM_COST"
 	blockReasonMissingMBCost   = "MISSING_MB_COST"
 	blockReasonFormulaError    = "FORMULA_ERROR"
+	// blockReasonMissingSuperba marks a SUPERBA product whose shade has no active
+	// Superba Cost SP master row.
+	blockReasonMissingSuperba = "MISSING_SUPERBA_COST"
 	// blockReasonMBOwnedByBatch marks an MB product that reached a generic calc chunk as a
 	// dependency node rather than as a job target. See computeOne.
 	blockReasonMBOwnedByBatch = "MB_OWNED_BY_MB_BATCH"
@@ -146,6 +149,8 @@ type loadedBundle struct {
 	// oil is the per-product oil context (LoadOilContext). Products whose type
 	// has no oil class are absent, which ComputeProduct treats as "no oil".
 	oil map[int64]*OilInput
+	// superba is the per-product Superba Cost SP resolution (SUPERBA-class only).
+	superba map[int64]*SuperbaCost
 	// txWeight is the per-product TX Weight rules (TxWeightLoader), keyed by
 	// grade. Products whose type has no rule are absent (fallback formula).
 	txWeight map[int64]map[string]TxWeightRule
@@ -173,6 +178,20 @@ func (s *Service) loadVBLossInputs(ctx context.Context, in ProcessChunkInput, up
 	return typeCodes, upstreamSnapshots, nil
 }
 
+// loadOilAndSuperba loads the per-product oil context and the Superba Cost SP
+// resolution (SUPERBA-class products only) for a chunk.
+func (s *Service) loadOilAndSuperba(ctx context.Context, products []int64) (map[int64]*OilInput, map[int64]*SuperbaCost, error) {
+	oil, err := s.loader.LoadOilContext(ctx, products)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load oil context: %w", err)
+	}
+	superba, err := s.loader.LoadSuperbaCost(ctx, products)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load superba cost: %w", err)
+	}
+	return oil, superba, nil
+}
+
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
 	routes, err := s.loader.LoadRoutesByProducts(ctx, in.Products)
 	if err != nil {
@@ -190,9 +209,9 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 	// Oil-class products resolve OIL_RATE from their oil RM group's
 	// cst_rm_cost row, so those group codes must ride the same LoadRMCosts
 	// query as the route RM codes (deduped).
-	oil, err := s.loader.LoadOilContext(ctx, in.Products)
+	oil, superba, err := s.loadOilAndSuperba(ctx, in.Products)
 	if err != nil {
-		return nil, fmt.Errorf("load oil context: %w", err)
+		return nil, err
 	}
 
 	itemCodes := oilGroupCodes(oil, collectRMCodes(routes))
@@ -271,6 +290,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		rmRateOrder:       s.loadRMRateOrder(ctx),
 		rmLandedOrder:     s.loadRMLandedOrder(ctx),
 		oil:               oil,
+		superba:           superba,
 		typeCodes:         typeCodes,
 		upstreamSnapshots: upstreamSnapshots,
 	}, nil
@@ -374,6 +394,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		RMRateOrder:      loaded.rmRateOrder,
 		RMLandedOrder:    loaded.rmLandedOrder,
 		Oil:              loaded.oil[pid],
+		Superba:          loaded.superba[pid],
 		TxWeight:         loaded.txWeight[pid],
 		VBLoss: &VBLossInheritance{
 			ProductTypeCode:        loaded.typeCodes[pid],
@@ -428,6 +449,13 @@ func (s *Service) recordComputeError(ctx context.Context, in ProcessChunkInput, 
 		}
 		s.emitProductBlocked(ctx, in, pid, blockReasonMissingMBCost, err)
 		metrics.ProductsTotal.WithLabelValues(productStatusBlocked, blockReasonMissingMBCost).Inc()
+		return productOutcomeBlocked
+	case errors.Is(err, costcalcdom.ErrMissingSuperbaCost):
+		if e := s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonMissingSuperba, logBytes(err)); e != nil {
+			_ = e
+		}
+		s.emitProductBlocked(ctx, in, pid, blockReasonMissingSuperba, err)
+		metrics.ProductsTotal.WithLabelValues(productStatusBlocked, blockReasonMissingSuperba).Inc()
 		return productOutcomeBlocked
 	case errors.Is(err, costcalcdom.ErrFormulaEval):
 		if e := s.productRepo.MarkBlocked(ctx, in.JobID, pid, blockReasonFormulaError, logBytes(err)); e != nil {

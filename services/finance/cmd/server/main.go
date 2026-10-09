@@ -45,6 +45,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/productparambulk"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	appshade "github.com/mutugading/goapps-backend/services/finance/internal/application/shade"
+	appsuperbacostsp "github.com/mutugading/goapps-backend/services/finance/internal/application/superbacostsp"
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
 	notifDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costnotification"
@@ -187,6 +188,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// oil-cost-rm-group: OIL_NAME allowed/default oil RM groups per product type.
 	oilGroupPolicy := postgres.NewOilGroupPolicyRepository(db)
 	shadeRepo := postgres.NewShadeRepository(db)
+	superbaCostSpRepo := postgres.NewSuperbaCostSpRepository(db)
 	// NOTE: legacy productRepo / prdRequestRepo wired to dropped tables — removed.
 	// Canonical Phase B (cost_product_master, cost_product_order) wiring added in S2.8-S2.10.
 
@@ -549,7 +551,8 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costProductParameterHandler := grpcdelivery.NewCostProductParameterHandler(costProductParameterApp).
 		WithParamRepo(parameterRepo).
 		WithFormulaRepo(formulaRepo).
-		WithAuditSupport(costAuditLogRepo)
+		WithAuditSupport(costAuditLogRepo).
+		WithSuperbaColours(costcalc.NewSuperbaColourLoader(db.DB))
 
 	// Bulk Edit Product Params (F4, B4). productParamBulkPublisher is the SAME
 	// rmqAdapter every other job publisher above uses — nil when RabbitMQ is
@@ -820,6 +823,19 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		log.Warn().Msg("Oracle unavailable; shade master Sync RPC will report ErrSyncNotConfigured")
 	}
 	shadeSyncHandler := appshade.NewSyncHandler(shadeOracleSource, shadeRepo, log.Logger)
+	// Superba Cost SP master. The Oracle source is not wired yet (phase P4), so
+	// the nil Source makes the Sync RPC report ErrSyncNotConfigured.
+	superbaCostSpHandler, err := grpcdelivery.NewSuperbaCostSpHandler(
+		appsuperbacostsp.NewCreateHandler(superbaCostSpRepo),
+		appsuperbacostsp.NewGetHandler(superbaCostSpRepo),
+		appsuperbacostsp.NewListHandler(superbaCostSpRepo),
+		appsuperbacostsp.NewUpdateHandler(superbaCostSpRepo),
+		appsuperbacostsp.NewDeleteHandler(superbaCostSpRepo),
+		appsuperbacostsp.NewSyncHandler(nil, superbaCostSpRepo, log.Logger),
+	)
+	if err != nil {
+		return fmt.Errorf("new superba cost sp handler: %w", err)
+	}
 	shadeHandler, err := grpcdelivery.NewShadeHandler(
 		appshade.NewCreateHandler(shadeRepo),
 		appshade.NewGetHandler(shadeRepo),
@@ -877,6 +893,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		mbBatchHandler,
 		machineHandler, interminglingHandler, spinFixedCostHandler, yarnTxWeightHandler, yarnTxWeightGroupHandler, productGradeHandler, lookupMasterHandler, yarnLookupFillHandler,
 		shadeHandler,
+		superbaCostSpHandler,
 		oracleSyncHandler, rmGroupHandler, rmCostHandler,
 		costProductTypeHandler, costRmTypeHandler, costErpHandler, costProductMasterHandler, costRouteHandler,
 		costMasterLookupHandler,
@@ -1013,6 +1030,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	lookupMasterHandler *grpcdelivery.LookupMasterHandler,
 	yarnLookupFillHandler *grpcdelivery.YarnLookupFillHandler,
 	shadeHandler *grpcdelivery.ShadeHandler,
+	superbaCostSpHandler *grpcdelivery.SuperbaCostSpHandler,
 	oracleSyncHandler *grpcdelivery.OracleSyncHandler,
 	rmGroupHandler *grpcdelivery.RMGroupHandler,
 	rmCostHandler *grpcdelivery.RMCostHandler,
@@ -1079,6 +1097,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	financev1.RegisterLookupMasterServiceServer(grpcServer.GRPCServer(), lookupMasterHandler)
 	financev1.RegisterYarnLookupFillServiceServer(grpcServer.GRPCServer(), yarnLookupFillHandler)
 	financev1.RegisterShadeServiceServer(grpcServer.GRPCServer(), shadeHandler)
+	financev1.RegisterSuperbaCostSpServiceServer(grpcServer.GRPCServer(), superbaCostSpHandler)
 	financev1.RegisterOracleSyncServiceServer(grpcServer.GRPCServer(), oracleSyncHandler)
 	financev1.RegisterRMGroupServiceServer(grpcServer.GRPCServer(), rmGroupHandler)
 	financev1.RegisterRMCostServiceServer(grpcServer.GRPCServer(), rmCostHandler)
