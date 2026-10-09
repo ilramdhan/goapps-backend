@@ -110,3 +110,30 @@ func (l *productLoader) LoadSuperbaCost(ctx context.Context, productSysIDs []int
 	}
 	return src.ResolveSuperbaCost(ctx, productSysIDs)
 }
+
+// SuperbaColourLoader is a small optional capability (like OilGroupNameLoader) so
+// existing ProductLoader fakes are unaffected: it returns the Superba colour name
+// per resolved SUPERBA product, for display-only overrides of MB_SP_DYE.
+type SuperbaColourLoader interface {
+	LoadSuperbaColours(ctx context.Context, productSysIDs []int64) (map[int64]string, error)
+}
+
+// LoadSuperbaColours implements SuperbaColourLoader. Only SUPERBA-class products
+// with a resolved master row and a non-empty colour name appear in the result.
+func (l *productLoader) LoadSuperbaColours(ctx context.Context, productSysIDs []int64) (map[int64]string, error) {
+	res, err := l.LoadSuperbaCost(ctx, productSysIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := map[int64]string{}
+	for pid, c := range res {
+		if c != nil && c.Found && c.ColourName != "" {
+			out[pid] = c.ColourName
+		}
+	}
+	return out, nil
+}
+
+// ParamCodeMBSpDye is the TOP 64 text param whose displayed value is replaced by
+// the Superba colour name for SUPERBA products (display only, never stored).
+const ParamCodeMBSpDye = "MB_SP_DYE"
