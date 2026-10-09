@@ -2,6 +2,7 @@ package costcalc
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,9 +19,9 @@ const mbCostExprV567 = "IS_SUPERBA == 1 ? SUPERBA_MB_COST : (MB_RATE_MKT * MB_SP
 func superbaCompute(ct costcalcdom.CalculationType, oil *OilInput, sb *SuperbaCost) (*ComputeOutput, error) {
 	return ComputeProduct(context.Background(), ComputeInput{
 		ProductSysID: 8010, Period: "202604", CalcType: ct, Oil: oil, Superba: sb,
-		Route:    buildOneStageRoute(8010, costroute.RmTypeItem, "RM_YARN", 1.0),
-		CAPP:     map[string]float64{"MB_RATE_MKT": 50, "MB_SP_DOZING": 4, "OIL_RATE": 5, "OPU": 2},
-		RMCosts:  map[string]RMCostRates{"RM_YARN|": {CostVal: 10}, "OILG|": {CrRate: 2.0}},
+		Route:   buildOneStageRoute(8010, costroute.RmTypeItem, "RM_YARN", 1.0),
+		CAPP:    map[string]float64{"MB_RATE_MKT": 50, "MB_SP_DOZING": 4, "OIL_RATE": 5, "OPU": 2},
+		RMCosts: map[string]RMCostRates{"RM_YARN|": {CostVal: 10}, "OILG|": {CrRate: 2.0}},
 		Formulas: []Formula{{FormulaCode: "F_YARN_MB_COST", FormulaType: "CALCULATION", Expression: mbCostExprV567,
 			ResultParamCode: "MB_COST_MKT", SortOrder: 1, InputParamCodes: []string{"MB_RATE_MKT", "MB_SP_DOZING"}}},
 		EvalCache: evaluator.NewCache(),
@@ -78,4 +79,26 @@ func TestApplySuperbaMBCost_Direct(t *testing.T) {
 	require.NoError(t, applySuperbaMBCost(ComputeInput{}, scope, zf))
 	assert.Equal(t, float64(0), scope[ScopeKeySuperbaMBCost])
 	assert.True(t, zf[ScopeKeySuperbaMBCost])
+}
+
+// TestMigration000567_MatchesFixture keeps mbCostExprV567 linked to the text
+// migration 000567 writes and guards on (parsed as text, never executed).
+func TestMigration000567_MatchesFixture(t *testing.T) {
+	const dir = "../../../migrations/postgres/000567_superba_mb_cost_formula."
+	rawUp, err := os.ReadFile(dir + "up.sql")
+	require.NoError(t, err)
+	rawDown, err := os.ReadFile(dir + "down.sql")
+	require.NoError(t, err)
+	up, down := stripSQLComments(string(rawUp)), stripSQLComments(string(rawDown))
+
+	const orig = "MB_RATE_MKT * MB_SP_DOZING / 100.0"
+	assert.Contains(t, up, "SET expression = '"+mbCostExprV567+"'")
+	assert.Contains(t, up, "AND f.expression = '"+orig+"'", "guarded on the exact 000408 text")
+	assert.Contains(t, up, "'superba_mb_cost_000567'")
+	assert.Contains(t, up, "RAISE NOTICE")
+	assert.NotContains(t, up, "RAISE EXCEPTION", "0 rows must warn, not fail")
+	assert.NotContains(t, up, "INSERT INTO formula_param", "reserved keys need no edge")
+	assert.Contains(t, down, "SET expression = '"+orig+"'")
+	assert.Contains(t, down, "f.updated_by = 'superba_mb_cost_000567'")
+	assert.Contains(t, down, "f.expression = '"+mbCostExprV567+"'")
 }
