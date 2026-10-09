@@ -133,11 +133,11 @@ func (h *GetRouteCostSheetHandler) overrideSuperbaColours(ctx context.Context, s
 	if !ok {
 		return nil
 	}
-	colours, err := cl.LoadSuperbaColours(ctx, stageIDs)
+	names, err := cl.LoadSuperbaColours(ctx, stageIDs)
 	if err != nil {
-		return fmt.Errorf("load superba colours: %w", err)
+		return fmt.Errorf("load superba names: %w", err)
 	}
-	for pid, name := range colours {
+	for pid, name := range names {
 		if capText[pid] == nil {
 			capText[pid] = map[string]string{}
 		}

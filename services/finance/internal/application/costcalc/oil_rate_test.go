@@ -97,7 +97,14 @@ func oilInput(c oilCase) ComputeInput {
 	if poy == "" {
 		poy = oilGainPOYDefault
 	}
+	// A SUPERBA product now needs its Superba Cost SP row (MISSING_SUPERBA_COST
+	// otherwise); these oil tests do not exercise MB cost, so supply a neutral one.
+	var sb *SuperbaCost
+	if c.oil != nil && c.oil.Class == OilClassSuperba {
+		sb = &SuperbaCost{ShadeCode: "TESTSHADE", Found: true}
+	}
 	return ComputeInput{
+		Superba:      sb,
 		ProductSysID: 9101,
 		Period:       "202609",
 		CalcType:     costcalcdom.CalcTypeActual,

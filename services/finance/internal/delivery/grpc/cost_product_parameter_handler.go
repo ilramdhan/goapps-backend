@@ -149,11 +149,11 @@ func (h *CostProductParameterHandler) applySuperbaDisplay(ctx context.Context, p
 	if !has {
 		return
 	}
-	colours, err := h.superba.LoadSuperbaColours(ctx, []int64{productSysID})
+	names, err := h.superba.LoadSuperbaColours(ctx, []int64{productSysID})
 	if err != nil {
 		return
 	}
-	name, ok := colours[productSysID]
+	name, ok := names[productSysID]
 	if !ok {
 		return
 	}

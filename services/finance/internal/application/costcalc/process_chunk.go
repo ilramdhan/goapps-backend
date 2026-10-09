@@ -178,6 +178,20 @@ func (s *Service) loadVBLossInputs(ctx context.Context, in ProcessChunkInput, up
 	return typeCodes, upstreamSnapshots, nil
 }
 
+// loadOilAndSuperba loads the per-product oil context and the Superba Cost SP
+// resolution (SUPERBA-class products only) for a chunk.
+func (s *Service) loadOilAndSuperba(ctx context.Context, products []int64) (map[int64]*OilInput, map[int64]*SuperbaCost, error) {
+	oil, err := s.loader.LoadOilContext(ctx, products)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load oil context: %w", err)
+	}
+	superba, err := s.loader.LoadSuperbaCost(ctx, products)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load superba cost: %w", err)
+	}
+	return oil, superba, nil
+}
+
 func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBundle, error) {
 	routes, err := s.loader.LoadRoutesByProducts(ctx, in.Products)
 	if err != nil {
@@ -195,14 +209,9 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 	// Oil-class products resolve OIL_RATE from their oil RM group's
 	// cst_rm_cost row, so those group codes must ride the same LoadRMCosts
 	// query as the route RM codes (deduped).
-	oil, err := s.loader.LoadOilContext(ctx, in.Products)
+	oil, superba, err := s.loadOilAndSuperba(ctx, in.Products)
 	if err != nil {
-		return nil, fmt.Errorf("load oil context: %w", err)
-	}
-
-	superba, err := s.loader.LoadSuperbaCost(ctx, in.Products)
-	if err != nil {
-		return nil, fmt.Errorf("load superba cost: %w", err)
+		return nil, err
 	}
 
 	itemCodes := oilGroupCodes(oil, collectRMCodes(routes))
