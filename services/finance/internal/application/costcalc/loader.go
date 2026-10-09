@@ -33,6 +33,7 @@ const (
 	loaderKindRMRateOrder     = "rm_rate_order"
 	loaderKindRMLandedOrder   = "rm_landed_order"
 	loaderKindOilContext      = "oil_context"
+	loaderKindSuperbaCost     = "superba_cost"
 	loaderKindUpstreamSnap    = "upstream_param_snapshot"
 	loaderKindProductType     = "product_type_code"
 )
@@ -278,6 +279,10 @@ type ProductLoader interface {
 	// oil RM group and its allowed set. Products whose type has no oil class
 	// are absent from the map (nil *OilInput => no oil resolution).
 	LoadOilContext(ctx context.Context, productSysIDs []int64) (map[int64]*OilInput, error)
+	// LoadSuperbaCost returns, per SUPERBA-class product only, the resolved
+	// Superba Cost SP row (SuperbaCost.Found=false when the shade has no active
+	// row). Other products are absent.
+	LoadSuperbaCost(ctx context.Context, productSysIDs []int64) (map[int64]*SuperbaCost, error)
 	// LoadUpstreamParamSnapshots returns, per upstream product, the committed
 	// cpc_param_snapshot for the period + calc type (same row filter as
 	// LoadUpstreamCosts). Products with no committed row are absent. Feeds the
@@ -299,6 +304,8 @@ type SpinPool struct {
 
 type productLoader struct {
 	db *sql.DB
+	// superba overrides the SUPERBA MB cost source; nil uses the master table.
+	superba SuperbaCostSource
 }
 
 // NewProductLoader constructs the default bulk loader implementation.

@@ -315,3 +315,8 @@ func TestComputeAndPersist_NetProdAndFixedCostEqualAcrossTypesWhenInputsMatch(t 
 		require.InDelta(t, 10.0, snapshot[ResultParamFixedCost], 1e-6, "%s: MB_FIXED_TOTAL depends only on non-cost inputs", r.CalcType())
 	}
 }
+
+// LoadSuperbaCost reports no SUPERBA-class products.
+func (f *noSharingLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*costcalc.SuperbaCost, error) {
+	return map[int64]*costcalc.SuperbaCost{}, nil
+}

@@ -252,3 +252,8 @@ func TestProcessChunk_GuardError_AbortsChunk(t *testing.T) {
 	require.True(t, errors.Is(err, sentinel))
 	require.Empty(t, resRepo.upserted, "no cost row may be written when MB membership is unknown")
 }
+
+// LoadSuperbaCost reports no SUPERBA-class products.
+func (f *mbGuardLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*SuperbaCost, error) {
+	return map[int64]*SuperbaCost{}, nil
+}

@@ -149,6 +149,8 @@ type loadedBundle struct {
 	// oil is the per-product oil context (LoadOilContext). Products whose type
 	// has no oil class are absent, which ComputeProduct treats as "no oil".
 	oil map[int64]*OilInput
+	// superba is the per-product Superba Cost SP resolution (SUPERBA-class only).
+	superba map[int64]*SuperbaCost
 	// txWeight is the per-product TX Weight rules (TxWeightLoader), keyed by
 	// grade. Products whose type has no rule are absent (fallback formula).
 	txWeight map[int64]map[string]TxWeightRule
@@ -196,6 +198,11 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 	oil, err := s.loader.LoadOilContext(ctx, in.Products)
 	if err != nil {
 		return nil, fmt.Errorf("load oil context: %w", err)
+	}
+
+	superba, err := s.loader.LoadSuperbaCost(ctx, in.Products)
+	if err != nil {
+		return nil, fmt.Errorf("load superba cost: %w", err)
 	}
 
 	itemCodes := oilGroupCodes(oil, collectRMCodes(routes))
@@ -274,6 +281,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		rmRateOrder:       s.loadRMRateOrder(ctx),
 		rmLandedOrder:     s.loadRMLandedOrder(ctx),
 		oil:               oil,
+		superba:           superba,
 		typeCodes:         typeCodes,
 		upstreamSnapshots: upstreamSnapshots,
 	}, nil
@@ -377,6 +385,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		RMRateOrder:      loaded.rmRateOrder,
 		RMLandedOrder:    loaded.rmLandedOrder,
 		Oil:              loaded.oil[pid],
+		Superba:          loaded.superba[pid],
 		TxWeight:         loaded.txWeight[pid],
 		VBLoss: &VBLossInheritance{
 			ProductTypeCode:        loaded.typeCodes[pid],

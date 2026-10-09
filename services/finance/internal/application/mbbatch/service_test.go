@@ -250,3 +250,8 @@ func TestNewMBResult_CurrencyLabel(t *testing.T) {
 	require.Equal(t, "IDR", newMBResult(1, "202607", costcalcdom.CalcTypeForecast, 900, 77, out).Currency())
 	require.Equal(t, "IDR", newMBResult(1, "202607", costcalcdom.CalcTypeSelling, 900, 77, out).Currency())
 }
+
+// LoadSuperbaCost reports no SUPERBA-class products.
+func (f *fakeLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*costcalc.SuperbaCost, error) {
+	return map[int64]*costcalc.SuperbaCost{}, nil
+}
