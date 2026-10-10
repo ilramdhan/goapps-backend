@@ -25,6 +25,13 @@ type AsyncImportHandler struct {
 	repo     domain.Repository
 	typeRepo cptdomain.Repository
 	jobRepo  costimportjob.Repository
+	autoFill MBSourceAutoFiller
+}
+
+// WithMBSourceAutoFill enables the shade-driven MB source auto-fill for each committed batch.
+func (h *AsyncImportHandler) WithMBSourceAutoFill(f MBSourceAutoFiller) *AsyncImportHandler {
+	h.autoFill = f
+	return h
 }
 
 // NewAsyncImportHandler creates a new AsyncImportHandler.
@@ -221,7 +228,7 @@ func (h *AsyncImportHandler) processBatch(
 		return success, failed, skipped, errs
 	}
 
-	_, upsertErr := h.repo.BulkCreate(ctx, batch, updatedBy)
+	created, upsertErr := h.repo.BulkCreate(ctx, batch, updatedBy)
 	if upsertErr != nil {
 		// Mark the whole mini-batch as failed.
 		for range batch {
@@ -235,6 +242,14 @@ func (h *AsyncImportHandler) processBatch(
 		return success, failed, skipped, errs
 	}
 	success += len(batch)
+	if h.autoFill != nil && len(created) > 0 {
+		ids := make([]int64, 0, len(created))
+		for _, id := range created {
+			ids = append(ids, id)
+		}
+		// After the batch is committed; best-effort, never fails the import.
+		h.autoFill.BestEffort(ctx, ids, updatedBy)
+	}
 	return success, failed, skipped, errs
 }
 

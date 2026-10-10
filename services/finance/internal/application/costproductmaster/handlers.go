@@ -35,12 +35,26 @@ type CreateCommand struct {
 type CreateHandler struct {
 	repo     domain.Repository
 	typeRepo cptdomain.Repository
+	autoFill MBSourceAutoFiller
 }
 
 // NewCreateHandler constructs a CreateHandler. typeRepo resolves the requested product
 // type so MB products can be rejected (guard E2); it must not be nil.
 func NewCreateHandler(r domain.Repository, typeRepo cptdomain.Repository) *CreateHandler {
 	return &CreateHandler{repo: r, typeRepo: typeRepo}
+}
+
+// MBSourceAutoFiller fills the MB source params (MB_SP_CODE / MB_SP_DYE ...) of products from
+// their shade. Implementations must be best-effort: they log failures and never panic or block
+// the caller on error (see mbsourceautofill.Service.BestEffort).
+type MBSourceAutoFiller interface {
+	BestEffort(ctx context.Context, productSysIDs []int64, actor string)
+}
+
+// WithMBSourceAutoFill enables the shade-driven MB source auto-fill after a successful create.
+func (h *CreateHandler) WithMBSourceAutoFill(f MBSourceAutoFiller) *CreateHandler {
+	h.autoFill = f
+	return h
 }
 
 // rejectMBType returns ErrMBProductNotManuallyCreatable when productTypeID resolves to the
@@ -85,6 +99,9 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*domain.
 	if err := h.repo.Create(ctx, p); err != nil {
 		return nil, err
 	}
+	if h.autoFill != nil {
+		h.autoFill.BestEffort(ctx, []int64{p.ProductSysID()}, cmd.ActorUserID)
+	}
 	return p, nil
 }
 
@@ -122,10 +139,21 @@ type UpdateCommand struct {
 }
 
 // UpdateHandler updates editable fields.
-type UpdateHandler struct{ repo domain.Repository }
+type UpdateHandler struct {
+	repo     domain.Repository
+	autoFill MBSourceAutoFiller
+}
 
 // NewUpdateHandler constructs an UpdateHandler.
 func NewUpdateHandler(r domain.Repository) *UpdateHandler { return &UpdateHandler{repo: r} }
+
+// WithMBSourceAutoFill enables the shade-driven MB source auto-fill after a successful update.
+// The fill only touches products whose MB_SP_CODE is still empty, so it runs whether or not
+// the shade changed and never overwrites an existing pick.
+func (h *UpdateHandler) WithMBSourceAutoFill(f MBSourceAutoFiller) *UpdateHandler {
+	h.autoFill = f
+	return h
+}
 
 // Handle executes the update.
 func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*domain.CostProductMaster, error) {
@@ -138,6 +166,9 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*domain.
 	}
 	if err := h.repo.Update(ctx, p); err != nil {
 		return nil, err
+	}
+	if h.autoFill != nil {
+		h.autoFill.BestEffort(ctx, []int64{p.ProductSysID()}, cmd.ActorUserID)
 	}
 	return p, nil
 }

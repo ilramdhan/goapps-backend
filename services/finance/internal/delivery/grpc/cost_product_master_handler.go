@@ -93,6 +93,13 @@ func NewCostProductMasterHandler(repo domain.Repository, typeRepo cptdomain.Repo
 	}, nil
 }
 
+// WithMBSourceAutoFill wires the best-effort shade-driven MB source auto-fill into the create
+// and update paths (decision Q3, 2026-10-10).
+func (h *CostProductMasterHandler) WithMBSourceAutoFill(f app.MBSourceAutoFiller) {
+	h.createHandler.WithMBSourceAutoFill(f)
+	h.updateHandler.WithMBSourceAutoFill(f)
+}
+
 // WithImportSupport wires the job repo, storage, and publisher needed for async CPM imports.
 func (h *CostProductMasterHandler) WithImportSupport(
 	jobRepo costimportjob.Repository,

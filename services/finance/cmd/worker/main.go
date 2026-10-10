@@ -22,9 +22,11 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	erpapp "github.com/mutugading/goapps-backend/services/finance/internal/application/erpintegration"
 	appmbhead "github.com/mutugading/goapps-backend/services/finance/internal/application/mbhead"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbsourceautofill"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	apprmcost "github.com/mutugading/goapps-backend/services/finance/internal/application/rmcost"
 	erpdomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/erpintegration"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbsource"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/rmcost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamclient"
@@ -138,7 +140,15 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	// during the CPP Excel import, mirroring the interactive save path's
 	// resolution (see costproductparameter.Handlers wiring in cmd/server).
 	mbSpinRepo := postgres.NewMBSpinRepository(db)
-	cpmImportHandler := costproductmaster.NewAsyncImportHandler(cpmRepo, cptRepo, costImportJobRepo)
+	cpmImportHandler := costproductmaster.NewAsyncImportHandler(cpmRepo, cptRepo, costImportJobRepo).
+		WithMBSourceAutoFill(mbsourceautofill.New( // best-effort shade-driven MB_SP_CODE/MB_SP_DYE fill after each committed batch
+			postgres.NewMBSourceAutoFillStore(db),
+			mbsource.NewResolver(
+				mbsource.NewMBSpinProvider(mbSpinRepo, postgres.NewParameterRepository(db)),
+				mbsource.NewSuperbaProvider(postgres.NewSuperbaCostSpRepository(db)),
+			),
+			postgres.NewParameterRepository(db),
+		))
 	cappImportHandler := costproductapplicableparam.NewAsyncImportHandler(cappRepo, costImportJobRepo)
 	cppImportHandler := costproductparameter.NewAsyncImportHandler(cppRepo, costImportJobRepo, mbSpinRepo).
 		WithOilGroupPolicy(postgres.NewOilGroupPolicyRepository(db)) // oil-cost-rm-group: validate OIL_NAME / default on blank

@@ -40,6 +40,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbheadbulk"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbpush"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbsourceautofill"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
 	periodlockapp "github.com/mutugading/goapps-backend/services/finance/internal/application/periodlock"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/productparambulk"
@@ -49,6 +50,7 @@ import (
 	grpcdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/grpc"
 	httpdelivery "github.com/mutugading/goapps-backend/services/finance/internal/delivery/httpdelivery"
 	notifDomain "github.com/mutugading/goapps-backend/services/finance/internal/domain/costnotification"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbsource"
 	domainshade "github.com/mutugading/goapps-backend/services/finance/internal/domain/shade"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
@@ -442,6 +444,14 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return err
 	}
+	mbSourceAutoFill := mbsourceautofill.New(
+		postgres.NewMBSourceAutoFillStore(db),
+		mbsource.NewResolver(
+			mbsource.NewMBSpinProvider(mbSpinRepo, parameterRepo),
+			mbsource.NewSuperbaProvider(superbaCostSpRepo),
+		),
+		parameterRepo,
+	)
 	costProductMasterHandler, err := grpcdelivery.NewCostProductMasterHandler(costProductMasterRepo, costProductTypeRepo)
 	if err != nil {
 		return err
@@ -450,6 +460,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// Wire async import support (storage + job repo + publisher) into CPM handler.
 	costProductMasterHandler.WithImportSupport(costImportJobRepo, storageSvc, rmqAdapter)
 	costProductMasterHandler.WithAuditSupport(costAuditLogRepo)
+	costProductMasterHandler.WithMBSourceAutoFill(mbSourceAutoFill)
 
 	// Build CostDataImportHandler (CAPP/CPP async import + export/template for CAPP/CPP/CPM).
 	cappExportH := cappapp.NewExportHandler(costProductParameterRepo)
