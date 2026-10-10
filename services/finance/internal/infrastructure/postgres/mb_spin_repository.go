@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbsource"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 )
 
@@ -545,4 +547,40 @@ func (r *MBSpinRepository) scanRow(rows *sql.Rows) (*mbspin.Entity, error) {
 
 func isMBSpinUniqueViolation(err error) bool {
 	return isPGUniqueViolation(err)
+}
+
+// FindByShades returns, per normalized shade (UPPER(TRIM)), the single live + active MB spin
+// picked by mbsource.SpinPickOrderSQL (Spinning > Boughtout > R and D, newest, id).
+// One batched query for any number of shades (implements mbsource.SpinShadeFinder).
+func (r *MBSpinRepository) FindByShades(ctx context.Context, normShades []string) (map[string]*mbspin.Entity, error) {
+	out := make(map[string]*mbspin.Entity, len(normShades))
+	if len(normShades) == 0 {
+		return out, nil
+	}
+	q := r.selectCols() + `
+		WHERE mbs_id IN (
+			SELECT DISTINCT ON (UPPER(TRIM(mbs_shade_code))) mbs_id
+			FROM mst_mb_spin
+			WHERE deleted_at IS NULL AND mbs_is_active
+			  AND COALESCE(TRIM(mbs_shade_code), '') <> ''
+			  AND UPPER(TRIM(mbs_shade_code)) = ANY($1)
+			ORDER BY ` + mbsource.SpinPickOrderSQL + `)`
+	rows, err := r.db.QueryContext(ctx, q, pq.Array(normShades))
+	if err != nil {
+		return nil, fmt.Errorf("find mb spins by shade: %w", err)
+	}
+	defer closeRows(rows)
+	for rows.Next() {
+		e, scanErr := r.scanRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		if sc := e.ShadeCode(); sc != nil {
+			out[mbsource.NormalizeShade(*sc)] = e
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate mb spins by shade: %w", err)
+	}
+	return out, nil
 }
