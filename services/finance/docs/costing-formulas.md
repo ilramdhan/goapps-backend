@@ -205,11 +205,17 @@ Test model: `internal/application/costcalc/compute_cap_pack_poy_test.go`.
 ## 6. Row 73 MB Cost Marketing for SUPERBA (Superba Cost SP master)
 
 `MB_COST_MKT` (row 73, formula `F_YARN_MB_COST`) is overridden for SUPERBA-class products only
-(`cost_product_type.cpt_oil_class = 'SUPERBA'`) by migration `000567`:
+(`cost_product_type.cpt_oil_class = 'SUPERBA'`) by migrations `000567` + `000568`:
 
 ```
-F_YARN_MB_COST = IS_SUPERBA == 1 ? SUPERBA_MB_COST : (MB_RATE_MKT * MB_SP_DOZING / 100.0)
+F_YARN_MB_COST = IS_SUPERBA == 1 ? SUPERBA_MB_COST : (((1 + WASTE_PERC) * MB_SP_DOZING) * MB_RATE_MKT / 100.0)
 ```
+
+- **Prod drift**: PROD's formula had been web-edited (admin, 2026-09-24) to
+  `((1 + WASTE_PERC) * MB_SP_DOZING) * MB_RATE_MKT / 100.0`, so `000567` (guarded on the 000408 text
+  `MB_RATE_MKT * MB_SP_DOZING / 100.0`) matched 0 rows there. `000568` rewrites both that prod text (case A) and
+  000567's output in lower envs (case B, syncing them to the waste-adjusted arm), adds the
+  `F_YARN_MB_COST -> WASTE_PERC` edge if missing, and backs up to `bak_000568_formula`.
 
 - `SUPERBA_MB_COST` is an **engine-injected** scope key (like `IS_POY` / `IS_ACTUAL`): no `mst_parameter`
   row, no `formula_param` edge. Loader `LoadSuperbaCost` (`internal/application/costcalc/loader_superba.go`)
