@@ -224,7 +224,11 @@ F_YARN_MB_COST = IS_SUPERBA == 1 ? SUPERBA_MB_COST : (((1 + WASTE_PERC) * MB_SP_
   `cost_product_master.cpm_shade_code` = `shade_code`, compared `UPPER(TRIM())`, active + not deleted only.
   Duplicate shade code → row with the largest `legacy_sys_id`. Value used = `old_value` always
   (`new_value` is informational).
-- Missing row for a SUPERBA product → product **BLOCKED** with reason `MISSING_SUPERBA_COST` (never silent 0).
+- Missing row for a SUPERBA product (shade has no active row, incl. empty shade) → **NOT blocked**: `SUPERBA_MB_COST = 0` (so `MB_COST_MKT = 0`), a new cost version is written, and a `superba cost not found for shade "X"; MB_COST_MKT = 0` warning is logged. The snapshot records `SUPERBA_MB_COST = 0` and flag `SUPERBA_MB_COST_MISSING = 1` (never written for found / non-SUPERBA products). `MISSING_SUPERBA_COST` / `ErrMissingSuperbaCost` are no longer produced (kept for label compatibility).
+- Find affected products:
+  ```sql
+  SELECT pm.cpm_product_code, pm.cpm_shade_code, pc.cpc_period, pc.cpc_calculation_type FROM cst_product_cost pc JOIN cost_product_master pm ON pm.cpm_product_sys_id = pc.cpc_product_sys_id WHERE pc.cpc_status <> 'SUPERSEDED' AND pc.cpc_param_snapshot->>'SUPERBA_MB_COST_MISSING' = '1';
+  ```
 - Non-SUPERBA products and the MB batch path (`ComputeInput.Oil == nil`) get `SUPERBA_MB_COST = 0`, are never
   looked up or blocked, and keep the old formula arm. Test model: `compute_superba_mb_cost_test.go`.
 - Row 64 `MB_SP_DYE`: for SUPERBA products the costing export and the product-master Param tab
@@ -239,7 +243,7 @@ F_YARN_MB_COST = IS_SUPERBA == 1 ? SUPERBA_MB_COST : (((1 + WASTE_PERC) * MB_SP_
 - **Future superba formula**: implement the `SuperbaCostSource` seam in costcalc instead of the master lookup;
   `F_YARN_MB_COST` does not need to change.
 - **Rollout rule**: before applying `000567` in an environment, run the coverage query below; every row returned
-  will be BLOCKED after the migration.
+  will get MB_COST_MKT = 0 (flagged SUPERBA_MB_COST_MISSING) after the migration.
 
 ```sql
 SELECT pm.cpm_product_sys_id, pm.cpm_product_code, pm.cpm_shade_code

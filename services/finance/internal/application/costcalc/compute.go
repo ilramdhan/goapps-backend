@@ -247,12 +247,9 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	}
 
 	// 1a'. SUPERBA products take MB cost marketing from the Superba Cost SP
-	// master (SUPERBA_MB_COST); a missing master row blocks the product
-	// (MISSING_SUPERBA_COST). Non-SUPERBA products are untouched.
-	if err := applySuperbaMBCost(in, scope, zeroFilled); err != nil {
-		recordProductSpanError(span, err)
-		return nil, err
-	}
+	// master (SUPERBA_MB_COST); a missing master row yields 0 + a snapshot
+	// flag (non-blocking). Non-SUPERBA products are untouched.
+	applySuperbaMBCost(in, scope, zeroFilled)
 
 	// 1b. A CALCULATED param that the formula chain consumes but no ACTIVE formula
 	// produces is still sitting in scope as the synthetic 0 that buildInitialScope
@@ -415,27 +412,37 @@ func applyOilRate(in ComputeInput, scope map[string]any, zeroFilled map[string]b
 //
 //   - SUPERBA-class product (in.Oil.Class == SUPERBA, the same check that sets
 //     IS_SUPERBA=1): the resolved master old_value is written and cleared from
-//     zeroFilled so cpc_param_snapshot records it. No resolved row returns
-//     ErrMissingSuperbaCost (-> BLOCKED / MISSING_SUPERBA_COST), never a 0.
+//     zeroFilled so cpc_param_snapshot records it. With no resolved row (shade
+//     has no active master row, or empty shade) the product is NOT blocked:
+//     SUPERBA_MB_COST = 0 is recorded explicitly, SUPERBA_MB_COST_MISSING = 1 is
+//     added to the snapshot, and a structured warning is logged (there is no
+//     per-product warnings channel in ComputeOutput).
 //   - Everyone else (PTY/POY/no oil class, and mbbatch where Oil is nil): the
 //     key is set to 0 so the expression never sees nil, but it stays in
-//     zeroFilled so it is kept OUT of the snapshot. No lookup, no block.
-func applySuperbaMBCost(in ComputeInput, scope map[string]any, zeroFilled map[string]bool) error {
+//     zeroFilled so it is kept OUT of the snapshot. No lookup, no flag.
+func applySuperbaMBCost(in ComputeInput, scope map[string]any, zeroFilled map[string]bool) {
 	if in.Oil == nil || in.Oil.Class != OilClassSuperba {
 		scope[ScopeKeySuperbaMBCost] = float64(0)
 		zeroFilled[ScopeKeySuperbaMBCost] = true
-		return nil
+		return
 	}
 	if in.Superba == nil || !in.Superba.Found {
 		shade := ""
 		if in.Superba != nil {
 			shade = in.Superba.ShadeCode
 		}
-		return fmt.Errorf("compute product %d: %w: shade %q", in.ProductSysID, costcalcdom.ErrMissingSuperbaCost, shade)
+		scope[ScopeKeySuperbaMBCost] = float64(0)
+		delete(zeroFilled, ScopeKeySuperbaMBCost)
+		scope[ScopeKeySuperbaMBCostMissing] = float64(1)
+		log.Warn().
+			Int64("product_sys_id", in.ProductSysID).
+			Str("period", in.Period).
+			Str("shade_code", shade).
+			Msg(fmt.Sprintf("superba cost not found for shade %q; MB_COST_MKT = 0", shade))
+		return
 	}
 	scope[ScopeKeySuperbaMBCost] = in.Superba.OldValue
 	delete(zeroFilled, ScopeKeySuperbaMBCost)
-	return nil
 }
 
 // injectSpinFixedCost writes the period's POY spin pool into scope, after the

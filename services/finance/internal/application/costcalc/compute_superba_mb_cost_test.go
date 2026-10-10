@@ -37,20 +37,25 @@ func TestApplySuperbaMBCost_SuperbaUsesOldValueAllCalcTypes(t *testing.T) {
 		require.NoError(t, err, string(ct))
 		assert.InDelta(t, 0.08, out.ParamSnapshot["MB_COST_MKT"], 1e-12, string(ct))
 		assert.InDelta(t, 0.08, out.ParamSnapshot[ScopeKeySuperbaMBCost], 1e-12, "recorded in snapshot "+string(ct))
+		_, flagged := out.ParamSnapshot[ScopeKeySuperbaMBCostMissing]
+		assert.False(t, flagged, "found: no missing flag")
 	}
 }
 
-func TestApplySuperbaMBCost_MissingBlocks(t *testing.T) {
+func TestApplySuperbaMBCost_MissingContinuesWithZero(t *testing.T) {
 	for name, sb := range map[string]*SuperbaCost{
-		"nil":       nil,
-		"not found": {ShadeCode: "NOPE", Found: false},
+		"nil":         nil,
+		"not found":   {ShadeCode: "NOPE", Found: false},
+		"empty shade": {ShadeCode: "", Found: false},
 	} {
-		_, err := superbaCompute(costcalcdom.CalcTypeForecast, sbTestOil, sb)
-		require.Error(t, err, name)
-		assert.ErrorIs(t, err, costcalcdom.ErrMissingSuperbaCost, name)
+		out, err := superbaCompute(costcalcdom.CalcTypeForecast, sbTestOil, sb)
+		require.NoError(t, err, name)
+		assert.InDelta(t, 0, out.ParamSnapshot["MB_COST_MKT"], 1e-12, name)
+		v, ok := out.ParamSnapshot[ScopeKeySuperbaMBCost]
+		assert.True(t, ok, name+": SUPERBA_MB_COST recorded explicitly")
+		assert.Equal(t, float64(0), v, name)
+		assert.Equal(t, float64(1), out.ParamSnapshot[ScopeKeySuperbaMBCostMissing], name)
 	}
-	_, err := superbaCompute(costcalcdom.CalcTypeForecast, sbTestOil, &SuperbaCost{ShadeCode: "NOPE"})
-	assert.ErrorContains(t, err, `"NOPE"`, "shade code in message")
 }
 
 func TestApplySuperbaMBCost_NonSuperbaUnchanged(t *testing.T) {
@@ -66,6 +71,8 @@ func TestApplySuperbaMBCost_NonSuperbaUnchanged(t *testing.T) {
 		assert.InDelta(t, 50*4/100.0, out.ParamSnapshot["MB_COST_MKT"], 1e-12, name)
 		_, inSnap := out.ParamSnapshot[ScopeKeySuperbaMBCost]
 		assert.False(t, inSnap, name+": key kept out of snapshot")
+		_, flagged := out.ParamSnapshot[ScopeKeySuperbaMBCostMissing]
+		assert.False(t, flagged, name+": no missing flag")
 		// mbbatch path / no lookup result: Oil nil, Superba nil, no block.
 		out, err = superbaCompute(costcalcdom.CalcTypeActual, oil, nil)
 		require.NoError(t, err, name)
@@ -76,7 +83,7 @@ func TestApplySuperbaMBCost_NonSuperbaUnchanged(t *testing.T) {
 func TestApplySuperbaMBCost_Direct(t *testing.T) {
 	scope := map[string]any{}
 	zf := map[string]bool{}
-	require.NoError(t, applySuperbaMBCost(ComputeInput{}, scope, zf))
+	applySuperbaMBCost(ComputeInput{}, scope, zf)
 	assert.Equal(t, float64(0), scope[ScopeKeySuperbaMBCost])
 	assert.True(t, zf[ScopeKeySuperbaMBCost])
 }

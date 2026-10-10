@@ -14,9 +14,13 @@ import (
 // deliberately NOT an mst_parameter row and has no formula_param edge.
 const ScopeKeySuperbaMBCost = "SUPERBA_MB_COST"
 
+// ScopeKeySuperbaMBCostMissing is a snapshot-only flag (1) written for SUPERBA
+// products whose shade has no active Superba Cost SP row (SUPERBA_MB_COST = 0).
+const ScopeKeySuperbaMBCostMissing = "SUPERBA_MB_COST_MISSING"
+
 // SuperbaCost is the per-product Superba Cost SP resolution for a SUPERBA-class
 // product. Found is false when the product's shade has no active master row
-// (or the product has no shade code); ComputeProduct then blocks the product.
+// (or the product has no shade code); ComputeProduct then continues with SUPERBA_MB_COST = 0.
 type SuperbaCost struct {
 	// ShadeCode is the product's cpm_shade_code as stored (trimmed), for messages.
 	ShadeCode string
