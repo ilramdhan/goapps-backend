@@ -250,3 +250,37 @@ WHERE NOT EXISTS (
   WHERE s.is_active AND s.deleted_at IS NULL
     AND UPPER(TRIM(s.shade_code)) = UPPER(TRIM(pm.cpm_shade_code)));
 ```
+
+### MB source resolver (shade-driven MB_SP_CODE / MB_SP_DYE auto-fill, 000569)
+
+The user only enters the product **shade**; the backend fills the MB source parameters.
+
+- **Where**: `internal/domain/mbsource` (resolver + providers), `internal/application/mbsourceautofill`
+  (service), hooks on product create, product update and the CPM bulk import (all best-effort: a
+  failure is logged and never fails the save), plus one-time backfill migration `000569`.
+- **Match**: `UPPER(TRIM(shade))` both sides, exact. Providers are ordered and batch-only; first hit
+  wins, so **MB spin wins over Superba** when a shade exists in both.
+- **MB spin provider**: live + active `mst_mb_spin` rows by `mbs_shade_code`. Several rows per shade
+  -> one deterministic pick: `mbs_status` Spinning > Boughtout > R and D (other/NULL last), then
+  newest (`GREATEST(created_at, updated_at)` desc), then `mbs_id`. The ORDER BY lives in
+  `mbsource.SpinPickOrderSQL` and migration 000569 repeats the same text (a test asserts equality).
+  MB_SP_CODE = ORION item code (else mb_costing, else spin id), companion `cpp_value_mb_spin_id` =
+  the picked spin, children = the same columns the Param-tab fill uses (`mbspin.NumericFillReaders` /
+  `TextFillReaders`, shared with `yarn_lookup_fill_handler`).
+- **Superba provider** (`cost_superba_cost_sp`): MB_SP_CODE = the normalized shade, MB_SP_DYE =
+  colour name; rate / dozing / other children stay empty (MB cost still comes from the
+  `IS_SUPERBA` branch above).
+- **Write rules**: only EMPTY cells; a product that already has any MB_SP_CODE value is skipped
+  entirely; locked and MB-typed products are skipped. MB_SP_CODE + its fill-group children are
+  attached (CAPP) only for products whose shade resolved. Values carry
+  `cpp_filled_by = 'auto_mb_source'` (backfill: `'backfill_mb_source_000569'`) so a future
+  "re-resolve" can find them. Values are frozen like any manual fill (no calc-time lookup; engine
+  and `mbbatch` unchanged).
+- **Fill handler**: selecting/refreshing a Superba shade in the Param tab no longer fails; when the
+  MB_SPIN lookup is NotFound the handler falls back to the Superba provider and fills MB_SP_DYE.
+- **Future merge of Superba into MB spin** (rows keyed by shade): delete `SuperbaProvider` and the
+  handler fallback; MBSpinProvider then hits first for those shades; re-resolve products whose
+  MB_SP_CODE holds a shade code (identifiable via `cpp_filled_by` and "no matching spin id") so they
+  get rate/dozing/spin id; finally drop the `IS_SUPERBA` branch of `F_YARN_MB_COST` with a guarded
+  (prod-text) formula migration, 000568-style. No per-product source is persisted, so no product
+  rewrite is required.

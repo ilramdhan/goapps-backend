@@ -577,14 +577,7 @@ func putOpt(m map[string]float64, code string, v *float64) {
 func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
 	spin, err := h.resolveMBSpinForFill(ctx, selectedKey)
 	if err != nil {
-		if errors.Is(err, mbspin.ErrNotFound) {
-			if resp, ok := h.fillFromSuperbaShade(ctx, selectedKey); ok {
-				return resp, nil
-			}
-		}
-		return &financev1.GetLookupFillValuesResponse{
-			Base: domainErrorToBaseResponse(err),
-		}, nil //nolint:nilerr // BaseResponse pattern
+		return h.mbSpinFillMiss(ctx, selectedKey, err), nil
 	}
 
 	children, err := h.paramRepo.GetByFillGroup(ctx, sourceParamCode)
@@ -620,6 +613,17 @@ func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey,
 		TextFills:    texts,
 		DisplayLabel: label,
 	}, nil
+}
+
+// mbSpinFillMiss answers an MB_SPIN fill whose key is not a spin: a Superba shade (when the
+// fallback is wired) fills the colour name, anything else keeps the original error response.
+func (h *YarnLookupFillHandler) mbSpinFillMiss(ctx context.Context, selectedKey string, err error) *financev1.GetLookupFillValuesResponse {
+	if errors.Is(err, mbspin.ErrNotFound) {
+		if resp, ok := h.fillFromSuperbaShade(ctx, selectedKey); ok {
+			return resp
+		}
+	}
+	return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}
 }
 
 // fillFromSuperbaShade answers an MB_SPIN fill for a key that is not a spin but a Superba shade.
