@@ -340,6 +340,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return fmt.Errorf("new yarn lookup fill handler: %w", err)
 	}
+	yarnLookupFillHandler.WithSuperbaFallback(mbsource.NewSuperbaProvider(superbaCostSpRepo))
 
 	// R30 — compare the live mst_lookup_master_column rows against the readers
 	// compiled into the fill handler and log any divergence. Deliberately

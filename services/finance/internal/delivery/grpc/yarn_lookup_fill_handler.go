@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/intermingling"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/machine"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbsource"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/parameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/productgrade"
@@ -254,6 +256,16 @@ type YarnLookupFillHandler struct {
 	mbSpinRepo        mbspin.Repository
 	boxBobbinRepo     boxbobbincost.Repository
 	paramRepo         parameter.Repository
+	// superbaFallback resolves a SUPERBA shade stored in MB_SP_CODE (optional; see
+	// WithSuperbaFallback).
+	superbaFallback mbsource.Provider
+}
+
+// WithSuperbaFallback lets the MB_SPIN fill resolve a Superba shade (stored in MB_SP_CODE by the
+// shade-driven auto-fill) instead of returning NotFound: it fills MB_SP_DYE with the colour name.
+func (h *YarnLookupFillHandler) WithSuperbaFallback(p mbsource.Provider) *YarnLookupFillHandler {
+	h.superbaFallback = p
+	return h
 }
 
 // NewYarnLookupFillHandler creates a new YarnLookupFillHandler.
@@ -565,6 +577,11 @@ func putOpt(m map[string]float64, code string, v *float64) {
 func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
 	spin, err := h.resolveMBSpinForFill(ctx, selectedKey)
 	if err != nil {
+		if errors.Is(err, mbspin.ErrNotFound) {
+			if resp, ok := h.fillFromSuperbaShade(ctx, selectedKey); ok {
+				return resp, nil
+			}
+		}
 		return &financev1.GetLookupFillValuesResponse{
 			Base: domainErrorToBaseResponse(err),
 		}, nil //nolint:nilerr // BaseResponse pattern
@@ -603,6 +620,40 @@ func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey,
 		TextFills:    texts,
 		DisplayLabel: label,
 	}, nil
+}
+
+// fillFromSuperbaShade answers an MB_SPIN fill for a key that is not a spin but a Superba shade.
+// Only text children the superba source knows (MB_SP_DYE) are returned; numeric children stay
+// empty (the MB cost of a Superba product comes from the IS_SUPERBA branch, not from rate/dozing).
+func (h *YarnLookupFillHandler) fillFromSuperbaShade(ctx context.Context, selectedKey string) (*financev1.GetLookupFillValuesResponse, bool) {
+	if h.superbaFallback == nil {
+		return nil, false
+	}
+	got, err := h.superbaFallback.ResolveByShades(ctx, []string{selectedKey})
+	if err != nil {
+		log.Warn().Err(err).Str("key", selectedKey).Msg("superba fallback for MB_SPIN fill failed")
+		return nil, false
+	}
+	res, ok := got[mbsource.NormalizeShade(selectedKey)]
+	if !ok {
+		return nil, false
+	}
+	texts := make(map[string]string)
+	for code, v := range res.Children {
+		if v.Text != nil {
+			texts[code] = *v.Text
+		}
+	}
+	label := selectedKey
+	if res.DyeName != "" {
+		label = fmt.Sprintf("%s — %s", selectedKey, res.DyeName)
+	}
+	return &financev1.GetLookupFillValuesResponse{
+		Base:         successResponse("Fill values retrieved (Superba shade)"),
+		NumericFills: map[string]float64{},
+		TextFills:    texts,
+		DisplayLabel: label,
+	}, true
 }
 
 // resolveMBSpinForFill resolves selectedKey to an MB Spin entity for the read
