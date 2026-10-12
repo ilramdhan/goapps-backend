@@ -82,6 +82,32 @@ func (f covUnlock) Handle(context.Context, periodlockapp.UnlockCommand) (periodl
 	return periodlockapp.UnlockResult{Lock: covPL()}, f.err
 }
 
+// spyUnlock records the UnlockCommand it receives.
+type spyUnlock struct{ got *periodlockapp.UnlockCommand }
+
+func (f spyUnlock) Handle(_ context.Context, cmd periodlockapp.UnlockCommand) (periodlockapp.UnlockResult, error) {
+	*f.got = cmd
+	return periodlockapp.UnlockResult{Lock: covPL()}, nil
+}
+
+func TestUnlockErpPeriodForwardsOverride(t *testing.T) {
+	var got periodlockapp.UnlockCommand
+	h := NewErpIntegrationGRPCHandler(ErpIntegrationDeps{Unlock: spyUnlock{got: &got}})
+	ctx := context.WithValue(context.Background(), AuthRolesKey, []string{"SUPER_ADMIN"})
+	ctx = context.WithValue(ctx, AuthUsernameKey, "root")
+	r, err := h.UnlockErpPeriod(ctx, &financev1.UnlockErpPeriodRequest{
+		Period: "202608", Reason: "emergency reopen", OverridePosted: true,
+	})
+	require.NoError(t, err)
+	assert.True(t, r.GetBase().GetIsSuccess())
+	assert.True(t, got.OverridePosted)
+	assert.True(t, got.IsSuperAdmin)
+	assert.Equal(t, "root", got.User)
+
+	assert.Equal(t, "403", erpErrBase(periodlockapp.ErrOverrideNotAllowed).GetStatusCode())
+	assert.Equal(t, "400", erpErrBase(domainperiodlock.ErrOverrideReasonTooShort).GetStatusCode())
+}
+
 type covPLGet struct{ err error }
 
 func (f covPLGet) Handle(context.Context, periodlockapp.GetQuery) (*domainperiodlock.PeriodLock, error) {
