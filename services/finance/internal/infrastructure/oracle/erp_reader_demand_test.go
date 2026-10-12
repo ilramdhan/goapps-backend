@@ -175,13 +175,17 @@ func TestErpDemandReader_SameColumns(t *testing.T) {
 
 func TestNewErpDemandReader_FailsClosed(t *testing.T) {
 	q := fakeoracle.New()
-	for _, env := range []string{"production", "PROD", " Production "} {
+	for _, env := range []string{"production", "PROD", " Production ", "goapps-production"} {
 		if _, err := oracle.NewErpDemandReader(q, "base_tables", env); !errors.Is(err, erpintegration.ErrBaseTablesInProduction) {
 			t.Errorf("env %q: expected ErrBaseTablesInProduction, got %v", env, err)
 		}
 	}
 	if _, err := oracle.NewErpDemandReader(q, "tables", "development"); !errors.Is(err, erpintegration.ErrInvalidDemandSource) {
 		t.Errorf("expected ErrInvalidDemandSource, got %v", err)
+	}
+	// The cluster sets APP_ENV from the namespace: staging allows base_tables.
+	if r, err := oracle.NewErpDemandReader(q, "base_tables", "goapps-staging"); err != nil || r.Source() != erpintegration.DemandSourceBaseTables {
+		t.Errorf("goapps-staging must allow base_tables: %v %v", r, err)
 	}
 	r, err := oracle.NewErpDemandReader(q, "", "production")
 	if err != nil || r.Source() != erpintegration.DemandSourceView {

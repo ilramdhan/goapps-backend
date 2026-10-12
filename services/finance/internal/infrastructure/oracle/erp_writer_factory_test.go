@@ -35,6 +35,8 @@ func TestNewErpWriter_Modes(t *testing.T) {
 		{"fake in staging", "FAKE", "staging", config.OracleIFConfig{}, domain.WriterModeFake, nil, true},
 		{"fake refused in production", "fake", "production", completeIF(), domain.WriterModeDisabled, ErrFakeWriterInProduction, false},
 		{"fake refused in prod alias", "fake", " PROD ", completeIF(), domain.WriterModeDisabled, ErrFakeWriterInProduction, false},
+		{"fake refused in production namespace", "fake", "goapps-production", completeIF(), domain.WriterModeDisabled, ErrFakeWriterInProduction, false},
+		{"fake in staging namespace", "fake", "goapps-staging", config.OracleIFConfig{}, domain.WriterModeFake, nil, true},
 		{"oracle without IF block", "oracle", "production", config.OracleIFConfig{Port: 1521}, domain.WriterModeDisabled, ErrOracleIFIncomplete, false},
 		{"oracle with IF block maps to disabled", "oracle", "production", completeIF(), domain.WriterModeDisabled, ErrOracleWriterUnavailable, false},
 		{"invalid mode", "live", "development", completeIF(), domain.WriterModeDisabled, ErrInvalidWriterMode, false},
