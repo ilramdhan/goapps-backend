@@ -18,6 +18,10 @@ var (
 	// period that has an ERP integration batch in status LOCKED (ERP freeze).
 	ErrUnlockBatchLocked = errors.New("period cannot be unlocked: an ERP batch for the period is LOCKED")
 
+	// ErrOverrideReasonTooShort is returned when a posted-period unlock
+	// override is requested with a reason shorter than overrideMinReasonLen.
+	ErrOverrideReasonTooShort = errors.New("override reason must be at least 10 characters")
+
 	// ErrAlreadyLocked is returned when locking a period that is already locked.
 	ErrAlreadyLocked = errors.New("period is already locked")
 

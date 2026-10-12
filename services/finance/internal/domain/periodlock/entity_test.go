@@ -94,6 +94,29 @@ func TestUnlockPostedRefused(t *testing.T) {
 	assert.Nil(t, l.UnlockedAt())
 }
 
+func TestUnlockOverridePosted(t *testing.T) {
+	l, err := NewPeriodLock("202608", CalcTypeActual, "alice", "close", t0)
+	require.NoError(t, err)
+	require.ErrorIs(t, l.Unlock("root", "emergency reopen", true, t0), ErrUnlockPostedPeriod)
+	t1 := t0.Add(time.Hour)
+	require.NoError(t, l.UnlockOverridePosted("root", "emergency reopen", t1))
+	assert.False(t, l.IsLocked())
+	assert.True(t, l.UnlockOverride())
+	assert.Equal(t, "root", l.UnlockedBy())
+	assert.Equal(t, t1, *l.UnlockedAt())
+
+	assert.ErrorIs(t, l.UnlockOverridePosted("root", "emergency reopen", t1), ErrNotLocked)
+}
+
+func TestUnlockOverridePostedValidation(t *testing.T) {
+	l, err := NewPeriodLock("202608", CalcTypeActual, "alice", "close", t0)
+	require.NoError(t, err)
+	assert.ErrorIs(t, l.UnlockOverridePosted("root", "  short  ", t0), ErrOverrideReasonTooShort)
+	assert.ErrorIs(t, l.UnlockOverridePosted("", "emergency reopen", t0), ErrUserRequired)
+	assert.True(t, l.IsLocked())
+	assert.False(t, l.UnlockOverride())
+}
+
 func TestUnlockValidation(t *testing.T) {
 	l, err := NewPeriodLock("202608", CalcTypeActual, "alice", "close", t0)
 	require.NoError(t, err)

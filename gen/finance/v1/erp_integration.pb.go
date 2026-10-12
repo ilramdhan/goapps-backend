@@ -4363,11 +4363,14 @@ func (x *LockErpPeriodResponse) GetData() *ErpPeriodLock {
 }
 
 type UnlockErpPeriodRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Period        string                 `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
-	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Period string                 `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
+	Reason string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	// SUPER_ADMIN only: unlock even when the ERP ADJ period is posted (GoApps
+	// lock only; Oracle is never touched). Requires a reason; audited.
+	OverridePosted bool `protobuf:"varint,3,opt,name=override_posted,json=overridePosted,proto3" json:"override_posted,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UnlockErpPeriodRequest) Reset() {
@@ -4412,6 +4415,13 @@ func (x *UnlockErpPeriodRequest) GetReason() string {
 		return x.Reason
 	}
 	return ""
+}
+
+func (x *UnlockErpPeriodRequest) GetOverridePosted() bool {
+	if x != nil {
+		return x.OverridePosted
+	}
+	return false
 }
 
 type UnlockErpPeriodResponse struct {
@@ -6133,12 +6143,13 @@ const file_finance_v1_erp_integration_proto_rawDesc = "" +
 	"\x18\xe8\aR\x06reason\"s\n" +
 	"\x15LockErpPeriodResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
-	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.ErpPeriodLockR\x04data\"v\n" +
+	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.ErpPeriodLockR\x04data\"\x9f\x01\n" +
 	"\x16UnlockErpPeriodRequest\x128\n" +
 	"\x06period\x18\x01 \x01(\tB \xbaH\x1dr\x1b2\x19^[0-9]{4}(0[1-9]|1[0-2])$R\x06period\x12\"\n" +
 	"\x06reason\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\n" +
-	"\x18\xe8\aR\x06reason\"u\n" +
+	"\x18\xe8\aR\x06reason\x12'\n" +
+	"\x0foverride_posted\x18\x03 \x01(\bR\x0eoverridePosted\"u\n" +
 	"\x17UnlockErpPeriodResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12-\n" +
 	"\x04data\x18\x02 \x01(\v2\x19.finance.v1.ErpPeriodLockR\x04data\"S\n" +

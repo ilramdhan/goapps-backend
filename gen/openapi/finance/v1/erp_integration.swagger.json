@@ -1534,6 +1534,10 @@
       "properties": {
         "reason": {
           "type": "string"
+        },
+        "overridePosted": {
+          "type": "boolean",
+          "description": "SUPER_ADMIN only: unlock even when the ERP ADJ period is posted (GoApps\nlock only; Oracle is never touched). Requires a reason; audited."
         }
       }
     },

@@ -247,6 +247,63 @@ func TestUnlockPostedRefused(t *testing.T) {
 	assert.True(t, locked)
 }
 
+func TestUnlockOverridePostedSuperAdmin(t *testing.T) {
+	ctx := context.Background()
+	repo, audit := lockedRepo(t), &spyAudit{}
+	res, err := newUnlock(repo, StaticAdjPostedProbe{Posted: true}, audit).Handle(ctx, UnlockCommand{
+		Period: "202608", User: "root", Reason: "emergency reopen", OverridePosted: true, IsSuperAdmin: true,
+	})
+	require.NoError(t, err)
+	assert.False(t, res.Lock.IsLocked())
+	assert.True(t, res.Lock.UnlockOverride())
+	locked, _ := repo.IsLocked(ctx, "202608", domain.CalcTypeActual)
+	assert.False(t, locked)
+
+	require.Len(t, audit.events, 1)
+	assert.Equal(t, auditdomain.OpErpPeriodUnlock, audit.events[0].Operation)
+	var after lockSnapshot
+	require.NoError(t, json.Unmarshal([]byte(audit.events[0].AfterData), &after))
+	require.NotNil(t, after.OverridePosted)
+	assert.True(t, *after.OverridePosted)
+	require.NotNil(t, after.AdjPosted)
+	assert.True(t, *after.AdjPosted)
+}
+
+func TestUnlockOverrideNotPostedIsNormalUnlock(t *testing.T) {
+	repo, audit := lockedRepo(t), &spyAudit{}
+	res, err := newUnlock(repo, StaticAdjPostedProbe{}, audit).Handle(context.Background(), UnlockCommand{
+		Period: "202608", User: "bob", Reason: "r", OverridePosted: true,
+	})
+	require.NoError(t, err)
+	assert.False(t, res.Lock.UnlockOverride())
+	var after lockSnapshot
+	require.NoError(t, json.Unmarshal([]byte(audit.events[0].AfterData), &after))
+	assert.Nil(t, after.OverridePosted)
+}
+
+func TestUnlockOverrideRequiresSuperAdmin(t *testing.T) {
+	ctx := context.Background()
+	repo, audit := lockedRepo(t), &spyAudit{}
+	_, err := newUnlock(repo, StaticAdjPostedProbe{Posted: true}, audit).Handle(ctx, UnlockCommand{
+		Period: "202608", User: "bob", Reason: "emergency reopen", OverridePosted: true,
+	})
+	assert.ErrorIs(t, err, ErrOverrideNotAllowed)
+	assert.Zero(t, repo.unlockCalls)
+	assert.Empty(t, audit.events)
+	locked, _ := repo.IsLocked(ctx, "202608", domain.CalcTypeActual)
+	assert.True(t, locked)
+}
+
+func TestUnlockOverrideBatchLockedRefused(t *testing.T) {
+	repo := lockedRepo(t)
+	repo.batchLocked = true
+	_, err := newUnlock(repo, StaticAdjPostedProbe{Posted: true}, nil).Handle(context.Background(), UnlockCommand{
+		Period: "202608", User: "root", Reason: "emergency reopen", OverridePosted: true, IsSuperAdmin: true,
+	})
+	assert.ErrorIs(t, err, domain.ErrUnlockBatchLocked)
+	assert.Zero(t, repo.unlockCalls)
+}
+
 func TestUnlockStaticPostedProbeRefuses(t *testing.T) {
 	repo := lockedRepo(t)
 	_, err := newUnlock(repo, StaticAdjPostedProbe{Posted: true}, nil).Handle(context.Background(),

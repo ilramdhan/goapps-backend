@@ -109,12 +109,14 @@ func erpErrBase(err error) *commonv1.BaseResponse {
 	case errors.Is(err, domain.ErrBatchNotFound):
 		return NotFoundResponse(err.Error())
 	case errors.Is(err, erpapp.ErrAckPermissionDenied), errors.Is(err, erpapp.ErrAdjPermissionDenied),
-		errors.Is(err, erpapp.ErrValuatePermissionDenied), errors.Is(err, erpapp.ErrPushPermissionDenied):
+		errors.Is(err, erpapp.ErrValuatePermissionDenied), errors.Is(err, erpapp.ErrPushPermissionDenied),
+		errors.Is(err, periodlockapp.ErrOverrideNotAllowed):
 		return ErrorResponse("403", err.Error())
 	case errors.Is(err, domain.ErrInvalidBatchPeriod), errors.Is(err, domain.ErrInvalidBatchMode),
 		errors.Is(err, domain.ErrInvalidBatchStatus), errors.Is(err, domain.ErrActorRequired), errors.Is(err, domain.ErrInvalidSchedule),
 		errors.Is(err, erpapp.ErrInvalidPeriod), errors.Is(err, erpapp.ErrAckHashMismatch),
-		errors.Is(err, domain.ErrConfirmMismatch), errors.Is(err, domain.ErrPreviewRequired):
+		errors.Is(err, domain.ErrConfirmMismatch), errors.Is(err, domain.ErrPreviewRequired),
+		errors.Is(err, domainperiodlock.ErrOverrideReasonTooShort):
 		return BadRequestResponse(err.Error())
 	case errors.Is(err, domainperiodlock.ErrPeriodLocked), errors.Is(err, erpapp.ErrStepNotAllowed),
 		errors.Is(err, domain.ErrFeatureDisabled), errors.Is(err, domain.ErrShadowNotPushable),
@@ -362,7 +364,10 @@ func (h *ErpIntegrationHandler) LockErpPeriod(ctx context.Context, req *financev
 
 // UnlockErpPeriod unlocks a period (refused while ADJ heads are posted).
 func (h *ErpIntegrationHandler) UnlockErpPeriod(ctx context.Context, req *financev1.UnlockErpPeriodRequest) (*financev1.UnlockErpPeriodResponse, error) {
-	r, err := h.d.Unlock.Handle(ctx, periodlockapp.UnlockCommand{Period: req.GetPeriod(), User: erpActor(ctx), Reason: req.GetReason()})
+	r, err := h.d.Unlock.Handle(ctx, periodlockapp.UnlockCommand{
+		Period: req.GetPeriod(), User: erpActor(ctx), Reason: req.GetReason(),
+		OverridePosted: req.GetOverridePosted(), IsSuperAdmin: IsSuperAdmin(ctx),
+	})
 	if err != nil {
 		return &financev1.UnlockErpPeriodResponse{Base: erpErrBase(err)}, nil
 	}

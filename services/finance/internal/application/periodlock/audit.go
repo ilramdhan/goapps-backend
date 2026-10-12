@@ -39,6 +39,9 @@ type lockSnapshot struct {
 	UnlockedBy    string     `json:"unlocked_by,omitempty"`
 	UnlockReason  string     `json:"unlock_reason,omitempty"`
 	RepushFlagged *int64     `json:"repush_flagged,omitempty"`
+	// Set only on the SUPER_ADMIN posted-period override path.
+	OverridePosted *bool `json:"override_posted,omitempty"`
+	AdjPosted      *bool `json:"adj_posted,omitempty"`
 }
 
 func snapshotOf(l *domain.PeriodLock) *lockSnapshot {

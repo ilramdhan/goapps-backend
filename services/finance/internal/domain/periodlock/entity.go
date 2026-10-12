@@ -19,6 +19,9 @@ import (
 // imports from other domains.
 const CalcTypeActual = "ACTUAL"
 
+// overrideMinReasonLen matches UnlockErpPeriodRequest.reason min_len.
+const overrideMinReasonLen = 10
+
 // maxUserLen mirrors cpl_locked_by / cpl_unlocked_by VARCHAR(64).
 const maxUserLen = 64
 
@@ -51,6 +54,8 @@ type PeriodLock struct {
 	unlockedAt   *time.Time
 	unlockedBy   string
 	unlockReason string
+	// unlockOverride is set by UnlockOverridePosted (not persisted; audit only).
+	unlockOverride bool
 }
 
 // NewPeriodLock creates a new, locked PeriodLock.
@@ -141,8 +146,35 @@ func (l *PeriodLock) Unlock(user, reason string, adjPosted bool, now time.Time) 
 	l.unlockedAt = &t
 	l.unlockedBy = user
 	l.unlockReason = reason
+	l.unlockOverride = false
 	return nil
 }
+
+// UnlockOverridePosted soft-unlocks the period even when the ERP ADJ is
+// posted (SUPER_ADMIN emergency override; GoApps lock only, Oracle is never
+// touched). It still requires the period to be locked and a reason of at
+// least overrideMinReasonLen characters.
+func (l *PeriodLock) UnlockOverridePosted(user, reason string, now time.Time) error {
+	if !l.IsLocked() {
+		return ErrNotLocked
+	}
+	user, reason, err := validateActor(user, reason)
+	if err != nil {
+		return err
+	}
+	if len(reason) < overrideMinReasonLen {
+		return ErrOverrideReasonTooShort
+	}
+	t := now
+	l.unlockedAt = &t
+	l.unlockedBy = user
+	l.unlockReason = reason
+	l.unlockOverride = true
+	return nil
+}
+
+// UnlockOverride reports whether the last unlock used UnlockOverridePosted.
+func (l *PeriodLock) UnlockOverride() bool { return l.unlockOverride }
 
 // IsLocked reports whether the lock is in force.
 func (l *PeriodLock) IsLocked() bool { return l.unlockedAt == nil }

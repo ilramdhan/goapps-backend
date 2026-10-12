@@ -14,12 +14,20 @@ import (
 // unlock fails closed rather than assume "not posted".
 var ErrAdjProbeNotConfigured = errors.New("period unlock: ADJ posted probe not configured")
 
+// ErrOverrideNotAllowed is returned when a posted-period unlock override is
+// requested by a non-SUPER_ADMIN caller.
+var ErrOverrideNotAllowed = errors.New("posted-period unlock override requires SUPER_ADMIN")
+
 // UnlockCommand unlocks (period, ACTUAL).
 type UnlockCommand struct {
 	Period   string
 	CalcType string // "" defaults to ACTUAL
 	User     string
 	Reason   string
+	// OverridePosted asks to unlock even when the ERP ADJ is posted (GoApps
+	// lock only; Oracle is never touched). Requires IsSuperAdmin.
+	OverridePosted bool
+	IsSuperAdmin   bool
 }
 
 // UnlockResult is the unlocked lock plus the number of ERP batches that were
@@ -84,7 +92,8 @@ func (h *UnlockHandler) Handle(ctx context.Context, cmd UnlockCommand) (UnlockRe
 	if err != nil {
 		return UnlockResult{}, fmt.Errorf("period unlock: ADJ posted probe: %w", err)
 	}
-	if err := lock.Unlock(cmd.User, cmd.Reason, posted, h.now().UTC()); err != nil {
+	override, err := h.applyUnlock(lock, cmd, posted)
+	if err != nil {
 		return UnlockResult{}, err
 	}
 
@@ -94,8 +103,25 @@ func (h *UnlockHandler) Handle(ctx context.Context, cmd UnlockCommand) (UnlockRe
 	}
 	after := snapshotOf(lock)
 	after.RepushFlagged = &flagged
+	if override {
+		yes := true
+		after.OverridePosted = &yes
+		after.AdjPosted = &yes
+	}
 	emitAudit(ctx, h.audit, auditdomain.OpErpPeriodUnlock, lock.Period(), lock.UnlockedBy(), before, after)
 	return UnlockResult{Lock: lock, RepushFlagged: flagged}, nil
+}
+
+// applyUnlock unlocks the entity. A posted period is unlocked only through
+// the SUPER_ADMIN override (override=true); otherwise Unlock refuses it.
+func (h *UnlockHandler) applyUnlock(lock *domain.PeriodLock, cmd UnlockCommand, posted bool) (override bool, err error) {
+	if posted && cmd.OverridePosted {
+		if !cmd.IsSuperAdmin {
+			return false, ErrOverrideNotAllowed
+		}
+		return true, lock.UnlockOverridePosted(cmd.User, cmd.Reason, h.now().UTC())
+	}
+	return false, lock.Unlock(cmd.User, cmd.Reason, posted, h.now().UTC())
 }
 
 // StaticAdjPostedProbe is the stand-in AdjPostedProbe used until the
