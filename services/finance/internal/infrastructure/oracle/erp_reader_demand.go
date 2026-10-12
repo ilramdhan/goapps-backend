@@ -94,7 +94,7 @@ func NewErpDemandReader(q ReadOnlyQuerier, source, appEnv string) (*ErpDemandRea
 	if err != nil {
 		return nil, err
 	}
-	if src == erpintegration.DemandSourceBaseTables && productionEnvs[strings.ToLower(strings.TrimSpace(appEnv))] {
+	if src == erpintegration.DemandSourceBaseTables && isProductionEnv(appEnv) {
 		return nil, erpintegration.ErrBaseTablesInProduction
 	}
 	return &ErpDemandReader{q: q, source: src}, nil

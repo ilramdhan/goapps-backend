@@ -24,8 +24,15 @@ var (
 	ErrOracleWriterUnavailable = errors.New("oracle: real oracle writer not available before P8-T2")
 )
 
-// productionEnvs are the app.env values that refuse the fake writer.
-var productionEnvs = map[string]bool{"production": true, "prod": true}
+// productionEnvs are the app.env values treated as production (fake writer
+// and base_tables demand refused). The cluster sets APP_ENV from
+// metadata.namespace, so the production namespace name is listed too.
+var productionEnvs = map[string]bool{"production": true, "prod": true, "goapps-production": true}
+
+// isProductionEnv reports whether appEnv names a production environment.
+func isProductionEnv(appEnv string) bool {
+	return productionEnvs[strings.ToLower(strings.TrimSpace(appEnv))]
+}
 
 // NewErpWriter returns the writer for erp.WriterMode and the mode actually in
 // effect. Fallbacks to disabled are logged at error level and returned as an
@@ -46,7 +53,7 @@ func NewErpWriter(erp config.ErpIntegrationConfig, ifCfg config.OracleIFConfig, 
 	}
 	switch mode {
 	case domain.WriterModeFake:
-		if productionEnvs[strings.ToLower(strings.TrimSpace(appEnv))] {
+		if isProductionEnv(appEnv) {
 			return disabled(ErrFakeWriterInProduction)
 		}
 		logger.Warn().Str("effective_mode", string(mode)).Msg("erp writer: fake writer active (in-memory, no Oracle)")
