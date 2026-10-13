@@ -163,6 +163,9 @@ type RMDetailSummary struct {
 	UnitCost     float64 `json:"unit_cost"`
 	Ratio        float64 `json:"ratio"`
 	Contribution float64 `json:"contribution"`
+	// Denier and RatioSource are only set for DENIER ratio-mode products.
+	Denier      float64 `json:"denier,omitempty"`
+	RatioSource string  `json:"ratio_source,omitempty"`
 }
 
 // AuditHistoryRepository persists AuditHistoryEntry rows.

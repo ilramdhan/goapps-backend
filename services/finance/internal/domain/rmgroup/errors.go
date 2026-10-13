@@ -14,6 +14,9 @@ var (
 	// ErrAlreadyDeleted is returned when attempting to modify a soft-deleted group.
 	ErrAlreadyDeleted = errors.New("rm group is already deleted")
 
+	// ErrInvalidDenier is returned when a denier is set to a value that is not > 0.
+	ErrInvalidDenier = errors.New("invalid denier: must be greater than 0")
+
 	// ErrEmptyCode is returned when the group code is empty.
 	ErrEmptyCode = errors.New("rm group code cannot be empty")
 

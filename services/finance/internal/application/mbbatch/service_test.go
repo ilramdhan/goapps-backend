@@ -127,6 +127,17 @@ func (f *fakeLoader) LoadProductTypeCodes(context.Context, []int64) (map[int64]s
 	return map[int64]string{}, nil
 }
 
+// LoadProductRMRatioModes reports no modes, so every product stays INPUT
+// (legacy route-ratio behavior).
+func (f *fakeLoader) LoadProductRMRatioModes(context.Context, []int64) (map[int64]string, error) {
+	return map[int64]string{}, nil
+}
+
+// LoadRMGroupDeniers reports no group deniers.
+func (f *fakeLoader) LoadRMGroupDeniers(context.Context, []string) (map[string]float64, error) {
+	return map[string]float64{}, nil
+}
+
 func (f *fakeLoader) LoadSellingSnapshots(context.Context, []int64, string) (map[int64]map[string]float64, error) {
 	return map[int64]map[string]float64{}, nil
 }

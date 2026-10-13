@@ -11,6 +11,8 @@ import (
 type CreateCommand struct {
 	TypeCode string
 	TypeName string
+	// RMRatioMode is INPUT|DENIER; empty defaults to INPUT.
+	RMRatioMode string
 }
 
 // CreateHandler creates a new CostProductType.
@@ -21,7 +23,7 @@ func NewCreateHandler(r domain.Repository) *CreateHandler { return &CreateHandle
 
 // Handle executes the create.
 func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*domain.CostProductType, error) {
-	t, err := domain.New(cmd.TypeCode, cmd.TypeName)
+	t, err := domain.New(cmd.TypeCode, cmd.TypeName, cmd.RMRatioMode)
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +52,8 @@ type UpdateCommand struct {
 	TypeID   int32
 	TypeName string
 	IsActive bool
+	// RMRatioMode is INPUT|DENIER; empty keeps the existing value.
+	RMRatioMode string
 }
 
 // UpdateHandler updates a CostProductType.
@@ -64,7 +68,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*domain.
 	if err != nil {
 		return nil, err
 	}
-	if err := t.Update(cmd.TypeName, cmd.IsActive); err != nil {
+	if err := t.Update(cmd.TypeName, cmd.IsActive, cmd.RMRatioMode); err != nil {
 		return nil, err
 	}
 	if err := h.repo.Update(ctx, t); err != nil {

@@ -403,6 +403,8 @@ type RMGroupHead struct {
 	// group is selectable as an OIL_NAME option (lookup master RM_GROUP_OIL) and
 	// its per-period rate drives OIL_RATE in the costing engine.
 	IsOilGroup bool `protobuf:"varint,22,opt,name=is_oil_group,json=isOilGroup,proto3" json:"is_oil_group,omitempty"`
+	// Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT.
+	Denier float64 `protobuf:"fixed64,24,opt,name=denier,proto3" json:"denier,omitempty"`
 	// Carry-forward provenance of the per-period values overlaid on this head
 	// (only meaningful when the head is read for a specific period).
 	// Empty = an exact row exists for the requested period; "ANCHOR" = values
@@ -594,6 +596,13 @@ func (x *RMGroupHead) GetIsOilGroup() bool {
 		return x.IsOilGroup
 	}
 	return false
+}
+
+func (x *RMGroupHead) GetDenier() float64 {
+	if x != nil {
+		return x.Denier
+	}
+	return 0
 }
 
 func (x *RMGroupHead) GetInheritedFromPeriod() string {
@@ -1123,7 +1132,9 @@ type CreateRMGroupRequest struct {
 	// V2: Marketing flag.
 	MarketingFlag RMMarketingFlag `protobuf:"varint,12,opt,name=marketing_flag,json=marketingFlag,proto3,enum=finance.v1.RMMarketingFlag" json:"marketing_flag,omitempty"`
 	// Mark the new group as an oil group (global, not per period). Defaults to false.
-	IsOilGroup    bool `protobuf:"varint,13,opt,name=is_oil_group,json=isOilGroup,proto3" json:"is_oil_group,omitempty"`
+	IsOilGroup bool `protobuf:"varint,13,opt,name=is_oil_group,json=isOilGroup,proto3" json:"is_oil_group,omitempty"`
+	// Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT.
+	Denier        *float64 `protobuf:"fixed64,14,opt,name=denier,proto3,oneof" json:"denier,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1247,6 +1258,13 @@ func (x *CreateRMGroupRequest) GetIsOilGroup() bool {
 		return x.IsOilGroup
 	}
 	return false
+}
+
+func (x *CreateRMGroupRequest) GetDenier() float64 {
+	if x != nil && x.Denier != nil {
+		return *x.Denier
+	}
+	return 0
 }
 
 // Create response.
@@ -1471,7 +1489,9 @@ type UpdateRMGroupRequest struct {
 	// New oil group flag (head-level, global — applies to all periods). Absent
 	// leaves it unchanged. Un-flagging a group still referenced by product
 	// OIL_NAME values is rejected by the backend (ErrOilGroupInUse).
-	IsOilGroup    *bool `protobuf:"varint,27,opt,name=is_oil_group,json=isOilGroup,proto3,oneof" json:"is_oil_group,omitempty"`
+	IsOilGroup *bool `protobuf:"varint,27,opt,name=is_oil_group,json=isOilGroup,proto3,oneof" json:"is_oil_group,omitempty"`
+	// Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT.
+	Denier        *float64 `protobuf:"fixed64,28,opt,name=denier,proto3,oneof" json:"denier,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1693,6 +1713,13 @@ func (x *UpdateRMGroupRequest) GetIsOilGroup() bool {
 		return *x.IsOilGroup
 	}
 	return false
+}
+
+func (x *UpdateRMGroupRequest) GetDenier() float64 {
+	if x != nil && x.Denier != nil {
+		return *x.Denier
+	}
+	return 0
 }
 
 // Update response.
@@ -3915,7 +3942,8 @@ var File_finance_v1_rm_group_proto protoreflect.FileDescriptor
 const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\n" +
 	"\x19finance/v1/rm_group.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xeb\t\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\x83\n" +
+	"\n" +
 	"\vRMGroupHead\x12\"\n" +
 	"\rgroup_head_id\x18\x01 \x01(\tR\vgroupHeadId\x12\x1d\n" +
 	"\n" +
@@ -3942,7 +3970,8 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x0evaluation_flag\x18\x14 \x01(\x0e2\x1b.finance.v1.RMValuationFlagR\rvaluationFlag\x12B\n" +
 	"\x0emarketing_flag\x18\x15 \x01(\x0e2\x1b.finance.v1.RMMarketingFlagR\rmarketingFlag\x12 \n" +
 	"\fis_oil_group\x18\x16 \x01(\bR\n" +
-	"isOilGroup\x122\n" +
+	"isOilGroup\x12\x16\n" +
+	"\x06denier\x18\x18 \x01(\x01R\x06denier\x122\n" +
 	"\x15inherited_from_period\x18\x17 \x01(\tR\x13inheritedFromPeriodB\x15\n" +
 	"\x13_init_val_valuationB\x15\n" +
 	"\x13_init_val_marketingB\x16\n" +
@@ -4009,7 +4038,7 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12/\n" +
 	"\x14owning_group_head_id\x18\x02 \x01(\tR\x11owningGroupHeadId\x123\n" +
 	"\x16owning_group_detail_id\x18\x03 \x01(\tR\x13owningGroupDetailId\x12*\n" +
-	"\x11owning_group_code\x18\x04 \x01(\tR\x0fowningGroupCode\"\xd0\x06\n" +
+	"\x11owning_group_code\x18\x04 \x01(\tR\x0fowningGroupCode\"\x88\a\n" +
 	"\x14CreateRMGroupRequest\x12E\n" +
 	"\n" +
 	"group_code\x18\x01 \x01(\tB&\xbaH#r!\x10\x01\x18\x1e2\x1b^[A-Z0-9][A-Z0-9 \\-]{0,29}$R\tgroupCode\x12)\n" +
@@ -4028,10 +4057,12 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x0evaluation_flag\x18\v \x01(\x0e2\x1b.finance.v1.RMValuationFlagR\rvaluationFlag\x12B\n" +
 	"\x0emarketing_flag\x18\f \x01(\x0e2\x1b.finance.v1.RMMarketingFlagR\rmarketingFlag\x12 \n" +
 	"\fis_oil_group\x18\r \x01(\bR\n" +
-	"isOilGroupB\x19\n" +
+	"isOilGroup\x12+\n" +
+	"\x06denier\x18\x0e \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x03R\x06denier\x88\x01\x01B\x19\n" +
 	"\x17_marketing_freight_rateB\x1d\n" +
 	"\x1b_marketing_anti_dumping_pctB\x1a\n" +
-	"\x18_marketing_default_value\"q\n" +
+	"\x18_marketing_default_valueB\t\n" +
+	"\a_denier\"q\n" +
 	"\x15CreateRMGroupResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
 	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.RMGroupHeadR\x04data\"|\n" +
@@ -4042,7 +4073,7 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\a_period\"y\n" +
 	"\x12GetRMGroupResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x126\n" +
-	"\x04data\x18\x02 \x01(\v2\".finance.v1.RMGroupHeadWithDetailsR\x04data\"\x84\x10\n" +
+	"\x04data\x18\x02 \x01(\v2\".finance.v1.RMGroupHeadWithDetailsR\x04data\"\xbc\x10\n" +
 	"\x14UpdateRMGroupRequest\x12,\n" +
 	"\rgroup_head_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vgroupHeadId\x12,\n" +
 	"\n" +
@@ -4075,7 +4106,8 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x06period\x18\x1a \x01(\tB\x11\xbaH\x0er\f2\n" +
 	"^[0-9]{6}$R\x06period\x12%\n" +
 	"\fis_oil_group\x18\x1b \x01(\bH\x12R\n" +
-	"isOilGroup\x88\x01\x01B\r\n" +
+	"isOilGroup\x88\x01\x01\x12+\n" +
+	"\x06denier\x18\x1c \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x13R\x06denier\x88\x01\x01B\r\n" +
 	"\v_group_nameB\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
@@ -4097,7 +4129,8 @@ const file_finance_v1_rm_group_proto_rawDesc = "" +
 	"\x18_marketing_default_valueB\x11\n" +
 	"\x0f_valuation_flagB\x11\n" +
 	"\x0f_marketing_flagB\x0f\n" +
-	"\r_is_oil_group\"q\n" +
+	"\r_is_oil_groupB\t\n" +
+	"\a_denier\"q\n" +
 	"\x15UpdateRMGroupResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12+\n" +
 	"\x04data\x18\x02 \x01(\v2\x17.finance.v1.RMGroupHeadR\x04data\"D\n" +

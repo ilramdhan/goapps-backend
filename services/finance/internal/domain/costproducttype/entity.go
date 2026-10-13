@@ -17,7 +17,28 @@ var (
 	ErrInvalidTypeCode = errors.New("invalid type_code")
 	// ErrInvalidTypeName is returned for invalid type_name (1-100 chars).
 	ErrInvalidTypeName = errors.New("invalid type_name")
+	// ErrInvalidRMRatioMode is returned for an rm_ratio_mode outside INPUT/DENIER.
+	ErrInvalidRMRatioMode = errors.New("rm_ratio_mode must be INPUT or DENIER")
 )
+
+// RM ratio modes mirror cost_product_type.cpt_rm_ratio_mode (CHECK constraint).
+const (
+	// RMRatioModeInput takes the RM ratio from the product-parameter input.
+	RMRatioModeInput = "INPUT"
+	// RMRatioModeDenier derives the RM ratio from the RM group head denier.
+	RMRatioModeDenier = "DENIER"
+)
+
+// NormalizeRMRatioMode trims/uppercases v and validates it. Empty yields "" (caller decides default).
+func NormalizeRMRatioMode(v string) (string, error) {
+	v = strings.ToUpper(strings.TrimSpace(v))
+	switch v {
+	case "", RMRatioModeInput, RMRatioModeDenier:
+		return v, nil
+	default:
+		return "", ErrInvalidRMRatioMode
+	}
+}
 
 var typeCodePattern = regexp.MustCompile(`^[A-Z][A-Z0-9]*$`)
 
@@ -31,10 +52,13 @@ type CostProductType struct {
 	updatedAt time.Time
 	// oilClass is cpt_oil_class: PTY / POY / SUPERBA, "" = no oil.
 	oilClass string
+	// rmRatioMode is cpt_rm_ratio_mode: INPUT (default) / DENIER.
+	rmRatioMode string
 }
 
 // New constructs a new CostProductType (typeID is assigned by the database).
-func New(typeCode, typeName string) (*CostProductType, error) {
+// rmRatioMode empty defaults to INPUT.
+func New(typeCode, typeName, rmRatioMode string) (*CostProductType, error) {
 	typeCode = strings.TrimSpace(typeCode)
 	if len(typeCode) == 0 || len(typeCode) > 5 || !typeCodePattern.MatchString(typeCode) {
 		return nil, ErrInvalidTypeCode
@@ -43,13 +67,21 @@ func New(typeCode, typeName string) (*CostProductType, error) {
 	if len(typeName) == 0 || len(typeName) > 100 {
 		return nil, ErrInvalidTypeName
 	}
+	mode, err := NormalizeRMRatioMode(rmRatioMode)
+	if err != nil {
+		return nil, err
+	}
+	if mode == "" {
+		mode = RMRatioModeInput
+	}
 	now := time.Now().UTC()
 	return &CostProductType{
-		typeCode:  typeCode,
-		typeName:  typeName,
-		isActive:  true,
-		createdAt: now,
-		updatedAt: now,
+		rmRatioMode: mode,
+		typeCode:    typeCode,
+		typeName:    typeName,
+		isActive:    true,
+		createdAt:   now,
+		updatedAt:   now,
 	}, nil
 }
 
@@ -65,11 +97,19 @@ func Reconstruct(typeID int32, typeCode, typeName string, isActive bool, created
 	}
 }
 
-// Update mutates name + active flag. type_code is immutable.
-func (c *CostProductType) Update(typeName string, isActive bool) error {
+// Update mutates name, active flag and rm_ratio_mode (empty = keep existing).
+// type_code is immutable.
+func (c *CostProductType) Update(typeName string, isActive bool, rmRatioMode string) error {
 	typeName = strings.TrimSpace(typeName)
 	if len(typeName) == 0 || len(typeName) > 100 {
 		return ErrInvalidTypeName
+	}
+	mode, err := NormalizeRMRatioMode(rmRatioMode)
+	if err != nil {
+		return err
+	}
+	if mode != "" {
+		c.rmRatioMode = mode
 	}
 	c.typeName = typeName
 	c.isActive = isActive
@@ -104,3 +144,14 @@ func (c *CostProductType) OilClass() string { return c.oilClass }
 // SetOilClass sets the oil class on hydration (repositories only). Changes go
 // through the oil-config use case, which validates the class and groups together.
 func (c *CostProductType) SetOilClass(v string) { c.oilClass = v }
+
+// RMRatioMode returns INPUT or DENIER (INPUT when unset).
+func (c *CostProductType) RMRatioMode() string {
+	if c.rmRatioMode == "" {
+		return RMRatioModeInput
+	}
+	return c.rmRatioMode
+}
+
+// SetRMRatioMode sets the mode on hydration (repositories only).
+func (c *CostProductType) SetRMRatioMode(v string) { c.rmRatioMode = v }

@@ -26,13 +26,13 @@ var _ costproducttype.Repository = (*CostProductTypeRepository)(nil)
 // Create persists a new CostProductType and assigns the generated typeID.
 func (r *CostProductTypeRepository) Create(ctx context.Context, t *costproducttype.CostProductType) error {
 	const q = `
-		INSERT INTO cost_product_type (cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO cost_product_type (cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, cpt_rm_ratio_mode)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING cpt_type_id
 	`
 	var id int32
 	if err := r.db.QueryRowContext(ctx, q,
-		t.TypeCode(), t.TypeName(), t.IsActive(), t.CreatedAt(), t.UpdatedAt(),
+		t.TypeCode(), t.TypeName(), t.IsActive(), t.CreatedAt(), t.UpdatedAt(), t.RMRatioMode(),
 	).Scan(&id); err != nil {
 		if isProductTypeUniqueViolation(err) {
 			return costproducttype.ErrAlreadyExists
@@ -46,7 +46,7 @@ func (r *CostProductTypeRepository) Create(ctx context.Context, t *costproductty
 // GetByID loads a CostProductType by id.
 func (r *CostProductTypeRepository) GetByID(ctx context.Context, id int32) (*costproducttype.CostProductType, error) {
 	const q = `
-		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, '')
+		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, ''), cpt_rm_ratio_mode
 		FROM cost_product_type WHERE cpt_type_id = $1
 	`
 	return r.scanRow(r.db.QueryRowContext(ctx, q, id))
@@ -55,7 +55,7 @@ func (r *CostProductTypeRepository) GetByID(ctx context.Context, id int32) (*cos
 // GetByCode loads a CostProductType by its unique code.
 func (r *CostProductTypeRepository) GetByCode(ctx context.Context, code string) (*costproducttype.CostProductType, error) {
 	const q = `
-		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, '')
+		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, ''), cpt_rm_ratio_mode
 		FROM cost_product_type WHERE cpt_type_code = $1
 	`
 	return r.scanRow(r.db.QueryRowContext(ctx, q, code))
@@ -65,10 +65,10 @@ func (r *CostProductTypeRepository) GetByCode(ctx context.Context, code string) 
 func (r *CostProductTypeRepository) Update(ctx context.Context, t *costproducttype.CostProductType) error {
 	const q = `
 		UPDATE cost_product_type
-		SET cpt_type_name = $2, cpt_is_active = $3, cpt_updated_at = $4
+		SET cpt_type_name = $2, cpt_is_active = $3, cpt_updated_at = $4, cpt_rm_ratio_mode = $5
 		WHERE cpt_type_id = $1
 	`
-	res, err := r.db.ExecContext(ctx, q, t.TypeID(), t.TypeName(), t.IsActive(), t.UpdatedAt())
+	res, err := r.db.ExecContext(ctx, q, t.TypeID(), t.TypeName(), t.IsActive(), t.UpdatedAt(), t.RMRatioMode())
 	if err != nil {
 		return fmt.Errorf("update cost_product_type: %w", err)
 	}
@@ -124,7 +124,7 @@ func (r *CostProductTypeRepository) List(ctx context.Context, f costproducttype.
 	offset := (page - 1) * pageSize
 
 	q := `
-		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, '')
+		SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, ''), cpt_rm_ratio_mode
 		` + where + fmt.Sprintf(" ORDER BY %s %s LIMIT $%d OFFSET $%d", col, dir, idx, idx+1)
 	args = append(args, pageSize, offset)
 
@@ -158,13 +158,13 @@ func (r *CostProductTypeRepository) List(ctx context.Context, f costproducttype.
 
 func (r *CostProductTypeRepository) scanRow(row *sql.Row) (*costproducttype.CostProductType, error) {
 	var (
-		id                   int32
-		code, name           string
-		isActive             bool
-		createdAt, updatedAt time.Time
-		oilClass             string
+		id                    int32
+		code, name            string
+		isActive              bool
+		createdAt, updatedAt  time.Time
+		oilClass, rmRatioMode string
 	)
-	if err := row.Scan(&id, &code, &name, &isActive, &createdAt, &updatedAt, &oilClass); err != nil {
+	if err := row.Scan(&id, &code, &name, &isActive, &createdAt, &updatedAt, &oilClass, &rmRatioMode); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, costproducttype.ErrNotFound
 		}
@@ -172,22 +172,24 @@ func (r *CostProductTypeRepository) scanRow(row *sql.Row) (*costproducttype.Cost
 	}
 	t := costproducttype.Reconstruct(id, code, name, isActive, createdAt, updatedAt)
 	t.SetOilClass(oilClass)
+	t.SetRMRatioMode(rmRatioMode)
 	return t, nil
 }
 
 func (r *CostProductTypeRepository) scanRows(rows *sql.Rows) (*costproducttype.CostProductType, error) {
 	var (
-		id                   int32
-		code, name           string
-		isActive             bool
-		createdAt, updatedAt time.Time
-		oilClass             string
+		id                    int32
+		code, name            string
+		isActive              bool
+		createdAt, updatedAt  time.Time
+		oilClass, rmRatioMode string
 	)
-	if err := rows.Scan(&id, &code, &name, &isActive, &createdAt, &updatedAt, &oilClass); err != nil {
+	if err := rows.Scan(&id, &code, &name, &isActive, &createdAt, &updatedAt, &oilClass, &rmRatioMode); err != nil {
 		return nil, fmt.Errorf("scan cost_product_type row: %w", err)
 	}
 	t := costproducttype.Reconstruct(id, code, name, isActive, createdAt, updatedAt)
 	t.SetOilClass(oilClass)
+	t.SetRMRatioMode(rmRatioMode)
 	return t, nil
 }
 
@@ -197,7 +199,7 @@ func isProductTypeUniqueViolation(err error) bool {
 
 // ListAllActive returns all active cost_product_type rows for map preloading.
 func (r *CostProductTypeRepository) ListAllActive(ctx context.Context) ([]*costproducttype.CostProductType, error) {
-	const q = `SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, '')
+	const q = `SELECT cpt_type_id, cpt_type_code, cpt_type_name, cpt_is_active, cpt_created_at, cpt_updated_at, COALESCE(cpt_oil_class, ''), cpt_rm_ratio_mode
                FROM cost_product_type WHERE cpt_is_active = TRUE ORDER BY cpt_type_code`
 	rows, err := r.db.QueryContext(ctx, q)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 
 	iamv1 "github.com/mutugading/goapps-backend/gen/iam/v1"
 	appcostcalc "github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
+	appcostsheet "github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/iamclient"
@@ -105,6 +106,13 @@ func (h *CostSheetExportHandler) Handle(ctx context.Context, msg rabbitmq.JobMes
 	}
 	if err := h.jobRepo.UpdateStatus(ctx, exec); err != nil {
 		h.logger.Warn().Err(err).Str("job_id", msg.JobID).Msg("cost sheet export: persist PROCESSING failed")
+	}
+
+	// The message carries the layout only for non-combined jobs published by a
+	// layout-aware publisher; otherwise the params JSON is authoritative (and
+	// yields combined for jobs queued before layouts existed).
+	if msg.Layout == "" {
+		msg.Layout = string(appcostsheet.LayoutFromParams(exec.Params()))
 	}
 
 	result, runErr := h.runExport(ctx, msg, h.resolveCalcType(exec))
@@ -212,6 +220,7 @@ func (h *CostSheetExportHandler) runExport(
 	}()
 
 	objectKey, fileName := costSheetObjectKey(msg, stats.fgLabels)
+	fileName = layoutFileName(appcostsheet.ParseExportLayout(msg.Layout), fileName, msg.Period, calcType)
 	if err := h.uploadTempFile(ctx, tmpPath, objectKey); err != nil {
 		return nil, err
 	}
@@ -309,6 +318,23 @@ func costSheetObjectKey(msg rabbitmq.JobMessage, fgLabels []string) (objectKey, 
 	return objectKey, fileName
 }
 
+// layoutFileName adapts the combined-layout download filename to the layout.
+// COMBINED keeps it untouched; HORIZONTAL is named after the flat sheet
+// (product-cost-all-data-<period>-<calcType>.xlsx); VERTICAL keeps the
+// combined name with a "-vertical" suffix before the extension.
+func layoutFileName(
+	layout appcostsheet.ExportLayout, combinedName, period string, calcType costcalcdom.CalculationType,
+) string {
+	switch layout {
+	case appcostsheet.LayoutHorizontal:
+		return fmt.Sprintf("product-cost-all-data-%s-%s.xlsx", period, strings.ToLower(string(calcType)))
+	case appcostsheet.LayoutVertical:
+		return strings.TrimSuffix(combinedName, ".xlsx") + "-vertical.xlsx"
+	default:
+		return combinedName
+	}
+}
+
 // exportStats accumulates the per-product outcomes surfaced in result_summary.
 type exportStats struct {
 	written  int
@@ -322,6 +348,9 @@ type exportStats struct {
 	// allStages accumulates every written product's stages, in write order, to
 	// feed the flat "all data" sheet — one row per stage across all products.
 	allStages []Stage
+	// collectAllStages gates allStages: only the combined layout renders the
+	// flat sheet from it, so the vertical layout skips holding every stage.
+	collectAllStages bool
 }
 
 // buildWorkbook renders the workbook: the flat "all data" sheet first, then one
@@ -332,11 +361,30 @@ type exportStats struct {
 // only append sheets, so its slot is claimed by renaming the default sheet
 // before any product sheet is added; its rows are written at the end, once
 // every product's stages have been collected.
+//
+// msg.Layout selects the sheet set: empty/"combined" is the behavior above;
+// "horizontal" renders only the flat sheet (buildHorizontalWorkbook) and
+// "vertical" only the per-product sheets (buildVerticalWorkbook).
 func (h *CostSheetExportHandler) buildWorkbook(
 	ctx context.Context, msg rabbitmq.JobMessage, calcType costcalcdom.CalculationType,
 ) (*excelize.File, *exportStats, error) {
+	switch appcostsheet.ParseExportLayout(msg.Layout) {
+	case appcostsheet.LayoutHorizontal:
+		return h.buildHorizontalWorkbook(ctx, msg, calcType)
+	case appcostsheet.LayoutVertical:
+		return h.buildVerticalWorkbook(ctx, msg, calcType)
+	case appcostsheet.LayoutCombined:
+	}
+	return h.buildCombinedWorkbook(ctx, msg, calcType)
+}
+
+// buildCombinedWorkbook renders the original workbook: "all data" first, then
+// one vertical sheet per product, opening on the first product sheet.
+func (h *CostSheetExportHandler) buildCombinedWorkbook(
+	ctx context.Context, msg rabbitmq.JobMessage, calcType costcalcdom.CalculationType,
+) (*excelize.File, *exportStats, error) {
 	book := excelize.NewFile()
-	stats := &exportStats{taken: map[string]bool{}}
+	stats := &exportStats{taken: map[string]bool{}, collectAllStages: true}
 
 	// Claim slot 0 for the flat sheet by renaming the default sheet into it,
 	// rather than deleting the default and appending later.
@@ -392,22 +440,10 @@ func (h *CostSheetExportHandler) addProductSheet(
 	calcType costcalcdom.CalculationType,
 	singleProduct bool,
 ) error {
-	raw, err := h.sheets.Handle(ctx, appcostcalc.GetRouteCostSheetQuery{
-		ProductSysID: productSysID,
-		Period:       period,
-		CalcType:     calcType,
-	})
-	if err != nil {
-		return fmt.Errorf("load route cost sheet for product %d: %w", productSysID, err)
+	stages, ok, err := h.loadProductStages(ctx, stats, productSysID, period, calcType)
+	if err != nil || !ok {
+		return err
 	}
-	if len(raw) == 0 {
-		stats.skipped = append(stats.skipped, productSysID)
-		stats.warnings = append(stats.warnings,
-			fmt.Sprintf("product %s has no route stages and was skipped", strconv.FormatInt(productSysID, 10)))
-		return nil
-	}
-
-	stages := toStages(raw)
 	if len(stages) > MaxStagesPerPage {
 		stats.warnings = append(stats.warnings, fmt.Sprintf(
 			"product %s has %d stages (over %d); the sheet will not fit one A4 page width in print",
@@ -436,8 +472,36 @@ func (h *CostSheetExportHandler) addProductSheet(
 	}
 	stats.written++
 	stats.fgLabels = append(stats.fgLabels, fgLabel)
-	stats.allStages = append(stats.allStages, stages...)
+	if stats.collectAllStages {
+		stats.allStages = append(stats.allStages, stages...)
+	}
 	return nil
+}
+
+// loadProductStages resolves one product's route stages in export order. A
+// route with zero stages is recorded as a skip and returns ok=false.
+func (h *CostSheetExportHandler) loadProductStages(
+	ctx context.Context,
+	stats *exportStats,
+	productSysID int64,
+	period string,
+	calcType costcalcdom.CalculationType,
+) (stages []Stage, ok bool, err error) {
+	raw, err := h.sheets.Handle(ctx, appcostcalc.GetRouteCostSheetQuery{
+		ProductSysID: productSysID,
+		Period:       period,
+		CalcType:     calcType,
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("load route cost sheet for product %d: %w", productSysID, err)
+	}
+	if len(raw) == 0 {
+		stats.skipped = append(stats.skipped, productSysID)
+		stats.warnings = append(stats.warnings,
+			fmt.Sprintf("product %s has no route stages and was skipped", strconv.FormatInt(productSysID, 10)))
+		return nil, false, nil
+	}
+	return toStages(raw), true, nil
 }
 
 // toStages converts the application-layer stage DTOs into the Excel builder's

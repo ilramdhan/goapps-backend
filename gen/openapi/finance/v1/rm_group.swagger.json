@@ -933,6 +933,11 @@
         "isOilGroup": {
           "type": "boolean",
           "description": "New oil group flag (head-level, global — applies to all periods). Absent\nleaves it unchanged. Un-flagging a group still referenced by product\nOIL_NAME values is rejected by the backend (ErrOilGroupInUse)."
+        },
+        "denier": {
+          "type": "number",
+          "format": "double",
+          "description": "Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT."
         }
       },
       "description": "Partial update of an RM group head. Absent fields leave state unchanged.\nClear_* booleans explicitly set nullable fields to NULL."
@@ -1143,6 +1148,11 @@
         "isOilGroup": {
           "type": "boolean",
           "description": "Mark the new group as an oil group (global, not per period). Defaults to false."
+        },
+        "denier": {
+          "type": "number",
+          "format": "double",
+          "description": "Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT."
         }
       },
       "description": "Create a new RM group head."
@@ -1683,6 +1693,11 @@
         "isOilGroup": {
           "type": "boolean",
           "description": "Oil group flag (head-level, global — NOT period-versioned). When true the\ngroup is selectable as an OIL_NAME option (lookup master RM_GROUP_OIL) and\nits per-period rate drives OIL_RATE in the costing engine."
+        },
+        "denier": {
+          "type": "number",
+          "format": "double",
+          "description": "Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT."
         },
         "inheritedFromPeriod": {
           "type": "string",

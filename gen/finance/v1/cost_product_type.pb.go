@@ -32,7 +32,9 @@ type CostProductType struct {
 	IsActive bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	// Oil class of the product type: "" (no oil), "PTY", "POY" or "SUPERBA".
 	// Drives IS_PTY/IS_POY/IS_SUPERBA flags and OIL_RATE resolution in costing.
-	OilClass      string        `protobuf:"bytes,5,opt,name=oil_class,json=oilClass,proto3" json:"oil_class,omitempty"`
+	OilClass string `protobuf:"bytes,5,opt,name=oil_class,json=oilClass,proto3" json:"oil_class,omitempty"`
+	// RM ratio mode: INPUT (route ratio as entered, default) or DENIER (ratio = denier share, used by MEL/ACY).
+	RmRatioMode   string        `protobuf:"bytes,6,opt,name=rm_ratio_mode,json=rmRatioMode,proto3" json:"rm_ratio_mode,omitempty"`
 	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -103,6 +105,13 @@ func (x *CostProductType) GetOilClass() string {
 	return ""
 }
 
+func (x *CostProductType) GetRmRatioMode() string {
+	if x != nil {
+		return x.RmRatioMode
+	}
+	return ""
+}
+
 func (x *CostProductType) GetAudit() *v1.AuditInfo {
 	if x != nil {
 		return x.Audit
@@ -111,9 +120,11 @@ func (x *CostProductType) GetAudit() *v1.AuditInfo {
 }
 
 type CreateCostProductTypeRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TypeCode      string                 `protobuf:"bytes,1,opt,name=type_code,json=typeCode,proto3" json:"type_code,omitempty"`
-	TypeName      string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TypeCode string                 `protobuf:"bytes,1,opt,name=type_code,json=typeCode,proto3" json:"type_code,omitempty"`
+	TypeName string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	// RM ratio mode: INPUT (route ratio as entered, default) or DENIER (ratio = denier share, used by MEL/ACY). Empty defaults to INPUT.
+	RmRatioMode   string `protobuf:"bytes,3,opt,name=rm_ratio_mode,json=rmRatioMode,proto3" json:"rm_ratio_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -158,6 +169,13 @@ func (x *CreateCostProductTypeRequest) GetTypeCode() string {
 func (x *CreateCostProductTypeRequest) GetTypeName() string {
 	if x != nil {
 		return x.TypeName
+	}
+	return ""
+}
+
+func (x *CreateCostProductTypeRequest) GetRmRatioMode() string {
+	if x != nil {
+		return x.RmRatioMode
 	}
 	return ""
 }
@@ -311,10 +329,12 @@ func (x *GetCostProductTypeResponse) GetData() *CostProductType {
 }
 
 type UpdateCostProductTypeRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TypeId        int32                  `protobuf:"varint,1,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
-	TypeName      string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
-	IsActive      bool                   `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TypeId   int32                  `protobuf:"varint,1,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	TypeName string                 `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	IsActive bool                   `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// RM ratio mode: INPUT (route ratio as entered, default) or DENIER (ratio = denier share, used by MEL/ACY). Empty leaves unchanged.
+	RmRatioMode   string `protobuf:"bytes,4,opt,name=rm_ratio_mode,json=rmRatioMode,proto3" json:"rm_ratio_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -368,6 +388,13 @@ func (x *UpdateCostProductTypeRequest) GetIsActive() bool {
 		return x.IsActive
 	}
 	return false
+}
+
+func (x *UpdateCostProductTypeRequest) GetRmRatioMode() string {
+	if x != nil {
+		return x.RmRatioMode
+	}
+	return ""
 }
 
 type UpdateCostProductTypeResponse struct {
@@ -1229,17 +1256,19 @@ var File_finance_v1_cost_product_type_proto protoreflect.FileDescriptor
 const file_finance_v1_cost_product_type_proto_rawDesc = "" +
 	"\n" +
 	"\"finance/v1/cost_product_type.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xca\x01\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xee\x01\n" +
 	"\x0fCostProductType\x12\x17\n" +
 	"\atype_id\x18\x01 \x01(\x05R\x06typeId\x12\x1b\n" +
 	"\ttype_code\x18\x02 \x01(\tR\btypeCode\x12\x1b\n" +
 	"\ttype_name\x18\x03 \x01(\tR\btypeName\x12\x1b\n" +
 	"\tis_active\x18\x04 \x01(\bR\bisActive\x12\x1b\n" +
-	"\toil_class\x18\x05 \x01(\tR\boilClass\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\x80\x01\n" +
+	"\toil_class\x18\x05 \x01(\tR\boilClass\x12\"\n" +
+	"\rrm_ratio_mode\x18\x06 \x01(\tR\vrmRatioMode\x12*\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xbc\x01\n" +
 	"\x1cCreateCostProductTypeRequest\x128\n" +
 	"\ttype_code\x18\x01 \x01(\tB\x1b\xbaH\x18r\x16\x10\x01\x18\x052\x10^[A-Z][A-Z0-9]*$R\btypeCode\x12&\n" +
-	"\ttype_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\btypeName\"}\n" +
+	"\ttype_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\btypeName\x12:\n" +
+	"\rrm_ratio_mode\x18\x03 \x01(\tB\x16\xbaH\x13r\x11R\x00R\x05INPUTR\x06DENIERR\vrmRatioMode\"}\n" +
 	"\x1dCreateCostProductTypeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12/\n" +
 	"\x04data\x18\x02 \x01(\v2\x1b.finance.v1.CostProductTypeR\x04data\"=\n" +
@@ -1247,11 +1276,12 @@ const file_finance_v1_cost_product_type_proto_rawDesc = "" +
 	"\atype_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x06typeId\"z\n" +
 	"\x1aGetCostProductTypeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12/\n" +
-	"\x04data\x18\x02 \x01(\v2\x1b.finance.v1.CostProductTypeR\x04data\"\x85\x01\n" +
+	"\x04data\x18\x02 \x01(\v2\x1b.finance.v1.CostProductTypeR\x04data\"\xc1\x01\n" +
 	"\x1cUpdateCostProductTypeRequest\x12 \n" +
 	"\atype_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x06typeId\x12&\n" +
 	"\ttype_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\btypeName\x12\x1b\n" +
-	"\tis_active\x18\x03 \x01(\bR\bisActive\"}\n" +
+	"\tis_active\x18\x03 \x01(\bR\bisActive\x12:\n" +
+	"\rrm_ratio_mode\x18\x04 \x01(\tB\x16\xbaH\x13r\x11R\x00R\x05INPUTR\x06DENIERR\vrmRatioMode\"}\n" +
 	"\x1dUpdateCostProductTypeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12/\n" +
 	"\x04data\x18\x02 \x01(\v2\x1b.finance.v1.CostProductTypeR\x04data\"\xb9\x02\n" +

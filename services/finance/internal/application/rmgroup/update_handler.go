@@ -55,6 +55,10 @@ type UpdateCommand struct {
 	// global, never period-versioned: it always writes the anchor head row,
 	// whatever Period is (oil-cost-rm-group D12).
 	IsOilGroup *bool
+
+	// Denier is the head-level nominal denier (global, anchor row only):
+	// nil = unchanged, 0 = clear to NULL, >0 = set, <0 = invalid.
+	Denier *float64
 }
 
 // UpdateHandler handles UpdateHead commands.
@@ -89,7 +93,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*rmgroup
 	if err != nil {
 		return nil, err
 	}
-	if err := h.assertOilFlagChangeAllowed(ctx, head, cmd.IsOilGroup); err != nil {
+	if err := h.assertGlobalFieldChangeAllowed(ctx, head, cmd); err != nil {
 		return nil, err
 	}
 
@@ -163,27 +167,47 @@ func (h *UpdateHandler) writeThroughAnchor(ctx context.Context, head *rmgroup.He
 	if cmd.IsOilGroup != nil {
 		head.SetOilGroup(*cmd.IsOilGroup)
 	}
+	if err := applyDenierPatch(head, cmd.Denier); err != nil {
+		return err
+	}
 	if err := h.repo.UpdateHead(ctx, head); err != nil {
 		return fmt.Errorf("persist head update: %w", err)
 	}
 	return nil
 }
 
-// writeOilFlagOnly persists only the oil-group flag onto the anchor head (other
+// writeOilFlagOnly persists only the global head fields (oil-group flag, denier) onto the anchor head (other
 // anchor fields are written back unchanged). No-op when the flag is absent or
 // unchanged.
 func (h *UpdateHandler) writeOilFlagOnly(ctx context.Context, head *rmgroup.Head, cmd UpdateCommand) error {
-	if cmd.IsOilGroup == nil || *cmd.IsOilGroup == head.IsOilGroup() {
+	flagChanged := cmd.IsOilGroup != nil && *cmd.IsOilGroup != head.IsOilGroup()
+	denierChanged := denierPatchChanges(head, cmd.Denier)
+	if !flagChanged && !denierChanged {
 		return nil
 	}
 	if err := head.Update(rmgroup.UpdateInput{}, cmd.UpdatedBy); err != nil {
 		return err
 	}
-	head.SetOilGroup(*cmd.IsOilGroup)
+	if flagChanged {
+		head.SetOilGroup(*cmd.IsOilGroup)
+	}
+	if err := applyDenierPatch(head, cmd.Denier); err != nil {
+		return err
+	}
 	if err := h.repo.UpdateHead(ctx, head); err != nil {
 		return fmt.Errorf("persist head oil-group flag: %w", err)
 	}
 	return nil
+}
+
+// assertGlobalFieldChangeAllowed validates the head-level (global) fields before
+// any write: the oil-flag in-use guard and a non-negative denier (it is applied
+// to the anchor row later, so it must be rejected up front).
+func (h *UpdateHandler) assertGlobalFieldChangeAllowed(ctx context.Context, head *rmgroup.Head, cmd UpdateCommand) error {
+	if cmd.Denier != nil && *cmd.Denier < 0 {
+		return rmgroup.ErrInvalidDenier
+	}
+	return h.assertOilFlagChangeAllowed(ctx, head, cmd.IsOilGroup)
 }
 
 // assertOilFlagChangeAllowed rejects un-flagging an oil group that is still
@@ -203,7 +227,7 @@ func (h *UpdateHandler) assertOilFlagChangeAllowed(ctx context.Context, head *rm
 }
 
 // hasPeriodPatch reports whether the command patches any period-scoped field
-// (everything except the global IsOilGroup flag).
+// (everything except the global IsOilGroup flag and Denier).
 func hasPeriodPatch(cmd UpdateCommand) bool {
 	return hasTextOrCostPatch(cmd) || hasFlagOrInitPatch(cmd) || cmd.IsActive != nil || hasV2MarketingPatch(cmd)
 }

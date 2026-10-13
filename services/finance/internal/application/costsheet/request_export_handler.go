@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 )
@@ -37,6 +39,16 @@ var ErrPublisherUnavailable = errors.New("message queue unavailable: RabbitMQ no
 // cost against available worker memory/limits.
 const maxExportProducts = 200
 
+// maxHorizontalProducts bounds how many products one HORIZONTAL ("all data"
+// only) file holds. That layout is deliberately not chunked at
+// maxExportProducts — it is a single flat sheet with no per-product sheets —
+// but one row per route stage must still fit Excel's 1,048,576-row limit.
+// At up to ~26 stages per product this keeps a file under the limit; a
+// larger selection falls back to splitting into several files (a batch),
+// which is logged. The worker additionally rolls over onto a continuation
+// sheet if a file would still overflow.
+const maxHorizontalProducts = 40000
+
 // resolvePageSize is the page size used while paging through ListResults to
 // build the full filtered product ID list. It uses the repository's own max
 // (500) rather than maxExportProducts to minimize round-trips when a period
@@ -52,18 +64,31 @@ type ExportJobPublisher interface {
 	PublishProductCostSheetExport(ctx context.Context, jobID, period, requestingUserID, createdBy string, productSysIDs []int64) error
 }
 
+// LayoutExportJobPublisher is optionally implemented by an ExportJobPublisher
+// that can also carry the export layout on the queue message. A publisher
+// without it still works: the worker falls back to the layout persisted in
+// the job params. COMBINED jobs always go through the original method, so
+// their message is unchanged.
+type LayoutExportJobPublisher interface {
+	PublishProductCostSheetExportWithLayout(
+		ctx context.Context, jobID, period, requestingUserID, createdBy string, productSysIDs []int64, layout string,
+	) error
+}
+
 // RequestExportCommand carries the validated input for queueing a product
 // cost sheet export. When ProductSysIDs is non-empty it overrides the filter
 // fields entirely — the filter fields are then ignored.
 type RequestExportCommand struct {
-	Period           string
-	CalcType         costcalcdom.CalculationType
-	ProductTypeIDs   []int32
-	Search           string
-	Status           string
-	ShadeCodes       []string
-	RMGroupCodes     []string
-	ProductSysIDs    []int64
+	Period         string
+	CalcType       costcalcdom.CalculationType
+	ProductTypeIDs []int32
+	Search         string
+	Status         string
+	ShadeCodes     []string
+	RMGroupCodes   []string
+	ProductSysIDs  []int64
+	// Layout selects the workbook shape; empty means LayoutCombined.
+	Layout           ExportLayout
 	RequestingUserID string // recipient for the EXPORT_READY notification
 	CreatedBy        string // audit identity (typically "user:<uuid>" or username)
 }
@@ -98,6 +123,7 @@ func (h *RequestExportHandler) Handle(ctx context.Context, cmd RequestExportComm
 	if cmd.CreatedBy == "" {
 		cmd.CreatedBy = cmd.RequestingUserID
 	}
+	cmd.Layout = ParseExportLayout(string(cmd.Layout))
 	if len(cmd.ProductSysIDs) > maxExportProducts {
 		return nil, fmt.Errorf("product_sys_ids exceeds the %d-item limit", maxExportProducts)
 	}
@@ -107,10 +133,41 @@ func (h *RequestExportHandler) Handle(ctx context.Context, cmd RequestExportComm
 		return nil, err
 	}
 
-	if len(productSysIDs) <= maxExportProducts {
+	chunkSize := productsPerFile(cmd.Layout)
+	if len(productSysIDs) <= chunkSize {
 		return h.handleSingle(ctx, cmd, productSysIDs)
 	}
-	return h.handleBatch(ctx, cmd, productSysIDs)
+	if cmd.Layout == LayoutHorizontal {
+		log.Warn().
+			Str("period", cmd.Period).
+			Int("products", len(productSysIDs)).
+			Int("max_products_per_file", chunkSize).
+			Msg("cost sheet export: horizontal selection exceeds one file's row budget; splitting into multiple files")
+	}
+	return h.handleBatch(ctx, cmd, productSysIDs, chunkSize)
+}
+
+// productsPerFile is the most products one export file holds for layout:
+// maxHorizontalProducts for the flat-only HORIZONTAL layout, maxExportProducts
+// for the layouts that render one sheet per product.
+func productsPerFile(layout ExportLayout) int {
+	if layout == LayoutHorizontal {
+		return maxHorizontalProducts
+	}
+	return maxExportProducts
+}
+
+// publish sends one job's queue message. COMBINED keeps the original message
+// (no layout field); other layouts carry it when the publisher supports it.
+func (h *RequestExportHandler) publish(ctx context.Context, jobID string, cmd RequestExportCommand, productSysIDs []int64) error {
+	if cmd.Layout != LayoutCombined {
+		if lp, ok := h.publisher.(LayoutExportJobPublisher); ok {
+			return lp.PublishProductCostSheetExportWithLayout(
+				ctx, jobID, cmd.Period, cmd.RequestingUserID, cmd.CreatedBy, productSysIDs, string(cmd.Layout),
+			)
+		}
+	}
+	return h.publisher.PublishProductCostSheetExport(ctx, jobID, cmd.Period, cmd.RequestingUserID, cmd.CreatedBy, productSysIDs)
 }
 
 // handleSingle queues one job_execution for a product list within the cap —
@@ -131,9 +188,7 @@ func (h *RequestExportHandler) handleSingle(ctx context.Context, cmd RequestExpo
 		return nil, fmt.Errorf("persist job: %w", err)
 	}
 
-	if err := h.publisher.PublishProductCostSheetExport(
-		ctx, exec.ID().String(), cmd.Period, cmd.RequestingUserID, cmd.CreatedBy, productSysIDs,
-	); err != nil {
+	if err := h.publish(ctx, exec.ID().String(), cmd, productSysIDs); err != nil {
 		return nil, h.failJob(ctx, exec, err)
 	}
 
@@ -148,8 +203,10 @@ func (h *RequestExportHandler) handleSingle(ctx context.Context, cmd RequestExpo
 // path (internal/worker.CostSheetExportHandler) atomically increments the
 // parent's counters and fires exactly one notification once every child has
 // finished.
-func (h *RequestExportHandler) handleBatch(ctx context.Context, cmd RequestExportCommand, productSysIDs []int64) (*RequestExportResult, error) {
-	chunks := chunkIDs(productSysIDs, maxExportProducts)
+func (h *RequestExportHandler) handleBatch(
+	ctx context.Context, cmd RequestExportCommand, productSysIDs []int64, chunkSize int,
+) (*RequestExportResult, error) {
+	chunks := chunkIDs(productSysIDs, chunkSize)
 
 	parentParams, err := buildParams(cmd, nil)
 	if err != nil {
@@ -186,9 +243,7 @@ func (h *RequestExportHandler) handleBatch(ctx context.Context, cmd RequestExpor
 	// completion and fire its one notification instead of hanging forever.
 	var publishErrs error
 	for i, child := range children {
-		if err := h.publisher.PublishProductCostSheetExport(
-			ctx, child.ID().String(), cmd.Period, cmd.RequestingUserID, cmd.CreatedBy, chunks[i],
-		); err != nil {
+		if err := h.publish(ctx, child.ID().String(), cmd, chunks[i]); err != nil {
 			publishErrs = errors.Join(publishErrs, h.failJob(ctx, child, err))
 			if _, incErr := h.jobRepo.IncrementChildProgress(ctx, parent.ID(), false); incErr != nil {
 				publishErrs = errors.Join(publishErrs, fmt.Errorf("record child publish failure: %w", incErr))
@@ -297,6 +352,7 @@ func buildParams(cmd RequestExportCommand, productSysIDs []int64) (json.RawMessa
 		"rm_group_codes":     cmd.RMGroupCodes,
 		"product_sys_ids":    productSysIDs,
 		"requesting_user_id": cmd.RequestingUserID,
+		layoutParamKey:       string(ParseExportLayout(string(cmd.Layout))),
 	}
 	paramsJSON, err := json.Marshal(params)
 	if err != nil {

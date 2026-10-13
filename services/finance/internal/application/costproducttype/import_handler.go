@@ -184,7 +184,7 @@ func (h *ImportHandler) handleDuplicate(ctx context.Context, existing *domain.Co
 func (h *ImportHandler) updateExisting(ctx context.Context, existing *domain.CostProductType, data cptRowData, rowNum int32, result *ImportResult) {
 	isActive := parseIsActive(data.isActive, existing.IsActive())
 
-	if err := existing.Update(data.typeName, isActive); err != nil {
+	if err := existing.Update(data.typeName, isActive, ""); err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{
 			RowNumber: rowNum,
@@ -209,7 +209,7 @@ func (h *ImportHandler) updateExisting(ctx context.Context, existing *domain.Cos
 
 // createType creates a new CostProductType.
 func (h *ImportHandler) createType(ctx context.Context, data cptRowData, rowNum int32, result *ImportResult) {
-	entity, err := domain.New(data.typeCode, data.typeName)
+	entity, err := domain.New(data.typeCode, data.typeName, "")
 	if err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{
@@ -222,7 +222,7 @@ func (h *ImportHandler) createType(ctx context.Context, data cptRowData, rowNum 
 
 	if data.isActive != "" {
 		isActive := parseIsActive(data.isActive, true)
-		if err := entity.Update(data.typeName, isActive); err != nil {
+		if err := entity.Update(data.typeName, isActive, ""); err != nil {
 			result.FailedCount++
 			result.Errors = append(result.Errors, ImportError{
 				RowNumber: rowNum,

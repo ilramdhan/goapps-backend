@@ -33,6 +33,11 @@ type JobMessage struct {
 	// The requesting handler resolves any filter to explicit IDs before
 	// publishing, so the worker never re-runs the filter query.
 	ProductSysIDs []int64 `json:"product_sys_ids,omitempty"`
+	// Layout is the workbook layout for product_cost_sheet_export jobs
+	// ("horizontal" / "vertical"). Empty means the original combined layout;
+	// the worker then also consults the job params, so messages published
+	// before this field existed keep rendering exactly as before.
+	Layout string `json:"layout,omitempty"`
 	// MbhID is the target mst_mb_head.mbh_id for mb_bulk_transition jobs — each
 	// child job carries exactly one. Subtype carries the action
 	// (force_unvalidate/submit/validate, see application/mbheadbulk's Action

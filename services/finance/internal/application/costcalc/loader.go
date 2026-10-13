@@ -36,6 +36,8 @@ const (
 	loaderKindSuperbaCost     = "superba_cost"
 	loaderKindUpstreamSnap    = "upstream_param_snapshot"
 	loaderKindProductType     = "product_type_code"
+	loaderKindRMRatioMode     = "rm_ratio_mode"
+	loaderKindRMGroupDenier   = "rm_group_denier"
 )
 
 // rmRateOrderFormulaCode is the mst_formula row whose expression column, since
@@ -292,6 +294,14 @@ type ProductLoader interface {
 	// for every product type, unlike LoadOilContext which only covers types with
 	// an oil class. Products not found are absent.
 	LoadProductTypeCodes(ctx context.Context, productSysIDs []int64) (map[int64]string, error)
+	// LoadProductRMRatioModes returns cost_product_type.cpt_rm_ratio_mode
+	// (INPUT | DENIER, upper-cased) per product. Products not found are absent
+	// and treated as INPUT. Feeds ComputeInput.RMRatioMode.
+	LoadProductRMRatioModes(ctx context.Context, productSysIDs []int64) (map[int64]string, error)
+	// LoadRMGroupDeniers returns cst_rm_group_head.denier keyed by group_code
+	// for active groups with a non-NULL denier. Groups without a denier are
+	// absent. Feeds ComputeInput.RMGroupDenier.
+	LoadRMGroupDeniers(ctx context.Context, groupCodes []string) (map[string]float64, error)
 }
 
 // SpinPool is the POY spin fixed-cost pool resolved for a period, together with

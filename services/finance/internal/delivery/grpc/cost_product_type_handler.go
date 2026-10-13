@@ -58,8 +58,9 @@ func (h *CostProductTypeHandler) CreateCostProductType(ctx context.Context, req 
 		return &financev1.CreateCostProductTypeResponse{Base: baseResp}, nil
 	}
 	t, err := h.createHandler.Handle(ctx, app.CreateCommand{
-		TypeCode: req.GetTypeCode(),
-		TypeName: req.GetTypeName(),
+		TypeCode:    req.GetTypeCode(),
+		TypeName:    req.GetTypeName(),
+		RMRatioMode: req.GetRmRatioMode(),
 	})
 	if err != nil {
 		return &financev1.CreateCostProductTypeResponse{Base: productTypeErrToBase(err)}, nil
@@ -91,9 +92,10 @@ func (h *CostProductTypeHandler) UpdateCostProductType(ctx context.Context, req 
 		return &financev1.UpdateCostProductTypeResponse{Base: baseResp}, nil
 	}
 	t, err := h.updateHandler.Handle(ctx, app.UpdateCommand{
-		TypeID:   req.GetTypeId(),
-		TypeName: req.GetTypeName(),
-		IsActive: req.GetIsActive(),
+		TypeID:      req.GetTypeId(),
+		TypeName:    req.GetTypeName(),
+		IsActive:    req.GetIsActive(),
+		RMRatioMode: req.GetRmRatioMode(),
 	})
 	if err != nil {
 		return &financev1.UpdateCostProductTypeResponse{Base: productTypeErrToBase(err)}, nil
@@ -153,11 +155,12 @@ func (h *CostProductTypeHandler) ListCostProductTypes(ctx context.Context, req *
 
 func costProductTypeToProto(t *domain.CostProductType) *financev1.CostProductType {
 	return &financev1.CostProductType{
-		TypeId:   t.TypeID(),
-		TypeCode: t.TypeCode(),
-		TypeName: t.TypeName(),
-		IsActive: t.IsActive(),
-		OilClass: t.OilClass(),
+		TypeId:      t.TypeID(),
+		TypeCode:    t.TypeCode(),
+		TypeName:    t.TypeName(),
+		IsActive:    t.IsActive(),
+		OilClass:    t.OilClass(),
+		RmRatioMode: t.RMRatioMode(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: t.CreatedAt().Format(time.RFC3339),
 			UpdatedAt: t.UpdatedAt().Format(time.RFC3339),
@@ -171,7 +174,8 @@ func productTypeErrToBase(err error) *commonv1.BaseResponse {
 		return NotFoundResponse(err.Error())
 	case errors.Is(err, domain.ErrAlreadyExists):
 		return ConflictResponse(err.Error())
-	case errors.Is(err, domain.ErrInvalidTypeCode), errors.Is(err, domain.ErrInvalidTypeName):
+	case errors.Is(err, domain.ErrInvalidTypeCode), errors.Is(err, domain.ErrInvalidTypeName),
+		errors.Is(err, domain.ErrInvalidRMRatioMode):
 		return ErrorResponse("400", err.Error())
 	case errors.Is(err, domain.ErrInvalidOilClass):
 		return oilConfigValidationResponse("oil_class", err)

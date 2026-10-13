@@ -667,7 +667,9 @@ func (r *CostResultRepository) ListResults(
 			           'shade_code', COALESCE(e.shade_code, ''),
 			           'unit_cost', e.unit_cost,
 			           'ratio', e.ratio,
-			           'contribution', e.contribution
+			           'contribution', e.contribution,
+			           'denier', COALESCE(e.denier, 0),
+			           'ratio_source', COALESCE(e.ratio_source, '')
 			         ) ORDER BY e.contribution DESC NULLS LAST
 			       ) AS details_json
 			  FROM (
@@ -676,7 +678,9 @@ func (r *CostResultRepository) ListResults(
 			           NULLIF(elem->>'unit_cost','')::numeric AS unit_cost,
 			           NULLIF(elem->>'ratio','')::numeric AS ratio,
 			           NULLIF(elem->>'contribution','')::numeric AS contribution,
-			           NULLIF(elem->>'route_level','')::int AS route_level
+			           NULLIF(elem->>'route_level','')::int AS route_level,
+			           NULLIF(elem->>'denier','')::numeric AS denier,
+			           elem->>'ratio_source' AS ratio_source
 			      FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
 			  ) e
 			  LEFT JOIN cst_rm_group_head g2 ON e.rm_type = 'GROUP' AND g2.group_code = e.ref_code AND g2.deleted_at IS NULL

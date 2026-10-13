@@ -80,6 +80,17 @@ func (f *mbGuardLoader) LoadProductTypeCodes(context.Context, []int64) (map[int6
 	return map[int64]string{}, nil
 }
 
+// LoadProductRMRatioModes reports no modes, so every product stays INPUT
+// (legacy route-ratio behavior).
+func (f *mbGuardLoader) LoadProductRMRatioModes(context.Context, []int64) (map[int64]string, error) {
+	return map[int64]string{}, nil
+}
+
+// LoadRMGroupDeniers reports no group deniers.
+func (f *mbGuardLoader) LoadRMGroupDeniers(context.Context, []string) (map[string]float64, error) {
+	return map[string]float64{}, nil
+}
+
 func (f *mbGuardLoader) LoadSellingSnapshots(_ context.Context, _ []int64, _ string) (map[int64]map[string]float64, error) {
 	return map[int64]map[string]float64{}, nil
 }

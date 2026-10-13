@@ -144,6 +144,10 @@ func OverlayHeadFromSnapshot(head *rmgroup.Head, snap *rmgroup.HeadPeriodSnapsho
 	}
 	// The oil-group flag is global (anchor-only), never period-scoped.
 	overlaid.SetOilGroup(head.IsOilGroup())
+	// Denier is likewise global (anchor-only).
+	if err := overlaid.SetDenier(head.Denier()); err != nil {
+		return nil, fmt.Errorf("carry denier to period overlay: %w", err)
+	}
 	return overlaid, nil
 }
 
