@@ -65,6 +65,14 @@ func NewGetRouteCostSheetHandler(svc *Service) *GetRouteCostSheetHandler {
 	return &GetRouteCostSheetHandler{svc: svc}
 }
 
+// GetRouteCostSheetBatchQuery selects every route stage of several products
+// for one period and calculation type.
+type GetRouteCostSheetBatchQuery struct {
+	ProductSysIDs []int64
+	Period        string
+	CalcType      costcalcdom.CalculationType
+}
+
 // Handle executes the query. A stage with no cost row for the requested
 // period/type gets HasCost=false and an empty snapshot — never an error, since
 // a partially-calculated route must still export.
@@ -75,22 +83,72 @@ func (h *GetRouteCostSheetHandler) Handle(ctx context.Context, q GetRouteCostShe
 	if len(q.Period) != 6 {
 		return nil, errors.New(errMsgPeriodFormat)
 	}
-
-	seqs, err := h.resolveStages(ctx, q.ProductSysID)
+	out, err := h.buildSheets(ctx, []int64{q.ProductSysID}, q.Period, q.CalcType)
 	if err != nil {
 		return nil, err
 	}
-	if len(seqs) == 0 {
-		return []RouteCostSheetStage{}, nil
+	if stages, ok := out[q.ProductSysID]; ok {
+		return stages, nil
 	}
+	return []RouteCostSheetStage{}, nil
+}
 
-	stageIDs := make([]int64, 0, len(seqs))
-	for _, s := range seqs {
-		if s.ProductSysID > 0 {
-			stageIDs = append(stageIDs, s.ProductSysID)
+// HandleBatch is Handle for many products at once: the routes of every
+// product are resolved in one loader call and every stage's cost row, product
+// master row and text params are then loaded once for the union of stages,
+// instead of ~8 queries per product. The result is keyed by product_sys_id and
+// each value is exactly what Handle returns for that product (an empty slice
+// for a product with no route or no stages), so callers can swap one for the
+// other without changing output.
+func (h *GetRouteCostSheetHandler) HandleBatch(ctx context.Context, q GetRouteCostSheetBatchQuery) (map[int64][]RouteCostSheetStage, error) {
+	for _, id := range q.ProductSysIDs {
+		if id <= 0 {
+			return nil, errors.New(errMsgProductIDPositive)
 		}
 	}
-	costs, err := h.svc.resultRepo.ListByProductIDsPeriodType(ctx, stageIDs, q.Period, q.CalcType)
+	if len(q.Period) != 6 {
+		return nil, errors.New(errMsgPeriodFormat)
+	}
+	out, err := h.buildSheets(ctx, q.ProductSysIDs, q.Period, q.CalcType)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range q.ProductSysIDs {
+		if _, ok := out[id]; !ok {
+			out[id] = []RouteCostSheetStage{}
+		}
+	}
+	return out, nil
+}
+
+// buildSheets assembles the stage lists of every product in productSysIDs.
+// Products without a route (or with an empty one) are absent from the result.
+// Every lookup below is keyed per stage product (or per OIL_NAME code), so
+// resolving several products together yields, per product, exactly what
+// resolving it alone would.
+func (h *GetRouteCostSheetHandler) buildSheets(
+	ctx context.Context, productSysIDs []int64, period string, calcType costcalcdom.CalculationType,
+) (map[int64][]RouteCostSheetStage, error) {
+	seqsByProduct, err := h.resolveStagesBatch(ctx, productSysIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64][]RouteCostSheetStage, len(seqsByProduct))
+	if len(seqsByProduct) == 0 {
+		return out, nil
+	}
+
+	stageIDs := make([]int64, 0, len(seqsByProduct)*4)
+	seen := map[int64]bool{}
+	for _, pid := range productSysIDs {
+		for _, s := range seqsByProduct[pid] {
+			if s.ProductSysID > 0 && !seen[s.ProductSysID] {
+				seen[s.ProductSysID] = true
+				stageIDs = append(stageIDs, s.ProductSysID)
+			}
+		}
+	}
+	costs, err := h.svc.resultRepo.ListByProductIDsPeriodType(ctx, stageIDs, period, calcType)
 	if err != nil {
 		return nil, fmt.Errorf("load stage costs: %w", err)
 	}
@@ -115,11 +173,14 @@ func (h *GetRouteCostSheetHandler) Handle(ctx context.Context, q GetRouteCostShe
 		return nil, err
 	}
 
-	out := make([]RouteCostSheetStage, 0, len(seqs))
-	for _, s := range seqs {
-		stage := buildStage(s, costs[s.ProductSysID], products, capText[s.ProductSysID])
-		stage.OilGroupName = oilNames[strings.TrimSpace(capText[s.ProductSysID][oilNameParamCode])]
-		out = append(out, stage)
+	for pid, seqs := range seqsByProduct {
+		stages := make([]RouteCostSheetStage, 0, len(seqs))
+		for _, s := range seqs {
+			stage := buildStage(s, costs[s.ProductSysID], products, capText[s.ProductSysID])
+			stage.OilGroupName = oilNames[strings.TrimSpace(capText[s.ProductSysID][oilNameParamCode])]
+			stages = append(stages, stage)
+		}
+		out[pid] = stages
 	}
 	return out, nil
 }
@@ -177,30 +238,38 @@ func (h *GetRouteCostSheetHandler) loadOilGroupNames(ctx context.Context, capTex
 	return names, nil
 }
 
-// resolveStages returns the product's route stages ordered by (level, seq).
-// An empty slice (no route, or a route with no stages) is a valid outcome.
-func (h *GetRouteCostSheetHandler) resolveStages(ctx context.Context, productSysID int64) ([]*costroute.Seq, error) {
-	graphs, err := h.svc.loader.LoadRoutesByProducts(ctx, []int64{productSysID})
+// resolveStagesBatch returns each product's route stages ordered by
+// (level, seq), in one loader call. A product with no route, or a route with
+// no stages, is absent from the result.
+func (h *GetRouteCostSheetHandler) resolveStagesBatch(ctx context.Context, productSysIDs []int64) (map[int64][]*costroute.Seq, error) {
+	graphs, err := h.svc.loader.LoadRoutesByProducts(ctx, productSysIDs)
 	if err != nil {
 		return nil, fmt.Errorf("load route: %w", err)
 	}
-	g, ok := graphs[productSysID]
-	if !ok || g == nil {
-		return nil, nil
-	}
-	seqs := make([]*costroute.Seq, 0, len(g.Seqs))
-	for _, s := range g.Seqs {
-		if s != nil {
-			seqs = append(seqs, s)
+	out := make(map[int64][]*costroute.Seq, len(productSysIDs))
+	for _, pid := range productSysIDs {
+		g, ok := graphs[pid]
+		if !ok || g == nil {
+			continue
 		}
-	}
-	sort.SliceStable(seqs, func(i, j int) bool {
-		if seqs[i].RouteLevel != seqs[j].RouteLevel {
-			return seqs[i].RouteLevel < seqs[j].RouteLevel
+		seqs := make([]*costroute.Seq, 0, len(g.Seqs))
+		for _, s := range g.Seqs {
+			if s != nil {
+				seqs = append(seqs, s)
+			}
 		}
-		return seqs[i].RouteSeq < seqs[j].RouteSeq
-	})
-	return seqs, nil
+		if len(seqs) == 0 {
+			continue
+		}
+		sort.SliceStable(seqs, func(i, j int) bool {
+			if seqs[i].RouteLevel != seqs[j].RouteLevel {
+				return seqs[i].RouteLevel < seqs[j].RouteLevel
+			}
+			return seqs[i].RouteSeq < seqs[j].RouteSeq
+		})
+		out[pid] = seqs
+	}
+	return out, nil
 }
 
 // buildStage zips one route seq with its (possibly missing) cost row. Identity
