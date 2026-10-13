@@ -275,6 +275,7 @@ func (h *RMGroupHandler) CreateRMGroup(ctx context.Context, req *financev1.Creat
 		ValuationFlag:           protoValuationFlagToString(req.ValuationFlag),
 		MarketingFlag:           protoMarketingFlagToString(req.MarketingFlag),
 		IsOilGroup:              req.GetIsOilGroup(),
+		Denier:                  req.Denier,
 	})
 	if err != nil {
 		RecordRMGroupOperation(opCreate, false)
@@ -364,6 +365,7 @@ func (h *RMGroupHandler) UpdateRMGroup(ctx context.Context, req *financev1.Updat
 		ClearInitValSimulation: req.ClearInitValSimulation,
 		IsActive:               req.IsActive,
 		IsOilGroup:             req.IsOilGroup,
+		Denier:                 req.Denier,
 		UpdatedBy:              getUserFromContext(ctx),
 	}
 	if req.FlagValuation != nil {
@@ -811,6 +813,7 @@ func rmGroupHeadToProto(h *rmgroupdomain.Head) *financev1.RMGroupHead {
 		InitValSimulation: h.InitValSimulation(),
 		IsActive:          h.IsActive(),
 		IsOilGroup:        h.IsOilGroup(),
+		Denier:            denierToProto(h.Denier()),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: h.CreatedAt().Format(time.RFC3339),
 			CreatedBy: h.CreatedBy(),
@@ -1238,4 +1241,12 @@ func (h *RMGroupHandler) DownloadGroupItemsTemplate(_ context.Context, req *fina
 // RecordRMGroupOperation records an RM Group operation metric.
 func RecordRMGroupOperation(operation string, success bool) {
 	rmGroupOperationsTotal.WithLabelValues(operation, metricStatus(success)).Inc()
+}
+
+// denierToProto maps a nullable denier to the plain proto double (NULL -> 0).
+func denierToProto(d *float64) float64 {
+	if d == nil {
+		return 0
+	}
+	return *d
 }
