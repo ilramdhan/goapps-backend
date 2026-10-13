@@ -74,6 +74,27 @@ func (a *JobPublisherAdapter) PublishProductCostSheetExport(
 	return a.publisher.PublishJob(ctx, RoutingKeyProductCostSheetExport, msg)
 }
 
+// PublishProductCostSheetExportWithLayout is PublishProductCostSheetExport
+// plus the workbook layout ("horizontal" / "vertical"; empty = combined).
+func (a *JobPublisherAdapter) PublishProductCostSheetExportWithLayout(
+	ctx context.Context,
+	jobID, period, requestingUserID, createdBy string,
+	productSysIDs []int64,
+	layout string,
+) error {
+	msg := JobMessage{
+		JobID:            jobID,
+		JobType:          "product_cost_sheet_export",
+		Subtype:          "xlsx",
+		Period:           period,
+		CreatedBy:        createdBy,
+		RequestingUserID: requestingUserID,
+		ProductSysIDs:    productSysIDs,
+		Layout:           layout,
+	}
+	return a.publisher.PublishJob(ctx, RoutingKeyProductCostSheetExport, msg)
+}
+
 // PublishImportJob publishes a costing data import job message.
 // jobID is the int64 primary key from cost_import_job. entity is the entity type (e.g. "product_master").
 // requestingUserID is the UUID of the user who submitted the import; used to route
