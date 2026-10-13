@@ -1623,6 +1623,15 @@
           "type": "integer",
           "format": "int32",
           "description": "Route level this RM edge feeds (1 = FG; 2..N upstream). Already stored in\ncpc_rm_cost_detail JSON; previously omitted from the contract."
+        },
+        "denier": {
+          "type": "number",
+          "format": "double",
+          "description": "Denier of the RM group head. Only set for DENIER ratio-mode products."
+        },
+        "ratioSource": {
+          "type": "string",
+          "description": "Source of the ratio (e.g. DENIER, SPANDEX_DRAFT). Only set for DENIER ratio-mode products."
         }
       },
       "description": "CostRMDetail is one RM input edge contribution to the cost."

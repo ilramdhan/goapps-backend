@@ -1564,7 +1564,11 @@ type CostRMDetail struct {
 	Contribution string `protobuf:"bytes,7,opt,name=contribution,proto3" json:"contribution,omitempty"`
 	// Route level this RM edge feeds (1 = FG; 2..N upstream). Already stored in
 	// cpc_rm_cost_detail JSON; previously omitted from the contract.
-	RouteLevel    int32 `protobuf:"varint,8,opt,name=route_level,json=routeLevel,proto3" json:"route_level,omitempty"`
+	RouteLevel int32 `protobuf:"varint,8,opt,name=route_level,json=routeLevel,proto3" json:"route_level,omitempty"`
+	// Denier of the RM group head. Only set for DENIER ratio-mode products.
+	Denier float64 `protobuf:"fixed64,9,opt,name=denier,proto3" json:"denier,omitempty"`
+	// Source of the ratio (e.g. DENIER, SPANDEX_DRAFT). Only set for DENIER ratio-mode products.
+	RatioSource   string `protobuf:"bytes,10,opt,name=ratio_source,json=ratioSource,proto3" json:"ratio_source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1653,6 +1657,20 @@ func (x *CostRMDetail) GetRouteLevel() int32 {
 		return x.RouteLevel
 	}
 	return 0
+}
+
+func (x *CostRMDetail) GetDenier() float64 {
+	if x != nil {
+		return x.Denier
+	}
+	return 0
+}
+
+func (x *CostRMDetail) GetRatioSource() string {
+	if x != nil {
+		return x.RatioSource
+	}
+	return ""
 }
 
 // FormulaEval traces one formula evaluation step.
@@ -5319,7 +5337,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\fproduct_code\x18\x03 \x01(\tR\vproductCode\x12!\n" +
 	"\fproduct_name\x18\x04 \x01(\tR\vproductName\x12+\n" +
 	"\x11cost_contribution\x18\x05 \x01(\tR\x10costContribution\x12\x14\n" +
-	"\x05ratio\x18\x06 \x01(\tR\x05ratio\"\xf6\x01\n" +
+	"\x05ratio\x18\x06 \x01(\tR\x05ratio\"\xb1\x02\n" +
 	"\fCostRMDetail\x12\x17\n" +
 	"\arm_type\x18\x01 \x01(\tR\x06rmType\x12\x19\n" +
 	"\bref_code\x18\x02 \x01(\tR\arefCode\x12\x1b\n" +
@@ -5330,7 +5348,10 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\x05ratio\x18\x06 \x01(\tR\x05ratio\x12\"\n" +
 	"\fcontribution\x18\a \x01(\tR\fcontribution\x12\x1f\n" +
 	"\vroute_level\x18\b \x01(\x05R\n" +
-	"routeLevel\"\xba\x02\n" +
+	"routeLevel\x12\x16\n" +
+	"\x06denier\x18\t \x01(\x01R\x06denier\x12!\n" +
+	"\fratio_source\x18\n" +
+	" \x01(\tR\vratioSource\"\xba\x02\n" +
 	"\vFormulaEval\x12!\n" +
 	"\fformula_code\x18\x01 \x01(\tR\vformulaCode\x12!\n" +
 	"\fformula_name\x18\x02 \x01(\tR\vformulaName\x12\x1e\n" +
