@@ -163,6 +163,13 @@ type RMCostDetail struct {
 	UnitCost     float64 `json:"unit_cost"`
 	Ratio        float64 `json:"ratio"`
 	Contribution float64 `json:"contribution"`
+	// Denier is the line's denier in DENIER ratio mode (upstream DENIER, or
+	// group denier / SPANDEX_DRAFT). Omitted for INPUT-mode products.
+	Denier float64 `json:"denier,omitempty"`
+	// RatioSource is "DENIER" for a denier-derived ratio and "INPUT" for a
+	// route-ratio line of a DENIER-mode product. Empty (omitted) for
+	// INPUT-mode products so their JSON is unchanged.
+	RatioSource string `json:"ratio_source,omitempty"`
 }
 
 // FormulaEvalTrace records one formula's evaluation step for diagnostics.
@@ -206,6 +213,9 @@ type ComputeOutput struct {
 	FormulaTrace    []FormulaEvalTrace
 	CostByLevel     []LevelContribution
 	InputHash       string
+	// Notes are human-readable, non-blocking calculation notes (e.g. a DENIER
+	// ratio input that was missing and treated as 0). Nil when there are none.
+	Notes []string
 }
 
 // ComputeProduct executes the cost calculation for one product. Pure function;
@@ -272,7 +282,10 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	}
 
 	// 2. Aggregate RM cost across every sequence in the route.
-	totalRM, rmDetail, levelMap, err := aggregateRMCost(in, resolveRMUnitCost)
+	// 2-. DENIER-mode products derive their RM line ratios from denier share;
+	// nil for INPUT-mode products, which keeps the legacy aggregation intact.
+	ratioPlan := planRMRatios(in)
+	totalRM, rmDetail, levelMap, err := aggregateRMCost(in, ratioPlan, resolveRMUnitCost)
 	if err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
@@ -288,7 +301,7 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	// branch below reuses landedRM instead of recomputing the aggregation.
 	// Its per-line detail/level breakdown is discarded: nothing downstream
 	// persists a separate landed-cost detail/level report today.
-	landedRM, _, _, err := aggregateRMCost(in, resolveRMLandedCost)
+	landedRM, _, _, err := aggregateRMCost(in, ratioPlan, resolveRMLandedCost)
 	if err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
@@ -336,6 +349,7 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		FormulaTrace:    formulaTrace,
 		CostByLevel:     buildCostByLevel(levelMap, conv, in.Route, in.ProductSysID, in.UpstreamCosts),
 		InputHash:       inputHash(in, totalRM),
+		Notes:           ratioPlan.notesOrNil(),
 	}, nil
 }
 
@@ -703,7 +717,10 @@ type rmUnitResolver func(in ComputeInput, rm *costroute.Rm) (float64, error)
 // costroute design the level-1 seq produces the FG; we treat every seq as
 // contributing because intermediate seqs feed the FG via their RMs (the
 // formula chain rolls them up — see S8b.7 chunk processor).
-func aggregateRMCost(in ComputeInput, resolve rmUnitResolver) (float64, []RMCostDetail, map[int32]float64, error) {
+//
+// plan carries the DENIER-mode ratio overrides (nil = INPUT mode: route ratio
+// and resolve for every line, the legacy behavior).
+func aggregateRMCost(in ComputeInput, plan *rmRatioPlan, resolve rmUnitResolver) (float64, []RMCostDetail, map[int32]float64, error) {
 	var totalRM float64
 	detail := []RMCostDetail{}
 	byLevel := map[int32]float64{}
@@ -723,11 +740,11 @@ func aggregateRMCost(in ComputeInput, resolve rmUnitResolver) (float64, []RMCost
 			if rm == nil {
 				continue
 			}
-			unit, err := resolve(in, rm)
+			unit, ratio, denier, source, err := plan.lineUnitAndRatio(in, rm, resolve)
 			if err != nil {
 				return 0, nil, nil, fmt.Errorf("product %d level %d: %w", in.ProductSysID, level, err)
 			}
-			contribution := unit * rm.RouteRmRatio
+			contribution := unit * ratio
 			totalRM += contribution
 			byLevel[level] += contribution
 			detail = append(detail, RMCostDetail{
@@ -736,8 +753,10 @@ func aggregateRMCost(in ComputeInput, resolve rmUnitResolver) (float64, []RMCost
 				RefCode:      rmRefCode(rm),
 				ShadeCode:    rm.RouteRmShadeCode,
 				UnitCost:     unit,
-				Ratio:        rm.RouteRmRatio,
+				Ratio:        ratio,
 				Contribution: contribution,
+				Denier:       denier,
+				RatioSource:  source,
 			})
 		}
 	}

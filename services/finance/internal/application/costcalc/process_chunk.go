@@ -639,6 +639,9 @@ func buildCalculationLog(out *ComputeOutput, spinPoolPeriod string) []byte {
 		"input_hash":       out.InputHash,
 		"spin_pool_period": spinPoolPeriod,
 	}
+	if len(out.Notes) > 0 {
+		doc["notes"] = out.Notes
+	}
 	b, err := json.Marshal(doc)
 	if err != nil {
 		// Never expected — fall back to a minimal envelope so the row still has
