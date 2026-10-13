@@ -160,6 +160,11 @@ type loadedBundle struct {
 	// upstreamSnapshots is the committed cpc_param_snapshot of every upstream
 	// PRODUCT RM (same row filter as upstreamCosts). Feeds VB loss inheritance.
 	upstreamSnapshots map[int64]map[string]float64
+	// rmRatioModes is cpt_rm_ratio_mode per chunk product (absent = INPUT).
+	rmRatioModes map[int64]string
+	// rmGroupDeniers is cst_rm_group_head.denier per GROUP RM code referenced
+	// by the chunk's routes (NULL denier = absent). Read in DENIER mode only.
+	rmGroupDeniers map[string]float64
 }
 
 // loadVBLossInputs loads what the POY-only VB loss rule needs for a chunk:
@@ -250,25 +255,9 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		sellingSnaps = make(map[int64]map[string]float64, len(in.Products))
 	}
 
-	spinPool, err := s.loader.LoadSpinFixedCost(ctx, in.Period)
+	spinPool, err := s.loadSpinPool(ctx, in)
 	if err != nil {
-		return nil, fmt.Errorf("load spin fixed cost: %w", err)
-	}
-	// Hard block rather than zero-fill: an absent pool would make every POY pool-arm
-	// formula divide-guard to 0 and silently understate fixed cost, which reads as a
-	// plausible number nobody catches.
-	if spinPool.Period == "" {
-		return nil, fmt.Errorf("%w: period %s", costcalcdom.ErrMissingSpinFixedCost, in.Period)
-	}
-	// Carry-forward from an older row is legitimate (see LoadSpinFixedCost), but the
-	// chunk should say so out loud once.
-	if spinPool.Period != in.Period {
-		log.Warn().
-			Str("requested_period", in.Period).
-			Str("spin_pool_period", spinPool.Period).
-			Int64("job_id", in.JobID).
-			Int64("chunk_id", in.ChunkID).
-			Msg("spin fixed cost pool is stale: no master row for the requested period, POY fixed cost computed from an older month's pool")
+		return nil, err
 	}
 
 	txWeight, err := s.loadTxWeightRules(ctx, in.Products)
@@ -276,7 +265,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		return nil, err
 	}
 
-	return &loadedBundle{
+	b := &loadedBundle{
 		txWeight:          txWeight,
 		routes:            routes,
 		capp:              capp,
@@ -293,7 +282,54 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		superba:           superba,
 		typeCodes:         typeCodes,
 		upstreamSnapshots: upstreamSnapshots,
-	}, nil
+	}
+	if err := s.loadRMRatioInputs(ctx, in.Products, b); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// loadRMRatioInputs loads what the DENIER RM ratio mode needs for a chunk into
+// b: cpt_rm_ratio_mode per chunk product and the head denier of every GROUP RM
+// referenced by b.routes (one query each). The upstream DENIER comes from
+// b.upstreamSnapshots, already loaded for the VB loss rule.
+func (s *Service) loadRMRatioInputs(ctx context.Context, products []int64, b *loadedBundle) error {
+	modes, err := s.loader.LoadProductRMRatioModes(ctx, products)
+	if err != nil {
+		return fmt.Errorf("load product RM ratio modes: %w", err)
+	}
+	deniers, err := s.loader.LoadRMGroupDeniers(ctx, collectGroupCodes(b.routes))
+	if err != nil {
+		return fmt.Errorf("load RM group deniers: %w", err)
+	}
+	b.rmRatioModes, b.rmGroupDeniers = modes, deniers
+	return nil
+}
+
+// loadSpinPool resolves the period's POY spin fixed-cost pool for a chunk and
+// refuses a chunk with no pool at or before the period.
+func (s *Service) loadSpinPool(ctx context.Context, in ProcessChunkInput) (SpinPool, error) {
+	spinPool, err := s.loader.LoadSpinFixedCost(ctx, in.Period)
+	if err != nil {
+		return SpinPool{}, fmt.Errorf("load spin fixed cost: %w", err)
+	}
+	// Hard block rather than zero-fill: an absent pool would make every POY pool-arm
+	// formula divide-guard to 0 and silently understate fixed cost, which reads as a
+	// plausible number nobody catches.
+	if spinPool.Period == "" {
+		return SpinPool{}, fmt.Errorf("%w: period %s", costcalcdom.ErrMissingSpinFixedCost, in.Period)
+	}
+	// Carry-forward from an older row is legitimate (see LoadSpinFixedCost), but the
+	// chunk should say so out loud once.
+	if spinPool.Period != in.Period {
+		log.Warn().
+			Str("requested_period", in.Period).
+			Str("spin_pool_period", spinPool.Period).
+			Int64("job_id", in.JobID).
+			Int64("chunk_id", in.ChunkID).
+			Msg("spin fixed cost pool is stale: no master row for the requested period, POY fixed cost computed from an older month's pool")
+	}
+	return spinPool, nil
 }
 
 // loadRMRateOrder resolves the GROUP-RM cascade order once per chunk. A nil
@@ -401,6 +437,9 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 			UpstreamTypeCodes:      loaded.typeCodes,
 			UpstreamParamSnapshots: loaded.upstreamSnapshots,
 		},
+		RMRatioMode:       loaded.rmRatioModes[pid],
+		RMGroupDenier:     loaded.rmGroupDeniers,
+		UpstreamSnapshots: loaded.upstreamSnapshots,
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)
@@ -654,6 +693,33 @@ func collectRMCodes(routes map[int64]*costroute.Graph) []string { //nolint:gocog
 				if _, ok := seen[code]; !ok {
 					seen[code] = struct{}{}
 					out = append(out, code)
+				}
+			}
+		}
+	}
+	return out
+}
+
+// collectGroupCodes returns the deduped list of GROUP-type RM codes referenced
+// by any route. Used as input to LoadRMGroupDeniers.
+func collectGroupCodes(routes map[int64]*costroute.Graph) []string {
+	seen := map[string]struct{}{}
+	out := []string{}
+	for _, g := range routes {
+		if g == nil {
+			continue
+		}
+		for _, seq := range g.Seqs {
+			if seq == nil {
+				continue
+			}
+			for _, rm := range seq.Rms {
+				if rm == nil || rm.RmType != costroute.RmTypeGroup || rm.RmGroupCode == "" {
+					continue
+				}
+				if _, ok := seen[rm.RmGroupCode]; !ok {
+					seen[rm.RmGroupCode] = struct{}{}
+					out = append(out, rm.RmGroupCode)
 				}
 			}
 		}

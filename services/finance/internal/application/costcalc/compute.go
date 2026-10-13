@@ -140,6 +140,18 @@ type ComputeInput struct {
 	// own F_YARN_VBn_LOSS formulas, preserving pre-rule behavior for callers
 	// that do not supply it (e.g. mbbatch). See applyInheritedVBLoss.
 	VBLoss *VBLossInheritance
+	// RMRatioMode is the product type's cpt_rm_ratio_mode (000570). "" or
+	// "INPUT" keeps every route RM ratio as entered (legacy behavior, e.g.
+	// mbbatch); "DENIER" derives the ratio of PRODUCT lines and denier GROUP
+	// lines from their denier share (see planRMRatios).
+	RMRatioMode string
+	// RMGroupDenier maps RM group_code -> cst_rm_group_head.denier for groups
+	// with a non-NULL denier. Only read in DENIER mode.
+	RMGroupDenier map[string]float64
+	// UpstreamSnapshots maps upstream product sys id -> its committed
+	// cpc_param_snapshot (the same map VBLoss carries; loaded once per chunk).
+	// Only read in DENIER mode, for the upstream DENIER param.
+	UpstreamSnapshots map[int64]map[string]float64
 }
 
 // RMCostDetail records one RM line's contribution to the total RM cost.
