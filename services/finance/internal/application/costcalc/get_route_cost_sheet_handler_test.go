@@ -2,6 +2,7 @@ package costcalc
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -261,4 +262,62 @@ func TestGetRouteCostSheet_CorruptSnapshot_DegradesOneColumn(t *testing.T) {
 		}
 		require.Equal(t, "12.5", st.ParamSnapshot["RM_RATE"])
 	}
+}
+
+// TestGetRouteCostSheet_HandleBatch_MatchesPerProductHandle pins the export's
+// batched path to the single-product one: every product's stages from one
+// HandleBatch call equal what Handle returns for that product alone,
+// including an empty slice for a product with no route, and the loaders are
+// hit once for the whole batch rather than once per product.
+func TestGetRouteCostSheet_HandleBatch_MatchesPerProductHandle(t *testing.T) {
+	t.Parallel()
+	graph := sevenStageGraph()
+	other := &costroute.Graph{Seqs: []*costroute.Seq{
+		{SeqID: 2, ProductSysID: 900, RouteLevel: 2, RouteSeq: 1, RouteItemCode: "UP"},
+		{SeqID: 1, ProductSysID: 901, RouteLevel: 1, RouteSeq: 1, RouteItemCode: "FG2"},
+		{SeqID: 3, ProductSysID: 601, RouteLevel: 3, RouteSeq: 1, RouteItemCode: "SHARED"},
+	}}
+	results := map[int64]*calcdomain.Result{}
+	for _, s := range append(graph.Seqs, other.Seqs...) {
+		results[s.ProductSysID] = sheetResult(s.ProductSysID, fmt.Sprintf(`{"RM_RATE":%d}`, s.ProductSysID))
+	}
+	loader := &countingSheetLoader{sheetFakeLoader: sheetFakeLoader{
+		graphs: map[int64]*costroute.Graph{800: graph, 901: other},
+		capText: map[int64]map[string]string{
+			601: {"MC_NAME": "BT-S"},
+			901: {"MC_NAME": "A1-8-S"},
+		},
+	}}
+	h := NewGetRouteCostSheetHandler(&Service{loader: loader, resultRepo: &sheetFakeResultRepo{byProduct: results}})
+	ctx := context.Background()
+
+	ids := []int64{800, 901, 555}
+	batch, err := h.HandleBatch(ctx, GetRouteCostSheetBatchQuery{ProductSysIDs: ids, Period: "202604", CalcType: calcdomain.CalcTypeActual})
+	require.NoError(t, err)
+	require.Equal(t, 1, loader.routeCalls, "routes resolved in one call for the whole batch")
+	require.Len(t, batch, len(ids))
+
+	for _, id := range ids {
+		single, err := h.Handle(ctx, GetRouteCostSheetQuery{ProductSysID: id, Period: "202604", CalcType: calcdomain.CalcTypeActual})
+		require.NoError(t, err)
+		require.Equal(t, single, batch[id], "product %d", id)
+	}
+	require.Empty(t, batch[555])
+	require.Len(t, batch[901], 3)
+	require.Equal(t, "BT-S", batch[901][2].ParamSnapshot["MC_NAME"])
+
+	_, err = h.HandleBatch(ctx, GetRouteCostSheetBatchQuery{ProductSysIDs: []int64{1, 0}, Period: "202604"})
+	require.Error(t, err)
+	_, err = h.HandleBatch(ctx, GetRouteCostSheetBatchQuery{ProductSysIDs: []int64{1}, Period: "2026"})
+	require.Error(t, err)
+}
+
+type countingSheetLoader struct {
+	sheetFakeLoader
+	routeCalls int
+}
+
+func (f *countingSheetLoader) LoadRoutesByProducts(ctx context.Context, ids []int64) (map[int64]*costroute.Graph, error) {
+	f.routeCalls++
+	return f.sheetFakeLoader.LoadRoutesByProducts(ctx, ids)
 }

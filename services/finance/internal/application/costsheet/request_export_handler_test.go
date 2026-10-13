@@ -61,7 +61,8 @@ func TestRequestExportHandler_ExplicitProductSysIDsBypassesFilter(t *testing.T) 
 	require.NotNil(t, res)
 	assert.Equal(t, job.TypeProductCostSheetExport, res.Execution.JobType())
 
-	// ListResults must never be called when ProductSysIDs is explicit.
+	// The filter must never be resolved when ProductSysIDs is explicit.
+	results.AssertNotCalled(t, "ListProductSysIDs", mock.Anything, mock.Anything)
 	results.AssertNotCalled(t, "ListResults", mock.Anything, mock.Anything)
 	repo.AssertExpectations(t)
 	pub.AssertExpectations(t)
@@ -74,10 +75,9 @@ func TestRequestExportHandler_FilterResolvedUnderCap(t *testing.T) {
 	results := &resultRepoMock{}
 	pub := &exportPubMock{}
 
-	items := makeResultSummaries(50)
-	results.On("ListResults", mock.Anything, mock.MatchedBy(func(f costcalcdom.ResultListFilter) bool {
+	results.On("ListProductSysIDs", mock.Anything, mock.MatchedBy(func(f costcalcdom.ResultListFilter) bool {
 		return f.Period == "202604" && f.Search == "widget"
-	})).Return(items, 50, "202604", nil).Once()
+	})).Return(makeProductIDs(50), nil).Once()
 
 	repo.On("Create", mock.Anything, mock.AnythingOfType("*job.Execution")).Return(nil).Once()
 	pub.On("PublishProductCostSheetExport", mock.Anything, mock.Anything, "202604", "user-1", "user-1", mock.MatchedBy(func(ids []int64) bool {
@@ -109,8 +109,7 @@ func TestRequestExportHandler_ExactlyCapDoesNotTruncate(t *testing.T) {
 	results := &resultRepoMock{}
 	pub := &exportPubMock{}
 
-	items := makeResultSummaries(200)
-	results.On("ListResults", mock.Anything, mock.Anything).Return(items, 200, "202604", nil).Once()
+	results.On("ListProductSysIDs", mock.Anything, mock.Anything).Return(makeProductIDs(200), nil).Once()
 
 	repo.On("Create", mock.Anything, mock.AnythingOfType("*job.Execution")).Return(nil).Once()
 	pub.On("PublishProductCostSheetExport", mock.Anything, mock.Anything, "202604", "user-1", "user-1", mock.MatchedBy(func(ids []int64) bool {
@@ -136,13 +135,12 @@ func TestRequestExportHandler_OverCapFansOutIntoParentAndChildren(t *testing.T) 
 	results := &resultRepoMock{}
 	pub := &exportPubMock{}
 
-	// Filter resolves to 450 products across two pages of the 500-sized
-	// resolvePageSize — more than maxExportProducts(200), so Handle must fan
-	// out into a parent + ceil(450/200)=3 children (200, 200, 50).
-	page1 := makeResultSummaries(450)
-	results.On("ListResults", mock.Anything, mock.MatchedBy(func(f costcalcdom.ResultListFilter) bool {
-		return f.Page == 1 && f.PageSize == 500
-	})).Return(page1, 450, "202604", nil).Once()
+	// Filter resolves (in one lean query) to 450 products — more than
+	// maxExportProducts(200), so Handle must fan out into a parent +
+	// ceil(450/200)=3 children (200, 200, 50).
+	results.On("ListProductSysIDs", mock.Anything, mock.MatchedBy(func(f costcalcdom.ResultListFilter) bool {
+		return f.Period == "202604"
+	})).Return(makeProductIDs(450), nil).Once()
 
 	repo.On("Create", mock.Anything, mock.MatchedBy(func(e *job.Execution) bool {
 		return e.IsParent() && e.TotalChildren() == 3
@@ -192,7 +190,7 @@ func TestRequestExportHandler_ExplicitProductSysIDsOverCapIsRejected(t *testing.
 	})
 	require.Error(t, err)
 	repo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
-	results.AssertNotCalled(t, "ListResults", mock.Anything, mock.Anything)
+	results.AssertNotCalled(t, "ListProductSysIDs", mock.Anything, mock.Anything)
 }
 
 func TestRequestExportHandler_EmptyResolutionIsError(t *testing.T) {
@@ -202,7 +200,7 @@ func TestRequestExportHandler_EmptyResolutionIsError(t *testing.T) {
 	results := &resultRepoMock{}
 	pub := &exportPubMock{}
 
-	results.On("ListResults", mock.Anything, mock.Anything).Return(nil, 0, "202604", nil).Once()
+	results.On("ListProductSysIDs", mock.Anything, mock.Anything).Return([]int64{}, nil).Once()
 
 	h := appcostsheet.NewRequestExportHandler(repo, results, pub)
 	_, err := h.Handle(context.Background(), appcostsheet.RequestExportCommand{
@@ -210,8 +208,66 @@ func TestRequestExportHandler_EmptyResolutionIsError(t *testing.T) {
 		RequestingUserID: "user-1",
 	})
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no products matched the given filter")
 	repo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
 	pub.AssertNotCalled(t, "PublishProductCostSheetExport", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRequestExportHandler_FilterResolutionPassesFullFilterOnce(t *testing.T) {
+	t.Parallel()
+
+	repo := &jobRepoMock{}
+	results := &resultRepoMock{}
+	pub := &exportPubMock{}
+
+	// The whole filter goes to the lean id query exactly once — no paging.
+	results.On("ListProductSysIDs", mock.Anything, mock.MatchedBy(func(f costcalcdom.ResultListFilter) bool {
+		return f.Period == "202604" && f.CalcType == costcalcdom.CalcTypeForecast &&
+			f.Status == "APPROVED" && f.Search == "poy" &&
+			len(f.ProductTypeIDs) == 2 && f.ProductTypeIDs[1] == 7 &&
+			len(f.ShadeCodes) == 1 && f.ShadeCodes[0] == "WHT" &&
+			len(f.RMGroupCodes) == 1 && f.RMGroupCodes[0] == "BRT" &&
+			f.Page == 0 && f.PageSize == 0
+	})).Return([]int64{42, 7, 9}, nil).Once()
+	repo.On("Create", mock.Anything, mock.AnythingOfType("*job.Execution")).Return(nil).Once()
+	pub.On("PublishProductCostSheetExport", mock.Anything, mock.Anything, "202604", "user-1", "user-1", []int64{42, 7, 9}).
+		Return(nil).Once()
+
+	h := appcostsheet.NewRequestExportHandler(repo, results, pub)
+	_, err := h.Handle(context.Background(), appcostsheet.RequestExportCommand{
+		Period:           "202604",
+		CalcType:         costcalcdom.CalcTypeForecast,
+		Status:           "APPROVED",
+		Search:           "poy",
+		ProductTypeIDs:   []int32{3, 7},
+		ShadeCodes:       []string{"WHT"},
+		RMGroupCodes:     []string{"BRT"},
+		RequestingUserID: "user-1",
+	})
+	require.NoError(t, err)
+	results.AssertExpectations(t)
+	results.AssertNotCalled(t, "ListResults", mock.Anything, mock.Anything)
+	repo.AssertExpectations(t)
+	pub.AssertExpectations(t)
+}
+
+func TestRequestExportHandler_FilterResolutionErrorIsWrapped(t *testing.T) {
+	t.Parallel()
+
+	repo := &jobRepoMock{}
+	results := &resultRepoMock{}
+	pub := &exportPubMock{}
+
+	results.On("ListProductSysIDs", mock.Anything, mock.Anything).Return(nil, context.DeadlineExceeded).Once()
+
+	h := appcostsheet.NewRequestExportHandler(repo, results, pub)
+	_, err := h.Handle(context.Background(), appcostsheet.RequestExportCommand{
+		Period:           "202604",
+		RequestingUserID: "user-1",
+	})
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Contains(t, err.Error(), "resolve product filter")
+	repo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
 }
 
 func TestRequestExportHandler_PublishFailureMarksJobFailed(t *testing.T) {
@@ -237,10 +293,10 @@ func TestRequestExportHandler_PublishFailureMarksJobFailed(t *testing.T) {
 	pub.AssertExpectations(t)
 }
 
-func makeResultSummaries(n int) []*costcalcdom.ResultSummary {
-	out := make([]*costcalcdom.ResultSummary, n)
+func makeProductIDs(n int) []int64 {
+	out := make([]int64, n)
 	for i := range out {
-		out[i] = &costcalcdom.ResultSummary{ProductSysID: int64(i + 1)}
+		out[i] = int64(i + 1)
 	}
 	return out
 }

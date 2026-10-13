@@ -10,6 +10,7 @@ import (
 
 	"github.com/xuri/excelize/v2"
 
+	appcostcalc "github.com/mutugading/goapps-backend/services/finance/internal/application/costcalc"
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/rabbitmq"
 )
@@ -32,11 +33,12 @@ func (h *CostSheetExportHandler) buildVerticalWorkbook(
 	stats.taken[placeholder] = true
 
 	singleProduct := len(msg.ProductSysIDs) == 1
-	for _, productSysID := range msg.ProductSysIDs {
-		if err := h.addProductSheet(ctx, book, stats, productSysID, msg.Period, calcType, singleProduct); err != nil {
-			closeWorkbook(h.logger, book)
-			return nil, nil, err
-		}
+	if err := h.forEachProductSheet(ctx, msg.ProductSysIDs, msg.Period, calcType,
+		func(productSysID int64, raw []appcostcalc.RouteCostSheetStage) error {
+			return h.addProductSheet(book, stats, productSysID, raw, singleProduct)
+		}); err != nil {
+		closeWorkbook(h.logger, book)
+		return nil, nil, err
 	}
 	if stats.written == 0 {
 		closeWorkbook(h.logger, book)
@@ -94,27 +96,30 @@ func (h *CostSheetExportHandler) writeHorizontalSheets(
 		return err
 	}
 	no := 0
-	for _, productSysID := range msg.ProductSysIDs {
-		stages, ok, loadErr := h.loadProductStages(ctx, stats, productSysID, msg.Period, calcType)
-		if loadErr != nil {
-			return loadErr
-		}
-		if !ok {
-			continue
-		}
-		for _, stage := range stages {
-			if sw.full() {
-				if sw, err = h.rolloverAllDataStream(book, sw, stats, msg.JobID); err != nil {
+	err = h.forEachProductSheet(ctx, msg.ProductSysIDs, msg.Period, calcType,
+		func(productSysID int64, raw []appcostcalc.RouteCostSheetStage) error {
+			stages, ok := productStages(stats, productSysID, raw)
+			if !ok {
+				return nil
+			}
+			for _, stage := range stages {
+				if sw.full() {
+					var rollErr error
+					if sw, rollErr = h.rolloverAllDataStream(book, sw, stats, msg.JobID); rollErr != nil {
+						return rollErr
+					}
+				}
+				no++
+				if err := sw.writeStage(no, stage); err != nil {
 					return err
 				}
 			}
-			no++
-			if err := sw.writeStage(no, stage); err != nil {
-				return err
-			}
-		}
-		stats.written++
-		stats.fgLabels = append(stats.fgLabels, finishedGoodLabel(stages))
+			stats.written++
+			stats.fgLabels = append(stats.fgLabels, finishedGoodLabel(stages))
+			return nil
+		})
+	if err != nil {
+		return err
 	}
 	return sw.flush()
 }

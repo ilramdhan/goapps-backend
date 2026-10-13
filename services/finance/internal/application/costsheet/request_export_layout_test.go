@@ -32,9 +32,9 @@ func paramsLayout(t *testing.T, exec *job.Execution) string {
 }
 
 func expectFilterResolves(results *resultRepoMock, n int) {
-	results.On("ListResults", mock.Anything, mock.MatchedBy(func(f costcalcdom.ResultListFilter) bool {
-		return f.Page == 1
-	})).Return(makeResultSummaries(n), n, "202604", nil).Once()
+	results.On("ListProductSysIDs", mock.Anything, mock.MatchedBy(func(f costcalcdom.ResultListFilter) bool {
+		return f.Period == "202604"
+	})).Return(makeProductIDs(n), nil).Once()
 }
 
 func TestRequestExportHandler_HorizontalOverCapIsOneJob(t *testing.T) {

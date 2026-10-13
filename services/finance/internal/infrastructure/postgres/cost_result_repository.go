@@ -448,22 +448,31 @@ func cpcOrderBy(sortBy, sortOrder string) string {
 // literal string "product:<product_sys_id>" (see rmRefCode in compute.go),
 // so resolving its code/name requires parsing that id back out and joining
 // cost_product_master.
+//
+// Each name lookup is a correlated EXISTS scoped to its rm_type rather than a
+// LEFT JOIN of all three lookup tables onto the unnested lines: with the joins,
+// the planner hash-joined the whole cost_product_master table once PER cost
+// row (Seq Scan × every row in the period — ~9s for 12k rows); the EXISTS form
+// is an index probe per line of the matching kind only (~0.1s). Semantics are
+// unchanged: a line matches when its ref_code, or the resolved name of the
+// same-kind row it points at, contains the search text.
 func rmDetailExistsClause(n int) string {
 	return fmt.Sprintf(`EXISTS (
 		     SELECT 1
 		       FROM jsonb_array_elements(COALESCE(cpc.cpc_rm_cost_detail, '[]'::jsonb)) elem
-		       LEFT JOIN cst_rm_group_head rmg_s
-		              ON elem->>'rm_type' = 'GROUP' AND rmg_s.group_code = elem->>'ref_code' AND rmg_s.deleted_at IS NULL
-		       LEFT JOIN cost_erp_item cei_s
-		              ON elem->>'rm_type' = 'ITEM' AND cei_s.cei_item_code = elem->>'ref_code'
-		       LEFT JOIN cost_product_master cpm_s
-		              ON elem->>'rm_type' = 'PRODUCT'
-		             AND cpm_s.cpm_product_sys_id = NULLIF(substring(elem->>'ref_code' FROM 'product:(\d+)'), '')::bigint
 		      WHERE elem->>'ref_code' ILIKE $%[1]d
-		         OR rmg_s.group_name ILIKE $%[1]d
-		         OR cei_s.cei_item_name ILIKE $%[1]d
-		         OR cpm_s.cpm_product_code ILIKE $%[1]d
-		         OR cpm_s.cpm_product_name ILIKE $%[1]d
+		         OR (elem->>'rm_type' = 'GROUP' AND EXISTS (
+		              SELECT 1 FROM cst_rm_group_head rmg_s
+		               WHERE rmg_s.group_code = elem->>'ref_code' AND rmg_s.deleted_at IS NULL
+		                 AND rmg_s.group_name ILIKE $%[1]d))
+		         OR (elem->>'rm_type' = 'ITEM' AND EXISTS (
+		              SELECT 1 FROM cost_erp_item cei_s
+		               WHERE cei_s.cei_item_code = elem->>'ref_code'
+		                 AND cei_s.cei_item_name ILIKE $%[1]d))
+		         OR (elem->>'rm_type' = 'PRODUCT' AND EXISTS (
+		              SELECT 1 FROM cost_product_master cpm_s
+		               WHERE cpm_s.cpm_product_sys_id = NULLIF(substring(elem->>'ref_code' FROM 'product:(\d+)'), '')::bigint
+		                 AND (cpm_s.cpm_product_code ILIKE $%[1]d OR cpm_s.cpm_product_name ILIKE $%[1]d)))
 		   )`, n)
 }
 
@@ -757,6 +766,79 @@ func (r *CostResultRepository) ListResults(
 		return nil, 0, "", fmt.Errorf("iterate cost results: %w", err)
 	}
 	return out, total, period, nil
+}
+
+// cpcListNeedsProductJoins reports whether cpcListWhere's predicates for f
+// reference the cpm (cost_product_master) / cei (cost_erp_item) aliases. Both
+// joins are many-to-one (cpm by primary key, cei by the unique item code), so
+// they never change which cost rows match; they only have to be present when a
+// predicate reads them.
+func cpcListNeedsProductJoins(f costcalc.ResultListFilter) bool {
+	return f.Search != "" || len(f.ProductTypeIDs) > 0 || len(f.ShadeCodes) > 0
+}
+
+// ListProductSysIDs returns the distinct product_sys_ids ListResults would
+// list for f across all of its pages, in ListResults' own order (first
+// occurrence wins when a product has several matching rows, e.g. ACTUAL and
+// FORECAST with no calc-type filter). Page/PageSize are ignored.
+//
+// It is the lean counterpart used to resolve an export's product filter: the
+// WHERE clause comes from the same cpcListWhere builder (so the filter
+// semantics cannot drift), but there is no display enrichment, no RM-detail
+// LATERAL rebuild, no COUNT(*) OVER() and no paging — one index-backed scan
+// (idx_cpc_period_type_status, plus the 000527 GIN index for RM group codes)
+// returning a single bigint column. Paging ListResults for this used to run the
+// heavy UI query once per 500 rows and could exceed the RPC deadline for a
+// whole period.
+func (r *CostResultRepository) ListProductSysIDs(ctx context.Context, f costcalc.ResultListFilter) ([]int64, error) {
+	period := f.Period
+	if period == "" {
+		resolved, err := r.latestPeriod(ctx)
+		if err != nil {
+			return nil, err
+		}
+		period = resolved
+	}
+
+	whereSQL, args := cpcListWhere(f, period)
+	joins := ""
+	if cpcListNeedsProductJoins(f) {
+		joins = ` LEFT JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = cpc.cpc_product_sys_id
+		  LEFT JOIN cost_erp_item cei ON cei.cei_item_code = cpm.cpm_erp_item_code`
+	}
+	// ORDER BY reuses ListResults' ordering so the export renders products in
+	// the same order the paged resolution produced before. Sorting on
+	// cpm columns needs the cpm join, so fall back to the join whenever the
+	// sort key references it.
+	orderBy := cpcOrderBy(f.SortBy, f.SortOrder)
+	if joins == "" && strings.Contains(orderBy, "cpm.") {
+		joins = ` LEFT JOIN cost_product_master cpm ON cpm.cpm_product_sys_id = cpc.cpc_product_sys_id`
+	}
+	q := `SELECT cpc.cpc_product_sys_id FROM cst_product_cost cpc` + joins + whereSQL + ` ORDER BY ` + orderBy
+
+	rows, err := r.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list cost result product ids: %w", err)
+	}
+	defer closeRows(rows)
+
+	ids := []int64{}
+	seen := map[int64]struct{}{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan cost result product id: %w", err)
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate cost result product ids: %w", err)
+	}
+	return ids, nil
 }
 
 // latestPeriod resolves the single most recent period present in
