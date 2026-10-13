@@ -364,6 +364,10 @@
         },
         "isActive": {
           "type": "boolean"
+        },
+        "rmRatioMode": {
+          "type": "string",
+          "description": "RM ratio mode: INPUT (route ratio as entered, default) or DENIER (ratio = denier share, used by MEL/ACY). Empty leaves unchanged."
         }
       }
     },
@@ -464,6 +468,10 @@
           "type": "string",
           "description": "Oil class of the product type: \"\" (no oil), \"PTY\", \"POY\" or \"SUPERBA\".\nDrives IS_PTY/IS_POY/IS_SUPERBA flags and OIL_RATE resolution in costing."
         },
+        "rmRatioMode": {
+          "type": "string",
+          "description": "RM ratio mode: INPUT (route ratio as entered, default) or DENIER (ratio = denier share, used by MEL/ACY)."
+        },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo"
         }
@@ -495,6 +503,10 @@
         },
         "typeName": {
           "type": "string"
+        },
+        "rmRatioMode": {
+          "type": "string",
+          "description": "RM ratio mode: INPUT (route ratio as entered, default) or DENIER (ratio = denier share, used by MEL/ACY). Empty defaults to INPUT."
         }
       }
     },
