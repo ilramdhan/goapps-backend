@@ -1170,6 +1170,8 @@ func rmDetailsToProto(details []costcalcdom.RMDetailSummary) []*financev1.CostRM
 			Ratio:        formatNumeric(d.Ratio),
 			Contribution: formatNumeric(d.Contribution),
 			RouteLevel:   d.RouteLevel,
+			Denier:       d.Denier,
+			RatioSource:  d.RatioSource,
 		})
 	}
 	return out

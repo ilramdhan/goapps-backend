@@ -81,6 +81,8 @@ func (s *Service) resolveResultDisplay(ctx context.Context, productSysID int64, 
 			UnitCost:     d.UnitCost,
 			Ratio:        d.Ratio,
 			Contribution: d.Contribution,
+			Denier:       d.Denier,
+			RatioSource:  d.RatioSource,
 		})
 	}
 	sort.SliceStable(details, func(i, j int) bool { return details[i].Contribution > details[j].Contribution })
