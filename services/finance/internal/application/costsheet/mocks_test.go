@@ -86,7 +86,7 @@ func (m *jobRepoMock) ListChildren(ctx context.Context, parentJobID uuid.UUID) (
 }
 
 // resultRepoMock is a testify mock covering costcalcdom.ResultRepository —
-// only ListResults is exercised by RequestExportHandler.
+// only ListProductSysIDs is exercised by RequestExportHandler.
 type resultRepoMock struct{ mock.Mock }
 
 func (m *resultRepoMock) UpsertWithSupersede(ctx context.Context, r *costcalcdom.Result) (int64, int, float64, int64, error) {
@@ -126,6 +126,15 @@ func (m *resultRepoMock) ListResults(ctx context.Context, f costcalcdom.ResultLi
 		out = v.([]*costcalcdom.ResultSummary)
 	}
 	return out, args.Int(1), args.String(2), args.Error(3)
+}
+
+func (m *resultRepoMock) ListProductSysIDs(ctx context.Context, f costcalcdom.ResultListFilter) ([]int64, error) {
+	args := m.Called(ctx, f)
+	var out []int64
+	if v := args.Get(0); v != nil {
+		out = v.([]int64)
+	}
+	return out, args.Error(1)
 }
 
 func (m *resultRepoMock) ListByProductIDsPeriodType(ctx context.Context, productSysIDs []int64, period string, calcType costcalcdom.CalculationType) (map[int64]*costcalcdom.Result, error) {

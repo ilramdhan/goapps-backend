@@ -49,12 +49,6 @@ const maxExportProducts = 200
 // sheet if a file would still overflow.
 const maxHorizontalProducts = 40000
 
-// resolvePageSize is the page size used while paging through ListResults to
-// build the full filtered product ID list. It uses the repository's own max
-// (500) rather than maxExportProducts to minimize round-trips when a period
-// resolves to tens of thousands of products.
-const resolvePageSize = 500
-
 // exportSubtype is the job.Execution subtype recorded for every product cost
 // sheet export (all such jobs render an xlsx workbook).
 const exportSubtype = "xlsx"
@@ -287,40 +281,29 @@ func (h *RequestExportHandler) validate(cmd RequestExportCommand) error {
 
 // resolveProducts returns the full target product_sys_id list. Explicit
 // ProductSysIDs bypass the filter query entirely; otherwise the filter is
-// resolved via the existing cost-result listing path, paging through every
-// matching row (not just the first page) so a large filter's fan-out sees
-// every product, not merely the first maxExportProducts.
+// resolved in ONE lean id-only query (ResultRepository.ListProductSysIDs) that
+// shares ListResults' WHERE builder, so every matching product is included —
+// not merely the first maxExportProducts — without running the heavy,
+// display-enriched list query page by page inside the RPC deadline.
 func (h *RequestExportHandler) resolveProducts(ctx context.Context, cmd RequestExportCommand) ([]int64, error) {
 	if len(cmd.ProductSysIDs) > 0 {
 		return cmd.ProductSysIDs, nil
 	}
 
-	var ids []int64
-	for page := 1; ; page++ {
-		filter := costcalcdom.ResultListFilter{
-			Period:         cmd.Period,
-			CalcType:       cmd.CalcType,
-			Status:         cmd.Status,
-			Search:         cmd.Search,
-			ProductTypeIDs: cmd.ProductTypeIDs,
-			ShadeCodes:     cmd.ShadeCodes,
-			RMGroupCodes:   cmd.RMGroupCodes,
-			Page:           page,
-			PageSize:       resolvePageSize,
-		}
-		items, total, _, err := h.resultRepo.ListResults(ctx, filter)
-		if err != nil {
-			return nil, fmt.Errorf("resolve product filter: %w", err)
-		}
-		if total == 0 {
-			return nil, fmt.Errorf("no products matched the given filter")
-		}
-		for _, it := range items {
-			ids = append(ids, it.ProductSysID)
-		}
-		if len(ids) >= total || len(items) == 0 {
-			break
-		}
+	ids, err := h.resultRepo.ListProductSysIDs(ctx, costcalcdom.ResultListFilter{
+		Period:         cmd.Period,
+		CalcType:       cmd.CalcType,
+		Status:         cmd.Status,
+		Search:         cmd.Search,
+		ProductTypeIDs: cmd.ProductTypeIDs,
+		ShadeCodes:     cmd.ShadeCodes,
+		RMGroupCodes:   cmd.RMGroupCodes,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("resolve product filter: %w", err)
+	}
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no products matched the given filter")
 	}
 	return ids, nil
 }
