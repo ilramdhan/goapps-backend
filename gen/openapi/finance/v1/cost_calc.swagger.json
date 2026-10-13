@@ -1825,6 +1825,17 @@
       },
       "description": "CostSheetExportBatchChildInfo summarizes one child job within a batch\nfan-out, including its download URL once the artifact is ready."
     },
+    "v1CostSheetExportLayout": {
+      "type": "string",
+      "enum": [
+        "COST_SHEET_EXPORT_LAYOUT_UNSPECIFIED",
+        "COST_SHEET_EXPORT_LAYOUT_COMBINED",
+        "COST_SHEET_EXPORT_LAYOUT_HORIZONTAL",
+        "COST_SHEET_EXPORT_LAYOUT_VERTICAL"
+      ],
+      "default": "COST_SHEET_EXPORT_LAYOUT_UNSPECIFIED",
+      "description": "CostSheetExportLayout selects the workbook shape a product cost sheet\nexport renders. UNSPECIFIED behaves exactly like COMBINED, so callers that\npredate the field keep today's output.\n\n - COST_SHEET_EXPORT_LAYOUT_UNSPECIFIED: Not set; treated as COMBINED.\n - COST_SHEET_EXPORT_LAYOUT_COMBINED: Flat \"all data\" sheet plus one vertical sheet per product, at most\n200 products per file (larger selections fan out into a batch).\n - COST_SHEET_EXPORT_LAYOUT_HORIZONTAL: Only the flat \"all data\" sheet (one row per route stage) in a single\nfile; not chunked at 200 products.\n - COST_SHEET_EXPORT_LAYOUT_VERTICAL: Only the per-product vertical sheets (no \"all data\" sheet), at most\n200 products per file."
+    },
     "v1DownloadExportBatchZipResponse": {
       "type": "object",
       "properties": {
@@ -1882,6 +1893,10 @@
         "isBatch": {
           "type": "boolean",
           "description": "True when this job is a batch-tracking parent fanned out into multiple\nchild export jobs; false for a standalone single job."
+        },
+        "layout": {
+          "$ref": "#/definitions/v1CostSheetExportLayout",
+          "description": "Workbook layout the job renders (jobs queued before the field existed\nreport COMBINED)."
         }
       },
       "description": "ExportJobSummary summarizes one export job row (parent/batch or standalone)\nfor the recent-exports listing."
@@ -2388,6 +2403,10 @@
           "type": "integer",
           "format": "int32",
           "description": "Child jobs that finished FAILED so far."
+        },
+        "layout": {
+          "$ref": "#/definitions/v1CostSheetExportLayout",
+          "description": "Workbook layout the job renders (jobs queued before the field existed\nreport COMBINED)."
         }
       },
       "description": "ProductCostSheetExportJobInfo summarizes a freshly-queued export job."
@@ -2440,6 +2459,10 @@
             "type": "string"
           },
           "description": "Raw-material group code filter, matched against GROUP-type RM lines\n(empty = all raw materials)."
+        },
+        "layout": {
+          "$ref": "#/definitions/v1CostSheetExportLayout",
+          "description": "Workbook layout (UNSPECIFIED = COMBINED, today's behaviour)."
         }
       },
       "description": "RequestProductCostSheetExportRequest queues an async product-cost-sheet\nexport job. Carries the same filter shape as ListCostResultsRequest, plus an\noptional explicit product selection that overrides the filter when non-empty."
