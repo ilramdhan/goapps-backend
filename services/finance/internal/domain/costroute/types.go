@@ -36,6 +36,9 @@ type Head struct {
 	PromotedFromDraftID int64
 	CylTypeID           int32
 	Notes               string
+	// RMRatioMode is the head product's cpt_rm_ratio_mode (INPUT|DENIER),
+	// a read-only annotation set by Graph.AnnotateRMRatios; never persisted.
+	RMRatioMode string
 	// LevelCount / RmCount are read-time aggregates populated by ListHeads.
 	LevelCount int32
 	RmCount    int32
@@ -73,6 +76,9 @@ type Seq struct {
 	OriginHeadID      int64
 	OriginProductCode string
 	NestDepth         int32
+	// RMRatioMode is the seq product's cpt_rm_ratio_mode (INPUT|DENIER), a
+	// read-only annotation set by Graph.AnnotateRMRatios; never persisted.
+	RMRatioMode string
 }
 
 // Rm mirrors cost_route_rm columns. Exactly one of the three ref columns is
@@ -117,6 +123,14 @@ type Rm struct {
 	NestDepth         int32
 	OriginProductCode string
 	OriginProductName string
+	// ComputedRatio/RatioSource/Denier/RatioNote are read-only annotations set
+	// by Graph.AnnotateRMRatios: the ratio the calc engine actually uses for
+	// this line (see ComputeSeqRMRatios). Never persisted; RouteRmRatio stays
+	// the stored crm_route_rm_ratio.
+	ComputedRatio float64
+	RatioSource   string
+	Denier        float64
+	RatioNote     string
 }
 
 // Graph bundles head + seqs (with rms inline).

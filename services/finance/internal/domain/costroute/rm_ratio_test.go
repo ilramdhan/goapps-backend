@@ -213,3 +213,54 @@ func TestIsDenierMode(t *testing.T) {
 		}
 	}
 }
+
+func TestGraph_DenierInputKeys(t *testing.T) {
+	g := &Graph{Seqs: []*Seq{
+		{ProductSysID: 1, Rms: []*Rm{tProduct(tUpA, 1), tGroup(tSpd, 1), tGroup(tSpd, 1), nil, {RmType: RmTypeItem, RmItemCode: "I"}}},
+		{ProductSysID: 1, Rms: []*Rm{tProduct(tUpA, 1)}},
+		{ProductSysID: 2, Rms: []*Rm{tProduct(tUpB, 1), tGroup(tOil, 1)}},
+		nil,
+	}}
+	up, grp, prods := g.DenierInputKeys(map[int64]string{1: RMRatioModeDenier, 2: RMRatioModeInput})
+	if len(up) != 1 || up[0] != tUpA || len(grp) != 1 || grp[0] != tSpd || len(prods) != 1 || prods[0] != 1 {
+		t.Fatalf("got %v %v %v", up, grp, prods)
+	}
+	up, grp, prods = g.DenierInputKeys(nil)
+	if up != nil || grp != nil || prods != nil {
+		t.Fatalf("INPUT-only graph should need nothing, got %v %v %v", up, grp, prods)
+	}
+	var nilG *Graph
+	if a, b, c := nilG.DenierInputKeys(nil); a != nil || b != nil || c != nil {
+		t.Fatal("nil graph")
+	}
+}
+
+func TestGraph_AnnotateRMRatios(t *testing.T) {
+	g := &Graph{
+		Head: &Head{ProductSysID: 1},
+		Seqs: []*Seq{
+			{ProductSysID: 1, RouteLevel: 1, Rms: []*Rm{tProduct(tUpA, 1), tGroup(tSpd, 1), nil}},
+			{ProductSysID: 2, RouteLevel: 2, Rms: []*Rm{tProduct(tUpB, 0.9)}},
+			nil,
+		},
+	}
+	g.AnnotateRMRatios(RatioSources{
+		Modes:          map[int64]string{1: "denier"},
+		UpstreamDenier: map[int64]float64{tUpA: 70},
+		GroupDenier:    map[string]float64{tSpd: 40},
+		SpandexDraft:   map[int64]float64{1: 3},
+	})
+	if g.Head.RMRatioMode != RMRatioModeDenier || g.Seqs[0].RMRatioMode != RMRatioModeDenier || g.Seqs[1].RMRatioMode != RMRatioModeInput {
+		t.Fatalf("modes %q %q %q", g.Head.RMRatioMode, g.Seqs[0].RMRatioMode, g.Seqs[1].RMRatioMode)
+	}
+	pty := g.Seqs[0].Rms[0]
+	if math.Abs(pty.ComputedRatio-0.84) > tDelta || math.Abs(pty.EffectiveRatio-0.84) > tDelta || pty.RatioSource != RatioSourceDenier || pty.Denier != 70 || pty.RouteRmRatio != 1 {
+		t.Fatalf("pty %+v", pty)
+	}
+	in := g.Seqs[1].Rms[0]
+	if in.ComputedRatio != 0.9 || in.RatioSource != "" || in.EffectiveRatio != 0 {
+		t.Fatalf("input line %+v", in)
+	}
+	var nilG *Graph
+	nilG.AnnotateRMRatios(RatioSources{})
+}

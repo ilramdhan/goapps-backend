@@ -588,6 +588,9 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// SaveRouteGraph never consults this, and no write path is touched by it.
 	nestedMBFlattener := costrouteapp.NewNestedMBFlattener(costRouteRepo, postgres.NewMBTypeChecker(db))
 	costRouteHandler.WithNestedMBFlattener(nestedMBFlattener)
+	// Wire read-time computed RM ratio annotation (DENIER-mode products) into the
+	// route graph viewer. Same SQL + domain function as the calc engine; read-only.
+	costRouteHandler.WithRatioLoader(postgres.NewRouteRMRatioLoader(db))
 
 	upsertGlobalHandler := fillapp.NewUpsertGlobalConfigHandler(fillConfigRepo)
 	upsertOverrideHandler := fillapp.NewUpsertOverrideHandler(fillConfigRepo)

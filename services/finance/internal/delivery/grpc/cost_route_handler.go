@@ -82,6 +82,13 @@ func (h *CostRouteHandler) WithNestedMBFlattener(f *app.NestedMBFlattener) *Cost
 	return h
 }
 
+// WithRatioLoader wires the RM ratio source loader into the graph read path so
+// GetRouteGraph returns the calc engine's computed RM ratio per line.
+func (h *CostRouteHandler) WithRatioLoader(l app.RatioSourceLoader) *CostRouteHandler {
+	h.getGraph.WithRatioLoader(l)
+	return h
+}
+
 // GetRouteByProduct returns the active head for a product.
 func (h *CostRouteHandler) GetRouteByProduct(ctx context.Context, req *financev1.GetRouteByProductRequest) (*financev1.GetRouteByProductResponse, error) {
 	head, err := h.getByProduct.Handle(ctx, req.GetProductSysId())
@@ -286,6 +293,7 @@ func routeHeadToProto(h *costroute.Head) *financev1.CostRouteHead {
 		Version:             h.Version,
 		PromotedFromDraftId: h.PromotedFromDraftID,
 		CylTypeId:           h.CylTypeID,
+		RmRatioMode:         h.RMRatioMode,
 		Notes:               h.Notes,
 		LevelCount:          h.LevelCount,
 		RmCount:             h.RmCount,
@@ -316,8 +324,15 @@ func routeGraphToProto(g *costroute.Graph) *financev1.RouteGraph {
 				continue
 			}
 			effectiveRatio := rm.EffectiveRatio
-			if effectiveRatio == 0 {
+			// A DENIER-derived ratio may legitimately be 0 (missing denier).
+			if effectiveRatio == 0 && rm.RatioSource != costroute.RatioSourceDenier {
 				effectiveRatio = rm.RouteRmRatio
+			}
+			computedRatio := rm.ComputedRatio
+			if rm.RatioSource == "" && computedRatio == 0 {
+				// Unannotated (no ratio loader, or a nested-MB row spliced in
+				// from another head): the engine uses the stored ratio.
+				computedRatio = rm.RouteRmRatio
 			}
 			rms = append(rms, &financev1.CostRouteRm{
 				RmId:               rm.RmID,
@@ -345,6 +360,10 @@ func routeGraphToProto(g *costroute.Graph) *financev1.RouteGraph {
 				NestDepth:          rm.NestDepth,
 				OriginProductCode:  rm.OriginProductCode,
 				OriginProductName:  rm.OriginProductName,
+				ComputedRatio:      computedRatio,
+				RatioSource:        rm.RatioSource,
+				Denier:             rm.Denier,
+				RatioNote:          rm.RatioNote,
 			})
 		}
 		seqs = append(seqs, &financev1.CostRouteSeq{
@@ -365,6 +384,7 @@ func routeGraphToProto(g *costroute.Graph) *financev1.RouteGraph {
 			OriginHeadId:      s.OriginHeadID,
 			OriginProductCode: s.OriginProductCode,
 			NestDepth:         s.NestDepth,
+			RmRatioMode:       s.RMRatioMode,
 		})
 	}
 	return &financev1.RouteGraph{Head: routeHeadToProto(g.Head), Seqs: seqs}

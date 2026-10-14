@@ -178,3 +178,94 @@ func lineDenier(rm *Rm, src RatioSourceData) (d float64, msg string, ok bool) {
 		return 0, "", false
 	}
 }
+
+// RatioSources is the master data needed to annotate a whole route graph with
+// its computed RM ratios.
+type RatioSources struct {
+	// Modes maps product sys id -> cpt_rm_ratio_mode (absent = INPUT).
+	Modes map[int64]string
+	// UpstreamDenier maps upstream product sys id -> master DENIER.
+	UpstreamDenier map[int64]float64
+	// GroupDenier maps RM group_code -> head denier (non-NULL only).
+	GroupDenier map[string]float64
+	// SpandexDraft maps seq product sys id -> its SPANDEX_DRAFT value.
+	SpandexDraft map[int64]float64
+}
+
+// NormalizedRMRatioMode returns DENIER for a DENIER mode and INPUT otherwise.
+func NormalizedRMRatioMode(mode string) string {
+	if IsDenierMode(mode) {
+		return RMRatioModeDenier
+	}
+	return RMRatioModeInput
+}
+
+// AnnotateRMRatios stamps every seq of g with its product's RM ratio mode and
+// every RM line with the ratio the calc engine uses for it
+// (ComputeSeqRMRatios, per seq, with that seq product's mode and
+// SPANDEX_DRAFT). DENIER-source lines also get EffectiveRatio = ComputedRatio
+// so nested-MB compounding and edge labels follow the engine's ratio. Only the
+// read-only annotation fields are written.
+func (g *Graph) AnnotateRMRatios(src RatioSources) {
+	if g == nil {
+		return
+	}
+	if g.Head != nil {
+		g.Head.RMRatioMode = NormalizedRMRatioMode(src.Modes[g.Head.ProductSysID])
+	}
+	for _, seq := range g.Seqs {
+		if seq == nil {
+			continue
+		}
+		seq.RMRatioMode = NormalizedRMRatioMode(src.Modes[seq.ProductSysID])
+		lines, _ := ComputeSeqRMRatios(seq, RatioSourceData{
+			Mode:           seq.RMRatioMode,
+			UpstreamDenier: src.UpstreamDenier,
+			GroupDenier:    src.GroupDenier,
+			SpandexDraft:   src.SpandexDraft[seq.ProductSysID],
+		})
+		for i, rm := range seq.Rms {
+			if rm == nil {
+				continue
+			}
+			l := lines[i]
+			rm.ComputedRatio, rm.RatioSource, rm.Denier, rm.RatioNote = l.Ratio, l.Source, l.Denier, l.Note
+			if l.Source == RatioSourceDenier {
+				rm.EffectiveRatio = l.Ratio
+			}
+		}
+	}
+}
+
+// DenierInputKeys lists what a DENIER-mode annotation of g needs loaded,
+// given each seq product's mode: the upstream PRODUCT RM ids and GROUP RM
+// codes of DENIER-mode seqs, and the DENIER-mode seq products themselves (for
+// SPANDEX_DRAFT). All slices are deduplicated; all are empty when no seq is
+// DENIER-mode.
+func (g *Graph) DenierInputKeys(modes map[int64]string) (upstreamIDs []int64, groupCodes []string, denierProducts []int64) {
+	if g == nil {
+		return nil, nil, nil
+	}
+	seenUp, seenGrp, seenProd := map[int64]bool{}, map[string]bool{}, map[int64]bool{}
+	for _, seq := range g.Seqs {
+		if seq == nil || !IsDenierMode(modes[seq.ProductSysID]) {
+			continue
+		}
+		if !seenProd[seq.ProductSysID] {
+			seenProd[seq.ProductSysID] = true
+			denierProducts = append(denierProducts, seq.ProductSysID)
+		}
+		for _, rm := range seq.Rms {
+			switch {
+			case rm == nil:
+			case rm.RmType == RmTypeProduct && !seenUp[rm.RmProductSysID]:
+				seenUp[rm.RmProductSysID] = true
+				upstreamIDs = append(upstreamIDs, rm.RmProductSysID)
+			case rm.RmType == RmTypeGroup && rm.RmGroupCode != "" && !seenGrp[rm.RmGroupCode]:
+				seenGrp[rm.RmGroupCode] = true
+				groupCodes = append(groupCodes, rm.RmGroupCode)
+			}
+		}
+	}
+	return upstreamIDs, groupCodes, denierProducts
+}
