@@ -938,6 +938,10 @@
           "type": "number",
           "format": "double",
           "description": "Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT."
+        },
+        "denierUseDraft": {
+          "type": "boolean",
+          "description": "When true the group denier is divided by the product's SPANDEX_DRAFT (spandex). False: denier used as-is (bought-out POY/FDY)."
         }
       },
       "description": "Partial update of an RM group head. Absent fields leave state unchanged.\nClear_* booleans explicitly set nullable fields to NULL."
@@ -1153,6 +1157,10 @@
           "type": "number",
           "format": "double",
           "description": "Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT."
+        },
+        "denierUseDraft": {
+          "type": "boolean",
+          "description": "When true the group denier is divided by the product's SPANDEX_DRAFT (spandex). False: denier used as-is (bought-out POY/FDY)."
         }
       },
       "description": "Create a new RM group head."
@@ -1698,6 +1706,10 @@
           "type": "number",
           "format": "double",
           "description": "Nominal denier of the RM group (e.g. spandex 20/40/70). Optional; used by DENIER ratio-mode products: spandex denier = denier / SPANDEX_DRAFT."
+        },
+        "denierUseDraft": {
+          "type": "boolean",
+          "description": "When true the group denier is divided by the product's SPANDEX_DRAFT (spandex). False: denier used as-is (bought-out POY/FDY)."
         },
         "inheritedFromPeriod": {
           "type": "string",
