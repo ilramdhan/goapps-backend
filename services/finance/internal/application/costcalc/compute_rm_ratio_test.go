@@ -55,11 +55,11 @@ func denierInput(mode string, route *costroute.Graph) ComputeInput {
 			spandexGrp + "|": {CostVal: 100, CrRate: 7, ClRate: 8},
 			oilGrp + "|":     {CostVal: 999, CrRate: 5, ClRate: 5},
 		},
-		UpstreamCosts:     map[int64]float64{denierUpA: 40, denierUpB: 33},
-		EvalCache:         evaluator.NewCache(),
-		RMRatioMode:       mode,
-		RMGroupDenier:     map[string]float64{spandexGrp: 40},
-		UpstreamSnapshots: map[int64]map[string]float64{denierUpA: {"DENIER": 70}, denierUpB: {"DENIER": 150}},
+		UpstreamCosts:  map[int64]float64{denierUpA: 40, denierUpB: 33},
+		EvalCache:      evaluator.NewCache(),
+		RMRatioMode:    mode,
+		RMGroupDenier:  map[string]float64{spandexGrp: 40},
+		UpstreamDenier: map[int64]float64{denierUpA: 70, denierUpB: 150},
 	}
 }
 
@@ -89,7 +89,7 @@ func TestComputeProduct_DenierRatio(t *testing.T) {
 			route: denierRoute(denierProductLine(1, denierUpA, 1), denierProductLine(2, denierUpB, 1)),
 			mutate: func(in *ComputeInput) {
 				in.UpstreamCosts[denierUpA] = 30
-				in.UpstreamSnapshots[denierUpA]["DENIER"] = 75
+				in.UpstreamDenier[denierUpA] = 75
 			},
 			wantRM: 32, wantLanded: 32, wantRatios: []float64{1.0 / 3, 2.0 / 3},
 		},
@@ -124,7 +124,7 @@ func TestComputeProduct_DenierRatio(t *testing.T) {
 		{
 			name:   "missing upstream DENIER -> PTY 0 + note, spandex takes ratio 1",
 			route:  denierRoute(denierProductLine(1, denierUpA, 1), denierGroupLine(2, spandexGrp, 1)),
-			mutate: func(in *ComputeInput) { delete(in.UpstreamSnapshots, denierUpA) },
+			mutate: func(in *ComputeInput) { delete(in.UpstreamDenier, denierUpA) },
 			wantRM: 100, wantLanded: 100, wantRatios: []float64{0, 1}, wantNotes: 1,
 		},
 		{
@@ -137,7 +137,7 @@ func TestComputeProduct_DenierRatio(t *testing.T) {
 			name:  "all denier zero -> total 0 + notes, no error",
 			route: denierRoute(denierProductLine(1, denierUpA, 1), denierGroupLine(2, spandexGrp, 1)),
 			mutate: func(in *ComputeInput) {
-				in.UpstreamSnapshots = nil
+				in.UpstreamDenier = nil
 				in.CAPP[cappKeySpandexDraft] = 0
 			},
 			wantRM: 0, wantLanded: 0, wantRatios: []float64{0, 0}, wantNotes: 3,
@@ -193,6 +193,28 @@ func TestComputeProduct_DenierRatio_DetailAnnotations(t *testing.T) {
 	assert.Nil(t, out.Notes)
 }
 
+// TestComputeProduct_DenierRatio_MasterDenierWinsOverSnapshot proves the
+// upstream DENIER comes from the product master (UpstreamDenier) only: a
+// conflicting snapshot value is ignored, and a snapshot alone is no fallback.
+func TestComputeProduct_DenierRatio_MasterDenierWinsOverSnapshot(t *testing.T) {
+	route := denierRoute(denierProductLine(1, denierUpA, 1), denierGroupLine(2, spandexGrp, 1))
+
+	in := denierInput(RMRatioModeDenier, route)
+	in.UpstreamSnapshots = map[int64]map[string]float64{denierUpA: {"DENIER": 999}}
+	out, err := ComputeProduct(context.Background(), in)
+	require.NoError(t, err)
+	assert.InDelta(t, 49.6, out.TotalRMCost, 1e-9)
+	assert.InDelta(t, 70, out.RMCostDetail[0].Denier, 1e-9)
+
+	noMaster := denierInput(RMRatioModeDenier, route)
+	noMaster.UpstreamDenier = nil
+	noMaster.UpstreamSnapshots = map[int64]map[string]float64{denierUpA: {"DENIER": 70}}
+	out, err = ComputeProduct(context.Background(), noMaster)
+	require.NoError(t, err)
+	assert.InDelta(t, 100, out.TotalRMCost, 1e-9, "snapshot DENIER is not a fallback")
+	assert.Len(t, out.Notes, 1)
+}
+
 func TestComputeProduct_DenierRatio_MissingGroupCostRowBlocks(t *testing.T) {
 	in := denierInput(RMRatioModeDenier, denierRoute(denierProductLine(1, denierUpA, 1), denierGroupLine(2, spandexGrp, 1)))
 	delete(in.RMCosts, spandexGrp+"|")
@@ -223,7 +245,7 @@ func TestComputeProduct_InputModeUnchanged(t *testing.T) {
 			assert.NotContains(t, string(b), "ratio_source")
 
 			legacy := in
-			legacy.RMRatioMode, legacy.RMGroupDenier, legacy.UpstreamSnapshots = "", nil, nil
+			legacy.RMRatioMode, legacy.RMGroupDenier, legacy.UpstreamDenier = "", nil, nil
 			legacyOut, err := ComputeProduct(context.Background(), legacy)
 			require.NoError(t, err)
 			assert.Equal(t, legacyOut.RMCostDetail, out.RMCostDetail)

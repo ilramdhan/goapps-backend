@@ -307,3 +307,8 @@ func TestBuildCalculationLog_RecordsSpinPoolPeriod(t *testing.T) {
 func (f *spinFakeLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*SuperbaCost, error) {
 	return map[int64]*SuperbaCost{}, nil
 }
+
+// LoadUpstreamDeniers reports no upstream deniers.
+func (f *spinFakeLoader) LoadUpstreamDeniers(context.Context, []int64) (map[int64]float64, error) {
+	return map[int64]float64{}, nil
+}

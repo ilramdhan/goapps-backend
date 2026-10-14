@@ -266,3 +266,8 @@ func TestNewMBResult_CurrencyLabel(t *testing.T) {
 func (f *fakeLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*costcalc.SuperbaCost, error) {
 	return map[int64]*costcalc.SuperbaCost{}, nil
 }
+
+// LoadUpstreamDeniers reports no upstream deniers.
+func (f *fakeLoader) LoadUpstreamDeniers(context.Context, []int64) (map[int64]float64, error) {
+	return map[int64]float64{}, nil
+}

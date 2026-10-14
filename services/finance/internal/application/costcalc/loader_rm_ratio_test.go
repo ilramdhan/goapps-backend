@@ -79,6 +79,29 @@ func TestLoadRMRatioInputs_Integration(t *testing.T) {
 	assert.Equal(t, map[string]float64{grpDenier: 40}, deniers,
 		"NULL denier, soft-deleted and unknown groups are absent")
 
+	// Upstream DENIER is read from the product master (CAPP + cost_product_parameter).
+	var denierParamID string
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT id FROM mst_parameter WHERE param_code = 'DENIER' AND deleted_at IS NULL`).Scan(&denierParamID))
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO cost_product_applicable_param (capp_product_sys_id, capp_param_id, capp_is_required, capp_created_by)
+		VALUES ($1, $3, FALSE, $4), ($2, $3, FALSE, $4)`, pDenier, pInput, denierParamID, actor)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO cost_product_parameter (cpp_product_sys_id, cpp_param_id, cpp_value_numeric, cpp_filled_by, cpp_created_by)
+		VALUES ($1, $2, 75, $3, $3)`, pDenier, denierParamID, actor)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM cost_product_parameter WHERE cpp_product_sys_id = ANY($1)`, int64ToArray([]int64{pDenier, pInput}))
+		_, _ = db.ExecContext(ctx, `DELETE FROM cost_product_applicable_param WHERE capp_product_sys_id = ANY($1)`, int64ToArray([]int64{pDenier, pInput}))
+	})
+	upDeniers, err := loader.LoadUpstreamDeniers(ctx, []int64{pDenier, pInput, -1})
+	require.NoError(t, err)
+	assert.Equal(t, map[int64]float64{pDenier: 75}, upDeniers, "applicable but unfilled and unknown products are absent")
+	emptyUp, err := loader.LoadUpstreamDeniers(ctx, nil)
+	require.NoError(t, err)
+	assert.Empty(t, emptyUp)
+
 	emptyModes, err := loader.LoadProductRMRatioModes(ctx, nil)
 	require.NoError(t, err)
 	assert.Empty(t, emptyModes)

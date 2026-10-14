@@ -93,11 +93,13 @@ type CostRouteHead struct {
 	// Number of RM inputs across all stages (read-time aggregate).
 	RmCount int32 `protobuf:"varint,11,opt,name=rm_count,json=rmCount,proto3" json:"rm_count,omitempty"`
 	// Lock tracking -- populated when routing_status = "LOCKED".
-	LockedBy      string        `protobuf:"bytes,17,opt,name=locked_by,json=lockedBy,proto3" json:"locked_by,omitempty"`
-	LockedAt      string        `protobuf:"bytes,18,opt,name=locked_at,json=lockedAt,proto3" json:"locked_at,omitempty"`
-	UnlockedBy    string        `protobuf:"bytes,19,opt,name=unlocked_by,json=unlockedBy,proto3" json:"unlocked_by,omitempty"`
-	UnlockedAt    string        `protobuf:"bytes,20,opt,name=unlocked_at,json=unlockedAt,proto3" json:"unlocked_at,omitempty"`
-	Audit         *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	LockedBy   string        `protobuf:"bytes,17,opt,name=locked_by,json=lockedBy,proto3" json:"locked_by,omitempty"`
+	LockedAt   string        `protobuf:"bytes,18,opt,name=locked_at,json=lockedAt,proto3" json:"locked_at,omitempty"`
+	UnlockedBy string        `protobuf:"bytes,19,opt,name=unlocked_by,json=unlockedBy,proto3" json:"unlocked_by,omitempty"`
+	UnlockedAt string        `protobuf:"bytes,20,opt,name=unlocked_at,json=unlockedAt,proto3" json:"unlocked_at,omitempty"`
+	Audit      *v1.AuditInfo `protobuf:"bytes,16,opt,name=audit,proto3" json:"audit,omitempty"`
+	// RM ratio mode of the product ("INPUT" | "DENIER"). Response-only; ignored on save.
+	RmRatioMode   string `protobuf:"bytes,21,opt,name=rm_ratio_mode,json=rmRatioMode,proto3" json:"rm_ratio_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -244,6 +246,13 @@ func (x *CostRouteHead) GetAudit() *v1.AuditInfo {
 	return nil
 }
 
+func (x *CostRouteHead) GetRmRatioMode() string {
+	if x != nil {
+		return x.RmRatioMode
+	}
+	return ""
+}
+
 // CostRouteSeq is one stage of the route at a given level + ordering.
 type CostRouteSeq struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -267,7 +276,9 @@ type CostRouteSeq struct {
 	// Product code of the nested MB this stage was spliced in from (empty = native).
 	OriginProductCode string `protobuf:"bytes,16,opt,name=origin_product_code,json=originProductCode,proto3" json:"origin_product_code,omitempty"`
 	// Flattening depth of this stage (0 = native to the requested head).
-	NestDepth     int32 `protobuf:"varint,17,opt,name=nest_depth,json=nestDepth,proto3" json:"nest_depth,omitempty"`
+	NestDepth int32 `protobuf:"varint,17,opt,name=nest_depth,json=nestDepth,proto3" json:"nest_depth,omitempty"`
+	// RM ratio mode of the product owning this stage ("INPUT" | "DENIER"). Response-only; ignored on save.
+	RmRatioMode   string `protobuf:"bytes,18,opt,name=rm_ratio_mode,json=rmRatioMode,proto3" json:"rm_ratio_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -421,6 +432,13 @@ func (x *CostRouteSeq) GetNestDepth() int32 {
 	return 0
 }
 
+func (x *CostRouteSeq) GetRmRatioMode() string {
+	if x != nil {
+		return x.RmRatioMode
+	}
+	return ""
+}
+
 // CostRouteRm is one input edge feeding a SEQ.
 // Exactly one of (rm_product_sys_id, rm_item_code, rm_group_code) is set,
 // matching rm_type.
@@ -464,6 +482,16 @@ type CostRouteRm struct {
 	// Product name of the referenced product (read-time join on rm_product_sys_id).
 	// Populated only for PRODUCT-type rows; empty for ITEM/GROUP rows.
 	RmProductName string `protobuf:"bytes,25,opt,name=rm_product_name,json=rmProductName,proto3" json:"rm_product_name,omitempty"`
+	// Response-only (ignored on save): ratio actually used by the calc engine for this line.
+	// Equals route_rm_ratio for INPUT-mode products or non-denier lines.
+	ComputedRatio float64 `protobuf:"fixed64,26,opt,name=computed_ratio,json=computedRatio,proto3" json:"computed_ratio,omitempty"`
+	// "" for INPUT-mode products, "DENIER" for denier-derived lines,
+	// "INPUT" for lines in a DENIER-mode product that keep the route ratio.
+	RatioSource string `protobuf:"bytes,27,opt,name=ratio_source,json=ratioSource,proto3" json:"ratio_source,omitempty"`
+	// Line denier used: upstream DENIER, or group denier / SPANDEX_DRAFT.
+	Denier float64 `protobuf:"fixed64,28,opt,name=denier,proto3" json:"denier,omitempty"`
+	// Explanatory note, e.g. missing denier treated as 0.
+	RatioNote     string `protobuf:"bytes,29,opt,name=ratio_note,json=ratioNote,proto3" json:"ratio_note,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -669,6 +697,34 @@ func (x *CostRouteRm) GetRmProductCode() string {
 func (x *CostRouteRm) GetRmProductName() string {
 	if x != nil {
 		return x.RmProductName
+	}
+	return ""
+}
+
+func (x *CostRouteRm) GetComputedRatio() float64 {
+	if x != nil {
+		return x.ComputedRatio
+	}
+	return 0
+}
+
+func (x *CostRouteRm) GetRatioSource() string {
+	if x != nil {
+		return x.RatioSource
+	}
+	return ""
+}
+
+func (x *CostRouteRm) GetDenier() float64 {
+	if x != nil {
+		return x.Denier
+	}
+	return 0
+}
+
+func (x *CostRouteRm) GetRatioNote() string {
+	if x != nil {
+		return x.RatioNote
 	}
 	return ""
 }
@@ -2130,7 +2186,7 @@ var File_finance_v1_cost_route_proto protoreflect.FileDescriptor
 const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\n" +
 	"\x1bfinance/v1/cost_route.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xa4\x04\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xc8\x04\n" +
 	"\rCostRouteHead\x12\x17\n" +
 	"\ahead_id\x18\x01 \x01(\x03R\x06headId\x12$\n" +
 	"\x0eproduct_sys_id\x18\x02 \x01(\x03R\fproductSysId\x12!\n" +
@@ -2151,7 +2207,8 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"unlockedBy\x12\x1f\n" +
 	"\vunlocked_at\x18\x14 \x01(\tR\n" +
 	"unlockedAt\x12*\n" +
-	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\"\xe1\x04\n" +
+	"\x05audit\x18\x10 \x01(\v2\x14.common.v1.AuditInfoR\x05audit\x12\"\n" +
+	"\rrm_ratio_mode\x18\x15 \x01(\tR\vrmRatioMode\"\x85\x05\n" +
 	"\fCostRouteSeq\x12\x15\n" +
 	"\x06seq_id\x18\x01 \x01(\x03R\x05seqId\x12\x17\n" +
 	"\ahead_id\x18\x02 \x01(\x03R\x06headId\x12$\n" +
@@ -2175,7 +2232,8 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\x0eorigin_head_id\x18\x0f \x01(\x03R\foriginHeadId\x12.\n" +
 	"\x13origin_product_code\x18\x10 \x01(\tR\x11originProductCode\x12\x1d\n" +
 	"\n" +
-	"nest_depth\x18\x11 \x01(\x05R\tnestDepth\"\x93\a\n" +
+	"nest_depth\x18\x11 \x01(\x05R\tnestDepth\x12\"\n" +
+	"\rrm_ratio_mode\x18\x12 \x01(\tR\vrmRatioMode\"\x94\b\n" +
 	"\vCostRouteRm\x12\x13\n" +
 	"\x05rm_id\x18\x01 \x01(\x03R\x04rmId\x12\x15\n" +
 	"\x06seq_id\x18\x02 \x01(\x03R\x05seqId\x121\n" +
@@ -2206,7 +2264,12 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\x13origin_product_code\x18\x16 \x01(\tR\x11originProductCode\x12.\n" +
 	"\x13origin_product_name\x18\x17 \x01(\tR\x11originProductName\x12&\n" +
 	"\x0frm_product_code\x18\x18 \x01(\tR\rrmProductCode\x12&\n" +
-	"\x0frm_product_name\x18\x19 \x01(\tR\rrmProductName\"i\n" +
+	"\x0frm_product_name\x18\x19 \x01(\tR\rrmProductName\x12%\n" +
+	"\x0ecomputed_ratio\x18\x1a \x01(\x01R\rcomputedRatio\x12!\n" +
+	"\fratio_source\x18\x1b \x01(\tR\vratioSource\x12\x16\n" +
+	"\x06denier\x18\x1c \x01(\x01R\x06denier\x12\x1d\n" +
+	"\n" +
+	"ratio_note\x18\x1d \x01(\tR\tratioNote\"i\n" +
 	"\n" +
 	"RouteGraph\x12-\n" +
 	"\x04head\x18\x01 \x01(\v2\x19.finance.v1.CostRouteHeadR\x04head\x12,\n" +

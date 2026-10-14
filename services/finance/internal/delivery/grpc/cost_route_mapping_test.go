@@ -78,3 +78,36 @@ func TestRouteGraphFromProto_RmPositionRoundTrip(t *testing.T) {
 	assert.InDelta(t, 12.0, rm.PositionX, 1e-9)
 	assert.InDelta(t, 34.0, rm.PositionY, 1e-9)
 }
+
+// TestRouteGraphToProto_ComputedRatio verifies the read-only RM ratio
+// annotations reach the proto, and that unannotated rows default
+// computed_ratio to the stored route ratio.
+func TestRouteGraphToProto_ComputedRatio(t *testing.T) {
+	g := &costroute.Graph{
+		Head: &costroute.Head{HeadID: 1, RMRatioMode: costroute.RMRatioModeDenier},
+		Seqs: []*costroute.Seq{{SeqID: 2, RMRatioMode: costroute.RMRatioModeDenier, Rms: []*costroute.Rm{
+			{RmID: 3, RouteRmRatio: 1, ComputedRatio: 0.84, EffectiveRatio: 0.84, RatioSource: costroute.RatioSourceDenier, Denier: 70},
+			{RmID: 4, RouteRmRatio: 1, RatioSource: costroute.RatioSourceDenier, RatioNote: "DENIER ratio: x"},
+			{RmID: 5, RouteRmRatio: 0.03, ComputedRatio: 0.03, RatioSource: costroute.RatioSourceInput},
+			{RmID: 6, RouteRmRatio: 0.5},
+		}}},
+	}
+	got := routeGraphToProto(g)
+	require.NotNil(t, got)
+	assert.Equal(t, costroute.RMRatioModeDenier, got.GetHead().GetRmRatioMode())
+	seq := got.GetSeqs()[0]
+	assert.Equal(t, costroute.RMRatioModeDenier, seq.GetRmRatioMode())
+	rms := seq.GetRms()
+	assert.InDelta(t, 0.84, rms[0].GetComputedRatio(), 1e-9)
+	assert.InDelta(t, 0.84, rms[0].GetEffectiveRatio(), 1e-9)
+	assert.InDelta(t, 1, rms[0].GetRouteRmRatio(), 1e-9)
+	assert.Equal(t, costroute.RatioSourceDenier, rms[0].GetRatioSource())
+	assert.InDelta(t, 70, rms[0].GetDenier(), 1e-9)
+	assert.Zero(t, rms[1].GetComputedRatio(), "DENIER line with missing denier stays 0")
+	assert.Zero(t, rms[1].GetEffectiveRatio(), "DENIER zero is not replaced by the route ratio")
+	assert.Equal(t, "DENIER ratio: x", rms[1].GetRatioNote())
+	assert.InDelta(t, 0.03, rms[2].GetComputedRatio(), 1e-9)
+	assert.InDelta(t, 0.5, rms[3].GetComputedRatio(), 1e-9, "unannotated -> route ratio")
+	assert.InDelta(t, 0.5, rms[3].GetEffectiveRatio(), 1e-9)
+	assert.Empty(t, rms[3].GetRatioSource())
+}

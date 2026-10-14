@@ -165,6 +165,9 @@ type loadedBundle struct {
 	// rmGroupDeniers is cst_rm_group_head.denier per GROUP RM code referenced
 	// by the chunk's routes (NULL denier = absent). Read in DENIER mode only.
 	rmGroupDeniers map[string]float64
+	// upstreamDeniers is the product-master DENIER of every upstream PRODUCT
+	// RM referenced by the chunk's routes. Read in DENIER mode only.
+	upstreamDeniers map[int64]float64
 }
 
 // loadVBLossInputs loads what the POY-only VB loss rule needs for a chunk:
@@ -290,9 +293,9 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 }
 
 // loadRMRatioInputs loads what the DENIER RM ratio mode needs for a chunk into
-// b: cpt_rm_ratio_mode per chunk product and the head denier of every GROUP RM
-// referenced by b.routes (one query each). The upstream DENIER comes from
-// b.upstreamSnapshots, already loaded for the VB loss rule.
+// b: cpt_rm_ratio_mode per chunk product, the head denier of every GROUP RM
+// referenced by b.routes and the product-master DENIER of every upstream
+// PRODUCT RM (one query each).
 func (s *Service) loadRMRatioInputs(ctx context.Context, products []int64, b *loadedBundle) error {
 	modes, err := s.loader.LoadProductRMRatioModes(ctx, products)
 	if err != nil {
@@ -302,7 +305,11 @@ func (s *Service) loadRMRatioInputs(ctx context.Context, products []int64, b *lo
 	if err != nil {
 		return fmt.Errorf("load RM group deniers: %w", err)
 	}
-	b.rmRatioModes, b.rmGroupDeniers = modes, deniers
+	upstreamDeniers, err := s.loader.LoadUpstreamDeniers(ctx, collectUpstreamProducts(b.routes))
+	if err != nil {
+		return fmt.Errorf("load upstream deniers: %w", err)
+	}
+	b.rmRatioModes, b.rmGroupDeniers, b.upstreamDeniers = modes, deniers, upstreamDeniers
 	return nil
 }
 
@@ -439,6 +446,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		},
 		RMRatioMode:       loaded.rmRatioModes[pid],
 		RMGroupDenier:     loaded.rmGroupDeniers,
+		UpstreamDenier:    loaded.upstreamDeniers,
 		UpstreamSnapshots: loaded.upstreamSnapshots,
 	})
 	if err != nil {

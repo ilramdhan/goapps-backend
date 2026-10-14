@@ -43,10 +43,20 @@ func (h *GetByProductHandler) Handle(ctx context.Context, productSysID int64) (*
 	return h.repo.GetActiveByProduct(ctx, productSysID)
 }
 
+// RatioSourceLoader loads the master data that annotates a route graph with
+// the RM ratios the calc engine uses (costroute.Graph.AnnotateRMRatios):
+// product ratio modes of the graph's seq products, and -- only for
+// DENIER-mode seqs -- upstream DENIER, RM group head denier and SPANDEX_DRAFT.
+// Implementations must batch (a bounded number of queries per graph).
+type RatioSourceLoader interface {
+	LoadRMRatioSources(ctx context.Context, g *costroute.Graph) (costroute.RatioSources, error)
+}
+
 // GetGraphHandler returns the full graph for a head.
 type GetGraphHandler struct {
-	repo      costroute.Repository
-	flattener *NestedMBFlattener
+	repo        costroute.Repository
+	flattener   *NestedMBFlattener
+	ratioLoader RatioSourceLoader
 }
 
 // NewGetGraphHandler constructs a GetGraphHandler.
@@ -63,13 +73,31 @@ func (h *GetGraphHandler) WithNestedMBFlattener(f *NestedMBFlattener) *GetGraphH
 	return h
 }
 
-// Handle loads the graph, optionally flattening nested-MB composition into it
-// for display when includeNestedMB is true and a flattener is wired. When
-// either condition is false, this returns exactly what it always has.
+// WithRatioLoader attaches an optional RM ratio source loader. When wired,
+// Handle annotates the requested head's native seqs with the computed RM
+// ratio (ratio mode, computed ratio, source, denier, note) before any nested-MB
+// flattening, so DENIER-derived ratios also drive nested compounding. Read-only:
+// SaveGraphHandler never sees these annotations.
+func (h *GetGraphHandler) WithRatioLoader(l RatioSourceLoader) *GetGraphHandler {
+	h.ratioLoader = l
+	return h
+}
+
+// Handle loads the graph, annotates it with computed RM ratios when a ratio
+// loader is wired, and optionally flattens nested-MB composition into it for
+// display when includeNestedMB is true and a flattener is wired. With neither
+// wired, this returns exactly what it always has.
 func (h *GetGraphHandler) Handle(ctx context.Context, headID int64, includeNestedMB bool) (*costroute.Graph, error) {
 	graph, err := h.repo.GetGraph(ctx, headID)
 	if err != nil {
 		return nil, err
+	}
+	if h.ratioLoader != nil && graph != nil {
+		src, err := h.ratioLoader.LoadRMRatioSources(ctx, graph)
+		if err != nil {
+			return nil, fmt.Errorf("load RM ratio sources: %w", err)
+		}
+		graph.AnnotateRMRatios(src)
 	}
 	if !includeNestedMB || h.flattener == nil {
 		return graph, nil

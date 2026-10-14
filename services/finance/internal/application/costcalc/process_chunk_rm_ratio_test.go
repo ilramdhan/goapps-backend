@@ -16,11 +16,23 @@ import (
 // per-chunk queries (one call each) into the bundle.
 type rmRatioChunkLoader struct {
 	mbGuardLoader
-	gotModeIDs    []int64
-	gotGroupCodes []string
-	modeCalls     int
-	denierCalls   int
-	denierErr     error
+	gotModeIDs     []int64
+	gotGroupCodes  []string
+	gotUpstreamIDs []int64
+	modeCalls      int
+	denierCalls    int
+	upstreamCalls  int
+	denierErr      error
+	upstreamErr    error
+}
+
+func (f *rmRatioChunkLoader) LoadUpstreamDeniers(_ context.Context, ids []int64) (map[int64]float64, error) {
+	f.upstreamCalls++
+	f.gotUpstreamIDs = ids
+	if f.upstreamErr != nil {
+		return nil, f.upstreamErr
+	}
+	return map[int64]float64{7: 70}, nil
 }
 
 func (f *rmRatioChunkLoader) LoadRoutesByProducts(_ context.Context, ids []int64) (map[int64]*costroute.Graph, error) {
@@ -65,6 +77,19 @@ func TestBulkLoad_LoadsRMRatioInputsOncePerChunk(t *testing.T) {
 	assert.Equal(t, RMRatioModeDenier, got.rmRatioModes[11])
 	assert.Empty(t, got.rmRatioModes[12])
 	assert.InDelta(t, 40, got.rmGroupDeniers["SPD1"], 1e-9)
+	assert.Equal(t, 1, loader.upstreamCalls)
+	assert.Equal(t, []int64{7}, loader.gotUpstreamIDs, "upstream ids are deduped across routes")
+	assert.InDelta(t, 70, got.upstreamDeniers[7], 1e-9)
+}
+
+func TestBulkLoad_UpstreamDenierErrorAbortsChunk(t *testing.T) {
+	sentinel := errors.New("upstream denier query failed")
+	loader := &rmRatioChunkLoader{upstreamErr: sentinel}
+	svc := NewService(nil, nil, nil, nil, nil, loader, nil, nil, nil)
+
+	_, err := svc.bulkLoad(context.Background(), mbGuardInput([]int64{11}))
+	require.ErrorIs(t, err, sentinel)
+	assert.Contains(t, err.Error(), "load upstream deniers")
 }
 
 func TestBulkLoad_RMGroupDenierErrorAbortsChunk(t *testing.T) {

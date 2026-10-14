@@ -173,7 +173,8 @@ func seedQueue(seqs []*costroute.Seq) []flattenNode {
 	var out []flattenNode
 	for _, s := range seqs {
 		for _, rm := range s.Rms {
-			if rm.EffectiveRatio == 0 {
+			// A DENIER-derived ratio (AnnotateRMRatios) may legitimately be 0.
+			if rm.EffectiveRatio == 0 && rm.RatioSource != costroute.RatioSourceDenier {
 				rm.EffectiveRatio = rm.RouteRmRatio
 			}
 			if rm.RmType == costroute.RmTypeProduct {
