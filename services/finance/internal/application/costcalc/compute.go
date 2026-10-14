@@ -148,9 +148,14 @@ type ComputeInput struct {
 	// RMGroupDenier maps RM group_code -> cst_rm_group_head.denier for groups
 	// with a non-NULL denier. Only read in DENIER mode.
 	RMGroupDenier map[string]float64
+	// UpstreamDenier maps upstream product sys id -> its product-master
+	// DENIER param (cost_product_parameter). Only read in DENIER mode; an
+	// absent or non-positive value makes that line's denier 0 (+ note).
+	UpstreamDenier map[int64]float64
 	// UpstreamSnapshots maps upstream product sys id -> its committed
-	// cpc_param_snapshot (the same map VBLoss carries; loaded once per chunk).
-	// Only read in DENIER mode, for the upstream DENIER param.
+	// cpc_param_snapshot (the same map VBLoss carries). It is NOT read by the
+	// DENIER mode any more -- the upstream DENIER comes from the master via
+	// UpstreamDenier, with no snapshot fallback.
 	UpstreamSnapshots map[int64]map[string]float64
 }
 

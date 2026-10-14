@@ -268,3 +268,8 @@ func TestProcessChunk_GuardError_AbortsChunk(t *testing.T) {
 func (f *mbGuardLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*SuperbaCost, error) {
 	return map[int64]*SuperbaCost{}, nil
 }
+
+// LoadUpstreamDeniers reports no upstream deniers.
+func (f *mbGuardLoader) LoadUpstreamDeniers(context.Context, []int64) (map[int64]float64, error) {
+	return map[int64]float64{}, nil
+}

@@ -10,8 +10,6 @@ import (
 // Keys and sources of the DENIER ratio mode, re-exported from the shared
 // costroute domain computation so calc and route graph cannot diverge.
 const (
-	// snapKeyDenier is the upstream product's DENIER param (TOP 13).
-	snapKeyDenier = costroute.ParamCodeDenier
 	// cappKeySpandexDraft is the product's own SPANDEX_DRAFT param (000570).
 	cappKeySpandexDraft = costroute.ParamCodeSpandexDraft
 	ratioSourceDenier   = costroute.RatioSourceDenier
@@ -76,15 +74,9 @@ func planRMRatios(in ComputeInput) *rmRatioPlan {
 
 // ratioSourceData adapts a ComputeInput to the shared domain computation.
 func ratioSourceData(in ComputeInput) costroute.RatioSourceData {
-	upstream := map[int64]float64{}
-	for id, snap := range in.UpstreamSnapshots {
-		if v, ok := snap[snapKeyDenier]; ok {
-			upstream[id] = v
-		}
-	}
 	return costroute.RatioSourceData{
 		Mode:           in.RMRatioMode,
-		UpstreamDenier: upstream,
+		UpstreamDenier: in.UpstreamDenier,
 		GroupDenier:    in.RMGroupDenier,
 		SpandexDraft:   in.CAPP[cappKeySpandexDraft],
 	}
