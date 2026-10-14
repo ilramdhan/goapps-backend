@@ -7,16 +7,18 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/costroute"
 )
 
 // RM ratio modes (cost_product_type.cpt_rm_ratio_mode, migration 000570).
 const (
 	// RMRatioModeInput keeps every route RM line's crm_route_rm_ratio as
 	// entered. "" is treated identically (legacy callers, e.g. mbbatch).
-	RMRatioModeInput = "INPUT"
+	RMRatioModeInput = costroute.RMRatioModeInput
 	// RMRatioModeDenier derives the ratio of the denier lines (PRODUCT RMs and
 	// GROUP RMs whose head has a denier) from their denier share.
-	RMRatioModeDenier = "DENIER"
+	RMRatioModeDenier = costroute.RMRatioModeDenier
 )
 
 // LoadProductRMRatioModes implements ProductLoader.LoadProductRMRatioModes with
