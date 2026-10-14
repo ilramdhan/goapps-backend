@@ -694,6 +694,10 @@
         },
         "audit": {
           "$ref": "#/definitions/v1AuditInfo"
+        },
+        "rmRatioMode": {
+          "type": "string",
+          "description": "RM ratio mode of the product (\"INPUT\" | \"DENIER\"). Response-only; ignored on save."
         }
       },
       "description": "CostRouteHead is the per-product released routing aggregate.\nOne non-LOCKED head per product (UK by cpm_product_sys_id)."
@@ -797,6 +801,24 @@
         "rmProductName": {
           "type": "string",
           "description": "Product name of the referenced product (read-time join on rm_product_sys_id).\nPopulated only for PRODUCT-type rows; empty for ITEM/GROUP rows."
+        },
+        "computedRatio": {
+          "type": "number",
+          "format": "double",
+          "description": "Response-only (ignored on save): ratio actually used by the calc engine for this line.\nEquals route_rm_ratio for INPUT-mode products or non-denier lines."
+        },
+        "ratioSource": {
+          "type": "string",
+          "description": "\"\" for INPUT-mode products, \"DENIER\" for denier-derived lines,\n\"INPUT\" for lines in a DENIER-mode product that keep the route ratio."
+        },
+        "denier": {
+          "type": "number",
+          "format": "double",
+          "description": "Line denier used: upstream DENIER, or group denier / SPANDEX_DRAFT."
+        },
+        "ratioNote": {
+          "type": "string",
+          "description": "Explanatory note, e.g. missing denier treated as 0."
         }
       },
       "description": "CostRouteRm is one input edge feeding a SEQ.\nExactly one of (rm_product_sys_id, rm_item_code, rm_group_code) is set,\nmatching rm_type."
@@ -875,6 +897,10 @@
           "type": "integer",
           "format": "int32",
           "description": "Flattening depth of this stage (0 = native to the requested head)."
+        },
+        "rmRatioMode": {
+          "type": "string",
+          "description": "RM ratio mode of the product owning this stage (\"INPUT\" | \"DENIER\"). Response-only; ignored on save."
         }
       },
       "description": "CostRouteSeq is one stage of the route at a given level + ordering."
