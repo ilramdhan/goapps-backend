@@ -165,6 +165,8 @@ type loadedBundle struct {
 	// rmGroupDeniers is cst_rm_group_head.denier per GROUP RM code referenced
 	// by the chunk's routes (NULL denier = absent). Read in DENIER mode only.
 	rmGroupDeniers map[string]float64
+	// rmGroupUseDraft is cst_rm_group_head.denier_use_draft for the same groups.
+	rmGroupUseDraft map[string]bool
 	// upstreamDeniers is the product-master DENIER of every upstream PRODUCT
 	// RM referenced by the chunk's routes. Read in DENIER mode only.
 	upstreamDeniers map[int64]float64
@@ -301,7 +303,7 @@ func (s *Service) loadRMRatioInputs(ctx context.Context, products []int64, b *lo
 	if err != nil {
 		return fmt.Errorf("load product RM ratio modes: %w", err)
 	}
-	deniers, err := s.loader.LoadRMGroupDeniers(ctx, collectGroupCodes(b.routes))
+	deniers, useDraft, err := s.loader.LoadRMGroupDeniers(ctx, collectGroupCodes(b.routes))
 	if err != nil {
 		return fmt.Errorf("load RM group deniers: %w", err)
 	}
@@ -309,7 +311,7 @@ func (s *Service) loadRMRatioInputs(ctx context.Context, products []int64, b *lo
 	if err != nil {
 		return fmt.Errorf("load upstream deniers: %w", err)
 	}
-	b.rmRatioModes, b.rmGroupDeniers, b.upstreamDeniers = modes, deniers, upstreamDeniers
+	b.rmRatioModes, b.rmGroupDeniers, b.rmGroupUseDraft, b.upstreamDeniers = modes, deniers, useDraft, upstreamDeniers
 	return nil
 }
 
@@ -446,6 +448,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		},
 		RMRatioMode:       loaded.rmRatioModes[pid],
 		RMGroupDenier:     loaded.rmGroupDeniers,
+		RMGroupUseDraft:   loaded.rmGroupUseDraft,
 		UpstreamDenier:    loaded.upstreamDeniers,
 		UpstreamSnapshots: loaded.upstreamSnapshots,
 	})

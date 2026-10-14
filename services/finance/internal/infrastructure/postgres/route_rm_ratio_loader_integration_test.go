@@ -1,5 +1,6 @@
 // Integration parity test: the route graph's computed RM ratio for a
-// DENIER-mode (ACY-like) product equals the calc engine's ratio for the same
+// DENIER-mode product (ACY-like spandex+draft and ITY-like POY/FDY groups
+// without draft) equals the calc engine's ratio for the same
 // master data. Gated by INTEGRATION_TEST=true.
 //
 // SAFETY: fixtures use a unique ITRRL prefix and are hard-deleted on cleanup.
@@ -22,14 +23,60 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
 
-func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) { //nolint:funlen // end-to-end fixture
+// parityGroup is one GROUP RM line of a parity fixture.
+type parityGroup struct {
+	suffix   string
+	denier   float64
+	useDraft bool
+	want     float64
+}
+
+// parityFixture describes one DENIER-mode product route for the parity test.
+type parityFixture struct {
+	// upstreamDenier is the upstream PRODUCT line's DENIER (0 = no PRODUCT line).
+	upstreamDenier float64
+	wantUpstream   float64
+	groups         []parityGroup
+	// draft is the product's SPANDEX_DRAFT (0 = not set).
+	draft float64
+}
+
+func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) {
+	spd := 40.0 / 3
+	tests := []struct {
+		name string
+		fx   parityFixture
+	}{
+		{
+			name: "ACY PTY150 + spandex 40 / draft 3",
+			fx: parityFixture{
+				upstreamDenier: 150, wantUpstream: 150 / (150 + spd), draft: 3,
+				groups: []parityGroup{{suffix: "-SPD", denier: 40, useDraft: true, want: spd / (150 + spd)}},
+			},
+		},
+		{
+			name: "ITY POY80 + FDY50 groups, no draft",
+			fx: parityFixture{
+				groups: []parityGroup{
+					{suffix: "-POY", denier: 80, want: 80.0 / 130},
+					{suffix: "-FDY", denier: 50, want: 50.0 / 130},
+				},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) { runRouteCalcParity(t, tc.fx) })
+	}
+}
+
+func runRouteCalcParity(t *testing.T, fx parityFixture) { //nolint:funlen // end-to-end fixture
+	t.Helper()
 	raw, db := openRRDDB(t)
 	ctx := context.Background()
 	const actor = "itest-rrl"
 	n := rand.IntN(1_000_000)
 	prefix := fmt.Sprintf("ITRRL%06d", n)
 	typeCode := fmt.Sprintf("L%04d", n%10000)
-	grp := prefix + "-SPD"
 
 	var typeID int
 	require.NoError(t, raw.QueryRowContext(ctx, `
@@ -42,10 +89,22 @@ func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) { //nolint:funlen //
 			VALUES ($1, $2, 'itest rrl', $3, $3) RETURNING cpm_product_sys_id`, prefix+suffix, typeID, actor).Scan(&id))
 		return id
 	}
-	fg, pty := insertProduct("-ACY"), insertProduct("-PTY")
-	_, err := raw.ExecContext(ctx, `
-		INSERT INTO cst_rm_group_head (group_code, group_name, denier, created_by) VALUES ($1, $1, 40, $2)`, grp, actor)
-	require.NoError(t, err)
+	fg := insertProduct("-FG")
+	ids := []int64{fg}
+	var pty int64
+	if fx.upstreamDenier > 0 {
+		pty = insertProduct("-PTY")
+		ids = append(ids, pty)
+	}
+	grpCodes := make([]string, 0, len(fx.groups))
+	for _, g := range fx.groups {
+		code := prefix + g.suffix
+		grpCodes = append(grpCodes, code)
+		_, err := raw.ExecContext(ctx, `
+			INSERT INTO cst_rm_group_head (group_code, group_name, denier, denier_use_draft, created_by)
+			VALUES ($1, $1, $2, $3, $4)`, code, g.denier, g.useDraft, actor)
+		require.NoError(t, err)
+	}
 
 	setParam := func(product int64, code string, v float64) {
 		_, err := raw.ExecContext(ctx, `
@@ -58,8 +117,12 @@ func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) { //nolint:funlen //
 			SELECT $1, id, $3, $4, $4 FROM mst_parameter WHERE param_code = $2 AND deleted_at IS NULL`, product, code, v, actor)
 		require.NoError(t, err)
 	}
-	setParam(pty, costroute.ParamCodeDenier, 150)
-	setParam(fg, costroute.ParamCodeSpandexDraft, 3)
+	if pty != 0 {
+		setParam(pty, costroute.ParamCodeDenier, fx.upstreamDenier)
+	}
+	if fx.draft > 0 {
+		setParam(fg, costroute.ParamCodeSpandexDraft, fx.draft)
+	}
 
 	var headID, seqID int64
 	require.NoError(t, raw.QueryRowContext(ctx, `
@@ -68,17 +131,20 @@ func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) { //nolint:funlen //
 	require.NoError(t, raw.QueryRowContext(ctx, `
 		INSERT INTO cost_route_seq (crs_head_id, crs_product_sys_id, crs_route_level, crs_route_seq, crs_created_by, crs_updated_by)
 		VALUES ($1, $2, 1, 1, $3, $3) RETURNING crs_seq_id`, headID, fg, actor).Scan(&seqID))
-	_, err = raw.ExecContext(ctx, `
-		INSERT INTO cost_route_rm (crm_seq_id, crm_parent_product_sys_id, crm_rm_product_sys_id, crm_rm_type, crm_route_rm_ratio, crm_created_by, crm_updated_by)
-		VALUES ($1, $2, $3, 'PRODUCT', 1, $4, $4)`, seqID, fg, pty, actor)
-	require.NoError(t, err)
-	_, err = raw.ExecContext(ctx, `
-		INSERT INTO cost_route_rm (crm_seq_id, crm_parent_product_sys_id, crm_rm_group_code, crm_rm_type, crm_route_rm_ratio, crm_created_by, crm_updated_by)
-		VALUES ($1, $2, $3, 'GROUP', 1, $4, $4)`, seqID, fg, grp, actor)
-	require.NoError(t, err)
+	if pty != 0 {
+		_, err := raw.ExecContext(ctx, `
+			INSERT INTO cost_route_rm (crm_seq_id, crm_parent_product_sys_id, crm_rm_product_sys_id, crm_rm_type, crm_route_rm_ratio, crm_created_by, crm_updated_by)
+			VALUES ($1, $2, $3, 'PRODUCT', 1, $4, $4)`, seqID, fg, pty, actor)
+		require.NoError(t, err)
+	}
+	for _, code := range grpCodes {
+		_, err := raw.ExecContext(ctx, `
+			INSERT INTO cost_route_rm (crm_seq_id, crm_parent_product_sys_id, crm_rm_group_code, crm_rm_type, crm_route_rm_ratio, crm_created_by, crm_updated_by)
+			VALUES ($1, $2, $3, 'GROUP', 1, $4, $4)`, seqID, fg, code, actor)
+		require.NoError(t, err)
+	}
 
 	t.Cleanup(func() {
-		ids := []int64{fg, pty}
 		_, _ = raw.ExecContext(ctx, `DELETE FROM cost_route_rm WHERE crm_seq_id = $1`, seqID)
 		_, _ = raw.ExecContext(ctx, `DELETE FROM cost_route_seq WHERE crs_head_id = $1`, headID)
 		_, _ = raw.ExecContext(ctx, `DELETE FROM cost_route_head WHERE crh_head_id = $1`, headID)
@@ -88,8 +154,19 @@ func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) { //nolint:funlen //
 			_, _ = raw.ExecContext(ctx, `DELETE FROM cost_product_master WHERE cpm_product_sys_id = $1`, id)
 		}
 		_, _ = raw.ExecContext(ctx, `DELETE FROM cost_product_type WHERE cpt_type_id = $1`, typeID)
-		_, _ = raw.ExecContext(ctx, `DELETE FROM cst_rm_group_head WHERE group_code = $1`, grp)
+		for _, code := range grpCodes {
+			_, _ = raw.ExecContext(ctx, `DELETE FROM cst_rm_group_head WHERE group_code = $1`, code)
+		}
 	})
+
+	// Expected ratio per RM ref code (calc engine RefCode convention).
+	want := map[string]float64{}
+	if pty != 0 {
+		want[fmt.Sprintf("product:%d", pty)] = fx.wantUpstream
+	}
+	for i, g := range fx.groups {
+		want[grpCodes[i]] = g.want
+	}
 
 	// Route graph side.
 	h := costrouteapp.NewGetGraphHandler(postgres.NewCostRouteRepository(db)).
@@ -101,11 +178,17 @@ func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) { //nolint:funlen //
 	routeRatio := map[string]float64{}
 	for _, rm := range g.Seqs[0].Rms {
 		assert.Equal(t, costroute.RatioSourceDenier, rm.RatioSource)
-		routeRatio[rm.RmType] = rm.ComputedRatio
+		assert.Empty(t, rm.RatioNote)
+		ref := rm.RmGroupCode
+		if rm.RmType == costroute.RmTypeProduct {
+			ref = fmt.Sprintf("product:%d", rm.RmProductSysID)
+		}
+		routeRatio[ref] = rm.ComputedRatio
 	}
-	spd := 40.0 / 3
-	assert.InDelta(t, 150/(150+spd), routeRatio[costroute.RmTypeProduct], 1e-9)
-	assert.InDelta(t, spd/(150+spd), routeRatio[costroute.RmTypeGroup], 1e-9)
+	require.Len(t, routeRatio, len(want))
+	for ref, w := range want {
+		assert.InDelta(t, w, routeRatio[ref], 1e-9, "route graph ratio for %s", ref)
+	}
 
 	// Calc engine side, fed by the engine's own bulk loader.
 	loader := costcalc.NewProductLoader(raw)
@@ -115,10 +198,19 @@ func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) { //nolint:funlen //
 	require.NoError(t, err)
 	modes, err := loader.LoadProductRMRatioModes(ctx, []int64{fg})
 	require.NoError(t, err)
-	groupDeniers, err := loader.LoadRMGroupDeniers(ctx, []string{grp})
+	groupDeniers, groupUseDraft, err := loader.LoadRMGroupDeniers(ctx, grpCodes)
 	require.NoError(t, err)
-	upDeniers, err := loader.LoadUpstreamDeniers(ctx, []int64{pty})
-	require.NoError(t, err)
+	var upDeniers map[int64]float64
+	upCosts := map[int64]float64{}
+	if pty != 0 {
+		upDeniers, err = loader.LoadUpstreamDeniers(ctx, []int64{pty})
+		require.NoError(t, err)
+		upCosts[pty] = 40
+	}
+	rmCosts := map[string]costcalc.RMCostRates{}
+	for _, code := range grpCodes {
+		rmCosts[code+"|"] = costcalc.RMCostRates{CostVal: 100}
+	}
 
 	out, err := costcalc.ComputeProduct(ctx, costcalc.ComputeInput{
 		ProductSysID: fg,
@@ -130,16 +222,17 @@ func TestRouteRMRatioLoader_MatchesCalcEngine(t *testing.T) { //nolint:funlen //
 			FormulaCode: "F_FINAL", FormulaName: "Final", Expression: "COST_RM_TOTAL",
 			ResultParamCode: costcalc.ScopeKeyFinalCost, InputParamCodes: []string{costcalc.ScopeKeyCostRMTotal},
 		}},
-		RMCosts:        map[string]costcalc.RMCostRates{grp + "|": {CostVal: 100}},
-		UpstreamCosts:  map[int64]float64{pty: 40},
-		EvalCache:      evaluator.NewCache(),
-		RMRatioMode:    modes[fg],
-		RMGroupDenier:  groupDeniers,
-		UpstreamDenier: upDeniers,
+		RMCosts:         rmCosts,
+		UpstreamCosts:   upCosts,
+		EvalCache:       evaluator.NewCache(),
+		RMRatioMode:     modes[fg],
+		RMGroupDenier:   groupDeniers,
+		RMGroupUseDraft: groupUseDraft,
+		UpstreamDenier:  upDeniers,
 	})
 	require.NoError(t, err)
-	require.Len(t, out.RMCostDetail, 2)
+	require.Len(t, out.RMCostDetail, len(want))
 	for _, d := range out.RMCostDetail {
-		assert.InDelta(t, routeRatio[d.RMType], d.Ratio, 1e-12, "route graph ratio == calc engine ratio for %s", d.RMType)
+		assert.InDelta(t, routeRatio[d.RefCode], d.Ratio, 1e-12, "route graph ratio == calc engine ratio for %s", d.RefCode)
 	}
 }

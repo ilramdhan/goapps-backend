@@ -64,6 +64,7 @@ func mixedSources() costroute.RatioSources {
 		Modes:          map[int64]string{ratioFG: costroute.RMRatioModeDenier, ratioPTY: costroute.RMRatioModeInput},
 		UpstreamDenier: map[int64]float64{ratioPTY: 150, ratioMB: 0},
 		GroupDenier:    map[string]float64{ratioSpd: 40},
+		GroupUseDraft:  map[string]bool{ratioSpd: true},
 		SpandexDraft:   map[int64]float64{ratioFG: 3},
 	}
 }

@@ -55,13 +55,13 @@ func (f *rmRatioChunkLoader) LoadProductRMRatioModes(_ context.Context, ids []in
 	return map[int64]string{ids[0]: RMRatioModeDenier}, nil
 }
 
-func (f *rmRatioChunkLoader) LoadRMGroupDeniers(_ context.Context, codes []string) (map[string]float64, error) {
+func (f *rmRatioChunkLoader) LoadRMGroupDeniers(_ context.Context, codes []string) (map[string]float64, map[string]bool, error) {
 	f.denierCalls++
 	f.gotGroupCodes = codes
 	if f.denierErr != nil {
-		return nil, f.denierErr
+		return nil, nil, f.denierErr
 	}
-	return map[string]float64{"SPD1": 40}, nil
+	return map[string]float64{"SPD1": 40}, map[string]bool{"SPD1": true}, nil
 }
 
 func TestBulkLoad_LoadsRMRatioInputsOncePerChunk(t *testing.T) {
@@ -77,6 +77,7 @@ func TestBulkLoad_LoadsRMRatioInputsOncePerChunk(t *testing.T) {
 	assert.Equal(t, RMRatioModeDenier, got.rmRatioModes[11])
 	assert.Empty(t, got.rmRatioModes[12])
 	assert.InDelta(t, 40, got.rmGroupDeniers["SPD1"], 1e-9)
+	assert.True(t, got.rmGroupUseDraft["SPD1"])
 	assert.Equal(t, 1, loader.upstreamCalls)
 	assert.Equal(t, []int64{7}, loader.gotUpstreamIDs, "upstream ids are deduped across routes")
 	assert.InDelta(t, 70, got.upstreamDeniers[7], 1e-9)

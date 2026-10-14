@@ -148,6 +148,10 @@ type ComputeInput struct {
 	// RMGroupDenier maps RM group_code -> cst_rm_group_head.denier for groups
 	// with a non-NULL denier. Only read in DENIER mode.
 	RMGroupDenier map[string]float64
+	// RMGroupUseDraft maps RM group_code -> cst_rm_group_head.denier_use_draft
+	// (000571): true divides the group denier by SPANDEX_DRAFT (spandex),
+	// false/absent uses it as-is. Only read in DENIER mode.
+	RMGroupUseDraft map[string]bool
 	// UpstreamDenier maps upstream product sys id -> its product-master
 	// DENIER param (cost_product_parameter). Only read in DENIER mode; an
 	// absent or non-positive value makes that line's denier 0 (+ note).

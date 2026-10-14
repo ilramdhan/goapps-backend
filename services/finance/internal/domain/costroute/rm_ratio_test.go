@@ -10,6 +10,8 @@ const (
 	tUpB   int64 = 902
 	tSpd         = "SPD0000006"
 	tOil         = "RMP0000087"
+	tPOY         = "POY0000001"
+	tFDY         = "FDY0000001"
 	tDelta       = 1e-9
 )
 
@@ -26,6 +28,7 @@ func tSrc() RatioSourceData {
 		Mode:           RMRatioModeDenier,
 		UpstreamDenier: map[int64]float64{tUpA: 70, tUpB: 150},
 		GroupDenier:    map[string]float64{tSpd: 40},
+		GroupUseDraft:  map[string]bool{tSpd: true},
 		SpandexDraft:   3,
 	}
 }
@@ -41,6 +44,8 @@ func TestComputeSeqRMRatios(t *testing.T) {
 		wantSources  []string
 		wantNotes    int
 		wantLineNote []bool
+		// ratioDelta overrides tDelta for cases stated as rounded ratios.
+		ratioDelta float64
 	}{
 		{
 			name:        "MEL 75/150",
@@ -138,6 +143,46 @@ func TestComputeSeqRMRatios(t *testing.T) {
 			wantSources: []string{"", ""},
 		},
 		{
+			name: "ITY POY80 + FDY50 groups, no draft",
+			rms:  []*Rm{tGroup(tPOY, 1), tGroup(tFDY, 1)},
+			mutate: func(s *RatioSourceData) {
+				s.GroupDenier[tPOY], s.GroupDenier[tFDY] = 80, 50
+				s.SpandexDraft = 0
+			},
+			wantRatios:  []float64{0.615385, 0.384615},
+			wantDeniers: []float64{80, 50},
+			wantSources: []string{RatioSourceDenier, RatioSourceDenier},
+			ratioDelta:  1e-6,
+		},
+		{
+			name:        "ACY spandex use_draft unchanged",
+			rms:         []*Rm{tProduct(tUpB, 1), tGroup(tSpd, 1)},
+			wantRatios:  []float64{0.918367, 0.081633},
+			wantDeniers: []float64{150, 40.0 / 3},
+			wantSources: []string{RatioSourceDenier, RatioSourceDenier},
+			ratioDelta:  1e-6,
+		},
+		{
+			name:        "mixed PTY150 + FDY50 group, draft ignored",
+			rms:         []*Rm{tProduct(tUpB, 1), tGroup(tFDY, 1)},
+			mutate:      func(s *RatioSourceData) { s.GroupDenier[tFDY] = 50 },
+			wantRatios:  []float64{0.75, 0.25},
+			wantDeniers: []float64{150, 50},
+			wantSources: []string{RatioSourceDenier, RatioSourceDenier},
+		},
+		{
+			name: "RMP group without denier keeps input ratio",
+			rms:  []*Rm{tGroup(tPOY, 1), tGroup(tFDY, 1), tGroup(tOil, 0.03)},
+			mutate: func(s *RatioSourceData) {
+				s.GroupDenier[tPOY], s.GroupDenier[tFDY] = 80, 50
+				s.SpandexDraft = 0
+			},
+			wantRatios:  []float64{0.615385, 0.384615, 0.03},
+			wantDeniers: []float64{80, 50, 0},
+			wantSources: []string{RatioSourceDenier, RatioSourceDenier, RatioSourceInput},
+			ratioDelta:  1e-6,
+		},
+		{
 			name:        "empty mode passthrough",
 			rms:         []*Rm{tProduct(tUpA, 0.6), nil},
 			mutate:      func(s *RatioSourceData) { s.Mode = "" },
@@ -157,7 +202,11 @@ func TestComputeSeqRMRatios(t *testing.T) {
 				t.Fatalf("len = %d, want %d", len(got), len(tc.rms))
 			}
 			for i := range got {
-				if math.Abs(got[i].Ratio-tc.wantRatios[i]) > tDelta {
+				delta := tDelta
+				if tc.ratioDelta > 0 {
+					delta = tc.ratioDelta
+				}
+				if math.Abs(got[i].Ratio-tc.wantRatios[i]) > delta {
 					t.Errorf("line %d ratio = %v, want %v", i, got[i].Ratio, tc.wantRatios[i])
 				}
 				if math.Abs(got[i].Denier-tc.wantDeniers[i]) > tDelta {
@@ -248,6 +297,7 @@ func TestGraph_AnnotateRMRatios(t *testing.T) {
 		Modes:          map[int64]string{1: "denier"},
 		UpstreamDenier: map[int64]float64{tUpA: 70},
 		GroupDenier:    map[string]float64{tSpd: 40},
+		GroupUseDraft:  map[string]bool{tSpd: true},
 		SpandexDraft:   map[int64]float64{1: 3},
 	})
 	if g.Head.RMRatioMode != RMRatioModeDenier || g.Seqs[0].RMRatioMode != RMRatioModeDenier || g.Seqs[1].RMRatioMode != RMRatioModeInput {

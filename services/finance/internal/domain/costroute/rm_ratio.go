@@ -46,7 +46,12 @@ type RatioSourceData struct {
 	// GroupDenier maps RM group_code -> cst_rm_group_head.denier for groups
 	// with a non-NULL denier; presence makes a GROUP line a denier line.
 	GroupDenier map[string]float64
+	// GroupUseDraft maps RM group_code -> cst_rm_group_head.denier_use_draft.
+	// True (spandex) divides the group denier by SpandexDraft; false/absent
+	// uses the group denier as-is (bought-out POY/FDY).
+	GroupUseDraft map[string]bool
 	// SpandexDraft is the seq product's SPANDEX_DRAFT value (0 = missing).
+	// Only read for GROUP lines whose head has denier_use_draft.
 	SpandexDraft float64
 }
 
@@ -54,7 +59,8 @@ type RatioSourceData struct {
 type LineRatio struct {
 	// Ratio is the ratio the calc engine uses for the line.
 	Ratio float64
-	// Denier is the line denier (upstream DENIER, or group denier / draft);
+	// Denier is the line denier (upstream DENIER, group denier / draft for
+	// draft groups, or group denier as-is);
 	// 0 for non-denier lines.
 	Denier float64
 	// Source is "" in INPUT mode, RatioSourceDenier for denier lines and
@@ -73,6 +79,8 @@ type LineRatio struct {
 // DENIER mode:
 //   - PRODUCT line: d = UpstreamDenier[upstream]
 //   - GROUP line whose head has a denier: d = head denier / SpandexDraft
+//     when the head has denier_use_draft (spandex), else d = head denier
+//     as-is (bought-out POY/FDY; no draft needed)
 //   - any other line keeps RouteRmRatio (Source INPUT)
 //
 // ratio_i = d_i / Σd over the seq's denier lines. A missing or non-positive
@@ -170,6 +178,9 @@ func lineDenier(rm *Rm, src RatioSourceData) (d float64, msg string, ok bool) {
 		if headDenier <= 0 {
 			return 0, fmt.Sprintf("DENIER ratio: RM group %s has no denier; treated as 0", rm.RmGroupCode), true
 		}
+		if !src.GroupUseDraft[rm.RmGroupCode] {
+			return headDenier, "", true
+		}
 		if src.SpandexDraft <= 0 {
 			return 0, fmt.Sprintf("DENIER ratio: SPANDEX_DRAFT missing or not positive; RM group %s treated as 0", rm.RmGroupCode), true
 		}
@@ -188,6 +199,8 @@ type RatioSources struct {
 	UpstreamDenier map[int64]float64
 	// GroupDenier maps RM group_code -> head denier (non-NULL only).
 	GroupDenier map[string]float64
+	// GroupUseDraft maps RM group_code -> head denier_use_draft.
+	GroupUseDraft map[string]bool
 	// SpandexDraft maps seq product sys id -> its SPANDEX_DRAFT value.
 	SpandexDraft map[int64]float64
 }
@@ -222,6 +235,7 @@ func (g *Graph) AnnotateRMRatios(src RatioSources) {
 			Mode:           seq.RMRatioMode,
 			UpstreamDenier: src.UpstreamDenier,
 			GroupDenier:    src.GroupDenier,
+			GroupUseDraft:  src.GroupUseDraft,
 			SpandexDraft:   src.SpandexDraft[seq.ProductSysID],
 		})
 		for i, rm := range seq.Rms {

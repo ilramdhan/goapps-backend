@@ -301,8 +301,9 @@ type ProductLoader interface {
 	LoadProductRMRatioModes(ctx context.Context, productSysIDs []int64) (map[int64]string, error)
 	// LoadRMGroupDeniers returns cst_rm_group_head.denier keyed by group_code
 	// for active groups with a non-NULL denier. Groups without a denier are
-	// absent. Feeds ComputeInput.RMGroupDenier.
-	LoadRMGroupDeniers(ctx context.Context, groupCodes []string) (map[string]float64, error)
+	// absent. The second map is denier_use_draft for the same groups. Feeds
+	// ComputeInput.RMGroupDenier / RMGroupUseDraft.
+	LoadRMGroupDeniers(ctx context.Context, groupCodes []string) (map[string]float64, map[string]bool, error)
 	// LoadUpstreamDeniers returns the product-master DENIER param of every
 	// given (upstream) product. Products without a value are absent. Feeds
 	// ComputeInput.UpstreamDenier.
