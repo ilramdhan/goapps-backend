@@ -1,0 +1,642 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "finance/v1/cost_product_lookup_sync.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CostProductLookupSyncService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/finance/lookup-sync/apply": {
+      "post": {
+        "summary": "ApplyLookupSync re-plans the scope and, if it still matches the confirmed\nfingerprint, queues a background job that writes the values.",
+        "operationId": "CostProductLookupSyncService_ApplyLookupSync",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApplyLookupSyncResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ApplyLookupSyncRequest queues a background job that applies the plan.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ApplyLookupSyncRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductLookupSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup-sync/jobs/{jobId}/failures": {
+      "get": {
+        "summary": "ListLookupSyncJobFailures lists failed/skipped products of a lookup-sync job.",
+        "operationId": "CostProductLookupSyncService_ListLookupSyncJobFailures",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListLookupSyncJobFailuresResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostProductLookupSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup-sync/jobs/{jobId}/status": {
+      "get": {
+        "summary": "GetLookupSyncJobStatus polls a lookup-sync job.",
+        "operationId": "CostProductLookupSyncService_GetLookupSyncJobStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetLookupSyncJobStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostProductLookupSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup-sync/preview": {
+      "post": {
+        "summary": "PreviewLookupSync returns the paged old→new plan for a scope.",
+        "operationId": "CostProductLookupSyncService_PreviewLookupSync",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PreviewLookupSyncResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "PreviewLookupSyncRequest computes the old→new plan for a scope, paged by item.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1PreviewLookupSyncRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductLookupSyncService"
+        ]
+      }
+    },
+    "/api/v1/finance/lookup-sync/usage": {
+      "get": {
+        "summary": "CountLookupUsage summarizes how many products use a master record and how\nmany values would change.",
+        "operationId": "CostProductLookupSyncService_CountLookupUsage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CountLookupUsageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "lookupMasterCode",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "masterKey",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CostProductLookupSyncService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ApplyLookupSyncRequest": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "$ref": "#/definitions/v1LookupSyncScope"
+        },
+        "planFingerprint": {
+          "type": "string",
+          "description": "plan_fingerprint from the preview the user confirmed."
+        }
+      },
+      "description": "ApplyLookupSyncRequest queues a background job that applies the plan."
+    },
+    "v1ApplyLookupSyncResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1BulkParamJobInfo"
+        },
+        "summary": {
+          "$ref": "#/definitions/v1LookupSyncSummary",
+          "description": "Plan as re-computed at apply time."
+        }
+      },
+      "description": "ApplyLookupSyncResponse returns the queued job (or 409 status_code when the\nplan drifted since preview)."
+    },
+    "v1BaseResponse": {
+      "type": "object",
+      "properties": {
+        "validationErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationError"
+          },
+          "description": "List of validation errors if any."
+        },
+        "statusCode": {
+          "type": "string",
+          "description": "HTTP-like status code (e.g., \"200\", \"400\", \"404\", \"500\")."
+        },
+        "isSuccess": {
+          "type": "boolean",
+          "description": "Indicates if the operation was successful."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message describing the result."
+        }
+      },
+      "description": "BaseResponse is the standard response wrapper for all API responses."
+    },
+    "v1BulkParamJobInfo": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "description": "job_execution.job_id (UUID)."
+        },
+        "jobCode": {
+          "type": "string",
+          "description": "Human-readable code (e.g. \"CPP_BULK-202609-001\")."
+        },
+        "status": {
+          "type": "string",
+          "description": "Initial status, typically \"QUEUED\"."
+        },
+        "totalChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total products expected to be processed by this job."
+        },
+        "completedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Products processed successfully so far."
+        },
+        "failedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Products that failed so far."
+        }
+      },
+      "description": "BulkParamJobInfo summarizes a freshly-queued bulk product-param edit job."
+    },
+    "v1BulkProductParamJobFailure": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64",
+          "description": "cost_product_master.cpm_product_sys_id that failed."
+        },
+        "productCode": {
+          "type": "string",
+          "description": "Product's business code, for display without a follow-up lookup."
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message explaining the failure."
+        }
+      },
+      "description": "BulkProductParamJobFailure describes one product that failed within a bulk\nparam-edit job."
+    },
+    "v1CountLookupUsageResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1LookupSyncSummary"
+        }
+      },
+      "description": "CountLookupUsageResponse returns the plan summary for one master record."
+    },
+    "v1GetLookupSyncJobStatusResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1BulkParamJobInfo"
+        },
+        "skippedChildren": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Products skipped at apply time (locked between preview and apply, etc.)."
+        },
+        "valuesWritten": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total param values written by the job so far."
+        }
+      },
+      "description": "GetLookupSyncJobStatusResponse reports live job progress."
+    },
+    "v1ListLookupSyncJobFailuresResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BulkProductParamJobFailure"
+          }
+        }
+      },
+      "description": "ListLookupSyncJobFailuresResponse lists per-product failures and skips."
+    },
+    "v1LookupMasterRef": {
+      "type": "object",
+      "properties": {
+        "lookupMasterCode": {
+          "type": "string",
+          "description": "mst_parameter.lookup_master_code: \"MACHINE\" | \"INTERMINGLING\" |\n\"PRODUCT_GRADE\" | \"MB_HEAD\" | \"MB_SPIN\" | \"BOX_BOBBIN_COST\"."
+        },
+        "masterKey": {
+          "type": "string",
+          "description": "Business key of the master record (mc_code, intm_code, pg_code,\nmbh_mb_costing, mb spin key, bbc_code)."
+        }
+      },
+      "description": "LookupMasterRef identifies one master record whose derived product params\nshould be re-synced (e.g. MACHINE + mc_code)."
+    },
+    "v1LookupSyncItem": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        },
+        "triggerParamCode": {
+          "type": "string",
+          "description": "Trigger param (MASTER_LOOKUP type) code, e.g. \"MC_CODE\"."
+        },
+        "lookupMasterCode": {
+          "type": "string",
+          "description": "lookup_master_code of the trigger param."
+        },
+        "masterKey": {
+          "type": "string",
+          "description": "Master key stored on the product for that trigger."
+        },
+        "skipReason": {
+          "type": "string",
+          "description": "Empty when the item will be applied. Otherwise one of: \"LOCKED\",\n\"KEY_EMPTY\", \"KEY_NOT_FOUND\", \"MB_SPIN_AMBIGUOUS\"."
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LookupSyncValueChange"
+          },
+          "description": "Values that would change (empty when already in sync or skipped)."
+        }
+      },
+      "description": "LookupSyncItem is one (product, lookup trigger param) pair in a plan."
+    },
+    "v1LookupSyncProductFilter": {
+      "type": "object",
+      "properties": {
+        "search": {
+          "type": "string"
+        },
+        "productTypeIds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "shadeCode": {
+          "type": "string"
+        },
+        "activeFilter": {
+          "type": "string"
+        }
+      },
+      "description": "LookupSyncProductFilter targets every product matching the Product Master\nlist filter (same semantics as ListCostProductMastersRequest)."
+    },
+    "v1LookupSyncProductIDs": {
+      "type": "object",
+      "properties": {
+        "productSysIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          },
+          "description": "cost_product_master.cpm_product_sys_id values. 1-5000 items."
+        }
+      },
+      "description": "LookupSyncProductIDs targets an explicit list of products."
+    },
+    "v1LookupSyncScope": {
+      "type": "object",
+      "properties": {
+        "masterRef": {
+          "$ref": "#/definitions/v1LookupMasterRef",
+          "description": "Every product whose lookup param currently points at this master record."
+        },
+        "productIds": {
+          "$ref": "#/definitions/v1LookupSyncProductIDs",
+          "description": "Every lookup trigger on these products."
+        },
+        "filter": {
+          "$ref": "#/definitions/v1LookupSyncProductFilter",
+          "description": "Every lookup trigger on products matching this filter."
+        }
+      },
+      "description": "LookupSyncScope selects which products (and which lookup triggers on them)\na preview or apply covers."
+    },
+    "v1LookupSyncSummary": {
+      "type": "object",
+      "properties": {
+        "totalProducts": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Distinct products in scope that have at least one lookup trigger."
+        },
+        "productsWithChanges": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Distinct products with at least one value change (not skipped)."
+        },
+        "totalValueChanges": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total value changes across all applicable items."
+        },
+        "lockedProducts": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Distinct products skipped because cpm_is_locked."
+        },
+        "skipCounts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Item counts by skip_reason."
+        },
+        "planFingerprint": {
+          "type": "string",
+          "description": "Opaque hash of the planned changes. Apply rejects with 409 when the\nre-computed plan no longer matches."
+        }
+      },
+      "description": "LookupSyncSummary aggregates a whole plan (not just the current page)."
+    },
+    "v1LookupSyncValueChange": {
+      "type": "object",
+      "properties": {
+        "paramId": {
+          "type": "string",
+          "description": "mst_parameter.param_id (UUID)."
+        },
+        "paramCode": {
+          "type": "string"
+        },
+        "paramName": {
+          "type": "string"
+        },
+        "oldValue": {
+          "type": "string",
+          "description": "Current stored value as text (\"\" when empty)."
+        },
+        "newValue": {
+          "type": "string",
+          "description": "Value the sync would write (\"\" when the child is cleared)."
+        },
+        "changeKind": {
+          "type": "string",
+          "description": "\"SET\" or \"CLEAR\"."
+        }
+      },
+      "description": "LookupSyncValueChange is one derived param value that differs from master."
+    },
+    "v1PaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Page number (1-indexed)."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        }
+      },
+      "description": "PaginationRequest contains pagination parameters for list requests."
+    },
+    "v1PaginationResponse": {
+      "type": "object",
+      "properties": {
+        "currentPage": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current page number."
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of items per page."
+        },
+        "totalItems": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of items across all pages."
+        },
+        "totalPages": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of pages."
+        }
+      },
+      "description": "PaginationResponse contains pagination metadata for list responses."
+    },
+    "v1PreviewLookupSyncRequest": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "$ref": "#/definitions/v1LookupSyncScope"
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationRequest"
+        },
+        "onlyActionable": {
+          "type": "boolean",
+          "description": "When TRUE, only items with changes or a skip reason are returned."
+        }
+      },
+      "description": "PreviewLookupSyncRequest computes the old→new plan for a scope, paged by item."
+    },
+    "v1PreviewLookupSyncResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "summary": {
+          "$ref": "#/definitions/v1LookupSyncSummary"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LookupSyncItem"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationResponse"
+        }
+      },
+      "description": "PreviewLookupSyncResponse returns one page of plan items plus the summary."
+    },
+    "v1ValidationError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field name that failed validation."
+        },
+        "message": {
+          "type": "string",
+          "description": "The validation error message."
+        }
+      },
+      "description": "ValidationError represents a single field validation error."
+    }
+  }
+}
