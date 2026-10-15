@@ -4,13 +4,10 @@ package grpc
 import (
 	"context"
 	"errors"
-	"fmt"
-	"sort"
 
-	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
-
+	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsync"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/boxbobbincost"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/intermingling"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/machine"
@@ -21,232 +18,21 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/productgrade"
 )
 
-// machineNumericReaders maps lookup_source_column → value extractor for mst_machine entity.
-// Add new entries here when new fillable columns are added to mst_lookup_master_column.
-var machineNumericReaders = map[string]func(*machine.Entity) (float64, bool){
-	"mc_speed":       func(e *machine.Entity) (float64, bool) { return e.MCSpeed(), true },
-	"mc_efficiency":  func(e *machine.Entity) (float64, bool) { return e.MCEfficiency(), true },
-	"no_of_position": func(e *machine.Entity) (float64, bool) { return float64(e.NoOfPosition()), true },
-	"no_of_end":      func(e *machine.Entity) (float64, bool) { return float64(e.NoOfEnd()), true },
-	"machine_rpm": func(e *machine.Entity) (float64, bool) {
-		if v := e.MachineRPM(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"power_per_day": func(e *machine.Entity) (float64, bool) {
-		if v := e.PowerPerDay(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"mp_per_day": func(e *machine.Entity) (float64, bool) {
-		if v := e.MpPerDay(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"ohs_per_day": func(e *machine.Entity) (float64, bool) {
-		if v := e.OhsPerDay(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"spares_per_day": func(e *machine.Entity) (float64, bool) {
-		if v := e.SparesPerDay(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"kgs_lost_change": func(e *machine.Entity) (float64, bool) {
-		if v := e.KgsLostChange(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"vb1_qty": func(e *machine.Entity) (float64, bool) {
-		if v := e.Vb1Qty(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"vb2_qty": func(e *machine.Entity) (float64, bool) {
-		if v := e.Vb2Qty(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"vb3_qty": func(e *machine.Entity) (float64, bool) {
-		if v := e.Vb3Qty(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"vb4_qty": func(e *machine.Entity) (float64, bool) {
-		if v := e.Vb4Qty(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	"vb5_qty": func(e *machine.Entity) (float64, bool) {
-		if v := e.Vb5Qty(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	// mc_weightage was registered in mst_lookup_master_column by 000425 but had no
-	// reader here, so the fill-group UI could offer the column while the handler
-	// could not resolve it. Wired up alongside the MC_WEIGHTAGE param (000475).
-	"mc_weightage": func(e *machine.Entity) (float64, bool) {
-		if v := e.McWeightage(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-}
-
-// interminglingNumericReaders maps lookup_source_column → value extractor for mst_intermingling entity.
-var interminglingNumericReaders = map[string]func(*intermingling.Entity) (float64, bool){
-	"intm_cost_per_kg": func(e *intermingling.Entity) (float64, bool) { return e.CostPerKg(), true },
-}
-
-// productGradeNumericReaders maps lookup_source_column → value extractor for mst_product_grade entity.
-var productGradeNumericReaders = map[string]func(*productgrade.Entity) (float64, bool){
-	"bc_perc":           func(e *productgrade.Entity) (float64, bool) { return e.BCPerc(), true },
-	"non_std_perc":      func(e *productgrade.Entity) (float64, bool) { return e.NonStdPerc(), true },
-	"bc_recovery_rate":  func(e *productgrade.Entity) (float64, bool) { return e.BCRecoveryRate(), true },
-	"std_selling_price": func(e *productgrade.Entity) (float64, bool) { return e.StdSellingPrice(), true },
-	"sp_value":          func(e *productgrade.Entity) (float64, bool) { return e.SpValue(), true },
-}
-
-// productGradeTextReaders maps lookup_source_column → text value extractor for mst_product_grade entity.
-var productGradeTextReaders = map[string]func(*productgrade.Entity) (string, bool){
-	"pg_detail_product": func(e *productgrade.Entity) (string, bool) {
-		if v := e.PgDetailProduct(); v != "" {
-			return v, true
-		}
-		return "", false
-	},
-	"pg_grade_label": func(e *productgrade.Entity) (string, bool) {
-		if v := e.PgGradeLabel(); v != "" {
-			return v, true
-		}
-		return "", false
-	},
-}
-
-// mbHeadNumericReaders maps lookup_source_column → numeric value extractor for mst_mb_head entity.
-var mbHeadNumericReaders = map[string]func(*mbhead.Entity) (float64, bool){
-	"mbh_dozing": func(e *mbhead.Entity) (float64, bool) {
-		if v := e.Dozing(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	// D30: mbh_run_ldr_pct is the actual LDR used in production — the correct value for costing.
-	"mbh_run_ldr_pct": func(e *mbhead.Entity) (float64, bool) {
-		if v := e.MBHRunLdrPct(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-	// D30: mbh_ldr_prsn is the planned LDR, set while the product is still new.
-	"mbh_ldr_prsn": func(e *mbhead.Entity) (float64, bool) {
-		if v := e.MBHLdrPrsn(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	},
-}
-
-// mbHeadTextReaders maps lookup_source_column → text value extractor for mst_mb_head entity.
-var mbHeadTextReaders = map[string]func(*mbhead.Entity) (string, bool){
-	"mbh_mgt_name": func(e *mbhead.Entity) (string, bool) {
-		if v := e.MgtName(); v != nil && *v != "" {
-			return *v, true
-		}
-		return "", false
-	},
-}
-
-// mbSpinNumericReaders / mbSpinTextReaders map lookup_source_column → value extractor for
-// mst_mb_spin. The maps live in the mbspin domain package (mbspin.NumericFillReaders /
-// mbspin.TextFillReaders) so the shade-driven auto-fill (mbsource) reuses EXACTLY the same
-// mapping as the interactive Param-tab fill and cannot diverge from it.
-var (
-	mbSpinNumericReaders = mbspin.NumericFillReaders
-	mbSpinTextReaders    = mbspin.TextFillReaders
-)
-
-// boxBobbinCostColumns mirrors the `case` labels of fillFromBoxBobbinCost, which
-// resolves columns with a literal switch instead of a reader map and therefore
-// cannot be enumerated reflectively. TestBoxBobbinSwitchColumnsMatchSource
-// asserts this slice against the handler source so it cannot drift from the
-// switch it copies.
-var boxBobbinCostColumns = []string{
-	"no_of_bob",
-	"bbcr_bob_rate_mkt",
-	"bbcr_box_rate_mkt",
-	"bbn_reuse",
-	"box_reuse",
-	"box_cost",
-	"bobin_cost",
-	"box_cost_val",
-	"bobin_cost_val",
-	"bbn_reuse_val",
-	"box_reuse_val",
-	"bbcr_bob_rate_val",
-	"bbcr_box_rate_val",
-}
+// mbHeadNumericReaders aliases the lookupsync reader map so delivery-layer
+// reader tests keep asserting against the live map.
+var mbHeadNumericReaders = lookupsync.MBHeadNumericReaders
 
 // LookupReaderColumns returns every lookup_source_column the fill handler can
-// actually resolve, keyed by lookup master code.
-//
-// This is derived from the reader maps above — the single source of truth. It
-// exists so the startup registry-divergence check can compare the live contents
-// of mst_lookup_master_column against the readers without maintaining a second
-// hand-written column list, which is the very duplication that produced the R30
-// drift in the first place.
+// actually resolve, keyed by lookup master code. It re-exports
+// lookupsync.LookupReaderColumns, the inventory derived from the reader maps
+// that the startup registry-divergence check consumes.
 func LookupReaderColumns() map[string]map[string]struct{} {
-	out := make(map[string]map[string]struct{}, 6)
-	add := func(master, col string) {
-		if out[master] == nil {
-			out[master] = map[string]struct{}{}
-		}
-		out[master][col] = struct{}{}
-	}
-	for col := range machineNumericReaders {
-		add("MACHINE", col)
-	}
-	for col := range interminglingNumericReaders {
-		add("INTERMINGLING", col)
-	}
-	for col := range productGradeNumericReaders {
-		add("PRODUCT_GRADE", col)
-	}
-	for col := range productGradeTextReaders {
-		add("PRODUCT_GRADE", col)
-	}
-	for col := range mbHeadNumericReaders {
-		add("MB_HEAD", col)
-	}
-	for col := range mbHeadTextReaders {
-		add("MB_HEAD", col)
-	}
-	for col := range mbSpinNumericReaders {
-		add("MB_SPIN", col)
-	}
-	for col := range mbSpinTextReaders {
-		add("MB_SPIN", col)
-	}
-	for _, col := range boxBobbinCostColumns {
-		add("BOX_BOBBIN_COST", col)
-	}
-	return out
+	return lookupsync.LookupReaderColumns()
 }
 
 // YarnLookupFillHandler implements financev1.YarnLookupFillServiceServer.
-// It routes GetLookupFillValues requests to master-specific fill logic.
+// It is a thin adapter over lookupsync.Resolver: it resolves the selected
+// master record and maps the result (or error) onto the BaseResponse pattern.
 type YarnLookupFillHandler struct {
 	financev1.UnimplementedYarnLookupFillServiceServer
 	machineRepo       machine.Repository
@@ -262,7 +48,7 @@ type YarnLookupFillHandler struct {
 }
 
 // WithSuperbaFallback lets the MB_SPIN fill resolve a Superba shade (stored in MB_SP_CODE by the
-// shade-driven auto-fill) instead of returning NotFound: it fills MB_SP_DYE with the colour name.
+// shade-driven auto-fill) instead of returning NotFound: it fills MB_SP_DYE with the color name.
 func (h *YarnLookupFillHandler) WithSuperbaFallback(p mbsource.Provider) *YarnLookupFillHandler {
 	h.superbaFallback = p
 	return h
@@ -289,406 +75,72 @@ func NewYarnLookupFillHandler(
 	}, nil
 }
 
+// resolver builds a lookupsync.Resolver over the handler's repositories. It is
+// built per call (a plain struct, no I/O) so handlers assembled field-by-field
+// in tests behave exactly like those from NewYarnLookupFillHandler.
+func (h *YarnLookupFillHandler) resolver() *lookupsync.Resolver {
+	return lookupsync.NewResolver(
+		h.machineRepo, h.interminglingRepo, h.productGradeRepo, h.mbHeadRepo,
+		h.mbSpinRepo, h.boxBobbinRepo, h.paramRepo,
+	).WithSuperbaFallback(h.superbaFallback)
+}
+
 // GetLookupFillValues routes to master-specific fill logic by lookup_master_code.
 func (h *YarnLookupFillHandler) GetLookupFillValues(ctx context.Context, req *financev1.GetLookupFillValuesRequest) (*financev1.GetLookupFillValuesResponse, error) { //nolint:nilerr // BaseResponse pattern
-	switch req.GetLookupMasterCode() {
-	case "MACHINE":
-		return h.fillFromMachine(ctx, req.GetSelectedKey(), req.GetSourceParamCode())
-	case "INTERMINGLING":
-		return h.fillFromIntermingling(ctx, req.GetSelectedKey(), req.GetSourceParamCode())
-	case "PRODUCT_GRADE":
-		return h.fillFromProductGrade(ctx, req.GetSelectedKey(), req.GetSourceParamCode())
-	case "MB_HEAD":
-		return h.fillFromMBHead(ctx, req.GetSelectedKey(), req.GetSourceParamCode())
-	case "MB_SPIN":
-		return h.fillFromMBSpin(ctx, req.GetSelectedKey(), req.GetSourceParamCode())
-	case "BOX_BOBBIN_COST":
-		return h.fillFromBoxBobbinCost(ctx, req.GetSelectedKey(), req.GetSourceParamCode())
-	case rmGroupOilMasterCode:
-		// oil-cost-rm-group D14: OIL_NAME's fill-group children are never filled
-		// from the lookup — OIL_RATE is resolved per calc period by the engine
-		// and OIL_GAIN_POY_DEFAULT is formula-produced. Return success with no
-		// fills so selecting an oil group does not 404.
-		return &financev1.GetLookupFillValuesResponse{
-			Base:         successResponse("RM group (oil) selected — children resolved by the calc engine"),
-			NumericFills: map[string]float64{},
-			TextFills:    map[string]string{},
-			DisplayLabel: req.GetSelectedKey(),
-		}, nil
-	default:
-		return &financev1.GetLookupFillValuesResponse{
-			Base: ErrorResponse("404", fmt.Sprintf("unknown lookup_master_code: %q", req.GetLookupMasterCode())),
-		}, nil //nolint:nilerr // BaseResponse pattern
-	}
+	return h.fill(ctx, req.GetLookupMasterCode(), req.GetSelectedKey(), req.GetSourceParamCode()), nil
 }
 
-// warnNoReader reports a lookup_source_column that is registered in
-// mst_lookup_master_column but has no reader in the Go-side reader maps (or no
-// switch case). Such a column is silently skipped and yields an empty fill, so
-// the only trace of the failure is this log line. It stays a warning rather than
-// an error on purpose: registered-but-unreadable columns still exist in the wild
-// and hard-failing would break otherwise working lookups.
-func warnNoReader(ctx context.Context, source, col, paramCode, sourceParamCode string) {
-	log.Ctx(ctx).Warn().
-		Str("lookup_source_column", col).
-		Str("param_code", paramCode).
-		Str("source_param_code", sourceParamCode).
-		Msg(source + " fill: no reader registered for lookup_source_column — value skipped")
-}
-
-func (h *YarnLookupFillHandler) fillFromMachine(ctx context.Context, mcCode, triggerParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	mc, err := h.machineRepo.GetByCode(ctx, mcCode)
+// fill resolves one master record and maps the outcome onto the response.
+func (h *YarnLookupFillHandler) fill(ctx context.Context, masterCode, selectedKey, sourceParamCode string) *financev1.GetLookupFillValuesResponse {
+	res, err := h.resolver().Resolve(ctx, masterCode, selectedKey, sourceParamCode)
 	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
+		return &financev1.GetLookupFillValuesResponse{Base: fillErrorToBaseResponse(masterCode, err)}
 	}
-
-	childParams, err := h.paramRepo.GetByFillGroup(ctx, triggerParamCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	nums := make(map[string]float64, len(childParams))
-	for _, p := range childParams {
-		col := p.LookupSourceColumn()
-		numReader, hasNumReader := machineNumericReaders[col]
-		if !hasNumReader {
-			// Machine has no text readers, so an unmapped column is unfillable.
-			warnNoReader(ctx, "Machine", col, p.Code().String(), triggerParamCode)
-			continue
-		}
-		if val, hasVal := numReader(mc); hasVal {
-			nums[p.Code().String()] = val
-		}
-	}
-
-	label := fmt.Sprintf("%s (%s) — %d pos, %.0f m/min, %.1f%% eff",
-		mc.Name(), mc.MCType(), mc.NoOfPosition(), mc.MCSpeed(), mc.MCEfficiency())
 	return &financev1.GetLookupFillValuesResponse{
-		Base:         successResponse("Machine fill values retrieved"),
-		NumericFills: nums,
-		TextFills:    map[string]string{},
-		DisplayLabel: label,
-	}, nil
+		Base:         successResponse(res.Message),
+		NumericFills: res.Numeric,
+		TextFills:    res.Text,
+		DisplayLabel: res.DisplayLabel,
+	}
 }
 
+// fillErrorToBaseResponse maps a Resolver error onto the BaseResponse the fill
+// RPC has always returned: an unknown master is a 404, an MB_SPIN fill-group
+// load failure is a 500 carrying the raw message, and every other error goes
+// through domainErrorToBaseResponse.
+func fillErrorToBaseResponse(masterCode string, err error) *commonv1.BaseResponse {
+	if errors.Is(err, lookupsync.ErrUnknownMaster) {
+		return ErrorResponse("404", err.Error())
+	}
+	var fgErr *lookupsync.FillGroupError
+	if masterCode == lookupsync.MasterMBSpin && errors.As(err, &fgErr) {
+		return ErrorResponse("500", err.Error())
+	}
+	return domainErrorToBaseResponse(err)
+}
+
+// fillFromIntermingling, fillFromBoxBobbinCost and fillFromMBSpin are per-master
+// entry points kept for the existing delivery tests; each delegates to fill.
+//
+//nolint:unparam // signature kept for existing delivery tests; error is always nil (BaseResponse pattern).
 func (h *YarnLookupFillHandler) fillFromIntermingling(ctx context.Context, intmCode, triggerParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	intm, err := h.interminglingRepo.GetByCode(ctx, intmCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	childParams, err := h.paramRepo.GetByFillGroup(ctx, triggerParamCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	nums := make(map[string]float64, len(childParams))
-	for _, p := range childParams {
-		col := p.LookupSourceColumn()
-		numReader, hasNumReader := interminglingNumericReaders[col]
-		if !hasNumReader {
-			// Intermingling has no text readers, so an unmapped column is unfillable.
-			warnNoReader(ctx, "Intermingling", col, p.Code().String(), triggerParamCode)
-			continue
-		}
-		if val, hasVal := numReader(intm); hasVal {
-			nums[p.Code().String()] = val
-		}
-	}
-
-	label := fmt.Sprintf("%s (%s) — %.4f USD/kg", intm.Name(), intm.Code(), intm.CostPerKg())
-	return &financev1.GetLookupFillValuesResponse{
-		Base:         successResponse("Intermingling fill values retrieved"),
-		NumericFills: nums,
-		TextFills:    map[string]string{},
-		DisplayLabel: label,
-	}, nil
+	return h.fill(ctx, lookupsync.MasterIntermingling, intmCode, triggerParamCode), nil
 }
 
-func (h *YarnLookupFillHandler) fillFromProductGrade(ctx context.Context, pgCode, triggerParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	grade, err := h.productGradeRepo.GetByCode(ctx, pgCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	childParams, err := h.paramRepo.GetByFillGroup(ctx, triggerParamCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	nums := make(map[string]float64, len(childParams))
-	texts := make(map[string]string, len(childParams))
-	for _, p := range childParams {
-		col := p.LookupSourceColumn()
-		numReader, hasNumReader := productGradeNumericReaders[col]
-		if hasNumReader {
-			if val, hasVal := numReader(grade); hasVal {
-				nums[p.Code().String()] = val
-			}
-		}
-		textReader, hasTextReader := productGradeTextReaders[col]
-		if hasTextReader {
-			if val, hasVal := textReader(grade); hasVal {
-				texts[p.Code().String()] = val
-			}
-		}
-		if !hasNumReader && !hasTextReader {
-			warnNoReader(ctx, "Product grade", col, p.Code().String(), triggerParamCode)
-		}
-	}
-
-	label := fmt.Sprintf("%s — BC %.1f%%, NonStd %.1f%%, Recovery %.1f%%",
-		grade.Name(), grade.BCPerc(), grade.NonStdPerc(), grade.BCRecoveryRate())
-	return &financev1.GetLookupFillValuesResponse{
-		Base:         successResponse("Product grade fill values retrieved"),
-		NumericFills: nums,
-		TextFills:    texts,
-		DisplayLabel: label,
-	}, nil
-}
-
-func (h *YarnLookupFillHandler) fillFromMBHead(ctx context.Context, mbCosting, triggerParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	mbh, err := h.mbHeadRepo.GetByMBCosting(ctx, mbCosting)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	childParams, err := h.paramRepo.GetByFillGroup(ctx, triggerParamCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	nums := make(map[string]float64, len(childParams))
-	texts := make(map[string]string, len(childParams))
-	for _, p := range childParams {
-		col := p.LookupSourceColumn()
-		numReader, hasNumReader := mbHeadNumericReaders[col]
-		if hasNumReader {
-			if val, hasVal := numReader(mbh); hasVal {
-				nums[p.Code().String()] = val
-			}
-		}
-		textReader, hasTextReader := mbHeadTextReaders[col]
-		if hasTextReader {
-			if val, hasVal := textReader(mbh); hasVal {
-				texts[p.Code().String()] = val
-			}
-		}
-		if !hasNumReader && !hasTextReader {
-			warnNoReader(ctx, "MB Head", col, p.Code().String(), triggerParamCode)
-		}
-	}
-
-	label := mbh.MBCosting()
-	if d := mbh.Dozing(); d != nil {
-		label = fmt.Sprintf("%s — %.2f%% dozing", mbh.MBCosting(), *d)
-	}
-	return &financev1.GetLookupFillValuesResponse{
-		Base:         successResponse("MB Head fill values retrieved"),
-		NumericFills: nums,
-		TextFills:    texts,
-		DisplayLabel: label,
-	}, nil
-}
-
-//nolint:gocyclo // flat column switch; TestBoxBobbinSwitchColumnsMatchSource parses its case labels, so it cannot be split.
+//nolint:unparam // signature kept for existing delivery tests; error is always nil (BaseResponse pattern).
 func (h *YarnLookupFillHandler) fillFromBoxBobbinCost(ctx context.Context, bbcCode, triggerParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	bbc, err := h.boxBobbinRepo.GetByCode(ctx, bbcCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	childParams, err := h.paramRepo.GetByFillGroup(ctx, triggerParamCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	// Get latest rates (best-effort).
-	var latestBobRateMkt, latestBoxRateMkt float64
-	rates, rateErr := h.boxBobbinRepo.ListRates(ctx, bbc.ID())
-	if rateErr != nil {
-		log.Ctx(ctx).Warn().Err(rateErr).Str("bbc_code", bbcCode).Msg("ListRates failed — returning without rate fills")
-	} else if len(rates) > 0 {
-		sort.Slice(rates, func(i, j int) bool { return rates[i].Period() > rates[j].Period() })
-		latestBobRateMkt = rates[0].BobRateMkt()
-		latestBoxRateMkt = rates[0].BoxRateMkt()
-	}
-
-	nums := make(map[string]float64, len(childParams))
-	for _, p := range childParams {
-		col := p.LookupSourceColumn()
-		switch col {
-		case "no_of_bob":
-			nums[p.Code().String()] = float64(bbc.NoOfBob())
-		case "bbcr_bob_rate_mkt":
-			// A zero/missing rate is a deliberate no-fill, not an unknown column.
-			if latestBobRateMkt > 0 {
-				nums[p.Code().String()] = latestBobRateMkt
-			}
-		case "bbcr_box_rate_mkt":
-			if latestBoxRateMkt > 0 {
-				nums[p.Code().String()] = latestBoxRateMkt
-			}
-		// Per-master Oracle columns on mst_box_bobbin_cost (registered by 000412/000421).
-		// bbcr_*_val is the legacy name 000407 seeded for DELIVERY_BOB/BOX_RATE; it never
-		// existed as a column, so it is aliased to the VAL master columns (same intent,
-		// see 000411 column comments).
-		case "bbn_reuse":
-			putOpt(nums, p.Code().String(), bbc.BbnReuse())
-		case "box_reuse":
-			putOpt(nums, p.Code().String(), bbc.BoxReuse())
-		case "box_cost":
-			putOpt(nums, p.Code().String(), bbc.BoxCost())
-		case "bobin_cost":
-			putOpt(nums, p.Code().String(), bbc.BobinCost())
-		case "box_cost_val":
-			putOpt(nums, p.Code().String(), bbc.BoxCostVal())
-		case "bbcr_box_rate_val":
-			putOpt(nums, p.Code().String(), bbc.BoxCostVal())
-		case "bobin_cost_val":
-			putOpt(nums, p.Code().String(), bbc.BobinCostVal())
-		case "bbcr_bob_rate_val":
-			putOpt(nums, p.Code().String(), bbc.BobinCostVal())
-		case "bbn_reuse_val":
-			putOpt(nums, p.Code().String(), bbc.BbnReuseVal())
-		case "box_reuse_val":
-			putOpt(nums, p.Code().String(), bbc.BoxReuseVal())
-		default:
-			warnNoReader(ctx, "Box bobbin cost", col, p.Code().String(), triggerParamCode)
-		}
-	}
-
-	label := fmt.Sprintf("%s — %d bob/box", bbc.Name(), bbc.NoOfBob())
-	return &financev1.GetLookupFillValuesResponse{
-		Base:         successResponse("Box bobbin cost fill values retrieved"),
-		NumericFills: nums,
-		TextFills:    map[string]string{},
-		DisplayLabel: label,
-	}, nil
+	return h.fill(ctx, lookupsync.MasterBoxBobbinCost, bbcCode, triggerParamCode), nil
 }
 
-// putOpt stores v under code when the nullable master column has a value.
-func putOpt(m map[string]float64, code string, v *float64) {
-	if v != nil {
-		m[code] = *v
-	}
-}
-
+//nolint:unparam // signature kept for existing delivery tests; error is always nil (BaseResponse pattern).
 func (h *YarnLookupFillHandler) fillFromMBSpin(ctx context.Context, selectedKey, sourceParamCode string) (*financev1.GetLookupFillValuesResponse, error) {
-	spin, err := h.resolveMBSpinForFill(ctx, selectedKey)
-	if err != nil {
-		return h.mbSpinFillMiss(ctx, selectedKey, err), nil
-	}
-
-	children, err := h.paramRepo.GetByFillGroup(ctx, sourceParamCode)
-	if err != nil {
-		return &financev1.GetLookupFillValuesResponse{Base: ErrorResponse("500", err.Error())}, nil //nolint:nilerr // BaseResponse pattern
-	}
-
-	nums := make(map[string]float64)
-	texts := make(map[string]string)
-	for _, p := range children {
-		col := p.LookupSourceColumn()
-		numReader, hasNumReader := mbSpinNumericReaders[col]
-		if hasNumReader {
-			if val, has := numReader(spin); has {
-				nums[p.Code().String()] = val
-			}
-		}
-		textReader, hasTextReader := mbSpinTextReaders[col]
-		if hasTextReader {
-			if val, has := textReader(spin); has {
-				texts[p.Code().String()] = val
-			}
-		}
-		if !hasNumReader && !hasTextReader {
-			warnNoReader(ctx, "MB Spin", col, p.Code().String(), sourceParamCode)
-		}
-	}
-
-	label := fmt.Sprintf("%s — %s", selectedKey, spin.MgtName())
-	return &financev1.GetLookupFillValuesResponse{
-		Base:         successResponse("Fill values retrieved"),
-		NumericFills: nums,
-		TextFills:    texts,
-		DisplayLabel: label,
-	}, nil
-}
-
-// mbSpinFillMiss answers an MB_SPIN fill whose key is not a spin: a Superba shade (when the
-// fallback is wired) fills the colour name, anything else keeps the original error response.
-func (h *YarnLookupFillHandler) mbSpinFillMiss(ctx context.Context, selectedKey string, err error) *financev1.GetLookupFillValuesResponse {
-	if errors.Is(err, mbspin.ErrNotFound) {
-		if resp, ok := h.fillFromSuperbaShade(ctx, selectedKey); ok {
-			return resp
-		}
-	}
-	return &financev1.GetLookupFillValuesResponse{Base: domainErrorToBaseResponse(err)}
-}
-
-// fillFromSuperbaShade answers an MB_SPIN fill for a key that is not a spin but a Superba shade.
-// Only text children the superba source knows (MB_SP_DYE) are returned; numeric children stay
-// empty (the MB cost of a Superba product comes from the IS_SUPERBA branch, not from rate/dozing).
-func (h *YarnLookupFillHandler) fillFromSuperbaShade(ctx context.Context, selectedKey string) (*financev1.GetLookupFillValuesResponse, bool) {
-	if h.superbaFallback == nil {
-		return nil, false
-	}
-	got, err := h.superbaFallback.ResolveByShades(ctx, []string{selectedKey})
-	if err != nil {
-		log.Warn().Err(err).Str("key", selectedKey).Msg("superba fallback for MB_SPIN fill failed")
-		return nil, false
-	}
-	res, ok := got[mbsource.NormalizeShade(selectedKey)]
-	if !ok {
-		return nil, false
-	}
-	texts := make(map[string]string)
-	for code, v := range res.Children {
-		if v.Text != nil {
-			texts[code] = *v.Text
-		}
-	}
-	label := selectedKey
-	if res.DyeName != "" {
-		label = fmt.Sprintf("%s — %s", selectedKey, res.DyeName)
-	}
-	return &financev1.GetLookupFillValuesResponse{
-		Base:         successResponse("Fill values retrieved (Superba shade)"),
-		NumericFills: map[string]float64{},
-		TextFills:    texts,
-		DisplayLabel: label,
-	}, true
+	return h.fill(ctx, lookupsync.MasterMBSpin, selectedKey, sourceParamCode), nil
 }
 
 // resolveMBSpinForFill resolves selectedKey to an MB Spin entity for the read
-// (lookup-fill) path.
-//
-// If selectedKey itself is a valid UUID, it is tried FIRST via GetByID — this is
-// the permanent mst_mb_spin.mbs_id, e.g. the value carried by the new companion
-// column cpp_value_mb_spin_id (migration 000494). A permanent-ID lookup is
-// unambiguous by construction (primary key), so it takes priority over the
-// legacy ORION-item-code / mb_costing chain, which can be ambiguous for the 177
-// ORION codes shared by more than one spin. If selectedKey is not a UUID, or the
-// UUID does not resolve, this falls through UNCHANGED to the original chain —
-// existing legacy-row behavior (selectedKey = ORION code or mb_costing text) is
-// not altered in any way.
+// (lookup-fill) path; see lookupsync.Resolver.ResolveMBSpin.
 func (h *YarnLookupFillHandler) resolveMBSpinForFill(ctx context.Context, selectedKey string) (*mbspin.Entity, error) {
-	if id, parseErr := uuid.Parse(selectedKey); parseErr == nil {
-		if spin, err := h.mbSpinRepo.GetByID(ctx, id); err == nil && spin != nil {
-			return spin, nil
-		}
-	}
-
-	// Try ORION item code first (product params use CMBS_ORION_ITEM_CODE as key).
-	spin, err := h.mbSpinRepo.GetByOrionItemCode(ctx, selectedKey)
-	if err != nil {
-		// Fallback to mb_costing lookup (legacy / direct entry).
-		spin, err = h.mbSpinRepo.GetByMBCosting(ctx, selectedKey)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return spin, nil
+	return h.resolver().ResolveMBSpin(ctx, selectedKey)
 }
 
 // compile-time interface check.
