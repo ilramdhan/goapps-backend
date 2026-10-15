@@ -78,6 +78,7 @@ func ratioSourceData(in ComputeInput) costroute.RatioSourceData {
 		Mode:           in.RMRatioMode,
 		UpstreamDenier: in.UpstreamDenier,
 		GroupDenier:    in.RMGroupDenier,
+		GroupUseDraft:  in.RMGroupUseDraft,
 		SpandexDraft:   in.CAPP[cappKeySpandexDraft],
 	}
 }

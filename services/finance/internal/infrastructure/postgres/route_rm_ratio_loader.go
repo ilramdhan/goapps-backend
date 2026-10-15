@@ -40,7 +40,7 @@ func (l *RouteRMRatioLoader) LoadRMRatioSources(ctx context.Context, g *costrout
 	if src.UpstreamDenier, err = rmratioquery.ProductParamValues(ctx, l.db, upstreamIDs, costroute.ParamCodeDenier); err != nil {
 		return src, fmt.Errorf("route RM ratio: %w", err)
 	}
-	if src.GroupDenier, err = rmratioquery.GroupDeniers(ctx, l.db, groupCodes); err != nil {
+	if src.GroupDenier, src.GroupUseDraft, err = rmratioquery.GroupDeniers(ctx, l.db, groupCodes); err != nil {
 		return src, fmt.Errorf("route RM ratio: %w", err)
 	}
 	if src.SpandexDraft, err = rmratioquery.ProductParamValues(ctx, l.db, denierProducts, costroute.ParamCodeSpandexDraft); err != nil {

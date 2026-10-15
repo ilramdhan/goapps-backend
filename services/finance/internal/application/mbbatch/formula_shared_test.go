@@ -170,8 +170,8 @@ func (f *noSharingLoader) LoadProductRMRatioModes(context.Context, []int64) (map
 }
 
 // LoadRMGroupDeniers reports no group deniers.
-func (f *noSharingLoader) LoadRMGroupDeniers(context.Context, []string) (map[string]float64, error) {
-	return map[string]float64{}, nil
+func (f *noSharingLoader) LoadRMGroupDeniers(context.Context, []string) (map[string]float64, map[string]bool, error) {
+	return map[string]float64{}, map[string]bool{}, nil
 }
 
 func (f *noSharingLoader) LoadSellingSnapshots(context.Context, []int64, string) (map[int64]map[string]float64, error) {

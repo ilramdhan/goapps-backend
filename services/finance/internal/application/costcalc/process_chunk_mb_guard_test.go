@@ -87,8 +87,8 @@ func (f *mbGuardLoader) LoadProductRMRatioModes(context.Context, []int64) (map[i
 }
 
 // LoadRMGroupDeniers reports no group deniers.
-func (f *mbGuardLoader) LoadRMGroupDeniers(context.Context, []string) (map[string]float64, error) {
-	return map[string]float64{}, nil
+func (f *mbGuardLoader) LoadRMGroupDeniers(context.Context, []string) (map[string]float64, map[string]bool, error) {
+	return map[string]float64{}, map[string]bool{}, nil
 }
 
 func (f *mbGuardLoader) LoadSellingSnapshots(_ context.Context, _ []int64, _ string) (map[int64]map[string]float64, error) {

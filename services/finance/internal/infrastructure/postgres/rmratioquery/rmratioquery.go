@@ -55,39 +55,43 @@ func ProductRatioModes(ctx context.Context, q Querier, productSysIDs []int64) (m
 	return out, nil
 }
 
-// GroupDeniers returns cst_rm_group_head.denier per group_code in one query.
-// Groups whose denier is NULL, soft-deleted groups and unknown codes are
-// absent, so presence in the map is what makes a GROUP line a denier line.
-func GroupDeniers(ctx context.Context, q Querier, groupCodes []string) (map[string]float64, error) {
+// GroupDeniers returns cst_rm_group_head.denier and denier_use_draft (000571)
+// per group_code in one query. Groups whose denier is NULL, soft-deleted
+// groups and unknown codes are absent from both maps, so presence in deniers
+// is what makes a GROUP line a denier line.
+func GroupDeniers(ctx context.Context, q Querier, groupCodes []string) (deniers map[string]float64, useDraft map[string]bool, err error) {
 	out := map[string]float64{}
+	draft := map[string]bool{}
 	if len(groupCodes) == 0 {
-		return out, nil
+		return out, draft, nil
 	}
 	const sqlText = `
-		SELECT group_code, denier::float8
+		SELECT group_code, denier::float8, denier_use_draft
 		FROM cst_rm_group_head
 		WHERE group_code = ANY($1)
 		  AND deleted_at IS NULL
 		  AND denier IS NOT NULL`
 	rows, err := q.QueryContext(ctx, sqlText, pq.Array(groupCodes))
 	if err != nil {
-		return nil, fmt.Errorf("load RM group deniers: %w", err)
+		return nil, nil, fmt.Errorf("load RM group deniers: %w", err)
 	}
 	defer closeRows(rows)
 	for rows.Next() {
 		var (
 			code   string
 			denier float64
+			use    bool
 		)
-		if err := rows.Scan(&code, &denier); err != nil {
-			return nil, fmt.Errorf("scan RM group denier: %w", err)
+		if err := rows.Scan(&code, &denier, &use); err != nil {
+			return nil, nil, fmt.Errorf("scan RM group denier: %w", err)
 		}
 		out[code] = denier
+		draft[code] = use
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate RM group deniers: %w", err)
+		return nil, nil, fmt.Errorf("iterate RM group deniers: %w", err)
 	}
-	return out, nil
+	return out, draft, nil
 }
 
 // ProductParamValues returns one numeric product-master parameter per product

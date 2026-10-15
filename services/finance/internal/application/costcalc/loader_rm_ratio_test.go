@@ -54,10 +54,11 @@ func TestLoadRMRatioInputs_Integration(t *testing.T) {
 	pDenier := insertProduct("-D", denierTypeID)
 	pInput := insertProduct("-I", inputTypeID)
 
-	grpDenier, grpNull, grpDeleted := prefix+"-SPD", prefix+"-OIL", prefix+"-DEL"
+	grpDenier, grpNull, grpDeleted, grpFDY := prefix+"-SPD", prefix+"-OIL", prefix+"-DEL", prefix+"-FDY"
 	_, err = db.ExecContext(ctx, `
-		INSERT INTO cst_rm_group_head (group_code, group_name, denier, created_by) VALUES
-			($1, $1, 40, $4), ($2, $2, NULL, $4), ($3, $3, 70, $4)`, grpDenier, grpNull, grpDeleted, actor)
+		INSERT INTO cst_rm_group_head (group_code, group_name, denier, denier_use_draft, created_by) VALUES
+			($1, $1, 40, TRUE, $5), ($2, $2, NULL, FALSE, $5), ($3, $3, 70, TRUE, $5), ($4, $4, 50, FALSE, $5)`,
+		grpDenier, grpNull, grpDeleted, grpFDY, actor)
 	require.NoError(t, err)
 	_, err = db.ExecContext(ctx, `UPDATE cst_rm_group_head SET deleted_at = NOW() WHERE group_code = $1`, grpDeleted)
 	require.NoError(t, err)
@@ -74,10 +75,12 @@ func TestLoadRMRatioInputs_Integration(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[int64]string{pDenier: RMRatioModeDenier, pInput: RMRatioModeInput}, modes)
 
-	deniers, err := loader.LoadRMGroupDeniers(ctx, []string{grpDenier, grpNull, grpDeleted, "NOPE"})
+	deniers, useDraft, err := loader.LoadRMGroupDeniers(ctx, []string{grpDenier, grpNull, grpDeleted, grpFDY, "NOPE"})
 	require.NoError(t, err)
-	assert.Equal(t, map[string]float64{grpDenier: 40}, deniers,
+	assert.Equal(t, map[string]float64{grpDenier: 40, grpFDY: 50}, deniers,
 		"NULL denier, soft-deleted and unknown groups are absent")
+	assert.Equal(t, map[string]bool{grpDenier: true, grpFDY: false}, useDraft,
+		"denier_use_draft is returned for the same groups")
 
 	// Upstream DENIER is read from the product master (CAPP + cost_product_parameter).
 	var denierParamID string
@@ -105,7 +108,8 @@ func TestLoadRMRatioInputs_Integration(t *testing.T) {
 	emptyModes, err := loader.LoadProductRMRatioModes(ctx, nil)
 	require.NoError(t, err)
 	assert.Empty(t, emptyModes)
-	emptyDeniers, err := loader.LoadRMGroupDeniers(ctx, nil)
+	emptyDeniers, emptyDraft, err := loader.LoadRMGroupDeniers(ctx, nil)
 	require.NoError(t, err)
 	assert.Empty(t, emptyDeniers)
+	assert.Empty(t, emptyDraft)
 }

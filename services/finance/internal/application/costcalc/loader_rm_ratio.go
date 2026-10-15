@@ -29,10 +29,11 @@ func (l *productLoader) LoadProductRMRatioModes(ctx context.Context, productSysI
 }
 
 // LoadRMGroupDeniers implements ProductLoader.LoadRMGroupDeniers with one
-// query per chunk: cst_rm_group_head.group_code -> denier (000570). Groups
+// query per chunk: cst_rm_group_head.group_code -> denier (000570) and
+// denier_use_draft (000571). Groups
 // whose denier is NULL, soft-deleted groups and unknown codes are absent, so
 // presence in the map is what makes a GROUP line a denier line.
-func (l *productLoader) LoadRMGroupDeniers(ctx context.Context, groupCodes []string) (map[string]float64, error) {
+func (l *productLoader) LoadRMGroupDeniers(ctx context.Context, groupCodes []string) (map[string]float64, map[string]bool, error) {
 	defer observeLoad(loaderKindRMGroupDenier, time.Now())
 	return rmratioquery.GroupDeniers(ctx, l.db, groupCodes)
 }

@@ -89,8 +89,8 @@ func (f *spinFakeLoader) LoadProductRMRatioModes(context.Context, []int64) (map[
 }
 
 // LoadRMGroupDeniers reports no group deniers.
-func (f *spinFakeLoader) LoadRMGroupDeniers(context.Context, []string) (map[string]float64, error) {
-	return map[string]float64{}, nil
+func (f *spinFakeLoader) LoadRMGroupDeniers(context.Context, []string) (map[string]float64, map[string]bool, error) {
+	return map[string]float64{}, map[string]bool{}, nil
 }
 
 func (f *spinFakeLoader) LoadSellingSnapshots(_ context.Context, _ []int64, _ string) (map[int64]map[string]float64, error) {

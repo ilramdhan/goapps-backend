@@ -276,6 +276,7 @@ func (h *RMGroupHandler) CreateRMGroup(ctx context.Context, req *financev1.Creat
 		MarketingFlag:           protoMarketingFlagToString(req.MarketingFlag),
 		IsOilGroup:              req.GetIsOilGroup(),
 		Denier:                  req.Denier,
+		DenierUseDraft:          req.GetDenierUseDraft(),
 	})
 	if err != nil {
 		RecordRMGroupOperation(opCreate, false)
@@ -366,6 +367,7 @@ func (h *RMGroupHandler) UpdateRMGroup(ctx context.Context, req *financev1.Updat
 		IsActive:               req.IsActive,
 		IsOilGroup:             req.IsOilGroup,
 		Denier:                 req.Denier,
+		DenierUseDraft:         req.DenierUseDraft,
 		UpdatedBy:              getUserFromContext(ctx),
 	}
 	if req.FlagValuation != nil {
@@ -814,6 +816,7 @@ func rmGroupHeadToProto(h *rmgroupdomain.Head) *financev1.RMGroupHead {
 		IsActive:          h.IsActive(),
 		IsOilGroup:        h.IsOilGroup(),
 		Denier:            denierToProto(h.Denier()),
+		DenierUseDraft:    h.DenierUseDraft(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: h.CreatedAt().Format(time.RFC3339),
 			CreatedBy: h.CreatedBy(),

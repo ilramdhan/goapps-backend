@@ -47,6 +47,10 @@ type Head struct {
 	// denier is the nominal yarn denier (e.g. spandex 20/40/70) used for
 	// DENIER-mode RM ratio. nil = not set. Head-level and global.
 	denier *float64
+	// denierUseDraft: when true the denier is divided by the product's
+	// SPANDEX_DRAFT in DENIER-mode RM ratio (spandex); false = used as-is
+	// (bought-out POY/FDY). Head-level and global.
+	denierUseDraft bool
 }
 
 // NewHead creates a new Head with validation. Defaults: flags = CONS, isActive = true.
@@ -268,6 +272,13 @@ func (h *Head) SetDenier(v *float64) error {
 	h.denier = &c
 	return nil
 }
+
+// DenierUseDraft reports whether the group denier is divided by the
+// product's SPANDEX_DRAFT (spandex) in DENIER-mode RM ratio.
+func (h *Head) DenierUseDraft() bool { return h.denierUseDraft }
+
+// SetDenierUseDraft sets the denier-use-draft flag (also used on hydration).
+func (h *Head) SetDenierUseDraft(v bool) { h.denierUseDraft = v }
 
 // AttachMarketingInputs sets the V2 marketing inputs on Reconstruct. Used by
 // repositories during entity hydration. Validates that flags (when set) are

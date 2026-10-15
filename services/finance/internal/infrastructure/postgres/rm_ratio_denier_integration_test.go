@@ -82,6 +82,7 @@ func TestRMGroupHeadDenier_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	d := 40.0
 	require.NoError(t, head.SetDenier(&d))
+	head.SetDenierUseDraft(true)
 	require.NoError(t, repo.CreateHead(ctx, head))
 	t.Cleanup(func() {
 		_, _ = raw.ExecContext(ctx, `DELETE FROM cst_rm_group_head_audit WHERE group_head_id = $1`, head.ID())
@@ -92,10 +93,13 @@ func TestRMGroupHeadDenier_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got.Denier())
 	require.InDelta(t, 40, *got.Denier(), 1e-9)
+	require.True(t, got.DenierUseDraft())
 
 	require.NoError(t, got.SetDenier(nil))
+	got.SetDenierUseDraft(false)
 	require.NoError(t, repo.UpdateHead(ctx, got))
 	got, err = repo.GetHeadByID(ctx, head.ID())
 	require.NoError(t, err)
 	require.Nil(t, got.Denier())
+	require.False(t, got.DenierUseDraft())
 }

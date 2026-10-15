@@ -55,11 +55,12 @@ func denierInput(mode string, route *costroute.Graph) ComputeInput {
 			spandexGrp + "|": {CostVal: 100, CrRate: 7, ClRate: 8},
 			oilGrp + "|":     {CostVal: 999, CrRate: 5, ClRate: 5},
 		},
-		UpstreamCosts:  map[int64]float64{denierUpA: 40, denierUpB: 33},
-		EvalCache:      evaluator.NewCache(),
-		RMRatioMode:    mode,
-		RMGroupDenier:  map[string]float64{spandexGrp: 40},
-		UpstreamDenier: map[int64]float64{denierUpA: 70, denierUpB: 150},
+		UpstreamCosts:   map[int64]float64{denierUpA: 40, denierUpB: 33},
+		EvalCache:       evaluator.NewCache(),
+		RMRatioMode:     mode,
+		RMGroupDenier:   map[string]float64{spandexGrp: 40},
+		RMGroupUseDraft: map[string]bool{spandexGrp: true},
+		UpstreamDenier:  map[int64]float64{denierUpA: 70, denierUpB: 150},
 	}
 }
 
