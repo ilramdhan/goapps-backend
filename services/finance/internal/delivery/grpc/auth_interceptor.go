@@ -686,6 +686,14 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostProductParamBulkService/GetBulkProductParamJobStatus":    "finance.product.route.view",
 		"/finance.v1.CostProductParamBulkService/ListBulkProductParamJobFailures": "finance.product.route.view",
 
+		// CostProductLookupSyncService (master-lookup-sync P5): read RPCs reuse the
+		// product-param view code; Apply mutates many products, same as BulkEditProductParams.
+		"/finance.v1.CostProductLookupSyncService/CountLookupUsage":          "finance.product.route.view",
+		"/finance.v1.CostProductLookupSyncService/PreviewLookupSync":         "finance.product.route.view",
+		"/finance.v1.CostProductLookupSyncService/ApplyLookupSync":           "finance.product.route.create",
+		"/finance.v1.CostProductLookupSyncService/GetLookupSyncJobStatus":    "finance.product.route.view",
+		"/finance.v1.CostProductLookupSyncService/ListLookupSyncJobFailures": "finance.product.route.view",
+
 		// CostProductTypeService oil config (oil-cost-rm-group D15): guarded from birth by the
 		// EXISTING product-type codes seeded in IAM 000038 (view/update, SUPER_ADMIN) and linked
 		// to menu FINANCE_PRODUCT_TYPE in IAM 000066 -- no new IAM code/migration.
