@@ -38,6 +38,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupregistry"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsync"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsyncjob"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbheadbulk"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbpush"
@@ -145,6 +146,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	var costCalcJobTriggerPub costcalc.JobTriggerPublisher
 	var bulkTransitionPublisher mbheadbulk.BulkTransitionJobPublisher
 	var productParamBulkPublisher productparambulk.BulkEditJobPublisher
+	var lookupSyncPublisher lookupsyncjob.JobPublisher
 	if rmqAdapter != nil {
 		oracleSyncPublisher = rmqAdapter
 		rmCostPublisher = rmqAdapter
@@ -152,6 +154,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costSheetExportPublisher = rmqAdapter
 		bulkTransitionPublisher = rmqAdapter
 		productParamBulkPublisher = rmqAdapter
+		lookupSyncPublisher = rmqAdapter
 	}
 	if costJobPub != nil {
 		costCalcJobTriggerPub = costJobPub
@@ -579,8 +582,8 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costProductParamBulkHandler := grpcdelivery.NewCostProductParamBulkHandler().
 		WithSubmitHandler(productParamBulkSubmitHandler, jobRepo, costProductMasterRepo)
 
-	// master-lookup-sync (P5): read side + apply skeleton. Enqueuer / job tracker
-	// are attached in P6.
+	// master-lookup-sync: read side (P5) + apply job enqueuer / tracker (P6).
+	// lookupSyncPublisher is nil without RabbitMQ → Apply answers 503.
 	lookupSyncResolver := lookupsync.NewResolver(
 		machineRepo, interminglingRepo, productGradeRepo, mbHeadRepo, mbSpinRepo, boxBobbinCostRepo, parameterRepo,
 	).WithSuperbaFallback(mbsource.NewSuperbaProvider(superbaCostSpRepo))
@@ -589,6 +592,11 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return fmt.Errorf("new cost product lookup sync handler: %w", err)
 	}
+	lookupSyncJobs := grpcdelivery.NewLookupSyncJobAdapter(
+		lookupsyncjob.NewEnqueuer(jobRepo, lookupSyncPublisher, lookupSyncPlanner),
+		lookupsyncjob.NewTracker(jobRepo, costProductMasterRepo),
+	)
+	costProductLookupSyncHandler.WithEnqueuer(lookupSyncJobs).WithJobTracker(lookupSyncJobs)
 
 	// Fill-assignment repositories + handlers.
 	fillConfigRepo := postgres.NewCostFillConfigRepository(db)

@@ -9,6 +9,8 @@ import (
 	commonv1 "github.com/mutugading/goapps-backend/gen/common/v1"
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsync"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsyncjob"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/job"
 )
 
 const (
@@ -289,8 +291,15 @@ func (h *CostProductLookupSyncHandler) ListLookupSyncJobFailures(
 }
 
 func lookupSyncErrToBase(err error) *commonv1.BaseResponse {
-	if errors.Is(err, lookupsync.ErrUnknownMaster) {
+	switch {
+	case errors.Is(err, lookupsync.ErrUnknownMaster),
+		errors.Is(err, lookupsyncjob.ErrInvalidJobID),
+		errors.Is(err, lookupsyncjob.ErrNothingToApply):
 		return BadRequestResponse(err.Error())
+	case errors.Is(err, lookupsyncjob.ErrPublisherUnavailable):
+		return ErrorResponse("503", err.Error())
+	case errors.Is(err, job.ErrNotFound):
+		return NotFoundResponse(err.Error())
 	}
 	return domainErrorToBaseResponse(fmt.Errorf("lookup sync: %w", err))
 }
