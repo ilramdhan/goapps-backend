@@ -117,6 +117,16 @@ func lookupSyncScopeFromProto(s *financev1.LookupSyncScope) (lookupsync.Scope, e
 	}
 }
 
+// lookupSyncItemActionable reports whether an item belongs in an only_actionable
+// preview: items with changes, plus items skipped for a reason the user can act
+// on. KEY_EMPTY (product never picked that master) is noise and stays hidden.
+func lookupSyncItemActionable(it lookupsync.Item) bool {
+	if it.SkipReason != "" {
+		return it.SkipReason != lookupsync.SkipKeyEmpty
+	}
+	return len(it.Changes) > 0
+}
+
 func lookupSyncSummaryToProto(s lookupsync.Summary) *financev1.LookupSyncSummary {
 	counts := make(map[string]int32, len(s.SkipCounts)+1)
 	for k, v := range s.SkipCounts {
@@ -203,7 +213,7 @@ func (h *CostProductLookupSyncHandler) PreviewLookupSync(
 	var total int64
 	items := make([]*financev1.LookupSyncItem, 0, size)
 	sum, err := h.planner.Walk(ctx, scope, func(it lookupsync.Item) error {
-		if req.GetOnlyActionable() && (it.SkipReason != "" || len(it.Changes) == 0) {
+		if req.GetOnlyActionable() && !lookupSyncItemActionable(it) {
 			return nil
 		}
 		if total >= lo && total < hi {

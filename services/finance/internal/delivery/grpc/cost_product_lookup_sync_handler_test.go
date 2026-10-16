@@ -128,14 +128,24 @@ func TestPreviewLookupSync_Paging(t *testing.T) {
 }
 
 func TestPreviewLookupSync_OnlyActionable(t *testing.T) {
-	p := &fakeLSPlanner{items: lsItems(5), sum: lookupsync.Summary{}}
+	// lsItems(5): 0,2,4 have changes, 1,3 LOCKED; plus one in-sync item and
+	// one KEY_EMPTY item, which only_actionable must hide.
+	items := append(lsItems(5),
+		lookupsync.Item{ProductSysID: 6, ProductCode: "P"},
+		lookupsync.Item{ProductSysID: 7, ProductCode: "P", SkipReason: lookupsync.SkipKeyEmpty},
+	)
+	p := &fakeLSPlanner{items: items, sum: lookupsync.Summary{}}
 	h, _ := NewCostProductLookupSyncHandler(p)
 	resp, err := h.PreviewLookupSync(context.Background(), &financev1.PreviewLookupSyncRequest{Scope: masterScope(), OnlyActionable: true})
 	require.NoError(t, err)
-	require.Len(t, resp.Items, 3) // indexes 0,2,4
-	assert.Equal(t, int64(3), resp.Pagination.TotalItems)
+	require.Len(t, resp.Items, 5) // changed 0,2,4 + LOCKED 1,3
+	assert.Equal(t, int64(5), resp.Pagination.TotalItems)
 	assert.Equal(t, "SET", resp.Items[0].Changes[0].ChangeKind)
 	assert.Equal(t, "2", resp.Items[0].Changes[0].NewValue)
+	assert.Equal(t, "LOCKED", resp.Items[1].SkipReason)
+	for _, it := range resp.Items {
+		assert.NotEqual(t, lookupsync.SkipKeyEmpty, it.SkipReason)
+	}
 
 	resp, _ = h.PreviewLookupSync(context.Background(), &financev1.PreviewLookupSyncRequest{Scope: masterScope()})
 	assert.Equal(t, "LOCKED", resp.Items[1].SkipReason)
