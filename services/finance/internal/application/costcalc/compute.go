@@ -271,8 +271,11 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 
 	// 1a. Oil-class products resolve OIL_RATE from their oil RM group's
 	// cst_rm_cost row for the period, overwriting any imported CAPP value.
-	// A missing/unusable oil rate blocks the product (MISSING_RM_COST).
-	if err := applyOilRate(in, scope, zeroFilled); err != nil {
+	// A missing/unusable oil rate blocks the product (MISSING_RM_COST) —
+	// unless OPU <= 0 (finance rule: OPU is the oil switch), in which case
+	// resolution is skipped, OIL_RATE is 0 and oilNote records why.
+	oilNote, err := applyOilRate(in, scope, zeroFilled)
+	if err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
 	}
@@ -358,7 +361,7 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 		FormulaTrace:    formulaTrace,
 		CostByLevel:     buildCostByLevel(levelMap, conv, in.Route, in.ProductSysID, in.UpstreamCosts),
 		InputHash:       inputHash(in, totalRM),
-		Notes:           ratioPlan.notesOrNil(),
+		Notes:           appendNote(ratioPlan.notesOrNil(), oilNote),
 	}, nil
 }
 
@@ -423,13 +426,31 @@ func buildInitialScope(in ComputeInput) (map[string]any, map[string]bool) {
 // resolved OIL_RATE into scope and clears it from zeroFilled so the snapshot
 // records the rate the oil formulas actually used. Non-oil products are a
 // no-op.
-func applyOilRate(in ComputeInput, scope map[string]any, zeroFilled map[string]bool) error {
+//
+// OPU is the oil switch (finance rule): an oil-class product whose CAPP OPU is
+// absent or <= 0 has no oil, so the oil rate is neither resolved nor validated
+// (it can never block the product). OIL_RATE is written as 0 — making OIL_COST
+// 0 via the unchanged formulas — and the returned note explains the skip. The
+// IS_* class flags are untouched (injectProductClassFlags), so the POY
+// OIL_GAIN_POY_DEFAULT arm still applies. The note is "" otherwise.
+func applyOilRate(in ComputeInput, scope map[string]any, zeroFilled map[string]bool) (string, error) {
+	if in.Oil != nil && !hasPositiveOPU(in.CAPP) {
+		scope[ScopeKeyOilRate] = float64(0)
+		delete(zeroFilled, ScopeKeyOilRate)
+		log.Debug().
+			Int64("product_sys_id", in.ProductSysID).
+			Str("period", in.Period).
+			Str("oil_class", in.Oil.Class).
+			Msg("oil rate skipped: OPU <= 0")
+		return fmt.Sprintf("OIL: OPU is 0 or missing; oil rate not resolved (type %s), OIL_RATE treated as 0",
+			in.Oil.TypeCode), nil
+	}
 	rate, label, applied, err := resolveOilRate(in)
 	if err != nil {
-		return fmt.Errorf("compute product %d: %w", in.ProductSysID, err)
+		return "", fmt.Errorf("compute product %d: %w", in.ProductSysID, err)
 	}
 	if !applied {
-		return nil
+		return "", nil
 	}
 	scope[ScopeKeyOilRate] = rate
 	delete(zeroFilled, ScopeKeyOilRate)
@@ -439,7 +460,25 @@ func applyOilRate(in ComputeInput, scope map[string]any, zeroFilled map[string]b
 		Float64("oil_rate", rate).
 		Str("oil_rate_source", label).
 		Msg("oil rate resolved from RM group")
-	return nil
+	return "", nil
+}
+
+// hasPositiveOPU reports whether the product's CAPP carries an OPU value > 0.
+func hasPositiveOPU(capp map[string]float64) bool {
+	opu, ok := capp[ScopeKeyOPU]
+	return ok && opu > 0
+}
+
+// appendNote returns notes with note appended, or notes unchanged when note is
+// empty. It never mutates notes' backing array (a fresh slice is built), so a
+// caller-owned slice such as rmRatioPlan.notes is left intact.
+func appendNote(notes []string, note string) []string {
+	if note == "" {
+		return notes
+	}
+	out := make([]string, 0, len(notes)+1)
+	out = append(out, notes...)
+	return append(out, note)
 }
 
 // applySuperbaMBCost injects the reserved SUPERBA_MB_COST key consumed by

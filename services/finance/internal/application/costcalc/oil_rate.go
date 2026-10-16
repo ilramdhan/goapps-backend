@@ -39,6 +39,10 @@ const (
 	// engine overwrites whatever CAPP carried with the RM group's rate for the
 	// calc period (CR -> SR -> PR by default, see resolveOilRate).
 	ScopeKeyOilRate = "OIL_RATE"
+	// ScopeKeyOPU is the OPU (oil pick-up) CAPP param. It is the oil switch:
+	// an oil-class product with OPU absent or <= 0 has no oil, so OIL_RATE is
+	// not resolved (see applyOilRate).
+	ScopeKeyOPU = "OPU"
 )
 
 // OilInput is the per-product oil context loaded by LoadOilContext. A nil
