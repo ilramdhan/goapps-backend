@@ -74,6 +74,10 @@ const (
 	// job type (P0-T15; migration 000555). Subtypes: "" (all), om_item,
 	// om_grade, apply_grade_groups.
 	TypeErpMasterSync Type = "erp_master_sync"
+	// TypeProductLookupSync is the master-lookup-sync job type (migration
+	// 000575): a parent job fans out one child per cpm_product_sys_id, each
+	// child re-planning and applying the lookup sync scope to its one product.
+	TypeProductLookupSync Type = "product_lookup_sync"
 )
 
 // String returns the string representation.

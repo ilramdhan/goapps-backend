@@ -55,6 +55,12 @@ type JobMessage struct {
 	// for product_param_bulk jobs — controls UpsertValue op behavior when the
 	// param is not yet CAPP-applicable to ProductSysID.
 	SkipMissingApplicable bool `json:"skip_missing_applicable,omitempty"`
+	// LookupSyncScope is the JSON-encoded lookupsync.Scope (without the
+	// product list) a product_lookup_sync child re-plans for ProductSysID.
+	LookupSyncScope string `json:"lookup_sync_scope,omitempty"`
+	// PlanFingerprint is the preview plan fingerprint the product_lookup_sync
+	// batch was confirmed against (traceability only).
+	PlanFingerprint string `json:"plan_fingerprint,omitempty"`
 }
 
 // Publisher publishes messages to RabbitMQ exchanges.

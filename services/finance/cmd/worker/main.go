@@ -21,6 +21,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductmaster"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	erpapp "github.com/mutugading/goapps-backend/services/finance/internal/application/erpintegration"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsync"
 	appmbhead "github.com/mutugading/goapps-backend/services/finance/internal/application/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbsourceautofill"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
@@ -218,6 +219,11 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 	// import handlers — it already implements cpp.Repository.ApplyBulkOperations.
 	productParamBulkHandler := workerinternal.NewProductParamBulkHandler(jobRepo, cppRepo, log.Logger)
 
+	// master-lookup-sync (P6b). Same resolver/planner wiring as cmd/server so the
+	// worker's in-tx re-plan matches the preview; Applier locks the product row
+	// FOR UPDATE, re-plans and writes with cpp_filled_by='lookup_sync'.
+	productLookupSyncHandler := workerinternal.NewProductLookupSyncHandler(jobRepo, buildLookupSyncApplier(db, mbSpinRepo), log.Logger)
+
 	// ERP master replica sync (P0-T15/T15b). Read-only on Oracle: the reader
 	// only sees the ReadOnlyGuard-wrapped querier. Nil when Oracle is absent,
 	// in which case erp_master_sync messages are acked and skipped.
@@ -239,6 +245,7 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 		rmqConn, syncHandler, rmCostExec, rmCostExportHandler, costingImportHandler, costSheetExportHandler,
 		mbBulkTransitionHandler,
 		productParamBulkHandler,
+		productLookupSyncHandler,
 		erpMasterSync,
 		erpExec,
 		cfg.RabbitMQ.ExportWorkerConcurrency,
@@ -298,6 +305,7 @@ func buildConsumers(
 	costSheetExportHandler *workerinternal.CostSheetExportHandler,
 	mbBulkTransitionHandler *workerinternal.MBBulkTransitionHandler,
 	productParamBulkHandler *workerinternal.ProductParamBulkHandler,
+	productLookupSyncHandler *workerinternal.ProductLookupSyncHandler,
 	erpMasterSync *erpapp.MasterSyncHandler,
 	erpIntegration *erpapp.JobExecutor,
 	exportConcurrency int,
@@ -323,6 +331,9 @@ func buildConsumers(
 	productParamBulkMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return productParamBulkHandler.Handle(ctx, msg)
 	}
+	productLookupSyncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
+		return productLookupSyncHandler.Handle(ctx, msg)
+	}
 	erpMasterSyncMsgHandler := func(ctx context.Context, msg rabbitmq.JobMessage) error {
 		return runErpMasterSyncJob(ctx, erpMasterSync, msg)
 	}
@@ -340,6 +351,9 @@ func buildConsumers(
 		// across children of the same batch (e.g. two children referencing the
 		// same lookup_fill_group_code trigger param). Left sequential.
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueProductParamBulk, productParamBulkMsgHandler, log.Logger),
+		// product_lookup_sync: one tx per product with a FOR UPDATE lock; left
+		// sequential like product_param_bulk (conservative default).
+		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueProductLookupSync, productLookupSyncMsgHandler, log.Logger),
 		// erp_master_sync: full-table upserts of the same replica tables — must
 		// never overlap, so strictly sequential.
 		rabbitmq.NewConsumer(rmqConn, rabbitmq.QueueErpMasterSync, erpMasterSyncMsgHandler, log.Logger),
@@ -401,6 +415,20 @@ func runErpMasterSyncJob(ctx context.Context, h *erpapp.MasterSyncHandler, msg r
 // It also wires the W2 steps (plan-06 P5-T5: adj_execute, lock_batch) and
 // the scheduled read/compute chain (P5-T11). The returned stop func stops the
 // scheduler.
+// buildLookupSyncApplier mirrors cmd/server's lookup-sync planner wiring
+// (resolver + Superba fallback + postgres SyncReader) and wraps it in the
+// transactional Applier used by product_lookup_sync children.
+func buildLookupSyncApplier(db *postgres.DB, mbSpinRepo *postgres.MBSpinRepository) *lookupsync.Applier {
+	parameterRepo := postgres.NewParameterRepository(db)
+	mbHeadRepo := postgres.NewMBHeadRepository(db, postgres.NewMBCompositionRepository(db))
+	resolver := lookupsync.NewResolver(
+		postgres.NewMachineRepository(db), postgres.NewInterminglingRepository(db), postgres.NewProductGradeRepository(db),
+		mbHeadRepo, mbSpinRepo, postgres.NewBoxBobbinCostRepository(db), parameterRepo,
+	).WithSuperbaFallback(mbsource.NewSuperbaProvider(postgres.NewSuperbaCostSpRepository(db)))
+	planner := lookupsync.NewPlanner(resolver, parameterRepo, postgres.NewLookupSyncRepository(db))
+	return lookupsync.NewApplier(planner, postgres.NewLookupSyncApplyRepository(db))
+}
+
 func buildErpIntegrationExecutor(ctx context.Context, cfg *config.Config, db *postgres.DB, jobRepo *postgres.JobRepository,
 	oracleClient *oracle.Client, publisher *rabbitmq.JobPublisherAdapter,
 ) (*erpapp.JobExecutor, func()) {

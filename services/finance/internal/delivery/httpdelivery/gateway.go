@@ -195,6 +195,10 @@ func (s *Server) Start(ctx context.Context) error { //nolint:gocognit,gocyclo //
 	if err := financev1.RegisterCostProductParamBulkServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register CostProductParamBulk gateway: %w", err)
 	}
+	// master-lookup-sync: lookup sync gateway.
+	if err := financev1.RegisterCostProductLookupSyncServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
+		return fmt.Errorf("failed to register CostProductLookupSync gateway: %w", err)
+	}
 	// S8a foundation: CostCalcService stub gateway.
 	if err := financev1.RegisterCostCalcServiceHandlerFromEndpoint(ctx, gwMux, s.grpcTarget, opts); err != nil {
 		return fmt.Errorf("failed to register CostCalc gateway: %w", err)

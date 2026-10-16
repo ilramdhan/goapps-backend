@@ -939,14 +939,17 @@ func isApplicableTx(ctx context.Context, tx *sql.Tx, productSysID int64, paramID
 // upsertValueTx writes a single CPP value row inside a caller-owned transaction —
 // the tx-scoped equivalent of Upsert (minus the applicability check, which the
 // caller — ApplyBulkOperations — already performed via isApplicableTx).
-func upsertValueTx(ctx context.Context, tx *sql.Tx, productSysID int64, paramID uuid.UUID, valueNumeric, valueText *string, valueFlag *bool, actor string) error {
+//
+// filledBy is recorded in cpp_filled_by (who/what produced the value, e.g. a
+// user or "lookup_sync"); actor is recorded in cpp_created_by/cpp_updated_by.
+func upsertValueTx(ctx context.Context, tx *sql.Tx, productSysID int64, paramID uuid.UUID, valueNumeric, valueText *string, valueFlag *bool, filledBy, actor string) error {
 	const q = `
 INSERT INTO cost_product_parameter (
     cpp_product_sys_id, cpp_param_id,
     cpp_value_numeric, cpp_value_text, cpp_value_flag,
     cpp_filled_at, cpp_filled_by,
     cpp_created_at, cpp_created_by
-) VALUES ($1, $2, $3::numeric, $4, $5, $6, $7, $6, $7)
+) VALUES ($1, $2, $3::numeric, $4, $5, $6, $7, $6, $8)
 ON CONFLICT (cpp_product_sys_id, cpp_param_id) DO UPDATE SET
     cpp_value_numeric = EXCLUDED.cpp_value_numeric,
     cpp_value_text    = EXCLUDED.cpp_value_text,
@@ -954,9 +957,9 @@ ON CONFLICT (cpp_product_sys_id, cpp_param_id) DO UPDATE SET
     cpp_filled_at     = EXCLUDED.cpp_filled_at,
     cpp_filled_by     = EXCLUDED.cpp_filled_by,
     cpp_updated_at    = EXCLUDED.cpp_filled_at,
-    cpp_updated_by    = EXCLUDED.cpp_filled_by
+    cpp_updated_by    = EXCLUDED.cpp_created_by
 `
-	if _, err := tx.ExecContext(ctx, q, productSysID, paramID, valueNumeric, valueText, valueFlag, time.Now(), actor); err != nil {
+	if _, err := tx.ExecContext(ctx, q, productSysID, paramID, valueNumeric, valueText, valueFlag, time.Now(), filledBy, actor); err != nil {
 		return fmt.Errorf("upsert cpp value %s: %w", paramID, err)
 	}
 	return nil
@@ -1052,7 +1055,7 @@ func (r *CostProductParameterRepository) applyUpsertValueOpTx(
 			return outcome, err
 		}
 	}
-	if err := upsertValueTx(ctx, tx, productSysID, op.ParamID, op.ValueNumeric, op.ValueText, op.ValueFlag, actor); err != nil {
+	if err := upsertValueTx(ctx, tx, productSysID, op.ParamID, op.ValueNumeric, op.ValueText, op.ValueFlag, actor, actor); err != nil {
 		return outcome, err
 	}
 	return outcome, nil

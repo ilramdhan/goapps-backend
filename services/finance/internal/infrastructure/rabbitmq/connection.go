@@ -45,6 +45,10 @@ const (
 	QueueProductParamBulk = "finance.jobs.product_param_bulk"
 	// RoutingKeyProductParamBulk is the routing key for Bulk Edit Product Params messages.
 	RoutingKeyProductParamBulk = "product_param_bulk"
+	// QueueProductLookupSync is the queue for master-lookup-sync apply jobs.
+	QueueProductLookupSync = "finance.jobs.product_lookup_sync"
+	// RoutingKeyProductLookupSync is the routing key for master-lookup-sync messages.
+	RoutingKeyProductLookupSync = "product_lookup_sync"
 	// QueueErpMasterSync is the queue for ERP master replica sync jobs
 	// (OM_ITEM / OM_GRADE_CODE_1 read-only sync, grade-group apply).
 	QueueErpMasterSync = "finance.jobs.erp_master_sync"
@@ -378,6 +382,7 @@ func (c *Connection) declareTopology() error {
 		{QueueImportJob, RoutingKeyImportJob},
 		{QueueMBBulkTransition, RoutingKeyMBBulkTransition},
 		{QueueProductParamBulk, RoutingKeyProductParamBulk},
+		{QueueProductLookupSync, RoutingKeyProductLookupSync},
 		{QueueErpMasterSync, RoutingKeyErpMasterSync},
 		{QueueErpIntegration, RoutingKeyErpIntegration},
 	}

@@ -94,6 +94,7 @@ func registeredServiceDescs() []grpc.ServiceDesc {
 		financev1.CostNotificationService_ServiceDesc,
 		financev1.CostProductParameterService_ServiceDesc,
 		financev1.CostProductParamBulkService_ServiceDesc,
+		financev1.CostProductLookupSyncService_ServiceDesc,
 		financev1.CostDataImportService_ServiceDesc,
 		financev1.CostCalcService_ServiceDesc,
 		financev1.CostLevelAssignmentConfigService_ServiceDesc,
@@ -702,7 +703,8 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 54 -> 56: ErpIntegrationService (35) + ErpRuleService (10), P6-T3a; all guarded
 	// from birth (knownFailOpen unchanged).
 	// 56 -> 57: SuperbaCostSpService (superba-mb-cost-sp P2), 6 RPCs guarded from birth.
-	assert.Len(t, registeredServiceDescs(), 57,
+	// 57 -> 58: CostProductLookupSyncService (master-lookup-sync P5), 5 RPCs guarded from birth.
+	assert.Len(t, registeredServiceDescs(), 58,
 		"service count changed — reconcile registeredServiceDescs() with cmd/server/main.go")
 	// 374 -> 375: RPC BARU DuplicateMBSpin (P8, gerbang G16 opsi (a)), 392 in gen - 17
 	// 375 -> 378: TIGA RPC BARU unlock MBHeadService (P10-b): RequestUnlockMBHead,
@@ -736,7 +738,8 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 403 -> 408: FIVE new YarnTxWeightGroupService CRUD RPCs (backlog1 T25).
 	// 408 -> 454: 46 new ERP RPCs (ErpIntegrationService 36 incl. ExportErpRecon + ErpRuleService 10).
 	// 454 -> 460: SuperbaCostSpService (6 RPCs, superba-mb-cost-sp P2).
-	assert.Len(t, reachable, 460,
+	// 460 -> 465: CostProductLookupSyncService (master-lookup-sync P5).
+	assert.Len(t, reachable, 465,
 		"reachable RPC count changed (398 in gen − 17 on the 3 unregistered services + 6 for the "+
 			"previously-omitted-from-this-list ShadeService + 5 new Bulk MB Head Regenerate RPCs + 1 new "+
 			"DuplicateProduct RPC + 3 new CostProductParamBulkService RPCs, product-route-fork-attach-bulk "+
@@ -796,7 +799,8 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// finance.cost.erpintegration.* / finance.cost.erprule.* codes (iam 000094). knownFailOpen does NOT grow.
 	// 228 -> 234: SuperbaCostSpService RPCs guarded FROM BIRTH by finance.master.superbacostsp.*
 	// (iam 000095). knownFailOpen does NOT grow.
-	assert.Equal(t, 234, guarded, "number of properly guarded RPCs changed")
+	// 234 -> 239: CostProductLookupSyncService RPCs guarded FROM BIRTH.
+	assert.Equal(t, 239, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43

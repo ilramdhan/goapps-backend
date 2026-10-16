@@ -37,6 +37,8 @@ import (
 	costrouteapp "github.com/mutugading/goapps-backend/services/finance/internal/application/costroute"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costsheet"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupregistry"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsync"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsyncjob"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbheadbulk"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbpush"
@@ -144,6 +146,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	var costCalcJobTriggerPub costcalc.JobTriggerPublisher
 	var bulkTransitionPublisher mbheadbulk.BulkTransitionJobPublisher
 	var productParamBulkPublisher productparambulk.BulkEditJobPublisher
+	var lookupSyncPublisher lookupsyncjob.JobPublisher
 	if rmqAdapter != nil {
 		oracleSyncPublisher = rmqAdapter
 		rmCostPublisher = rmqAdapter
@@ -151,6 +154,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costSheetExportPublisher = rmqAdapter
 		bulkTransitionPublisher = rmqAdapter
 		productParamBulkPublisher = rmqAdapter
+		lookupSyncPublisher = rmqAdapter
 	}
 	if costJobPub != nil {
 		costCalcJobTriggerPub = costJobPub
@@ -578,6 +582,22 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	costProductParamBulkHandler := grpcdelivery.NewCostProductParamBulkHandler().
 		WithSubmitHandler(productParamBulkSubmitHandler, jobRepo, costProductMasterRepo)
 
+	// master-lookup-sync: read side (P5) + apply job enqueuer / tracker (P6).
+	// lookupSyncPublisher is nil without RabbitMQ → Apply answers 503.
+	lookupSyncResolver := lookupsync.NewResolver(
+		machineRepo, interminglingRepo, productGradeRepo, mbHeadRepo, mbSpinRepo, boxBobbinCostRepo, parameterRepo,
+	).WithSuperbaFallback(mbsource.NewSuperbaProvider(superbaCostSpRepo))
+	lookupSyncPlanner := lookupsync.NewPlanner(lookupSyncResolver, parameterRepo, postgres.NewLookupSyncRepository(db))
+	costProductLookupSyncHandler, err := grpcdelivery.NewCostProductLookupSyncHandler(lookupSyncPlanner)
+	if err != nil {
+		return fmt.Errorf("new cost product lookup sync handler: %w", err)
+	}
+	lookupSyncJobs := grpcdelivery.NewLookupSyncJobAdapter(
+		lookupsyncjob.NewEnqueuer(jobRepo, lookupSyncPublisher, lookupSyncPlanner),
+		lookupsyncjob.NewTracker(jobRepo, costProductMasterRepo),
+	)
+	costProductLookupSyncHandler.WithEnqueuer(lookupSyncJobs).WithJobTracker(lookupSyncJobs)
+
 	// Fill-assignment repositories + handlers.
 	fillConfigRepo := postgres.NewCostFillConfigRepository(db)
 	fillTaskRepo := postgres.NewCostFillTaskRepository(db)
@@ -917,6 +937,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costRoutingRuleHandler, costAuditLogHandler, costNotificationHandler,
 		costProductParameterHandler,
 		costProductParamBulkHandler,
+		costProductLookupSyncHandler,
 		costDataImportHandler,
 		costCalcHandler,
 		costFillConfigHandler, costFillTaskHandler,
@@ -1065,6 +1086,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	costNotificationHandler *grpcdelivery.CostNotificationHandler,
 	costProductParameterHandler *grpcdelivery.CostProductParameterHandler,
 	costProductParamBulkHandler *grpcdelivery.CostProductParamBulkHandler,
+	costProductLookupSyncHandler *grpcdelivery.CostProductLookupSyncHandler,
 	costDataImportHandler *grpcdelivery.CostDataImportHandler,
 	costCalcHandler *grpcdelivery.CostCalcHandler,
 	costFillConfigHandler *grpcdelivery.CostFillConfigHandler,
@@ -1138,6 +1160,7 @@ func startServers(ctx context.Context, cfg *config.Config,
 	// CostProductParameterService (own Unimplemented embed, own auth_interceptor
 	// permission mappings).
 	financev1.RegisterCostProductParamBulkServiceServer(grpcServer.GRPCServer(), costProductParamBulkHandler)
+	financev1.RegisterCostProductLookupSyncServiceServer(grpcServer.GRPCServer(), costProductLookupSyncHandler)
 	// Costing data import/export service.
 	financev1.RegisterCostDataImportServiceServer(grpcServer.GRPCServer(), costDataImportHandler)
 	// S8a foundation: CostCalcService stub.

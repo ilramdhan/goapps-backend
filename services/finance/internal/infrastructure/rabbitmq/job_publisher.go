@@ -170,6 +170,23 @@ func (a *JobPublisherAdapter) PublishProductParamBulk(
 	return a.publisher.PublishJob(ctx, RoutingKeyProductParamBulk, msg)
 }
 
+// PublishProductLookupSync publishes one master-lookup-sync child job message
+// — one product_sys_id plus the shared JSON-encoded scope and plan fingerprint.
+func (a *JobPublisherAdapter) PublishProductLookupSync(
+	ctx context.Context,
+	jobID string, productSysID int64, scopeJSON, fingerprint, createdBy string,
+) error {
+	msg := JobMessage{
+		JobID:           jobID,
+		JobType:         "product_lookup_sync",
+		CreatedBy:       createdBy,
+		ProductSysID:    productSysID,
+		LookupSyncScope: scopeJSON,
+		PlanFingerprint: fingerprint,
+	}
+	return a.publisher.PublishJob(ctx, RoutingKeyProductLookupSync, msg)
+}
+
 // PublishErpIntegration publishes an ERP integration batch-step job
 // (plan-04 P3-T4); subtype is the step (load_demand, coverage, ...).
 func (a *JobPublisherAdapter) PublishErpIntegration(ctx context.Context, jobID, subtype, period, createdBy string) error {
