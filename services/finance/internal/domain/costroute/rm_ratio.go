@@ -53,6 +53,24 @@ type RatioSourceData struct {
 	// SpandexDraft is the seq product's SPANDEX_DRAFT value (0 = missing).
 	// Only read for GROUP lines whose head has denier_use_draft.
 	SpandexDraft float64
+	// ProductDenierOverride maps upstream product sys id -> the seq product's
+	// own RM denier override (000578). A positive entry replaces
+	// UpstreamDenier for that PRODUCT line. Nil = no overrides.
+	ProductDenierOverride map[int64]float64
+	// GroupDenierOverride maps RM group_code -> the seq product's own RM
+	// denier override (000578). A positive entry is the FINAL line denier:
+	// never divided by SpandexDraft, and it makes the line a denier line even
+	// when the group head has no denier. Nil = no overrides.
+	GroupDenierOverride map[string]float64
+}
+
+// DenierOverrides is one product's RM denier overrides (000578), keyed by RM
+// identity: the FINAL line denier to use instead of the master denier.
+type DenierOverrides struct {
+	// Product maps rm_product_sys_id -> override denier (PRODUCT lines).
+	Product map[int64]float64
+	// Group maps rm_group_code -> override denier (GROUP lines).
+	Group map[string]float64
 }
 
 // LineRatio is the resolved ratio of one route RM line.
@@ -68,6 +86,9 @@ type LineRatio struct {
 	Source string
 	// Note explains a line-level fallback (e.g. missing denier treated as 0).
 	Note string
+	// Overridden is true when Denier came from the seq product's RM denier
+	// override instead of the master denier. Source stays RatioSourceDenier.
+	Overridden bool
 }
 
 // ComputeSeqRMRatios resolves the ratio of every RM line of seq, index-aligned
@@ -103,13 +124,13 @@ func ComputeSeqRMRatios(seq *Seq, src RatioSourceData) ([]LineRatio, []string) {
 		if rm == nil {
 			continue
 		}
-		d, msg, ok := lineDenier(rm, src)
+		d, msg, ok, overridden := lineDenier(rm, src)
 		if !ok {
 			out[i] = LineRatio{Ratio: rm.RouteRmRatio, Source: RatioSourceInput}
 			continue
 		}
 		notes.add(msg)
-		out[i] = LineRatio{Denier: d, Source: RatioSourceDenier, Note: msg}
+		out[i] = LineRatio{Denier: d, Source: RatioSourceDenier, Note: msg, Overridden: overridden}
 		denierIdx = append(denierIdx, i)
 		total += d
 	}
@@ -161,8 +182,34 @@ func (n *noteSet) add(msg string) {
 
 // lineDenier resolves one line's denier. ok=false means the line is not a
 // denier line and keeps its route ratio; msg is a non-empty note when an input
-// is missing and the line's denier is treated as 0.
-func lineDenier(rm *Rm, src RatioSourceData) (d float64, msg string, ok bool) {
+// is missing and the line's denier is treated as 0. A positive override of
+// the seq product is checked first and used as the final line denier
+// (overridden=true); without one the master path is unchanged.
+func lineDenier(rm *Rm, src RatioSourceData) (d float64, msg string, ok, overridden bool) {
+	if v, has := lineOverride(rm, src); has {
+		return v, "", true, true
+	}
+	d, msg, ok = masterLineDenier(rm, src)
+	return d, msg, ok, false
+}
+
+// lineOverride returns the seq product's positive denier override for rm.
+// ITEM lines are never overridden.
+func lineOverride(rm *Rm, src RatioSourceData) (float64, bool) {
+	var v float64
+	switch rm.RmType {
+	case RmTypeProduct:
+		v = src.ProductDenierOverride[rm.RmProductSysID]
+	case RmTypeGroup:
+		v = src.GroupDenierOverride[rm.RmGroupCode]
+	default:
+		return 0, false
+	}
+	return v, v > 0
+}
+
+// masterLineDenier is lineDenier's master-data path (no override).
+func masterLineDenier(rm *Rm, src RatioSourceData) (d float64, msg string, ok bool) {
 	switch rm.RmType {
 	case RmTypeProduct:
 		v := src.UpstreamDenier[rm.RmProductSysID]
@@ -203,6 +250,9 @@ type RatioSources struct {
 	GroupUseDraft map[string]bool
 	// SpandexDraft maps seq product sys id -> its SPANDEX_DRAFT value.
 	SpandexDraft map[int64]float64
+	// Overrides maps seq product sys id -> its own RM denier overrides
+	// (000578). Absent/nil = no overrides (master deniers only).
+	Overrides map[int64]DenierOverrides
 }
 
 // NormalizedRMRatioMode returns DENIER for a DENIER mode and INPUT otherwise.
@@ -231,12 +281,15 @@ func (g *Graph) AnnotateRMRatios(src RatioSources) {
 			continue
 		}
 		seq.RMRatioMode = NormalizedRMRatioMode(src.Modes[seq.ProductSysID])
+		ovr := src.Overrides[seq.ProductSysID]
 		lines, _ := ComputeSeqRMRatios(seq, RatioSourceData{
-			Mode:           seq.RMRatioMode,
-			UpstreamDenier: src.UpstreamDenier,
-			GroupDenier:    src.GroupDenier,
-			GroupUseDraft:  src.GroupUseDraft,
-			SpandexDraft:   src.SpandexDraft[seq.ProductSysID],
+			Mode:                  seq.RMRatioMode,
+			UpstreamDenier:        src.UpstreamDenier,
+			GroupDenier:           src.GroupDenier,
+			GroupUseDraft:         src.GroupUseDraft,
+			SpandexDraft:          src.SpandexDraft[seq.ProductSysID],
+			ProductDenierOverride: ovr.Product,
+			GroupDenierOverride:   ovr.Group,
 		})
 		for i, rm := range seq.Rms {
 			if rm == nil {
@@ -244,6 +297,7 @@ func (g *Graph) AnnotateRMRatios(src RatioSources) {
 			}
 			l := lines[i]
 			rm.ComputedRatio, rm.RatioSource, rm.Denier, rm.RatioNote = l.Ratio, l.Source, l.Denier, l.Note
+			rm.DenierOverridden = l.Overridden
 			if l.Source == RatioSourceDenier {
 				rm.EffectiveRatio = l.Ratio
 			}

@@ -131,6 +131,9 @@ type Rm struct {
 	RatioSource   string
 	Denier        float64
 	RatioNote     string
+	// DenierOverridden is true when Denier came from the seq product's RM
+	// denier override (000578) instead of the master denier.
+	DenierOverridden bool
 }
 
 // Graph bundles head + seqs (with rms inline).
