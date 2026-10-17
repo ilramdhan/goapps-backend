@@ -856,6 +856,13 @@ func (r *CostRouteRepository) DuplicateRoute(ctx context.Context, in costroute.D
 		productMap[upstream] = newID
 	}
 
+	// 5b. Forked products got their source's RM denier overrides verbatim; a PRODUCT
+	// override pointing at an upstream product that was ALSO forked now targets the
+	// fork's copy of it (D3), so the forked route's lines keep matching.
+	if err := remapForkedDenierOverridesTx(ctx, tx, productMap); err != nil {
+		return costroute.DuplicateOutput{}, err
+	}
+
 	// 6. Create new route head.
 	var newHeadID int64
 	if err := tx.QueryRowContext(ctx, `
@@ -1183,11 +1190,13 @@ func duplicateProductTx(
 		INSERT INTO cost_product_master (
 			cpm_product_code, cpm_product_type_id, cpm_product_name,
 			cpm_shade_code, cpm_grade_code, cpm_description,
-			cpm_is_active, cpm_created_by, cpm_updated_by
+			cpm_is_active, cpm_created_by, cpm_updated_by,
+			cpm_duplicated_from_sys_id
 		)
 		SELECT $1, cpm_product_type_id, cpm_product_name,
 		       cpm_shade_code, cpm_grade_code, cpm_description,
-		       TRUE, $2, $2
+		       TRUE, $2, $2,
+		       cpm_product_sys_id
 		FROM cost_product_master
 		WHERE cpm_product_sys_id = $3
 		RETURNING cpm_product_sys_id`,
@@ -1220,7 +1229,48 @@ func duplicateProductTx(
 			return 0, fmt.Errorf("copy capp values: %w", err)
 		}
 	}
+	// RM denier overrides (000578) are always copied, independent of the param flags
+	// (D2): they describe how this product's route ratio is computed, not a param.
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO cost_product_rm_denier_override (
+			cpdo_product_sys_id, cpdo_rm_type, cpdo_rm_product_sys_id, cpdo_rm_group_code,
+			cpdo_denier, cpdo_reason, cpdo_created_by, cpdo_updated_by
+		)
+		SELECT $1, cpdo_rm_type, cpdo_rm_product_sys_id, cpdo_rm_group_code,
+		       cpdo_denier, cpdo_reason, $2, $2
+		FROM cost_product_rm_denier_override
+		WHERE cpdo_product_sys_id = $3`,
+		newSysID, actor, sourceProductSysID); err != nil {
+		return 0, fmt.Errorf("copy RM denier overrides: %w", err)
+	}
 	return newSysID, nil
+}
+
+// remapForkedDenierOverridesTx re-keys the PRODUCT RM denier overrides of every forked
+// product (productMap values) whose rm_product_sys_id is a forked source product
+// (productMap key) to that product's fork. GROUP overrides and overrides on
+// non-forked RM products are left as copied.
+func remapForkedDenierOverridesTx(ctx context.Context, tx *sql.Tx, productMap map[int64]int64) error {
+	if len(productMap) == 0 {
+		return nil
+	}
+	oldIDs := make([]int64, 0, len(productMap))
+	newIDs := make([]int64, 0, len(productMap))
+	for oldID, newID := range productMap {
+		oldIDs = append(oldIDs, oldID)
+		newIDs = append(newIDs, newID)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE cost_product_rm_denier_override o
+		SET cpdo_rm_product_sys_id = m.new_id
+		FROM unnest($1::bigint[], $2::bigint[]) AS m(old_id, new_id)
+		WHERE o.cpdo_rm_type = 'PRODUCT'
+		  AND o.cpdo_rm_product_sys_id = m.old_id
+		  AND o.cpdo_product_sys_id = ANY($2::bigint[])`,
+		pq.Array(oldIDs), pq.Array(newIDs)); err != nil {
+		return fmt.Errorf("remap forked RM denier overrides: %w", err)
+	}
+	return nil
 }
 
 // duplicateGraphTx copies seqs + rms, remapping product references via productMap.
