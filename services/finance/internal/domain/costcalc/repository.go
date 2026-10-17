@@ -171,6 +171,8 @@ type RMDetailSummary struct {
 	// Denier and RatioSource are only set for DENIER ratio-mode products.
 	Denier      float64 `json:"denier,omitempty"`
 	RatioSource string  `json:"ratio_source,omitempty"`
+	// DenierSource is MASTER / OVERRIDE for denier lines (000578), else "".
+	DenierSource string `json:"denier_source,omitempty"`
 }
 
 // AuditHistoryRepository persists AuditHistoryEntry rows.

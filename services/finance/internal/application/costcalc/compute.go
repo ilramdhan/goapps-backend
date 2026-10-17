@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"slices"
 	"sync"
 	"time"
@@ -156,6 +157,10 @@ type ComputeInput struct {
 	// DENIER param (cost_product_parameter). Only read in DENIER mode; an
 	// absent or non-positive value makes that line's denier 0 (+ note).
 	UpstreamDenier map[int64]float64
+	// RMDenierOverride is this product's own RM denier overrides (000578):
+	// the final line denier of a PRODUCT/GROUP RM line, used instead of the
+	// master denier. Only read in DENIER mode; empty = master deniers only.
+	RMDenierOverride costroute.DenierOverrides
 	// UpstreamSnapshots maps upstream product sys id -> its committed
 	// cpc_param_snapshot (the same map VBLoss carries). It is NOT read by the
 	// DENIER mode any more -- the upstream DENIER comes from the master via
@@ -179,6 +184,10 @@ type RMCostDetail struct {
 	// route-ratio line of a DENIER-mode product. Empty (omitted) for
 	// INPUT-mode products so their JSON is unchanged.
 	RatioSource string `json:"ratio_source,omitempty"`
+	// DenierSource is "MASTER" for a denier line using the master denier and
+	// "OVERRIDE" for one using the product's RM denier override (000578).
+	// Empty (omitted) for non-denier lines and INPUT-mode products.
+	DenierSource string `json:"denier_source,omitempty"`
 }
 
 // FormulaEvalTrace records one formula's evaluation step for diagnostics.
@@ -788,7 +797,7 @@ func aggregateRMCost(in ComputeInput, plan *rmRatioPlan, resolve rmUnitResolver)
 			if rm == nil {
 				continue
 			}
-			unit, ratio, denier, source, err := plan.lineUnitAndRatio(in, rm, resolve)
+			unit, ratio, denier, source, denierSource, err := plan.lineUnitAndRatio(in, rm, resolve)
 			if err != nil {
 				return 0, nil, nil, fmt.Errorf("product %d level %d: %w", in.ProductSysID, level, err)
 			}
@@ -805,6 +814,7 @@ func aggregateRMCost(in ComputeInput, plan *rmRatioPlan, resolve rmUnitResolver)
 				Contribution: contribution,
 				Denier:       denier,
 				RatioSource:  source,
+				DenierSource: denierSource,
 			})
 		}
 	}
@@ -1308,5 +1318,32 @@ func inputHash(in ComputeInput, totalRM float64) string {
 			_ = e
 		}
 	}
+	writeOverrideHash(h, in.RMDenierOverride)
 	return hex.EncodeToString(h.Sum(nil))[:32]
+}
+
+// writeOverrideHash appends the sorted RM denier overrides to h. Nothing is
+// written when there are none, so the hash of a product without overrides is
+// unchanged.
+func writeOverrideHash(h io.Writer, ovr costroute.DenierOverrides) {
+	productIDs := make([]int64, 0, len(ovr.Product))
+	for id := range ovr.Product {
+		productIDs = append(productIDs, id)
+	}
+	slices.Sort(productIDs)
+	for _, id := range productIDs {
+		if _, e := fmt.Fprintf(h, "|ovr:P:%d=%.6f", id, ovr.Product[id]); e != nil {
+			_ = e
+		}
+	}
+	groupCodes := make([]string, 0, len(ovr.Group))
+	for code := range ovr.Group {
+		groupCodes = append(groupCodes, code)
+	}
+	slices.Sort(groupCodes)
+	for _, code := range groupCodes {
+		if _, e := fmt.Fprintf(h, "|ovr:G:%s=%.6f", code, ovr.Group[code]); e != nil {
+			_ = e
+		}
+	}
 }

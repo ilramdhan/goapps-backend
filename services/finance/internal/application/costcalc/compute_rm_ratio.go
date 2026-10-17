@@ -14,6 +14,10 @@ const (
 	cappKeySpandexDraft = costroute.ParamCodeSpandexDraft
 	ratioSourceDenier   = costroute.RatioSourceDenier
 	ratioSourceInput    = costroute.RatioSourceInput
+	// denierSourceMaster / denierSourceOverride are RMCostDetail.DenierSource
+	// values of a denier line (master denier vs. RM denier override, 000578).
+	denierSourceMaster   = "MASTER"
+	denierSourceOverride = "OVERRIDE"
 )
 
 // denierLine is the DENIER-mode resolution of one route RM line.
@@ -24,6 +28,9 @@ type denierLine struct {
 	// selected cost_val/cost_mark (RMCostRates.CostVal) for both RM_RATE and
 	// RM_LANDED_COST instead of the GROUP cascades.
 	group bool
+	// overridden marks a line whose denier is the product's RM denier
+	// override (000578) instead of the master denier.
+	overridden bool
 }
 
 // rmRatioPlan holds the DENIER-mode ratio overrides of one product, keyed by
@@ -60,7 +67,7 @@ func planRMRatios(in ComputeInput) *rmRatioPlan {
 				continue
 			}
 			rm := seq.Rms[i]
-			plan.lines[rm] = denierLine{denier: l.Denier, ratio: l.Ratio, group: rm.RmType == costroute.RmTypeGroup}
+			plan.lines[rm] = denierLine{denier: l.Denier, ratio: l.Ratio, group: rm.RmType == costroute.RmTypeGroup, overridden: l.Overridden}
 		}
 		for _, n := range notes {
 			if !seen[n] {
@@ -75,11 +82,13 @@ func planRMRatios(in ComputeInput) *rmRatioPlan {
 // ratioSourceData adapts a ComputeInput to the shared domain computation.
 func ratioSourceData(in ComputeInput) costroute.RatioSourceData {
 	return costroute.RatioSourceData{
-		Mode:           in.RMRatioMode,
-		UpstreamDenier: in.UpstreamDenier,
-		GroupDenier:    in.RMGroupDenier,
-		GroupUseDraft:  in.RMGroupUseDraft,
-		SpandexDraft:   in.CAPP[cappKeySpandexDraft],
+		Mode:                  in.RMRatioMode,
+		UpstreamDenier:        in.UpstreamDenier,
+		GroupDenier:           in.RMGroupDenier,
+		GroupUseDraft:         in.RMGroupUseDraft,
+		SpandexDraft:          in.CAPP[cappKeySpandexDraft],
+		ProductDenierOverride: in.RMDenierOverride.Product,
+		GroupDenierOverride:   in.RMDenierOverride.Group,
 	}
 }
 
@@ -97,22 +106,27 @@ func resolveDenierGroupCost(in ComputeInput, rm *costroute.Rm) (float64, error) 
 
 // lineUnitAndRatio resolves one RM line's unit cost, ratio and detail
 // annotations under plan (nil plan = INPUT mode, the legacy behavior).
-func (p *rmRatioPlan) lineUnitAndRatio(in ComputeInput, rm *costroute.Rm, resolve rmUnitResolver) (unit, ratio, denier float64, source string, err error) {
+// denierSource is "" for non-denier lines, else MASTER or OVERRIDE.
+func (p *rmRatioPlan) lineUnitAndRatio(in ComputeInput, rm *costroute.Rm, resolve rmUnitResolver) (unit, ratio, denier float64, source, denierSource string, err error) {
 	if p == nil {
 		unit, err = resolve(in, rm)
-		return unit, rm.RouteRmRatio, 0, "", err
+		return unit, rm.RouteRmRatio, 0, "", "", err
 	}
 	l, ok := p.lines[rm]
 	if !ok {
 		unit, err = resolve(in, rm)
-		return unit, rm.RouteRmRatio, 0, ratioSourceInput, err
+		return unit, rm.RouteRmRatio, 0, ratioSourceInput, "", err
 	}
 	if l.group {
 		unit, err = resolveDenierGroupCost(in, rm)
 	} else {
 		unit, err = resolve(in, rm)
 	}
-	return unit, l.ratio, l.denier, ratioSourceDenier, err
+	denierSource = denierSourceMaster
+	if l.overridden {
+		denierSource = denierSourceOverride
+	}
+	return unit, l.ratio, l.denier, ratioSourceDenier, denierSource, err
 }
 
 // notesOrNil returns the plan's deduplicated notes, or nil for an INPUT-mode

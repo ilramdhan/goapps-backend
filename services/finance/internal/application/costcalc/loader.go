@@ -39,6 +39,7 @@ const (
 	loaderKindRMRatioMode     = "rm_ratio_mode"
 	loaderKindRMGroupDenier   = "rm_group_denier"
 	loaderKindUpstreamDenier  = "upstream_denier"
+	loaderKindRMDenierOvr     = "rm_denier_override"
 )
 
 // rmRateOrderFormulaCode is the mst_formula row whose expression column, since
@@ -308,6 +309,10 @@ type ProductLoader interface {
 	// given (upstream) product. Products without a value are absent. Feeds
 	// ComputeInput.UpstreamDenier.
 	LoadUpstreamDeniers(ctx context.Context, productSysIDs []int64) (map[int64]float64, error)
+	// LoadRMDenierOverrides returns each given (owner) product's own RM denier
+	// overrides (cost_product_rm_denier_override, 000578). Products without
+	// an override are absent. Feeds ComputeInput.RMDenierOverride.
+	LoadRMDenierOverrides(ctx context.Context, productSysIDs []int64) (map[int64]costroute.DenierOverrides, error)
 }
 
 // SpinPool is the POY spin fixed-cost pool resolved for a period, together with

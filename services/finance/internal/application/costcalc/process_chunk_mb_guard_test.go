@@ -273,3 +273,8 @@ func (f *mbGuardLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*Su
 func (f *mbGuardLoader) LoadUpstreamDeniers(context.Context, []int64) (map[int64]float64, error) {
 	return map[int64]float64{}, nil
 }
+
+// LoadRMDenierOverrides reports no RM denier overrides.
+func (f *mbGuardLoader) LoadRMDenierOverrides(context.Context, []int64) (map[int64]costroute.DenierOverrides, error) {
+	return map[int64]costroute.DenierOverrides{}, nil
+}

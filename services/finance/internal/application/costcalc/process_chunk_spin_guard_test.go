@@ -312,3 +312,8 @@ func (f *spinFakeLoader) LoadSuperbaCost(context.Context, []int64) (map[int64]*S
 func (f *spinFakeLoader) LoadUpstreamDeniers(context.Context, []int64) (map[int64]float64, error) {
 	return map[int64]float64{}, nil
 }
+
+// LoadRMDenierOverrides reports no RM denier overrides.
+func (f *spinFakeLoader) LoadRMDenierOverrides(context.Context, []int64) (map[int64]costroute.DenierOverrides, error) {
+	return map[int64]costroute.DenierOverrides{}, nil
+}

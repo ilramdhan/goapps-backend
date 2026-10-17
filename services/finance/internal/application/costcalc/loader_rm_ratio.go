@@ -47,3 +47,19 @@ func (l *productLoader) LoadUpstreamDeniers(ctx context.Context, productSysIDs [
 	defer observeLoad(loaderKindUpstreamDenier, time.Now())
 	return rmratioquery.ProductParamValues(ctx, l.db, productSysIDs, costroute.ParamCodeDenier)
 }
+
+// LoadRMDenierOverrides implements ProductLoader.LoadRMDenierOverrides with one
+// query per chunk over cost_product_rm_denier_override (000578). The SQL is
+// shared with the route graph ratio loader (rmratioquery).
+func (l *productLoader) LoadRMDenierOverrides(ctx context.Context, productSysIDs []int64) (map[int64]costroute.DenierOverrides, error) {
+	defer observeLoad(loaderKindRMDenierOvr, time.Now())
+	rows, err := rmratioquery.ProductDenierOverrides(ctx, l.db, productSysIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64]costroute.DenierOverrides, len(rows))
+	for id, ov := range rows {
+		out[id] = costroute.DenierOverrides{Product: ov.Product, Group: ov.Group}
+	}
+	return out, nil
+}
