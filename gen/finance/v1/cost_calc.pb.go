@@ -1630,7 +1630,9 @@ type CostRMDetail struct {
 	// Denier of the RM group head. Only set for DENIER ratio-mode products.
 	Denier float64 `protobuf:"fixed64,9,opt,name=denier,proto3" json:"denier,omitempty"`
 	// Source of the ratio (e.g. DENIER, SPANDEX_DRAFT). Only set for DENIER ratio-mode products.
-	RatioSource   string `protobuf:"bytes,10,opt,name=ratio_source,json=ratioSource,proto3" json:"ratio_source,omitempty"`
+	RatioSource string `protobuf:"bytes,10,opt,name=ratio_source,json=ratioSource,proto3" json:"ratio_source,omitempty"`
+	// Denier provenance: "" | MASTER | OVERRIDE. Only set for DENIER ratio-mode lines.
+	DenierSource  string `protobuf:"bytes,11,opt,name=denier_source,json=denierSource,proto3" json:"denier_source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1731,6 +1733,13 @@ func (x *CostRMDetail) GetDenier() float64 {
 func (x *CostRMDetail) GetRatioSource() string {
 	if x != nil {
 		return x.RatioSource
+	}
+	return ""
+}
+
+func (x *CostRMDetail) GetDenierSource() string {
+	if x != nil {
+		return x.DenierSource
 	}
 	return ""
 }
@@ -5428,7 +5437,7 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"\fproduct_code\x18\x03 \x01(\tR\vproductCode\x12!\n" +
 	"\fproduct_name\x18\x04 \x01(\tR\vproductName\x12+\n" +
 	"\x11cost_contribution\x18\x05 \x01(\tR\x10costContribution\x12\x14\n" +
-	"\x05ratio\x18\x06 \x01(\tR\x05ratio\"\xb1\x02\n" +
+	"\x05ratio\x18\x06 \x01(\tR\x05ratio\"\xd6\x02\n" +
 	"\fCostRMDetail\x12\x17\n" +
 	"\arm_type\x18\x01 \x01(\tR\x06rmType\x12\x19\n" +
 	"\bref_code\x18\x02 \x01(\tR\arefCode\x12\x1b\n" +
@@ -5442,7 +5451,8 @@ const file_finance_v1_cost_calc_proto_rawDesc = "" +
 	"routeLevel\x12\x16\n" +
 	"\x06denier\x18\t \x01(\x01R\x06denier\x12!\n" +
 	"\fratio_source\x18\n" +
-	" \x01(\tR\vratioSource\"\xba\x02\n" +
+	" \x01(\tR\vratioSource\x12#\n" +
+	"\rdenier_source\x18\v \x01(\tR\fdenierSource\"\xba\x02\n" +
 	"\vFormulaEval\x12!\n" +
 	"\fformula_code\x18\x01 \x01(\tR\vformulaCode\x12!\n" +
 	"\fformula_name\x18\x02 \x01(\tR\vformulaName\x12\x1e\n" +

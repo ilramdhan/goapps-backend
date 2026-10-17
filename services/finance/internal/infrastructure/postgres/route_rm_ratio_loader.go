@@ -10,9 +10,10 @@ import (
 
 // RouteRMRatioLoader implements costroute application's RatioSourceLoader. It
 // reuses the calc engine's exact SQL (rmratioquery), so the route graph shows
-// the same ratio the engine computes. At most 4 batched queries per graph:
+// the same ratio the engine computes. At most 5 batched queries per graph:
 // ratio modes of the seq products, then -- only when some seq is DENIER-mode
-// -- upstream DENIER, RM group head denier and SPANDEX_DRAFT.
+// -- upstream DENIER, RM group head denier, SPANDEX_DRAFT and the seq
+// products' RM denier overrides.
 type RouteRMRatioLoader struct {
 	db *DB
 }
@@ -46,7 +47,25 @@ func (l *RouteRMRatioLoader) LoadRMRatioSources(ctx context.Context, g *costrout
 	if src.SpandexDraft, err = rmratioquery.ProductParamValues(ctx, l.db, denierProducts, costroute.ParamCodeSpandexDraft); err != nil {
 		return src, fmt.Errorf("route RM ratio: %w", err)
 	}
+	ovr, err := rmratioquery.ProductDenierOverrides(ctx, l.db, denierProducts)
+	if err != nil {
+		return src, fmt.Errorf("route RM ratio: %w", err)
+	}
+	src.Overrides = toDomainDenierOverrides(ovr)
 	return src, nil
+}
+
+// toDomainDenierOverrides maps rmratioquery overrides to the domain type
+// (nil when there are none).
+func toDomainDenierOverrides(in map[int64]rmratioquery.DenierOverrides) map[int64]costroute.DenierOverrides {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[int64]costroute.DenierOverrides, len(in))
+	for id, ov := range in {
+		out[id] = costroute.DenierOverrides{Product: ov.Product, Group: ov.Group}
+	}
+	return out
 }
 
 // graphProductIDs returns the deduplicated head + seq product ids of g.

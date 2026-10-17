@@ -170,6 +170,9 @@ type loadedBundle struct {
 	// upstreamDeniers is the product-master DENIER of every upstream PRODUCT
 	// RM referenced by the chunk's routes. Read in DENIER mode only.
 	upstreamDeniers map[int64]float64
+	// rmDenierOverrides is each DENIER-mode chunk product's own RM denier
+	// overrides (000578). Absent = none.
+	rmDenierOverrides map[int64]costroute.DenierOverrides
 }
 
 // loadVBLossInputs loads what the POY-only VB loss rule needs for a chunk:
@@ -297,7 +300,8 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 // loadRMRatioInputs loads what the DENIER RM ratio mode needs for a chunk into
 // b: cpt_rm_ratio_mode per chunk product, the head denier of every GROUP RM
 // referenced by b.routes and the product-master DENIER of every upstream
-// PRODUCT RM (one query each).
+// PRODUCT RM (one query each), plus the RM denier overrides of the chunk's
+// DENIER-mode products (one query, skipped when there are none).
 func (s *Service) loadRMRatioInputs(ctx context.Context, products []int64, b *loadedBundle) error {
 	modes, err := s.loader.LoadProductRMRatioModes(ctx, products)
 	if err != nil {
@@ -312,7 +316,25 @@ func (s *Service) loadRMRatioInputs(ctx context.Context, products []int64, b *lo
 		return fmt.Errorf("load upstream deniers: %w", err)
 	}
 	b.rmRatioModes, b.rmGroupDeniers, b.rmGroupUseDraft, b.upstreamDeniers = modes, deniers, useDraft, upstreamDeniers
+	if denierProducts := denierModeProducts(products, modes); len(denierProducts) > 0 {
+		ovr, err := s.loader.LoadRMDenierOverrides(ctx, denierProducts)
+		if err != nil {
+			return fmt.Errorf("load RM denier overrides: %w", err)
+		}
+		b.rmDenierOverrides = ovr
+	}
 	return nil
+}
+
+// denierModeProducts returns the products whose mode is DENIER, in order.
+func denierModeProducts(products []int64, modes map[int64]string) []int64 {
+	var out []int64
+	for _, pid := range products {
+		if costroute.IsDenierMode(modes[pid]) {
+			out = append(out, pid)
+		}
+	}
+	return out
 }
 
 // loadSpinPool resolves the period's POY spin fixed-cost pool for a chunk and
@@ -450,6 +472,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		RMGroupDenier:     loaded.rmGroupDeniers,
 		RMGroupUseDraft:   loaded.rmGroupUseDraft,
 		UpstreamDenier:    loaded.upstreamDeniers,
+		RMDenierOverride:  loaded.rmDenierOverrides[pid],
 		UpstreamSnapshots: loaded.upstreamSnapshots,
 	})
 	if err != nil {

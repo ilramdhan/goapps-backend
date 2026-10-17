@@ -465,6 +465,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// Wire async import support (storage + job repo + publisher) into CPM handler.
 	costProductMasterHandler.WithImportSupport(costImportJobRepo, storageSvc, rmqAdapter)
 	costProductMasterHandler.WithAuditSupport(costAuditLogRepo)
+	costProductMasterHandler.WithRMDenierOverrides(costProductMasterRepo)
 	costProductMasterHandler.WithMBSourceAutoFill(mbSourceAutoFill)
 
 	// Build CostDataImportHandler (CAPP/CPP async import + export/template for CAPP/CPP/CPM).

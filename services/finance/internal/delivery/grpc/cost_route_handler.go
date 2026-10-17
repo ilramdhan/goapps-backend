@@ -364,6 +364,7 @@ func routeGraphToProto(g *costroute.Graph) *financev1.RouteGraph {
 				RatioSource:        rm.RatioSource,
 				Denier:             rm.Denier,
 				RatioNote:          rm.RatioNote,
+				DenierOverridden:   rm.DenierOverridden,
 			})
 		}
 		seqs = append(seqs, &financev1.CostRouteSeq{

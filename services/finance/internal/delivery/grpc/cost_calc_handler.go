@@ -1204,6 +1204,7 @@ func rmDetailsToProto(details []costcalcdom.RMDetailSummary) []*financev1.CostRM
 			RouteLevel:   d.RouteLevel,
 			Denier:       d.Denier,
 			RatioSource:  d.RatioSource,
+			DenierSource: d.DenierSource,
 		})
 	}
 	return out

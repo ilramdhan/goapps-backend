@@ -491,9 +491,11 @@ type CostRouteRm struct {
 	// Line denier used: upstream DENIER, or group denier / SPANDEX_DRAFT.
 	Denier float64 `protobuf:"fixed64,28,opt,name=denier,proto3" json:"denier,omitempty"`
 	// Explanatory note, e.g. missing denier treated as 0.
-	RatioNote     string `protobuf:"bytes,29,opt,name=ratio_note,json=ratioNote,proto3" json:"ratio_note,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	RatioNote string `protobuf:"bytes,29,opt,name=ratio_note,json=ratioNote,proto3" json:"ratio_note,omitempty"`
+	// True when the denier used for this line comes from a per-product override.
+	DenierOverridden bool `protobuf:"varint,30,opt,name=denier_overridden,json=denierOverridden,proto3" json:"denier_overridden,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CostRouteRm) Reset() {
@@ -727,6 +729,13 @@ func (x *CostRouteRm) GetRatioNote() string {
 		return x.RatioNote
 	}
 	return ""
+}
+
+func (x *CostRouteRm) GetDenierOverridden() bool {
+	if x != nil {
+		return x.DenierOverridden
+	}
+	return false
 }
 
 // RouteGraph bundles the head + all seqs (with rms inline).
@@ -2233,7 +2242,7 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\x13origin_product_code\x18\x10 \x01(\tR\x11originProductCode\x12\x1d\n" +
 	"\n" +
 	"nest_depth\x18\x11 \x01(\x05R\tnestDepth\x12\"\n" +
-	"\rrm_ratio_mode\x18\x12 \x01(\tR\vrmRatioMode\"\x94\b\n" +
+	"\rrm_ratio_mode\x18\x12 \x01(\tR\vrmRatioMode\"\xc1\b\n" +
 	"\vCostRouteRm\x12\x13\n" +
 	"\x05rm_id\x18\x01 \x01(\x03R\x04rmId\x12\x15\n" +
 	"\x06seq_id\x18\x02 \x01(\x03R\x05seqId\x121\n" +
@@ -2269,7 +2278,8 @@ const file_finance_v1_cost_route_proto_rawDesc = "" +
 	"\fratio_source\x18\x1b \x01(\tR\vratioSource\x12\x16\n" +
 	"\x06denier\x18\x1c \x01(\x01R\x06denier\x12\x1d\n" +
 	"\n" +
-	"ratio_note\x18\x1d \x01(\tR\tratioNote\"i\n" +
+	"ratio_note\x18\x1d \x01(\tR\tratioNote\x12+\n" +
+	"\x11denier_overridden\x18\x1e \x01(\bR\x10denierOverridden\"i\n" +
 	"\n" +
 	"RouteGraph\x12-\n" +
 	"\x04head\x18\x01 \x01(\v2\x19.finance.v1.CostRouteHeadR\x04head\x12,\n" +

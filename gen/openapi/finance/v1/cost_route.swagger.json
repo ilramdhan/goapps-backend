@@ -819,6 +819,10 @@
         "ratioNote": {
           "type": "string",
           "description": "Explanatory note, e.g. missing denier treated as 0."
+        },
+        "denierOverridden": {
+          "type": "boolean",
+          "description": "True when the denier used for this line comes from a per-product override."
         }
       },
       "description": "CostRouteRm is one input edge feeding a SEQ.\nExactly one of (rm_product_sys_id, rm_item_code, rm_group_code) is set,\nmatching rm_type."
