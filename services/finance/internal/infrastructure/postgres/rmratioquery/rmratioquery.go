@@ -143,3 +143,58 @@ func closeRows(rows *sql.Rows) {
 		_ = cerr
 	}
 }
+
+// DenierOverrides is one product's RM denier overrides (000578): the FINAL line
+// denier to use instead of the master denier, keyed by RM identity.
+type DenierOverrides struct {
+	Product map[int64]float64  // rm_product_sys_id -> denier (PRODUCT lines)
+	Group   map[string]float64 // rm_group_code -> denier (GROUP lines)
+}
+
+// ProductDenierOverrides returns cost_product_rm_denier_override per owner
+// product in one query. Products without an override are absent; a present
+// entry always has both maps non-nil.
+func ProductDenierOverrides(ctx context.Context, q Querier, productSysIDs []int64) (map[int64]DenierOverrides, error) {
+	out := map[int64]DenierOverrides{}
+	if len(productSysIDs) == 0 {
+		return out, nil
+	}
+	const sqlText = `
+		SELECT cpdo_product_sys_id, cpdo_rm_type,
+		       COALESCE(cpdo_rm_product_sys_id, 0), COALESCE(cpdo_rm_group_code, ''),
+		       cpdo_denier::float8
+		FROM cost_product_rm_denier_override
+		WHERE cpdo_product_sys_id = ANY($1)`
+	rows, err := q.QueryContext(ctx, sqlText, pq.Array(productSysIDs))
+	if err != nil {
+		return nil, fmt.Errorf("load RM denier overrides: %w", err)
+	}
+	defer closeRows(rows)
+	for rows.Next() {
+		var (
+			productSysID int64
+			rmType       string
+			rmProduct    int64
+			rmGroup      string
+			denier       float64
+		)
+		if err := rows.Scan(&productSysID, &rmType, &rmProduct, &rmGroup, &denier); err != nil {
+			return nil, fmt.Errorf("scan RM denier override: %w", err)
+		}
+		ov, ok := out[productSysID]
+		if !ok {
+			ov = DenierOverrides{Product: map[int64]float64{}, Group: map[string]float64{}}
+			out[productSysID] = ov
+		}
+		switch rmType {
+		case "PRODUCT":
+			ov.Product[rmProduct] = denier
+		case "GROUP":
+			ov.Group[rmGroup] = denier
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate RM denier overrides: %w", err)
+	}
+	return out, nil
+}
