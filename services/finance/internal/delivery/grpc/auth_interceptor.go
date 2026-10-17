@@ -675,7 +675,10 @@ func getRequiredPermission(fullMethod string) string {
 		// F2 (B2): DuplicateProduct mints a new product master row -- reuses the same
 		// create-like permission as CreateCostProductMaster/UpdateCostProductMaster per the
 		// locked design decision (no new IAM codes/migrations for this plan).
-		"/finance.v1.CostProductMasterService/DuplicateProduct": "finance.product.route.create",
+		"/finance.v1.CostProductMasterService/DuplicateProduct":       "finance.product.route.create",
+		"/finance.v1.CostProductMasterService/ListRMDenierOverrides":  "finance.product.route.view",
+		"/finance.v1.CostProductMasterService/UpsertRMDenierOverride": "finance.product.route.create",
+		"/finance.v1.CostProductMasterService/DeleteRMDenierOverride": "finance.product.route.create",
 
 		// CostProductParamBulkService (F4, B4): Bulk Edit Product Params reuses the
 		// same finance.product.route.* codes as CostProductParameterService per the

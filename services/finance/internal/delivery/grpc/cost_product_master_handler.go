@@ -36,8 +36,9 @@ type CostProductMasterHandler struct {
 	storageSvc        storage.Service
 	importPublisher   *rabbitmq.JobPublisherAdapter
 	validation        *ValidationHelper
-	auditRepo         costauditlog.Repository // optional; nil means no audit
-	erpAttrs          erpAttrUpdater          // optional; nil ignores ERP attribute fields
+	auditRepo         costauditlog.Repository           // optional; nil means no audit
+	erpAttrs          erpAttrUpdater                    // optional; nil ignores ERP attribute fields
+	overrideRepo      domain.RMDenierOverrideRepository // RM denier override RPCs; nil → 500
 }
 
 // erpAttrUpdater is the seam over app.UpdateErpAttributesHandler.
