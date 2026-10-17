@@ -341,6 +341,128 @@
         ]
       }
     },
+    "/api/v1/finance/cost-product-master/{productSysId}/rm-denier-overrides": {
+      "get": {
+        "operationId": "CostProductMasterService_ListRMDenierOverrides",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRMDenierOverridesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "CostProductMasterService"
+        ]
+      },
+      "delete": {
+        "operationId": "CostProductMasterService_DeleteRMDenierOverride",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteRMDenierOverrideResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "rmType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "rmProductSysId",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "rmGroupCode",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "applyToDuplicates",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "CostProductMasterService"
+        ]
+      },
+      "post": {
+        "operationId": "CostProductMasterService_UpsertRMDenierOverride",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertRMDenierOverrideResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productSysId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CostProductMasterServiceUpsertRMDenierOverrideBody"
+            }
+          }
+        ],
+        "tags": [
+          "CostProductMasterService"
+        ]
+      }
+    },
     "/api/v1/finance/cost-product-master/{productSysId}/unlock": {
       "post": {
         "operationId": "CostProductMasterService_UnlockCostProductMaster",
@@ -571,6 +693,31 @@
         "erpPrdPerDay": {
           "type": "string",
           "title": "decimal string"
+        }
+      }
+    },
+    "CostProductMasterServiceUpsertRMDenierOverrideBody": {
+      "type": "object",
+      "properties": {
+        "rmType": {
+          "type": "string"
+        },
+        "rmProductSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmGroupCode": {
+          "type": "string"
+        },
+        "denier": {
+          "type": "number",
+          "format": "double"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "applyToDuplicates": {
+          "type": "boolean"
         }
       }
     },
@@ -813,6 +960,25 @@
         }
       }
     },
+    "v1DeleteRMDenierOverrideResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "deletedCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "appliedProductSysIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          }
+        }
+      }
+    },
     "v1DownloadCostProductMasterTemplateResponse": {
       "type": "object",
       "properties": {
@@ -827,6 +993,22 @@
           "type": "string"
         }
       }
+    },
+    "v1DuplicateProductRef": {
+      "type": "object",
+      "properties": {
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        }
+      },
+      "description": "DuplicateProductRef identifies a product sharing the same duplicate family."
     },
     "v1DuplicateProductResponse": {
       "type": "object",
@@ -925,6 +1107,28 @@
         }
       }
     },
+    "v1ListRMDenierOverridesResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RMDenierOverride"
+          }
+        },
+        "duplicateProducts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DuplicateProductRef"
+          }
+        }
+      }
+    },
     "v1PaginationRequest": {
       "type": "object",
       "properties": {
@@ -967,6 +1171,59 @@
       },
       "description": "PaginationResponse contains pagination metadata for list responses."
     },
+    "v1RMDenierOverride": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "productSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmType": {
+          "type": "string",
+          "description": "PRODUCT | GROUP."
+        },
+        "rmProductSysId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rmProductCode": {
+          "type": "string"
+        },
+        "rmProductName": {
+          "type": "string"
+        },
+        "rmGroupCode": {
+          "type": "string"
+        },
+        "rmGroupName": {
+          "type": "string"
+        },
+        "denier": {
+          "type": "number",
+          "format": "double"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "updatedBy": {
+          "type": "string"
+        }
+      },
+      "description": "RMDenierOverride is a per-product denier override for one RM (product or group)."
+    },
     "v1UnlockCostProductMasterResponse": {
       "type": "object",
       "properties": {
@@ -997,6 +1254,24 @@
         },
         "data": {
           "$ref": "#/definitions/v1CostProductMaster"
+        }
+      }
+    },
+    "v1UpsertRMDenierOverrideResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "$ref": "#/definitions/v1RMDenierOverride"
+        },
+        "appliedProductSysIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          }
         }
       }
     },

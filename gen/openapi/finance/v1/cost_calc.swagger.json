@@ -1632,6 +1632,10 @@
         "ratioSource": {
           "type": "string",
           "description": "Source of the ratio (e.g. DENIER, SPANDEX_DRAFT). Only set for DENIER ratio-mode products."
+        },
+        "denierSource": {
+          "type": "string",
+          "description": "Denier provenance: \"\" | MASTER | OVERRIDE. Only set for DENIER ratio-mode lines."
         }
       },
       "description": "CostRMDetail is one RM input edge contribution to the cost."

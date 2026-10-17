@@ -31,6 +31,9 @@ const (
 	CostProductMasterService_ImportCostProductMasters_FullMethodName          = "/finance.v1.CostProductMasterService/ImportCostProductMasters"
 	CostProductMasterService_DownloadCostProductMasterTemplate_FullMethodName = "/finance.v1.CostProductMasterService/DownloadCostProductMasterTemplate"
 	CostProductMasterService_DuplicateProduct_FullMethodName                  = "/finance.v1.CostProductMasterService/DuplicateProduct"
+	CostProductMasterService_ListRMDenierOverrides_FullMethodName             = "/finance.v1.CostProductMasterService/ListRMDenierOverrides"
+	CostProductMasterService_UpsertRMDenierOverride_FullMethodName            = "/finance.v1.CostProductMasterService/UpsertRMDenierOverride"
+	CostProductMasterService_DeleteRMDenierOverride_FullMethodName            = "/finance.v1.CostProductMasterService/DeleteRMDenierOverride"
 )
 
 // CostProductMasterServiceClient is the client API for CostProductMasterService service.
@@ -49,6 +52,9 @@ type CostProductMasterServiceClient interface {
 	ImportCostProductMasters(ctx context.Context, in *ImportCostProductMastersRequest, opts ...grpc.CallOption) (*ImportCostProductMastersResponse, error)
 	DownloadCostProductMasterTemplate(ctx context.Context, in *DownloadCostProductMasterTemplateRequest, opts ...grpc.CallOption) (*DownloadCostProductMasterTemplateResponse, error)
 	DuplicateProduct(ctx context.Context, in *DuplicateProductRequest, opts ...grpc.CallOption) (*DuplicateProductResponse, error)
+	ListRMDenierOverrides(ctx context.Context, in *ListRMDenierOverridesRequest, opts ...grpc.CallOption) (*ListRMDenierOverridesResponse, error)
+	UpsertRMDenierOverride(ctx context.Context, in *UpsertRMDenierOverrideRequest, opts ...grpc.CallOption) (*UpsertRMDenierOverrideResponse, error)
+	DeleteRMDenierOverride(ctx context.Context, in *DeleteRMDenierOverrideRequest, opts ...grpc.CallOption) (*DeleteRMDenierOverrideResponse, error)
 }
 
 type costProductMasterServiceClient struct {
@@ -179,6 +185,36 @@ func (c *costProductMasterServiceClient) DuplicateProduct(ctx context.Context, i
 	return out, nil
 }
 
+func (c *costProductMasterServiceClient) ListRMDenierOverrides(ctx context.Context, in *ListRMDenierOverridesRequest, opts ...grpc.CallOption) (*ListRMDenierOverridesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRMDenierOverridesResponse)
+	err := c.cc.Invoke(ctx, CostProductMasterService_ListRMDenierOverrides_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductMasterServiceClient) UpsertRMDenierOverride(ctx context.Context, in *UpsertRMDenierOverrideRequest, opts ...grpc.CallOption) (*UpsertRMDenierOverrideResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertRMDenierOverrideResponse)
+	err := c.cc.Invoke(ctx, CostProductMasterService_UpsertRMDenierOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costProductMasterServiceClient) DeleteRMDenierOverride(ctx context.Context, in *DeleteRMDenierOverrideRequest, opts ...grpc.CallOption) (*DeleteRMDenierOverrideResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteRMDenierOverrideResponse)
+	err := c.cc.Invoke(ctx, CostProductMasterService_DeleteRMDenierOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CostProductMasterServiceServer is the server API for CostProductMasterService service.
 // All implementations must embed UnimplementedCostProductMasterServiceServer
 // for forward compatibility.
@@ -195,6 +231,9 @@ type CostProductMasterServiceServer interface {
 	ImportCostProductMasters(context.Context, *ImportCostProductMastersRequest) (*ImportCostProductMastersResponse, error)
 	DownloadCostProductMasterTemplate(context.Context, *DownloadCostProductMasterTemplateRequest) (*DownloadCostProductMasterTemplateResponse, error)
 	DuplicateProduct(context.Context, *DuplicateProductRequest) (*DuplicateProductResponse, error)
+	ListRMDenierOverrides(context.Context, *ListRMDenierOverridesRequest) (*ListRMDenierOverridesResponse, error)
+	UpsertRMDenierOverride(context.Context, *UpsertRMDenierOverrideRequest) (*UpsertRMDenierOverrideResponse, error)
+	DeleteRMDenierOverride(context.Context, *DeleteRMDenierOverrideRequest) (*DeleteRMDenierOverrideResponse, error)
 	mustEmbedUnimplementedCostProductMasterServiceServer()
 }
 
@@ -240,6 +279,15 @@ func (UnimplementedCostProductMasterServiceServer) DownloadCostProductMasterTemp
 }
 func (UnimplementedCostProductMasterServiceServer) DuplicateProduct(context.Context, *DuplicateProductRequest) (*DuplicateProductResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DuplicateProduct not implemented")
+}
+func (UnimplementedCostProductMasterServiceServer) ListRMDenierOverrides(context.Context, *ListRMDenierOverridesRequest) (*ListRMDenierOverridesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRMDenierOverrides not implemented")
+}
+func (UnimplementedCostProductMasterServiceServer) UpsertRMDenierOverride(context.Context, *UpsertRMDenierOverrideRequest) (*UpsertRMDenierOverrideResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpsertRMDenierOverride not implemented")
+}
+func (UnimplementedCostProductMasterServiceServer) DeleteRMDenierOverride(context.Context, *DeleteRMDenierOverrideRequest) (*DeleteRMDenierOverrideResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteRMDenierOverride not implemented")
 }
 func (UnimplementedCostProductMasterServiceServer) mustEmbedUnimplementedCostProductMasterServiceServer() {
 }
@@ -479,6 +527,60 @@ func _CostProductMasterService_DuplicateProduct_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostProductMasterService_ListRMDenierOverrides_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRMDenierOverridesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductMasterServiceServer).ListRMDenierOverrides(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductMasterService_ListRMDenierOverrides_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductMasterServiceServer).ListRMDenierOverrides(ctx, req.(*ListRMDenierOverridesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductMasterService_UpsertRMDenierOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertRMDenierOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductMasterServiceServer).UpsertRMDenierOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductMasterService_UpsertRMDenierOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductMasterServiceServer).UpsertRMDenierOverride(ctx, req.(*UpsertRMDenierOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostProductMasterService_DeleteRMDenierOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRMDenierOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostProductMasterServiceServer).DeleteRMDenierOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostProductMasterService_DeleteRMDenierOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostProductMasterServiceServer).DeleteRMDenierOverride(ctx, req.(*DeleteRMDenierOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CostProductMasterService_ServiceDesc is the grpc.ServiceDesc for CostProductMasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -533,6 +635,18 @@ var CostProductMasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DuplicateProduct",
 			Handler:    _CostProductMasterService_DuplicateProduct_Handler,
+		},
+		{
+			MethodName: "ListRMDenierOverrides",
+			Handler:    _CostProductMasterService_ListRMDenierOverrides_Handler,
+		},
+		{
+			MethodName: "UpsertRMDenierOverride",
+			Handler:    _CostProductMasterService_UpsertRMDenierOverride_Handler,
+		},
+		{
+			MethodName: "DeleteRMDenierOverride",
+			Handler:    _CostProductMasterService_DeleteRMDenierOverride_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
