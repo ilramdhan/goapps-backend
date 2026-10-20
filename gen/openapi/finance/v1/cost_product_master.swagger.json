@@ -662,6 +662,10 @@
         "erpPrdPerDay": {
           "type": "string",
           "title": "decimal string"
+        },
+        "rmRatioModeOverride": {
+          "type": "string",
+          "description": "Per-product RM ratio mode override. Absent = unchanged; \"\" = clear (follow product type)."
         }
       }
     },
@@ -888,6 +892,14 @@
         "erpPrdPerDay": {
           "type": "string",
           "title": "decimal string"
+        },
+        "rmRatioModeOverride": {
+          "type": "string",
+          "description": "Per-product RM ratio mode: \"\" = follow product type, INPUT or DENIER (migration 000579)."
+        },
+        "effectiveRmRatioMode": {
+          "type": "string",
+          "description": "COALESCE(product override, product type mode); read-only."
         }
       }
     },
