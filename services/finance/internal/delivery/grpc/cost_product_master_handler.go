@@ -39,6 +39,28 @@ type CostProductMasterHandler struct {
 	auditRepo         costauditlog.Repository           // optional; nil means no audit
 	erpAttrs          erpAttrUpdater                    // optional; nil ignores ERP attribute fields
 	overrideRepo      domain.RMDenierOverrideRepository // RM denier override RPCs; nil → 500
+	rmRatioMode       rmRatioModeUpdater                // optional; nil ignores rm_ratio_mode_override
+}
+
+// rmRatioModeUpdater is the seam over app.UpdateRMRatioModeHandler.
+type rmRatioModeUpdater interface {
+	Handle(ctx context.Context, cmd app.UpdateRMRatioModeCommand) (*domain.CostProductMaster, error)
+}
+
+// WithRMRatioMode enables persisting the per-product rm_ratio_mode_override carried by Update (000579).
+func (h *CostProductMasterHandler) WithRMRatioMode(u rmRatioModeUpdater) { h.rmRatioMode = u }
+
+// applyRMRatioMode applies the optional override after the main write succeeded.
+// mode nil = unchanged; "" clears (follow product type).
+func (h *CostProductMasterHandler) applyRMRatioMode(ctx context.Context, cur *domain.CostProductMaster, mode *string, actor string) (*domain.CostProductMaster, error) {
+	if h.rmRatioMode == nil || mode == nil {
+		return cur, nil
+	}
+	up, err := h.rmRatioMode.Handle(ctx, app.UpdateRMRatioModeCommand{ProductSysID: cur.ProductSysID(), Mode: *mode, ActorUserID: actor})
+	if err != nil || up == nil {
+		return cur, err
+	}
+	return up, nil
 }
 
 // erpAttrUpdater is the seam over app.UpdateErpAttributesHandler.
@@ -217,6 +239,11 @@ func (h *CostProductMasterHandler) UpdateCostProductMaster(ctx context.Context, 
 	up, aerr := h.applyErpAttrs(ctx, p, erpAttrPatch(req.GetErpFgType(), req.GetErpChpItemCode(), req.GetErpMsBatchItem(), req.GetErpItemType(), req.GetErpPrdPerDay()), actor)
 	if aerr != nil {
 		return &financev1.UpdateCostProductMasterResponse{Base: productMasterErrToBase(aerr)}, nil
+	}
+	p = up
+	up, merr := h.applyRMRatioMode(ctx, p, req.RmRatioModeOverride, actor)
+	if merr != nil {
+		return &financev1.UpdateCostProductMasterResponse{Base: productMasterErrToBase(merr)}, nil
 	}
 	p = up
 	h.emitAudit(ctx, costauditlog.OpUpdate, p.ProductSysID(), actor)
@@ -443,6 +470,9 @@ func costProductMasterToProto(p *domain.CostProductMaster) *financev1.CostProduc
 		IsActive:       p.IsActive(),
 		Source:         p.Source(),
 		IsLocked:       p.IsLocked(),
+		// 000579 per-product RM ratio mode.
+		RmRatioModeOverride:  p.RMRatioModeOverride(),
+		EffectiveRmRatioMode: p.EffectiveRMRatioMode(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: p.CreatedAt().Format(time.RFC3339),
 			CreatedBy: p.CreatedBy(),
@@ -460,7 +490,8 @@ func productMasterErrToBase(err error) *commonv1.BaseResponse {
 		return ConflictResponse(err.Error())
 	case errors.Is(err, domain.ErrInvalidProductName),
 		errors.Is(err, domain.ErrInvalidGradeCode),
-		errors.Is(err, domain.ErrInactive):
+		errors.Is(err, domain.ErrInactive),
+		errors.Is(err, domain.ErrInvalidRMRatioModeOverride):
 		return ErrorResponse("400", err.Error())
 	// ErrMBProductNotManuallyCreatable → 400: the caller asked for a product type that is
 	// not addressable through this API at all. Without this arm it fell through to

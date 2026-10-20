@@ -53,8 +53,12 @@ type CostProductMaster struct {
 	ErpMsBatchItem  string                 `protobuf:"bytes,25,opt,name=erp_ms_batch_item,json=erpMsBatchItem,proto3" json:"erp_ms_batch_item,omitempty"`
 	ErpItemType     string                 `protobuf:"bytes,26,opt,name=erp_item_type,json=erpItemType,proto3" json:"erp_item_type,omitempty"`
 	ErpPrdPerDay    string                 `protobuf:"bytes,27,opt,name=erp_prd_per_day,json=erpPrdPerDay,proto3" json:"erp_prd_per_day,omitempty"` // decimal string
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Per-product RM ratio mode: "" = follow product type, INPUT or DENIER (migration 000579).
+	RmRatioModeOverride string `protobuf:"bytes,28,opt,name=rm_ratio_mode_override,json=rmRatioModeOverride,proto3" json:"rm_ratio_mode_override,omitempty"`
+	// COALESCE(product override, product type mode); read-only.
+	EffectiveRmRatioMode string `protobuf:"bytes,29,opt,name=effective_rm_ratio_mode,json=effectiveRmRatioMode,proto3" json:"effective_rm_ratio_mode,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CostProductMaster) Reset() {
@@ -272,6 +276,20 @@ func (x *CostProductMaster) GetErpItemType() string {
 func (x *CostProductMaster) GetErpPrdPerDay() string {
 	if x != nil {
 		return x.ErpPrdPerDay
+	}
+	return ""
+}
+
+func (x *CostProductMaster) GetRmRatioModeOverride() string {
+	if x != nil {
+		return x.RmRatioModeOverride
+	}
+	return ""
+}
+
+func (x *CostProductMaster) GetEffectiveRmRatioMode() string {
+	if x != nil {
+		return x.EffectiveRmRatioMode
 	}
 	return ""
 }
@@ -679,8 +697,10 @@ type UpdateCostProductMasterRequest struct {
 	ErpMsBatchItem string `protobuf:"bytes,11,opt,name=erp_ms_batch_item,json=erpMsBatchItem,proto3" json:"erp_ms_batch_item,omitempty"`
 	ErpItemType    string `protobuf:"bytes,12,opt,name=erp_item_type,json=erpItemType,proto3" json:"erp_item_type,omitempty"`
 	ErpPrdPerDay   string `protobuf:"bytes,13,opt,name=erp_prd_per_day,json=erpPrdPerDay,proto3" json:"erp_prd_per_day,omitempty"` // decimal string
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Per-product RM ratio mode override. Absent = unchanged; "" = clear (follow product type).
+	RmRatioModeOverride *string `protobuf:"bytes,14,opt,name=rm_ratio_mode_override,json=rmRatioModeOverride,proto3,oneof" json:"rm_ratio_mode_override,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *UpdateCostProductMasterRequest) Reset() {
@@ -800,6 +820,13 @@ func (x *UpdateCostProductMasterRequest) GetErpItemType() string {
 func (x *UpdateCostProductMasterRequest) GetErpPrdPerDay() string {
 	if x != nil {
 		return x.ErpPrdPerDay
+	}
+	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetRmRatioModeOverride() string {
+	if x != nil && x.RmRatioModeOverride != nil {
+		return *x.RmRatioModeOverride
 	}
 	return ""
 }
@@ -2425,7 +2452,7 @@ var File_finance_v1_cost_product_master_proto protoreflect.FileDescriptor
 const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\n" +
 	"$finance/v1/cost_product_master.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xc6\a\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xb2\b\n" +
 	"\x11CostProductMaster\x12$\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03R\fproductSysId\x12!\n" +
 	"\fproduct_code\x18\x02 \x01(\tR\vproductCode\x12&\n" +
@@ -2457,7 +2484,9 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\x11erp_chp_item_code\x18\x18 \x01(\tR\x0eerpChpItemCode\x12)\n" +
 	"\x11erp_ms_batch_item\x18\x19 \x01(\tR\x0eerpMsBatchItem\x12\"\n" +
 	"\rerp_item_type\x18\x1a \x01(\tR\verpItemType\x12%\n" +
-	"\x0ferp_prd_per_day\x18\x1b \x01(\tR\ferpPrdPerDay\"\xf2\x04\n" +
+	"\x0ferp_prd_per_day\x18\x1b \x01(\tR\ferpPrdPerDay\x123\n" +
+	"\x16rm_ratio_mode_override\x18\x1c \x01(\tR\x13rmRatioModeOverride\x125\n" +
+	"\x17effective_rm_ratio_mode\x18\x1d \x01(\tR\x14effectiveRmRatioMode\"\xf2\x04\n" +
 	"\x1eCreateCostProductMasterRequest\x12/\n" +
 	"\x0fproduct_type_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rproductTypeId\x12-\n" +
 	"\fproduct_name\x18\x02 \x01(\tB\n" +
@@ -2488,7 +2517,7 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\fproduct_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\vproductCode\"\x84\x01\n" +
 	"\"GetCostProductMasterByCodeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
-	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xf0\x04\n" +
+	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xdd\x05\n" +
 	"\x1eUpdateCostProductMasterRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\fproductSysId\x12-\n" +
 	"\fproduct_name\x18\x02 \x01(\tB\n" +
@@ -2506,7 +2535,9 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	" \x01(\tB\a\xbaH\x04r\x02\x182R\x0eerpChpItemCode\x122\n" +
 	"\x11erp_ms_batch_item\x18\v \x01(\tB\a\xbaH\x04r\x02\x18\fR\x0eerpMsBatchItem\x12+\n" +
 	"\rerp_item_type\x18\f \x01(\tB\a\xbaH\x04r\x02\x18\x14R\verpItemType\x12M\n" +
-	"\x0ferp_prd_per_day\x18\r \x01(\tB&\xbaH#r!2\x1f^([0-9]{1,12}(\\.[0-9]{1,6})?)?$R\ferpPrdPerDay\"\x81\x01\n" +
+	"\x0ferp_prd_per_day\x18\r \x01(\tB&\xbaH#r!2\x1f^([0-9]{1,12}(\\.[0-9]{1,6})?)?$R\ferpPrdPerDay\x12P\n" +
+	"\x16rm_ratio_mode_override\x18\x0e \x01(\tB\x16\xbaH\x13r\x11R\x00R\x05INPUTR\x06DENIERH\x00R\x13rmRatioModeOverride\x88\x01\x01B\x19\n" +
+	"\x17_rm_ratio_mode_override\"\x81\x01\n" +
 	"\x1fUpdateCostProductMasterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
 	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xf7\x03\n" +
@@ -2783,6 +2814,7 @@ func file_finance_v1_cost_product_master_proto_init() {
 	if File_finance_v1_cost_product_master_proto != nil {
 		return
 	}
+	file_finance_v1_cost_product_master_proto_msgTypes[7].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
