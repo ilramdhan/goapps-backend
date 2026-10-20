@@ -21,16 +21,19 @@ type Querier interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
-// ProductRatioModes returns cost_product_type.cpt_rm_ratio_mode per product
-// (upper-cased, trimmed) in one query. Unknown products are absent, which
-// callers treat as INPUT.
+// ProductRatioModes returns the effective RM ratio mode per product
+// (upper-cased, trimmed) in one query: the per-product override
+// cost_product_master.cpm_rm_ratio_mode (000579) when set, else the product
+// type's cost_product_type.cpt_rm_ratio_mode (000570). NULL override
+// everywhere is exactly the type-only behavior. Unknown products are absent,
+// which callers treat as INPUT.
 func ProductRatioModes(ctx context.Context, q Querier, productSysIDs []int64) (map[int64]string, error) {
 	out := map[int64]string{}
 	if len(productSysIDs) == 0 {
 		return out, nil
 	}
 	const sqlText = `
-		SELECT pm.cpm_product_sys_id, pt.cpt_rm_ratio_mode
+		SELECT pm.cpm_product_sys_id, COALESCE(pm.cpm_rm_ratio_mode, pt.cpt_rm_ratio_mode)
 		FROM cost_product_master pm
 		JOIN cost_product_type   pt ON pt.cpt_type_id = pm.cpm_product_type_id
 		WHERE pm.cpm_product_sys_id = ANY($1)`

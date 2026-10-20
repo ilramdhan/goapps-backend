@@ -19,8 +19,8 @@ const (
 )
 
 // LoadProductRMRatioModes implements ProductLoader.LoadProductRMRatioModes with
-// one query per chunk: cost_product_master.cpm_product_type_id ->
-// cost_product_type.cpt_rm_ratio_mode (000570, NOT NULL DEFAULT 'INPUT'). An
+// one query per chunk: COALESCE(cost_product_master.cpm_rm_ratio_mode (000579,
+// per-product override), cost_product_type.cpt_rm_ratio_mode (000570)). An
 // unknown product id is simply absent, which the engine treats as INPUT. The
 // SQL is shared with the route graph ratio loader (rmratioquery).
 func (l *productLoader) LoadProductRMRatioModes(ctx context.Context, productSysIDs []int64) (map[int64]string, error) {

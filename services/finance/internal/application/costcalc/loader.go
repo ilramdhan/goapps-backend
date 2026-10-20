@@ -296,8 +296,9 @@ type ProductLoader interface {
 	// for every product type, unlike LoadOilContext which only covers types with
 	// an oil class. Products not found are absent.
 	LoadProductTypeCodes(ctx context.Context, productSysIDs []int64) (map[int64]string, error)
-	// LoadProductRMRatioModes returns cost_product_type.cpt_rm_ratio_mode
-	// (INPUT | DENIER, upper-cased) per product. Products not found are absent
+	// LoadProductRMRatioModes returns the effective RM ratio mode per product:
+	// cpm_rm_ratio_mode (000579) when set, else cpt_rm_ratio_mode
+	// (INPUT | DENIER, upper-cased). Products not found are absent
 	// and treated as INPUT. Feeds ComputeInput.RMRatioMode.
 	LoadProductRMRatioModes(ctx context.Context, productSysIDs []int64) (map[int64]string, error)
 	// LoadRMGroupDeniers returns cst_rm_group_head.denier keyed by group_code
