@@ -1191,12 +1191,12 @@ func duplicateProductTx(
 			cpm_product_code, cpm_product_type_id, cpm_product_name,
 			cpm_shade_code, cpm_grade_code, cpm_description,
 			cpm_is_active, cpm_created_by, cpm_updated_by,
-			cpm_duplicated_from_sys_id
+			cpm_duplicated_from_sys_id, cpm_rm_ratio_mode
 		)
 		SELECT $1, cpm_product_type_id, cpm_product_name,
 		       cpm_shade_code, cpm_grade_code, cpm_description,
 		       TRUE, $2, $2,
-		       cpm_product_sys_id
+		       cpm_product_sys_id, cpm_rm_ratio_mode
 		FROM cost_product_master
 		WHERE cpm_product_sys_id = $3
 		RETURNING cpm_product_sys_id`,

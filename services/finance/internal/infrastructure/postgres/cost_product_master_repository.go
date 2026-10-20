@@ -34,7 +34,9 @@ const cpmColumns = `
 	COALESCE(cpm_shade_name,''),COALESCE(cpm_flex_01,''),COALESCE(cpm_flex_02,''),COALESCE(cpm_flex_03,''),
 	COALESCE(cpm_source,''),cpm_is_locked,
 	COALESCE(cpm_erp_fg_type,''),COALESCE(cpm_erp_chp_item_code,''),COALESCE(cpm_erp_ms_batch_item,''),
-	COALESCE(cpm_erp_item_type,''),cpm_erp_prd_per_day`
+	COALESCE(cpm_erp_item_type,''),cpm_erp_prd_per_day,
+	COALESCE(cpm_rm_ratio_mode,''),
+	COALESCE(cpm_rm_ratio_mode,(SELECT cpt_rm_ratio_mode FROM cost_product_type WHERE cpt_type_id = cpm_product_type_id),'')`
 
 // Create inserts the product. product_code is generated atomically via generate_cost_product_code()
 // inside the same INSERT, returning the new sys_id and code.
@@ -660,6 +662,9 @@ type cpmRow struct {
 	erpMsBatchItem string
 	erpItemType    string
 	erpPrdPerDay   decimal.NullDecimal
+	// 000579 per-product RM ratio mode ("" = follow type) and the effective mode.
+	rmRatioModeOverride  string
+	effectiveRMRatioMode string
 }
 
 func (r *CostProductMasterRepository) scanRow(row *sql.Row) (*costproductmaster.CostProductMaster, error) {
@@ -674,6 +679,7 @@ func (r *CostProductMasterRepository) scanRow(row *sql.Row) (*costproductmaster.
 		&d.shadeName, &d.flex01, &d.flex02, &d.flex03,
 		&d.source, &d.locked,
 		&d.erpFgType, &d.erpChpItemCode, &d.erpMsBatchItem, &d.erpItemType, &d.erpPrdPerDay,
+		&d.rmRatioModeOverride, &d.effectiveRMRatioMode,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, costproductmaster.ErrNotFound
@@ -695,6 +701,7 @@ func (r *CostProductMasterRepository) scanRows(rows *sql.Rows) (*costproductmast
 		&d.shadeName, &d.flex01, &d.flex02, &d.flex03,
 		&d.source, &d.locked,
 		&d.erpFgType, &d.erpChpItemCode, &d.erpMsBatchItem, &d.erpItemType, &d.erpPrdPerDay,
+		&d.rmRatioModeOverride, &d.effectiveRMRatioMode,
 	); err != nil {
 		return nil, fmt.Errorf("scan cost_product_master row: %w", err)
 	}
@@ -733,6 +740,7 @@ func cpmFromRow(d cpmRow) *costproductmaster.CostProductMaster {
 		FgType: d.erpFgType, ChpItemCode: d.erpChpItemCode, MsBatchItem: d.erpMsBatchItem,
 		ItemType: d.erpItemType, PrdPerDay: d.erpPrdPerDay,
 	})
+	p.RestoreRMRatioMode(d.rmRatioModeOverride, d.effectiveRMRatioMode)
 	return p
 }
 
