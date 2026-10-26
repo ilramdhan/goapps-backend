@@ -815,8 +815,11 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// P8-T2), so the service boots unchanged when Oracle is absent.
 	erpWriter := setupErpWriter(cfg)
 
-	// Oracle BI ETL runner (optional — graceful degradation when Oracle is unavailable).
-	var biETLRunner jobapp.BIETLRunner
+	// Oracle BI ETL runners (optional — graceful degradation when Oracle is unavailable).
+	// bietl.Router picks the runner by the job's data source (HD-01): ERP_ORACLE → MV loader,
+	// HRIS_ORACLE → HRIS loader (H010). A source without a runner fails its job with a clear
+	// message; the service itself keeps running.
+	biETLRouter := bietl.NewRouter(biDataSourceRepo)
 	oracleClient, oracleErr := oracleinfra.NewClient(cfg.Oracle, log.Logger)
 	if oracleErr != nil {
 		log.Warn().Err(oracleErr).Msg("Oracle unavailable; BI ETL jobs (etl_mis/etl_delivery_margin/etl_sales) will fail gracefully")
@@ -827,8 +830,18 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 			}
 		}()
 		biMVRepo := oracleinfra.NewBIMVRepository(oracleClient)
-		biETLRunner = bietl.NewMVLoader(biMVRepo, biFactRepo)
+		biETLRouter.Register(bietl.SourceERPOracle, bietl.NewMVLoader(biMVRepo, biFactRepo))
 	}
+	// HRIS connection (HD-02): separate read-only account; opt-in via ORACLE_HRIS_* env.
+	if hrisClient := setupHRISClient(cfg.OracleHRIS); hrisClient != nil {
+		defer func() {
+			if cErr := hrisClient.Close(); cErr != nil {
+				log.Warn().Err(cErr).Msg("Failed to close Oracle HRIS connection")
+			}
+		}()
+		// The HRIS loader is registered here by H010 (bietl.SourceHRISOracle).
+	}
+	var biETLRunner jobapp.BIETLRunner = biETLRouter
 
 	// ERP cost integration (plan-04 P3-T3/T4): CreateBatch, batch-step
 	// trigger and period lock/unlock with the real read-only ADJ posted probe.
@@ -1349,4 +1362,20 @@ func (a *cprRequestNoAdapter) GetRequestNo(ctx context.Context, requestID int64)
 		return "", fmt.Errorf("cprRequestNoAdapter.GetRequestNo: %w", err)
 	}
 	return req.RequestNo(), nil
+}
+
+// setupHRISClient opens the optional HRIS Oracle connection (HD-02). It returns nil when
+// ORACLE_HRIS_* is not configured or the connection fails; HRIS ETL jobs then fail gracefully
+// through bietl.Router while the service keeps running.
+func setupHRISClient(cfg config.OracleConfig) *oracleinfra.Client {
+	if !cfg.Configured() {
+		log.Info().Msg("Oracle HRIS not configured (ORACLE_HRIS_*); HRIS ETL runner not installed")
+		return nil
+	}
+	client, err := oracleinfra.NewClient(cfg, log.Logger)
+	if err != nil {
+		log.Warn().Err(err).Msg("Oracle HRIS unavailable; HRIS ETL jobs will fail gracefully")
+		return nil
+	}
+	return client
 }

@@ -12,21 +12,24 @@ import (
 
 // Config holds all configuration for the service.
 type Config struct {
-	App       AppConfig            `mapstructure:"app"`
-	Server    ServerConfig         `mapstructure:"server"`
-	Database  DatabaseConfig       `mapstructure:"database"`
-	Redis     RedisConfig          `mapstructure:"redis"`
-	AuthRedis AuthRedisConfig      `mapstructure:"auth_redis"`
-	JWT       JWTConfig            `mapstructure:"jwt"`
-	CORS      CORSConfig           `mapstructure:"cors"`
-	Oracle    OracleConfig         `mapstructure:"oracle"`
-	OracleIF  OracleIFConfig       `mapstructure:"oracle_if"`
-	ERP       ErpIntegrationConfig `mapstructure:"erp_integration"`
-	RabbitMQ  RabbitMQConfig       `mapstructure:"rabbitmq"`
-	Tracing   TracingConfig        `mapstructure:"tracing"`
-	Logger    LoggerConfig         `mapstructure:"logger"`
-	Storage   StorageConfig        `mapstructure:"storage"`
-	IAMClient IAMClientConfig      `mapstructure:"iam_client"`
+	App       AppConfig       `mapstructure:"app"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	AuthRedis AuthRedisConfig `mapstructure:"auth_redis"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
+	CORS      CORSConfig      `mapstructure:"cors"`
+	Oracle    OracleConfig    `mapstructure:"oracle"`
+	OracleIF  OracleIFConfig  `mapstructure:"oracle_if"`
+	// OracleHRIS is the separate read-only HRIS connection for the HR dashboard (HD-02, K5).
+	// Empty Host/Service/User/Password ⇒ HRIS runner is not installed; the service still starts.
+	OracleHRIS OracleConfig         `mapstructure:"oracle_hris"`
+	ERP        ErpIntegrationConfig `mapstructure:"erp_integration"`
+	RabbitMQ   RabbitMQConfig       `mapstructure:"rabbitmq"`
+	Tracing    TracingConfig        `mapstructure:"tracing"`
+	Logger     LoggerConfig         `mapstructure:"logger"`
+	Storage    StorageConfig        `mapstructure:"storage"`
+	IAMClient  IAMClientConfig      `mapstructure:"iam_client"`
 }
 
 // IAMClientConfig configures the gRPC client used by the worker to call IAM
@@ -65,6 +68,12 @@ type OracleConfig struct {
 	Password        string        `mapstructure:"password"`
 	MaxOpenConns    int           `mapstructure:"max_open_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+}
+
+// Configured reports whether enough settings are present to attempt a connection.
+// Unlike the ERP connection there is no default host: HRIS is opt-in (HD-02).
+func (c OracleConfig) Configured() bool {
+	return c.Host != "" && c.User != "" && c.Password != "" && c.Service != ""
 }
 
 // RabbitMQConfig holds RabbitMQ connection configuration.
@@ -272,6 +281,16 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("oracle.conn_max_lifetime", 10*time.Minute)
 	setErpDefaults(v)
 
+	// Oracle HRIS defaults (HD-02): no host/credentials by default → runner not installed.
+	// Small pool: the ETL is a single daily job (~3 connections).
+	v.SetDefault("oracle_hris.host", "")
+	v.SetDefault("oracle_hris.port", 1521)
+	v.SetDefault("oracle_hris.service", "")
+	v.SetDefault("oracle_hris.user", "")
+	v.SetDefault("oracle_hris.password", "")
+	v.SetDefault("oracle_hris.max_open_conns", 3)
+	v.SetDefault("oracle_hris.conn_max_lifetime", 10*time.Minute)
+
 	// RabbitMQ defaults (URL must come from env var — never hardcode credentials)
 	v.SetDefault("rabbitmq.url", "")
 	v.SetDefault("rabbitmq.prefetch_count", 1)
@@ -342,6 +361,12 @@ func bindEnvVars(v *viper.Viper) {
 		{"oracle.service", "ORACLE_SERVICE"},
 		{"oracle.user", "ORACLE_USER"},
 		{"oracle.password", "ORACLE_PASSWORD"},
+		// Oracle HRIS (HD-02)
+		{"oracle_hris.host", "ORACLE_HRIS_HOST"},
+		{"oracle_hris.port", "ORACLE_HRIS_PORT"},
+		{"oracle_hris.service", "ORACLE_HRIS_SERVICE"},
+		{"oracle_hris.user", "ORACLE_HRIS_USER"},
+		{"oracle_hris.password", "ORACLE_HRIS_PASSWORD"},
 		// RabbitMQ
 		{"rabbitmq.url", "RABBITMQ_URL"},
 		// CORS
