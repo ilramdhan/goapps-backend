@@ -54,14 +54,23 @@ go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
 
 ### Clone Repository
 
-```bash
-# Clone with SSH
-git clone git@github.com:mutugading/goapps-backend.git
-cd goapps-backend
+GoApps uses a **fork + upstream** model: `origin` is your fork (you push here), `upstream` is `mutugading/goapps-backend` (fetch only, changes go in through PRs). The full guide is in [Git Workflow](https://github.com/mutugading/goapps-workspace/blob/main/docs/GIT-WORKFLOW.md).
 
-# Or with HTTPS
-git clone https://github.com/mutugading/goapps-backend.git
+Recommended: set up all four repos at once with the workspace tool:
+
+```bash
+git clone https://github.com/mutugading/goapps-workspace.git
+cd goapps-workspace
+make setup        # forks, clones and adds the upstream remote for every repo
+```
+
+Working on this repo only: fork it on GitHub, then
+
+```bash
+git clone https://github.com/<your-user>/goapps-backend.git
 cd goapps-backend
+git remote add upstream https://github.com/mutugading/goapps-backend.git
+git remote set-url --push upstream DISABLED   # never push to the org directly
 ```
 
 ### VSCode Extensions
@@ -143,19 +152,22 @@ For major changes, create an issue first using available templates:
 
 ### 2. Create Feature Branch
 
+Never work on `main`; it only mirrors `upstream/main`. Always branch from the latest `upstream/main`:
+
 ```bash
-# Update main branch
-git checkout main
-git pull origin main
+# From goapps-workspace (add REPOS=... to span several repos with the same branch name)
+make feat NAME=finance/add-uom-export REPOS=backend
 
-# Create feature branch
-git checkout -b <type>/<service>/<description>
+# Or manually in this repo
+git fetch upstream
+git switch -c feat/finance/add-uom-export upstream/main
 
-# Examples:
-git checkout -b feat/finance/add-uom-export
-git checkout -b fix/finance/validate-uom-code
-git checkout -b refactor/finance/simplify-repository
+# Other examples:
+#   fix/finance/validate-uom-code
+#   refactor/finance/simplify-repository
 ```
+
+Branch types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `ci`.
 
 ### 3. Make Changes
 
@@ -192,7 +204,7 @@ git push origin <branch-name>
 Create PR via GitHub UI or CLI:
 
 ```bash
-gh pr create --title "feat(uom): add bulk import from Excel" \
+gh pr create -R mutugading/goapps-backend --title "feat(uom): add bulk import from Excel" \
   --body "## Description
   Add ability to import UOMs from Excel file.
   
@@ -205,6 +217,10 @@ gh pr create --title "feat(uom): add bulk import from Excel" \
   - [x] Unit tests added
   - [x] Integration tests added"
 ```
+
+Shortcut from goapps-workspace: `make push && make pr` opens the PR form for every repo whose branch has new commits.
+
+> **Keeping up to date**: rebase on the latest org code with `make update` (or `git fetch upstream && git rebase upstream/main`), then `git push --force-with-lease`. After your PR is merged, run `make sync && make cleanup` from goapps-workspace. Do **not** use GitHub's "Sync fork → Update branch" on `main` after a squash merge; it creates duplicate commits. Conflicts and other edge cases: see [Git Workflow](https://github.com/mutugading/goapps-workspace/blob/main/docs/GIT-WORKFLOW.md#6-konflik-dan-kasus-yang-sering-terjadi).
 
 ---
 
