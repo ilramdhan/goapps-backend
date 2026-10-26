@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,6 +45,14 @@ const (
 	// ScopeKeyConversion is read out at the end as the total conversion cost
 	// (labor, overhead). Optional, defaults to 0 if missing.
 	ScopeKeyConversion = "COST_CONVERSION"
+)
+
+// Result params of the oil formulas (F_YARN_OIL_COST, F_YARN_OIL_GAIN,
+// F_YARN_OIL_GAIN_POY_DEFAULT; migrations 000408 / 000524).
+const (
+	ParamOilCost           = "OIL_COST"
+	ParamOilGain           = "OIL_GAIN"
+	ParamOilGainPOYDefault = "OIL_GAIN_POY_DEFAULT"
 )
 
 // Reserved scope keys carrying the POY spin fixed-cost pool (migration 000474)
@@ -340,7 +349,8 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	// Resolution order:
 	//   a) scope["COST_STAGE_OUT"] — explicit terminal sink (yarn / multi-formula products)
 	//   b) sole terminal formula — formula whose output is not consumed by any
-	//      other formula in this product's set (simple / test products)
+	//      other formula in this product's set (simple / test products); a sink
+	//      that is an oil param fails with ErrMissingFinalCostFormula (FAILED)
 	//   c) COST_RM_TOTAL — product has no formulas at all (pure RM cost)
 	finalCost, ok := scopeFloat(scope, ScopeKeyFinalCost)
 	if !ok {
@@ -1284,6 +1294,7 @@ func findTerminalFormula(formulas []Formula) (*Formula, error) { //nolint:gocogn
 
 // resolveFinalCost determines the final cost when COST_STAGE_OUT is absent from scope.
 // Pure-RM products (no formulas) return totalRM; formula products infer the DAG sink.
+// A sink that is an auxiliary (oil) param fails with ErrMissingFinalCostFormula.
 func resolveFinalCost(in ComputeInput, scope map[string]any, totalRM float64) (float64, error) {
 	if len(in.Formulas) == 0 {
 		return totalRM, nil
@@ -1292,8 +1303,33 @@ func resolveFinalCost(in ComputeInput, scope map[string]any, totalRM float64) (f
 	if termErr != nil {
 		return 0, fmt.Errorf("%w: product %d: %w", costcalcdom.ErrFormulaEval, in.ProductSysID, termErr)
 	}
+	if auxiliaryResultParams[terminal.ResultParamCode] {
+		return 0, fmt.Errorf("%w: product %d: only %d auxiliary formulas loaded (%s), inferred terminal %s -> %s is not a cost sink; complete CAPP",
+			costcalcdom.ErrMissingFinalCostFormula, in.ProductSysID, len(in.Formulas),
+			strings.Join(formulaCodes(in.Formulas), ", "), terminal.FormulaCode, terminal.ResultParamCode)
+	}
 	fc, _ := scopeFloat(scope, terminal.ResultParamCode)
 	return fc, nil
+}
+
+// auxiliaryResultParams are formula result params that are cost components,
+// never a product's final cost. When findTerminalFormula infers one of them as
+// the DAG sink, the product's CAPP is missing its real cost chain (e.g. only
+// the oil params backfilled by migration 000525) and reading the sink would
+// silently report the oil value — typically 0 — as the cost per unit.
+var auxiliaryResultParams = map[string]bool{
+	ParamOilCost:           true,
+	ParamOilGain:           true,
+	ParamOilGainPOYDefault: true,
+}
+
+// formulaCodes returns the formula codes of the set, in load order.
+func formulaCodes(formulas []Formula) []string {
+	out := make([]string, 0, len(formulas))
+	for _, f := range formulas {
+		out = append(out, f.FormulaCode)
+	}
+	return out
 }
 
 func inputHash(in ComputeInput, totalRM float64) string {

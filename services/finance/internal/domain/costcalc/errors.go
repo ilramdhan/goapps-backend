@@ -24,7 +24,13 @@ var (
 	// spin pool and silently understate fixed cost rather than fail.
 	ErrMissingSpinFixedCost = errors.New("no active spin fixed cost master row at or before the requested period")
 	ErrFormulaEval          = errors.New("formula evaluation failed")
-	ErrCycleDetected        = errors.New("dependency cycle detected")
-	ErrChunkRetryExhausted  = errors.New("chunk retry attempts exhausted")
-	ErrInvalidPeriod        = errors.New("period must be YYYYMM")
+	// ErrMissingFinalCostFormula is returned when a product has formulas but none
+	// produces the final cost: COST_STAGE_OUT is absent and the inferred DAG sink
+	// is an auxiliary (oil) param, so the product's CAPP is incomplete. It is
+	// deliberately NOT wrapped in ErrFormulaEval so the product ends FAILED
+	// rather than SUCCESS with a cost of 0.
+	ErrMissingFinalCostFormula = errors.New("final cost formula (COST_STAGE_OUT) not in product's applicable params")
+	ErrCycleDetected           = errors.New("dependency cycle detected")
+	ErrChunkRetryExhausted     = errors.New("chunk retry attempts exhausted")
+	ErrInvalidPeriod           = errors.New("period must be YYYYMM")
 )

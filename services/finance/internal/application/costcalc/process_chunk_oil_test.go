@@ -44,7 +44,7 @@ func (f *oilChunkLoader) LoadRMCosts(_ context.Context, codes []string, _, _ str
 func (f *oilChunkLoader) LoadFormulas(_ context.Context, ids []int64) (map[int64][]Formula, error) {
 	out := make(map[int64][]Formula, len(ids))
 	for _, id := range ids {
-		out[id] = oilFormulas(oilGainPOYDefault)
+		out[id] = withFinalCostSink(oilFormulas(oilGainPOYDefault))
 	}
 	return out, nil
 }
