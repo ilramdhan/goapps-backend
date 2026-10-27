@@ -16,17 +16,26 @@ const compareNoneLC = "none"
 const (
 	colGroup1 = "group_1"
 	colGroup2 = "group_2"
+	colGroup3 = "group_3"
 )
 
 // ViewerFilters carries the runtime filter state from the viewer page.
 type ViewerFilters struct {
-	PeriodPreset string    // L12M | L24M | THIS_YEAR | THIS_QTR | THIS_MONTH | ALL | CUSTOM
+	PeriodPreset string    // L12M | L24M | THIS_YEAR | THIS_QTR | THIS_MONTH | LAST_MONTH | THIS_WEEK | LAST_WEEK | YESTERDAY | ALL | CUSTOM
 	PeriodFrom   time.Time // valid when CUSTOM
 	PeriodTo     time.Time
 	Compare      string   // none | MoM | QoQ | YoY | YTD | R12
 	DrillPath    []string // depth 0 = aggregate, 1 = into group_2, 2 = into group_3
 	Group1Filter []string // selected group_1 values from filter chips; empty = show all
 	Group2Filter []string // selected group_2 values from filter chips; empty = show all
+	// GroupBy / GroupFilter drive the employee_ot table (HD-18): the group-by key (DIVISION, DEPT)
+	// and the selected values of that group. They replace Group1Filter in that mode and are part
+	// of the cache hash like every other field.
+	GroupBy     string
+	GroupFilter []string
+	// ComparePeriod is the explicit comparison payroll period (YYYYMM) of the employee_ot table
+	// (HD-25); empty = the periods right before the window (HD-24).
+	ComparePeriod string
 	// ForceTrend, when true, overrides the chart_config x_axis_field and forces isTrend=true
 	// in Plan(). Used by the monthly-detail BFF to fetch time-series data from dashboards
 	// (e.g. EBITDA) whose chart_config is categorical (waterfall), not period-grouped.
@@ -58,10 +67,23 @@ func Plan(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time) (factmet
 		return planComputedRatio(d, f, now, cr.Numerator, cr.Denominator, cr.Scale, cr.GroupBy)
 	}
 
+	// Employee tables (H018, HD-18): one row per employee, read from bi_fact_metric directly.
+	if isEmployeeOT(d) {
+		return planEmployeeOT(d, f, now)
+	}
+	if isEmployeeTable(d) {
+		return planEmployeeTable(d, f, now)
+	}
+
 	// Multi-metric path: chart_config.metric_filter.include_metrics is set.
 	// Bypasses MVs — builds a UNION ALL query per metric against bi_fact_metric directly.
 	if metrics := metricFilter(d); len(metrics) > 0 {
 		return planMultiMetric(d, f, now, metrics)
+	}
+
+	// Two-dimensional charts (stacked_bar dept × OT type, heatmap week × dept; H013).
+	if x, series, ok := pivotDims(d, f); ok {
+		return planPivot(d, f, now, x, series)
 	}
 
 	drillDepth := len(f.DrillPath)
@@ -69,7 +91,7 @@ func Plan(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time) (factmet
 		return factmetric.PlannedQuery{}, fmt.Errorf("%w: depth %d > max %d", factmetric.ErrDrillTooDeep, drillDepth, d.MaxDrillLevel().Int())
 	}
 
-	period := ResolvePeriod(f.PeriodPreset, f.PeriodFrom, f.PeriodTo, d.PeriodGrain().String(), now)
+	period := ResolvePeriodCal(f.PeriodPreset, f.PeriodFrom, f.PeriodTo, d.PeriodGrain().String(), d.PeriodCalendar().String(), now)
 
 	// Trend charts (x_axis_field="period") group by period over time; categorical charts
 	// (waterfall/bar/donut) group by the drill-level group column.
@@ -110,7 +132,7 @@ func metricFilter(d *dashboarddomain.Dashboard) []string {
 // not user input). In addition, metric names are validated as UPPERCASE_SNAKE_CASE by the
 // registry before being stored, so they contain no SQL-injection characters.
 func planMultiMetric(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time, metrics []string) (factmetric.PlannedQuery, error) {
-	period := ResolvePeriod(f.PeriodPreset, f.PeriodFrom, f.PeriodTo, d.PeriodGrain().String(), now)
+	period := ResolvePeriodCal(f.PeriodPreset, f.PeriodFrom, f.PeriodTo, d.PeriodGrain().String(), d.PeriodCalendar().String(), now)
 
 	// Build common WHERE conditions (shared across all UNION branches).
 	// $1 = type. Additional params indexed from $2.
@@ -361,24 +383,28 @@ func buildPlan(a buildArgs) (factmetric.PlannedQuery, error) {
 
 	// Trend chart + real compare mode → emit a self-join for prev_value.
 	if groupByPeriod {
-		if shift := compareShiftMonths(a.Compare); shift > 0 {
+		if shift := compareShiftInterval(a.Compare, a.Grain); shift != "" {
 			return buildTrendComparePlan(a, coreConds, dateConds, args, shift), nil
 		}
 		// NB: the materialized views (mv_bi_metric_g1/g2) do NOT carry periode_label,
-		// so the label is derived from periode_date via TO_CHAR (YYYYMM) here.
+		// so the label is derived from periode_date via TO_CHAR (YYYYMM; WEEKLY IYYY-"W"IW).
+		label := periodLabelSQL(a.Grain)
 		sql := fmt.Sprintf(`
-SELECT TO_CHAR(periode_date, 'YYYYMM')::text AS category, periode_date,
-       TO_CHAR(periode_date, 'YYYYMM')::text AS periode_label,
+SELECT %s::text AS category, periode_date,
+       %s::text AS periode_label,
        SUM(value) AS value, 0::numeric AS prev_value, 0::int AS order_seq
 FROM %s
 WHERE %s
 GROUP BY periode_date
-ORDER BY periode_date`, a.Source, strings.Join(dateConds, " AND "))
+ORDER BY periode_date`, label, label, a.Source, strings.Join(dateConds, " AND "))
 		return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: a.Source}, nil
 	}
 
 	// Categorical chart: one row per distinct category, summed over the window.
 	categoryExpr := "COALESCE(" + a.CategoryCol + ", '')"
+	if a.CategoryCol == colGroup3 && IsHRType(a.Type) {
+		categoryExpr = employeeLabelExpr(a.CategoryCol)
+	}
 	orderExpr := "0"
 	if a.OrderCol != "" {
 		orderExpr = "COALESCE(MAX(" + a.OrderCol + "), 0)"
@@ -395,14 +421,22 @@ ORDER BY order_seq NULLS LAST, category`,
 	return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: a.Source}, nil
 }
 
+// employeeLabelExpr renders an HR group_3 (NIK) as "NIK — Nama" using bi_hr_employee (HD-07). The name
+// is looked up at query time; a NIK without an employee row stays a bare NIK. col is a whitelisted
+// column name, never user input. The level is already gated by workforceemployee.view.
+func employeeLabelExpr(col string) string {
+	return "COALESCE(" + col + ", '') || COALESCE(' — ' || NULLIF((SELECT e.emp_name FROM bi_hr_employee e WHERE e.nik = " + col + " LIMIT 1), ''), '')"
+}
+
 // buildTrendComparePlan assembles a CTE query: `cur` aggregates the current window per
 // period; `prev` aggregates the whole series (no date filter) per period; the outer
-// select left-joins prev on (cur.periode_date - <shift> months) to populate prev_value.
+// select left-joins prev on (cur.periode_date - <shift>) to populate prev_value.
 //
-// shiftMonths is a fixed integer derived from the compare mode (not user input), so the
+// shift is a fixed interval derived from the compare mode and grain (not user input), so the
 // INTERVAL literal is safe to inline.
-func buildTrendComparePlan(a buildArgs, coreConds, dateConds []string, args []any, shiftMonths int) factmetric.PlannedQuery {
-	// NB: the materialized views don't carry periode_label; it is derived via TO_CHAR.
+func buildTrendComparePlan(a buildArgs, coreConds, dateConds []string, args []any, shift string) factmetric.PlannedQuery {
+	// NB: the materialized views don't carry periode_label; it is derived via TO_CHAR per grain.
+	label := periodLabelExpr(a.Grain, "cur.periode_date")
 	sql := fmt.Sprintf(`
 WITH cur AS (
     SELECT periode_date, SUM(value) AS value
@@ -416,18 +450,18 @@ prev AS (
     WHERE %s
     GROUP BY periode_date
 )
-SELECT TO_CHAR(cur.periode_date, 'YYYYMM')::text AS category,
+SELECT %s::text AS category,
        cur.periode_date,
-       TO_CHAR(cur.periode_date, 'YYYYMM')::text AS periode_label,
+       %s::text AS periode_label,
        cur.value,
        COALESCE(prev.value, 0) AS prev_value,
        0::int AS order_seq
 FROM cur
-LEFT JOIN prev ON prev.periode_date = (cur.periode_date - INTERVAL '%d months')
+LEFT JOIN prev ON prev.periode_date = (cur.periode_date - INTERVAL '%s')
 ORDER BY cur.periode_date`,
 		a.Source, strings.Join(dateConds, " AND "),
 		a.Source, strings.Join(coreConds, " AND "),
-		shiftMonths)
+		label, label, shift)
 
 	return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: a.Source}
 }
@@ -452,13 +486,14 @@ func planComputedRatio( //nolint:unparam
 	d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time,
 	numerator, denominator string, scale float64, groupBy string,
 ) (factmetric.PlannedQuery, error) {
-	if groupBy == "" {
-		groupBy = colGroup2
+	groupBy, err := NormalizeGroupBy(groupBy)
+	if err != nil {
+		return factmetric.PlannedQuery{}, err
 	}
 	// Derive the order column from the groupBy column (e.g. group_2 → group_2_order).
 	orderCol := groupBy + "_order"
 
-	period := ResolvePeriod(f.PeriodPreset, f.PeriodFrom, f.PeriodTo, d.PeriodGrain().String(), now)
+	period := ResolvePeriodCal(f.PeriodPreset, f.PeriodFrom, f.PeriodTo, d.PeriodGrain().String(), d.PeriodCalendar().String(), now)
 	args := []any{d.FilterType()}
 	idx := 2
 	conds := []string{"type = $1", "agg_method = 'SUM'", "is_active = TRUE"}
@@ -552,17 +587,26 @@ ORDER BY value DESC NULLS LAST`,
 	return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: "bi_fact_metric"}, nil
 }
 
-// compareShiftMonths maps a compare mode to a month offset for the overlay self-join.
-// Returns 0 when no period-shifted overlay applies (none / YTD / unknown).
-func compareShiftMonths(compare string) int {
+// compareShiftInterval maps a compare mode to the period offset of the overlay self-join, or ""
+// when no period-shifted overlay applies (none / YTD / unknown).
+//
+// WEEKLY periode_date is always a Monday, and a Monday shifted by months is rarely a Monday, so
+// the weekly overlay shifts by whole weeks (7/91/364 days), the same offsets as compareRangeWeekly.
+// R12 keeps its trend meaning (same period a year back = 364 days); the KPI side has no R12.
+func compareShiftInterval(compare, grain string) string {
+	var months, weeks int
 	switch compare {
 	case "MoM":
-		return 1
+		months, weeks = 1, 1
 	case "QoQ":
-		return 3
+		months, weeks = 3, 13
 	case "YoY", "R12":
-		return 12
+		months, weeks = 12, 52
 	default:
-		return 0
+		return ""
 	}
+	if grain == grainWeekly {
+		return fmt.Sprintf("%d days", weeks*7)
+	}
+	return fmt.Sprintf("%d months", months)
 }

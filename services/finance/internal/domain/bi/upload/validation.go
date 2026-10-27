@@ -10,6 +10,7 @@ import (
 // Grain values accepted in the PERIODE_GRAIN column.
 const (
 	grainDaily     = "DAILY"
+	grainWeekly    = "WEEKLY"
 	grainMonthly   = "MONTHLY"
 	grainQuarterly = "QUARTERLY"
 	grainYearly    = "YEARLY"
@@ -185,12 +186,12 @@ func validateOptionalGroups(raw RawRow, rowNumber int) []FieldError {
 func validateGrain(raw RawRow, rowNumber int) (string, *FieldError) {
 	grain := strings.ToUpper(strings.TrimSpace(raw.Grain))
 	switch grain {
-	case grainDaily, grainMonthly, grainQuarterly, grainYearly:
+	case grainDaily, grainWeekly, grainMonthly, grainQuarterly, grainYearly:
 		return grain, nil
 	default:
 		return grain, &FieldError{
 			Row: rowNumber, Column: colGrain, Value: raw.Grain,
-			Issue: "invalid PERIODE_GRAIN", Expected: "DAILY|MONTHLY|QUARTERLY|YEARLY",
+			Issue: "invalid PERIODE_GRAIN", Expected: "DAILY|WEEKLY|MONTHLY|QUARTERLY|YEARLY",
 		}
 	}
 }
@@ -203,6 +204,8 @@ func validatePeriode(raw RawRow, grain string, rowNumber int) (time.Time, string
 	switch grain {
 	case grainDaily:
 		return parseDaily(v, raw.Periode, rowNumber)
+	case grainWeekly:
+		return parseWeekly(v, raw.Periode, rowNumber)
 	default:
 		return parseMonthly(v, raw.Periode, rowNumber)
 	}
@@ -214,6 +217,18 @@ func parseDaily(v, original string, rowNumber int) (time.Time, string, *FieldErr
 		return time.Time{}, "", &FieldError{Row: rowNumber, Column: colPeriode, Value: original, Issue: "invalid daily PERIODE", Expected: "YYYY-MM-DD"}
 	}
 	return t, t.Format("2006-01-02"), nil
+}
+
+// parseWeekly accepts any date (YYYY-MM-DD) and snaps it to the ISO Monday of its week (HD-05);
+// the label is the ISO week "IYYY-Www".
+func parseWeekly(v, original string, rowNumber int) (time.Time, string, *FieldError) {
+	t, err := time.Parse("2006-01-02", v)
+	if err != nil {
+		return time.Time{}, "", &FieldError{Row: rowNumber, Column: colPeriode, Value: original, Issue: "invalid weekly PERIODE", Expected: "YYYY-MM-DD (snapped to Monday)"}
+	}
+	monday := t.AddDate(0, 0, -((int(t.Weekday()) + 6) % 7))
+	y, w := monday.ISOWeek()
+	return monday, fmt.Sprintf("%04d-W%02d", y, w), nil
 }
 
 func parseMonthly(v, original string, rowNumber int) (time.Time, string, *FieldError) {

@@ -70,6 +70,7 @@ func biDomainErrorToBase(err error) *commonv1.BaseResponse {
 		errors.Is(err, dashboarddomain.ErrInvalidGrain),
 		errors.Is(err, dashboarddomain.ErrInvalidCompareMode),
 		errors.Is(err, dashboarddomain.ErrInvalidPeriod),
+		errors.Is(err, dashboarddomain.ErrInvalidPeriodCalendar),
 		errors.Is(err, dashboarddomain.ErrInvalidDrillLevel),
 		errors.Is(err, dashboarddomain.ErrInvalidCacheTTL),
 		errors.Is(err, dashboarddomain.ErrInvalidRefreshInterval),
@@ -126,10 +127,15 @@ func uuidFromString(s string) uuid.UUID {
 // Enum maps
 // =========================================================================
 
+// grainWeeklyStr is the domain string of PERIODE_GRAIN_WEEKLY (HD-05).
+const grainWeeklyStr = "WEEKLY"
+
 func periodeGrainToString(g financev1.PeriodeGrain) string {
 	switch g {
 	case financev1.PeriodeGrain_PERIODE_GRAIN_DAILY:
 		return "DAILY"
+	case financev1.PeriodeGrain_PERIODE_GRAIN_WEEKLY:
+		return grainWeeklyStr
 	case financev1.PeriodeGrain_PERIODE_GRAIN_MONTHLY:
 		return "MONTHLY"
 	case financev1.PeriodeGrain_PERIODE_GRAIN_QUARTERLY:
@@ -145,6 +151,8 @@ func stringToPeriodeGrain(s string) financev1.PeriodeGrain {
 	switch s {
 	case "DAILY":
 		return financev1.PeriodeGrain_PERIODE_GRAIN_DAILY
+	case grainWeeklyStr:
+		return financev1.PeriodeGrain_PERIODE_GRAIN_WEEKLY
 	case "MONTHLY":
 		return financev1.PeriodeGrain_PERIODE_GRAIN_MONTHLY
 	case "QUARTERLY":
@@ -379,6 +387,7 @@ func dashboardToProto(d *dashboarddomain.Dashboard) *financev1.Dashboard {
 		FilterGroup_1:      d.FilterGroup1(),
 		PeriodeGrain:       stringToPeriodeGrain(d.PeriodGrain().String()),
 		DefaultPeriod:      d.DefaultPeriod().String(),
+		PeriodCalendar:     d.PeriodCalendar().String(),
 		ChartType:          stringToChartType(d.ChartType().String()),
 		ChartConfig:        mapToStruct(d.ChartConfig().MarshalToMap()),
 		LayoutConfig:       mapToStruct(d.LayoutConfig()),

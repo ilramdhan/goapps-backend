@@ -23,6 +23,11 @@ type PreviewQuery struct {
 	ChartConfig  map[string]any
 	KpiConfig    []map[string]any
 	CompareModes []string
+	// CanViewWorkforce / IsSuperAdmin gate HR_* types (HD-10); preview must not bypass them.
+	CanViewWorkforce bool
+	// CanViewEmployee gates employee-level (group_3 = NIK) output (HD-07), e.g. table_mode.
+	CanViewEmployee bool
+	IsSuperAdmin    bool
 }
 
 // PreviewHandler renders an unsaved dashboard configuration.
@@ -73,7 +78,15 @@ func (h *PreviewHandler) Handle(ctx context.Context, q PreviewQuery) (*Result, e
 		return nil, fmt.Errorf("validate preview dashboard: %w", err)
 	}
 
+	// HD-10: HR_* (own type or via a KPI cross_ratio) needs workforce.view; checked before any query.
+	if !q.IsSuperAdmin && !q.CanViewWorkforce && TouchesHRType(d.FilterType(), d.KpiConfig()) {
+		return nil, fmt.Errorf("%w: workforce data requires %s", dashboarddomain.ErrForbidden, PermWorkforceView)
+	}
+
 	filters := ViewerFilters{PeriodPreset: "L12M"}
+	if !q.IsSuperAdmin && !q.CanViewEmployee && RequestsEmployeeLevel(d, filters) {
+		return nil, fmt.Errorf("%w: employee-level data requires %s", dashboarddomain.ErrForbidden, PermWorkforceEmployee)
+	}
 	now := h.now()
 	plan, err := Plan(d, filters, now)
 	if err != nil {
@@ -84,7 +97,7 @@ func (h *PreviewHandler) Handle(ctx context.Context, q PreviewQuery) (*Result, e
 		return nil, err
 	}
 
-	period := ResolvePeriod(filters.PeriodPreset, time.Time{}, time.Time{}, d.PeriodGrain().String(), now)
+	period := ResolvePeriodCal(filters.PeriodPreset, time.Time{}, time.Time{}, d.PeriodGrain().String(), d.PeriodCalendar().String(), now)
 	kpis, err := ComputeKPIs(ctx, h.fact, d, period, now, nil, nil)
 	if err != nil {
 		return nil, err
@@ -92,5 +105,6 @@ func (h *PreviewHandler) Handle(ctx context.Context, q PreviewQuery) (*Result, e
 
 	drillCtx := BuildDrillContext(d, filters)
 	result := Shape(d, rows, kpis, filters, drillCtx)
+	addEmployeeOTRanges(&result, d, filters, now)
 	return &result, nil
 }

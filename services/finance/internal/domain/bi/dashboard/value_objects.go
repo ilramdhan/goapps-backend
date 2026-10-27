@@ -72,7 +72,7 @@ type PeriodGrain struct{ value chart.PeriodGrain }
 // NewPeriodGrain validates and constructs a PeriodGrain.
 func NewPeriodGrain(s string) (PeriodGrain, error) {
 	if !chart.IsValidPeriodGrain(s) {
-		return PeriodGrain{}, fmt.Errorf("%w: %q is not a valid period grain (want DAILY|MONTHLY|QUARTERLY|YEARLY)", ErrInvalidGrain, s)
+		return PeriodGrain{}, fmt.Errorf("%w: %q is not a valid period grain (want DAILY|WEEKLY|MONTHLY|QUARTERLY|YEARLY)", ErrInvalidGrain, s)
 	}
 	return PeriodGrain{value: chart.PeriodGrain(s)}, nil
 }
@@ -135,6 +135,10 @@ var allowedDefaultPeriods = map[string]struct{}{
 	"THIS_YEAR":  {},
 	"THIS_QTR":   {},
 	"THIS_MONTH": {},
+	"THIS_WEEK":  {},
+	"LAST_WEEK":  {},
+	"LAST_MONTH": {},
+	"YESTERDAY":  {},
 	"ALL":        {},
 	"CUSTOM":     {},
 }
@@ -149,6 +153,31 @@ func NewDefaultPeriod(s string) (DefaultPeriod, error) {
 
 // String returns the canonical default-period key.
 func (d DefaultPeriod) String() string { return d.value }
+
+// Period calendars (HD-06): how MONTHLY periods and "this/last period" presets are cut.
+const (
+	// PeriodCalendarCalendar is the calendar month (default, legacy finance behavior).
+	PeriodCalendarCalendar = "CALENDAR"
+	// PeriodCalendarPayroll is the payroll period 26th(prev month)..25th (HR facts, K3).
+	PeriodCalendarPayroll = "PAYROLL_26_25"
+)
+
+// PeriodCalendar is a validated bi_dashboard.period_calendar value.
+type PeriodCalendar struct{ value string }
+
+// NewPeriodCalendar validates a period calendar; empty means CALENDAR.
+func NewPeriodCalendar(s string) (PeriodCalendar, error) {
+	switch s {
+	case "", PeriodCalendarCalendar:
+		return PeriodCalendar{value: PeriodCalendarCalendar}, nil
+	case PeriodCalendarPayroll:
+		return PeriodCalendar{value: PeriodCalendarPayroll}, nil
+	}
+	return PeriodCalendar{}, fmt.Errorf("%w: %q is not a valid period calendar (want CALENDAR|PAYROLL_26_25)", ErrInvalidPeriodCalendar, s)
+}
+
+// String returns the canonical period-calendar string.
+func (c PeriodCalendar) String() string { return c.value }
 
 // MaxDrillLevel is a validated 1..3 integer.
 type MaxDrillLevel struct{ value int }

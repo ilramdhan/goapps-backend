@@ -9,7 +9,7 @@ type Filter struct {
 	Group1       string    // optional pre-filter
 	Group2       string    // populated when drill depth >= 1
 	Group3       string    // populated when drill depth >= 2
-	Grain        string    // DAILY|MONTHLY|QUARTERLY|YEARLY
+	Grain        string    // DAILY|WEEKLY|MONTHLY|QUARTERLY|YEARLY
 	DateFrom     time.Time // inclusive
 	DateTo       time.Time // inclusive
 	Scenario     string    // default 'ACTUAL'

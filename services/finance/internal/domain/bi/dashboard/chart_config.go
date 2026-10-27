@@ -71,6 +71,14 @@ type ChartConfig struct {
 	// When non-empty the query planner bypasses MVs and queries bi_fact_metric directly.
 	MetricFilter MetricFilterConfig
 
+	// FilterGroup2 pins group_2 for the two-dimensional pivot path (e.g. OVER_LIMIT for the R2
+	// heatmap, H013). Stored as filter_group_2; other planner paths ignore it.
+	FilterGroup2 string
+
+	// TableMode selects a dedicated table planner (e.g. "employee_week", H018): one row per
+	// employee for the latest week. Such a table exposes group_3 (NIK), so it is gated like a drill.
+	TableMode string
+
 	// ComputedRatio, when non-nil, instructs the query planner to use planComputedRatio
 	// instead of the standard MV/multi-metric path. Used for secondary charts such as
 	// "Margin %" that derive a ratio from two existing metric columns.
@@ -175,6 +183,8 @@ func ParseChartConfig(t ChartType, raw map[string]any) (ChartConfig, error) {
 	applyString(merged, "empty_message", &cfg.EmptyMessage)
 	applyString(merged, "drill_to", &cfg.DrillTo)
 	applyString(merged, "sort_order", &cfg.SortOrder)
+	applyString(merged, "filter_group_2", &cfg.FilterGroup2)
+	applyString(merged, "table_mode", &cfg.TableMode)
 
 	if v, ok := mergedAsFloat(merged, "inner_radius"); ok {
 		cfg.InnerRadius = v
@@ -302,6 +312,8 @@ func (c ChartConfig) MarshalToMap() map[string]any { //nolint:gocognit // one br
 	putString(out, "empty_message", c.EmptyMessage)
 	putString(out, "drill_to", c.DrillTo)
 	putString(out, "sort_order", c.SortOrder)
+	putString(out, "filter_group_2", c.FilterGroup2)
+	putString(out, "table_mode", c.TableMode)
 	if c.InnerRadius != 0 {
 		out["inner_radius"] = c.InnerRadius
 	}

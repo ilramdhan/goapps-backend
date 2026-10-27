@@ -100,6 +100,36 @@ func Shape(d *dashboarddomain.Dashboard, rows []factmetric.AggRow, kpis []factme
 	// Multi-metric detection: when the dashboard has metric_filter.include_metrics set,
 	// AggRows come from planMultiMetric() where Category = metric_name.
 	// Route to shapeMultiMetric() to produce one Series per metric.
+	// Employee Overtime (HD-18): table, or two daily series when drilled into a NIK.
+	if isEmployeeOT(d) {
+		return shapeEmployeeOTResult(d, rows, formattedKPIs, f, drillContext, numFmt, decimals)
+	}
+	// Employee table (H018): one row per NIK, one Series per column.
+	if isEmployeeTable(d) && len(f.DrillPath) == 0 {
+		series, cats := shapeEmployeeTable(rows, numFmt, decimals)
+		return Result{
+			Config:       d.ChartConfig().MarshalToMap(),
+			Series:       series,
+			Categories:   cats,
+			KPIs:         formattedKPIs,
+			DrillContext: drillContext,
+			Meta:         Meta{AsOf: time.Now().UTC(), RowCount: len(rows)},
+		}
+	}
+	if IsPivot(d, f) {
+		x, _, _ := pivotDims(d, f)
+		now := time.Now()
+		series, cats := shapePivot(rows, numFmt, decimals, pivotFillLabels(d, f, now, x))
+		return Result{
+			Config:       d.ChartConfig().MarshalToMap(),
+			Series:       series,
+			Categories:   cats,
+			KPIs:         formattedKPIs,
+			DrillContext: drillContext,
+			Meta:         Meta{AsOf: time.Now().UTC(), RowCount: len(rows)},
+		}
+	}
+
 	if metrics := d.ChartConfig().MetricFilter.IncludeMetrics; len(metrics) > 0 {
 		multiSeries := shapeMultiMetric(rows, staticMetricLabels, numFmt, decimals)
 
@@ -151,7 +181,7 @@ func Shape(d *dashboarddomain.Dashboard, rows []factmetric.AggRow, kpis []factme
 	}
 
 	series := []Series{primary}
-	if len(comparePts) > 0 && f.Compare != "" && f.Compare != "none" {
+	if len(comparePts) > 0 && f.Compare != "" && f.Compare != compareNoneLC {
 		series = append(series, Series{
 			Name:   f.Compare + " Previous",
 			Points: comparePts,

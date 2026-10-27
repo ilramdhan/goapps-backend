@@ -56,14 +56,34 @@ func TestIsValidCompareMode(t *testing.T) {
 }
 
 func TestIsValidPeriodGrain(t *testing.T) {
-	for _, s := range []string{"DAILY", "MONTHLY", "QUARTERLY", "YEARLY"} {
+	for _, s := range []string{"DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"} {
 		if !chart.IsValidPeriodGrain(s) {
 			t.Errorf("expected %q valid", s)
 		}
 	}
-	for _, s := range []string{"daily", "Monthly", "WEEKLY", ""} {
+	for _, s := range []string{"daily", "Monthly", "weekly", "HOURLY", ""} {
 		if chart.IsValidPeriodGrain(s) {
 			t.Errorf("expected %q invalid", s)
 		}
+	}
+}
+
+func TestShiftPeriod_Weekly(t *testing.T) {
+	mon := time.Date(2026, 10, 12, 0, 0, 0, 0, time.UTC) // Monday
+	cases := []struct {
+		mode chart.CompareMode
+		want time.Time
+	}{
+		{chart.CompareMoM, time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)},
+		{chart.CompareYoY, time.Date(2025, 10, 13, 0, 0, 0, 0, time.UTC)}, // −52 weeks, still Monday
+	}
+	for _, c := range cases {
+		got := chart.ShiftPeriod(mon, c.mode, chart.GrainWeekly)
+		if !got.Equal(c.want) || got.Weekday() != time.Monday {
+			t.Errorf("%s: want %v, got %v", c.mode, c.want, got)
+		}
+	}
+	if !chart.IsValidPeriodGrain("WEEKLY") {
+		t.Error("WEEKLY must be a valid grain")
 	}
 }

@@ -24,7 +24,7 @@ func TestValidateRow_Valid(t *testing.T) {
 }
 
 func TestValidateRow_BadGrain(t *testing.T) {
-	raw := RawRow{Type: "MIS", Group1: "EBITDA", Grain: "WEEKLY", Periode: "202604", Value: "1"}
+	raw := RawRow{Type: "MIS", Group1: "EBITDA", Grain: "HOURLY", Periode: "202604", Value: "1"}
 	row, errs := ValidateRow(raw, "MIS", 3)
 	require.NotEmpty(t, errs)
 	assert.Equal(t, ValidationInvalid, row.ValidationStatus)

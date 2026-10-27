@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE bi_hr_employee DROP COLUMN IF EXISTS division;
+COMMIT;

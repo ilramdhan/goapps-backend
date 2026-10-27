@@ -3,12 +3,24 @@ package job
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
-// ValidateCronExpression validates a 5-field cron expression or @shorthand.
-// It only checks structural validity (field count), not range correctness.
+// ValidateCronExpression validates a 5-field cron expression or @shorthand, optionally prefixed
+// with a time zone (`CRON_TZ=Asia/Jakarta 0 5 * * *`, robfig/cron syntax) so HR jobs run on WIB
+// regardless of the server TZ (H013). It only checks structure, not range correctness.
 func ValidateCronExpression(expr string) error {
 	expr = strings.TrimSpace(expr)
+	if strings.HasPrefix(expr, "CRON_TZ=") || strings.HasPrefix(expr, "TZ=") {
+		tz, rest, ok := strings.Cut(expr, " ")
+		if !ok || strings.HasSuffix(tz, "=") {
+			return fmt.Errorf("%w: time zone prefix without schedule", ErrInvalidCron)
+		}
+		if _, err := time.LoadLocation(tz[strings.Index(tz, "=")+1:]); err != nil {
+			return fmt.Errorf("%w: unknown time zone %q", ErrInvalidCron, tz)
+		}
+		expr = strings.TrimSpace(rest)
+	}
 	if expr == "" {
 		return fmt.Errorf("%w: empty expression", ErrInvalidCron)
 	}

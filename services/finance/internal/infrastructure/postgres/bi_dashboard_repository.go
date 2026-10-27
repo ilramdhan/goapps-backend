@@ -84,15 +84,15 @@ INSERT INTO bi_dashboard (
     chart_type, chart_config, layout_config, compare_modes, kpi_config,
     drill_enabled, max_drill_level, cache_ttl_sec, refresh_interval_sec,
     display_order, group_id, is_active, is_featured, feature_order,
-    created_at, created_by
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`
+    created_at, created_by, period_calendar
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`
 	_, err = tx.ExecContext(ctx, q,
 		d.ID(), d.Code().String(), d.Title(), d.Description(),
 		d.FilterType(), biNullableString(d.FilterGroup1()), d.PeriodGrain().String(), d.DefaultPeriod().String(),
 		d.ChartType().String(), chartConfig, nullableBytes(layoutConfig), compareModes, kpiConfig,
 		d.DrillEnabled(), d.MaxDrillLevel().Int(), d.CacheTTL().Seconds(), d.RefreshInterval().Seconds(),
 		d.DisplayOrder(), d.GroupID(), d.IsActive(), d.IsFeatured(), d.FeatureOrder(),
-		d.CreatedAt(), nullableUUID(d.CreatedBy()),
+		d.CreatedAt(), nullableUUID(d.CreatedBy()), d.PeriodCalendar().String(),
 	)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -301,7 +301,8 @@ UPDATE bi_dashboard SET
     is_featured = $20,
     feature_order = $21,
     updated_at = $22,
-    updated_by = $23
+    updated_by = $23,
+    period_calendar = $24
 WHERE dashboard_id = $1 AND deleted_at IS NULL`
 	res, err := tx.ExecContext(ctx, q,
 		d.ID(), d.Title(), d.Description(),
@@ -309,7 +310,7 @@ WHERE dashboard_id = $1 AND deleted_at IS NULL`
 		d.ChartType().String(), chartConfig, nullableBytes(layoutConfig), compareModes, kpiConfig,
 		d.DrillEnabled(), d.MaxDrillLevel().Int(), d.CacheTTL().Seconds(), d.RefreshInterval().Seconds(),
 		d.DisplayOrder(), d.GroupID(), d.IsActive(), d.IsFeatured(), d.FeatureOrder(),
-		d.UpdatedAt(), nullableUUID(d.UpdatedBy()),
+		d.UpdatedAt(), nullableUUID(d.UpdatedBy()), d.PeriodCalendar().String(),
 	)
 	if err != nil {
 		return fmt.Errorf("update: %w", err)
@@ -364,6 +365,7 @@ func (r *BiDashboardRepository) Duplicate(ctx context.Context, sourceID uuid.UUI
 		FilterType:         src.FilterType(),
 		FilterGroup1:       src.FilterGroup1(),
 		PeriodGrain:        src.PeriodGrain().String(),
+		PeriodCalendar:     src.PeriodCalendar().String(),
 		DefaultPeriod:      src.DefaultPeriod().String(),
 		ChartType:          src.ChartType().String(),
 		ChartConfigRaw:     src.ChartConfig().MarshalToMap(),
@@ -512,7 +514,8 @@ SELECT dashboard_id, dashboard_code, dashboard_title, description,
        chart_type, chart_config, layout_config, compare_modes, kpi_config,
        drill_enabled, max_drill_level, cache_ttl_sec, refresh_interval_sec,
        display_order, group_id, is_active, is_featured, feature_order,
-       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
+       created_at, created_by, updated_at, updated_by, deleted_at, deleted_by,
+       period_calendar
 FROM bi_dashboard`
 
 const selectDashboardByID = selectDashboardBase + " WHERE dashboard_id = $1 AND deleted_at IS NULL"
@@ -550,6 +553,7 @@ type dashboardRow struct {
 	UpdatedBy          uuid.NullUUID
 	DeletedAt          sql.NullTime
 	DeletedBy          uuid.NullUUID
+	PeriodCalendar     string
 }
 
 // scanDashboard scans a single row into a domain entity. Roles are hydrated separately.
@@ -562,6 +566,7 @@ func (r *BiDashboardRepository) scanDashboard(_ context.Context, scan scanFunc) 
 		&row.DrillEnabled, &row.MaxDrillLevel, &row.CacheTTLSec, &row.RefreshIntervalSec,
 		&row.DisplayOrder, &row.GroupID, &row.IsActive, &row.IsFeatured, &row.FeatureOrder,
 		&row.CreatedAt, &row.CreatedBy, &row.UpdatedAt, &row.UpdatedBy, &row.DeletedAt, &row.DeletedBy,
+		&row.PeriodCalendar,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, dashboard.ErrNotFound
@@ -595,6 +600,7 @@ func (r *BiDashboardRepository) scanDashboard(_ context.Context, scan scanFunc) 
 		FilterType:         row.FilterType,
 		FilterGroup1:       nullToString(row.FilterGroup1),
 		PeriodGrain:        row.PeriodGrain,
+		PeriodCalendar:     row.PeriodCalendar,
 		DefaultPeriod:      row.DefaultPeriod,
 		ChartType:          row.ChartType,
 		ChartConfigRaw:     chartConfigMap,

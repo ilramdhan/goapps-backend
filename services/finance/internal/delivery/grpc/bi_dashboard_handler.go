@@ -120,6 +120,7 @@ func (h *BIDashboardHandler) CreateDashboard(ctx context.Context, req *financev1
 		FilterType:         req.GetFilterType(),
 		FilterGroup1:       req.GetFilterGroup_1(),
 		PeriodGrain:        periodeGrainToString(req.GetPeriodeGrain()),
+		PeriodCalendar:     req.GetPeriodCalendar(),
 		DefaultPeriod:      req.GetDefaultPeriod(),
 		ChartType:          chartTypeToString(req.GetChartType()),
 		ChartConfigRaw:     structToMap(req.GetChartConfig()),
@@ -245,6 +246,10 @@ func (h *BIDashboardHandler) UpdateDashboard(ctx context.Context, req *financev1
 	if req.PeriodeGrain != nil {
 		v := periodeGrainToString(req.GetPeriodeGrain())
 		cmd.PeriodGrain = &v
+	}
+	if req.PeriodCalendar != nil {
+		v := req.GetPeriodCalendar()
+		cmd.PeriodCalendar = &v
 	}
 	if req.DefaultPeriod != nil {
 		v := req.GetDefaultPeriod()

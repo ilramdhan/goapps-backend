@@ -34,6 +34,7 @@ type CreateCommand struct {
 	FilterType         string
 	FilterGroup1       string
 	PeriodGrain        string
+	PeriodCalendar     string
 	DefaultPeriod      string
 	ChartType          string
 	ChartConfigRaw     map[string]any
@@ -70,6 +71,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*dashboa
 		FilterType:         cmd.FilterType,
 		FilterGroup1:       cmd.FilterGroup1,
 		PeriodGrain:        cmd.PeriodGrain,
+		PeriodCalendar:     cmd.PeriodCalendar,
 		DefaultPeriod:      cmd.DefaultPeriod,
 		ChartType:          cmd.ChartType,
 		ChartConfigRaw:     cmd.ChartConfigRaw,
@@ -169,6 +171,7 @@ type UpdateCommand struct {
 	FilterType         *string
 	FilterGroup1       *string
 	PeriodGrain        *string
+	PeriodCalendar     *string
 	DefaultPeriod      *string
 	ChartType          *string
 	ChartConfigRaw     map[string]any
@@ -211,6 +214,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*dashboa
 		FilterType:         cmd.FilterType,
 		FilterGroup1:       cmd.FilterGroup1,
 		PeriodGrain:        cmd.PeriodGrain,
+		PeriodCalendar:     cmd.PeriodCalendar,
 		DefaultPeriod:      cmd.DefaultPeriod,
 		ChartType:          cmd.ChartType,
 		ChartConfigRaw:     cmd.ChartConfigRaw,

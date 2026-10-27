@@ -23,6 +23,7 @@ type PeriodGrain string
 // All supported period grains.
 const (
 	GrainDaily     PeriodGrain = "DAILY"
+	GrainWeekly    PeriodGrain = "WEEKLY"
 	GrainMonthly   PeriodGrain = "MONTHLY"
 	GrainQuarterly PeriodGrain = "QUARTERLY"
 	GrainYearly    PeriodGrain = "YEARLY"
@@ -40,7 +41,7 @@ func IsValidCompareMode(s string) bool {
 // IsValidPeriodGrain reports whether the given string is a known period grain.
 func IsValidPeriodGrain(s string) bool {
 	switch PeriodGrain(s) {
-	case GrainDaily, GrainMonthly, GrainQuarterly, GrainYearly:
+	case GrainDaily, GrainWeekly, GrainMonthly, GrainQuarterly, GrainYearly:
 		return true
 	}
 	return false
@@ -49,9 +50,9 @@ func IsValidPeriodGrain(s string) bool {
 // ShiftPeriod returns t shifted backward by one comparison step, given the dashboard's grain.
 //
 // The shift is:
-//   - MoM → 1 period unit (1 day for DAILY, 1 month for MONTHLY, 1 quarter for QUARTERLY, 1 year for YEARLY)
+//   - MoM → 1 period unit (1 day for DAILY, 7 days for WEEKLY, 1 month for MONTHLY, 1 quarter for QUARTERLY, 1 year for YEARLY)
 //   - QoQ → 3 months (only meaningful for MONTHLY/QUARTERLY; behavior is "3 periods" for other grains)
-//   - YoY → 12 months for MONTHLY, 4 quarters for QUARTERLY, 1 year for YEARLY, 365 days for DAILY
+//   - YoY → 12 months for MONTHLY, 4 quarters for QUARTERLY, 1 year for YEARLY, 365 days for DAILY, 52 weeks for WEEKLY
 //   - YTD → returns t itself (YTD compares year-to-date, not a shifted point)
 //   - R12 → returns t shifted back 12 months (rolling 12-month window start)
 //   - None → returns t unchanged
@@ -81,6 +82,8 @@ func shiftOnePeriod(t time.Time, grain PeriodGrain) time.Time {
 	switch grain {
 	case GrainDaily:
 		return t.AddDate(0, 0, -1)
+	case GrainWeekly:
+		return t.AddDate(0, 0, -7)
 	case GrainMonthly:
 		return t.AddDate(0, -1, 0)
 	case GrainQuarterly:
@@ -96,6 +99,8 @@ func shiftThreePeriods(t time.Time, grain PeriodGrain) time.Time {
 	switch grain {
 	case GrainDaily:
 		return t.AddDate(0, 0, -3)
+	case GrainWeekly:
+		return t.AddDate(0, 0, -13*7) // a quarter of weeks
 	case GrainMonthly:
 		return t.AddDate(0, -3, 0)
 	case GrainQuarterly:
@@ -111,6 +116,8 @@ func shiftYear(t time.Time, grain PeriodGrain) time.Time {
 	switch grain {
 	case GrainDaily:
 		return t.AddDate(0, 0, -365)
+	case GrainWeekly:
+		return t.AddDate(0, 0, -52*7) // 52 weeks keeps the Monday anchor
 	case GrainMonthly:
 		return t.AddDate(-1, 0, 0)
 	case GrainQuarterly:

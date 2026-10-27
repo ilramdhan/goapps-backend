@@ -22,6 +22,7 @@ type Dashboard struct {
 	filterType       string
 	filterGroup1     string
 	periodGrain      PeriodGrain
+	periodCalendar   PeriodCalendar
 	defaultPeriod    DefaultPeriod
 	chartType        ChartType
 	chartConfig      ChartConfig
@@ -58,6 +59,7 @@ type NewDashboardParams struct {
 	FilterType         string
 	FilterGroup1       string
 	PeriodGrain        string
+	PeriodCalendar     string // empty = CALENDAR
 	DefaultPeriod      string
 	ChartType          string
 	ChartConfigRaw     map[string]any
@@ -102,6 +104,11 @@ func NewDashboard(p NewDashboardParams) (*Dashboard, error) {
 	}
 
 	grain, err := NewPeriodGrain(p.PeriodGrain)
+	if err != nil {
+		return nil, err
+	}
+
+	periodCalendar, err := NewPeriodCalendar(p.PeriodCalendar)
 	if err != nil {
 		return nil, err
 	}
@@ -165,6 +172,7 @@ func NewDashboard(p NewDashboardParams) (*Dashboard, error) {
 		filterType:       p.FilterType,
 		filterGroup1:     p.FilterGroup1,
 		periodGrain:      grain,
+		periodCalendar:   periodCalendar,
 		defaultPeriod:    defaultPeriod,
 		chartType:        chartType,
 		chartConfig:      chartConfig,
@@ -196,6 +204,7 @@ type UpdateParams struct {
 	FilterType         *string
 	FilterGroup1       *string
 	PeriodGrain        *string
+	PeriodCalendar     *string
 	DefaultPeriod      *string
 	ChartType          *string
 	ChartConfigRaw     map[string]any
@@ -254,6 +263,13 @@ func (d *Dashboard) Update(p UpdateParams) error {
 			return err
 		}
 		staged.periodGrain = grain
+	}
+	if p.PeriodCalendar != nil {
+		pc, err := NewPeriodCalendar(*p.PeriodCalendar)
+		if err != nil {
+			return err
+		}
+		staged.periodCalendar = pc
 	}
 	if p.DefaultPeriod != nil {
 		dp, err := NewDefaultPeriod(*p.DefaultPeriod)
@@ -393,6 +409,9 @@ func (d *Dashboard) FilterGroup1() string { return d.filterGroup1 }
 
 // PeriodGrain returns the period granularity value object.
 func (d *Dashboard) PeriodGrain() PeriodGrain { return d.periodGrain }
+
+// PeriodCalendar returns how periods are cut (calendar month or payroll 26-25).
+func (d *Dashboard) PeriodCalendar() PeriodCalendar { return d.periodCalendar }
 
 // DefaultPeriod returns the default period preset value object.
 func (d *Dashboard) DefaultPeriod() DefaultPeriod { return d.defaultPeriod }

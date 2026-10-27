@@ -32,6 +32,9 @@ var (
 	// ErrInvalidPeriod is returned by NewDefaultPeriod for unknown preset keys.
 	ErrInvalidPeriod = errors.New("invalid default period preset")
 
+	// ErrInvalidPeriodCalendar is returned by NewPeriodCalendar for unknown calendars.
+	ErrInvalidPeriodCalendar = errors.New("invalid period calendar")
+
 	// ErrInvalidDrillLevel is returned when max_drill_level is outside 1..3.
 	ErrInvalidDrillLevel = errors.New("invalid max drill level")
 

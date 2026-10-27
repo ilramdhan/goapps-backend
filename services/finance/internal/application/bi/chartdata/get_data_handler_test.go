@@ -221,3 +221,37 @@ func TestGetDataHandler_NotFound(t *testing.T) {
 		t.Errorf("expected ErrNotFound, got %v", err)
 	}
 }
+
+// H013: a WEEKLY dashboard anchors on today's WIB date, not on the latest fact (a week where nobody
+// is over/near the limit has no HR_OT_WEEK_STATUS rows); 22:00 UTC Sun = Mon 05:00 WIB.
+func TestGetDataHandler_WeeklyAnchorsToWIBToday(t *testing.T) {
+	dash, err := dashboarddomain.NewDashboard(dashboarddomain.NewDashboardParams{
+		Code: "HR_WEEK", Title: "R2", FilterType: "HR_OT_WEEK_STATUS", PeriodGrain: "WEEKLY",
+		DefaultPeriod: "THIS_WEEK", ChartType: "bar",
+		ChartConfigRaw: map[string]any{"x_axis_field": "group_1", "y_axis_field": "value"},
+		MaxDrillLevel:  1, CacheTTLSec: 60, GroupID: uuid.New(), IsActive: true, CreatedBy: uuid.New(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := &mockDashboardRepo{getByCode: func(_ context.Context, _ string) (*dashboarddomain.Dashboard, error) { return dash, nil }}
+	fact := &mockFactRepo{latest: time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC)} // stale week
+	h := chartdata.NewGetDataHandler(repo, fact, newMockCache(), func(any) string { return "h" }).
+		WithNow(func() time.Time { return time.Date(2026, 10, 18, 22, 0, 0, 0, time.UTC) })
+	if _, err = h.Handle(context.Background(), chartdata.GetDataQuery{
+		DashboardCode: "HR_WEEK", Filters: chartdata.ViewerFilters{PeriodPreset: "THIS_WEEK"},
+		UserRoles: []string{"ANY"}, CanViewWorkforce: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var from time.Time
+	for _, a := range fact.lastArgs {
+		if d, ok := a.(time.Time); ok {
+			from = d
+			break
+		}
+	}
+	if want := time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC); !from.Equal(want) {
+		t.Errorf("THIS_WEEK from = %v, want WIB Monday %v", from, want)
+	}
+}

@@ -24,6 +24,10 @@ type GetDataQuery struct {
 	Filters       ViewerFilters
 	UserRoles     []string
 	IsSuperAdmin  bool
+	// CanViewEmployee = caller holds PermWorkforceEmployee (HD-07); gates group_3 of HR_* types.
+	CanViewEmployee bool
+	// CanViewWorkforce = caller holds PermWorkforceView; gates every HR_* dashboard (HD-10).
+	CanViewWorkforce bool
 }
 
 // GetDataHandler is the viewer-side orchestrator: loads dashboard, applies access check,
@@ -64,7 +68,13 @@ func (h *GetDataHandler) WithNow(now func() time.Time) *GetDataHandler {
 // resolveAsOf returns the "data as of" anchor for the dashboard. Warehouse data lags wall-clock
 // (the current calendar month is usually not loaded yet), so period presets and KPI windows are
 // anchored to the latest loaded period for this dashboard's scope; falls back to now when empty.
+//
+// WEEKLY (HR R2, HD-05) is the exception: "this week / last week" mean the calendar week, and a
+// week with nobody over/near the limit has no fact rows, so the anchor is today's WIB date (H013).
 func (h *GetDataHandler) resolveAsOf(ctx context.Context, d *dashboarddomain.Dashboard) (time.Time, error) {
+	if d.PeriodGrain().String() == grainWeekly {
+		return wibDate(h.now()), nil
+	}
 	latest, err := h.fact.LatestPeriod(ctx, d.FilterType(), d.FilterGroup1(), d.PeriodGrain().String())
 	if err != nil {
 		return time.Time{}, fmt.Errorf("latest period: %w", err)
@@ -82,9 +92,9 @@ func (h *GetDataHandler) Handle(ctx context.Context, q GetDataQuery) (*Result, e
 	if err != nil {
 		return nil, err
 	}
-	// 2. Access check
-	if !d.IsAccessibleBy(q.UserRoles, q.IsSuperAdmin) {
-		return nil, dashboarddomain.ErrForbidden
+	// 2. Access checks (role whitelist, HD-10 workforce, HD-07 employee level)
+	if err := authorizeView(d, q); err != nil {
+		return nil, err
 	}
 
 	// 3. Try cache
@@ -120,8 +130,8 @@ func (h *GetDataHandler) Handle(ctx context.Context, q GetDataQuery) (*Result, e
 	}
 
 	// 6. Compute KPIs
-	period := ResolvePeriod(q.Filters.PeriodPreset, q.Filters.PeriodFrom, q.Filters.PeriodTo,
-		d.PeriodGrain().String(), asOf)
+	period := ResolvePeriodCal(q.Filters.PeriodPreset, q.Filters.PeriodFrom, q.Filters.PeriodTo,
+		d.PeriodGrain().String(), d.PeriodCalendar().String(), asOf)
 	kpis, err := ComputeKPIs(ctx, h.fact, d, period, asOf, q.Filters.Group1Filter, q.Filters.Group2Filter)
 	if err != nil {
 		return nil, fmt.Errorf("compute kpis: %w", err)
@@ -130,6 +140,7 @@ func (h *GetDataHandler) Handle(ctx context.Context, q GetDataQuery) (*Result, e
 	// 7. Shape + format
 	drillCtx := BuildDrillContext(d, q.Filters)
 	result := Shape(d, rows, kpis, q.Filters, drillCtx)
+	addEmployeeOTRanges(&result, d, q.Filters, asOf)
 	result.Meta.QueryHash = hashKey
 
 	// 8. Cache (best-effort)
@@ -141,4 +152,21 @@ func (h *GetDataHandler) Handle(ctx context.Context, q GetDataQuery) (*Result, e
 	}
 
 	return &result, nil
+}
+
+// authorizeView applies the dashboard access checks of Handle. The employee-level check runs
+// before the cache so a result cached for a permitted user is never served to one without it.
+func authorizeView(d *dashboarddomain.Dashboard, q GetDataQuery) error {
+	if !d.IsAccessibleBy(q.UserRoles, q.IsSuperAdmin) {
+		return dashboarddomain.ErrForbidden
+	}
+	// HR_* dashboards need workforce.view on top of the role whitelist (HD-10).
+	if !q.IsSuperAdmin && !q.CanViewWorkforce && TouchesHRType(d.FilterType(), d.KpiConfig()) {
+		return fmt.Errorf("%w: workforce data requires %s", dashboarddomain.ErrForbidden, PermWorkforceView)
+	}
+	// Employee-level (group_3) of HR_* needs its own permission (HD-07).
+	if !q.IsSuperAdmin && !q.CanViewEmployee && RequestsEmployeeLevel(d, q.Filters) {
+		return fmt.Errorf("%w: employee-level data requires %s", dashboarddomain.ErrForbidden, PermWorkforceEmployee)
+	}
+	return nil
 }

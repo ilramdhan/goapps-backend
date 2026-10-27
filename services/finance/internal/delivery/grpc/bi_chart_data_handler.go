@@ -55,10 +55,12 @@ func (h *BIChartDataHandler) GetDashboardData(ctx context.Context, req *financev
 	// Read filter values forwarded by the BFF as gRPC metadata headers.
 	applyMetadataFilters(ctx, &filters)
 	q := chartdataapp.GetDataQuery{
-		DashboardCode: req.GetDashboardCode(),
-		Filters:       filters,
-		UserRoles:     GetRolesFromCtx(ctx),
-		IsSuperAdmin:  IsSuperAdmin(ctx),
+		DashboardCode:    req.GetDashboardCode(),
+		Filters:          filters,
+		UserRoles:        GetRolesFromCtx(ctx),
+		IsSuperAdmin:     IsSuperAdmin(ctx),
+		CanViewEmployee:  HasPermission(ctx, chartdataapp.PermWorkforceEmployee),
+		CanViewWorkforce: HasPermission(ctx, chartdataapp.PermWorkforceView),
 	}
 	result, err := h.getDataHandler.Handle(ctx, q)
 	if err != nil {
@@ -80,13 +82,16 @@ func (h *BIChartDataHandler) PreviewDashboard(ctx context.Context, req *financev
 		modes = append(modes, compareModeToString(m))
 	}
 	q := chartdataapp.PreviewQuery{
-		FilterType:   req.GetFilterType(),
-		FilterGroup1: req.GetFilterGroup_1(),
-		PeriodGrain:  periodeGrainToString(req.GetPeriodeGrain()),
-		ChartType:    chartTypeToString(req.GetChartType()),
-		ChartConfig:  structToMap(req.GetChartConfig()),
-		KpiConfig:    structListToMaps(req.GetKpiConfig()),
-		CompareModes: modes,
+		FilterType:       req.GetFilterType(),
+		FilterGroup1:     req.GetFilterGroup_1(),
+		PeriodGrain:      periodeGrainToString(req.GetPeriodeGrain()),
+		ChartType:        chartTypeToString(req.GetChartType()),
+		ChartConfig:      structToMap(req.GetChartConfig()),
+		KpiConfig:        structListToMaps(req.GetKpiConfig()),
+		CompareModes:     modes,
+		CanViewWorkforce: HasPermission(ctx, chartdataapp.PermWorkforceView),
+		CanViewEmployee:  HasPermission(ctx, chartdataapp.PermWorkforceEmployee),
+		IsSuperAdmin:     IsSuperAdmin(ctx),
 	}
 	result, err := h.previewHandler.Handle(ctx, q)
 	if err != nil {
@@ -165,6 +170,9 @@ func chartResultToProto(r *chartdataapp.Result) *financev1.ChartDataResponse {
 // Supported headers:
 //   - x-group1-filter: comma-separated group_1 values for filter-chip selections.
 //   - x-group2-filter: comma-separated group_2 values for filter-chip selections.
+//   - x-group-by: group-by key of the employee_ot table (DIVISION | DEPT; HD-18), whitelisted in the planner.
+//   - x-group-filter: JSON array of selected values of that group (employee_ot; replaces x-group1-filter).
+//   - x-compare-period: payroll period YYYYMM compared against by employee_ot (HD-25); validated in the planner.
 //   - x-computed-ratio: JSON-encoded ComputedRatioConfig for the /computed BFF route.
 //   - x-force-trend: when "true", overrides x_axis_field and forces isTrend=true in Plan().
 //     Used by the monthly-detail BFF to fetch period-grouped series from categorical
@@ -180,6 +188,7 @@ func applyMetadataFilters(ctx context.Context, f *chartdataapp.ViewerFilters) {
 	if vals := md.Get("x-group2-filter"); len(vals) > 0 && vals[0] != "" {
 		f.Group2Filter = strings.Split(vals[0], ",")
 	}
+	applyGroupingMetadata(md, f)
 	// x-computed-ratio: JSON-encoded ComputedRatioConfig injected by the /computed BFF route.
 	// When present, the query planner switches to planComputedRatio (ratio grouped by group_2).
 	if vals := md.Get("x-computed-ratio"); len(vals) > 0 && vals[0] != "" {
@@ -192,6 +201,23 @@ func applyMetadataFilters(ctx context.Context, f *chartdataapp.ViewerFilters) {
 	// regardless of the dashboard's x_axis_field setting.
 	if vals := md.Get("x-force-trend"); len(vals) > 0 && vals[0] == "true" {
 		f.ForceTrend = true
+	}
+}
+
+// applyGroupingMetadata reads x-group-by, x-compare-period and x-group-filter (employee tables).
+// A malformed x-group-filter is ignored like a malformed x-computed-ratio (no filter).
+func applyGroupingMetadata(md metadata.MD, f *chartdataapp.ViewerFilters) {
+	if vals := md.Get("x-group-by"); len(vals) > 0 {
+		f.GroupBy = vals[0]
+	}
+	if vals := md.Get("x-compare-period"); len(vals) > 0 {
+		f.ComparePeriod = vals[0]
+	}
+	if vals := md.Get("x-group-filter"); len(vals) > 0 && vals[0] != "" {
+		var gf []string
+		if err := json.Unmarshal([]byte(vals[0]), &gf); err == nil {
+			f.GroupFilter = gf
+		}
 	}
 }
 
