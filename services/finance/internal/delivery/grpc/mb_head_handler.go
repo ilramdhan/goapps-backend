@@ -17,6 +17,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcomposition"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbparam"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/shade"
 	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
 
@@ -107,10 +108,10 @@ func NewMBHeadHandlerWithRecipeFull(
 		return nil, err
 	}
 	return &MBHeadHandler{
-		createHandler:        appmbhead.NewCreateHandler(repo, machineRepo),
+		createHandler:        appmbhead.NewCreateHandler(repo, machineRepo, nil),
 		getHandler:           appmbhead.NewGetHandler(repo),
 		listHandler:          appmbhead.NewListHandler(repo),
-		updateHandler:        appmbhead.NewUpdateHandler(repo),
+		updateHandler:        appmbhead.NewUpdateHandler(repo, nil),
 		deleteHandler:        appmbhead.NewDeleteHandler(repo),
 		submitHandler:        appmbhead.NewSubmitHandlerWithComposition(repo, compositionRepo),
 		validateHandler:      appmbhead.NewValidateHandlerWithComposition(repo, paramRepo, compositionRepo),
@@ -127,6 +128,18 @@ func NewMBHeadHandlerWithRecipeFull(
 		templateHandler:      appmbhead.NewTemplateHandler(),
 		validation:           v,
 	}, nil
+}
+
+// WithShadeMaster attaches the shade master repository so a successful recipe
+// create/update auto-creates a MANUAL shade row for an unknown shade code
+// (best-effort — a shade failure is logged and never fails the save). A nil repo
+// leaves the hook disabled. Returns the handler for chaining.
+func (h *MBHeadHandler) WithShadeMaster(shadeRepo shade.Repository) *MBHeadHandler {
+	if shadeRepo != nil {
+		h.createHandler.WithShadeRepo(shadeRepo)
+		h.updateHandler.WithShadeRepo(shadeRepo)
+	}
+	return h
 }
 
 // WithCostCalcDetail attaches the read-only reader backing ExportMBCostCalcDetail and

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/shade"
 )
 
 // UpdateCommand represents the update MB Head command.
@@ -53,12 +54,21 @@ type UpdateCommand struct {
 
 // UpdateHandler handles the UpdateMBHead command.
 type UpdateHandler struct {
-	repo mbhead.Repository
+	repo      mbhead.Repository
+	shadeRepo shade.Repository
 }
 
-// NewUpdateHandler creates a new UpdateHandler.
-func NewUpdateHandler(repo mbhead.Repository) *UpdateHandler {
-	return &UpdateHandler{repo: repo}
+// NewUpdateHandler creates a new UpdateHandler. shadeRepo backs the best-effort
+// shade-master auto-create after a successful save; nil disables it.
+func NewUpdateHandler(repo mbhead.Repository, shadeRepo shade.Repository) *UpdateHandler {
+	return &UpdateHandler{repo: repo, shadeRepo: shadeRepo}
+}
+
+// WithShadeRepo attaches the shade master repository used by the best-effort
+// shade auto-create and returns the handler for chaining.
+func (h *UpdateHandler) WithShadeRepo(shadeRepo shade.Repository) *UpdateHandler {
+	h.shadeRepo = shadeRepo
+	return h
 }
 
 // Handle executes the update MB Head command.
@@ -139,6 +149,8 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 			return nil, err
 		}
 	}
+
+	ensureShadeMaster(ctx, h.shadeRepo, entity, cmd.UpdatedBy)
 
 	return entity, nil
 }

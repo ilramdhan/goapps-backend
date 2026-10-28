@@ -10,6 +10,7 @@ import (
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/machine"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/shade"
 )
 
 // DefaultMachineCode is the mst_machine.mc_code every MB Head is pinned to (B5).
@@ -79,13 +80,22 @@ type CreateCommand struct {
 type CreateHandler struct {
 	repo        mbhead.Repository
 	machineRepo machine.Repository
+	shadeRepo   shade.Repository
 }
 
 // NewCreateHandler creates a new CreateHandler.
 //
-// machineRepo is required for B5 — the "MB" machine lookup.
-func NewCreateHandler(repo mbhead.Repository, machineRepo machine.Repository) *CreateHandler {
-	return &CreateHandler{repo: repo, machineRepo: machineRepo}
+// machineRepo is required for B5 — the "MB" machine lookup. shadeRepo backs the
+// best-effort shade-master auto-create after a successful save; nil disables it.
+func NewCreateHandler(repo mbhead.Repository, machineRepo machine.Repository, shadeRepo shade.Repository) *CreateHandler {
+	return &CreateHandler{repo: repo, machineRepo: machineRepo, shadeRepo: shadeRepo}
+}
+
+// WithShadeRepo attaches the shade master repository used by the best-effort
+// shade auto-create and returns the handler for chaining.
+func (h *CreateHandler) WithShadeRepo(shadeRepo shade.Repository) *CreateHandler {
+	h.shadeRepo = shadeRepo
+	return h
 }
 
 // Handle executes the create MB Head command.
@@ -155,6 +165,8 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbhead.
 			return nil, err
 		}
 	}
+
+	ensureShadeMaster(ctx, h.shadeRepo, entity, cmd.CreatedBy)
 
 	return entity, nil
 }

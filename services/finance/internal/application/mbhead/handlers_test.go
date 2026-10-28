@@ -124,7 +124,7 @@ func (m *MockRepository) ForceUnvalidateTransition(ctx context.Context, id uuid.
 func TestCreateHandler_Handle(t *testing.T) {
 	t.Run("success - creates new MB Head", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo())
+		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo(), nil)
 		ctx := context.Background()
 
 		cmd := mbhead.CreateCommand{
@@ -145,7 +145,7 @@ func TestCreateHandler_Handle(t *testing.T) {
 
 	t.Run("error - duplicate mb_costing", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo())
+		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo(), nil)
 		ctx := context.Background()
 
 		cmd := mbhead.CreateCommand{
@@ -164,7 +164,7 @@ func TestCreateHandler_Handle(t *testing.T) {
 
 	t.Run("error - empty mb_costing", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo())
+		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo(), nil)
 		ctx := context.Background()
 
 		cmd := mbhead.CreateCommand{
@@ -182,7 +182,7 @@ func TestCreateHandler_Handle(t *testing.T) {
 
 	t.Run("error - empty created_by", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo())
+		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo(), nil)
 		ctx := context.Background()
 
 		cmd := mbhead.CreateCommand{
@@ -254,7 +254,7 @@ func TestGetHandler_Handle(t *testing.T) {
 func TestUpdateHandler_Handle(t *testing.T) {
 	t.Run("success - updates entity", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewUpdateHandler(mockRepo)
+		handler := mbhead.NewUpdateHandler(mockRepo, nil)
 		ctx := context.Background()
 
 		id := uuid.New()
@@ -282,7 +282,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 
 	t.Run("error - not found", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		handler := mbhead.NewUpdateHandler(mockRepo)
+		handler := mbhead.NewUpdateHandler(mockRepo, nil)
 		ctx := context.Background()
 
 		id := uuid.New()

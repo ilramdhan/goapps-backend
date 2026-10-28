@@ -55,7 +55,7 @@ func TestUpdateHandler_MBCostingRename(t *testing.T) {
 				repo.On("Update", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 			}
 
-			got, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+			got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 				ID: id, MBCosting: tt.incoming, UpdatedBy: "editor",
 			})
 
