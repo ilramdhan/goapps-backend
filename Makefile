@@ -31,6 +31,8 @@ help:
 	@echo "  make v2-seed            - Run seeders for all services as <svc>_owner (direct)"
 	@echo "  make v2-verify          - Run 90-verify.sql on every DB"
 	@echo "  make v2-down            - Stop the v2 stack (V2_PURGE=1 also drops its volume)"
+	@echo "  make v2-env-on          - Point local services at v2 (writes services/<svc>/.env.local)"
+	@echo "  make v2-env-off         - Back to the classic per-service DBs (removes those .env.local)"
 	@echo "  make migration-lint     - Check migrations against the 1-DB-per-service rule"
 
 # =============================================================================
@@ -125,7 +127,7 @@ V2_SERVICES := iam finance ppc
 
 V2_SQL_SRC  ?= ../docs/migration-postgres/v2/sql
 
-.PHONY: v2-up v2-down v2-migrate v2-grants v2-seed v2-verify v2-sync-check migration-lint
+.PHONY: v2-up v2-down v2-migrate v2-grants v2-seed v2-verify v2-sync-check v2-env-on v2-env-off migration-lint
 
 v2-up:
 	$(V2_COMPOSE) up -d --wait
@@ -158,6 +160,24 @@ v2-seed:
 
 v2-verify:
 	@for d in iam_db finance_db ppc_db; do echo "=== $$d"; docker exec -i goapps-v2-postgres psql -X -U postgres -d $$d -f /v2/sql/90-verify.sql || exit 1; done
+
+# Switch local services between the classic DBs and v2. Every service Makefile
+# auto-loads services/<svc>/.env.local, so the switch is just that file.
+# Only files carrying V2_ENV_MARK are ever overwritten/removed; your own .env.local is left alone.
+V2_ENV_MARK := \# managed-by: make v2-env-on
+V2_ENV_MAP  := iam:iam finance:finance ppc:ppc finance-cost-worker:workers finance-cost-orchestrator:workers
+
+v2-env-on:
+	@for m in $(V2_ENV_MAP); do svc=$${m%%:*}; src=deploy/local-v2/env/$${m##*:}.env; dst=services/$$svc/.env.local; \
+	  if [ -f $$dst ] && ! grep -q 'managed-by: make v2-env-on' $$dst; then \
+	    echo "⚠️  $$dst is yours, not touched. Append $$src to it by hand."; continue; fi; \
+	  { echo "$(V2_ENV_MARK)"; cat $$src; } > $$dst; echo "✅ $$dst -> v2 ($$src)"; \
+	done
+
+v2-env-off:
+	@for m in $(V2_ENV_MAP); do dst=services/$${m%%:*}/.env.local; \
+	  if [ -f $$dst ] && grep -q 'managed-by: make v2-env-on' $$dst; then rm $$dst; echo "✅ removed $$dst (classic DB again)"; fi; \
+	done
 
 # deploy/local-v2/sql must stay a byte-identical copy of the VPS scripts (no forked logic).
 v2-sync-check:

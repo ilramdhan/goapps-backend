@@ -853,7 +853,7 @@ Full ADR: `docs/adr/0001-one-database-per-service.md` (this repo). Roles referen
 - **Extensions** (`pg_trgm`, `uuid-ossp`) are pre-created by the DBA scripts (`10-create-databases.sql`); `<svc>_owner` is not a superuser, so a migration may only `CREATE EXTENSION IF NOT EXISTS` an already-provisioned one. A new extension goes into the DBA script first.
 - **Migrations must NOT contain**: `CREATE/ALTER SCHEMA`, `SET search_path`, `OWNER TO`, `GRANT/REVOKE`, `ALTER DEFAULT PRIVILEGES`, `dblink`/FDW/`CREATE DATABASE`/`CREATE ROLE`, or references to other schemas.
 - **Lint**: `make migration-lint` (`scripts/migration-lint.sh`), enforced by CI `.github/workflows/migration-lint.yml`. Exceptions go in `scripts/migration-lint.allow`; every entry needs a `# reason`.
-- **Local stack (mirrors VPS)**: `docker-compose.v2.yaml` + `make v2-up / v2-migrate / v2-seed / v2-verify`; services read `deploy/local-v2/env/<svc>.env`.
+- **Local stack (mirrors VPS)**: `docker-compose.v2.yaml` + `make v2-up / v2-migrate / v2-seed / v2-verify`; `make v2-env-on` / `v2-env-off` switches services via `services/<svc>/.env.local` (source `deploy/local-v2/env/<svc>.env`).
 - **After migrations**: a new materialized view in finance -> re-run `25-finance-runtime.sql`; IAM columns added to restricted tables -> re-run `30-restricted-iam.sql`.
 - **Migrate** as `<svc>_owner` (direct) with `x-migrations-table=schema_migrations_<svc>`; run the service as `<svc>_app` via PgBouncer. Data from another service comes via gRPC, never SQL.
 

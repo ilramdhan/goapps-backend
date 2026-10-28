@@ -41,6 +41,8 @@ Thumbs.db
 *.env
 env.yaml
 env.yml
+# dev-only DSNs for docker-compose.v2 (no real secrets; see deploy/local-v2/README.md)
+!deploy/local-v2/env/*.env
 
 # Config files with potential secrets
 config.local.yaml

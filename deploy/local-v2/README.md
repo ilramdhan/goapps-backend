@@ -27,8 +27,14 @@ All passwords here are **dev-only**; real ones live in the password manager, nev
 ```bash
 docker compose up -d redis rabbitmq minio minio-init mailpit   # classic infra (unchanged)
 make v2-up && make v2-migrate && make v2-seed && make v2-verify
-set -a; . deploy/local-v2/env/finance.env; set +a; make -C services/finance run
+make v2-env-on                       # services/<svc>/.env.local -> v2 (PgBouncer :6440, <svc>_app)
+make -C services/iam run             # and finance / ppc / finance-cost-worker / finance-cost-orchestrator as usual
+make v2-env-off                      # back to the classic per-service DBs (5434/5435/5436)
 ```
+`v2-env-on` only writes `.env.local` files it owns (first line `# managed-by: make v2-env-on`);
+if you already have your own `services/<svc>/.env.local`, it is skipped and you append the
+`deploy/local-v2/env/<svc>.env` lines yourself. One-off without the switch:
+`set -a; . deploy/local-v2/env/finance.env; set +a; make -C services/finance run`.
 
 Finance e2e through PgBouncer as the runtime role:
 ```bash

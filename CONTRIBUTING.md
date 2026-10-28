@@ -153,7 +153,8 @@ Every service owns exactly one database. Full decision: [`docs/adr/0001-one-data
   ```bash
   docker compose up -d redis rabbitmq minio minio-init mailpit   # shared infra, unchanged
   make v2-up && make v2-migrate && make v2-seed && make v2-verify
-  set -a; . deploy/local-v2/env/finance.env; set +a; make finance-run
+  make v2-env-on        # services now use v2 via services/<svc>/.env.local; make v2-env-off to go back
+  make finance-run
   ```
   Details: [`deploy/local-v2/README.md`](deploy/local-v2/README.md). The classic per-service `docker-compose.yaml` still works.
 
