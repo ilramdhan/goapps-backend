@@ -169,51 +169,81 @@ func (r *BIMVRepository) fetchRows(ctx context.Context, query string, hasMetric 
 	}()
 
 	var result []BIMVRow
+	skipped := 0
 	for rows.Next() {
-		row, scanErr := r.scanRow(rows, hasMetric)
+		row, ok, scanErr := r.scanRow(rows, hasMetric)
 		if scanErr != nil {
 			return nil, fmt.Errorf("scan MV row: %w", scanErr)
+		}
+		if !ok {
+			skipped++
+			continue
 		}
 		result = append(result, row)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate MV rows: %w", err)
 	}
+	if skipped > 0 {
+		r.client.logger.Warn().Int("skipped", skipped).Int("loaded", len(result)).
+			Msg("oracle MV rows with NULL FM_VALUE skipped (value not yet available in source)")
+	}
 	return result, nil
 }
 
-// scanRow scans one row from an Oracle MV query into a BIMVRow.
-func (r *BIMVRepository) scanRow(rows *sql.Rows, hasMetric bool) (BIMVRow, error) {
-	var row BIMVRow
+// resolveMVValues maps the nullable FM_VALUE / FM_DISPLAY_VALUE pair to the values stored in
+// bi_fact_metric (both NOT NULL). A NULL FM_VALUE means the source has no figure yet (e.g. a
+// margin for the running month), so the row is reported as not loadable rather than stored as
+// 0, which would read as a real zero and skew AVG metrics. A NULL FM_DISPLAY_VALUE falls back
+// to FM_VALUE.
+func resolveMVValues(value, display sql.NullFloat64) (float64, float64, bool) {
+	if !value.Valid {
+		return 0, 0, false
+	}
+	if !display.Valid {
+		return value.Float64, value.Float64, true
+	}
+	return value.Float64, display.Float64, true
+}
+
+// scanRow scans one row from an Oracle MV query into a BIMVRow. ok is false when the row has
+// no FM_VALUE and must be skipped (see resolveMVValues).
+func (r *BIMVRepository) scanRow(rows *sql.Rows, hasMetric bool) (row BIMVRow, ok bool, err error) {
 	var periodeDate sql.NullTime
+	var value, display sql.NullFloat64
 	var g1o, g2o, g3o sql.NullInt64
 	var srcCode sql.NullString
 
 	if hasMetric {
 		var mn, mc, am sql.NullString
-		err := rows.Scan(
+		err = rows.Scan(
 			&row.Type, &row.Group1, &row.Group2, &row.Group3,
 			&g1o, &g2o, &g3o,
 			&row.PeriodGrain, &periodeDate, &row.PeriodLabel,
-			&row.Value, &row.DisplayValue, &row.UOM, &row.Scenario, &srcCode,
+			&value, &display, &row.UOM, &row.Scenario, &srcCode,
 			&mn, &mc, &am,
 		)
 		if err != nil {
-			return BIMVRow{}, err
+			return BIMVRow{}, false, err
 		}
 		row.MetricName = mn.String
 		row.MetricCategory = mc.String
 		row.AggMethod = am.String
 	} else {
-		err := rows.Scan(
+		err = rows.Scan(
 			&row.Type, &row.Group1, &row.Group2, &row.Group3,
 			&g1o, &g2o, &g3o,
 			&row.PeriodGrain, &periodeDate, &row.PeriodLabel,
-			&row.Value, &row.DisplayValue, &row.UOM, &row.Scenario, &srcCode,
+			&value, &display, &row.UOM, &row.Scenario, &srcCode,
 		)
 		if err != nil {
-			return BIMVRow{}, err
+			return BIMVRow{}, false, err
 		}
+	}
+
+	row.Value, row.DisplayValue, ok = resolveMVValues(value, display)
+	if !ok {
+		return BIMVRow{}, false, nil
 	}
 
 	if periodeDate.Valid {
@@ -229,5 +259,5 @@ func (r *BIMVRepository) scanRow(rows *sql.Rows, hasMetric bool) (BIMVRow, error
 		row.Group3Order = int(g3o.Int64) //nolint:gosec // Oracle order values are small ints, safe narrowing
 	}
 	row.SourceCode = strings.TrimSpace(srcCode.String)
-	return row, nil
+	return row, true, nil
 }
