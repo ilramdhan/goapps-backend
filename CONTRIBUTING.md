@@ -8,6 +8,7 @@ Thank you for your interest in contributing to `goapps-backend`! This document c
 
 1. [Getting Started](#getting-started)
 2. [Development Environment](#development-environment)
+   - [Database per Service (ADR 0001)](#database-per-service-adr-0001)
 3. [Contribution Workflow](#contribution-workflow)
 4. [Pull Request Guidelines](#pull-request-guidelines)
 5. [Code Review Process](#code-review-process)
@@ -135,6 +136,26 @@ grpcurl -plaintext localhost:50051 list
 grpcurl -plaintext -d '{"code": "KG", "name": "Kilogram"}' \
   localhost:50051 finance.v1.UOMService/CreateUOM
 ```
+
+### Database per Service (ADR 0001)
+
+Every service owns exactly one database. Full decision: [`docs/adr/0001-one-database-per-service.md`](docs/adr/0001-one-database-per-service.md).
+
+- **1 service = 1 database `<svc>_db`**, schema `public` only, migration table `schema_migrations_<svc>`.
+- Roles: `<svc>_owner` runs migrations/seeds (direct connection), `<svc>_app` runs the service (via PgBouncer, DML only), `<svc>_ro` is read-only. No service uses a superuser.
+- **No cross-service SQL.** If you need another service's data, call its gRPC API.
+- **Migration Lint (CI, required via CI Gate).** A migration may not contain `CREATE/ALTER/DROP SCHEMA`, `SET search_path`, `OWNER TO`, `GRANT`/`REVOKE`, `ALTER DEFAULT PRIVILEGES`, `dblink`/FDW/`CREATE DATABASE`/`CREATE ROLE`, or references to another schema. Run it locally before pushing:
+  ```bash
+  make migration-lint
+  ```
+  A justified exception goes in `scripts/migration-lint.allow` with a `# reason` (reviewed like code).
+- **Optional local stack that matches staging/production** (Postgres 18 + PgBouncer, same roles and grants as the VPS):
+  ```bash
+  docker compose up -d redis rabbitmq minio minio-init mailpit   # shared infra, unchanged
+  make v2-up && make v2-migrate && make v2-seed && make v2-verify
+  set -a; . deploy/local-v2/env/finance.env; set +a; make finance-run
+  ```
+  Details: [`deploy/local-v2/README.md`](deploy/local-v2/README.md). The classic per-service `docker-compose.yaml` still works.
 
 ---
 

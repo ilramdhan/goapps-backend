@@ -109,6 +109,9 @@ goapps-backend/
 │       └── go.mod
 ├── scripts/                      # Utility scripts (merge-swagger.py, etc.)
 ├── docker-compose.yaml           # Shared local dev infrastructure
+├── docker-compose.v2.yaml        # Local Postgres+PgBouncer mirroring the VPS (ADR 0001)
+├── deploy/local-v2/              # SQL/init/PgBouncer/env for docker-compose.v2
+├── docs/adr/                     # Architecture Decision Records
 ├── .golangci.yml                 # Lint config (v2 format, 27 linters)
 ├── Makefile                      # Root-level targets
 └── RULES.md                     # Detailed coding conventions
@@ -391,6 +394,7 @@ if err == nil {
 - Never modify a merged migration -- create a new one
 - Every up migration must have a corresponding down migration
 - Tool: golang-migrate v4
+- **One database per service (ADR 0001, `docs/adr/`)**: schema `public` only, table `schema_migrations_<svc>`, no `CREATE SCHEMA` / `search_path` / `OWNER TO` / `GRANT` / other-schema refs. CI **Migration Lint** enforces it — run `make migration-lint` (repo root) before committing a migration. Details §15.
 
 ### Costing formulas
 
@@ -843,7 +847,7 @@ For a new CRUD entity in an existing service:
 
 **Rule**: 1 service = 1 database `<svc>_db`; roles `<svc>_owner` (migrations/seeds only, direct connection), `<svc>_app` (runtime, via PgBouncer, DML only), `<svc>_ro` (read-only group); schema `public` only; migration table `schema_migrations_<svc>`; no cross-service SQL — use gRPC.
 
-Full ADR: `docs/adr/0001-one-database-per-service.md` (workspace root). Roles reference: `docs/migration-postgres/v2/roles-and-access.md`.
+Full ADR: `docs/adr/0001-one-database-per-service.md` (this repo). Roles reference: `docs/migration-postgres/v2/roles-and-access.md` (goapps workspace docs). Team-facing summary: `CONTRIBUTING.md` "Database per Service".
 
 - **Provisioning SQL (source of truth)**: `docs/migration-postgres/v2/sql/` (workspace). Roles/DB/pg_hba/secret for a new service are currently **manual** from those scripts; a `new-service-db.sh <svc>` script is **planned (P8b)**, not existing.
 - **Extensions** (`pg_trgm`, `uuid-ossp`) are pre-created by the DBA scripts (`10-create-databases.sql`); `<svc>_owner` is not a superuser, so a migration may only `CREATE EXTENSION IF NOT EXISTS` an already-provisioned one. A new extension goes into the DBA script first.
@@ -872,7 +876,7 @@ Known gaps identified during a 2026-07 documentation audit — not blockers, but
 
 | Area | Severity | Note |
 |------|----------|------|
-| `deploy/` directory empty | Low | K8s manifests live in `goapps-infra` instead |
+| `deploy/` holds only `local-v2/` | Low | Local DB stack for `docker-compose.v2.yaml`; K8s manifests live in `goapps-infra` |
 | Config validation | Low | No viper validation schema — only manual checks in code |
 | Token blacklist cleanup | Medium | No documented TTL/expiration policy for Redis DB 1 entries |
 | Circuit breaker pattern | Medium | Mentioned in RULES.md but not implemented |
