@@ -1,0 +1,3 @@
+# Migration lint allow-list. Format (justification after '#' is REQUIRED):
+#   <rule-id> <path-relative-to-repo>[:<line>]  # why this is acceptable
+# Stale entries (matching nothing) fail the lint. Currently empty: the tree is clean.

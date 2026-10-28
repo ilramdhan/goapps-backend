@@ -171,6 +171,8 @@ make seed                          # Run data seeders
 Finance default DATABASE_URL: `postgres://finance:finance123@localhost:5434/finance_db?sslmode=disable`
 IAM default DATABASE_URL: `postgres://iam:iam123@localhost:5435/iam_db?sslmode=disable`
 
+> Note (ADR 0001): these are legacy single-service dev DSNs. Staging/prod (VPS) use one DB per service with `<svc>_owner` / `<svc>_app` roles, never a superuser; the local stack mirroring the VPS is `docker-compose.v2.yaml` (`make v2-up`, env in `deploy/local-v2/env/<svc>.env`).
+
 ### Docker (local infra)
 
 ```bash
@@ -823,7 +825,7 @@ For a new CRUD entity in an existing service:
 2. **Generate**: `./scripts/gen-go.sh`
 3. **Domain**: `entity.go`, `value_objects.go`, `repository.go`, `errors.go`
    - **No type stuttering**: if package is `formula`, use `Type` not `FormulaType`, `Param` not `FormulaParam`
-4. **Migration**: `make migrate-create NAME=create_mst_xxx`
+4. **Migration**: `make migrate-create NAME=create_mst_xxx` — must pass `make migration-lint` (see "New Microservice — Database Rule" below)
 5. **Infrastructure**: `postgres/xxx_repository.go` implementing domain interface
    - **Handle ALL errors**: including `tx.Rollback()` in defers, and value object constructors in DTO mappers
    - **Transactions**: use `if rbErr := tx.Rollback(); rbErr != nil { err = fmt.Errorf(...) }` pattern
@@ -836,6 +838,20 @@ For a new CRUD entity in an existing service:
 9. **Swagger**: `make proto-copy-swagger`
 10. **Tests**: domain unit tests, application handler tests with mocked repo, integration tests
 11. **Lint**: run `make lint` (or `golangci-lint run ./...`) and fix ALL issues before committing
+
+### New Microservice — Database Rule (ADR 0001)
+
+**Rule**: 1 service = 1 database `<svc>_db`; roles `<svc>_owner` (migrations/seeds only, direct connection), `<svc>_app` (runtime, via PgBouncer, DML only), `<svc>_ro` (read-only group); schema `public` only; migration table `schema_migrations_<svc>`; no cross-service SQL — use gRPC.
+
+Full ADR: `docs/adr/0001-one-database-per-service.md` (workspace root). Roles reference: `docs/migration-postgres/v2/roles-and-access.md`.
+
+- **Provisioning SQL (source of truth)**: `docs/migration-postgres/v2/sql/` (workspace). Roles/DB/pg_hba/secret for a new service are currently **manual** from those scripts; a `new-service-db.sh <svc>` script is **planned (P8b)**, not existing.
+- **Extensions** (`pg_trgm`, `uuid-ossp`) are pre-created by the DBA scripts (`10-create-databases.sql`); `<svc>_owner` is not a superuser, so a migration may only `CREATE EXTENSION IF NOT EXISTS` an already-provisioned one. A new extension goes into the DBA script first.
+- **Migrations must NOT contain**: `CREATE/ALTER SCHEMA`, `SET search_path`, `OWNER TO`, `GRANT/REVOKE`, `ALTER DEFAULT PRIVILEGES`, `dblink`/FDW/`CREATE DATABASE`/`CREATE ROLE`, or references to other schemas.
+- **Lint**: `make migration-lint` (`scripts/migration-lint.sh`), enforced by CI `.github/workflows/migration-lint.yml`. Exceptions go in `scripts/migration-lint.allow`; every entry needs a `# reason`.
+- **Local stack (mirrors VPS)**: `docker-compose.v2.yaml` + `make v2-up / v2-migrate / v2-seed / v2-verify`; services read `deploy/local-v2/env/<svc>.env`.
+- **After migrations**: a new materialized view in finance -> re-run `25-finance-runtime.sql`; IAM columns added to restricted tables -> re-run `30-restricted-iam.sql`.
+- **Migrate** as `<svc>_owner` (direct) with `x-migrations-table=schema_migrations_<svc>`; run the service as `<svc>_app` via PgBouncer. Data from another service comes via gRPC, never SQL.
 
 ### File Size Guidelines
 

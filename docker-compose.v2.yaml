@@ -1,0 +1,59 @@
+# GoApps local DB stack "v2" — mirrors the VPS Postgres layout (ADR 0001, one database per service).
+# Additive: the classic docker-compose.yaml (per-service superuser DBs) keeps working unchanged.
+#
+#   make v2-up        # Postgres 18 + PgBouncer, roles/DBs/grants from deploy/local-v2/sql
+#   make v2-migrate   # migrations + grant refresh, as <svc>_owner direct
+#   make v2-verify    # 90-verify.sql on every DB
+#   make v2-down      # stop (add V2_PURGE=1 to drop the volume)
+#
+# Connect:
+#   services  -> <svc>_app   @ localhost:6440 (PgBouncer, transaction mode)  pw dev_<svc>_app
+#   migrate   -> <svc>_owner @ localhost:5440 (direct)                       pw dev_<svc>_owner
+#   superuser -> postgres    @ localhost:5440                                 pw dev_postgres
+# Env overrides per service: deploy/local-v2/env/<svc>.env
+# Redis / RabbitMQ / MinIO / Mailpit still come from docker-compose.yaml.
+name: goapps-v2
+
+services:
+  postgres-v2:
+    image: postgres:18-alpine
+    container_name: goapps-v2-postgres
+    ports:
+      - "5440:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_postgres
+      POSTGRES_DB: postgres
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "max_connections=200"]
+    volumes:
+      - v2_postgres_data:/var/lib/postgresql
+      - ./deploy/local-v2/sql:/v2/sql:ro
+      - ./deploy/local-v2/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # healthy only once init finished (finance_db exists and grants are in place)
+      test: ["CMD-SHELL", "psql -U postgres -d finance_db -tAc 'select 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [goapps-v2]
+
+  pgbouncer-v2:
+    image: edoburu/pgbouncer:v1.25.1-p0
+    container_name: goapps-v2-pgbouncer
+    depends_on:
+      postgres-v2:
+        condition: service_healthy
+    ports:
+      - "6440:6432"
+    volumes:
+      - ./deploy/local-v2/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./deploy/local-v2/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    networks: [goapps-v2]
+
+volumes:
+  v2_postgres_data:
+
+networks:
+  goapps-v2:
+    driver: bridge

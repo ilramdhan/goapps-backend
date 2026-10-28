@@ -1,0 +1,52 @@
+# Migration Lint — enforces "1 service = 1 database, schema public only, no
+# cross-service SQL" on services/*/migrations/postgres/*.sql.
+#
+# Each service owns its own database and runs migrations as <svc>_owner;
+# schemas, roles, grants and search_path are DBA-managed. A migration that
+# creates schemas, changes ownership/grants, or reaches into another schema or
+# database breaks that isolation, so it is caught here before review.
+# Also checks that every x-migrations-table is schema_migrations_<svc>.
+# Rules and allow-list: scripts/migration_lint.py, scripts/migration-lint.allow.
+# ci-gate.yml waits on this check automatically; no extra wiring needed.
+name: Migration Lint
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "services/*/migrations/**"
+      - "scripts/migration-lint*"
+      - "scripts/migration_lint*"
+      - ".github/workflows/migration-lint.yml"
+      - ".github/workflows/**"
+      - "Makefile"
+      - "docker-compose*.yaml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "services/*/migrations/**"
+      - "scripts/migration-lint*"
+      - "scripts/migration_lint*"
+      - ".github/workflows/migration-lint.yml"
+      - ".github/workflows/**"
+      - "Makefile"
+      - "docker-compose*.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-lint:
+    name: Migration Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Self-test
+        run: ./scripts/migration-lint.sh --self-test
+      - name: Lint migrations
+        run: ./scripts/migration-lint.sh
