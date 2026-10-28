@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -245,7 +246,7 @@ func (h *MBHeadHandler) CreateMBHead(ctx context.Context, req *financev1.CreateM
 	})
 	if err != nil {
 		RecordMBHeadOperation("create", false)
-		return &financev1.CreateMBHeadResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.CreateMBHeadResponse{Base: mbHeadWriteErrToBase(err)}, nil
 	}
 
 	RecordMBHeadOperation("create", true)
@@ -346,7 +347,7 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 	})
 	if err != nil {
 		RecordMBHeadOperation("update", false)
-		return &financev1.UpdateMBHeadResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.UpdateMBHeadResponse{Base: mbHeadWriteErrToBase(err)}, nil
 	}
 
 	RecordMBHeadOperation("update", true)
@@ -354,6 +355,16 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 		Base: successResponse("MB head updated successfully"),
 		Data: mbHeadEntityToProto(entity),
 	}, nil
+}
+
+// mbHeadWriteErrToBase maps create/update errors, giving the MB Costing uniqueness
+// conflict a clear user-facing message; everything else falls through to the generic
+// domain mapping.
+func mbHeadWriteErrToBase(err error) *commonv1.BaseResponse {
+	if errors.Is(err, mbhead.ErrAlreadyExists) {
+		return ConflictResponse("MB Costing code already exists")
+	}
+	return domainErrorToBaseResponse(err)
 }
 
 // DeleteMBHead soft-deletes an MB head record.

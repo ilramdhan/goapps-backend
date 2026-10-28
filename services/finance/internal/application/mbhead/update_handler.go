@@ -3,6 +3,7 @@ package mbhead
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -80,8 +81,21 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 		return nil, err
 	}
 
+	oldCosting := entity.MBCosting()
+	costingChanged := mbCostingChanged(oldCosting, cmd.MBCosting)
+	mbCosting := cmd.MBCosting
+	if costingChanged {
+		if err := h.assertMBCostingFree(ctx, *cmd.MBCosting); err != nil {
+			return nil, err
+		}
+	} else {
+		// A trim-equal value is a no-op: never let a whitespace-only edit drift the
+		// head away from the cost product / spin rows that copied its costing.
+		mbCosting = nil
+	}
+
 	if err := entity.Update(mbhead.UpdateInput{
-		MBCosting:       cmd.MBCosting,
+		MBCosting:       mbCosting,
 		MgtName:         cmd.MgtName,
 		Denier:          cmd.Denier,
 		Filament:        cmd.Filament,
@@ -110,7 +124,13 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 		}
 	}
 
-	if err := h.repo.Update(ctx, entity); err != nil {
+	if costingChanged {
+		// The rename must reach the auto-generated cost product name and the root
+		// MB Spin rows in the same transaction as the head itself.
+		if err := h.repo.UpdateWithCostingRename(ctx, entity, oldCosting); err != nil {
+			return nil, err
+		}
+	} else if err := h.repo.Update(ctx, entity); err != nil {
 		return nil, err
 	}
 
@@ -121,6 +141,29 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 	}
 
 	return entity, nil
+}
+
+// mbCostingChanged reports whether an incoming MB Costing really renames the head.
+// nil (field absent) and a value equal to the stored one after trimming are no-ops.
+func mbCostingChanged(current string, incoming *string) bool {
+	if incoming == nil {
+		return false
+	}
+	return strings.TrimSpace(*incoming) != strings.TrimSpace(current)
+}
+
+// assertMBCostingFree rejects a rename onto an MB Costing another live head already
+// uses (unique index uix_mst_mb_head_mb_costing). Only called when the value changes,
+// so the head's own row can never collide with itself.
+func (h *UpdateHandler) assertMBCostingFree(ctx context.Context, incoming string) error {
+	taken, err := h.repo.ExistsByMBCosting(ctx, incoming)
+	if err != nil {
+		return err
+	}
+	if taken {
+		return mbhead.ErrAlreadyExists
+	}
+	return nil
 }
 
 // assertVSNumberFree checks VS Number uniqueness ONLY when the value actually

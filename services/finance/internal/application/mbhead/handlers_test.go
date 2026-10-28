@@ -50,6 +50,11 @@ func (m *MockRepository) Update(ctx context.Context, entity *mbheaddomain.Entity
 	return args.Error(0)
 }
 
+func (m *MockRepository) UpdateWithCostingRename(ctx context.Context, entity *mbheaddomain.Entity, oldCosting string) error {
+	args := m.Called(ctx, entity, oldCosting)
+	return args.Error(0)
+}
+
 func (m *MockRepository) SoftDelete(ctx context.Context, id uuid.UUID, deletedBy string) error {
 	args := m.Called(ctx, id, deletedBy)
 	return args.Error(0)
@@ -264,7 +269,8 @@ func TestUpdateHandler_Handle(t *testing.T) {
 		}
 
 		mockRepo.On("GetByID", ctx, id).Return(entity, nil)
-		mockRepo.On("Update", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
+		mockRepo.On("ExistsByMBCosting", ctx, "MB001-UPD").Return(false, nil)
+		mockRepo.On("UpdateWithCostingRename", ctx, mock.AnythingOfType("*mbhead.Entity"), "MB001").Return(nil)
 
 		result, err := handler.Handle(ctx, cmd)
 
