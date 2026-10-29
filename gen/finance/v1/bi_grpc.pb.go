@@ -983,12 +983,13 @@ var DataSourceService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	BiJobService_ListJobs_FullMethodName    = "/finance.v1.BiJobService/ListJobs"
-	BiJobService_ListJobLogs_FullMethodName = "/finance.v1.BiJobService/ListJobLogs"
-	BiJobService_TriggerJob_FullMethodName  = "/finance.v1.BiJobService/TriggerJob"
-	BiJobService_CreateBiJob_FullMethodName = "/finance.v1.BiJobService/CreateBiJob"
-	BiJobService_UpdateBiJob_FullMethodName = "/finance.v1.BiJobService/UpdateBiJob"
-	BiJobService_DeleteBiJob_FullMethodName = "/finance.v1.BiJobService/DeleteBiJob"
+	BiJobService_ListJobs_FullMethodName     = "/finance.v1.BiJobService/ListJobs"
+	BiJobService_GetEtlStatus_FullMethodName = "/finance.v1.BiJobService/GetEtlStatus"
+	BiJobService_ListJobLogs_FullMethodName  = "/finance.v1.BiJobService/ListJobLogs"
+	BiJobService_TriggerJob_FullMethodName   = "/finance.v1.BiJobService/TriggerJob"
+	BiJobService_CreateBiJob_FullMethodName  = "/finance.v1.BiJobService/CreateBiJob"
+	BiJobService_UpdateBiJob_FullMethodName  = "/finance.v1.BiJobService/UpdateBiJob"
+	BiJobService_DeleteBiJob_FullMethodName  = "/finance.v1.BiJobService/DeleteBiJob"
 )
 
 // BiJobServiceClient is the client API for BiJobService service.
@@ -999,6 +1000,8 @@ const (
 type BiJobServiceClient interface {
 	// ListJobs returns ETL job registry entries.
 	ListJobs(ctx context.Context, in *ListJobsRequest, opts ...grpc.CallOption) (*ListJobsResponse, error)
+	// GetEtlStatus returns last-run status of ETL_HR_* jobs only (HD-27, finance.bi.etlstatus.view).
+	GetEtlStatus(ctx context.Context, in *GetEtlStatusRequest, opts ...grpc.CallOption) (*GetEtlStatusResponse, error)
 	// ListJobLogs returns logs for a specific job.
 	ListJobLogs(ctx context.Context, in *ListJobLogsRequest, opts ...grpc.CallOption) (*ListJobLogsResponse, error)
 	// TriggerJob manually triggers an ETL job run.
@@ -1023,6 +1026,16 @@ func (c *biJobServiceClient) ListJobs(ctx context.Context, in *ListJobsRequest, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListJobsResponse)
 	err := c.cc.Invoke(ctx, BiJobService_ListJobs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *biJobServiceClient) GetEtlStatus(ctx context.Context, in *GetEtlStatusRequest, opts ...grpc.CallOption) (*GetEtlStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetEtlStatusResponse)
+	err := c.cc.Invoke(ctx, BiJobService_GetEtlStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1087,6 +1100,8 @@ func (c *biJobServiceClient) DeleteBiJob(ctx context.Context, in *DeleteBiJobReq
 type BiJobServiceServer interface {
 	// ListJobs returns ETL job registry entries.
 	ListJobs(context.Context, *ListJobsRequest) (*ListJobsResponse, error)
+	// GetEtlStatus returns last-run status of ETL_HR_* jobs only (HD-27, finance.bi.etlstatus.view).
+	GetEtlStatus(context.Context, *GetEtlStatusRequest) (*GetEtlStatusResponse, error)
 	// ListJobLogs returns logs for a specific job.
 	ListJobLogs(context.Context, *ListJobLogsRequest) (*ListJobLogsResponse, error)
 	// TriggerJob manually triggers an ETL job run.
@@ -1109,6 +1124,9 @@ type UnimplementedBiJobServiceServer struct{}
 
 func (UnimplementedBiJobServiceServer) ListJobs(context.Context, *ListJobsRequest) (*ListJobsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListJobs not implemented")
+}
+func (UnimplementedBiJobServiceServer) GetEtlStatus(context.Context, *GetEtlStatusRequest) (*GetEtlStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetEtlStatus not implemented")
 }
 func (UnimplementedBiJobServiceServer) ListJobLogs(context.Context, *ListJobLogsRequest) (*ListJobLogsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListJobLogs not implemented")
@@ -1160,6 +1178,24 @@ func _BiJobService_ListJobs_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BiJobServiceServer).ListJobs(ctx, req.(*ListJobsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BiJobService_GetEtlStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEtlStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BiJobServiceServer).GetEtlStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BiJobService_GetEtlStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BiJobServiceServer).GetEtlStatus(ctx, req.(*GetEtlStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1264,6 +1300,10 @@ var BiJobService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListJobs",
 			Handler:    _BiJobService_ListJobs_Handler,
+		},
+		{
+			MethodName: "GetEtlStatus",
+			Handler:    _BiJobService_GetEtlStatus_Handler,
 		},
 		{
 			MethodName: "ListJobLogs",

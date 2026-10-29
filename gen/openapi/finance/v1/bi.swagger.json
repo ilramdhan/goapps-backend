@@ -539,6 +539,29 @@
         ]
       }
     },
+    "/api/v1/finance/bi/etl-status": {
+      "get": {
+        "summary": "GetEtlStatus returns last-run status of ETL_HR_* jobs only (HD-27, finance.bi.etlstatus.view).",
+        "operationId": "BiJobService_GetEtlStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetEtlStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "BiJobService"
+        ]
+      }
+    },
     "/api/v1/finance/bi/fact/distincts": {
       "get": {
         "summary": "GetFactDistincts returns distinct type/group_1/group_2/group_3 values for an optional type filter.",
@@ -2038,6 +2061,26 @@
         }
       }
     },
+    "v1EtlJobStatus": {
+      "type": "object",
+      "properties": {
+        "jobName": {
+          "type": "string"
+        },
+        "lastRunAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastStatus": {
+          "type": "string"
+        },
+        "lastSuccessAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "EtlJobStatus is the operational status of one ETL_HR_* job (HD-27). No raw error text."
+    },
     "v1FactMetricDistinct": {
       "type": "object",
       "properties": {
@@ -2103,6 +2146,21 @@
         },
         "data": {
           "$ref": "#/definitions/v1Dashboard"
+        }
+      }
+    },
+    "v1GetEtlStatusResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EtlJobStatus"
+          }
         }
       }
     },

@@ -909,6 +909,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	biJobHandler, err := grpcdelivery.NewBIJobHandler(
 		jobapp.NewListHandler(biJobRepo),
 		jobapp.NewListLogsHandler(biJobRepo),
+		jobapp.NewEtlStatusHandler(biJobRepo),
 		biJobTriggerHandler,
 		jobapp.NewCreateHandler(biJobRepo),
 		jobapp.NewUpdateHandler(biJobRepo),

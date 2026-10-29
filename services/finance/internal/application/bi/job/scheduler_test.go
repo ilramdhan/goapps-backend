@@ -72,6 +72,10 @@ func (r *stubRepo) Update(_ context.Context, p jobdomain.UpdateJobParams) (*jobd
 	return nil, nil //nolint:nilnil // stub
 }
 func (r *stubRepo) Delete(_ context.Context, id uuid.UUID, by uuid.UUID) error { return nil }
+func (r *stubRepo) ListEtlStatus(context.Context, string) ([]*jobdomain.EtlStatus, error) {
+	return nil, nil
+}
+
 func (r *stubRepo) ListLogs(_ context.Context, _ uuid.UUID, _, _ int) ([]*jobdomain.Log, int64, error) {
 	return nil, 0, nil
 }

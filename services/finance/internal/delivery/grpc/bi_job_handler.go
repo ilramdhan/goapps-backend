@@ -3,6 +3,9 @@ package grpc
 import (
 	"context"
 
+	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	financev1 "github.com/mutugading/goapps-backend/gen/finance/v1"
 	jobapp "github.com/mutugading/goapps-backend/services/finance/internal/application/bi/job"
 )
@@ -12,6 +15,7 @@ type BIJobHandler struct {
 	financev1.UnimplementedBiJobServiceServer
 	listHandler      *jobapp.ListHandler
 	listLogsHandler  *jobapp.ListLogsHandler
+	etlStatusHandler *jobapp.EtlStatusHandler
 	triggerHandler   *jobapp.TriggerHandler
 	createHandler    *jobapp.CreateHandler
 	updateHandler    *jobapp.UpdateHandler
@@ -23,6 +27,7 @@ type BIJobHandler struct {
 func NewBIJobHandler(
 	list *jobapp.ListHandler,
 	listLogs *jobapp.ListLogsHandler,
+	etlStatus *jobapp.EtlStatusHandler,
 	trigger *jobapp.TriggerHandler,
 	create *jobapp.CreateHandler,
 	update *jobapp.UpdateHandler,
@@ -35,6 +40,7 @@ func NewBIJobHandler(
 	return &BIJobHandler{
 		listHandler:      list,
 		listLogsHandler:  listLogs,
+		etlStatusHandler: etlStatus,
 		triggerHandler:   trigger,
 		createHandler:    create,
 		updateHandler:    update,
@@ -55,6 +61,32 @@ func (h *BIJobHandler) ListJobs(ctx context.Context, req *financev1.ListJobsRequ
 	}
 	return &financev1.ListJobsResponse{
 		Base: successResponse("Jobs listed"),
+		Data: items,
+	}, nil
+}
+
+// GetEtlStatus returns last-run status of ETL_HR_* jobs only, without error text (HD-27).
+// Gated by finance.bi.etlstatus.view in getRequiredPermission.
+func (h *BIJobHandler) GetEtlStatus(ctx context.Context, _ *financev1.GetEtlStatusRequest) (*financev1.GetEtlStatusResponse, error) {
+	out, err := h.etlStatusHandler.Handle(ctx)
+	if err != nil {
+		// Generic message on purpose: raw DB errors must not reach HR/Direksi callers (HD-27).
+		log.Error().Err(err).Msg("get etl status failed")
+		return &financev1.GetEtlStatusResponse{Base: InternalErrorResponse("Failed to get ETL status")}, nil
+	}
+	items := make([]*financev1.EtlJobStatus, 0, len(out))
+	for _, s := range out {
+		item := &financev1.EtlJobStatus{JobName: s.JobName, LastStatus: s.LastStatus}
+		if !s.LastRunAt.IsZero() {
+			item.LastRunAt = timestamppb.New(s.LastRunAt)
+		}
+		if !s.LastSuccessAt.IsZero() {
+			item.LastSuccessAt = timestamppb.New(s.LastSuccessAt)
+		}
+		items = append(items, item)
+	}
+	return &financev1.GetEtlStatusResponse{
+		Base: successResponse("ETL status listed"),
 		Data: items,
 	}, nil
 }

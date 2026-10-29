@@ -715,6 +715,9 @@ func getRequiredPermission(fullMethod string) string {
 		"/finance.v1.CostLevelAssignmentConfigService/DeleteGlobalConfig": "finance.product.request.resolve",
 		"/finance.v1.CostLevelAssignmentConfigService/ListGlobalConfigs":  "finance.product.request.view",
 
+		// BiJobService.GetEtlStatus: read-only status of ETL_HR_* jobs (HD-27).
+		"/finance.v1.BiJobService/GetEtlStatus": "finance.bi.etlstatus.view",
+
 		// ShadeService (master shade CRUD, R8) — permissions seeded by iam
 		// migration 000089. DeactivateShade maps to .delete: the seed names that
 		// code "Deactivate Shade" even though the RPC only soft-deactivates

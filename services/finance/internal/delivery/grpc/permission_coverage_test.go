@@ -740,7 +740,8 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 454 -> 460: SuperbaCostSpService (6 RPCs, superba-mb-cost-sp P2).
 	// 460 -> 465: CostProductLookupSyncService (master-lookup-sync P5).
 	// 465 -> 468: THREE new RM denier override RPCs (rm-denier-override R6).
-	assert.Len(t, reachable, 468,
+	// 468 -> 469: BiJobService.GetEtlStatus (HD-27, H062a).
+	assert.Len(t, reachable, 469,
 		"reachable RPC count changed (398 in gen − 17 on the 3 unregistered services + 6 for the "+
 			"previously-omitted-from-this-list ShadeService + 5 new Bulk MB Head Regenerate RPCs + 1 new "+
 			"DuplicateProduct RPC + 3 new CostProductParamBulkService RPCs, product-route-fork-attach-bulk "+
@@ -802,7 +803,8 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// (iam 000095). knownFailOpen does NOT grow.
 	// 234 -> 239: CostProductLookupSyncService RPCs guarded FROM BIRTH.
 	// 239 -> 242: List/Upsert/DeleteRMDenierOverride guarded FROM BIRTH by finance.product.route.view/create.
-	assert.Equal(t, 242, guarded, "number of properly guarded RPCs changed")
+	// 242 -> 243: BiJobService.GetEtlStatus guarded FROM BIRTH by finance.bi.etlstatus.view (HD-27).
+	assert.Equal(t, 243, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43

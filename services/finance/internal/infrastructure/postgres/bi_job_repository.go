@@ -63,6 +63,51 @@ LEFT JOIN LATERAL (
 	return out, rows.Err()
 }
 
+// ListEtlStatus returns last run and last success per active job whose name starts with prefix.
+// Only status and timestamps are read; error_message and config are never selected (HD-27).
+func (r *BiJobRepository) ListEtlStatus(ctx context.Context, prefix string) ([]*job.EtlStatus, error) {
+	const q = `
+SELECT j.job_name, last.status, last.started_at, ok.started_at
+FROM bi_job j
+LEFT JOIN LATERAL (
+    SELECT status, started_at FROM bi_job_log
+    WHERE job_id = j.job_id ORDER BY started_at DESC LIMIT 1
+) last ON TRUE
+LEFT JOIN LATERAL (
+    SELECT started_at FROM bi_job_log
+    WHERE job_id = j.job_id AND status = 'SUCCESS' ORDER BY started_at DESC LIMIT 1
+) ok ON TRUE
+WHERE j.is_active = TRUE AND starts_with(j.job_name, $1)
+ORDER BY j.job_name`
+	rows, err := r.db.QueryContext(ctx, q, prefix)
+	if err != nil {
+		return nil, fmt.Errorf("query etl status: %w", err)
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
+
+	var out []*job.EtlStatus
+	for rows.Next() {
+		var (
+			s          job.EtlStatus
+			lastStatus sql.NullString
+			lastRun    sql.NullTime
+			lastOK     sql.NullTime
+		)
+		if err := rows.Scan(&s.JobName, &lastStatus, &lastRun, &lastOK); err != nil {
+			return nil, fmt.Errorf("scan etl status: %w", err)
+		}
+		s.LastStatus = nullToString(lastStatus)
+		s.LastRunAt = nullTimeOrZero(lastRun)
+		s.LastSuccessAt = nullTimeOrZero(lastOK)
+		out = append(out, &s)
+	}
+	return out, rows.Err()
+}
+
 // GetByID returns a single job by primary key.
 func (r *BiJobRepository) GetByID(ctx context.Context, id uuid.UUID) (*job.Job, error) {
 	q := `

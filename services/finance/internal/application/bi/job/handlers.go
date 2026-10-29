@@ -28,6 +28,21 @@ func (h *ListHandler) Handle(ctx context.Context, includeInactive bool) ([]*jobd
 	return h.repo.List(ctx, includeInactive)
 }
 
+// EtlStatusHandler returns the last-run summary of ETL_HR_* jobs only (HD-27).
+type EtlStatusHandler struct{ repo jobdomain.Repository }
+
+// NewEtlStatusHandler constructs an EtlStatusHandler.
+func NewEtlStatusHandler(r jobdomain.Repository) *EtlStatusHandler { return &EtlStatusHandler{repo: r} }
+
+// Handle returns the status per ETL_HR_* job.
+func (h *EtlStatusHandler) Handle(ctx context.Context) ([]*jobdomain.EtlStatus, error) {
+	out, err := h.repo.ListEtlStatus(ctx, jobdomain.EtlStatusJobPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("list etl status: %w", err)
+	}
+	return out, nil
+}
+
 // ListLogsQuery is the payload for ListLogsHandler.
 type ListLogsQuery struct {
 	JobID    uuid.UUID

@@ -88,9 +88,23 @@ type UpdateJobParams struct {
 	UpdatedBy       uuid.UUID
 }
 
+// EtlStatus is the operational summary of one ETL job (HD-27). It deliberately carries no
+// error text, row counts, config, or trigger identity.
+type EtlStatus struct {
+	JobName       string
+	LastRunAt     time.Time // zero when never run
+	LastStatus    string
+	LastSuccessAt time.Time // zero when never succeeded
+}
+
+// EtlStatusJobPrefix limits GetEtlStatus to HR ETL jobs (HD-27).
+const EtlStatusJobPrefix = "ETL_HR_"
+
 // Repository is the read + trigger + CRUD contract.
 type Repository interface {
 	List(ctx context.Context, includeInactive bool) ([]*Job, error)
+	// ListEtlStatus returns last run / last success for active jobs whose name starts with prefix.
+	ListEtlStatus(ctx context.Context, prefix string) ([]*EtlStatus, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Job, error)
 	Create(ctx context.Context, p CreateJobParams) (*Job, error)
 	Update(ctx context.Context, p UpdateJobParams) (*Job, error)
