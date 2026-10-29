@@ -20,6 +20,33 @@ func TestParseRMLandedOrder_ValidTwoSectionFormat(t *testing.T) {
 	assert.Equal(t, []string{"SP", "PP", "FP"}, cfg["SELLING"])
 }
 
+func TestParseRMLandedOrder_ActualWithPPFallbackValid(t *testing.T) {
+	t.Parallel()
+	// Migration 000599's expression: PP (PO projection) closes the ACTUAL
+	// cascade, mirroring PR at the tail of RM_RATE's CR->SR->PR cascade.
+	cfg := ParseRMLandedOrder("ACTUAL:CL,SL,FL,PP;FORECAST:SP,PP,FP;SELLING:SP,PP,FP")
+	require.Len(t, cfg, 3)
+	assert.Equal(t, []string{"CL", "SL", "FL", "PP"}, cfg["ACTUAL"])
+	assert.Equal(t, []string{"SP", "PP", "FP"}, cfg["FORECAST"])
+	assert.Equal(t, []string{"SP", "PP", "FP"}, cfg["SELLING"])
+}
+
+func TestParseRMLandedOrder_ActualRejectsForecastOnlyTokens(t *testing.T) {
+	t.Parallel()
+	// SP and FP stay forecast-only: an ACTUAL section using either is
+	// dropped (caller falls back to DefaultRMLandedOrderActual).
+	for _, in := range []string{"ACTUAL:CL,SL,FL,SP", "ACTUAL:CL,SL,FL,FP", "ACTUAL:SP"} {
+		cfg := ParseRMLandedOrder(in)
+		_, ok := cfg["ACTUAL"]
+		assert.False(t, ok, "input %q must not yield an ACTUAL section", in)
+	}
+}
+
+func TestDefaultRMLandedOrderActual_EndsWithPP(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, []string{"CL", "SL", "FL", "PP"}, DefaultRMLandedOrderActual)
+}
+
 func TestParseRMLandedOrder_MissingSectionIndependentFallback(t *testing.T) {
 	t.Parallel()
 	// Only ACTUAL configured; FORECAST/SELLING simply absent from the map so
@@ -166,4 +193,13 @@ func TestRMLandedCandidates_ForecastOrderRespected(t *testing.T) {
 	assert.InDelta(t, 10.0, got[0].Value, 1e-9)
 	assert.InDelta(t, 20.0, got[1].Value, 1e-9)
 	assert.InDelta(t, 30.0, got[2].Value, 1e-9)
+}
+
+func TestRMLandedCandidates_ActualOrderWithPPFallback(t *testing.T) {
+	t.Parallel()
+	rates := RMCostRates{ClRate: 1, SlRate: 2, FlRate: 3, PpRate: 4}
+	got := rmLandedCandidates(DefaultRMLandedOrderActual, rates)
+	require.Len(t, got, 4)
+	assert.Equal(t, "PP", got[3].Label)
+	assert.InDelta(t, 4.0, got[3].Value, 1e-9)
 }

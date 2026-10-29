@@ -119,11 +119,18 @@ const (
 )
 
 // DefaultRMLandedOrderActual is the hardcoded fallback GROUP-RM landed-cost
-// cascade for calc_type ACTUAL — first non-zero of CL->SL->FL wins. Used
+// cascade for calc_type ACTUAL — first non-zero of CL->SL->FL->PP wins. Used
 // whenever F_YARN_RM_LANDED's expression is missing, empty, or its ACTUAL
 // section fails to parse, so a config typo can never hard-fail a cost
 // computation.
-var DefaultRMLandedOrderActual = []string{"CL", "SL", "FL"}
+//
+// PP (the PO-based landed projection) sits at the tail of the ACTUAL cascade
+// on purpose, mirroring how PR (the PO-based rate) closes RM_RATE's ACTUAL
+// cascade CR->SR->PR. Before migration 000599 the ACTUAL cascade stopped at
+// FL, so RM groups that only had PO data (CL/SL/FL all zero) silently got an
+// RM_LANDED_COST of 0 even though RM_RATE resolved a non-zero PR — e.g. prod
+// period 202608 had 188 of 378 RM groups in that state.
+var DefaultRMLandedOrderActual = []string{"CL", "SL", "FL", "PP"}
 
 // DefaultRMLandedOrderForecast is the hardcoded fallback GROUP-RM
 // landed-cost cascade for calc_type FORECAST — first non-zero of
@@ -134,16 +141,18 @@ var DefaultRMLandedOrderActual = []string{"CL", "SL", "FL"}
 var DefaultRMLandedOrderForecast = []string{"SP", "PP", "FP"}
 
 // validRMLandedTokensByCalcType is the closed set of tokens
-// ParseRMLandedOrder accepts per calc_type section.
+// ParseRMLandedOrder accepts per calc_type section. ACTUAL accepts PP (PO
+// projection) as its last-resort fallback — see DefaultRMLandedOrderActual —
+// but never SP/FP, which are forecast-only (spot/future projections).
 var validRMLandedTokensByCalcType = map[string]map[string]bool{
-	calcTypeActual:   {"CL": true, "SL": true, "FL": true},
+	calcTypeActual:   {"CL": true, "SL": true, "FL": true, "PP": true},
 	calcTypeForecast: {"SP": true, "PP": true, "FP": true},
 	calcTypeSelling:  {"SP": true, "PP": true, "FP": true},
 }
 
 // ParseRMLandedOrder parses the calc-type-keyed GROUP-RM landed-cost cascade
 // format from F_YARN_RM_LANDED's expression column, e.g.
-// "ACTUAL:CL,SL,FL;FORECAST:SP,PP,FP;SELLING:SP,PP,FP".
+// "ACTUAL:CL,SL,FL,PP;FORECAST:SP,PP,FP;SELLING:SP,PP,FP".
 //
 // Each semicolon-separated section is "CALC_TYPE:CSV-of-tokens". Sections are
 // parsed independently: a missing, unparseable, or invalid section for one

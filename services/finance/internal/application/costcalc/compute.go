@@ -119,9 +119,10 @@ type ComputeInput struct {
 	// preserving pre-Task-C behavior for callers that do not supply it.
 	RMRateOrder []string
 	// RMLandedOrder is the calc-type-keyed GROUP-RM landed-cost cascade
-	// config (first non-zero of CL/SL/FL for ACTUAL, SP/PP/FP for
+	// config (first non-zero of CL/SL/FL/PP for ACTUAL, SP/PP/FP for
 	// FORECAST/SELLING), loaded once per chunk from F_YARN_RM_LANDED's
-	// expression column (migration 000519) via loader.LoadRMLandedOrder.
+	// expression column (migrations 000519, 000599) via
+	// loader.LoadRMLandedOrder.
 	// A calc_type missing from this map (including nil/empty) falls back to
 	// that calc_type's hardcoded default in resolveRMLandedCost, preserving
 	// behavior for callers that do not supply it.
@@ -897,8 +898,11 @@ func resolveRMUnitCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
 // are identical for those two RM types by design. Only GROUP-type RMs
 // diverge: RM_LANDED_COST runs its own calc-type-DEPENDENT cascade (unlike
 // RM_RATE's calc-type-agnostic CR/SR/PR cascade), configured by
-// F_YARN_RM_LANDED's expression column (migration 000519):
-//   - ACTUAL:             first non-zero of CL -> SL -> FL
+// F_YARN_RM_LANDED's expression column (migrations 000519, 000599):
+//   - ACTUAL:             first non-zero of CL -> SL -> FL -> PP. PP (the
+//     PO-based landed projection) is the last-resort fallback, mirroring PR
+//     at the tail of RM_RATE's CR -> SR -> PR cascade; without it, groups
+//     with only PO data silently resolved a landed cost of 0 (000599).
 //   - FORECAST:           first non-zero of SP -> PP -> FP
 //   - SELLING:            DELIBERATE PLACEHOLDER, no SELLING-specific
 //     landed-cost definition exists anywhere in the codebase today (see
@@ -952,7 +956,7 @@ func rmRateCandidates(order []string, rates RMCostRates) []rmcost.LabeledRate {
 }
 
 // rmLandedCandidates maps a GROUP-RM landed-cost cascade order (tokens
-// CL/SL/FL for ACTUAL, SP/PP/FP for FORECAST/SELLING) onto rates' matching
+// CL/SL/FL/PP for ACTUAL, SP/PP/FP for FORECAST/SELLING) onto rates' matching
 // fields, in that order, for rmcost.FirstNonZeroWithLabel. Callers resolve
 // the order itself via rmLandedOrderForCalcType before calling this, so an
 // empty order here (e.g. a caller-constructed empty slice) simply yields no
