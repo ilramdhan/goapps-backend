@@ -97,6 +97,68 @@ func TestComputeProduct_GroupRM_Landed_CascadesActualClSlFl(t *testing.T) {
 	})
 }
 
+// TestComputeProduct_GroupRM_Landed_ActualFallsBackToPP covers the PP tail
+// of the ACTUAL cascade (CL -> SL -> FL -> PP, migration 000599): RM groups
+// with only PO data (CL/SL/FL all zero) previously resolved a landed cost of
+// 0 silently. Exercised both with no config (hardcoded default) and with the
+// migrated expression parsed into RMLandedOrder.
+func TestComputeProduct_GroupRM_Landed_ActualFallsBackToPP(t *testing.T) {
+	configs := map[string]map[string][]string{
+		"default order": nil,
+		"migrated expression": ParseRMLandedOrder(
+			"ACTUAL:CL,SL,FL,PP;FORECAST:SP,PP,FP;SELLING:SP,PP,FP"),
+	}
+	for name, cfg := range configs {
+		baseIn := func(rates RMCostRates) ComputeInput {
+			return ComputeInput{
+				ProductSysID:  1,
+				Period:        "202608",
+				CalcType:      costcalcdom.CalcTypeActual,
+				Route:         buildOneStageRoute(1, costroute.RmTypeGroup, "GRP001", 1.0),
+				CAPP:          map[string]float64{},
+				Formulas:      []Formula{finalCostFormula("COST_RM_TOTAL"), landedFormula()},
+				RMCosts:       map[string]RMCostRates{"GRP001|": rates},
+				RMLandedOrder: cfg,
+				EvalCache:     evaluator.NewCache(),
+			}
+		}
+
+		t.Run(name+": cl/sl/fl zero, pp positive -> uses pp_rate", func(t *testing.T) {
+			out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+				PrRate: 15.0,
+				PpRate: 14.5,
+			}))
+			require.NoError(t, err)
+			assert.InDelta(t, 14.5, out.ParamSnapshot[rmLandedResultParam], 1e-9)
+			assert.InDelta(t, 15.0, out.CostPerUnit, 1e-9)
+		})
+
+		t.Run(name+": cl positive -> cl wins over pp", func(t *testing.T) {
+			out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+				ClRate: 4.25,
+				PpRate: 14.5,
+			}))
+			require.NoError(t, err)
+			assert.InDelta(t, 4.25, out.ParamSnapshot[rmLandedResultParam], 1e-9)
+		})
+
+		t.Run(name+": fl positive -> fl wins over pp", func(t *testing.T) {
+			out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{
+				FlRate: 30.0,
+				PpRate: 14.5,
+			}))
+			require.NoError(t, err)
+			assert.InDelta(t, 30.0, out.ParamSnapshot[rmLandedResultParam], 1e-9)
+		})
+
+		t.Run(name+": all zero -> zero landed cost, not an error", func(t *testing.T) {
+			out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{}))
+			require.NoError(t, err)
+			assert.InDelta(t, 0, out.ParamSnapshot[rmLandedResultParam], 1e-9)
+		})
+	}
+}
+
 // TestComputeProduct_GroupRM_Landed_CascadesForecastSpPpFp covers
 // resolveRMLandedCost's GROUP-type cascade for calc_type FORECAST:
 // sp_rate -> pp_rate -> fp_rate.

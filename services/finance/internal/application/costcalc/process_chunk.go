@@ -141,7 +141,7 @@ type loadedBundle struct {
 	// back to DefaultRMRateOrder when the loader is nil or resolves nothing.
 	rmRateOrder []string
 	// rmLandedOrder is the calc-type-keyed GROUP-RM landed-cost cascade config
-	// (first non-zero of CL/SL/FL for ACTUAL, SP/PP/FP for FORECAST/SELLING),
+	// (first non-zero of CL/SL/FL/PP for ACTUAL, SP/PP/FP for FORECAST/SELLING),
 	// loaded once per chunk via s.rmLandedOrderLoader. May be missing entries
 	// for a given calc_type -- resolveRMLandedCost/rmLandedOrderForCalcType
 	// fall back to that calc_type's hardcoded default independently.

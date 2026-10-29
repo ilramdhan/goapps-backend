@@ -57,7 +57,7 @@ func WithRMRateOrderLoader(l RMRateOrderLoader) ServiceOption {
 
 // WithRMLandedOrderLoader installs the GROUP-RM landed-cost cascade order
 // loader. Omitting this option (nil) keeps the hardcoded per-calc_type
-// defaults (ACTUAL: CL,SL,FL; FORECAST/SELLING: SP,PP,FP).
+// defaults (ACTUAL: CL,SL,FL,PP; FORECAST/SELLING: SP,PP,FP).
 func WithRMLandedOrderLoader(l RMLandedOrderLoader) ServiceOption {
 	return func(s *Service) { s.rmLandedOrderLoader = l }
 }

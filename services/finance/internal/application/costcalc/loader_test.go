@@ -521,18 +521,19 @@ func (s *LoaderSuite) TestLoader_LoadRMCosts_ClSlFlSpPpFpRates() {
 
 // TestLoader_LoadRMLandedOrder_ReadsMigratedExpression exercises
 // LoadRMLandedOrder against the real F_YARN_RM_LANDED row repurposed by
-// migration 000519 -- proving the query, not just the pure
-// ParseRMLandedOrder parser, works end-to-end against the schema.
-// Deliberately does not seed its own fixture row: F_YARN_RM_LANDED is a
-// fixed formula_code the loader queries by name, and migration 000519
-// already sets its expression to "ACTUAL:CL,SL,FL;FORECAST:SP,PP,FP;
-// SELLING:SP,PP,FP" on any database these integration tests run against.
+// migration 000519 (ACTUAL section extended with PP by 000599) -- proving
+// the query, not just the pure ParseRMLandedOrder parser, works end-to-end
+// against the schema. Deliberately does not seed its own fixture row:
+// F_YARN_RM_LANDED is a fixed formula_code the loader queries by name, and
+// migration 000599 sets its expression to "ACTUAL:CL,SL,FL,PP;
+// FORECAST:SP,PP,FP;SELLING:SP,PP,FP" on any database these integration
+// tests run against.
 func (s *LoaderSuite) TestLoader_LoadRMLandedOrder_ReadsMigratedExpression() {
 	landedLoader, ok := s.loader.(RMLandedOrderLoader)
 	require.True(s.T(), ok, "productLoader must implement RMLandedOrderLoader")
 
 	cfg := landedLoader.LoadRMLandedOrder(s.ctx)
-	require.Equal(s.T(), []string{"CL", "SL", "FL"}, cfg["ACTUAL"])
+	require.Equal(s.T(), []string{"CL", "SL", "FL", "PP"}, cfg["ACTUAL"])
 	require.Equal(s.T(), []string{"SP", "PP", "FP"}, cfg["FORECAST"])
 	require.Equal(s.T(), []string{"SP", "PP", "FP"}, cfg["SELLING"])
 }
