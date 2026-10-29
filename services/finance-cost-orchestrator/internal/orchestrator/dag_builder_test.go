@@ -273,3 +273,124 @@ func TestDagBuilder_All_KeepsEveryNonMBProduct(t *testing.T) {
 	}
 	require.NoError(t, rows.Err())
 }
+
+// inactiveRoutedProducts returns the inactive products (cpm_is_active = false) that
+// still own an active (COMPLETE/LOCKED) route head — the population the inactive
+// seed filter must drop.
+func inactiveRoutedProducts(t *testing.T, db *sql.DB) map[int64]bool {
+	t.Helper()
+	rows, err := db.QueryContext(context.Background(), `
+		SELECT DISTINCT crh.crh_product_sys_id
+		FROM cost_route_head crh
+		JOIN cost_product_master pm ON pm.cpm_product_sys_id = crh.crh_product_sys_id
+		WHERE crh.crh_routing_status IN ('COMPLETE','LOCKED')
+		  AND crh.crh_deleted_at IS NULL
+		  AND NOT pm.cpm_is_active`)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+
+	out := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		require.NoError(t, rows.Scan(&id))
+		out[id] = true
+	}
+	require.NoError(t, rows.Err())
+	return out
+}
+
+// A deactivated product is retired from costing: ALL must not seed it, otherwise it is
+// recalculated (and typically BLOCKED) every period.
+func TestDagBuilder_All_ExcludesInactiveFromSeedSet(t *testing.T) {
+	db := openTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	inactive := inactiveRoutedProducts(t, db)
+	if len(inactive) == 0 {
+		t.Skip("no inactive product with an active route in dev DB; nothing to exclude")
+	}
+
+	seed, err := NewDagBuilder(db).allActiveProducts(context.Background())
+	require.NoError(t, err)
+	for _, id := range seed {
+		require.False(t, inactive[id], "inactive product %d must not be in the ScopeAll seed set", id)
+	}
+}
+
+// FILTERED applies the same rule within the chosen product type.
+func TestDagBuilder_Filtered_ExcludesInactiveFromSeedSet(t *testing.T) {
+	db := openTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	var typeID int32
+	var inactiveID int64
+	err := db.QueryRowContext(context.Background(), `
+		SELECT pm.cpm_product_type_id, pm.cpm_product_sys_id
+		FROM cost_route_head crh
+		JOIN cost_product_master pm ON pm.cpm_product_sys_id = crh.crh_product_sys_id
+		JOIN cost_product_type   pt ON pt.cpt_type_id = pm.cpm_product_type_id
+		WHERE crh.crh_routing_status IN ('COMPLETE','LOCKED')
+		  AND crh.crh_deleted_at IS NULL
+		  AND NOT pm.cpm_is_active
+		  AND pt.cpt_type_code <> $1
+		LIMIT 1`, typeCodeMB).Scan(&typeID, &inactiveID)
+	if err == sql.ErrNoRows {
+		t.Skip("no inactive non-MB product with an active route in dev DB; skip")
+	}
+	require.NoError(t, err)
+
+	seed, err := NewDagBuilder(db).productsByType(context.Background(), typeID)
+	require.NoError(t, err)
+	require.NotContains(t, seed, inactiveID, "inactive product must not be in the FILTERED seed set")
+}
+
+// Inactivity only narrows what a job TARGETS. An active product that consumes an
+// inactive routed product as a PRODUCT-type RM must still pull that upstream into the
+// DAG, ordered before the consumer, so it gets a fresh upstream cost.
+func TestDagBuilder_ActiveConsumer_KeepsInactiveUpstream(t *testing.T) {
+	db := openTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	var consumer, upstream int64
+	err := db.QueryRowContext(context.Background(), `
+		SELECT crs.crs_product_sys_id, crm.crm_rm_product_sys_id
+		FROM cost_route_head crh
+		JOIN cost_route_seq crs ON crs.crs_head_id = crh.crh_head_id
+		JOIN cost_route_rm  crm ON crm.crm_seq_id  = crs.crs_seq_id
+		JOIN cost_product_master down_pm ON down_pm.cpm_product_sys_id = crs.crs_product_sys_id
+		JOIN cost_product_master up_pm   ON up_pm.cpm_product_sys_id   = crm.crm_rm_product_sys_id
+		WHERE crh.crh_routing_status IN ('COMPLETE','LOCKED')
+		  AND crh.crh_deleted_at IS NULL
+		  AND crs.crs_deleted_at IS NULL
+		  AND crm.crm_rm_type = 'PRODUCT'
+		  AND down_pm.cpm_is_active
+		  AND NOT up_pm.cpm_is_active
+		  AND crs.crs_product_sys_id <> crm.crm_rm_product_sys_id
+		  AND EXISTS (
+		    SELECT 1 FROM cost_route_head up
+		    WHERE up.crh_product_sys_id = crm.crm_rm_product_sys_id
+		      AND up.crh_routing_status IN ('COMPLETE','LOCKED')
+		      AND up.crh_deleted_at IS NULL
+		  )
+		LIMIT 1`).Scan(&consumer, &upstream)
+	if err == sql.ErrNoRows {
+		t.Skip("no active product consuming an inactive routed product in dev DB; skip")
+	}
+	require.NoError(t, err)
+
+	g, _, err := NewDagBuilder(db).Build(context.Background(), ScopeInput{
+		Scope:        costcalc.ScopeSingleProduct,
+		ProductSysID: consumer,
+	})
+	require.NoError(t, err)
+	require.True(t, g.HasNode(upstream), "inactive upstream %d must stay in the DAG", upstream)
+	require.Contains(t, g.Upstream(consumer), upstream)
+
+	wave := map[int64]int{}
+	for _, w := range costcalc.PlanWaves(g).Waves {
+		for _, p := range w.Products {
+			wave[p] = w.Number
+		}
+	}
+	require.Less(t, wave[upstream], wave[consumer], "inactive upstream must be computed before its consumer")
+}

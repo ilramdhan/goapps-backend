@@ -113,6 +113,25 @@ const excludeMBPredicate = `
 	      AND mb_pt.cpt_type_code = '` + typeCodeMB + `'
 	  )`
 
+// excludeInactivePredicate is the SQL fragment that keeps only products whose master
+// row is active (cpm_is_active). A deactivated product is retired from costing: it
+// must not be seeded into ALL / FILTERED / SINGLE_ROUTE jobs, otherwise it is
+// recalculated every period and typically ends BLOCKED for lack of fresh inputs.
+//
+// Unlike excludeMBPredicate this is an EXISTS: a product without a master row cannot
+// be confirmed active, so it is dropped.
+//
+// SINGLE_PRODUCT is deliberately not filtered — naming one product explicitly is an
+// informed request and may still compute an inactive product. Dependency resolution
+// (loadProductRMEdges) is not filtered either; see the note there.
+const excludeInactivePredicate = `
+	  AND EXISTS (
+	    SELECT 1
+	    FROM cost_product_master a
+	    WHERE a.cpm_product_sys_id = %s
+	      AND a.cpm_is_active
+	  )`
+
 // ErrMBScopeNotAllowed is returned when a calc job explicitly targets MB products.
 // Unlike the silent filtering applied to ALL, an explicit MB request is a user
 // mistake worth surfacing: the job would otherwise report SUCCESS having calculated
@@ -159,24 +178,27 @@ func (b *DagBuilder) resolveInitialSet(ctx context.Context, in ScopeInput) ([]in
 	}
 }
 
-// allActiveProducts returns every product that has an active (COMPLETE or LOCKED)
-// route head, excluding MB (see typeCodeMB). Under ALL the exclusion is silent —
-// the user asked for "everything the calc engine owns", and MB is not part of that.
+// allActiveProducts returns every active product (cpm_is_active, see
+// excludeInactivePredicate) that has an active (COMPLETE or LOCKED) route head,
+// excluding MB (see typeCodeMB). Under ALL both exclusions are silent — the user
+// asked for "everything the calc engine owns", and neither MB nor retired products
+// are part of that.
 func (b *DagBuilder) allActiveProducts(ctx context.Context) ([]int64, error) {
 	q := `
 		SELECT DISTINCT crh.crh_product_sys_id
 		FROM cost_route_head crh
 		WHERE crh.crh_routing_status IN ('COMPLETE','LOCKED')
 		  AND crh.crh_deleted_at IS NULL` +
-		fmt.Sprintf(excludeMBPredicate, "crh.crh_product_sys_id") + `
+		fmt.Sprintf(excludeMBPredicate, "crh.crh_product_sys_id") +
+		fmt.Sprintf(excludeInactivePredicate, "crh.crh_product_sys_id") + `
 		ORDER BY crh.crh_product_sys_id
 	`
 	return b.scanInt64s(ctx, q)
 }
 
-// productsByType returns active-route products of a specific product type. The MB
-// type itself is rejected earlier in resolveInitialSet; the predicate here is
-// belt-and-braces for the case where two type rows share the MB code.
+// productsByType returns active products with an active route of a specific product
+// type. The MB type itself is rejected earlier in resolveInitialSet; the MB predicate
+// here is belt-and-braces for the case where two type rows share the MB code.
 func (b *DagBuilder) productsByType(ctx context.Context, typeID int32) ([]int64, error) {
 	if typeID == 0 {
 		return nil, fmt.Errorf("product_type_id_filter required for FILTERED scope")
@@ -188,18 +210,20 @@ func (b *DagBuilder) productsByType(ctx context.Context, typeID int32) ([]int64,
 		WHERE crh.crh_routing_status IN ('COMPLETE','LOCKED')
 		  AND crh.crh_deleted_at IS NULL
 		  AND cpm.cpm_product_type_id = $1` +
-		fmt.Sprintf(excludeMBPredicate, "crh.crh_product_sys_id") + `
+		fmt.Sprintf(excludeMBPredicate, "crh.crh_product_sys_id") +
+		fmt.Sprintf(excludeInactivePredicate, "crh.crh_product_sys_id") + `
 		ORDER BY crh.crh_product_sys_id
 	`
 	return b.scanInt64s(ctx, q, typeID)
 }
 
 // productsOfRouteHead returns the FG product for a specific route head, unless that
-// product is an MB.
+// product is an MB or inactive.
 func (b *DagBuilder) productsOfRouteHead(ctx context.Context, headID int64) ([]int64, error) {
 	q := `SELECT crh_product_sys_id FROM cost_route_head
 	      WHERE crh_head_id = $1 AND crh_deleted_at IS NULL` +
-		fmt.Sprintf(excludeMBPredicate, "crh_product_sys_id")
+		fmt.Sprintf(excludeMBPredicate, "crh_product_sys_id") +
+		fmt.Sprintf(excludeInactivePredicate, "crh_product_sys_id")
 	return b.scanInt64s(ctx, q, headID)
 }
 
@@ -250,6 +274,12 @@ func (b *DagBuilder) isMBProductType(ctx context.Context, typeID int32) (bool, e
 // ErrMissingUpstreamCost. No such reference exists in current data — MB routes are
 // the only routes that reference MB — so this branch is unreachable in practice and
 // the seed-set filters above carry the whole exclusion.
+//
+// Likewise deliberately NOT filtered by cpm_is_active (excludeInactivePredicate).
+// An active product may still consume an inactive product with an active route as
+// a PRODUCT-type RM; that upstream must stay in the DAG so it is recalculated first
+// and the consumer gets a fresh upstream cost instead of ErrMissingUpstreamCost.
+// Inactivity only removes a product from what a job TARGETS.
 func (b *DagBuilder) loadProductRMEdges(ctx context.Context, productSysIDs []int64) ([]edge, error) {
 	const q = `
 		SELECT crs.crs_product_sys_id, crm.crm_rm_product_sys_id
