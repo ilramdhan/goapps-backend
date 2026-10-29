@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbcomposition"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbparam"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/shade"
 	"github.com/mutugading/goapps-backend/services/finance/pkg/safeconv"
 )
 
@@ -106,10 +108,10 @@ func NewMBHeadHandlerWithRecipeFull(
 		return nil, err
 	}
 	return &MBHeadHandler{
-		createHandler:        appmbhead.NewCreateHandler(repo, machineRepo),
+		createHandler:        appmbhead.NewCreateHandler(repo, machineRepo, nil),
 		getHandler:           appmbhead.NewGetHandler(repo),
 		listHandler:          appmbhead.NewListHandler(repo),
-		updateHandler:        appmbhead.NewUpdateHandler(repo),
+		updateHandler:        appmbhead.NewUpdateHandler(repo, nil),
 		deleteHandler:        appmbhead.NewDeleteHandler(repo),
 		submitHandler:        appmbhead.NewSubmitHandlerWithComposition(repo, compositionRepo),
 		validateHandler:      appmbhead.NewValidateHandlerWithComposition(repo, paramRepo, compositionRepo),
@@ -126,6 +128,18 @@ func NewMBHeadHandlerWithRecipeFull(
 		templateHandler:      appmbhead.NewTemplateHandler(),
 		validation:           v,
 	}, nil
+}
+
+// WithShadeMaster attaches the shade master repository so a successful recipe
+// create/update auto-creates a MANUAL shade row for an unknown shade code
+// (best-effort — a shade failure is logged and never fails the save). A nil repo
+// leaves the hook disabled. Returns the handler for chaining.
+func (h *MBHeadHandler) WithShadeMaster(shadeRepo shade.Repository) *MBHeadHandler {
+	if shadeRepo != nil {
+		h.createHandler.WithShadeRepo(shadeRepo)
+		h.updateHandler.WithShadeRepo(shadeRepo)
+	}
+	return h
 }
 
 // WithCostCalcDetail attaches the read-only reader backing ExportMBCostCalcDetail and
@@ -245,7 +259,7 @@ func (h *MBHeadHandler) CreateMBHead(ctx context.Context, req *financev1.CreateM
 	})
 	if err != nil {
 		RecordMBHeadOperation("create", false)
-		return &financev1.CreateMBHeadResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.CreateMBHeadResponse{Base: mbHeadWriteErrToBase(err)}, nil
 	}
 
 	RecordMBHeadOperation("create", true)
@@ -346,7 +360,7 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 	})
 	if err != nil {
 		RecordMBHeadOperation("update", false)
-		return &financev1.UpdateMBHeadResponse{Base: domainErrorToBaseResponse(err)}, nil
+		return &financev1.UpdateMBHeadResponse{Base: mbHeadWriteErrToBase(err)}, nil
 	}
 
 	RecordMBHeadOperation("update", true)
@@ -354,6 +368,16 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 		Base: successResponse("MB head updated successfully"),
 		Data: mbHeadEntityToProto(entity),
 	}, nil
+}
+
+// mbHeadWriteErrToBase maps create/update errors, giving the MB Costing uniqueness
+// conflict a clear user-facing message; everything else falls through to the generic
+// domain mapping.
+func mbHeadWriteErrToBase(err error) *commonv1.BaseResponse {
+	if errors.Is(err, mbhead.ErrAlreadyExists) {
+		return ConflictResponse("MB Costing code already exists")
+	}
+	return domainErrorToBaseResponse(err)
 }
 
 // DeleteMBHead soft-deletes an MB head record.

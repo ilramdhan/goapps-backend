@@ -116,7 +116,7 @@ func TestCreateHandler_MachineIsAlwaysMB(t *testing.T) {
 		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
-		got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin",
 		})
 
@@ -134,7 +134,7 @@ func TestCreateHandler_MachineIsAlwaysMB(t *testing.T) {
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
 		other := uuid.New()
-		got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB002", CreatedBy: "admin", MachineID: &other,
 		})
 
@@ -160,7 +160,7 @@ func TestCreateHandler_MissingMBMachineIsAnError(t *testing.T) {
 			mrepo.On("GetByCode", ctx, "MB").Return(nil, lookupErr)
 			repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 
-			got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+			got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 				MBCosting: "MB001", CreatedBy: "admin",
 			})
 
@@ -176,7 +176,7 @@ func TestCreateHandler_MissingMBMachineIsAnError(t *testing.T) {
 		mrepo.On("GetByCode", ctx, "MB").Return(nil, machine.ErrNotFound)
 		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 
-		_, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		_, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin",
 		})
 		assert.ErrorIs(t, err, mbhead.ErrDefaultMachineUnavailable)
@@ -195,7 +195,7 @@ func TestCreateHandler_DefaultStatus(t *testing.T) {
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil)
 		repo.On("ExistsByMBCosting", ctx, costing).Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
-		return mbhead.NewCreateHandler(repo, mrepo), repo
+		return mbhead.NewCreateHandler(repo, mrepo, nil), repo
 	}
 
 	t.Run("status omitted - defaults to \"R and D\"", func(t *testing.T) {
@@ -229,7 +229,7 @@ func TestCreateHandler_LegacyPayloadStoresNulls(t *testing.T) {
 
 	// Exactly the shape the legacy form sends: no mbhVsNumber, no mbhNoOfProcess,
 	// no additionalShades.
-	got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+	got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 		MBCosting: "MB001", CreatedBy: "admin",
 	})
 
@@ -255,7 +255,7 @@ func TestCreateHandler_StoresSuppliedRecipeFields(t *testing.T) {
 	repo.On("ExistsByVSNumber", ctx, "VS-9", uuid.Nil).Return(false, nil)
 	repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
-	got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+	got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 		MBCosting: "MB001", CreatedBy: "admin",
 		VSNumber: strptr("VS-9"), NoOfProcess: strptr("T"),
 	})
@@ -280,7 +280,7 @@ func TestCreateHandler_VSNumberUniqueness(t *testing.T) {
 		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("ExistsByVSNumber", ctx, "VS-1", uuid.Nil).Return(true, nil)
 
-		got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin", VSNumber: strptr("VS-1"),
 		})
 
@@ -299,7 +299,7 @@ func TestCreateHandler_VSNumberUniqueness(t *testing.T) {
 			repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 			repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
-			got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+			got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 				MBCosting: "MB001", CreatedBy: "admin", VSNumber: strptr(exempt),
 			})
 
@@ -319,7 +319,7 @@ func TestCreateHandler_VSNumberUniqueness(t *testing.T) {
 		repo.On("ExistsByVSNumber", ctx, "NA", uuid.Nil).Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
-		got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin", VSNumber: strptr("NA"),
 		})
 
@@ -347,7 +347,7 @@ func TestUpdateHandler_VSNumberOnlyCheckedWhenChanged(t *testing.T) {
 		repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 		repo.On("Update", ctx, e).Return(nil)
 
-		_, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		_, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin", VSNumber: strptr("VS-7"),
 		})
 
@@ -361,7 +361,7 @@ func TestUpdateHandler_VSNumberOnlyCheckedWhenChanged(t *testing.T) {
 		repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 		repo.On("ExistsByVSNumber", ctx, "VS-8", e.ID()).Return(true, nil)
 
-		got, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin", VSNumber: strptr("VS-8"),
 		})
 
@@ -377,7 +377,7 @@ func TestUpdateHandler_VSNumberOnlyCheckedWhenChanged(t *testing.T) {
 		repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 		repo.On("Update", ctx, e).Return(nil)
 
-		_, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		_, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin", VSNumber: strptr("0"),
 		})
 
@@ -411,7 +411,7 @@ func TestUpdateHandler_LegacyHeadWithNullCrossSectionSucceeds(t *testing.T) {
 	repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 	repo.On("Update", ctx, e).Return(nil)
 
-	got, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+	got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 		ID: e.ID(), UpdatedBy: "admin", MgtName: strptr("renamed"),
 	})
 
@@ -444,7 +444,7 @@ func TestUpdateHandler_ShadesUntouchedWithoutFlag(t *testing.T) {
 		repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 		repo.On("Update", ctx, e).Return(nil)
 
-		got, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin",
 		})
 
@@ -461,7 +461,7 @@ func TestUpdateHandler_ShadesUntouchedWithoutFlag(t *testing.T) {
 		repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 		repo.On("Update", ctx, e).Return(nil)
 
-		got, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin",
 			AdditionalShades:        []mbheaddomain.Shade{{SeqNo: 1, Code: "SH-Z"}},
 			ReplaceAdditionalShades: false,
@@ -481,7 +481,7 @@ func TestUpdateHandler_ShadesUntouchedWithoutFlag(t *testing.T) {
 		repo.On("Update", ctx, e).Return(nil)
 		repo.On("ReplaceShades", ctx, e.ID(), want, "admin").Return(nil)
 
-		got, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin",
 			AdditionalShades: want, ReplaceAdditionalShades: true,
 		})
@@ -499,7 +499,7 @@ func TestUpdateHandler_ShadesUntouchedWithoutFlag(t *testing.T) {
 		repo.On("Update", ctx, e).Return(nil)
 		repo.On("ReplaceShades", ctx, e.ID(), []mbheaddomain.Shade(nil), "admin").Return(nil)
 
-		got, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin", ReplaceAdditionalShades: true,
 		})
 
@@ -523,7 +523,7 @@ func TestCreateHandler_ShadesAllowedAtCreate(t *testing.T) {
 		want := []mbheaddomain.Shade{{SeqNo: 1, Code: "SH-A", Name: "Alpha"}, {SeqNo: 2, Code: "SH-B"}}
 		repo.On("ReplaceShades", ctx, mock.AnythingOfType("uuid.UUID"), want, "admin").Return(nil)
 
-		got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin", AdditionalShades: want,
 		})
 
@@ -538,7 +538,7 @@ func TestCreateHandler_ShadesAllowedAtCreate(t *testing.T) {
 		mrepo.On("GetByCode", ctx, "MB").Return(newMachineMB(t), nil)
 		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 
-		got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin",
 			AdditionalShades: []mbheaddomain.Shade{
 				{SeqNo: 1, Code: "A"}, {SeqNo: 2, Code: "B"}, {SeqNo: 3, Code: "C"},
@@ -570,7 +570,7 @@ func TestCreateHandler_DevCodeUniqueness(t *testing.T) {
 		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("ExistsByDevCode", ctx, "DEV-1", uuid.Nil).Return(true, nil)
 
-		got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin", DevCode: "DEV-1",
 		})
 
@@ -587,7 +587,7 @@ func TestCreateHandler_DevCodeUniqueness(t *testing.T) {
 		repo.On("ExistsByDevCode", ctx, "DEV-2", uuid.Nil).Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
-		got, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin", DevCode: "DEV-2",
 		})
 
@@ -604,7 +604,7 @@ func TestCreateHandler_DevCodeUniqueness(t *testing.T) {
 		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
-		_, err := mbhead.NewCreateHandler(repo, mrepo).Handle(ctx, mbhead.CreateCommand{
+		_, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin",
 		})
 
@@ -635,7 +635,7 @@ func TestUpdateHandler_DevCodeOnlyCheckedWhenChanged(t *testing.T) {
 		repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 		repo.On("Update", ctx, e).Return(nil)
 
-		_, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		_, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin", DevCode: strptr("DEV-LEGACY"),
 		})
 
@@ -649,7 +649,7 @@ func TestUpdateHandler_DevCodeOnlyCheckedWhenChanged(t *testing.T) {
 		repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 		repo.On("Update", ctx, e).Return(nil)
 
-		_, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		_, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin",
 		})
 
@@ -663,7 +663,7 @@ func TestUpdateHandler_DevCodeOnlyCheckedWhenChanged(t *testing.T) {
 		repo.On("GetByID", ctx, e.ID()).Return(e, nil)
 		repo.On("ExistsByDevCode", ctx, "DEV-8", e.ID()).Return(true, nil)
 
-		got, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin", DevCode: strptr("DEV-8"),
 		})
 
@@ -679,7 +679,7 @@ func TestUpdateHandler_DevCodeOnlyCheckedWhenChanged(t *testing.T) {
 		repo.On("ExistsByDevCode", ctx, "DEV-9", e.ID()).Return(false, nil)
 		repo.On("Update", ctx, e).Return(nil)
 
-		_, err := mbhead.NewUpdateHandler(repo).Handle(ctx, mbhead.UpdateCommand{
+		_, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
 			ID: e.ID(), UpdatedBy: "admin", DevCode: strptr("DEV-9"),
 		})
 

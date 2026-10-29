@@ -51,6 +51,10 @@ func (f *fakeFrozenMBHeadRepo) Update(_ context.Context, e *mbhead.Entity) error
 	return nil
 }
 
+func (f *fakeFrozenMBHeadRepo) UpdateWithCostingRename(ctx context.Context, e *mbhead.Entity, _ string) error {
+	return f.Update(ctx, e)
+}
+
 func (f *fakeFrozenMBHeadRepo) SoftDelete(_ context.Context, _ uuid.UUID, _ string) error { return nil }
 
 func (f *fakeFrozenMBHeadRepo) ExistsByMBCosting(_ context.Context, _ string) (bool, error) {

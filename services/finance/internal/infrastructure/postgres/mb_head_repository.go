@@ -172,7 +172,60 @@ func (r *MBHeadRepository) List(ctx context.Context, filter mbhead.ListFilter) (
 
 // Update persists changes to an existing MB Head.
 func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) error {
-	result, err := r.db.ExecContext(ctx, `
+	return r.updateOn(ctx, r.db, entity)
+}
+
+// UpdateWithCostingRename persists the head exactly like Update and, in the SAME
+// transaction, propagates an MB Costing rename to the rows the Validate auto-gen copied
+// it into: the linked MB-recipe cost product's cpm_product_name (only when
+// mbh_cost_product_id is set and the product is still cpm_source = mbCostProductSource)
+// and the head's live MB Spin rows whose mbs_mb_costing still equals oldCosting.
+//
+// ⛔ Product param values that captured the old costing text are NOT rewritten.
+func (r *MBHeadRepository) UpdateWithCostingRename(ctx context.Context, entity *mbhead.Entity, oldCosting string) error {
+	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
+		if err := r.updateOn(ctx, tx, entity); err != nil {
+			return err
+		}
+		return renameMBCostingTx(ctx, tx, entity, oldCosting)
+	})
+}
+
+// mbCostingRenameProductQuery renames the auto-generated MB-recipe cost product. The
+// cpm_source guard keeps a hand-made product that happens to be linked untouched.
+const mbCostingRenameProductQuery = `
+		UPDATE cost_product_master
+		SET cpm_product_name = $1, cpm_updated_at = NOW(), cpm_updated_by = $2
+		WHERE cpm_product_sys_id = $3 AND cpm_source = $4`
+
+// mbCostingRenameSpinQuery renames the head's spin rows still carrying the old costing.
+const mbCostingRenameSpinQuery = `
+		UPDATE mst_mb_spin
+		SET mbs_mb_costing = $1, updated_at = NOW(), updated_by = $2
+		WHERE mbs_mbh_id = $3 AND mbs_mb_costing = $4 AND deleted_at IS NULL`
+
+func renameMBCostingTx(ctx context.Context, q rowQuerier, entity *mbhead.Entity, oldCosting string) error {
+	actor := ""
+	if entity.UpdatedBy() != nil {
+		actor = *entity.UpdatedBy()
+	}
+	if productID := entity.CostProductID(); productID != 0 {
+		if _, err := q.ExecContext(ctx, mbCostingRenameProductQuery,
+			entity.MBCosting(), actor, productID, mbCostProductSource,
+		); err != nil {
+			return fmt.Errorf("rename mb cost product: %w", err)
+		}
+	}
+	if _, err := q.ExecContext(ctx, mbCostingRenameSpinQuery,
+		entity.MBCosting(), actor, entity.ID(), oldCosting,
+	); err != nil {
+		return fmt.Errorf("rename mb spin costing: %w", err)
+	}
+	return nil
+}
+
+func (r *MBHeadRepository) updateOn(ctx context.Context, q rowQuerier, entity *mbhead.Entity) error {
+	result, err := q.ExecContext(ctx, `
 		UPDATE mst_mb_head SET
 			mbh_mb_costing    = $2,
 			mbh_mgt_name      = $3,
@@ -229,6 +282,9 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 		entity.NoOfProcess(),
 	)
 	if err != nil {
+		if isMBHeadUniqueViolation(err) {
+			return mbhead.ErrAlreadyExists
+		}
 		return fmt.Errorf("update mb head: %w", err)
 	}
 	rowsAffected, err := result.RowsAffected()

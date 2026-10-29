@@ -25,6 +25,11 @@ type Repository interface {
 	// Update persists changes to an existing MB Head.
 	Update(ctx context.Context, entity *Entity) error
 
+	// UpdateWithCostingRename persists changes like Update and, in the same transaction,
+	// propagates an MB Costing rename (oldCosting -> entity.MBCosting()) to the linked
+	// auto-generated cost product name and the head's MB Spin rows.
+	UpdateWithCostingRename(ctx context.Context, entity *Entity, oldCosting string) error
+
 	// SoftDelete marks an MB Head as deleted.
 	SoftDelete(ctx context.Context, id uuid.UUID, deletedBy string) error
 

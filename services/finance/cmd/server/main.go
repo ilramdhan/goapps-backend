@@ -256,6 +256,9 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// does not reuse mbRecipeFullExportRepo: that repo owns the 37-column export's
 	// query, which must stay byte-for-byte unchanged.
 	mbHeadHandler = mbHeadHandler.WithCostCalcDetail(postgres.NewMBCostCalcDetailExportRepository(db))
+	// Recipe create/update auto-creates a MANUAL shade master row for an unknown shade
+	// code (best-effort, never fails the save).
+	mbHeadHandler = mbHeadHandler.WithShadeMaster(shadeRepo)
 
 	// Full wiring: duplicate spin + child-recalc cascade. mbSpinRepo supplies both
 	// the read side and the recalc write side; mbDozingImpactRepo is READ-ONLY and
