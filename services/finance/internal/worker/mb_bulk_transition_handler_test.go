@@ -76,7 +76,7 @@ func (f *fakeWorkerMBHeadRepo) Update(_ context.Context, _ *mbheaddomain.Entity)
 	panic("not used by MBBulkTransitionHandler tests")
 }
 
-func (f *fakeWorkerMBHeadRepo) UpdateWithCostingRename(_ context.Context, _ *mbheaddomain.Entity, _ string) error {
+func (f *fakeWorkerMBHeadRepo) UpdateWithCascade(_ context.Context, _ *mbheaddomain.Entity, _ string, _ *mbheaddomain.ParamSnapshot) ([]uuid.UUID, error) {
 	panic("not used by MBBulkTransitionHandler tests")
 }
 

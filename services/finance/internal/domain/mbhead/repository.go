@@ -25,10 +25,14 @@ type Repository interface {
 	// Update persists changes to an existing MB Head.
 	Update(ctx context.Context, entity *Entity) error
 
-	// UpdateWithCostingRename persists changes like Update and, in the same transaction,
-	// propagates an MB Costing rename (oldCosting -> entity.MBCosting()) to the linked
-	// auto-generated cost product name and the head's MB Spin rows.
-	UpdateWithCostingRename(ctx context.Context, entity *Entity, oldCosting string) error
+	// UpdateWithCascade persists changes like Update and, in the same transaction, cascades
+	// the head onto the rows its Validate auto-gen copied it into. With a cost product
+	// (CostProductID() != 0): every live MB Spin's head-derived fields, the root spin's
+	// guarded LDR, the cost product's name/shade and — when params is non-nil — the
+	// frozen param snapshot plus the CPP re-freeze; the touched spin IDs are returned.
+	// Without one: only an MB Costing rename (oldCosting -> entity.MBCosting()) reaches
+	// the spins still carrying oldCosting, and no IDs are returned.
+	UpdateWithCascade(ctx context.Context, entity *Entity, oldCosting string, params *ParamSnapshot) ([]uuid.UUID, error)
 
 	// SoftDelete marks an MB Head as deleted.
 	SoftDelete(ctx context.Context, id uuid.UUID, deletedBy string) error

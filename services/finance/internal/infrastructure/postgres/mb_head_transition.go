@@ -178,23 +178,8 @@ func (r *MBHeadRepository) RefreezeCostParams(ctx context.Context, id uuid.UUID,
 	}
 	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
 		// Update mst_mb_head frozen param columns in-place — no version bump, no status change.
-		if _, err := tx.ExecContext(ctx, `
-			UPDATE mst_mb_head SET
-			    mbh_param_waste              = NULLIF($2, '')::numeric,
-			    mbh_param_quality_loss       = NULLIF($3, '')::numeric,
-			    mbh_param_efficiency         = NULLIF($4, '')::numeric,
-			    mbh_param_dev_expense        = NULLIF($5, '')::numeric,
-			    mbh_param_packing            = NULLIF($6, '')::numeric,
-			    mbh_param_mb_prod_per_day    = NULLIF($7, '')::numeric,
-			    mbh_param_throughput_per_hour = $8,
-			    mbh_param_no_of_process       = $9,
-			    updated_at = NOW()
-			WHERE mbh_id = $1 AND deleted_at IS NULL
-		`, id,
-			params.Waste, params.QualityLoss, params.Efficiency, params.DevExpense,
-			params.Packing, params.MBProdPerDay, params.ThroughputPerHour, params.NoOfProcess,
-		); err != nil {
-			return fmt.Errorf("refreeze: update mst_mb_head: %w", err)
+		if err := updateFrozenParamsTx(ctx, tx, id, params); err != nil {
+			return err
 		}
 
 		// Re-run the CPP freeze (upsert — idempotent per ON CONFLICT ... DO UPDATE).
@@ -203,6 +188,30 @@ func (r *MBHeadRepository) RefreezeCostParams(ctx context.Context, id uuid.UUID,
 		}
 		return nil
 	})
+}
+
+// updateFrozenParamsTx writes the frozen mbh_param_* snapshot onto mst_mb_head in place —
+// no version bump, no status change. Shared by RefreezeCostParams and UpdateWithCascade.
+func updateFrozenParamsTx(ctx context.Context, tx *sql.Tx, id uuid.UUID, params *mbhead.ParamSnapshot) error {
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE mst_mb_head SET
+		    mbh_param_waste              = NULLIF($2, '')::numeric,
+		    mbh_param_quality_loss       = NULLIF($3, '')::numeric,
+		    mbh_param_efficiency         = NULLIF($4, '')::numeric,
+		    mbh_param_dev_expense        = NULLIF($5, '')::numeric,
+		    mbh_param_packing            = NULLIF($6, '')::numeric,
+		    mbh_param_mb_prod_per_day    = NULLIF($7, '')::numeric,
+		    mbh_param_throughput_per_hour = $8,
+		    mbh_param_no_of_process       = $9,
+		    updated_at = NOW()
+		WHERE mbh_id = $1 AND deleted_at IS NULL
+	`, id,
+		params.Waste, params.QualityLoss, params.Efficiency, params.DevExpense,
+		params.Packing, params.MBProdPerDay, params.ThroughputPerHour, params.NoOfProcess,
+	); err != nil {
+		return fmt.Errorf("refreeze: update mst_mb_head: %w", err)
+	}
+	return nil
 }
 
 func (r *MBHeadRepository) insertWorkflowLogTx(ctx context.Context, tx *sql.Tx, id uuid.UUID, fromState, toState, actorUserID, reason string, version int32) error {

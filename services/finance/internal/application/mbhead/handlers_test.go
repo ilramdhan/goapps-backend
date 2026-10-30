@@ -50,9 +50,12 @@ func (m *MockRepository) Update(ctx context.Context, entity *mbheaddomain.Entity
 	return args.Error(0)
 }
 
-func (m *MockRepository) UpdateWithCostingRename(ctx context.Context, entity *mbheaddomain.Entity, oldCosting string) error {
-	args := m.Called(ctx, entity, oldCosting)
-	return args.Error(0)
+func (m *MockRepository) UpdateWithCascade(ctx context.Context, entity *mbheaddomain.Entity, oldCosting string, params *mbheaddomain.ParamSnapshot) ([]uuid.UUID, error) {
+	args := m.Called(ctx, entity, oldCosting, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]uuid.UUID), args.Error(1)
 }
 
 func (m *MockRepository) SoftDelete(ctx context.Context, id uuid.UUID, deletedBy string) error {
@@ -270,7 +273,7 @@ func TestUpdateHandler_Handle(t *testing.T) {
 
 		mockRepo.On("GetByID", ctx, id).Return(entity, nil)
 		mockRepo.On("ExistsByMBCosting", ctx, "MB001-UPD").Return(false, nil)
-		mockRepo.On("UpdateWithCostingRename", ctx, mock.AnythingOfType("*mbhead.Entity"), "MB001").Return(nil)
+		mockRepo.On("UpdateWithCascade", ctx, mock.AnythingOfType("*mbhead.Entity"), "MB001", (*mbheaddomain.ParamSnapshot)(nil)).Return(nil, nil)
 
 		result, err := handler.Handle(ctx, cmd)
 
