@@ -122,6 +122,10 @@ func (f *fakeWorkerMBHeadRepo) ExistsByDevCode(_ context.Context, _ string, _ uu
 	panic("not used by MBBulkTransitionHandler tests")
 }
 
+func (f *fakeWorkerMBHeadRepo) ExistsByOrionItemCode(_ context.Context, _ string, _ uuid.UUID) (bool, error) {
+	panic("not used by MBBulkTransitionHandler tests")
+}
+
 func (f *fakeWorkerMBHeadRepo) RefreezeCostParams(_ context.Context, _ uuid.UUID, _ *mbheaddomain.Entity, _ *mbheaddomain.ParamSnapshot) error {
 	panic("not used by MBBulkTransitionHandler tests")
 }

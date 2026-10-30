@@ -37,6 +37,11 @@ var (
 	// in the application layer, only when the value actually changes, and with ⛔ NO
 	// UNIQUE constraint in the database (one would reject the legacy rows outright).
 	ErrDuplicateDevCode = errors.New("mbhead: dev code already exists")
+	// ErrDuplicateOrionItemCode is returned when an Orion Item Code being set or changed
+	// is already used by another live MB head. Like ErrDuplicateDevCode it is enforced
+	// only in the application layer, only when the value changes — legacy duplicates
+	// stay editable and there is ⛔ NO UNIQUE constraint on mbh_orion_item_code.
+	ErrDuplicateOrionItemCode = errors.New("mbhead: orion item code already exists")
 	// ErrRecipeFieldRequired is returned when a mandatory MB recipe field is empty.
 	ErrRecipeFieldRequired = errors.New("mbhead: required recipe field is empty")
 	// ErrHeadLocked is returned when an MB head is locked and cannot be modified.

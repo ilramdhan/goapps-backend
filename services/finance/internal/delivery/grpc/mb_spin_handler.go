@@ -334,6 +334,9 @@ func mbSpinEntityToProto(e *mbspin.Entity) *financev1.MBSpin {
 	if e.OracleSysID() != nil {
 		p.MbsOracleSysId = *e.OracleSysID()
 	}
+	if e.OrionItemCode() != nil {
+		p.MbsOrionItemCode = *e.OrionItemCode()
+	}
 	p.MbsDenier = e.Denier()
 	if e.Filament() != nil {
 		v := safeconv.IntToInt32(*e.Filament())

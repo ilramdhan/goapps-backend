@@ -219,3 +219,55 @@ func (s *MBAutoGenSpinSuite) TestAutoGenSpin_FullyPopulatedHead_PersistsDerivedF
 	require.True(s.T(), costProductID.Valid, "mbs_cost_product_id must not be NULL after auto-gen createSpinOn")
 	require.Equal(s.T(), productSysID, costProductID.Int64)
 }
+
+// The auto-generated root spin persists the head's Orion Item Code.
+func (s *MBAutoGenSpinSuite) TestAutoGenSpin_InheritsHeadOrionItemCode() {
+	entity, err := mbhead.New(mbhead.NewParams{
+		MBCosting:     mbSpinAutoGenFixturePrefix + "MBC-" + uuid.NewString()[:8],
+		CreatedBy:     "itest",
+		OrionItemCode: stringPtr("ORI-AUTOGEN"),
+	})
+	require.NoError(s.T(), err)
+
+	productSysID := s.seedCostProductMaster()
+	require.NoError(s.T(), s.db.Transaction(s.ctx, func(tx *sql.Tx) error {
+		return mbAutoGenSpin(s.ctx, tx, s.mbhID, entity, productSysID, "itest")
+	}))
+
+	var orion sql.NullString
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT mbs_orion_item_code FROM mst_mb_spin WHERE mbs_mbh_id = $1`, s.mbhID).Scan(&orion))
+	require.Equal(s.T(), "ORI-AUTOGEN", orion.String)
+}
+
+// A head code already carried by another live spin (TRIM compare) is NOT copied: the
+// auto-generated spin gets no code.
+func (s *MBAutoGenSpinSuite) TestAutoGenSpin_TakenOrionItemCode_LeftNil() {
+	code := mbSpinAutoGenFixturePrefix + "ORI-" + uuid.NewString()[:6]
+	otherHead := uuid.New()
+	_, err := s.db.ExecContext(s.ctx, `
+		INSERT INTO mst_mb_head (mbh_id, mbh_mb_costing, mbh_current_version, mbh_entry_status, created_by)
+		VALUES ($1, $2, 1, 'VALIDATED', 'itest')`, otherHead, mbSpinAutoGenFixturePrefix+uuid.NewString()[:8])
+	require.NoError(s.T(), err)
+	_, err = s.db.ExecContext(s.ctx, `
+		INSERT INTO mst_mb_spin (mbs_id, mbs_mbh_id, mbs_mgt_name, mbs_mb_costing, mbs_orion_item_code, created_by)
+		VALUES ($1, $2, 'other', $3, $4, 'itest')`,
+		uuid.New(), otherHead, mbSpinAutoGenFixturePrefix+"OTHER", " "+code+" ")
+	require.NoError(s.T(), err)
+
+	entity, err := mbhead.New(mbhead.NewParams{
+		MBCosting:     mbSpinAutoGenFixturePrefix + "MBC-" + uuid.NewString()[:8],
+		CreatedBy:     "itest",
+		OrionItemCode: stringPtr(code),
+	})
+	require.NoError(s.T(), err)
+	productSysID := s.seedCostProductMaster()
+	require.NoError(s.T(), s.db.Transaction(s.ctx, func(tx *sql.Tx) error {
+		return mbAutoGenSpin(s.ctx, tx, s.mbhID, entity, productSysID, "itest")
+	}))
+
+	var orion sql.NullString
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT mbs_orion_item_code FROM mst_mb_spin WHERE mbs_mbh_id = $1`, s.mbhID).Scan(&orion))
+	require.False(s.T(), orion.Valid, "taken code must not be duplicated onto the new spin")
+}

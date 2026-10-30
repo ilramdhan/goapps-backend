@@ -74,6 +74,10 @@ type CreateCommand struct {
 	// allowed at create time. Nil means the payload omitted the field, which is the
 	// legacy shape and must succeed.
 	AdditionalShades []mbhead.Shade
+
+	// OrionItemCode is the optional ERP item code. nil or blank = not set (NULL); a
+	// non-empty value must not already be used by another live head.
+	OrionItemCode *string
 }
 
 // CreateHandler handles the CreateMBHead command.
@@ -116,6 +120,10 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbhead.
 		return nil, err
 	}
 
+	if err := assertOrionItemCodeFree(ctx, h.repo, mbhead.NormalizeOrionItemCode(cmd.OrionItemCode), uuid.Nil); err != nil {
+		return nil, err
+	}
+
 	machineID, err := h.resolveDefaultMachineID(ctx)
 	if err != nil {
 		return nil, err
@@ -143,6 +151,7 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbhead.
 		MachineID:       machineID,
 		VSNumber:        cmd.VSNumber,
 		NoOfProcess:     cmd.NoOfProcess,
+		OrionItemCode:   cmd.OrionItemCode,
 	})
 	if err != nil {
 		return nil, err
@@ -229,6 +238,25 @@ func (h *CreateHandler) assertDevCodeFree(ctx context.Context, devCode string, e
 	}
 	if taken {
 		return mbhead.ErrDuplicateDevCode
+	}
+	return nil
+}
+
+// assertOrionItemCodeFree enforces Orion Item Code uniqueness among live heads in the
+// application layer, mirroring the Dev Code rule: there is ⛔ NO UNIQUE constraint on
+// mbh_orion_item_code, so legacy duplicates stay untouched. The empty string (absent or
+// cleared) is never probed. Callers pass the trimmed value and only call this for a value
+// that is new on the head — see UpdateHandler.assertOrionItemCodeFree.
+func assertOrionItemCodeFree(ctx context.Context, repo mbhead.Repository, code string, excludeID uuid.UUID) error {
+	if code == "" {
+		return nil
+	}
+	taken, err := repo.ExistsByOrionItemCode(ctx, code, excludeID)
+	if err != nil {
+		return err
+	}
+	if taken {
+		return fmt.Errorf("%w: %q", mbhead.ErrDuplicateOrionItemCode, code)
 	}
 	return nil
 }

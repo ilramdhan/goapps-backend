@@ -2,6 +2,7 @@
 package mbhead
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -94,6 +95,12 @@ type Entity struct {
 	// UNLOCK_REQUESTED), which is the source the design names. Empty string means
 	// "unknown" and RejectUnlock refuses rather than inventing a target.
 	preUnlockStatus string
+
+	// orionItemCode maps to mbh_orion_item_code (Oracle CMBH_ORION_ITEM_CODE, 000416):
+	// the ERP item code of the recipe. nil = NULL; a blank value is never stored — it is
+	// normalized to nil (see normalizeOrionItemCode). Uniqueness for NEW values is an
+	// application-layer rule; legacy duplicates are left alone (no DB constraint).
+	orionItemCode *string
 }
 
 // NewParams carries the construction arguments for New. It replaces the former
@@ -131,6 +138,9 @@ type NewParams struct {
 	// NoOfProcess is the live user choice. Nil stays NULL — ⛔ no default is encoded
 	// here, the default is an open user decision (U-B).
 	NoOfProcess *string
+	// OrionItemCode is the optional ERP item code. It is trimmed and a blank value is
+	// stored as NULL.
+	OrionItemCode *string
 }
 
 // New creates a new MB Head entity with validation.
@@ -155,6 +165,7 @@ func New(p NewParams) (*Entity, error) {
 		shadeName: p.ShadeName, crossSection: p.CrossSection, lustureCode: p.LustureCode,
 		machineID: p.MachineID,
 		vsNumber:  p.VSNumber, noOfProcess: p.NoOfProcess,
+		orionItemCode: normalizeOrionItemCode(p.OrionItemCode),
 	}
 	// Seed the derived column for a brand-new head. The row lands in the DB with
 	// mbh_entry_status = 'DRAFT' (column DEFAULT, migration 000445:6-7) — the INSERT
@@ -192,6 +203,8 @@ type PersistedExtras struct {
 	// back from mst_mb_workflow_log. Empty when the head is not parked in
 	// UNLOCK_REQUESTED — or when the log holds no such row.
 	PreUnlockStatus string
+	// OrionItemCode is mbh_orion_item_code, read back as stored (nil = NULL).
+	OrionItemCode *string
 }
 
 // HydrateExtras applies persisted P5 columns onto a Reconstruct-ed entity. It is
@@ -208,6 +221,7 @@ func (e *Entity) HydrateExtras(x PersistedExtras) {
 	e.unlockRequestedBy = x.UnlockRequestedBy
 	e.unlockReason = x.UnlockReason
 	e.preUnlockStatus = x.PreUnlockStatus
+	e.orionItemCode = x.OrionItemCode
 }
 
 // Reconstruct rebuilds an MB Head from persistence data.
@@ -435,6 +449,9 @@ func (e *Entity) UnlockReason() *string { return e.unlockReason }
 // unknown. Persisted nowhere of its own — restored from mst_mb_workflow_log.
 func (e *Entity) PreUnlockStatus() string { return e.preUnlockStatus }
 
+// OrionItemCode returns the optional ERP item code (mbh_orion_item_code); nil = not set.
+func (e *Entity) OrionItemCode() *string { return e.orionItemCode }
+
 // IsEditable reports whether the recipe's content may be mutated right now.
 //
 // 🔴 A locked head is NOT editable, and a head parked in UNLOCK_REQUESTED is not
@@ -477,6 +494,9 @@ type UpdateInput struct {
 	// (D13). ⛔ Absent is never coerced into a default.
 	VSNumber    *string
 	NoOfProcess *string
+	// OrionItemCode: nil leaves the stored value untouched; an empty (or blank) value
+	// clears it to NULL; anything else is trimmed and stored.
+	OrionItemCode *string
 }
 
 // Update applies optional field changes to the entity.
@@ -827,4 +847,26 @@ func (e *Entity) applyRecipeExtraFields(in UpdateInput) {
 	if in.NoOfProcess != nil {
 		e.noOfProcess = in.NoOfProcess
 	}
+	if in.OrionItemCode != nil {
+		e.orionItemCode = normalizeOrionItemCode(in.OrionItemCode)
+	}
+}
+
+// NormalizeOrionItemCode trims an incoming ERP item code and maps nil or a blank value
+// to "" — the form the application layer compares when deciding whether a uniqueness
+// check is needed.
+func NormalizeOrionItemCode(code *string) string {
+	if code == nil {
+		return ""
+	}
+	return strings.TrimSpace(*code)
+}
+
+// normalizeOrionItemCode is the storage form: trimmed, with a blank value as nil (NULL).
+func normalizeOrionItemCode(code *string) *string {
+	v := NormalizeOrionItemCode(code)
+	if v == "" {
+		return nil
+	}
+	return &v
 }

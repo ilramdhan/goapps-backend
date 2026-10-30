@@ -93,6 +93,12 @@ type Repository interface {
 	// changed, and the empty string is exempt.
 	ExistsByDevCode(ctx context.Context, devCode string, excludeID uuid.UUID) (bool, error)
 
+	// ExistsByOrionItemCode reports whether any other live head already carries the given
+	// mbh_orion_item_code (exact, case-sensitive match), excluding excludeID (pass uuid.Nil
+	// on create). HELPER ONLY, same contract as ExistsByDevCode: there is ⛔ NO UNIQUE
+	// constraint, legacy duplicates stay untouched, and "" is never probed.
+	ExistsByOrionItemCode(ctx context.Context, code string, excludeID uuid.UUID) (bool, error)
+
 	// ForceUnvalidateTransition atomically forces a VALIDATED head back to DRAFT for the Bulk
 	// MB Head Regenerate feature (Phase B): updates mst_mb_head's entry_status/state_reason,
 	// clears the lock columns (is_locked/unlock_requested_at/unlock_requested_by), resets the

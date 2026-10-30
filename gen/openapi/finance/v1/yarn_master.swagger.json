@@ -5073,6 +5073,10 @@
         "replaceAdditionalShades": {
           "type": "boolean",
           "description": "Whether additional_shades should replace the stored shade list. Only when true is the\nlist rewritten. Legacy forms omit this flag, so their updates never wipe existing shades."
+        },
+        "mbhOrionItemCode": {
+          "type": "string",
+          "description": "Oracle Orion item code (max 200). Absent = unchanged, \"\" = clear."
         }
       },
       "description": "UpdateMBHeadRequest is the request for updating an MB Head record."
@@ -6371,6 +6375,10 @@
             "$ref": "#/definitions/v1MBHeadShadeInput"
           },
           "description": "Additional shades (max 2)."
+        },
+        "mbhOrionItemCode": {
+          "type": "string",
+          "description": "Oracle Orion item code (optional, max 200; empty = none)."
         }
       },
       "description": "CreateMBHeadRequest is the request for creating an MB Head record."
@@ -8844,6 +8852,10 @@
         "mbhUnlockReason": {
           "type": "string",
           "description": "Reason WRITTEN BY THE REQUESTER when calling RequestUnlockMBHead, i.e. the\nfree-text justification for why the locked recipe needs to be reopened.\nPersisted in mst_mb_head.mbh_unlock_reason.\n\nABSENT means no unlock request has ever been recorded for this head. It is\ndeliberately NOT cleared when an unlock is granted or rejected — the trail of\nwhy the unlock was asked for must survive the decision.\n\nRendered next to mbh_unlock_requested_by (43) and mbh_unlock_requested_at (42)\nso the approver sees WHO asked, WHEN, and WHY before deciding.\n\n⛔ This is NOT state_reason. state_reason carries the reason of the PREVIOUS\nworkflow step (principle U-2) and is left untouched by RequestUnlockMBHead —\nnever substitute one for the other."
+        },
+        "mbhOrionItemCode": {
+          "type": "string",
+          "description": "Oracle Orion item code (VARCHAR(200), optional; empty = none)."
         }
       },
       "description": "MBHead represents a Melange Batch head master record (MEL yarn type only)."
@@ -9004,6 +9016,10 @@
         "mbsCrossSection": {
           "type": "string",
           "description": "Cross section, copied down from MB Head at auto-gen. Read-only lineage field."
+        },
+        "mbsOrionItemCode": {
+          "type": "string",
+          "description": "Oracle Orion item code (output-only, read-only; inherited from head when empty)."
         }
       },
       "description": "MBSpin represents a Melange Batch spin detail record (child of MBHead)."

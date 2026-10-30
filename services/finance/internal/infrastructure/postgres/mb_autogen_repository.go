@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -319,7 +320,11 @@ func (r *MBHeadRepository) autoGenCostProduct(ctx context.Context, tx *sql.Tx, i
 // same HydrateLineage/CostProductID path the repository already uses to read that column back
 // from storage (migration 000490).
 func mbAutoGenSpin(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mbhead.Entity, productSysID int64, actorUserID string) error {
-	spin, err := mbBuildAutoGenSpin(headID, entity, productSysID, actorUserID)
+	orion, err := mbAutoGenSpinOrionCode(ctx, tx, entity)
+	if err != nil {
+		return err
+	}
+	spin, err := mbBuildAutoGenSpin(headID, entity, mbEmptyStringToPtr(orion), productSysID, actorUserID)
 	if err != nil {
 		return err
 	}
@@ -329,10 +334,33 @@ func mbAutoGenSpin(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mb
 	return nil
 }
 
+// mbAutoGenSpinOrionCode returns the (trimmed) head Orion Item Code the auto-generated root
+// spin may inherit, or "" when the head has none OR any live spin already carries it (TRIM
+// compare, same tx). A second live spin with the same code would make MB_SP_CODE text-keyed
+// yarn rows ambiguous (SkipMBSpinAmbiguous / ResolveUniqueByOrionItemCode).
+func mbAutoGenSpinOrionCode(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity) (string, error) {
+	code := entity.OrionItemCode()
+	if code == nil || strings.TrimSpace(*code) == "" {
+		return "", nil
+	}
+	trimmed := strings.TrimSpace(*code)
+	var taken bool
+	if err := tx.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM mst_mb_spin WHERE deleted_at IS NULL AND TRIM(mbs_orion_item_code) = $1)`,
+		trimmed,
+	).Scan(&taken); err != nil {
+		return "", fmt.Errorf("mb_autogen: check spin orion item code taken: %w", err)
+	}
+	if taken {
+		return "", nil
+	}
+	return trimmed, nil
+}
+
 // mbBuildAutoGenSpin constructs (without persisting) the *mbspin.Entity that mbAutoGenSpin
 // writes. Split out from mbAutoGenSpin so the field-derivation rules can be unit-tested without
 // a database connection — createSpinOn (the only DB-touching step) stays in mbAutoGenSpin.
-func mbBuildAutoGenSpin(headID uuid.UUID, entity *mbhead.Entity, productSysID int64, actorUserID string) (*mbspin.Entity, error) {
+func mbBuildAutoGenSpin(headID uuid.UUID, entity *mbhead.Entity, orionItemCode *string, productSysID int64, actorUserID string) (*mbspin.Entity, error) {
 	mgtName := mbSpinAutoGenMgtName(entity)
 	rndStatus := mbspin.StatusRnD
 	mbCosting := mbEmptyStringToPtr(entity.MBCosting())
@@ -341,7 +369,9 @@ func mbBuildAutoGenSpin(headID uuid.UUID, entity *mbhead.Entity, productSysID in
 	// Stakeholder decision (putaran 83): Denier/Filament/Dozing/MB Costing/CC/Final Product
 	// carry straight over from the parent MB Head — they are plain identity/spec fields with
 	// no separate recalculation process, unlike the LDR fields below.
-	spin, err := mbspin.New(headID, mgtName, nil, nil, entity.Denier(), entity.Filament(), entity.Dozing(), mbCosting, cc, nil, &rndStatus, nil, nil, entity.MBHFinalProduct(), nil, nil, actorUserID)
+	// orionItemCode is the head code already vetted by mbAutoGenSpinOrionCode (nil when the
+	// head has none or another live spin carries it).
+	spin, err := mbspin.New(headID, mgtName, nil, orionItemCode, entity.Denier(), entity.Filament(), entity.Dozing(), mbCosting, cc, nil, &rndStatus, nil, nil, entity.MBHFinalProduct(), nil, nil, actorUserID)
 	if err != nil {
 		return nil, fmt.Errorf("mb_autogen: construct auto-generated mb spin: %w", err)
 	}

@@ -6084,8 +6084,10 @@ type MBHead struct {
 	// workflow step (principle U-2) and is left untouched by RequestUnlockMBHead —
 	// never substitute one for the other.
 	MbhUnlockReason *string `protobuf:"bytes,45,opt,name=mbh_unlock_reason,json=mbhUnlockReason,proto3,oneof" json:"mbh_unlock_reason,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Oracle Orion item code (VARCHAR(200), optional; empty = none).
+	MbhOrionItemCode string `protobuf:"bytes,46,opt,name=mbh_orion_item_code,json=mbhOrionItemCode,proto3" json:"mbh_orion_item_code,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *MBHead) Reset() {
@@ -6433,6 +6435,13 @@ func (x *MBHead) GetMbhUnlockReason() string {
 	return ""
 }
 
+func (x *MBHead) GetMbhOrionItemCode() string {
+	if x != nil {
+		return x.MbhOrionItemCode
+	}
+	return ""
+}
+
 // CreateMBHeadRequest is the request for creating an MB Head record.
 type CreateMBHeadRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -6484,6 +6493,8 @@ type CreateMBHeadRequest struct {
 	MbhNoOfProcess *string `protobuf:"bytes,21,opt,name=mbh_no_of_process,json=mbhNoOfProcess,proto3,oneof" json:"mbh_no_of_process,omitempty"`
 	// Additional shades (max 2).
 	AdditionalShades []*MBHeadShadeInput `protobuf:"bytes,22,rep,name=additional_shades,json=additionalShades,proto3" json:"additional_shades,omitempty"`
+	// Oracle Orion item code (optional, max 200; empty = none).
+	MbhOrionItemCode *string `protobuf:"bytes,23,opt,name=mbh_orion_item_code,json=mbhOrionItemCode,proto3,oneof" json:"mbh_orion_item_code,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -6670,6 +6681,13 @@ func (x *CreateMBHeadRequest) GetAdditionalShades() []*MBHeadShadeInput {
 		return x.AdditionalShades
 	}
 	return nil
+}
+
+func (x *CreateMBHeadRequest) GetMbhOrionItemCode() string {
+	if x != nil && x.MbhOrionItemCode != nil {
+		return *x.MbhOrionItemCode
+	}
+	return ""
 }
 
 // CreateMBHeadResponse is the response for creating an MB Head record.
@@ -6882,8 +6900,10 @@ type UpdateMBHeadRequest struct {
 	// Whether additional_shades should replace the stored shade list. Only when true is the
 	// list rewritten. Legacy forms omit this flag, so their updates never wipe existing shades.
 	ReplaceAdditionalShades *bool `protobuf:"varint,23,opt,name=replace_additional_shades,json=replaceAdditionalShades,proto3,oneof" json:"replace_additional_shades,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// Oracle Orion item code (max 200). Absent = unchanged, "" = clear.
+	MbhOrionItemCode *string `protobuf:"bytes,24,opt,name=mbh_orion_item_code,json=mbhOrionItemCode,proto3,oneof" json:"mbh_orion_item_code,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *UpdateMBHeadRequest) Reset() {
@@ -7075,6 +7095,13 @@ func (x *UpdateMBHeadRequest) GetReplaceAdditionalShades() bool {
 		return *x.ReplaceAdditionalShades
 	}
 	return false
+}
+
+func (x *UpdateMBHeadRequest) GetMbhOrionItemCode() string {
+	if x != nil && x.MbhOrionItemCode != nil {
+		return *x.MbhOrionItemCode
+	}
+	return ""
 }
 
 // UpdateMBHeadResponse is the response for updating an MB Head record.
@@ -10048,8 +10075,10 @@ type MBSpin struct {
 	MbsShadeName string `protobuf:"bytes,25,opt,name=mbs_shade_name,json=mbsShadeName,proto3" json:"mbs_shade_name,omitempty"`
 	// Cross section, copied down from MB Head at auto-gen. Read-only lineage field.
 	MbsCrossSection string `protobuf:"bytes,26,opt,name=mbs_cross_section,json=mbsCrossSection,proto3" json:"mbs_cross_section,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Oracle Orion item code (output-only, read-only; inherited from head when empty).
+	MbsOrionItemCode string `protobuf:"bytes,27,opt,name=mbs_orion_item_code,json=mbsOrionItemCode,proto3" json:"mbs_orion_item_code,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *MBSpin) Reset() {
@@ -10260,6 +10289,13 @@ func (x *MBSpin) GetMbsShadeName() string {
 func (x *MBSpin) GetMbsCrossSection() string {
 	if x != nil {
 		return x.MbsCrossSection
+	}
+	return ""
+}
+
+func (x *MBSpin) GetMbsOrionItemCode() string {
+	if x != nil {
+		return x.MbsOrionItemCode
 	}
 	return ""
 }
@@ -20879,7 +20915,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\vmbhs_seq_no\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x02(\x01R\tmbhsSeqNo\x121\n" +
 	"\x0fmbhs_shade_code\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\rmbhsShadeCode\x124\n" +
 	"\x0fmbhs_shade_name\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18dH\x00R\rmbhsShadeName\x88\x01\x01B\x12\n" +
-	"\x10_mbhs_shade_name\"\xb6\x11\n" +
+	"\x10_mbhs_shade_name\"\xe5\x11\n" +
 	"\x06MBHead\x12\x15\n" +
 	"\x06mbh_id\x18\x01 \x01(\tR\x05mbhId\x12)\n" +
 	"\x11mbh_oracle_sys_id\x18\x02 \x01(\tR\x0embhOracleSysId\x12$\n" +
@@ -20936,7 +20972,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x17mbh_unlock_requested_at\x18* \x01(\tH\rR\x14mbhUnlockRequestedAt\x88\x01\x01\x12:\n" +
 	"\x17mbh_unlock_requested_by\x18+ \x01(\tH\x0eR\x14mbhUnlockRequestedBy\x88\x01\x01\x126\n" +
 	"\x15mbh_check_status_calc\x18, \x01(\tH\x0fR\x12mbhCheckStatusCalc\x88\x01\x01\x12/\n" +
-	"\x11mbh_unlock_reason\x18- \x01(\tH\x10R\x0fmbhUnlockReason\x88\x01\x01B\r\n" +
+	"\x11mbh_unlock_reason\x18- \x01(\tH\x10R\x0fmbhUnlockReason\x88\x01\x01\x12-\n" +
+	"\x13mbh_orion_item_code\x18. \x01(\tR\x10mbhOrionItemCodeB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
 	"\r_mbh_filamentB\r\n" +
 	"\v_mbh_dozingB\x13\n" +
@@ -20953,7 +20990,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x18_mbh_unlock_requested_atB\x1a\n" +
 	"\x18_mbh_unlock_requested_byB\x18\n" +
 	"\x16_mbh_check_status_calcB\x14\n" +
-	"\x12_mbh_unlock_reason\"\xec\v\n" +
+	"\x12_mbh_unlock_reason\"\xc2\f\n" +
 	"\x13CreateMBHeadRequest\x12/\n" +
 	"\x0embh_mb_costing\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\fmbhMbCosting\x127\n" +
 	"\x11mbh_oracle_sys_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x1eH\x00R\x0embhOracleSysId\x88\x01\x01\x12.\n" +
@@ -20985,7 +21022,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x0fmbh_run_ldr_pct\x18\x13 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x10R\fmbhRunLdrPct\x88\x01\x01\x120\n" +
 	"\rmbh_vs_number\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x182H\x11R\vmbhVsNumber\x88\x01\x01\x12@\n" +
 	"\x11mbh_no_of_process\x18\x15 \x01(\tB\x10\xbaH\rr\vR\x00R\x01SR\x01DR\x01TH\x12R\x0embhNoOfProcess\x88\x01\x01\x12S\n" +
-	"\x11additional_shades\x18\x16 \x03(\v2\x1c.finance.v1.MBHeadShadeInputB\b\xbaH\x05\x92\x01\x02\x10\x02R\x10additionalShadesB\x14\n" +
+	"\x11additional_shades\x18\x16 \x03(\v2\x1c.finance.v1.MBHeadShadeInputB\b\xbaH\x05\x92\x01\x02\x10\x02R\x10additionalShades\x12<\n" +
+	"\x13mbh_orion_item_code\x18\x17 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\x13R\x10mbhOrionItemCode\x88\x01\x01B\x14\n" +
 	"\x12_mbh_oracle_sys_idB\x0f\n" +
 	"\r_mbh_mgt_nameB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
@@ -21004,7 +21042,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x0f_mbh_machine_idB\x12\n" +
 	"\x10_mbh_run_ldr_pctB\x10\n" +
 	"\x0e_mbh_vs_numberB\x14\n" +
-	"\x12_mbh_no_of_process\"k\n" +
+	"\x12_mbh_no_of_processB\x16\n" +
+	"\x14_mbh_orion_item_code\"k\n" +
 	"\x14CreateMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"3\n" +
@@ -21012,7 +21051,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\"h\n" +
 	"\x11GetMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
-	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\xc6\f\n" +
+	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"\x9c\r\n" +
 	"\x13UpdateMBHeadRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x124\n" +
 	"\x0embh_mb_costing\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dH\x00R\fmbhMbCosting\x88\x01\x01\x12.\n" +
@@ -21045,7 +21084,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\rmbh_vs_number\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x182H\x12R\vmbhVsNumber\x88\x01\x01\x12@\n" +
 	"\x11mbh_no_of_process\x18\x15 \x01(\tB\x10\xbaH\rr\vR\x00R\x01SR\x01DR\x01TH\x13R\x0embhNoOfProcess\x88\x01\x01\x12S\n" +
 	"\x11additional_shades\x18\x16 \x03(\v2\x1c.finance.v1.MBHeadShadeInputB\b\xbaH\x05\x92\x01\x02\x10\x02R\x10additionalShades\x12?\n" +
-	"\x19replace_additional_shades\x18\x17 \x01(\bH\x14R\x17replaceAdditionalShades\x88\x01\x01B\x11\n" +
+	"\x19replace_additional_shades\x18\x17 \x01(\bH\x14R\x17replaceAdditionalShades\x88\x01\x01\x12<\n" +
+	"\x13mbh_orion_item_code\x18\x18 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\x15R\x10mbhOrionItemCode\x88\x01\x01B\x11\n" +
 	"\x0f_mbh_mb_costingB\x0f\n" +
 	"\r_mbh_mgt_nameB\r\n" +
 	"\v_mbh_denierB\x0f\n" +
@@ -21066,7 +21106,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x10_mbh_run_ldr_pctB\x10\n" +
 	"\x0e_mbh_vs_numberB\x14\n" +
 	"\x12_mbh_no_of_processB\x1c\n" +
-	"\x1a_replace_additional_shades\"k\n" +
+	"\x1a_replace_additional_shadesB\x16\n" +
+	"\x14_mbh_orion_item_code\"k\n" +
 	"\x14UpdateMBHeadResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x01(\v2\x12.finance.v1.MBHeadR\x04data\"6\n" +
@@ -21241,7 +21282,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbh_id\x18\x01 \x01(\tR\x05mbhId\x12\x1d\n" +
 	"\n" +
 	"mb_costing\x18\x02 \x01(\tR\tmbCosting\x12#\n" +
-	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"\xc0\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"\xef\n" +
 	"\n" +
 	"\x06MBSpin\x12\x15\n" +
 	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12)\n" +
@@ -21278,7 +21319,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\rmbs_vs_number\x18\x17 \x01(\tB\a\xbaH\x04r\x02\x182H\rR\vmbsVsNumber\x88\x01\x01\x12$\n" +
 	"\x0embs_shade_code\x18\x18 \x01(\tR\fmbsShadeCode\x12$\n" +
 	"\x0embs_shade_name\x18\x19 \x01(\tR\fmbsShadeName\x12*\n" +
-	"\x11mbs_cross_section\x18\x1a \x01(\tR\x0fmbsCrossSectionB\r\n" +
+	"\x11mbs_cross_section\x18\x1a \x01(\tR\x0fmbsCrossSection\x12-\n" +
+	"\x13mbs_orion_item_code\x18\x1b \x01(\tR\x10mbsOrionItemCodeB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
 	"\v_mbs_dozingB\t\n" +

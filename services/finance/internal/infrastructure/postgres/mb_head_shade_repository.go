@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -121,6 +122,27 @@ func (r *MBHeadRepository) ExistsByDevCode(ctx context.Context, devCode string, 
 	`, devCode, excludeID).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("check mb head dev code exists: %w", err)
+	}
+	return exists, nil
+}
+
+// ExistsByOrionItemCode reports whether a live MB head other than excludeID already
+// carries the given mbh_orion_item_code (both sides TRIM-compared, so a whitespace-padded
+// legacy value still counts as a duplicate).
+//
+// ⚠ HELPER ONLY — there is deliberately NO unique index on mbh_orion_item_code: legacy
+// duplicates must stay readable and editable. The application layer decides when to
+// consult this, and never probes the empty string.
+func (r *MBHeadRepository) ExistsByOrionItemCode(ctx context.Context, code string, excludeID uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM mst_mb_head
+			WHERE TRIM(mbh_orion_item_code) = $1 AND deleted_at IS NULL AND mbh_id <> $2
+		)
+	`, strings.TrimSpace(code), excludeID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check mb head orion item code exists: %w", err)
 	}
 	return exists, nil
 }
