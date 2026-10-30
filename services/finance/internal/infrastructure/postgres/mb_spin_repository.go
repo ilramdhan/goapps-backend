@@ -111,7 +111,7 @@ func (r *MBSpinRepository) List(ctx context.Context, filter mbspin.ListFilter) (
 		idx++
 	}
 	if filter.Search != "" {
-		base += fmt.Sprintf(` AND (mbs_mgt_name ILIKE $%d OR mbs_mb_costing ILIKE $%d)`, idx, idx)
+		base += fmt.Sprintf(` AND (mbs_mgt_name ILIKE $%d OR mbs_mb_costing ILIKE $%d OR mbs_orion_item_code ILIKE $%d)`, idx, idx, idx)
 		args = append(args, "%"+filter.Search+"%")
 		idx++
 	}
