@@ -111,7 +111,7 @@ func NewMBHeadHandlerWithRecipeFull(
 		createHandler:        appmbhead.NewCreateHandler(repo, machineRepo, nil),
 		getHandler:           appmbhead.NewGetHandler(repo),
 		listHandler:          appmbhead.NewListHandler(repo),
-		updateHandler:        appmbhead.NewUpdateHandler(repo, nil),
+		updateHandler:        appmbhead.NewUpdateHandler(repo, nil).WithParamRepo(paramRepo),
 		deleteHandler:        appmbhead.NewDeleteHandler(repo),
 		submitHandler:        appmbhead.NewSubmitHandlerWithComposition(repo, compositionRepo),
 		validateHandler:      appmbhead.NewValidateHandlerWithComposition(repo, paramRepo, compositionRepo),
@@ -139,6 +139,15 @@ func (h *MBHeadHandler) WithShadeMaster(shadeRepo shade.Repository) *MBHeadHandl
 		h.createHandler.WithShadeRepo(shadeRepo)
 		h.updateHandler.WithShadeRepo(shadeRepo)
 	}
+	return h
+}
+
+// WithLookupSyncTrigger attaches the after-commit lookup-sync port used when an edit of an
+// already-validated recipe cascades into its MB Spins (best-effort — a queueing failure
+// is logged and never fails the save). A nil trigger leaves it disabled. Returns the
+// handler for chaining.
+func (h *MBHeadHandler) WithLookupSyncTrigger(t appmbhead.LookupSyncTrigger) *MBHeadHandler {
+	h.updateHandler.WithLookupSyncTrigger(t)
 	return h
 }
 

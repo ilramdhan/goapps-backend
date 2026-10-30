@@ -596,11 +596,18 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	if err != nil {
 		return fmt.Errorf("new cost product lookup sync handler: %w", err)
 	}
+	lookupSyncEnqueuer := lookupsyncjob.NewEnqueuer(jobRepo, lookupSyncPublisher, lookupSyncPlanner)
 	lookupSyncJobs := grpcdelivery.NewLookupSyncJobAdapter(
-		lookupsyncjob.NewEnqueuer(jobRepo, lookupSyncPublisher, lookupSyncPlanner),
+		lookupSyncEnqueuer,
 		lookupsyncjob.NewTracker(jobRepo, costProductMasterRepo),
 	)
 	costProductLookupSyncHandler.WithEnqueuer(lookupSyncJobs).WithJobTracker(lookupSyncJobs)
+	// MB Recipe cascade: an edit of a validated recipe queues a lookup sync per cascaded
+	// spin after commit (best-effort). Only wired with RabbitMQ — without it the trigger
+	// would only ever log ErrPublisherUnavailable.
+	if lookupSyncPublisher != nil {
+		mbHeadHandler = mbHeadHandler.WithLookupSyncTrigger(lookupsyncjob.NewCascadeTrigger(lookupSyncPlanner, lookupSyncEnqueuer))
+	}
 
 	// Fill-assignment repositories + handlers.
 	fillConfigRepo := postgres.NewCostFillConfigRepository(db)

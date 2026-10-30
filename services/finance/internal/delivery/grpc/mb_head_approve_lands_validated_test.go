@@ -73,8 +73,8 @@ func (f *approveFakeRepo) List(_ context.Context, _ mbhead.ListFilter) ([]*mbhea
 
 func (f *approveFakeRepo) Update(_ context.Context, _ *mbhead.Entity) error { return nil }
 
-func (f *approveFakeRepo) UpdateWithCostingRename(_ context.Context, _ *mbhead.Entity, _ string) error {
-	return nil
+func (f *approveFakeRepo) UpdateWithCascade(_ context.Context, _ *mbhead.Entity, _ string, _ *mbhead.ParamSnapshot) ([]uuid.UUID, error) {
+	return nil, nil
 }
 
 func (f *approveFakeRepo) SoftDelete(_ context.Context, _ uuid.UUID, _ string) error { return nil }

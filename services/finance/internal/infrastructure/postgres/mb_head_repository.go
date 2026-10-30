@@ -175,28 +175,67 @@ func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) er
 	return r.updateOn(ctx, r.db, entity)
 }
 
-// UpdateWithCostingRename persists the head exactly like Update and, in the SAME
-// transaction, propagates an MB Costing rename to the rows the Validate auto-gen copied
-// it into: the linked MB-recipe cost product's cpm_product_name (only when
-// mbh_cost_product_id is set and the product is still cpm_source = mbCostProductSource)
-// and the head's live MB Spin rows whose mbs_mb_costing still equals oldCosting.
+// UpdateWithCascade persists the head exactly like Update and, in the SAME transaction,
+// cascades the recipe onto every row the Validate auto-gen copied it into (MB Recipe
+// cascade design §3.2) — once the head has a cost product (entity.CostProductID() != 0):
 //
-// ⛔ Product param values that captured the old costing text are NOT rewritten.
-func (r *MBHeadRepository) UpdateWithCostingRename(ctx context.Context, entity *mbhead.Entity, oldCosting string) error {
-	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
+//  1. mst_mb_head itself (updateOn).
+//  2. Every live MB Spin of the head — root AND children — gets the head's identity/spec
+//     fields (mbCascadeSpinQuery). Shade code/name/cross-section follow the old
+//     syncRootSpinShadeFromHead rule: written together, or not at all when all are empty.
+//  3. The root spin's LDR via the existing guarded sync (mbs_ldr_is_actual = FALSE).
+//  4. The linked cost product's name and shade — only while cpm_source = MB_RECIPE.
+//  5. When params is non-nil: the frozen mbh_param_* columns and the CPP freeze
+//     (mbFreezeCostParams), the same writes RefreezeCostParams performs.
+//
+// A head WITHOUT a cost product keeps the pre-cascade behavior: only an MB Costing rename
+// (oldCosting != entity.MBCosting()) reaches its spins still carrying oldCosting — legacy
+// Oracle-imported spins can hang off a head that was never validated here.
+//
+// Returns the mbs_id of every spin the full cascade touched (nil on the legacy path) so the
+// caller can queue lookup syncs after commit. Any failure rolls back the whole update.
+//
+// ⛔ Product param values that captured the old costing text are NOT rewritten here.
+func (r *MBHeadRepository) UpdateWithCascade(ctx context.Context, entity *mbhead.Entity, oldCosting string, params *mbhead.ParamSnapshot) ([]uuid.UUID, error) {
+	actor := ""
+	if entity.UpdatedBy() != nil {
+		actor = *entity.UpdatedBy()
+	}
+	var spinIDs []uuid.UUID
+	err := r.db.Transaction(ctx, func(tx *sql.Tx) error {
 		if err := r.updateOn(ctx, tx, entity); err != nil {
 			return err
 		}
-		return renameMBCostingTx(ctx, tx, entity, oldCosting)
+		productID := entity.CostProductID()
+		if productID == 0 {
+			return renameSpinCostingTx(ctx, tx, entity, oldCosting, actor)
+		}
+		ids, err := cascadeHeadToSpinsTx(ctx, tx, entity, actor)
+		if err != nil {
+			return err
+		}
+		if err := syncRootSpinLDRFromHead(ctx, tx, entity.ID(), entity, actor); err != nil {
+			return err
+		}
+		if err := cascadeHeadToCostProductTx(ctx, tx, entity, productID, actor); err != nil {
+			return err
+		}
+		if params != nil {
+			if err := updateFrozenParamsTx(ctx, tx, entity.ID(), params); err != nil {
+				return err
+			}
+			if err := mbFreezeCostParams(ctx, tx, productID, entity, actor); err != nil {
+				return fmt.Errorf("cascade: freeze CPP: %w", err)
+			}
+		}
+		spinIDs = ids
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return spinIDs, nil
 }
-
-// mbCostingRenameProductQuery renames the auto-generated MB-recipe cost product. The
-// cpm_source guard keeps a hand-made product that happens to be linked untouched.
-const mbCostingRenameProductQuery = `
-		UPDATE cost_product_master
-		SET cpm_product_name = $1, cpm_updated_at = NOW(), cpm_updated_by = $2
-		WHERE cpm_product_sys_id = $3 AND cpm_source = $4`
 
 // mbCostingRenameSpinQuery renames the head's spin rows still carrying the old costing.
 const mbCostingRenameSpinQuery = `
@@ -204,22 +243,112 @@ const mbCostingRenameSpinQuery = `
 		SET mbs_mb_costing = $1, updated_at = NOW(), updated_by = $2
 		WHERE mbs_mbh_id = $3 AND mbs_mb_costing = $4 AND deleted_at IS NULL`
 
-func renameMBCostingTx(ctx context.Context, q rowQuerier, entity *mbhead.Entity, oldCosting string) error {
-	actor := ""
-	if entity.UpdatedBy() != nil {
-		actor = *entity.UpdatedBy()
+// renameSpinCostingTx is the legacy (no cost product) rename: a no-op unless the costing
+// really changed.
+func renameSpinCostingTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity, oldCosting, actor string) error {
+	if oldCosting == entity.MBCosting() {
+		return nil
 	}
-	if productID := entity.CostProductID(); productID != 0 {
-		if _, err := q.ExecContext(ctx, mbCostingRenameProductQuery,
-			entity.MBCosting(), actor, productID, mbCostProductSource,
-		); err != nil {
-			return fmt.Errorf("rename mb cost product: %w", err)
-		}
-	}
-	if _, err := q.ExecContext(ctx, mbCostingRenameSpinQuery,
+	if _, err := tx.ExecContext(ctx, mbCostingRenameSpinQuery,
 		entity.MBCosting(), actor, entity.ID(), oldCosting,
 	); err != nil {
 		return fmt.Errorf("rename mb spin costing: %w", err)
+	}
+	return nil
+}
+
+// mbCascadeSpinQuery overwrites the head-derived columns of every live spin of a head
+// (decision 1: no manual-edit detection). Nullable spec fields (final product, VS
+// number, lusture) are overwritten even with NULL — user decision "overwrite all".
+//
+// Shade code, shade name and cross-section mirror syncRootSpinShadeFromHead exactly:
+// when $14 (any of the three is non-empty on the head) they are written as a set — an
+// empty one as NULL — so a code and a name from different shades can never be mixed;
+// when all three are empty the spin keeps its values. mbs_cc follows the shade code (000499).
+//
+// ⛔ Deliberately untouched: mbs_orion_item_code, mbs_status, mbs_is_active,
+// mbs_cost_rate_mkt, mbs_ldr_*, mbs_run_ldr_pct, mbs_ldr_prsn and the *_is_fixed flags.
+const mbCascadeSpinQuery = `
+		UPDATE mst_mb_spin SET
+			mbs_mb_costing    = $1,
+			mbs_mgt_name      = $2,
+			mbs_denier        = $3,
+			mbs_filament      = $4,
+			mbs_dozing        = $5,
+			mbs_final_product = $6,
+			mbs_vs_number     = $7,
+			mbs_lusture_code  = $8,
+			mbs_cross_section = CASE WHEN $14 THEN $9 ELSE mbs_cross_section END,
+			mbs_shade_code    = CASE WHEN $14 THEN $10 ELSE mbs_shade_code END,
+			mbs_shade_name    = CASE WHEN $14 THEN $11 ELSE mbs_shade_name END,
+			mbs_cc            = CASE WHEN $14 THEN $10 ELSE mbs_cc END,
+			updated_at        = NOW(),
+			updated_by        = $12
+		WHERE mbs_mbh_id = $13 AND deleted_at IS NULL
+		RETURNING mbs_id`
+
+func cascadeHeadToSpinsTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity, actor string) ([]uuid.UUID, error) {
+	shadeCode := mbEmptyStringToPtr(entity.ShadeCode())
+	shadeName := mbEmptyStringToPtr(entity.ShadeName())
+	crossSection := mbEmptyStringToPtr(entity.CrossSection())
+	writeShade := shadeCode != nil || shadeName != nil || crossSection != nil
+	rows, err := tx.QueryContext(ctx, mbCascadeSpinQuery,
+		entity.MBCosting(),
+		mbSpinAutoGenMgtName(entity),
+		entity.Denier(),
+		entity.Filament(),
+		entity.Dozing(),
+		entity.MBHFinalProduct(),
+		entity.VSNumber(),
+		mbEmptyStringToPtr(entity.LustureCode()),
+		crossSection,
+		shadeCode,
+		shadeName,
+		actor,
+		entity.ID(),
+		writeShade,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("cascade mb head to spins: %w", err)
+	}
+	defer closeRows(rows)
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan cascaded spin id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate cascaded spin ids: %w", err)
+	}
+	return ids, nil
+}
+
+// mbCascadeProductQuery keeps the auto-generated MB-recipe cost product's name and shade
+// in step with the head. The cpm_source guard keeps a hand-made product that happens to
+// be linked untouched. Shade code + name mirror syncCostProductMasterShadeFromHead: when
+// $6 (either is non-empty on the head) both are written as a pair — an empty one as NULL —
+// otherwise the product keeps its shade.
+const mbCascadeProductQuery = `
+		UPDATE cost_product_master SET
+			cpm_product_name = $1,
+			cpm_shade_code   = CASE WHEN $6 THEN $2 ELSE cpm_shade_code END,
+			cpm_shade_name   = CASE WHEN $6 THEN $3 ELSE cpm_shade_name END,
+			cpm_updated_at   = NOW(),
+			cpm_updated_by   = $4
+		WHERE cpm_product_sys_id = $5 AND cpm_source = $7`
+
+func cascadeHeadToCostProductTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity, productID int64, actor string) error {
+	shadeCode := mbEmptyStringToPtr(entity.ShadeCode())
+	shadeName := mbEmptyStringToPtr(entity.ShadeName())
+	writeShade := shadeCode != nil || shadeName != nil
+	if _, err := tx.ExecContext(ctx, mbCascadeProductQuery,
+		entity.MBCosting(), shadeCode, shadeName,
+		actor, productID, writeShade, mbCostProductSource,
+	); err != nil {
+		return fmt.Errorf("cascade mb head to cost product: %w", err)
 	}
 	return nil
 }

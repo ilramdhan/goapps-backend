@@ -23,16 +23,11 @@ type RefreezeCommand struct {
 type RefreezeHandler struct {
 	repo      mbhead.Repository
 	paramRepo mbparam.Repository
-	validate  *ValidateHandler
 }
 
 // NewRefreezeHandler creates a RefreezeHandler.
 func NewRefreezeHandler(repo mbhead.Repository, paramRepo mbparam.Repository) *RefreezeHandler {
-	return &RefreezeHandler{
-		repo:      repo,
-		paramRepo: paramRepo,
-		validate:  NewValidateHandler(repo, paramRepo),
-	}
+	return &RefreezeHandler{repo: repo, paramRepo: paramRepo}
 }
 
 // Handle re-resolves the param snapshot (with head-override logic from
@@ -48,19 +43,26 @@ func (h *RefreezeHandler) Handle(ctx context.Context, cmd RefreezeCommand) error
 		return fmt.Errorf("refreeze %s: cost product has not been auto-generated yet; validate first", entity.MBCosting())
 	}
 
-	params, err := h.validate.resolveParamSnapshot(ctx)
+	params, err := resolveRefreezeSnapshot(ctx, h.paramRepo, entity)
 	if err != nil {
-		return fmt.Errorf("resolve param snapshot: %w", err)
+		return err
+	}
+	return h.repo.RefreezeCostParams(ctx, cmd.MbhID, entity, params)
+}
+
+// resolveRefreezeSnapshot resolves the param-master snapshot, lets the head's own values
+// win (applyHeadParamOverrides) and freezes the result onto the in-memory entity too, so
+// mbFreezeCostParams — which reads entity.ParamThroughputPerHour() etc., not params —
+// writes the corrected values. Shared by RefreezeHandler and the UpdateHandler cascade.
+func resolveRefreezeSnapshot(ctx context.Context, paramRepo mbparam.Repository, entity *mbhead.Entity) (*mbhead.ParamSnapshot, error) {
+	params, err := resolveParamSnapshotFrom(ctx, paramRepo)
+	if err != nil {
+		return nil, fmt.Errorf("resolve param snapshot: %w", err)
 	}
 	applyHeadParamOverrides(params, entity)
-
-	// Freeze the corrected values onto the in-memory entity too, so
-	// mbFreezeCostParams inside RefreezeCostParams reads the right values from
-	// entity.ParamThroughputPerHour() etc. (the CPP write uses getters, not params).
 	entity.FreezeParams(
 		params.Waste, params.QualityLoss, params.Efficiency, params.DevExpense,
 		params.Packing, params.MBProdPerDay, params.ThroughputPerHour, params.NoOfProcess,
 	)
-
-	return h.repo.RefreezeCostParams(ctx, cmd.MbhID, entity, params)
+	return params, nil
 }

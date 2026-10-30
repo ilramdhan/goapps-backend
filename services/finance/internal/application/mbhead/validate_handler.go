@@ -194,7 +194,13 @@ func applyHeadParamOverrides(params *mbhead.ParamSnapshot, entity *mbhead.Entity
 }
 
 func (h *ValidateHandler) resolveParamSnapshot(ctx context.Context) (*mbhead.ParamSnapshot, error) {
-	all, err := h.paramRepo.ListActive(ctx)
+	return resolveParamSnapshotFrom(ctx, h.paramRepo)
+}
+
+// resolveParamSnapshotFrom resolves the mst_mb_param master defaults into a snapshot.
+// Shared by Validate, Refreeze and the Update cascade (via resolveRefreezeSnapshot).
+func resolveParamSnapshotFrom(ctx context.Context, paramRepo mbparam.Repository) (*mbhead.ParamSnapshot, error) {
+	all, err := paramRepo.ListActive(ctx)
 	if err != nil {
 		return nil, err
 	}

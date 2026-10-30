@@ -51,8 +51,8 @@ func (f *fakeFrozenMBHeadRepo) Update(_ context.Context, e *mbhead.Entity) error
 	return nil
 }
 
-func (f *fakeFrozenMBHeadRepo) UpdateWithCostingRename(ctx context.Context, e *mbhead.Entity, _ string) error {
-	return f.Update(ctx, e)
+func (f *fakeFrozenMBHeadRepo) UpdateWithCascade(ctx context.Context, e *mbhead.Entity, _ string, _ *mbhead.ParamSnapshot) ([]uuid.UUID, error) {
+	return nil, f.Update(ctx, e)
 }
 
 func (f *fakeFrozenMBHeadRepo) SoftDelete(_ context.Context, _ uuid.UUID, _ string) error { return nil }

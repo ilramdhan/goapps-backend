@@ -50,7 +50,7 @@ func TestUpdateHandler_MBCostingRename(t *testing.T) {
 			switch {
 			case tt.wantErr != nil:
 			case tt.wantRename:
-				repo.On("UpdateWithCostingRename", ctx, mock.AnythingOfType("*mbhead.Entity"), "MB001").Return(nil)
+				repo.On("UpdateWithCascade", ctx, mock.AnythingOfType("*mbhead.Entity"), "MB001", (*mbheaddomain.ParamSnapshot)(nil)).Return(nil, nil)
 			default:
 				repo.On("Update", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 			}
@@ -62,7 +62,7 @@ func TestUpdateHandler_MBCostingRename(t *testing.T) {
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
 				repo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
-				repo.AssertNotCalled(t, "UpdateWithCostingRename", mock.Anything, mock.Anything, mock.Anything)
+				repo.AssertNotCalled(t, "UpdateWithCascade", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.wantCost, got.MBCosting())
