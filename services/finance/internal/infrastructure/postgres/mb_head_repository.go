@@ -238,26 +238,64 @@ func (r *MBHeadRepository) UpdateWithCascade(ctx context.Context, entity *mbhead
 	return spinIDs, nil
 }
 
-// mbCostingRenameSpinQuery renames the head's spin rows still carrying the old costing and,
-// on those same rows only, fills an empty mbs_orion_item_code from the head ($5; NULL =
-// head has none, spin unchanged). A non-empty spin code is never overwritten.
+// mbCostingRenameSpinQuery renames the head's spin rows still carrying the old costing.
+// Orion Item Code is NOT touched here — see fillRootSpinOrionTx (root spin only, and only
+// when no other live spin already carries the head code).
 const mbCostingRenameSpinQuery = `
 		UPDATE mst_mb_spin
 		SET mbs_mb_costing = $1,
-		    mbs_orion_item_code = COALESCE(NULLIF(mbs_orion_item_code, ''), $5),
 		    updated_at = NOW(), updated_by = $2
 		WHERE mbs_mbh_id = $3 AND mbs_mb_costing = $4 AND deleted_at IS NULL`
 
 // renameSpinCostingTx is the legacy (no cost product) rename: a no-op unless the costing
-// really changed.
+// really changed. Before renaming, the head's root spin — if it is one of the rows being
+// renamed (still on the old costing) — gets an empty Orion Item Code filled.
 func renameSpinCostingTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity, oldCosting, actor string) error {
 	if oldCosting == entity.MBCosting() {
 		return nil
 	}
+	if err := fillRootSpinOrionTx(ctx, tx, entity, actor, &oldCosting); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, mbCostingRenameSpinQuery,
-		entity.MBCosting(), actor, entity.ID(), oldCosting, entity.OrionItemCode(),
+		entity.MBCosting(), actor, entity.ID(), oldCosting,
 	); err != nil {
 		return fmt.Errorf("rename mb spin costing: %w", err)
+	}
+	return nil
+}
+
+// mbFillRootSpinOrionQuery fills the Orion Item Code of ONE spin of a head — its oldest live
+// root spin (mbs_parent_spin_id IS NULL), optionally restricted to a costing ($4, NULL = any)
+// — with the head code ($1), and only when:
+//   - that root's code is empty (NULL / blank), and
+//   - no OTHER live spin (any head) already carries the code (TRIM compare).
+//
+// Children never receive the head code. This keeps MB_SP_CODE text-keyed yarn rows
+// unambiguous: a second live spin with the same code would trip SkipMBSpinAmbiguous /
+// ResolveUniqueByOrionItemCode and shift GetByOrionItemCode's oldest-wins winner.
+const mbFillRootSpinOrionQuery = `
+		UPDATE mst_mb_spin r
+		SET mbs_orion_item_code = CAST($1 AS TEXT), updated_at = NOW(), updated_by = $2
+		WHERE r.mbs_id = (
+		        SELECT x.mbs_id FROM mst_mb_spin x
+		        WHERE x.mbs_mbh_id = $3 AND x.mbs_parent_spin_id IS NULL AND x.deleted_at IS NULL
+		          AND (CAST($4 AS TEXT) IS NULL OR x.mbs_mb_costing = CAST($4 AS TEXT))
+		        ORDER BY x.created_at ASC, x.mbs_id ASC LIMIT 1)
+		  AND NULLIF(TRIM(r.mbs_orion_item_code), '') IS NULL
+		  AND NOT EXISTS (
+		        SELECT 1 FROM mst_mb_spin o
+		        WHERE o.deleted_at IS NULL AND o.mbs_id <> r.mbs_id
+		          AND TRIM(o.mbs_orion_item_code) = CAST($1 AS TEXT))`
+
+// fillRootSpinOrionTx runs mbFillRootSpinOrionQuery; a head without a code is a no-op.
+func fillRootSpinOrionTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity, actor string, costing *string) error {
+	code := entity.OrionItemCode()
+	if code == nil || strings.TrimSpace(*code) == "" {
+		return nil
+	}
+	if _, err := tx.ExecContext(ctx, mbFillRootSpinOrionQuery, strings.TrimSpace(*code), actor, entity.ID(), costing); err != nil {
+		return fmt.Errorf("fill root mb spin orion item code: %w", err)
 	}
 	return nil
 }
@@ -271,9 +309,8 @@ func renameSpinCostingTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity,
 // empty one as NULL — so a code and a name from different shades can never be mixed;
 // when all three are empty the spin keeps its values. mbs_cc follows the shade code (000499).
 //
-// mbs_orion_item_code is only FILLED, never overwritten: a spin that already carries a
-// non-empty code keeps it, and an empty head code ($15 NULL) leaves every spin unchanged
-// (COALESCE(NULLIF(spin, ”), head)).
+// mbs_orion_item_code is NOT written here: cascadeHeadToSpinsTx follows up with
+// fillRootSpinOrionTx (root spin only, only when empty and no other live spin has the code).
 //
 // ⛔ Deliberately untouched: mbs_status, mbs_is_active, mbs_cost_rate_mkt, mbs_ldr_*,
 // mbs_run_ldr_pct, mbs_ldr_prsn and the *_is_fixed flags.
@@ -291,7 +328,6 @@ const mbCascadeSpinQuery = `
 			mbs_shade_code    = CASE WHEN $14 THEN $10 ELSE mbs_shade_code END,
 			mbs_shade_name    = CASE WHEN $14 THEN $11 ELSE mbs_shade_name END,
 			mbs_cc            = CASE WHEN $14 THEN $10 ELSE mbs_cc END,
-			mbs_orion_item_code = COALESCE(NULLIF(mbs_orion_item_code, ''), $15),
 			updated_at        = NOW(),
 			updated_by        = $12
 		WHERE mbs_mbh_id = $13 AND deleted_at IS NULL
@@ -317,7 +353,6 @@ func cascadeHeadToSpinsTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity
 		actor,
 		entity.ID(),
 		writeShade,
-		entity.OrionItemCode(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("cascade mb head to spins: %w", err)
@@ -333,6 +368,9 @@ func cascadeHeadToSpinsTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate cascaded spin ids: %w", err)
+	}
+	if err := fillRootSpinOrionTx(ctx, tx, entity, actor, nil); err != nil {
+		return nil, err
 	}
 	return ids, nil
 }

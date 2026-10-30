@@ -401,44 +401,88 @@ func (s *MBHeadCascadeSuite) TestCascade_NilParams_CPPAndFrozenSnapshotUntouched
 	require.Equal(s.T(), "typo fixed", s.spin(s.rootSpin).mgt.String, "spins still cascade")
 }
 
-// Orion Item Code is only FILLED on spins whose code is empty (NULL or ”): a spin that
-// already carries a code keeps it, and an empty head code changes nothing.
-func (s *MBHeadCascadeSuite) TestCascade_OrionItemCode_FillsOnlyEmptySpins() {
+// Orion Item Code goes to the ROOT spin only, only when it is empty (NULL / blank), and an
+// empty head code changes nothing. Children never receive it.
+func (s *MBHeadCascadeSuite) TestCascade_OrionItemCode_FillsRootOnly() {
 	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = NULL WHERE mbs_id = $1`, s.rootSpin)
+	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = '  ' WHERE mbs_id = $1`, s.childSpin)
 
-	// Empty head code first: nothing changes (root stays NULL, child keeps its code).
+	// Empty head code first: nothing changes.
 	e, _ := s.editedHead(nil)
 	_, err := s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"OLD", nil)
 	require.NoError(s.T(), err)
 	require.False(s.T(), s.spin(s.rootSpin).orion.Valid, "empty head code leaves an empty spin empty")
-	require.Equal(s.T(), "ORI-CHILD", s.spin(s.childSpin).orion.String)
 
-	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = '' WHERE mbs_id = $1`, s.childSpin)
 	e, _ = s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-HEAD") })
 	_, err = s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"NEW", nil)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), "ORI-HEAD", s.spin(s.rootSpin).orion.String, "NULL spin code filled")
-	require.Equal(s.T(), "ORI-HEAD", s.spin(s.childSpin).orion.String, "'' spin code filled")
+	require.Equal(s.T(), "ORI-HEAD", s.spin(s.rootSpin).orion.String, "empty root filled")
+	require.Equal(s.T(), "  ", s.spin(s.childSpin).orion.String, "child never gets the head code")
 	require.Equal(s.T(), "ORI-DEL", s.spin(s.deletedSpin).orion.String, "soft-deleted spin untouched")
 
-	// A changed head code never overwrites a spin that now carries one.
+	// A changed head code never overwrites a root that now carries one.
 	e, _ = s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-OTHER") })
 	_, err = s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"NEW", nil)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), "ORI-HEAD", s.spin(s.rootSpin).orion.String)
-	require.Equal(s.T(), "ORI-HEAD", s.spin(s.childSpin).orion.String)
 }
 
-// Without a cost product only the legacy rename runs: spins still carrying the old costing get
-// an empty code filled; other spins and non-empty codes are untouched.
-func (s *MBHeadCascadeSuite) TestNoProduct_RenameFillsEmptyOrionOnRenamedSpinsOnly() {
-	s.exec(`UPDATE mst_mb_head SET mbh_cost_product_id = NULL WHERE mbh_id = $1`, s.mbhID)
+// Root already carries the head code and children are empty: an edit leaves the children
+// empty (never a second live spin with the same code).
+func (s *MBHeadCascadeSuite) TestCascade_OrionItemCode_RootHasCode_ChildrenStayEmpty() {
+	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = 'ORI-X' WHERE mbs_id = $1`, s.rootSpin)
+	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = NULL WHERE mbs_id = $1`, s.childSpin)
+	e, _ := s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-X") })
+	_, err := s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"OLD", nil)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), "ORI-X", s.spin(s.rootSpin).orion.String)
+	require.False(s.T(), s.spin(s.childSpin).orion.Valid, "child stays empty")
+}
+
+// seedOtherHeadSpin creates a second head with one live root spin carrying code.
+func (s *MBHeadCascadeSuite) seedOtherHeadSpin(code string) {
+	other := uuid.New()
+	s.exec(`INSERT INTO mst_mb_head (mbh_id, mbh_mb_costing, mbh_current_version, mbh_entry_status, created_by)
+		VALUES ($1, $2, 1, 'VALIDATED', 'itest')`, other, mbCascFixturePrefix+"OTH-"+uuid.NewString()[:6])
+	s.exec(`INSERT INTO mst_mb_spin (mbs_id, mbs_mbh_id, mbs_mgt_name, mbs_orion_item_code, created_by)
+		VALUES ($1, $2, 'other', $3, 'itest')`, uuid.New(), other, code)
+}
+
+// Head code already on a live spin of ANOTHER head (whitespace-padded legacy value): the
+// root is not filled.
+func (s *MBHeadCascadeSuite) TestCascade_OrionItemCode_TakenByOtherHeadSpin_RootNotFilled() {
+	s.seedOtherHeadSpin(" ORI-TAKEN ")
 	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = NULL WHERE mbs_id IN ($1, $2)`, s.rootSpin, s.childSpin)
+	e, _ := s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-TAKEN") })
+	_, err := s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"OLD", nil)
+	require.NoError(s.T(), err)
+	require.False(s.T(), s.spin(s.rootSpin).orion.Valid, "taken code is not copied")
+	require.False(s.T(), s.spin(s.childSpin).orion.Valid)
+}
+
+// Without a cost product only the legacy rename runs: the root (on the old costing) gets an
+// empty code filled; children never do.
+func (s *MBHeadCascadeSuite) TestNoProduct_RenameFillsEmptyOrionOnRootOnly() {
+	s.exec(`UPDATE mst_mb_head SET mbh_cost_product_id = NULL WHERE mbh_id = $1`, s.mbhID)
+	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = NULL, mbs_mb_costing = $2 WHERE mbs_id IN ($1, $3)`,
+		s.rootSpin, mbCascFixturePrefix+"OLD", s.childSpin)
 	e, _ := s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-HEAD") })
 	_, err := s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"OLD", nil)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), "ORI-HEAD", s.spin(s.rootSpin).orion.String, "renamed spin gets the head code")
-	require.False(s.T(), s.spin(s.childSpin).orion.Valid, "spin outside the rename WHERE untouched")
+	require.Equal(s.T(), "ORI-HEAD", s.spin(s.rootSpin).orion.String, "renamed root gets the head code")
+	require.False(s.T(), s.spin(s.childSpin).orion.Valid, "renamed child stays empty")
+	require.Equal(s.T(), mbCascFixturePrefix+"NEW", s.spin(s.childSpin).costing.String, "child still renamed")
+}
+
+// Legacy rename with the head code already on another head's spin: root not filled.
+func (s *MBHeadCascadeSuite) TestNoProduct_RenameTakenCode_RootNotFilled() {
+	s.seedOtherHeadSpin("ORI-TAKEN")
+	s.exec(`UPDATE mst_mb_head SET mbh_cost_product_id = NULL WHERE mbh_id = $1`, s.mbhID)
+	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = NULL WHERE mbs_id = $1`, s.rootSpin)
+	e, _ := s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-TAKEN") })
+	_, err := s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"OLD", nil)
+	require.NoError(s.T(), err)
+	require.False(s.T(), s.spin(s.rootSpin).orion.Valid)
 }
 
 // Head orion item code round-trips through Create/Get/List/Update (incl. clear) and the
@@ -466,6 +510,10 @@ func (s *MBHeadCascadeSuite) TestHeadOrionItemCode_RoundTripAndExists() {
 	taken, err = s.headRepo.ExistsByOrionItemCode(s.ctx, "ORI-RT", s.mbhID)
 	require.NoError(s.T(), err)
 	require.False(s.T(), taken, "the head itself is excluded")
+	s.exec(`UPDATE mst_mb_head SET mbh_orion_item_code = '  ORI-RT ' WHERE mbh_id = $1`, s.mbhID)
+	taken, err = s.headRepo.ExistsByOrionItemCode(s.ctx, " ORI-RT", uuid.Nil)
+	require.NoError(s.T(), err)
+	require.True(s.T(), taken, "whitespace-padded duplicate is caught")
 
 	created, err := mbhead.New(mbhead.NewParams{
 		MBCosting: mbCascFixturePrefix + "CRT", CreatedBy: "itest", OrionItemCode: stringPtr("ORI-CRT"),
