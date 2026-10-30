@@ -40,8 +40,8 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 			mbh_is_boughtout, mbh_dev_code, mbh_shade_code, mbh_shade_name,
 			mbh_cross_section, mbh_lusture_code, mbh_machine_id, mbh_run_ldr_pct,
 			mbh_vs_number, mbh_no_of_process,
-			mbh_check_status_calc
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+			mbh_check_status_calc, mbh_orion_item_code
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
 	`,
 		entity.ID(),
 		entity.OracleSysID(),
@@ -74,6 +74,7 @@ func (r *MBHeadRepository) Create(ctx context.Context, entity *mbhead.Entity) er
 		// Derived column (000487). mbh_check_status above stays a pure passthrough of
 		// whatever the caller supplied — ⛔ this value is NEVER written there (K-1).
 		entity.MBHCheckStatusCalc(),
+		entity.OrionItemCode(),
 	)
 	if err != nil {
 		if isMBHeadUniqueViolation(err) {
@@ -110,8 +111,8 @@ func buildMBHeadListWhere(filter mbhead.ListFilter) (string, []interface{}) {
 
 	if filter.Search != "" {
 		base += fmt.Sprintf(
-			` AND (mbh_mb_costing ILIKE $%d OR mbh_mgt_name ILIKE $%d OR mbh_dev_code ILIKE $%d OR mbh_shade_code ILIKE $%d OR mbh_shade_name ILIKE $%d)`,
-			idx, idx, idx, idx, idx,
+			` AND (mbh_mb_costing ILIKE $%d OR mbh_mgt_name ILIKE $%d OR mbh_dev_code ILIKE $%d OR mbh_shade_code ILIKE $%d OR mbh_shade_name ILIKE $%d OR mbh_orion_item_code ILIKE $%d)`,
+			idx, idx, idx, idx, idx, idx,
 		)
 		args = append(args, "%"+filter.Search+"%")
 		idx++
@@ -237,10 +238,14 @@ func (r *MBHeadRepository) UpdateWithCascade(ctx context.Context, entity *mbhead
 	return spinIDs, nil
 }
 
-// mbCostingRenameSpinQuery renames the head's spin rows still carrying the old costing.
+// mbCostingRenameSpinQuery renames the head's spin rows still carrying the old costing and,
+// on those same rows only, fills an empty mbs_orion_item_code from the head ($5; NULL =
+// head has none, spin unchanged). A non-empty spin code is never overwritten.
 const mbCostingRenameSpinQuery = `
 		UPDATE mst_mb_spin
-		SET mbs_mb_costing = $1, updated_at = NOW(), updated_by = $2
+		SET mbs_mb_costing = $1,
+		    mbs_orion_item_code = COALESCE(NULLIF(mbs_orion_item_code, ''), $5),
+		    updated_at = NOW(), updated_by = $2
 		WHERE mbs_mbh_id = $3 AND mbs_mb_costing = $4 AND deleted_at IS NULL`
 
 // renameSpinCostingTx is the legacy (no cost product) rename: a no-op unless the costing
@@ -250,7 +255,7 @@ func renameSpinCostingTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity,
 		return nil
 	}
 	if _, err := tx.ExecContext(ctx, mbCostingRenameSpinQuery,
-		entity.MBCosting(), actor, entity.ID(), oldCosting,
+		entity.MBCosting(), actor, entity.ID(), oldCosting, entity.OrionItemCode(),
 	); err != nil {
 		return fmt.Errorf("rename mb spin costing: %w", err)
 	}
@@ -266,8 +271,12 @@ func renameSpinCostingTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity,
 // empty one as NULL — so a code and a name from different shades can never be mixed;
 // when all three are empty the spin keeps its values. mbs_cc follows the shade code (000499).
 //
-// ⛔ Deliberately untouched: mbs_orion_item_code, mbs_status, mbs_is_active,
-// mbs_cost_rate_mkt, mbs_ldr_*, mbs_run_ldr_pct, mbs_ldr_prsn and the *_is_fixed flags.
+// mbs_orion_item_code is only FILLED, never overwritten: a spin that already carries a
+// non-empty code keeps it, and an empty head code ($15 NULL) leaves every spin unchanged
+// (COALESCE(NULLIF(spin, ”), head)).
+//
+// ⛔ Deliberately untouched: mbs_status, mbs_is_active, mbs_cost_rate_mkt, mbs_ldr_*,
+// mbs_run_ldr_pct, mbs_ldr_prsn and the *_is_fixed flags.
 const mbCascadeSpinQuery = `
 		UPDATE mst_mb_spin SET
 			mbs_mb_costing    = $1,
@@ -282,6 +291,7 @@ const mbCascadeSpinQuery = `
 			mbs_shade_code    = CASE WHEN $14 THEN $10 ELSE mbs_shade_code END,
 			mbs_shade_name    = CASE WHEN $14 THEN $11 ELSE mbs_shade_name END,
 			mbs_cc            = CASE WHEN $14 THEN $10 ELSE mbs_cc END,
+			mbs_orion_item_code = COALESCE(NULLIF(mbs_orion_item_code, ''), $15),
 			updated_at        = NOW(),
 			updated_by        = $12
 		WHERE mbs_mbh_id = $13 AND deleted_at IS NULL
@@ -307,6 +317,7 @@ func cascadeHeadToSpinsTx(ctx context.Context, tx *sql.Tx, entity *mbhead.Entity
 		actor,
 		entity.ID(),
 		writeShade,
+		entity.OrionItemCode(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("cascade mb head to spins: %w", err)
@@ -377,7 +388,8 @@ func (r *MBHeadRepository) updateOn(ctx context.Context, q rowQuerier, entity *m
 			mbh_machine_id    = $20,
 			mbh_run_ldr_pct   = $21,
 			mbh_vs_number     = $22,
-			mbh_no_of_process = $23
+			mbh_no_of_process = $23,
+			mbh_orion_item_code = $24
 		WHERE mbh_id = $1 AND deleted_at IS NULL
 	`,
 		entity.ID(),
@@ -409,6 +421,7 @@ func (r *MBHeadRepository) updateOn(ctx context.Context, q rowQuerier, entity *m
 		entity.MBHRunLdrPct(),
 		entity.VSNumber(),
 		entity.NoOfProcess(),
+		entity.OrionItemCode(),
 	)
 	if err != nil {
 		if isMBHeadUniqueViolation(err) {
@@ -593,7 +606,7 @@ func (r *MBHeadRepository) selectCols() string {
 		           AND w.mbwl_to_state = 'UNLOCK_REQUESTED'
 		         ORDER BY w.mbwl_actor_at DESC
 		         LIMIT 1),
-		       mbh_check_status_calc
+		       mbh_check_status_calc, mbh_orion_item_code
 		FROM mst_mb_head
 	`
 }
@@ -674,6 +687,8 @@ type mbHeadDTO struct {
 	PreUnlockStatus sql.NullString
 	// MBHCheckStatusCalc is the DERIVED column (000487). NULL = never calculated.
 	MBHCheckStatusCalc sql.NullString
+	// OrionItemCode is mbh_orion_item_code (000416). NULL = not set.
+	OrionItemCode sql.NullString
 }
 
 func nullTimeToStringPtr(n sql.NullTime) *string {
@@ -724,6 +739,7 @@ func (d *mbHeadDTO) toEntity() *mbhead.Entity {
 		LockedBy:           nullableStringPtr(d.LockedBy),
 		UnlockReason:       nullableStringPtr(d.UnlockReason),
 		PreUnlockStatus:    d.PreUnlockStatus.String,
+		OrionItemCode:      nullableStringPtr(d.OrionItemCode),
 	})
 	return e
 }
@@ -745,7 +761,7 @@ func (r *MBHeadRepository) scanOne(row *sql.Row) (*mbhead.Entity, error) {
 		&d.VSNumber, &d.NoOfProcess,
 		&d.IsLocked, &d.UnlockRequestedAt, &d.UnlockRequestedBy,
 		&d.LockedAt, &d.LockedBy, &d.UnlockReason, &d.PreUnlockStatus,
-		&d.MBHCheckStatusCalc,
+		&d.MBHCheckStatusCalc, &d.OrionItemCode,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbhead.ErrNotFound
@@ -773,7 +789,7 @@ func (r *MBHeadRepository) scanRow(rows *sql.Rows) (*mbhead.Entity, error) {
 		&d.VSNumber, &d.NoOfProcess,
 		&d.IsLocked, &d.UnlockRequestedAt, &d.UnlockRequestedBy,
 		&d.LockedAt, &d.LockedBy, &d.UnlockReason, &d.PreUnlockStatus,
-		&d.MBHCheckStatusCalc,
+		&d.MBHCheckStatusCalc, &d.OrionItemCode,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan mb head row: %w", err)

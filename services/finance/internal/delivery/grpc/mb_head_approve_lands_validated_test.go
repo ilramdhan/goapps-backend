@@ -121,6 +121,10 @@ func (f *approveFakeRepo) ExistsByDevCode(_ context.Context, _ string, _ uuid.UU
 	return false, nil
 }
 
+func (f *approveFakeRepo) ExistsByOrionItemCode(_ context.Context, _ string, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 func (f *approveFakeRepo) RefreezeCostParams(_ context.Context, _ uuid.UUID, _ *mbhead.Entity, _ *mbhead.ParamSnapshot) error {
 	return nil
 }

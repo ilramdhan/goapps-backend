@@ -219,3 +219,23 @@ func (s *MBAutoGenSpinSuite) TestAutoGenSpin_FullyPopulatedHead_PersistsDerivedF
 	require.True(s.T(), costProductID.Valid, "mbs_cost_product_id must not be NULL after auto-gen createSpinOn")
 	require.Equal(s.T(), productSysID, costProductID.Int64)
 }
+
+// The auto-generated root spin persists the head's Orion Item Code.
+func (s *MBAutoGenSpinSuite) TestAutoGenSpin_InheritsHeadOrionItemCode() {
+	entity, err := mbhead.New(mbhead.NewParams{
+		MBCosting:     mbSpinAutoGenFixturePrefix + "MBC-" + uuid.NewString()[:8],
+		CreatedBy:     "itest",
+		OrionItemCode: stringPtr("ORI-AUTOGEN"),
+	})
+	require.NoError(s.T(), err)
+
+	productSysID := s.seedCostProductMaster()
+	require.NoError(s.T(), s.db.Transaction(s.ctx, func(tx *sql.Tx) error {
+		return mbAutoGenSpin(s.ctx, tx, s.mbhID, entity, productSysID, "itest")
+	}))
+
+	var orion sql.NullString
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT mbs_orion_item_code FROM mst_mb_spin WHERE mbs_mbh_id = $1`, s.mbhID).Scan(&orion))
+	require.Equal(s.T(), "ORI-AUTOGEN", orion.String)
+}

@@ -265,6 +265,7 @@ func (h *MBHeadHandler) CreateMBHead(ctx context.Context, req *financev1.CreateM
 		VSNumber:         req.MbhVsNumber,
 		NoOfProcess:      req.MbhNoOfProcess,
 		AdditionalShades: shadeInputsToDomain(req.AdditionalShades),
+		OrionItemCode:    req.MbhOrionItemCode,
 	})
 	if err != nil {
 		RecordMBHeadOperation("create", false)
@@ -366,6 +367,8 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 		// sends replace_additional_shades leaves the stored shade rows intact.
 		AdditionalShades:        shadeInputsToDomain(req.AdditionalShades),
 		ReplaceAdditionalShades: req.GetReplaceAdditionalShades(),
+		// nil = unchanged, "" = clear.
+		OrionItemCode: req.MbhOrionItemCode,
 	})
 	if err != nil {
 		RecordMBHeadOperation("update", false)
@@ -385,6 +388,9 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 func mbHeadWriteErrToBase(err error) *commonv1.BaseResponse {
 	if errors.Is(err, mbhead.ErrAlreadyExists) {
 		return ConflictResponse("MB Costing code already exists")
+	}
+	if errors.Is(err, mbhead.ErrDuplicateOrionItemCode) {
+		return ConflictResponse("Orion Item Code already exists")
 	}
 	return domainErrorToBaseResponse(err)
 }
@@ -1025,6 +1031,9 @@ func parseOptionalMachineID(raw *string) (*uuid.UUID, *commonv1.BaseResponse) {
 func mbHeadRecipeFieldsToProto(p *financev1.MBHead, e *mbhead.Entity) {
 	p.MbhVsNumber = e.VSNumber()
 	p.MbhNoOfProcess = e.NoOfProcess()
+	if code := e.OrionItemCode(); code != nil {
+		p.MbhOrionItemCode = *code
+	}
 
 	locked := e.IsLocked()
 	p.MbhIsLocked = &locked

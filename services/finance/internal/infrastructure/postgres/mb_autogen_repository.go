@@ -341,7 +341,8 @@ func mbBuildAutoGenSpin(headID uuid.UUID, entity *mbhead.Entity, productSysID in
 	// Stakeholder decision (putaran 83): Denier/Filament/Dozing/MB Costing/CC/Final Product
 	// carry straight over from the parent MB Head — they are plain identity/spec fields with
 	// no separate recalculation process, unlike the LDR fields below.
-	spin, err := mbspin.New(headID, mgtName, nil, nil, entity.Denier(), entity.Filament(), entity.Dozing(), mbCosting, cc, nil, &rndStatus, nil, nil, entity.MBHFinalProduct(), nil, nil, actorUserID)
+	// The root spin inherits the head's Orion Item Code (nil when the head has none).
+	spin, err := mbspin.New(headID, mgtName, nil, entity.OrionItemCode(), entity.Denier(), entity.Filament(), entity.Dozing(), mbCosting, cc, nil, &rndStatus, nil, nil, entity.MBHFinalProduct(), nil, nil, actorUserID)
 	if err != nil {
 		return nil, fmt.Errorf("mb_autogen: construct auto-generated mb spin: %w", err)
 	}

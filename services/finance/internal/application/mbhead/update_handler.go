@@ -53,6 +53,10 @@ type UpdateCommand struct {
 	// the legacy edit form — which never sends additional_shades — would wipe every
 	// shade row on each save.
 	ReplaceAdditionalShades bool
+
+	// OrionItemCode: nil leaves the stored code untouched, "" (or blank) clears it, any
+	// other value is trimmed and must not already be used by another live head.
+	OrionItemCode *string
 }
 
 // LookupSyncTrigger queues a master-lookup sync for the yarn products that reference an
@@ -124,6 +128,10 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 		return nil, err
 	}
 
+	if err := h.assertOrionItemCodeFree(ctx, entity, cmd.OrionItemCode); err != nil {
+		return nil, err
+	}
+
 	oldCosting := entity.MBCosting()
 	oldMachineID := copyUUIDPtr(entity.MachineID())
 	costingChanged := mbCostingChanged(oldCosting, cmd.MBCosting)
@@ -158,6 +166,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 		MachineID:       cmd.MachineID,
 		VSNumber:        cmd.VSNumber,
 		NoOfProcess:     cmd.NoOfProcess,
+		OrionItemCode:   cmd.OrionItemCode,
 	}, cmd.UpdatedBy); err != nil {
 		return nil, err
 	}
@@ -329,4 +338,18 @@ func (h *UpdateHandler) assertDevCodeFree(ctx context.Context, entity *mbhead.En
 		return mbhead.ErrDuplicateDevCode
 	}
 	return nil
+}
+
+// assertOrionItemCodeFree checks Orion Item Code uniqueness ONLY when the value actually
+// changes. nil (absent) and a cleared/blank value are never probed, and an unchanged code
+// is never re-checked, so heads already sharing a legacy code stay editable.
+func (h *UpdateHandler) assertOrionItemCodeFree(ctx context.Context, entity *mbhead.Entity, incoming *string) error {
+	if incoming == nil {
+		return nil
+	}
+	code := mbhead.NormalizeOrionItemCode(incoming)
+	if code == mbhead.NormalizeOrionItemCode(entity.OrionItemCode()) {
+		return nil
+	}
+	return assertOrionItemCodeFree(ctx, h.repo, code, entity.ID())
 }

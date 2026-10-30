@@ -114,6 +114,11 @@ func (m *MockRepository) ExistsByDevCode(ctx context.Context, devCode string, ex
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockRepository) ExistsByOrionItemCode(ctx context.Context, code string, excludeID uuid.UUID) (bool, error) {
+	args := m.Called(ctx, code, excludeID)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *MockRepository) RefreezeCostParams(ctx context.Context, id uuid.UUID, entity *mbheaddomain.Entity, params *mbheaddomain.ParamSnapshot) error {
 	args := m.Called(ctx, id, entity, params)
 	return args.Error(0)

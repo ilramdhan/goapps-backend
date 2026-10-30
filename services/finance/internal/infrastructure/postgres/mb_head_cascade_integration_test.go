@@ -400,3 +400,91 @@ func (s *MBHeadCascadeSuite) TestCascade_NilParams_CPPAndFrozenSnapshotUntouched
 	require.Equal(s.T(), "T", np)
 	require.Equal(s.T(), "typo fixed", s.spin(s.rootSpin).mgt.String, "spins still cascade")
 }
+
+// Orion Item Code is only FILLED on spins whose code is empty (NULL or ”): a spin that
+// already carries a code keeps it, and an empty head code changes nothing.
+func (s *MBHeadCascadeSuite) TestCascade_OrionItemCode_FillsOnlyEmptySpins() {
+	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = NULL WHERE mbs_id = $1`, s.rootSpin)
+
+	// Empty head code first: nothing changes (root stays NULL, child keeps its code).
+	e, _ := s.editedHead(nil)
+	_, err := s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"OLD", nil)
+	require.NoError(s.T(), err)
+	require.False(s.T(), s.spin(s.rootSpin).orion.Valid, "empty head code leaves an empty spin empty")
+	require.Equal(s.T(), "ORI-CHILD", s.spin(s.childSpin).orion.String)
+
+	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = '' WHERE mbs_id = $1`, s.childSpin)
+	e, _ = s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-HEAD") })
+	_, err = s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"NEW", nil)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), "ORI-HEAD", s.spin(s.rootSpin).orion.String, "NULL spin code filled")
+	require.Equal(s.T(), "ORI-HEAD", s.spin(s.childSpin).orion.String, "'' spin code filled")
+	require.Equal(s.T(), "ORI-DEL", s.spin(s.deletedSpin).orion.String, "soft-deleted spin untouched")
+
+	// A changed head code never overwrites a spin that now carries one.
+	e, _ = s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-OTHER") })
+	_, err = s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"NEW", nil)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), "ORI-HEAD", s.spin(s.rootSpin).orion.String)
+	require.Equal(s.T(), "ORI-HEAD", s.spin(s.childSpin).orion.String)
+}
+
+// Without a cost product only the legacy rename runs: spins still carrying the old costing get
+// an empty code filled; other spins and non-empty codes are untouched.
+func (s *MBHeadCascadeSuite) TestNoProduct_RenameFillsEmptyOrionOnRenamedSpinsOnly() {
+	s.exec(`UPDATE mst_mb_head SET mbh_cost_product_id = NULL WHERE mbh_id = $1`, s.mbhID)
+	s.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = NULL WHERE mbs_id IN ($1, $2)`, s.rootSpin, s.childSpin)
+	e, _ := s.editedHead(func(in *mbhead.UpdateInput) { in.OrionItemCode = stringPtr("ORI-HEAD") })
+	_, err := s.headRepo.UpdateWithCascade(s.ctx, e, mbCascFixturePrefix+"OLD", nil)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), "ORI-HEAD", s.spin(s.rootSpin).orion.String, "renamed spin gets the head code")
+	require.False(s.T(), s.spin(s.childSpin).orion.Valid, "spin outside the rename WHERE untouched")
+}
+
+// Head orion item code round-trips through Create/Get/List/Update (incl. clear) and the
+// uniqueness helper sees only live heads other than the excluded one.
+func (s *MBHeadCascadeSuite) TestHeadOrionItemCode_RoundTripAndExists() {
+	e, err := s.headRepo.GetByID(s.ctx, s.mbhID)
+	require.NoError(s.T(), err)
+	require.Nil(s.T(), e.OrionItemCode())
+
+	require.NoError(s.T(), e.Update(mbhead.UpdateInput{OrionItemCode: stringPtr(" ORI-RT ")}, "editor"))
+	require.NoError(s.T(), s.headRepo.Update(s.ctx, e))
+	got, err := s.headRepo.GetByID(s.ctx, s.mbhID)
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), got.OrionItemCode())
+	require.Equal(s.T(), "ORI-RT", *got.OrionItemCode())
+
+	items, _, err := s.headRepo.List(s.ctx, mbhead.ListFilter{Search: "ORI-RT", Page: 1, PageSize: 10})
+	require.NoError(s.T(), err)
+	require.Len(s.T(), items, 1)
+	require.Equal(s.T(), s.mbhID, items[0].ID())
+
+	taken, err := s.headRepo.ExistsByOrionItemCode(s.ctx, "ORI-RT", uuid.Nil)
+	require.NoError(s.T(), err)
+	require.True(s.T(), taken)
+	taken, err = s.headRepo.ExistsByOrionItemCode(s.ctx, "ORI-RT", s.mbhID)
+	require.NoError(s.T(), err)
+	require.False(s.T(), taken, "the head itself is excluded")
+
+	created, err := mbhead.New(mbhead.NewParams{
+		MBCosting: mbCascFixturePrefix + "CRT", CreatedBy: "itest", OrionItemCode: stringPtr("ORI-CRT"),
+	})
+	require.NoError(s.T(), err)
+	require.NoError(s.T(), s.headRepo.Create(s.ctx, created))
+	got, err = s.headRepo.GetByID(s.ctx, created.ID())
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), "ORI-CRT", *got.OrionItemCode())
+
+	require.NoError(s.T(), got.Update(mbhead.UpdateInput{OrionItemCode: stringPtr("")}, "editor"))
+	require.NoError(s.T(), s.headRepo.Update(s.ctx, got))
+	var stored sql.NullString
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx,
+		`SELECT mbh_orion_item_code FROM mst_mb_head WHERE mbh_id = $1`, created.ID()).Scan(&stored))
+	require.False(s.T(), stored.Valid, "cleared code is stored as NULL")
+
+	require.NoError(s.T(), s.headRepo.SoftDelete(s.ctx, s.mbhID, "itest"))
+	taken, err = s.headRepo.ExistsByOrionItemCode(s.ctx, "ORI-RT", uuid.Nil)
+	require.NoError(s.T(), err)
+	require.False(s.T(), taken, "soft-deleted heads do not count")
+}

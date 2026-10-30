@@ -197,3 +197,22 @@ func TestMBBuildAutoGenSpin_AlwaysNilFields_StayNilForMinimalHead(t *testing.T) 
 	require.False(t, spin.LDRIsActual())
 	require.Nil(t, spin.LDRAdjustmentPct())
 }
+
+// The auto-generated root spin inherits the head's Orion Item Code; a head without one
+// yields a spin without one.
+func TestMBBuildAutoGenSpin_InheritsOrionItemCode(t *testing.T) {
+	head, err := mbhead.New(mbAutoGenSpinFieldsHeadParams(func(p *mbhead.NewParams) {
+		p.OrionItemCode = stringPtr("ORI-HEAD")
+	}))
+	require.NoError(t, err)
+	spin, err := mbBuildAutoGenSpin(uuid.New(), head, 1, "tester")
+	require.NoError(t, err)
+	require.NotNil(t, spin.OrionItemCode())
+	require.Equal(t, "ORI-HEAD", *spin.OrionItemCode())
+
+	head, err = mbhead.New(mbAutoGenSpinFieldsHeadParams(nil))
+	require.NoError(t, err)
+	spin, err = mbBuildAutoGenSpin(uuid.New(), head, 1, "tester")
+	require.NoError(t, err)
+	require.Nil(t, spin.OrionItemCode())
+}

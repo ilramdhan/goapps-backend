@@ -68,3 +68,15 @@ func TestBuildMBHeadListWhere_CostProductIDCombinesWithOtherFilters(t *testing.T
 		t.Fatalf("expected last arg = %d, got %v", id, args[2])
 	}
 }
+
+// TestBuildMBHeadListWhere_SearchIncludesOrionItemCode pins that the free-text search also
+// matches mbh_orion_item_code, on the same single placeholder.
+func TestBuildMBHeadListWhere_SearchIncludesOrionItemCode(t *testing.T) {
+	base, args := buildMBHeadListWhere(mbhead.ListFilter{Search: "ORI"})
+	if !strings.Contains(base, "mbh_orion_item_code ILIKE $1") {
+		t.Fatalf("expected orion item code in search predicate, got %q", base)
+	}
+	if len(args) != 1 {
+		t.Fatalf("expected exactly one search arg, got %v", args)
+	}
+}

@@ -124,3 +124,23 @@ func (r *MBHeadRepository) ExistsByDevCode(ctx context.Context, devCode string, 
 	}
 	return exists, nil
 }
+
+// ExistsByOrionItemCode reports whether a live MB head other than excludeID already
+// carries the given mbh_orion_item_code.
+//
+// ⚠ HELPER ONLY — there is deliberately NO unique index on mbh_orion_item_code: legacy
+// duplicates must stay readable and editable. The application layer decides when to
+// consult this, and never probes the empty string.
+func (r *MBHeadRepository) ExistsByOrionItemCode(ctx context.Context, code string, excludeID uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM mst_mb_head
+			WHERE mbh_orion_item_code = $1 AND deleted_at IS NULL AND mbh_id <> $2
+		)
+	`, code, excludeID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check mb head orion item code exists: %w", err)
+	}
+	return exists, nil
+}

@@ -93,6 +93,10 @@ func (f *fakeFrozenMBHeadRepo) ExistsByDevCode(_ context.Context, _ string, _ uu
 	return false, nil
 }
 
+func (f *fakeFrozenMBHeadRepo) ExistsByOrionItemCode(_ context.Context, _ string, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 func (f *fakeFrozenMBHeadRepo) RefreezeCostParams(_ context.Context, _ uuid.UUID, _ *mbhead.Entity, _ *mbhead.ParamSnapshot) error {
 	return nil
 }
