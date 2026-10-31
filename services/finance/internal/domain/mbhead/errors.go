@@ -46,6 +46,9 @@ var (
 	ErrRecipeFieldRequired = errors.New("mbhead: required recipe field is empty")
 	// ErrHeadLocked is returned when an MB head is locked and cannot be modified.
 	ErrHeadLocked = errors.New("mbhead: recipe is locked")
+	// ErrNotDeletable is returned when deleting an MB head that is not in DRAFT.
+	// The message keeps "cannot be deleted" so domainErrorToBaseResponse maps it to 409.
+	ErrNotDeletable = errors.New("mbhead: recipe cannot be deleted unless it is DRAFT")
 	// ErrUnlockNotRequested is returned when granting an unlock that was never requested.
 	ErrUnlockNotRequested = errors.New("mbhead: no pending unlock request")
 	// ErrUnlockOriginUnknown is returned when a pending unlock request is rejected but

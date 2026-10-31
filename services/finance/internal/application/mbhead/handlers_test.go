@@ -306,16 +306,16 @@ func TestUpdateHandler_Handle(t *testing.T) {
 }
 
 func TestDeleteHandler_Handle(t *testing.T) {
-	t.Run("success - soft deletes entity", func(t *testing.T) {
+	t.Run("success - soft deletes a DRAFT head", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		handler := mbhead.NewDeleteHandler(mockRepo)
 		ctx := context.Background()
 
-		id := uuid.New()
-		mockRepo.On("SoftDelete", ctx, id, "admin").Return(nil)
+		head := headInState(mbheaddomain.StatusDraft, "")
+		mockRepo.On("GetByID", ctx, head.ID()).Return(head, nil)
+		mockRepo.On("SoftDelete", ctx, head.ID(), "admin").Return(nil)
 
-		cmd := mbhead.DeleteCommand{ID: id, DeletedBy: "admin"}
-		err := handler.Handle(ctx, cmd)
+		err := handler.Handle(ctx, mbhead.DeleteCommand{ID: head.ID(), DeletedBy: "admin"})
 
 		assert.NoError(t, err)
 		mockRepo.AssertExpectations(t)
@@ -327,14 +327,37 @@ func TestDeleteHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		id := uuid.New()
-		mockRepo.On("SoftDelete", ctx, id, "admin").Return(mbheaddomain.ErrNotFound)
+		mockRepo.On("GetByID", ctx, id).Return(nil, mbheaddomain.ErrNotFound)
 
-		cmd := mbhead.DeleteCommand{ID: id, DeletedBy: "admin"}
-		err := handler.Handle(ctx, cmd)
+		err := handler.Handle(ctx, mbhead.DeleteCommand{ID: id, DeletedBy: "admin"})
 
 		assert.ErrorIs(t, err, mbheaddomain.ErrNotFound)
-		mockRepo.AssertExpectations(t)
+		mockRepo.AssertNotCalled(t, "SoftDelete", mock.Anything, mock.Anything, mock.Anything)
 	})
+
+	for _, status := range []string{
+		mbheaddomain.StatusSubmitted,
+		mbheaddomain.StatusApproved,
+		mbheaddomain.StatusValidated,
+		mbheaddomain.StatusRejected,
+		mbheaddomain.StatusUnlockRequested,
+		mbheaddomain.StatusUnApproved,
+		mbheaddomain.StatusRevoked,
+	} {
+		t.Run("error - not deletable from "+status, func(t *testing.T) {
+			mockRepo := new(MockRepository)
+			handler := mbhead.NewDeleteHandler(mockRepo)
+			ctx := context.Background()
+
+			head := headInState(status, "")
+			mockRepo.On("GetByID", ctx, head.ID()).Return(head, nil)
+
+			err := handler.Handle(ctx, mbhead.DeleteCommand{ID: head.ID(), DeletedBy: "admin"})
+
+			assert.ErrorIs(t, err, mbheaddomain.ErrNotDeletable)
+			mockRepo.AssertNotCalled(t, "SoftDelete", mock.Anything, mock.Anything, mock.Anything)
+		})
+	}
 }
 
 func TestListHandler_Handle(t *testing.T) {

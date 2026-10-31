@@ -25,7 +25,14 @@ func NewDeleteHandler(repo mbhead.Repository) *DeleteHandler {
 	return &DeleteHandler{repo: repo}
 }
 
-// Handle executes the delete MB Head command (soft delete).
+// Handle executes the delete MB Head command (soft delete). Only a DRAFT head may be deleted.
 func (h *DeleteHandler) Handle(ctx context.Context, cmd DeleteCommand) error {
+	entity, err := h.repo.GetByID(ctx, cmd.ID)
+	if err != nil {
+		return err
+	}
+	if err := entity.EnsureDeletable(); err != nil {
+		return err
+	}
 	return h.repo.SoftDelete(ctx, cmd.ID, cmd.DeletedBy)
 }

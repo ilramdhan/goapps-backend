@@ -452,6 +452,18 @@ func (e *Entity) PreUnlockStatus() string { return e.preUnlockStatus }
 // OrionItemCode returns the optional ERP item code (mbh_orion_item_code); nil = not set.
 func (e *Entity) OrionItemCode() *string { return e.orionItemCode }
 
+// EnsureDeletable returns ErrNotDeletable unless the head is in DRAFT. Submitted,
+// approved/validated, rejected and parked heads are kept — only unfinished drafts may go.
+func (e *Entity) EnsureDeletable() error {
+	if e.IsDeleted() {
+		return ErrAlreadyDeleted
+	}
+	if e.entryStatus != StatusDraft {
+		return ErrNotDeletable
+	}
+	return nil
+}
+
 // IsEditable reports whether the recipe's content may be mutated right now.
 //
 // 🔴 A locked head is NOT editable, and a head parked in UNLOCK_REQUESTED is not
