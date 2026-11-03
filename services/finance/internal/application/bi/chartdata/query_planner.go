@@ -2,6 +2,7 @@ package chartdata
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,6 +19,13 @@ const (
 	colGroup2 = "group_2"
 	colGroup3 = "group_3"
 )
+
+// metricNamePattern is the shape of a registry metric_name; guards values inlined into SQL.
+var metricNamePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+
+// CategoryFieldDimensionKey is the chart_config.category_field value that groups a chart by
+// bi_fact_metric.dimension_key.
+const CategoryFieldDimensionKey = "dimension_key"
 
 // ViewerFilters carries the runtime filter state from the viewer page.
 type ViewerFilters struct {
@@ -73,6 +81,15 @@ func Plan(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time) (factmet
 	}
 	if isEmployeeTable(d) {
 		return planEmployeeTable(d, f, now)
+	}
+
+	// Dimension path (PP-10): categorical chart grouped by dimension_key.
+	if d.ChartConfig().CategoryField == CategoryFieldDimensionKey {
+		metrics := metricFilter(d)
+		if len(metrics) == 0 {
+			return factmetric.PlannedQuery{}, fmt.Errorf("%w: category_field=dimension_key requires metric_filter.include_metrics", factmetric.ErrInvalidPlan)
+		}
+		return planDimension(d, f, now, metrics[0])
 	}
 
 	// Multi-metric path: chart_config.metric_filter.include_metrics is set.
@@ -157,7 +174,7 @@ func planMultiMetric(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Tim
 	}
 
 	// Build group filters from dashboard pre-filter, drill path, and filter chips.
-	baseConds, args, _ = appendGroupConds(baseConds, args, idx, d, f)
+	baseConds, args = appendGroupConds(baseConds, args, idx, d, f)
 
 	allConds := baseConds
 	where := strings.Join(allConds, " AND ")
@@ -182,6 +199,68 @@ GROUP BY periode_date`, m, where, m))
 	return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: "bi_fact_metric"}, nil
 }
 
+// planDimension builds a categorical query grouped by dimension_key for one metric (PP-10).
+// The metric name comes from admin-configured chart_config.metric_filter and is inlined into the SQL,
+// so it is checked against metricNamePattern here (parseMetricFilter only drops empty strings).
+// Group filters/drill narrow group_1/group_2.
+func planDimension(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time, metric string) (factmetric.PlannedQuery, error) {
+	if !metricNamePattern.MatchString(metric) {
+		return factmetric.PlannedQuery{}, fmt.Errorf("%w: metric %q is not UPPERCASE_SNAKE_CASE", factmetric.ErrInvalidPlan, metric)
+	}
+	period := ResolvePeriod(f.PeriodPreset, f.PeriodFrom, f.PeriodTo, d.PeriodGrain().String(), now)
+	args := []any{d.FilterType()}
+	idx := 2
+	conds := []string{"type = $1", "agg_method = 'SUM'", "is_active = TRUE", "scenario = 'ACTUAL'", "dimension_key <> ''"}
+	if grain := d.PeriodGrain().String(); grain != "" {
+		conds = append(conds, fmt.Sprintf("periode_grain = $%d", idx))
+		args = append(args, grain)
+		idx++
+	}
+	if !period.From.IsZero() && !period.To.IsZero() {
+		conds = append(conds, fmt.Sprintf("periode_date BETWEEN $%d AND $%d", idx, idx+1))
+		args = append(args, period.From, period.To)
+		idx += 2
+	}
+	conds, args = appendGroupConds(conds, args, idx, d, f)
+	labelExpr, orderExpr, join := dimensionLabelParts(d.FilterType())
+	sql := fmt.Sprintf(`
+SELECT %s AS category, NULL::date AS periode_date, ''::text AS periode_label,
+       a.value AS value, 0::numeric AS prev_value, %s AS order_seq
+FROM (
+  SELECT dimension_key, COALESCE(SUM(display_value), 0) AS value
+  FROM bi_fact_metric
+  WHERE %s AND metric_name = '%s'
+  GROUP BY dimension_key
+) a
+%s
+ORDER BY order_seq, a.value DESC, category`, labelExpr, orderExpr,
+		strings.Join(conds, " AND "), metric, join)
+	return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: "bi_fact_metric"}, nil
+}
+
+// dimensionLabelParts returns the display label, order expression, and LEFT JOIN for dimension
+// charts (PP-04): the label and machine order come from the newest staging row per key (DISTINCT ON),
+// not from a lookup table. Other types fall back to the raw dimension_key.
+func dimensionLabelParts(factType string) (label, order, join string) {
+	const noJoin = ""
+	switch factType {
+	case "PP_PACK_PRODUCT":
+		return "COALESCE(lbl.lbl_text, a.dimension_key)", "0::int", `LEFT JOIN (
+  SELECT DISTINCT ON (merge_no) merge_no AS lbl_key,
+         merge_no || COALESCE(' - ' || NULLIF(concat_ws(' ', NULLIF(prod_descr, ''), NULLIF(shade, ''), NULLIF(poy_line, '')), ''), '') AS lbl_text,
+         NULL::int AS lbl_order
+    FROM bi_pp_stg_pack_prod_daily WHERE merge_no IS NOT NULL ORDER BY merge_no, pack_date DESC
+) lbl ON lbl.lbl_key = a.dimension_key`
+	case "PP_PACK_MACHINE":
+		return "a.dimension_key", "COALESCE(lbl.lbl_order, 9999)", `LEFT JOIN (
+  SELECT DISTINCT ON (mc_no) mc_no AS lbl_key, NULL::text AS lbl_text, mach_order_rep AS lbl_order
+    FROM bi_pp_stg_pack_prod_daily WHERE mc_no IS NOT NULL ORDER BY mc_no, pack_date DESC
+) lbl ON lbl.lbl_key = a.dimension_key`
+	default:
+		return "a.dimension_key", "0::int", noJoin
+	}
+}
+
 // appendGroupConds appends group_1 / group_2 conditions for a multi-metric UNION query.
 //
 // Priority order:
@@ -191,7 +270,7 @@ GROUP BY periode_date`, m, where, m))
 func appendGroupConds(
 	conds []string, args []any, idx int,
 	d *dashboarddomain.Dashboard, f ViewerFilters,
-) ([]string, []any, int) {
+) ([]string, []any) {
 	if d.FilterGroup1() != "" {
 		conds = append(conds, fmt.Sprintf("group_1 = $%d", idx))
 		args = append(args, d.FilterGroup1())
@@ -211,9 +290,9 @@ func appendGroupConds(
 		conds, args, idx = appendINClause(conds, args, idx, colGroup1, f.Group1Filter)
 	}
 	if len(f.Group2Filter) > 0 {
-		conds, args, idx = appendINClause(conds, args, idx, colGroup2, f.Group2Filter)
+		conds, args, _ = appendINClause(conds, args, idx, colGroup2, f.Group2Filter)
 	}
-	return conds, args, idx
+	return conds, args
 }
 
 // appendINClause adds a "col IN ($n,$n+1,...)" condition and advances idx.
@@ -255,6 +334,7 @@ func planLevel1(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 			Period:      period,
 			Grain:       d.PeriodGrain().String(),
 			Compare:     f.Compare,
+			Metric:      d.ChartConfig().SingleMetric,
 		}, isTrend))
 	}
 	return buildPlan(applyTrend(buildArgs{
@@ -265,6 +345,7 @@ func planLevel1(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 		Period:      period,
 		Grain:       d.PeriodGrain().String(),
 		Compare:     f.Compare,
+		Metric:      d.ChartConfig().SingleMetric,
 	}, isTrend))
 }
 
@@ -282,6 +363,7 @@ func planLevel2(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 			Period:      period,
 			Grain:       d.PeriodGrain().String(),
 			Compare:     f.Compare,
+			Metric:      d.ChartConfig().SingleMetric,
 			RequireG3:   true,
 		}, isTrend))
 	}
@@ -294,6 +376,7 @@ func planLevel2(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 		Period:      period,
 		Grain:       d.PeriodGrain().String(),
 		Compare:     f.Compare,
+		Metric:      d.ChartConfig().SingleMetric,
 	}, isTrend))
 }
 
@@ -313,6 +396,7 @@ func planLevel3(d *dashboarddomain.Dashboard, f ViewerFilters, period PeriodRang
 		Period:      period,
 		Grain:       d.PeriodGrain().String(),
 		Compare:     f.Compare,
+		Metric:      d.ChartConfig().SingleMetric,
 		RequireG3:   true,
 	}, isTrend))
 }
@@ -329,7 +413,8 @@ type buildArgs struct {
 	Grain       string
 	Scenario    string
 	Compare     string
-	RequireG3   bool // when true, add `AND group_3 IS NOT NULL`
+	RequireG3   bool   // when true, add `AND group_3 IS NOT NULL`
+	Metric      string // when set, add `AND metric_name = $n` (PP-10 single_metric)
 }
 
 // buildPlan emits the canonical 6-column SELECT used by BiFactMetricRepository.QueryAggregate.
@@ -364,6 +449,11 @@ func buildPlan(a buildArgs) (factmetric.PlannedQuery, error) {
 	}
 	if a.RequireG3 {
 		coreConds = append(coreConds, "group_3 IS NOT NULL")
+	}
+	if a.Metric != "" {
+		coreConds = append(coreConds, fmt.Sprintf("metric_name = $%d", idx))
+		args = append(args, a.Metric)
+		idx++
 	}
 	coreConds = append(coreConds, fmt.Sprintf("periode_grain = $%d", idx))
 	args = append(args, a.Grain)

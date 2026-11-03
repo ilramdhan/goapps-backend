@@ -41,6 +41,14 @@ type ChartConfig struct {
 	// Drill
 	DrillTo string
 
+	// CategoryField, when "dimension_key", makes the planner group a categorical chart by
+	// bi_fact_metric.dimension_key (product, machine, poly; PP-10). Empty = default group columns.
+	CategoryField string
+
+	// SingleMetric pins the drill/trend MV path to one metric_name (e.g. "PACK_TOTAL") for types that
+	// carry several metrics per group (PP-10). Empty = no metric filter (legacy single-metric types).
+	SingleMetric string
+
 	// Misc
 	SortOrder     string
 	InnerRadius   float64
@@ -182,6 +190,8 @@ func ParseChartConfig(t ChartType, raw map[string]any) (ChartConfig, error) {
 	applyString(merged, "tooltip_format", &cfg.TooltipFormat)
 	applyString(merged, "empty_message", &cfg.EmptyMessage)
 	applyString(merged, "drill_to", &cfg.DrillTo)
+	applyString(merged, "category_field", &cfg.CategoryField)
+	applyString(merged, "single_metric", &cfg.SingleMetric)
 	applyString(merged, "sort_order", &cfg.SortOrder)
 	applyString(merged, "filter_group_2", &cfg.FilterGroup2)
 	applyString(merged, "table_mode", &cfg.TableMode)
@@ -311,6 +321,8 @@ func (c ChartConfig) MarshalToMap() map[string]any { //nolint:gocognit // one br
 	putString(out, "tooltip_format", c.TooltipFormat)
 	putString(out, "empty_message", c.EmptyMessage)
 	putString(out, "drill_to", c.DrillTo)
+	putString(out, "category_field", c.CategoryField)
+	putString(out, "single_metric", c.SingleMetric)
 	putString(out, "sort_order", c.SortOrder)
 	putString(out, "filter_group_2", c.FilterGroup2)
 	putString(out, "table_mode", c.TableMode)

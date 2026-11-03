@@ -1,0 +1,6 @@
+BEGIN;
+DELETE FROM bi_dashboard
+ WHERE dashboard_code IN ('PP_PACK_SUMMARY', 'PP_PACK_PRODUCT', 'PP_PACK_MACHINE', 'PP_PACK_POLY');
+DELETE FROM bi_job_log WHERE job_id IN (SELECT job_id FROM bi_job WHERE job_name = 'MV_REFRESH_PP_PACK');
+DELETE FROM bi_job WHERE job_name = 'MV_REFRESH_PP_PACK';
+COMMIT;

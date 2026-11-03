@@ -150,9 +150,10 @@ func computeCrossRatioKPI(
 	return row, nil
 }
 
-// crossRatioQuery sums VALUE of one cross_ratio side. typ falls back to the dashboard type;
-// a fixed group1 wins over the viewer's dept filter (group1Filters).
-func crossRatioQuery(typ, defaultType, grain, group1 string, group1Filters []string, per PeriodRange) factmetric.PlannedQuery {
+// crossRatioQueryMetric sums one cross_ratio side. typ falls back to the dashboard type; a fixed group1
+// wins over the viewer's dept filter (group1Filters). When metric is set (PP-10) the side sums that
+// metric_name over the type's groups instead of the VALUE rows of one group_1.
+func crossRatioQueryMetric(typ, defaultType, grain, group1, metric string, group1Filters []string, per PeriodRange) factmetric.PlannedQuery {
 	if typ == "" {
 		typ = defaultType
 	}
@@ -170,6 +171,11 @@ func crossRatioQuery(typ, defaultType, grain, group1 string, group1Filters []str
 		}
 		conds = " AND group_1 IN (" + strings.Join(ph, ",") + ")"
 	}
+	metricCond := "'VALUE'"
+	if metric != "" {
+		args = append(args, metric)
+		metricCond = fmt.Sprintf("$%d", len(args))
+	}
 	sql := `SELECT 'kpi'::text AS category, NULL::date AS periode_date,
                        ''::text AS periode_label,
                        COALESCE(SUM(display_value), 0) AS value,
@@ -177,7 +183,7 @@ func crossRatioQuery(typ, defaultType, grain, group1 string, group1Filters []str
                 FROM bi_fact_metric
                 WHERE type = $1 AND periode_grain = $2
                   AND periode_date BETWEEN $3 AND $4` + conds + `
-                  AND is_active = TRUE AND metric_name = 'VALUE'`
+                  AND is_active = TRUE AND metric_name = ` + metricCond
 	return factmetric.PlannedQuery{SQL: sql, Args: args, TargetTable: "bi_fact_metric"}
 }
 
@@ -190,11 +196,11 @@ func crossRatioValue(
 	group1Filters []string,
 	per PeriodRange,
 ) (float64, error) {
-	numRows, err := repo.QueryAggregate(ctx, crossRatioQuery(k.CrossRatioNumeratorType, defaultType, grain, k.CrossRatioNumeratorGroup1, group1Filters, per))
+	numRows, err := repo.QueryAggregate(ctx, crossRatioQueryMetric(k.CrossRatioNumeratorType, defaultType, grain, k.CrossRatioNumeratorGroup1, k.CrossRatioNumeratorMetric, group1Filters, per))
 	if err != nil {
 		return 0, fmt.Errorf("cross ratio numerator: %w", err)
 	}
-	denRows, err := repo.QueryAggregate(ctx, crossRatioQuery(k.CrossRatioDenominatorType, defaultType, grain, k.CrossRatioDenominatorGroup1, group1Filters, per))
+	denRows, err := repo.QueryAggregate(ctx, crossRatioQueryMetric(k.CrossRatioDenominatorType, defaultType, grain, k.CrossRatioDenominatorGroup1, k.CrossRatioDenominatorMetric, group1Filters, per))
 	if err != nil {
 		return 0, fmt.Errorf("cross ratio denominator: %w", err)
 	}

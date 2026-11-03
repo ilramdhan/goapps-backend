@@ -854,6 +854,10 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 			oracleinfra.NewHRISOTRepository(hrisClient),
 			hrStaging,
 		).WithATT(oracleinfra.NewHRISATTRepository(hrisClient), hrStaging))
+		// The HRIS loader is registered here by H010 (bietl.SourceHRISOracle).
+		// Packed production (PP-03): same connection, routed by target_type PP_PACK.
+		biETLRouter.RegisterTarget(bietl.SourceHRISOracle, bietl.TargetPPPack, bietl.NewPPLoader(
+			oracleinfra.NewASPAKPackProdRepository(hrisClient), postgres.NewBiPPStagingRepository(db), log.Logger))
 	}
 	var biETLRunner jobapp.BIETLRunner = biETLRouter
 
