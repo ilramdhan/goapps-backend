@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Finance Cost Worker Service
 # Build from repository ROOT: docker build -t finance-cost-worker -f services/finance-cost-worker/Dockerfile .
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o /bin/finance-cost-worker \
     ./cmd/server
 
-FROM alpine:3.20
+FROM alpine:3.24
 
 WORKDIR /app
 

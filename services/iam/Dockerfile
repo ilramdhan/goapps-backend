@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for IAM Service
 # Build from repository ROOT: docker build -t iam-service -f services/iam/Dockerfile .
 # Stage 1: Build
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /app
 
@@ -43,7 +43,7 @@ RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate
     && cp $(go env GOPATH)/bin/migrate /bin/migrate
 
 # Stage 2: Runtime
-FROM alpine:3.20
+FROM alpine:3.24
 
 WORKDIR /app
 
