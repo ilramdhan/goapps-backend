@@ -5,6 +5,34 @@
 
 ---
 
+## Agent Skills (read first — use them without being asked)
+
+Claude Code skills installed at user level (`~/.claude/skills/`). Invoke the matching skill automatically when the task fits; the user should not have to name it. If a skill is not in the session's skill list, it is not installed on this machine — run `find-skills` (or `npx skills find <topic>`) to locate it, and tell the user the install command instead of guessing.
+
+| When | Skill |
+|------|-------|
+| Review a PR (any goapps repo, incl. paired cross-repo PRs) | `review-pr` — draft first in `../docs/pr-review-drafts/`, post only after user approval |
+| Triage an issue / fill labels, assignee, project fields (Status, Prio, Size, Estimate, Iteration, Start, Due) | `triage-issue` — draft first, apply only after approval |
+| Non-trivial feature / bug / refactor end-to-end | `feature-flow` (resume-check first) |
+| Can't find a skill for a task | `find-skills` |
+| Security-sensitive change | `security-review`, `differential-review`; dependency changes: `supply-chain-risk-auditor` |
+| CI workflows (`.github/workflows/*`) | `github-actions-hardening`, `gha-security-review` |
+| Receiving review feedback / before merging own work | `receiving-code-review`, `requesting-code-review` |
+| Any Go work | `golang-how-to` (routes to the right `golang-*` skills: grpc, error-handling, concurrency, database, testing, security, lint…) + team skill `backend` |
+| SQL migrations / repositories / query performance | `supabase-postgres-best-practices` (generic Postgres rules) — this repo's ADR 0001 and §7 still win |
+| Dockerfile | `multi-stage-dockerfile` |
+| Proto / gRPC contract touched | `protobuf`, `public-grpc-api-design`, team skill `proto` |
+
+Setting up a new machine (public skills; `review-pr`, `triage-issue`, `feature-flow` and the team skills `backend`/`frontend`/`proto`/`infra` are internal, so copy them from a teammate's `~/.claude/skills/`):
+```bash
+npx skills add samber/cc-skills-golang vercel-labs/skills@find-skills obra/superpowers@receiving-code-review obra/superpowers@requesting-code-review getsentry/skills@security-review getsentry/skills@gha-security-review trailofbits/skills@differential-review trailofbits/skills@supply-chain-risk-auditor github/awesome-copilot@github-actions-hardening github/awesome-copilot@multi-stage-dockerfile -g -y
+npx skills add supabase/agent-skills@supabase-postgres-best-practices bufbuild/claude-plugins@protobuf samber/developer-platform-skills@public-grpc-api-design -g -y
+```
+
+Precedence: this CLAUDE.md > external skill. External skills fill gaps and flag industry best-practice issues the repo rules don't cover yet; when they conflict with a repo rule, follow the repo rule and mention the conflict to the user.
+
+---
+
 ## 1. Overview
 
 Go gRPC microservice monorepo using **Clean Architecture / DDD**. Each directory under `services/` is an independent Go module sharing generated protobuf code from `goapps-shared-proto`:
