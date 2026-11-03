@@ -38,7 +38,7 @@ goapps/
 
 | Repository | Description | Tech Stack |
 |------------|-------------|------------|
-| `goapps-backend` | Microservices APIs | Go 1.24, gRPC, PostgreSQL, Redis |
+| `goapps-backend` | Microservices APIs | Go 1.26, gRPC, PostgreSQL, Redis |
 | `goapps-infra` | Infrastructure as Code | Kubernetes, Kustomize, Helm, ArgoCD |
 | `goapps-frontend` | Web Application | Next.js 15, React, TypeScript |
 | `goapps-shared-proto` | API Contracts | Protocol Buffers, Buf |
@@ -303,7 +303,7 @@ goapps-backend/
 
 ### Prerequisites
 
-- **Go 1.24+** - [Download](https://go.dev/dl/)
+- **Go 1.26+** - [Download](https://go.dev/dl/)
 - **Docker & Docker Compose** - For local development
 - **Buf CLI** - Protocol buffer management
 - **golangci-lint** - Code linting

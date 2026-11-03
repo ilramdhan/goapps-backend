@@ -188,7 +188,7 @@ func (r *Registry) Codes() []erpintegration.IssueCode {
 
 // Run runs every validator and returns the findings in a deterministic order.
 func (r *Registry) Run(in Input) Result {
-	var all []Finding
+	var all []Finding //nolint:prealloc // nil-on-empty result is intentional; flagged by prealloc v1.1+
 	for _, v := range r.validators {
 		all = append(all, v.Validate(&in)...)
 	}

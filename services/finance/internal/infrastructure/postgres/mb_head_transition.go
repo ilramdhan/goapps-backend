@@ -123,7 +123,7 @@ func (r *MBHeadRepository) updateEntryStatusTx(ctx context.Context, tx *sql.Tx, 
 	// $5..$12 numbering the params block relies on is never disturbed. When the
 	// transition is not lock-related the fragment is empty and no lock column moves.
 	lockFrag, args := lockClauses(mbhead.DeriveLockEffect(fromState, toState), actorUserID, stateReason, args)
-	q += lockFrag
+	q += lockFrag //nolint:gosec // G202: lockFrag is built from fixed column names, values bound as $n placeholders
 
 	q += ` WHERE mbh_id = $1 AND deleted_at IS NULL`
 

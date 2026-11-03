@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for IAM Service
 # Build from repository ROOT: docker build -t iam-service -f services/iam/Dockerfile .
 # Stage 1: Build
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 

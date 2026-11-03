@@ -22,8 +22,8 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: '1.24'
-  GOLANGCI_LINT_VERSION: 'v2.3.0'  # NOT the service Makefile's v1.62.2 — v1 cannot parse a `version: "2"` config
+  GO_VERSION: '1.26'
+  GOLANGCI_LINT_VERSION: 'v2.15.0'  # NOT the service Makefile's v1.62.2 — v1 cannot parse a `version: "2"` config
   SERVICE_NAME: ppc-service
   WORKING_DIR: ./services/ppc
 

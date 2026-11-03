@@ -146,7 +146,7 @@ func (r *MBHeadRepository) relockHeadTx(
 	// overwrites the save. RowsAffected = 0 surfaces as the same "moved concurrently"
 	// error the status guard already produces, which the job logs and moves past.
 	args = append(args, c.GrantedAt)
-	q += fmt.Sprintf(` AND %s`, untouchedSinceGrant("mst_mb_head", fmt.Sprintf("$%d", len(args))))
+	q += fmt.Sprintf(` AND %s`, untouchedSinceGrant("mst_mb_head", fmt.Sprintf("$%d", len(args)))) //nolint:gosec // G202: fixed SQL fragment, values bound as $n placeholders
 
 	result, execErr := tx.ExecContext(ctx, q, args...)
 	if execErr != nil {

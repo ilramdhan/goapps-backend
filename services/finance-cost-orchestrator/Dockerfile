@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Finance Cost Orchestrator Service
 # Build from repository ROOT: docker build -t finance-cost-orchestrator -f services/finance-cost-orchestrator/Dockerfile .
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 

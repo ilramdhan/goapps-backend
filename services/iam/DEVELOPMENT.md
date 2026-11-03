@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go 1.24+
+- Go 1.26+
 - Docker and Docker Compose
 - [migrate CLI](https://github.com/golang-migrate/migrate) (install via `make install-tools`)
 - grpcurl (optional, for testing gRPC endpoints)

@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for Finance Service
 # Build from repository ROOT: docker build -t finance-service -f services/finance/Dockerfile .
 # Stage 1: Build
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 

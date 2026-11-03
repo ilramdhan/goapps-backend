@@ -190,7 +190,7 @@ func (h *SendMessageHandler) notifyIfOffline(ctx context.Context, recipientID uu
 		return
 	}
 	if h.emailDispatch != nil && n != nil {
-		go h.emailDispatch.Dispatch(context.Background(), n)
+		go h.emailDispatch.Dispatch(context.Background(), n) //nolint:gosec // G118: intentionally detached — email must not be cancelled with the request
 	}
 }
 

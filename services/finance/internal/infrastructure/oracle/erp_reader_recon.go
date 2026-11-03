@@ -194,7 +194,7 @@ func scanReconCostRow(rows Rows) (erpintegration.StdRow, error) {
 		item, grade, shade, source, basis, fg sql.NullString
 		nums                                  [8]sql.NullString
 	)
-	dest := []any{&item, &grade, &shade, &source, &basis, &fg}
+	dest := []any{&item, &grade, &shade, &source, &basis, &fg} //nolint:prealloc // flagged by prealloc v1.1+; append growth is negligible here
 	for i := range nums {
 		dest = append(dest, &nums[i])
 	}

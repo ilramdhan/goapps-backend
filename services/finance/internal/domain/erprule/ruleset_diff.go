@@ -99,7 +99,7 @@ func Diff(prev, cur *RuleSet) []RuleChange {
 	if cur == nil {
 		cur = &RuleSet{}
 	}
-	var out []RuleChange
+	var out []RuleChange //nolint:prealloc // nil-on-empty result is intentional; flagged by prealloc v1.1+
 	out = append(out, diffRules(prev, cur)...)
 	out = append(out, diffPrices(prev, cur)...)
 	out = append(out, diffGrades(prev, cur)...)

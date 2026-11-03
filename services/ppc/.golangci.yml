@@ -1,4 +1,4 @@
-# golangci-lint v2.3.0 configuration
+# golangci-lint v2.15.0 configuration
 # https://golangci-lint.run/
 
 version: "2"
@@ -59,6 +59,12 @@ linters:
     goconst:
       min-len: 3
       min-occurrences: 3
+      # goconst >= 1.8 (golangci-lint v2.4+) also counts literals passed as
+      # call arguments and inside composite literals. Exclude those contexts to
+      # keep the v2.3.0 baseline.
+      exclude-types:
+        - Call
+        - CompositeLit
     gosec:
       excludes:
         - G104

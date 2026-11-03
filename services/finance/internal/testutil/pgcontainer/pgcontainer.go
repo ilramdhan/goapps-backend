@@ -184,7 +184,7 @@ func (s *Server) CreateDatabase(t testing.TB, name, template string) *sql.DB {
 	}
 	admin := s.Open(t, "postgres")
 	ctx := context.Background()
-	stmt := "CREATE DATABASE " + name
+	stmt := "CREATE DATABASE " + name //nolint:gosec // G202: identifiers validated by identRe above; DDL cannot take placeholders
 	if template != "" {
 		stmt += " TEMPLATE " + template
 	}

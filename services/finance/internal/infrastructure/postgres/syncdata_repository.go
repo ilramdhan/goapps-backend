@@ -87,7 +87,7 @@ func (r *SyncDataRepository) upsertBatch(
 			sb.WriteString(", ")
 		}
 		base := i*29 + 1 // 29 placeholders per row
-		sb.WriteString(fmt.Sprintf(
+		fmt.Fprintf(&sb,
 			"($%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d)",
 			base, base+1, base+2, base+3, base+4, base+5,
 			base+6, base+7, base+8,
@@ -97,7 +97,7 @@ func (r *SyncDataRepository) upsertBatch(
 			base+19, base+20, base+21, base+22,
 			base+23, base+24, base+25, base+26,
 			base+27, base+28,
-		))
+		)
 
 		args = append(args,
 			item.Period, item.ItemCode, item.GradeCode,

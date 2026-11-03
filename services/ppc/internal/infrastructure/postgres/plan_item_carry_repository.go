@@ -90,7 +90,7 @@ const demandLabelOfPlanItem = `COALESCE((
 func (r *PlanItemRepository) ListCarryCandidates(
 	ctx context.Context, sourceMonth, targetMonth string,
 ) ([]*planitem.CarryCandidate, error) {
-	args := []interface{}{sourceMonth, targetMonth}
+	args := []interface{}{sourceMonth, targetMonth} //nolint:prealloc // flagged by prealloc v1.1+; append growth is negligible here
 
 	statusPlaceholders := make([]string, 0, len(carryEligibleStatuses))
 	for i, s := range carryEligibleStatuses {
@@ -158,7 +158,7 @@ func (r *PlanItemRepository) ListCarryCandidates(
 func (r *PlanItemRepository) CarryCoverage(
 	ctx context.Context, planItemID int64, _ string,
 ) (planitem.Coverage, error) {
-	args := []interface{}{planItemID}
+	args := []interface{}{planItemID} //nolint:prealloc // flagged by prealloc v1.1+; append growth is negligible here
 	covered, count, voidArgs := coverageSubquery("$1", 2)
 	args = append(args, voidArgs...)
 	qtyAway, months := carriedAwaySubqueries("$1")

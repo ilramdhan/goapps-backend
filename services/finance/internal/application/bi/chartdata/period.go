@@ -5,6 +5,7 @@ package chartdata
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -200,7 +201,7 @@ func PeriodLabel(t time.Time, grain string) string {
 		return fmt.Sprintf("%04d-W%02d", y, w)
 	case "QUARTERLY":
 		q := (int(t.Month())-1)/3 + 1
-		return t.Format("2006") + "-Q" + string(rune('0'+q))
+		return t.Format("2006") + "-Q" + strconv.Itoa(q)
 	case "YEARLY":
 		return t.Format("2006")
 	default: // MONTHLY

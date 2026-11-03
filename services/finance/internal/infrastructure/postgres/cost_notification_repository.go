@@ -52,7 +52,7 @@ func (r *CostNotificationRepository) GetByID(ctx context.Context, id int64) (*co
 // List returns a paginated list for the recipient.
 func (r *CostNotificationRepository) List(ctx context.Context, f costnotification.Filter) ([]*costnotification.Notification, int64, error) {
 	where := "FROM cost_notification WHERE cn_recipient_user_id=$1"
-	args := []any{f.RecipientUserID}
+	args := []any{f.RecipientUserID} //nolint:prealloc // flagged by prealloc v1.1+; append growth is negligible here
 	if f.UnreadOnly {
 		where += ` AND cn_is_read=FALSE`
 	}

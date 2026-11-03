@@ -350,7 +350,7 @@ func PermissionInterceptor() grpc.UnaryServerInterceptor {
 func getRequiredPermission(fullMethod string) string {
 	// Permission mapping for Finance service.
 	// Format: {service}.{module}.{entity}.{action}
-	permissions := map[string]string{
+	permissions := map[string]string{ //nolint:gosec // G101 false positive: RPC→permission-code map, no credentials
 		// ErpIntegrationService
 		"/finance.v1.ErpIntegrationService/CreateErpBatch":               "finance.cost.erpintegration.trigger",
 		"/finance.v1.ErpIntegrationService/ListErpBatches":               "finance.cost.erpintegration.view",

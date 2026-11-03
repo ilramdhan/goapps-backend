@@ -181,7 +181,7 @@ grpc-health:
 # Tools Installation
 # =============================================================================
 
-GOLANGCI_LINT_VERSION := v2.3.0
+GOLANGCI_LINT_VERSION := v2.15.0
 AIR_VERSION := v1.52.3
 GOIMPORTS_VERSION := v0.28.0
 GRPCURL_VERSION := v1.9.1

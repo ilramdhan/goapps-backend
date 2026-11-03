@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for PPC (Production Planning & Control) Service.
 # Build from repository ROOT: docker build -t ppc-service -f services/ppc/Dockerfile .
 # Stage 1: Build
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 

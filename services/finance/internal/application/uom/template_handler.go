@@ -58,7 +58,7 @@ func (tw *templateExcelWriter) error() error {
 }
 
 // Handle generates the import template Excel file.
-func (h *TemplateHandler) Handle() (result *TemplateResult, err error) {
+func (h *TemplateHandler) Handle() (result *TemplateResult, err error) { //nolint:gocognit // linear template-building steps; score 21 under gocognit v1.2+
 	// Create Excel file
 	f := excelize.NewFile()
 	defer func() {

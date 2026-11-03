@@ -75,7 +75,7 @@ func (l *MergeCandidateLookup) Candidates(
 ) ([]int64, error) {
 	// $1 product, $2 machine group, $3 anchor shade, $4 deadline, $5 window,
 	// $6 anchor id, then the natural-shade set, then the status set.
-	args := []interface{}{
+	args := []interface{}{ //nolint:prealloc // flagged by prealloc v1.1+; append growth is negligible here
 		anchor.ProductSysID, anchor.MachineGroupID, anchor.ShadeCode,
 		anchor.Deadline, windowDays, anchor.PlanItemID,
 	}

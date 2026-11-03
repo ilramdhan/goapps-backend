@@ -232,7 +232,7 @@ func planEmployeeOT(d *dashboarddomain.Dashboard, f ViewerFilters, now time.Time
 		return factmetric.PlannedQuery{}, fmt.Errorf("%w: too many group filter values", factmetric.ErrInvalidPlan)
 	}
 	expr := employeeOTGroupExpr[groupBy]
-	args := []any{TypeHoursName, w.PeriodFrom, w.PeriodTo, TypeWeekName, TypeWeekExcessName, TypeChronicName, w.Week, employeeOTMaxRows + 1, w.PrevFrom, w.PrevTo}
+	args := []any{TypeHoursName, w.PeriodFrom, w.PeriodTo, TypeWeekName, TypeWeekExcessName, TypeChronicName, w.Week, employeeOTMaxRows + 1, w.PrevFrom, w.PrevTo} //nolint:prealloc // flagged by prealloc v1.1+; append growth is negligible here
 	firstWeek := w.Week
 	if len(w.Weeks) > 0 {
 		firstWeek = w.Weeks[0]

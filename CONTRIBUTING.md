@@ -26,7 +26,7 @@ Thank you for your interest in contributing to `goapps-backend`! This document c
 
 Before contributing, make sure you have:
 
-1. **Go 1.24+** - [Download](https://go.dev/dl/)
+1. **Go 1.26+** - [Download](https://go.dev/dl/)
 2. **Docker & Docker Compose** - For local development
 3. **Buf CLI** - Protocol buffer management
 4. **golangci-lint v2.3.0** - Code linting

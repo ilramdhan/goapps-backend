@@ -54,7 +54,7 @@ Each service needs its own `.github/workflows/<service>.yml`, or no image is eve
 
 | | |
 |---|---|
-| Language | Go 1.24 |
+| Language | Go 1.26 |
 | Transport | gRPC + gRPC-Gateway (REST) |
 | Database | PostgreSQL 18 (pgx v5) |
 | Cache | Redis 7 (go-redis v9) |
@@ -681,7 +681,7 @@ logging: { level, format }
 
 ## 14. Lint Pre-Flight Checklist (MANDATORY before declaring work complete)
 
-> CI runs golangci-lint v2.3.0. Local binary is v1.62.2, so `make lint` will not catch everything -- **manually review every new file** against this checklist. The most common CI failures are listed below with copy-pasteable fixes.
+> CI runs golangci-lint v2.15.0 (Go 1.26). Local binary is v1.62.2, so `make lint` will not catch everything -- **manually review every new file** against this checklist. The most common CI failures are listed below with copy-pasteable fixes.
 
 ### Pattern 1 — int→int32 conversions (gosec G115)
 

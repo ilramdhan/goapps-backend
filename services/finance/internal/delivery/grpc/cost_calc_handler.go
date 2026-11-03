@@ -798,8 +798,9 @@ func scopeToProto(s costcalcdom.JobScope) financev1.CalcJobScope {
 		return financev1.CalcJobScope_CALC_JOB_SCOPE_SINGLE_PRODUCT
 	case costcalcdom.ScopeSingleRoute:
 		return financev1.CalcJobScope_CALC_JOB_SCOPE_SINGLE_ROUTE
+	default: // e.g. ScopeMBBatch has no proto enum value yet
+		return financev1.CalcJobScope_CALC_JOB_SCOPE_UNSPECIFIED
 	}
-	return financev1.CalcJobScope_CALC_JOB_SCOPE_UNSPECIFIED
 }
 
 func protoToCalcJobStatus(p financev1.CalcJobStatus) costcalcdom.JobStatus {

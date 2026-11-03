@@ -8,7 +8,7 @@ import "github.com/mutugading/goapps-backend/services/finance/internal/domain/er
 // ack required) on derived rows (design §7 V-08, row scope).
 func V08() Validator {
 	return validatorFunc{code: CodeV08, fn: func(in *Input) []Finding {
-		var out []Finding
+		var out []Finding //nolint:prealloc // nil-on-empty result is intentional; flagged by prealloc v1.1+
 		for _, r := range in.Rows {
 			out = append(out, v08Row(r)...)
 			out = append(out, v08wRow(r)...)
