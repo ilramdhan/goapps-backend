@@ -2,7 +2,7 @@
 name: 🚀 New Service Request
 about: Request a new microservice to be added
 title: '[SERVICE] '
-labels: 'type: feature, scope: new-service'
+labels: 'type:feature, needs-triage'
 assignees: ''
 ---
 
