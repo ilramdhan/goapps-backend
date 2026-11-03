@@ -590,3 +590,5 @@ Relevant logs
 ---
 
 Thank you for contributing to `goapps-backend`! 🚀
+
+> Found a vulnerability? Do not open a public issue; see [SECURITY.md](SECURITY.md) for how to report it privately.

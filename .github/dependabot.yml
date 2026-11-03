@@ -1,0 +1,50 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: ["chore", "dependencies"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: gomod
+    directories:
+      - /gen
+      - /pkg/costcalc
+      - /services/finance
+      - /services/finance-cost-orchestrator
+      - /services/finance-cost-worker
+      - /services/iam
+      - /services/ppc
+      - /services/shared
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: ["chore", "dependencies"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      go-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: docker
+    directories:
+      - /services/finance
+      - /services/finance-cost-orchestrator
+      - /services/finance-cost-worker
+      - /services/iam
+      - /services/ppc
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: ["chore", "dependencies"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker-minor-patch:
+        update-types: ["minor", "patch"]
