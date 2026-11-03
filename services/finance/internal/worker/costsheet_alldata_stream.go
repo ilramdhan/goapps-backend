@@ -2,7 +2,7 @@ package worker
 
 // costsheet_alldata_stream.go is the streaming counterpart of
 // WriteAllDataSheet (costsheet_alldata.go, which is code generated and must
-// not be hand-edited). It writes the same 149 columns with the same value
+// not be hand-edited). It writes the same 153 columns with the same value
 // rules, but through excelize's StreamWriter so a large flat-only export never
 // materializes the whole sheet in memory.
 

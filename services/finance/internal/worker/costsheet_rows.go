@@ -20,10 +20,10 @@ package worker
 //
 // The CSV carries 96 lines: one leading report-title line ("Report : Find
 // Color by Product") plus 95 data rows. This manifest reproduces ALL 95 of
-// them and adds ONE synthetic divider of its own, so len(costSheetRows) is 96,
-// not 95. The layout splits into two sections:
+// them and adds ONE synthetic divider of its own, so len(costSheetRows) is 100
+// (96 CSV-derived entries plus the 4 route-conversion rows 79a-79d), not 95. The layout splits into two sections:
 //
-//   - Manifest entries 1..84 — the printed sheet. Verified 2026-09-11 by
+//   - Manifest entries 1..88 — the printed sheet (84 reference rows + 79a-79d). Verified 2026-09-11 by
 //     unzipping the reference workbook
 //     (<repo-root>/data-examples/export-product-cost/example-export-param.xlsx):
 //     its "parameter check" sheet ends at row 84 exactly, so this prefix is
@@ -81,8 +81,9 @@ const (
 
 // Excel number formats used across the sheet. Rates, costs, percentages, and
 // final costs all share the same three-decimal format in the template; counts,
-// production, and speed rows share the integer format. Exactly THREE rows carry
-// numFmtDecimal4 — 13 (MB Rate.), 79 (Final Conversion excl MB.) and 81 (Cost
+// production, and speed rows share the integer format. Seven rows carry
+// numFmtDecimal4 — 13 (MB Rate.), 79 (Final Conversion excl MB.), 79a-79d (route
+// conversion stage/total, added P2-T3 by explicit user request) and 81 (Cost
 // lessQL,CO,Frwd.); the justification and the reference-workbook sweep behind
 // that set are documented at the row-13 entry below.
 const (
@@ -92,7 +93,7 @@ const (
 	numFmtText     = "@"
 )
 
-// sheetRow is one of the 96 fixed entries of the product cost sheet: the
+// sheetRow is one of the 100 fixed entries of the product cost sheet: the
 // CSV template's 95 data rows plus the synthetic "others" divider.
 type sheetRow struct {
 	Num       string // the row number as printed in column A ("1.", "33.", "" for separators)
@@ -223,6 +224,14 @@ var costSheetRows = []sheetRow{
 	{Num: "77.", Label: " BC V Loss (Del).", ParamCode: "BC_VAL_LOSS_DELIVERY", Kind: kindSnapshot, NumFmt: numFmtDecimal},
 	{Kind: kindSeparator},
 	{Num: "79.", Label: "Final Conversion excl MB.", ParamCode: "DELIVERY_CONVERSION", Kind: kindSnapshot, NumFmt: numFmtDecimal4},
+	// Conversion stage and route-total rows (P2-T3). Sourced from the Excel
+	// conv-cost-calc.xlsx columns EF/EG/EH/EI: stage cap/del and the route totals.
+	// Inserted as "79a."-"79d." so no existing printed number shifts; row 79
+	// stays DELIVERY_CONVERSION (an RM_RATE alias), kept per user decision.
+	{Num: "79a.", Label: "Conv Cap Stage.", ParamCode: "CAP_CONV_STAGE", Kind: kindSnapshot, NumFmt: numFmtDecimal4},
+	{Num: "79b.", Label: "Conv Del Stage.", ParamCode: "DEL_CONV_STAGE", Kind: kindSnapshot, NumFmt: numFmtDecimal4},
+	{Num: "79c.", Label: "Total Conv Cap (Route).", ParamCode: "TOTAL_CAP_CONV", Kind: kindSnapshot, NumFmt: numFmtDecimal4},
+	{Num: "79d.", Label: "Total Conv Del (Route).", ParamCode: "TOTAL_DEL_CONV", Kind: kindSnapshot, NumFmt: numFmtDecimal4},
 	// Unnumbered section divider in the source template — printed as a label
 	// with dashed filler cells, not a data row.
 	{Label: "For sale of AX Grade only", Kind: kindSeparator},

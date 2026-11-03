@@ -1,6 +1,6 @@
 package worker
 
-// costsheet_export_excel.go renders the fixed 96-entry manifest in
+// costsheet_export_excel.go renders the fixed 100-entry manifest in
 // costsheet_rows.go into an A4 xlsx workbook, one column per route stage.
 // Only the rows before the "others" separator are inside the print area; see
 // applyPrintArea.

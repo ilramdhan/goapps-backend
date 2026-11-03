@@ -9,9 +9,9 @@ import (
 )
 
 // The flat sheet's width is fixed by the legacy workbook it reproduces: nine
-// identity columns (A..I) plus 140 parameter columns (J..ES).
+// identity columns (A..I) plus 144 parameter columns (J..EW).
 const (
-	allDataExpectedColumns  = 149
+	allDataExpectedColumns  = 153
 	allDataExpectedIdentity = 9
 )
 
@@ -140,7 +140,7 @@ func TestWriteAllDataSheet_AbsentParamsStayBlank(t *testing.T) {
 	defer func() { require.NoError(t, f.Close()) }()
 	require.NoError(t, WriteAllDataSheet(f, allDataFixture()))
 
-	for _, cell := range []string{"BH2", "U2", "ES2"} {
+	for _, cell := range []string{"BH2", "U2", "EW2"} {
 		got, err := f.GetCellValue(allDataSheetName, cell)
 		require.NoError(t, err)
 		require.Empty(t, got, "cell %s must be blank", cell)

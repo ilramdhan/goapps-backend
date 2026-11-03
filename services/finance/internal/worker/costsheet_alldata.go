@@ -56,7 +56,7 @@ type allDataColumn struct {
 	Identity int
 }
 
-// allDataColumns is the full 149-column manifest, in sheet order (A..ES).
+// allDataColumns is the full 153-column manifest, in sheet order (A..EW).
 var allDataColumns = []allDataColumn{
 	{Header: "No", Kind: allDataIdentity, Identity: identityNo},
 	{Header: "Left Sys ID", Kind: allDataIdentity, Identity: identityLeftSysID},
@@ -207,6 +207,10 @@ var allDataColumns = []allDataColumn{
 	{Header: "138.R NS loss", Kind: allDataParam, ParamCode: "R_NON_STD_LOSS"},
 	{Header: "139.R BC loss", Kind: allDataParam, ParamCode: "R_BC_LOSS"},
 	{Header: "140.Addl Val Loss", Kind: allDataParam, ParamCode: "ADDITIONAL_VAL_LOSS"},
+	{Header: "141.Conv Cap Stage", Kind: allDataParam, ParamCode: "CAP_CONV_STAGE"},
+	{Header: "142.Conv Del Stage", Kind: allDataParam, ParamCode: "DEL_CONV_STAGE"},
+	{Header: "143.Total Conv Cap (Route)", Kind: allDataParam, ParamCode: "TOTAL_CAP_CONV"},
+	{Header: "144.Total Conv Del (Route)", Kind: allDataParam, ParamCode: "TOTAL_DEL_CONV"},
 }
 
 // =============================================================================
@@ -254,7 +258,7 @@ const (
 )
 
 // WriteAllDataSheet renders the flat "all data" sheet into f: a single header
-// row followed by one row per stage, 149 columns wide.
+// row followed by one row per stage, 153 columns wide.
 //
 // Unlike the transposed per-product sheet, an absent parameter is left as a
 // genuinely empty cell rather than a "-" placeholder — the flat sheet is a data
@@ -301,7 +305,7 @@ func WriteAllDataSheet(f *excelize.File, stages []Stage) error {
 	return nil
 }
 
-// writeAllDataHeader writes row 1 — the 149 column names, verbatim.
+// writeAllDataHeader writes row 1 — the 153 column names, verbatim.
 func writeAllDataHeader(f *excelize.File) error {
 	for i, col := range allDataColumns {
 		cell, err := excelize.CoordinatesToCellName(i+1, 1)

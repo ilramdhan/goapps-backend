@@ -27,8 +27,8 @@ import (
 //     85-95 sit below the divider, outside the print area.
 const (
 	expectedCSVDataRowCount   = 95
-	expectedSheetRowCount     = expectedCSVDataRowCount + 1
-	expectedPrintableRowCount = 84
+	expectedSheetRowCount     = expectedCSVDataRowCount + 1 + 4
+	expectedPrintableRowCount = 84 + 4
 )
 
 const (
@@ -57,17 +57,31 @@ func stageWith(snapshot map[string]string) Stage {
 // Row manifest
 // -----------------------------------------------------------------------------
 
+// isRouteConversionRow reports whether a printed number is one of the four
+// route-conversion rows (79a-79d) that sit outside the CSV template.
+func isRouteConversionRow(num string) bool {
+	switch num {
+	case "79a.", "79b.", "79c.", "79d.":
+		return true
+	}
+	return false
+}
+
 func TestCostSheetRows_HasExactly95CSVRows(t *testing.T) {
 	t.Parallel()
 	assert.Len(t, costSheetRows, expectedSheetRowCount,
-		"the cost sheet layout is fixed at %d CSV rows plus the others divider",
+		"the cost sheet layout is fixed at %d CSV rows, the others divider and 4 route-conversion rows",
 		expectedCSVDataRowCount)
 
-	// Every manifest entry except the synthetic others divider maps to a CSV
-	// data row, so dropping it leaves exactly the CSV's 95.
+	// Every manifest entry except the synthetic others divider and the four
+	// route-conversion rows 79a-79d (not in the CSV, added P2-T3) maps to a CSV
+	// data row, so dropping them leaves exactly the CSV's 95.
 	csvRows := 0
 	for i := range costSheetRows {
 		if costSheetRows[i].Kind == kindSeparator && costSheetRows[i].Label == othersSeparatorLabel {
+			continue
+		}
+		if isRouteConversionRow(costSheetRows[i].Num) {
 			continue
 		}
 		csvRows++
@@ -670,15 +684,21 @@ func separatorRowCount() int {
 // (<repo-root>/data-examples/export-product-cost/example-export-param.xlsx,
 // sheet "parameter check") carries more than 3 dp in exactly three cells, so a
 // fourth numFmtDecimal4 row must be a deliberate act with its own evidence,
-// never an incidental copy-paste.
+// never an incidental copy-paste. Rows 79a-79d are the deliberate exception:
+// added with four decimals by explicit user decision (P2-T3), not from the
+// reference workbook.
 func TestCostSheetRows_Decimal4Set(t *testing.T) {
 	t.Parallel()
 
 	// Keyed by printed row number, with the label the number must still carry.
 	wantDecimal4 := map[string]string{
-		"13.": "MB Rate.",
-		"79.": "Final Conversion excl MB.",
-		"81.": "Cost lessQL,CO,Frwd.",
+		"13.":  "MB Rate.",
+		"79.":  "Final Conversion excl MB.",
+		"79a.": "Conv Cap Stage.",
+		"79b.": "Conv Del Stage.",
+		"79c.": "Total Conv Cap (Route).",
+		"79d.": "Total Conv Del (Route).",
+		"81.":  "Cost lessQL,CO,Frwd.",
 	}
 
 	t.Run("each four-decimal row keeps its format", func(t *testing.T) {
