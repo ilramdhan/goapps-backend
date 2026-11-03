@@ -29,9 +29,16 @@ type fakePPStaging struct {
 	d1, d2 time.Time
 	n      int
 	src    uuid.UUID
+	exist  int
+	called bool
+}
+
+func (f *fakePPStaging) CountPackProdDaily(context.Context, time.Time, time.Time) (int, error) {
+	return f.exist, nil
 }
 
 func (f *fakePPStaging) ReplacePackProdDaily(_ context.Context, d1, d2 time.Time, rows []oracleinfra.PackProdDailyRow, src uuid.UUID) (int, error) {
+	f.called = true
 	f.d1, f.d2, f.n, f.src = d1, d2, len(rows), src
 	return len(rows), nil
 }
@@ -75,4 +82,21 @@ func TestPPLoader_Load_FetchErrorSkipsStaging(t *testing.T) {
 	_, err := l.Load(context.Background(), TargetPPPack, "", uuid.New())
 	assert.Error(t, err)
 	assert.True(t, stg.d1.IsZero())
+}
+
+func TestPPLoader_Load_EmptySourceWithStagedWindow_FailsClosed(t *testing.T) {
+	stg := &fakePPStaging{exist: 10}
+	l := NewPPLoader(&fakePPSource{}, stg, zerolog.Nop())
+	_, err := l.Load(context.Background(), TargetPPPack, "", uuid.New())
+	require.ErrorIs(t, err, ErrPPEmptySource)
+	assert.False(t, stg.called, "staging must not be touched")
+}
+
+func TestPPLoader_Load_EmptySourceEmptyStaging_Proceeds(t *testing.T) {
+	stg := &fakePPStaging{}
+	l := NewPPLoader(&fakePPSource{}, stg, zerolog.Nop())
+	n, err := l.Load(context.Background(), TargetPPPack, "", uuid.New())
+	require.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.True(t, stg.called)
 }

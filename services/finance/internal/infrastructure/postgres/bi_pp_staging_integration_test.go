@@ -123,4 +123,15 @@ func TestBiPPStagingRepository_ReplacePackProdDaily(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1203, n)
 	require.Len(t, read(), 1204)
+
+	// CountPackProdDaily (fail-closed guard, PP-13): inclusive window bounds, empty window = 0.
+	c, err := repo.CountPackProdDaily(ctx, d("1999-01-02"), d("1999-01-05"))
+	require.NoError(t, err)
+	require.Equal(t, 1203, c)
+	c, err = repo.CountPackProdDaily(ctx, d("1999-01-01"), d("1999-01-01"))
+	require.NoError(t, err)
+	require.Equal(t, 1, c, "bounds are inclusive; row outside the later window still counted")
+	c, err = repo.CountPackProdDaily(ctx, d("1999-02-01"), d("1999-02-28"))
+	require.NoError(t, err)
+	require.Equal(t, 0, c)
 }

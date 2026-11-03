@@ -37,6 +37,16 @@ func NewBiPPStagingRepository(db *DB) *BiPPStagingRepository {
 	return &BiPPStagingRepository{db: db}
 }
 
+// CountPackProdDaily returns the number of staging rows with pack_date in [d1, d2].
+func (r *BiPPStagingRepository) CountPackProdDaily(ctx context.Context, d1, d2 time.Time) (int, error) {
+	var n int
+	if err := r.db.QueryRowContext(ctx,
+		`SELECT count(*) FROM bi_pp_stg_pack_prod_daily WHERE pack_date BETWEEN $1 AND $2`, d1, d2).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count staging window: %w", err)
+	}
+	return n, nil
+}
+
 // ReplacePackProdDaily deletes staging rows with pack_date in [d1, d2], batch-inserts rows (ETL§C),
 // then re-aggregates the DAILY/WEEKLY/MONTHLY PP_PACK_* facts of the window and reconciles them (ETL§D/§F),
 // all in one transaction, so combinations that vanished from the source vanish from staging and

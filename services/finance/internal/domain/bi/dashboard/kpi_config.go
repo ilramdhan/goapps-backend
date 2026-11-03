@@ -134,26 +134,19 @@ func parseKpiEntry(m map[string]any, idx int) (KpiEntry, error) {
 		return KpiEntry{}, fmt.Errorf("%w: entry %d format %q is not a recognized number-format", ErrInvalidKpiConfig, idx, format)
 	}
 
-	decimals := 0
-	if v, ok := mergedAsInt(m, "decimals"); ok {
-		decimals = v
-	}
-	if decimals < 0 || decimals > 6 {
-		return KpiEntry{}, fmt.Errorf("%w: entry %d decimals %d out of [0,6]", ErrInvalidKpiConfig, idx, decimals)
+	decimals, err := parseKpiDecimals(m, idx)
+	if err != nil {
+		return KpiEntry{}, err
 	}
 
-	showSparkline := mapBoolVal(m, "show_sparkline")
-	sparkPeriods := 0
-	if v, ok := mergedAsInt(m, "sparkline_periods"); ok {
-		sparkPeriods = v
-	}
-	if showSparkline && sparkPeriods == 0 {
-		sparkPeriods = 12
-	}
+	showSparkline, sparkPeriods := parseKpiSparkline(m)
 
 	crossNumer, crossDenom, crossScale := parseCrossRatioFields(agg, m)
 	crossNumerType, crossDenomType := parseCrossRatioTypes(agg, m)
 	numMetric, denMetric := parseCrossRatioMetrics(agg, m)
+	if (numMetric == "") != (denMetric == "") {
+		return KpiEntry{}, fmt.Errorf("%w: entry %d cross_ratio needs both numerator_metric and denominator_metric", ErrInvalidKpiConfig, idx)
+	}
 
 	return KpiEntry{
 		Label:                       label,
@@ -175,6 +168,30 @@ func parseKpiEntry(m map[string]any, idx int) (KpiEntry, error) {
 		CrossRatioDenominatorType:   crossDenomType,
 		FilterGroup2:                mapStringVal(m, "filter_group_2"),
 	}, nil
+}
+
+// parseKpiDecimals reads and range-checks the optional 'decimals' field (default 0).
+func parseKpiDecimals(m map[string]any, idx int) (int, error) {
+	decimals := 0
+	if v, ok := mergedAsInt(m, "decimals"); ok {
+		decimals = v
+	}
+	if decimals < 0 || decimals > 6 {
+		return 0, fmt.Errorf("%w: entry %d decimals %d out of [0,6]", ErrInvalidKpiConfig, idx, decimals)
+	}
+	return decimals, nil
+}
+
+// parseKpiSparkline reads the sparkline flags; periods default to 12 when the sparkline is shown.
+func parseKpiSparkline(m map[string]any) (show bool, periods int) {
+	show = mapBoolVal(m, "show_sparkline")
+	if v, ok := mergedAsInt(m, "sparkline_periods"); ok {
+		periods = v
+	}
+	if show && periods == 0 {
+		periods = 12
+	}
+	return show, periods
 }
 
 // parseCrossRatioFields reads cross_ratio-specific fields from the raw map.

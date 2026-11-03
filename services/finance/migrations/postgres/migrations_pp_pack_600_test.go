@@ -72,3 +72,14 @@ func TestPackProdDashboards603MigrationText(t *testing.T) {
 	assert.Contains(t, up, "MV_REFRESH_PP_PACK")
 	assert.Contains(t, down, "MV_REFRESH_PP_PACK")
 }
+
+// P011: jadwal WIB (000604).
+func TestPackProdSchedule604MigrationText(t *testing.T) {
+	up := readMig(t, "000604_fix_pp_pack_job_schedule_wib.up.sql")
+	down := readMig(t, "000604_fix_pp_pack_job_schedule_wib.down.sql")
+	assert.Contains(t, up, "'CRON_TZ=Asia/Jakarta 0 7 * * *'")
+	assert.Contains(t, up, "'CRON_TZ=Asia/Jakarta 15 7 * * *'")
+	assert.Contains(t, up, "RAISE EXCEPTION")
+	assert.Contains(t, down, "schedule_cron = '0 7 * * *'")
+	assert.Contains(t, down, "schedule_cron = '15 7 * * *'")
+}

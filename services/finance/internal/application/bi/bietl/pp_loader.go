@@ -2,6 +2,7 @@ package bietl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,6 +19,9 @@ const TargetPPPack = "PP_PACK"
 // PPWindowDays is the re-pull horizon of the packed-production job (PP-03).
 const PPWindowDays = 35
 
+// ErrPPEmptySource is returned when Oracle returns no rows for a window that staging already holds.
+var ErrPPEmptySource = errors.New("packed production view returned 0 rows but staging window is not empty; data left untouched")
+
 // PackProdSource fetches packed-production view rows from Oracle (HRIS_ORACLE connection).
 type PackProdSource interface {
 	FetchPackProdDaily(ctx context.Context, d1, d2 time.Time) ([]oracleinfra.PackProdDailyRow, error)
@@ -27,6 +31,8 @@ type PackProdSource interface {
 // (ETL§C + §D).
 type PackProdStaging interface {
 	ReplacePackProdDaily(ctx context.Context, d1, d2 time.Time, rows []oracleinfra.PackProdDailyRow, sourceID uuid.UUID) (int, error)
+	// CountPackProdDaily returns the staging rows with pack_date in [d1, d2] (fail-closed guard, P011).
+	CountPackProdDaily(ctx context.Context, d1, d2 time.Time) (int, error)
 }
 
 // PPLoader runs the packed-production ETL. It is registered on the router for HRIS_ORACLE +
@@ -55,10 +61,16 @@ func (l *PPLoader) Load(ctx context.Context, targetType, _ string, sourceID uuid
 		return 0, fmt.Errorf("fetch pack prod daily: %w", err)
 	}
 	if len(rows) == 0 {
-		// The window is still replaced (empty source = empty staging and facts), but a whole empty month is
-		// unusual enough to surface in the logs.
-		l.log.Warn().Str("d1", d1.Format(time.DateOnly)).Str("d2", d2.Format(time.DateOnly)).
-			Msg("packed production view returned 0 rows; staging window will be emptied")
+		// Fail-closed (P011): an empty view over a window that staging already holds is far more likely a
+		// broken source (grant, view, connection) than a real zero, so keep the old data and mark the job FAILED.
+		existing, cErr := l.staging.CountPackProdDaily(ctx, d1, d2)
+		if cErr != nil {
+			return 0, fmt.Errorf("count pack prod staging window: %w", cErr)
+		}
+		if existing > 0 {
+			return 0, fmt.Errorf("%w: window %s..%s has %d staged rows", ErrPPEmptySource,
+				d1.Format(time.DateOnly), d2.Format(time.DateOnly), existing)
+		}
 	}
 	n, err := l.staging.ReplacePackProdDaily(ctx, d1, d2, rows, sourceID)
 	if err != nil {
