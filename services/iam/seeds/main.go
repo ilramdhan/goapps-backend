@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -30,36 +31,56 @@ type adminCredentials struct {
 	Password string
 }
 
+// defaultPasswordFileName is the file name used for a generated admin password
+// when SEED_ADMIN_PASSWORD_FILE is not set (placed in os.TempDir()).
+const defaultPasswordFileName = "seed-admin-password.txt"
+
 // getAdminCredentials reads admin credentials from environment variables.
-// If SEED_ADMIN_PASSWORD is not set in non-development environments,
-// a random password is generated and printed to stdout.
-func getAdminCredentials(appEnv string) adminCredentials {
+// If SEED_ADMIN_PASSWORD is not set in non-development environments, a random
+// password is generated and written (mode 0600) to SEED_ADMIN_PASSWORD_FILE
+// (default: <os.TempDir()>/seed-admin-password.txt). The password is never
+// logged or printed; only the file path is logged.
+func getAdminCredentials(appEnv string) (adminCredentials, error) {
 	creds := adminCredentials{
 		Username: envOrDefault("SEED_ADMIN_USERNAME", "admin"),
 		Email:    envOrDefault("SEED_ADMIN_EMAIL", "admin@goapps.local"),
 		Password: os.Getenv("SEED_ADMIN_PASSWORD"),
 	}
 
-	if creds.Password == "" {
-		if appEnv == "development" || appEnv == "" {
-			// Local dev: use a known default
-			creds.Password = "admin123" //nolint:gosec // intentional default for local dev only
-		} else {
-			// Staging/production: generate a random password and print it
-			creds.Password = generateRandomPassword(24)
-			log.Warn().
-				Str("env", appEnv).
-				Msg("SEED_ADMIN_PASSWORD not set — generated random password (printed below, save it now!)")
-			fmt.Printf("\n========================================\n")
-			fmt.Printf("  GENERATED ADMIN PASSWORD: %s\n", creds.Password)
-			fmt.Printf("  USERNAME: %s\n", creds.Username)
-			fmt.Printf("  EMAIL: %s\n", creds.Email)
-			fmt.Printf("  ⚠ Save this password now — it will NOT be shown again.\n")
-			fmt.Printf("========================================\n\n")
-		}
+	if creds.Password != "" {
+		return creds, nil
 	}
 
-	return creds
+	if appEnv == "development" || appEnv == "" {
+		// Local dev: use a known default
+		creds.Password = "admin123" //nolint:gosec // intentional default for local dev only
+		return creds, nil
+	}
+
+	// Staging/production: generate a random password and store it in a
+	// private file instead of logging it (avoids clear-text secrets in logs).
+	creds.Password = generateRandomPassword(24)
+	path := envOrDefault("SEED_ADMIN_PASSWORD_FILE", filepath.Join(os.TempDir(), defaultPasswordFileName))
+	if err := writePasswordFile(path, creds.Password); err != nil {
+		return adminCredentials{}, fmt.Errorf("write generated admin password file: %w", err)
+	}
+	log.Warn().
+		Str("env", appEnv).
+		Str("username", creds.Username).
+		Str("password_file", path).
+		Msg("SEED_ADMIN_PASSWORD not set; generated a random admin password and wrote it to password_file (0600). Retrieve and delete it.")
+
+	return creds, nil
+}
+
+// writePasswordFile writes the password to path with 0600 permissions,
+// replacing any existing file.
+func writePasswordFile(path, pw string) error {
+	if err := os.WriteFile(path, []byte(pw+"\n"), 0o600); err != nil {
+		return err
+	}
+	// WriteFile does not change perms of a pre-existing file.
+	return os.Chmod(path, 0o600)
 }
 
 func envOrDefault(key, fallback string) string {
@@ -283,6 +304,12 @@ func main() {
 	log.Info().Msg("Seeding completed successfully")
 }
 
+func closeDB(db interface{ Close() error }) {
+	if closeErr := db.Close(); closeErr != nil {
+		log.Warn().Err(closeErr).Msg("Failed to close database connection")
+	}
+}
+
 func run() error {
 	// Load configuration
 	cfg, err := config.Load()
@@ -295,18 +322,16 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer func() {
-		if closeErr := db.Close(); closeErr != nil {
-			log.Warn().Err(closeErr).Msg("Failed to close database connection")
-		}
-	}()
+	defer closeDB(db)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	// Resolve admin credentials from environment
-	appEnv := cfg.App.Env
-	creds := getAdminCredentials(appEnv)
+	creds, err := getAdminCredentials(cfg.App.Env)
+	if err != nil {
+		return err
+	}
 
 	// Run all seeds in a transaction
 	return db.Transaction(ctx, func(tx *sql.Tx) error {

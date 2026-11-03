@@ -612,7 +612,7 @@ logging: { level, format }
 
 - `DATABASE_PASSWORD` -- database password
 - `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` -- token signing keys
-- `SEED_ADMIN_PASSWORD` -- IAM admin seed password (random if unset)
+- `SEED_ADMIN_PASSWORD` -- IAM admin seed password (if unset in non-dev: random, written 0600 to `SEED_ADMIN_PASSWORD_FILE`, default `<tmp>/seed-admin-password.txt`; never logged)
 - Config values can be overridden via env: `DATABASE_HOST=prod-db ./bin/service`
 
 ---
