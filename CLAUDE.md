@@ -7,7 +7,11 @@
 
 ## Agent Skills (read first — use them without being asked)
 
-Claude Code skills installed at user level (`~/.claude/skills/`). Invoke the matching skill automatically when the task fits; the user should not have to name it. If a skill is not in the session's skill list, it is not installed on this machine — run `find-skills` (or `npx skills find <topic>`) to locate it, and tell the user the install command instead of guessing.
+Claude Code skills installed at user level (`~/.claude/skills/`). Invoke the matching skill automatically when the task fits; the user should not have to name it. **Missing skill → recommend installing it.** Other devs may not have these skills yet. At the start of a task, if a skill listed below is not in the session's skill list, do not silently skip it:
+1. Tell the user which skill is missing and why it helps this task (one line).
+2. Give the exact install command from "Setting up a new machine" below (public skills: `npx skills add <owner/repo@skill> -g -y`; they load on the next session start). If the skill is not in that list, run `find-skills` / `npx skills find <topic>` and recommend only well-known sources.
+3. Offer to run the install for them; run it only if they agree. Internal skills (`review-pr`, `triage-issue`, `feature-flow`, `backend`, `frontend`, `proto`, `infra`) can't be installed via npx — ask the user to copy them from a teammate's `~/.claude/skills/`.
+4. Meanwhile, continue the task using this CLAUDE.md as the baseline.
 
 | When | Skill |
 |------|-------|
