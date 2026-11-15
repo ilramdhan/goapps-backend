@@ -6,7 +6,7 @@ Refresh your local v2 Postgres (docker container `goapps-v2-postgres`, `localhos
 
 ```
 prod backup -> staging .60 (every Sunday ~06:30 WIB: restore + SANITIZE)
-            -> p9-devsnap (Sunday ~09:30 WIB: pg_dump of the sanitized DBs, profiles full/slim)
+            -> p9-devsnap (Sunday ~09:30 WIB: pg_dump of the sanitized DBs, profiles full/slim/remote)
             -> your laptop (make v2-sync: rsync over ssh, resumable, sha256-verified, restored in your container)
 ```
 
@@ -14,6 +14,7 @@ Raw/unsanitized production data never reaches a laptop. The script refuses any s
 
 Profiles:
 - `slim` (default): iam_db, ppc_db complete; finance_db without the data of the big history/log tables (schema kept). Much faster.
+- `remote`: like `slim` but also without the data of `cst_product_cost` and `cst_mb_cost` (the largest finance tables); much smaller download for slow VPN links. Cost screens stay empty until you calculate data locally.
 - `full`: everything (finance_db is ~30 GB restored, large download).
 
 ## One-time setup
@@ -32,7 +33,7 @@ Required tools: `bash`, `docker`, `ssh`, `rsync`, `sha256sum` or `shasum`. No lo
 4. Start the local stack: `make v2-up`
 
 Optional settings (env or a gitignored `.env.devsnap` in the repo root):
-`DEVSNAP_HOST` (default 192.168.0.60), `DEVSNAP_USER` (devsync), `DEVSNAP_KEY` (path to a specific private key), `DEVSNAP_PROFILE` (slim|full), `DEVSNAP_CACHE` (default `~/.cache/goapps/devsnap`).
+`DEVSNAP_HOST` (default 192.168.0.60), `DEVSNAP_USER` (devsync), `DEVSNAP_KEY` (path to a specific private key), `DEVSNAP_PROFILE` (slim|full|remote), `DEVSNAP_CACHE` (default `~/.cache/goapps/devsnap`).
 
 ## Daily use
 
