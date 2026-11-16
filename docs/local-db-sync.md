@@ -6,7 +6,7 @@ Refresh your local v2 Postgres (docker container `goapps-v2-postgres`, `localhos
 
 ```
 prod backup -> staging .60 (every Sunday ~06:30 WIB: restore + SANITIZE)
-            -> p9-devsnap (Sunday ~09:30 WIB: pg_dump of the sanitized DBs, profiles full/slim)
+            -> p9-devsnap (Sunday ~09:30 WIB: pg_dump of the sanitized DBs, profiles full/slim/remote)
             -> your laptop (make v2-sync: rsync over ssh, resumable, sha256-verified, restored in your container)
 ```
 
@@ -14,6 +14,7 @@ Raw/unsanitized production data never reaches a laptop. The script refuses any s
 
 Profiles:
 - `slim` (default): iam_db, ppc_db complete; finance_db without the data of the big history/log tables (schema kept). Much faster.
+- `remote`: like `slim` but also without the data of `cst_product_cost` and `cst_mb_cost` (the largest finance tables); much smaller download for slow VPN links. Cost screens stay empty until you calculate data locally.
 - `full`: everything (finance_db is ~30 GB restored, large download).
 
 ## One-time setup
@@ -32,20 +33,21 @@ Required tools: `bash`, `docker`, `ssh`, `rsync`, `sha256sum` or `shasum`. No lo
 4. Start the local stack: `make v2-up`
 
 Optional settings (env or a gitignored `.env.devsnap` in the repo root):
-`DEVSNAP_HOST` (default 192.168.0.60), `DEVSNAP_USER` (devsync), `DEVSNAP_KEY` (path to a specific private key), `DEVSNAP_PROFILE` (slim|full), `DEVSNAP_CACHE` (default `~/.cache/goapps/devsnap`).
+`DEVSNAP_HOST` (default 192.168.0.60), `DEVSNAP_USER` (devsync), `DEVSNAP_KEY` (path to a specific private key), `DEVSNAP_PROFILE` (slim|full|remote), `DEVSNAP_CACHE` (default `~/.cache/goapps/devsnap`).
 
 ## Daily use
 
 ```bash
 make v2-sync                              # slim profile, asks for confirmation
 make v2-sync ARGS="--profile full"        # everything
+make v2-sync ARGS="--profile remote"      # slow VPN: smallest download, no cost results
 make v2-sync ARGS="--dry-run"             # download + verify only
 make v2-sync ARGS="--yes --keep-cache"    # no prompt, keep older cached snapshots
 ```
 
 Steps: preflight, fetch MANIFEST, verify "sanitized p9", download (resumable, shows speed), sha256 verify, confirm, restore into `<db>_refresh` and swap, `make v2-migrate`, print versions. If a download is interrupted, re-run: it resumes, and files already cached and valid are skipped.
 
-Timing: the download is bound by your link/VPN speed (slim is a fraction of full); restore of slim takes minutes, full much longer. After the first sync, a re-run with the same snapshot skips the download.
+Timing: the download is bound by your link/VPN speed. finance_db dump sizes (2026-11): full ~2.7 GB, slim ~1.5 GB (~3 h at 135 KB/s VPN), remote ~60 MB (~8 min); restore of slim takes minutes, full much longer. After the first sync, a re-run with the same snapshot skips the download.
 
 ## After sync
 
@@ -61,9 +63,10 @@ Timing: the download is bound by your link/VPN speed (slim is a fraction of full
 | `Permission denied (publickey)` | Your public key is not registered, or the wrong key is used: set `DEVSNAP_KEY`; ask the admin |
 | `checksum mismatch` | The bad file was removed from the cache; re-run `make v2-sync` |
 | `REFUSING ... not 'sanitized p9'` | Do NOT work around it. Tell the admin; the snapshot is unsafe |
-| not enough disk | Need ~3x the snapshot size free; use `slim`, free space, or set `DEVSNAP_CACHE` |
+| not enough disk | Need ~3x the snapshot size free; use `slim` or `remote`, free space, or set `DEVSNAP_CACHE` |
 | `pg_restore ... errors` | All-or-nothing: all three databases are restored as `*_refresh` first and swapped in one transaction, so on any error ALL local databases stay untouched. Check the message (version mismatch, disk) and re-run |
 | `not enough disk inside container` | A restore needs ~12x the compressed snapshot (slim 1.5 GB → ~17 GB) free inside Docker, on top of the current databases. Colima: `colima stop && colima start --disk 100` (can only grow); Docker Desktop: Settings > Resources > Disk image size; `docker system prune` frees unused images |
+| `profile 'remote' is not in this snapshot` | The snapshot was built before the remote profile existed; wait for the next Sunday build or use `slim` |
 | snapshot missing / rsync error | Snapshot is built Sunday ~09:30 WIB; during build or refresh it may be briefly unavailable, retry |
 | `v2-migrate` fails | Install `migrate` CLI; then run `make v2-migrate` manually |
 

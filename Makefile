@@ -171,7 +171,7 @@ v2-seed:
 	done
 
 # Refresh local v2 from the weekly SANITIZED developer snapshot (rsync over ssh, resumable).
-# Flags: make v2-sync ARGS="--profile full --yes"  (see scripts/v2-sync.sh --help, docs/local-db-sync.md)
+# Flags: make v2-sync ARGS="--profile full|remote --yes"  (see scripts/v2-sync.sh --help, docs/local-db-sync.md)
 v2-sync:
 	@scripts/v2-sync.sh $(ARGS)
 

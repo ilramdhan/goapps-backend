@@ -3,7 +3,7 @@
 # SANITIZED developer snapshot published on the staging DB server (see docs/local-db-sync.md).
 # Works with bash 3.2 (macOS), Ubuntu and WSL2. No host Postgres tools needed: restore runs in the container.
 #
-# Usage: scripts/v2-sync.sh [--profile slim|full] [--dry-run] [--yes] [--keep-cache] [-h]
+# Usage: scripts/v2-sync.sh [--profile slim|full|remote] [--dry-run] [--yes] [--keep-cache] [-h]
 #   --dry-run     download + verify only, no restore
 #   --yes         do not ask for confirmation
 #   --keep-cache  keep older snapshots in the cache too (default: keep only the latest one)
@@ -47,7 +47,7 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-case "$PROFILE" in slim|full) ;; *) die "profile must be slim or full, got '$PROFILE'" ;; esac
+case "$PROFILE" in slim|full|remote) ;; *) die "profile must be slim, full or remote, got '$PROFILE'" ;; esac
 
 if [ -z "${DOCKER_HOST:-}" ] && ! docker info >/dev/null 2>&1 && [ -S "$HOME/.colima/default/docker.sock" ]; then
   export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"
