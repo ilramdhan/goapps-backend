@@ -8,9 +8,10 @@ var NumericFillReaders = map[string]func(*Entity) (float64, bool){
 		}
 		return 0, false
 	},
-	// D30: mbs_dozing is the retired, contaminated legacy column. The READER is kept
-	// on purpose until L1 repoints lookup_source_column — removing it now would empty
-	// out the fills that are currently live.
+	// D30: mbs_dozing is the retired, contaminated legacy column. L1 (migration 000611)
+	// repoints MB_SP_DOZING to mbs_run_ldr_pct. The READER is kept on purpose so any
+	// parameter still configured with mbs_dozing (and the 000611 down path) keeps
+	// filling instead of going empty.
 	// G5 (2026-08-22): it is deliberately NOT registered in mst_lookup_master_column
 	// (pulled back out of 000477), so it is not offered in the "Source Column"
 	// dropdown — its units are mixed across heads (oil-rate vs run_ldr scale). It is a
