@@ -103,11 +103,15 @@ type Machine struct {
 	NoOfPosition int32 `protobuf:"varint,6,opt,name=no_of_position,json=noOfPosition,proto3" json:"no_of_position,omitempty"`
 	// Number of ends per position.
 	NoOfEnd int32 `protobuf:"varint,7,opt,name=no_of_end,json=noOfEnd,proto3" json:"no_of_end,omitempty"`
-	// Machine speed in m/min.
+	// Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server.
+	//
+	// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 	McSpeed float64 `protobuf:"fixed64,8,opt,name=mc_speed,json=mcSpeed,proto3" json:"mc_speed,omitempty"`
 	// Optional machine RPM.
 	MachineRpm *float64 `protobuf:"fixed64,9,opt,name=machine_rpm,json=machineRpm,proto3,oneof" json:"machine_rpm,omitempty"`
-	// Machine efficiency as a percentage (default 95).
+	// Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server.
+	//
+	// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 	McEfficiency float64 `protobuf:"fixed64,10,opt,name=mc_efficiency,json=mcEfficiency,proto3" json:"mc_efficiency,omitempty"`
 	// Optional power cost per day in USD.
 	PowerPerDay *float64 `protobuf:"fixed64,11,opt,name=power_per_day,json=powerPerDay,proto3,oneof" json:"power_per_day,omitempty"`
@@ -230,6 +234,7 @@ func (x *Machine) GetNoOfEnd() int32 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 func (x *Machine) GetMcSpeed() float64 {
 	if x != nil {
 		return x.McSpeed
@@ -244,6 +249,7 @@ func (x *Machine) GetMachineRpm() float64 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 func (x *Machine) GetMcEfficiency() float64 {
 	if x != nil {
 		return x.McEfficiency
@@ -399,11 +405,15 @@ type CreateMachineRequest struct {
 	NoOfPosition int32 `protobuf:"varint,5,opt,name=no_of_position,json=noOfPosition,proto3" json:"no_of_position,omitempty"`
 	// Number of ends per position (≥ 1).
 	NoOfEnd int32 `protobuf:"varint,6,opt,name=no_of_end,json=noOfEnd,proto3" json:"no_of_end,omitempty"`
-	// Machine speed in m/min (≥ 0).
+	// Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server.
+	//
+	// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 	McSpeed float64 `protobuf:"fixed64,7,opt,name=mc_speed,json=mcSpeed,proto3" json:"mc_speed,omitempty"`
 	// Optional machine RPM.
 	MachineRpm *float64 `protobuf:"fixed64,8,opt,name=machine_rpm,json=machineRpm,proto3,oneof" json:"machine_rpm,omitempty"`
-	// Machine efficiency percentage (0-100).
+	// Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server.
+	//
+	// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 	McEfficiency float64 `protobuf:"fixed64,9,opt,name=mc_efficiency,json=mcEfficiency,proto3" json:"mc_efficiency,omitempty"`
 	// Optional power cost per day in USD.
 	PowerPerDay *float64 `protobuf:"fixed64,10,opt,name=power_per_day,json=powerPerDay,proto3,oneof" json:"power_per_day,omitempty"`
@@ -515,6 +525,7 @@ func (x *CreateMachineRequest) GetNoOfEnd() int32 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 func (x *CreateMachineRequest) GetMcSpeed() float64 {
 	if x != nil {
 		return x.McSpeed
@@ -529,6 +540,7 @@ func (x *CreateMachineRequest) GetMachineRpm() float64 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 func (x *CreateMachineRequest) GetMcEfficiency() float64 {
 	if x != nil {
 		return x.McEfficiency
@@ -826,11 +838,15 @@ type UpdateMachineRequest struct {
 	NoOfPosition *int32 `protobuf:"varint,5,opt,name=no_of_position,json=noOfPosition,proto3,oneof" json:"no_of_position,omitempty"`
 	// Updated number of ends per position.
 	NoOfEnd *int32 `protobuf:"varint,6,opt,name=no_of_end,json=noOfEnd,proto3,oneof" json:"no_of_end,omitempty"`
-	// Updated machine speed.
+	// Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server.
+	//
+	// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 	McSpeed *float64 `protobuf:"fixed64,7,opt,name=mc_speed,json=mcSpeed,proto3,oneof" json:"mc_speed,omitempty"`
 	// Updated machine RPM.
 	MachineRpm *float64 `protobuf:"fixed64,8,opt,name=machine_rpm,json=machineRpm,proto3,oneof" json:"machine_rpm,omitempty"`
-	// Updated machine efficiency percentage.
+	// Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server.
+	//
+	// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 	McEfficiency *float64 `protobuf:"fixed64,9,opt,name=mc_efficiency,json=mcEfficiency,proto3,oneof" json:"mc_efficiency,omitempty"`
 	// Updated power cost per day.
 	PowerPerDay *float64 `protobuf:"fixed64,10,opt,name=power_per_day,json=powerPerDay,proto3,oneof" json:"power_per_day,omitempty"`
@@ -944,6 +960,7 @@ func (x *UpdateMachineRequest) GetNoOfEnd() int32 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 func (x *UpdateMachineRequest) GetMcSpeed() float64 {
 	if x != nil && x.McSpeed != nil {
 		return *x.McSpeed
@@ -958,6 +975,7 @@ func (x *UpdateMachineRequest) GetMachineRpm() float64 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in finance/v1/yarn_master.proto.
 func (x *UpdateMachineRequest) GetMcEfficiency() float64 {
 	if x != nil && x.McEfficiency != nil {
 		return *x.McEfficiency
@@ -12185,7 +12203,7 @@ func (x *GetLookupFillValuesRequest) GetSourceParamCode() string {
 type GetLookupFillValuesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Base  *v1.BaseResponse       `protobuf:"bytes,1,opt,name=base,proto3" json:"base,omitempty"`
-	// param_code → numeric value to fill (e.g., {"MC_SPEED": 800.0, "MC_EFFICIENCY": 92.0}).
+	// param_code → numeric value to fill (e.g., {"NO_OF_POSITION": 504.0, "NO_OF_END": 2.0}).
 	NumericFills map[string]float64 `protobuf:"bytes,2,rep,name=numeric_fills,json=numericFills,proto3" json:"numeric_fills,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
 	// param_code → text value to fill (e.g., {"MB_DYE_NAME": "CIBA RED"}).
 	TextFills map[string]string `protobuf:"bytes,3,rep,name=text_fills,json=textFills,proto3" json:"text_fills,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -21165,7 +21183,7 @@ var File_finance_v1_yarn_master_proto protoreflect.FileDescriptor
 const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\n" +
 	"\x1cfinance/v1/yarn_master.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xcd\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x14finance/v1/uom.proto\x1a\x1cgoogle/api/annotations.proto\"\xd5\n" +
 	"\n" +
 	"\aMachine\x12\x1d\n" +
 	"\n" +
@@ -21176,12 +21194,12 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\vmc_location\x18\x05 \x01(\tR\n" +
 	"mcLocation\x12$\n" +
 	"\x0eno_of_position\x18\x06 \x01(\x05R\fnoOfPosition\x12\x1a\n" +
-	"\tno_of_end\x18\a \x01(\x05R\anoOfEnd\x12\x19\n" +
-	"\bmc_speed\x18\b \x01(\x01R\amcSpeed\x12$\n" +
+	"\tno_of_end\x18\a \x01(\x05R\anoOfEnd\x12\x1d\n" +
+	"\bmc_speed\x18\b \x01(\x01B\x02\x18\x01R\amcSpeed\x12$\n" +
 	"\vmachine_rpm\x18\t \x01(\x01H\x00R\n" +
-	"machineRpm\x88\x01\x01\x12#\n" +
+	"machineRpm\x88\x01\x01\x12'\n" +
 	"\rmc_efficiency\x18\n" +
-	" \x01(\x01R\fmcEfficiency\x12'\n" +
+	" \x01(\x01B\x02\x18\x01R\fmcEfficiency\x12'\n" +
 	"\rpower_per_day\x18\v \x01(\x01H\x01R\vpowerPerDay\x88\x01\x01\x12\x1b\n" +
 	"\tis_active\x18\f \x01(\bR\bisActive\x12\x14\n" +
 	"\x05notes\x18\r \x01(\tR\x05notes\x12!\n" +
@@ -21224,7 +21242,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x15_mc_bobbin_per_trollyB\x0e\n" +
 	"\f_mc_box_costB\x18\n" +
 	"\x16_mc_captive_per_bobbinB\x0f\n" +
-	"\r_mc_weightage\"\xbf\v\n" +
+	"\r_mc_weightage\"\xc3\v\n" +
 	"\x14CreateMachineRequest\x12,\n" +
 	"\fmachine_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x1eR\vmachineCode\x12,\n" +
 	"\fmachine_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\vmachineName\x12 \n" +
@@ -21232,11 +21250,11 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\vmc_location\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\n" +
 	"mcLocation\x12-\n" +
 	"\x0eno_of_position\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fnoOfPosition\x12#\n" +
-	"\tno_of_end\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\anoOfEnd\x12)\n" +
-	"\bmc_speed\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\amcSpeed\x12$\n" +
+	"\tno_of_end\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\anoOfEnd\x12+\n" +
+	"\bmc_speed\x18\a \x01(\x01B\x10\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00\x18\x01R\amcSpeed\x12$\n" +
 	"\vmachine_rpm\x18\b \x01(\x01H\x00R\n" +
-	"machineRpm\x88\x01\x01\x12<\n" +
-	"\rmc_efficiency\x18\t \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00Y@)\x00\x00\x00\x00\x00\x00\x00\x00R\fmcEfficiency\x12'\n" +
+	"machineRpm\x88\x01\x01\x12>\n" +
+	"\rmc_efficiency\x18\t \x01(\x01B\x19\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00Y@)\x00\x00\x00\x00\x00\x00\x00\x00\x18\x01R\fmcEfficiency\x12'\n" +
 	"\rpower_per_day\x18\n" +
 	" \x01(\x01H\x01R\vpowerPerDay\x88\x01\x01\x12\x1e\n" +
 	"\x05notes\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x05notes\x12!\n" +
@@ -21287,7 +21305,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"machine_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tmachineId\"j\n" +
 	"\x12GetMachineResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12'\n" +
-	"\x04data\x18\x02 \x01(\v2\x13.finance.v1.MachineR\x04data\"\x89\r\n" +
+	"\x04data\x18\x02 \x01(\v2\x13.finance.v1.MachineR\x04data\"\x8d\r\n" +
 	"\x14UpdateMachineRequest\x12'\n" +
 	"\n" +
 	"machine_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tmachineId\x121\n" +
@@ -21296,11 +21314,11 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\vmc_location\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dH\x02R\n" +
 	"mcLocation\x88\x01\x01\x122\n" +
 	"\x0eno_of_position\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x03R\fnoOfPosition\x88\x01\x01\x12(\n" +
-	"\tno_of_end\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01H\x04R\anoOfEnd\x88\x01\x01\x12.\n" +
-	"\bmc_speed\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00H\x05R\amcSpeed\x88\x01\x01\x12$\n" +
+	"\tno_of_end\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01H\x04R\anoOfEnd\x88\x01\x01\x120\n" +
+	"\bmc_speed\x18\a \x01(\x01B\x10\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00\x18\x01H\x05R\amcSpeed\x88\x01\x01\x12$\n" +
 	"\vmachine_rpm\x18\b \x01(\x01H\x06R\n" +
-	"machineRpm\x88\x01\x01\x12A\n" +
-	"\rmc_efficiency\x18\t \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00Y@)\x00\x00\x00\x00\x00\x00\x00\x00H\aR\fmcEfficiency\x88\x01\x01\x12'\n" +
+	"machineRpm\x88\x01\x01\x12C\n" +
+	"\rmc_efficiency\x18\t \x01(\x01B\x19\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00Y@)\x00\x00\x00\x00\x00\x00\x00\x00\x18\x01H\aR\fmcEfficiency\x88\x01\x01\x12'\n" +
 	"\rpower_per_day\x18\n" +
 	" \x01(\x01H\bR\vpowerPerDay\x88\x01\x01\x12#\n" +
 	"\x05notes\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aH\tR\x05notes\x88\x01\x01\x12 \n" +

@@ -69,7 +69,7 @@ func newTestMachine(t *testing.T) *machinedomain.Entity {
 	t.Helper()
 	entity, err := machinedomain.New(
 		"MC001", "Machine One", "DTY", "Hall A",
-		96, 2, 600.0, nil, 0.95, nil,
+		96, 2, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		"test notes", "admin",
@@ -91,8 +91,6 @@ func TestCreateHandler_Handle(t *testing.T) {
 			Location:     "Hall A",
 			NoOfPosition: 96,
 			NoOfEnd:      2,
-			MCSpeed:      600.0,
-			MCEfficiency: 0.95,
 			Notes:        "test notes",
 			CreatedBy:    "admin",
 		}
@@ -318,7 +316,7 @@ func TestListHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 
 		m1 := newTestMachine(t)
-		m2, err := machinedomain.New("MC002", "Machine Two", "POY", "Hall B", 48, 1, 400.0, nil, 0.90, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "", "admin")
+		m2, err := machinedomain.New("MC002", "Machine Two", "POY", "Hall B", 48, 1, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "", "admin")
 		require.NoError(t, err)
 
 		mockRepo.On("List", ctx, mock.AnythingOfType("machine.ListFilter")).Return(

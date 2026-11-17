@@ -16,9 +16,7 @@ type Entity struct {
 	location           string
 	noOfPosition       int
 	noOfEnd            int
-	mcSpeed            float64
 	machineRPM         *float64
-	mcEfficiency       float64
 	powerPerDay        *float64
 	mpPerDay           *float64
 	ohsPerDay          *float64
@@ -51,7 +49,7 @@ type Entity struct {
 func New(
 	code, name, mcType, location string,
 	noOfPosition, noOfEnd int,
-	mcSpeed float64, machineRPM *float64, mcEfficiency float64, powerPerDay *float64,
+	machineRPM *float64, powerPerDay *float64,
 	mpPerDay, ohsPerDay, sparesPerDay, kgsLostChange *float64,
 	vb1Qty, vb2Qty, vb3Qty, vb4Qty, vb5Qty *float64,
 	mcPoyBobbinWeight, mcTotFxdCst, mcBobbinPerTrolly, mcBoxCost, mcCaptivePerBobbin, mcWeightage *float64,
@@ -68,9 +66,9 @@ func New(
 	}
 	return &Entity{
 		id: uuid.New(), code: code, name: name, mcType: mcType, location: location,
-		noOfPosition: noOfPosition, noOfEnd: noOfEnd, mcSpeed: mcSpeed, machineRPM: machineRPM,
-		mcEfficiency: mcEfficiency, powerPerDay: powerPerDay,
-		mpPerDay: mpPerDay, ohsPerDay: ohsPerDay, sparesPerDay: sparesPerDay, kgsLostChange: kgsLostChange,
+		noOfPosition: noOfPosition, noOfEnd: noOfEnd, machineRPM: machineRPM,
+		powerPerDay: powerPerDay,
+		mpPerDay:    mpPerDay, ohsPerDay: ohsPerDay, sparesPerDay: sparesPerDay, kgsLostChange: kgsLostChange,
 		vb1Qty: vb1Qty, vb2Qty: vb2Qty, vb3Qty: vb3Qty, vb4Qty: vb4Qty, vb5Qty: vb5Qty,
 		mcPoyBobbinWeight: mcPoyBobbinWeight, mcTotFxdCst: mcTotFxdCst, mcBobbinPerTrolly: mcBobbinPerTrolly,
 		mcBoxCost: mcBoxCost, mcCaptivePerBobbin: mcCaptivePerBobbin, mcWeightage: mcWeightage,
@@ -86,7 +84,7 @@ func Reconstruct(
 	id uuid.UUID,
 	code, name, mcType, location string,
 	noOfPosition, noOfEnd int,
-	mcSpeed float64, machineRPM *float64, mcEfficiency float64, powerPerDay *float64,
+	machineRPM *float64, powerPerDay *float64,
 	mpPerDay, ohsPerDay, sparesPerDay, kgsLostChange *float64,
 	vb1Qty, vb2Qty, vb3Qty, vb4Qty, vb5Qty *float64,
 	mcPoyBobbinWeight, mcTotFxdCst, mcBobbinPerTrolly, mcBoxCost, mcCaptivePerBobbin, mcWeightage *float64,
@@ -96,9 +94,9 @@ func Reconstruct(
 ) *Entity {
 	return &Entity{
 		id: id, code: code, name: name, mcType: mcType, location: location,
-		noOfPosition: noOfPosition, noOfEnd: noOfEnd, mcSpeed: mcSpeed, machineRPM: machineRPM,
-		mcEfficiency: mcEfficiency, powerPerDay: powerPerDay,
-		mpPerDay: mpPerDay, ohsPerDay: ohsPerDay, sparesPerDay: sparesPerDay, kgsLostChange: kgsLostChange,
+		noOfPosition: noOfPosition, noOfEnd: noOfEnd, machineRPM: machineRPM,
+		powerPerDay: powerPerDay,
+		mpPerDay:    mpPerDay, ohsPerDay: ohsPerDay, sparesPerDay: sparesPerDay, kgsLostChange: kgsLostChange,
 		vb1Qty: vb1Qty, vb2Qty: vb2Qty, vb3Qty: vb3Qty, vb4Qty: vb4Qty, vb5Qty: vb5Qty,
 		mcPoyBobbinWeight: mcPoyBobbinWeight, mcTotFxdCst: mcTotFxdCst, mcBobbinPerTrolly: mcBobbinPerTrolly,
 		mcBoxCost: mcBoxCost, mcCaptivePerBobbin: mcCaptivePerBobbin, mcWeightage: mcWeightage,
@@ -129,14 +127,8 @@ func (e *Entity) NoOfPosition() int { return e.noOfPosition }
 // NoOfEnd returns the number of ends.
 func (e *Entity) NoOfEnd() int { return e.noOfEnd }
 
-// MCSpeed returns the machine speed in m/min.
-func (e *Entity) MCSpeed() float64 { return e.mcSpeed }
-
 // MachineRPM returns the optional machine RPM.
 func (e *Entity) MachineRPM() *float64 { return e.machineRPM }
-
-// MCEfficiency returns the machine efficiency percentage.
-func (e *Entity) MCEfficiency() float64 { return e.mcEfficiency }
 
 // PowerPerDay returns the optional power cost per day in USD.
 func (e *Entity) PowerPerDay() *float64 { return e.powerPerDay }
@@ -220,9 +212,7 @@ type UpdateInput struct {
 	Location           *string
 	NoOfPosition       *int
 	NoOfEnd            *int
-	MCSpeed            *float64
 	MachineRPM         *float64
-	MCEfficiency       *float64
 	PowerPerDay        *float64
 	MpPerDay           *float64
 	OhsPerDay          *float64
@@ -307,14 +297,8 @@ func (e *Entity) applyMachineParams(in UpdateInput) {
 	if in.NoOfEnd != nil {
 		e.noOfEnd = *in.NoOfEnd
 	}
-	if in.MCSpeed != nil {
-		e.mcSpeed = *in.MCSpeed
-	}
 	if in.MachineRPM != nil {
 		e.machineRPM = in.MachineRPM
-	}
-	if in.MCEfficiency != nil {
-		e.mcEfficiency = *in.MCEfficiency
 	}
 }
 

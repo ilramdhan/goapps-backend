@@ -10,9 +10,10 @@ import (
 
 // machineNumericReaders maps lookup_source_column → value extractor for mst_machine entity.
 // Add new entries here when new fillable columns are added to mst_lookup_master_column.
+// NOTE: mc_speed / mc_efficiency are intentionally absent. Speed and efficiency are
+// per-product parameters now, so "Sync dari master" must never overwrite them from
+// the machine master (legacy mst_machine values are kept but ignored).
 var machineNumericReaders = map[string]func(*machine.Entity) (float64, bool){
-	"mc_speed":       func(e *machine.Entity) (float64, bool) { return e.MCSpeed(), true },
-	"mc_efficiency":  func(e *machine.Entity) (float64, bool) { return e.MCEfficiency(), true },
 	"no_of_position": func(e *machine.Entity) (float64, bool) { return float64(e.NoOfPosition()), true },
 	"no_of_end":      func(e *machine.Entity) (float64, bool) { return float64(e.NoOfEnd()), true },
 	"machine_rpm": func(e *machine.Entity) (float64, bool) {

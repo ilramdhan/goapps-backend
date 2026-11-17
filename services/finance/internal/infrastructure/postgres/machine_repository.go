@@ -32,15 +32,15 @@ func (r *MachineRepository) Create(ctx context.Context, entity *machine.Entity) 
 	query := `
 		INSERT INTO mst_machine (
 			mc_id, mc_code, mc_name, mc_type, mc_location,
-			no_of_position, no_of_end, mc_speed, machine_rpm,
-			mc_efficiency, power_per_day,
+			no_of_position, no_of_end, machine_rpm,
+			power_per_day,
 			mp_per_day, ohs_per_day, spares_per_day, kgs_lost_change,
 			vb1_qty, vb2_qty, vb3_qty, vb4_qty, vb5_qty,
 			mc_poy_bobbin_weight, mc_tot_fxd_cst, mc_bobbin_per_trolly,
 			mc_box_cost, mc_captive_per_bobbin, mc_weightage,
 			is_active, notes,
 			created_at, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		entity.ID(),
@@ -50,9 +50,7 @@ func (r *MachineRepository) Create(ctx context.Context, entity *machine.Entity) 
 		nullableString(entity.Location()),
 		entity.NoOfPosition(),
 		entity.NoOfEnd(),
-		entity.MCSpeed(),
 		entity.MachineRPM(),
-		entity.MCEfficiency(),
 		entity.PowerPerDay(),
 		entity.MpPerDay(),
 		entity.OhsPerDay(),
@@ -166,29 +164,27 @@ func (r *MachineRepository) Update(ctx context.Context, entity *machine.Entity) 
 			mc_location          = $4,
 			no_of_position       = $5,
 			no_of_end            = $6,
-			mc_speed             = $7,
-			machine_rpm          = $8,
-			mc_efficiency        = $9,
-			power_per_day        = $10,
-			mp_per_day           = $11,
-			ohs_per_day          = $12,
-			spares_per_day       = $13,
-			kgs_lost_change      = $14,
-			vb1_qty              = $15,
-			vb2_qty              = $16,
-			vb3_qty              = $17,
-			vb4_qty              = $18,
-			vb5_qty              = $19,
-			mc_poy_bobbin_weight = $20,
-			mc_tot_fxd_cst       = $21,
-			mc_bobbin_per_trolly = $22,
-			mc_box_cost          = $23,
-			mc_captive_per_bobbin = $24,
-			mc_weightage         = $25,
-			is_active            = $26,
-			notes                = $27,
-			updated_at           = $28,
-			updated_by           = $29
+			machine_rpm          = $7,
+			power_per_day        = $8,
+			mp_per_day           = $9,
+			ohs_per_day          = $10,
+			spares_per_day       = $11,
+			kgs_lost_change      = $12,
+			vb1_qty              = $13,
+			vb2_qty              = $14,
+			vb3_qty              = $15,
+			vb4_qty              = $16,
+			vb5_qty              = $17,
+			mc_poy_bobbin_weight = $18,
+			mc_tot_fxd_cst       = $19,
+			mc_bobbin_per_trolly = $20,
+			mc_box_cost          = $21,
+			mc_captive_per_bobbin = $22,
+			mc_weightage         = $23,
+			is_active            = $24,
+			notes                = $25,
+			updated_at           = $26,
+			updated_by           = $27
 		WHERE mc_id = $1 AND deleted_at IS NULL
 	`
 	result, err := r.db.ExecContext(ctx, query,
@@ -198,9 +194,7 @@ func (r *MachineRepository) Update(ctx context.Context, entity *machine.Entity) 
 		nullableString(entity.Location()),
 		entity.NoOfPosition(),
 		entity.NoOfEnd(),
-		entity.MCSpeed(),
 		entity.MachineRPM(),
-		entity.MCEfficiency(),
 		entity.PowerPerDay(),
 		entity.MpPerDay(),
 		entity.OhsPerDay(),
@@ -285,8 +279,8 @@ func (r *MachineRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool,
 func (r *MachineRepository) selectCols() string {
 	return `
 		SELECT mc_id, mc_code, mc_name, mc_type, mc_location,
-		       no_of_position, no_of_end, mc_speed, machine_rpm,
-		       mc_efficiency, power_per_day,
+		       no_of_position, no_of_end, machine_rpm,
+		       power_per_day,
 		       mp_per_day, ohs_per_day, spares_per_day, kgs_lost_change,
 		       vb1_qty, vb2_qty, vb3_qty, vb4_qty, vb5_qty,
 		       mc_poy_bobbin_weight, mc_tot_fxd_cst, mc_bobbin_per_trolly,
@@ -317,9 +311,7 @@ type machineDTO struct {
 	Location           sql.NullString
 	NoOfPosition       int
 	NoOfEnd            int
-	MCSpeed            float64
 	MachineRPM         sql.NullFloat64
-	MCEfficiency       float64
 	PowerPerDay        sql.NullFloat64
 	MpPerDay           sql.NullFloat64
 	OhsPerDay          sql.NullFloat64
@@ -355,9 +347,7 @@ func (d *machineDTO) toEntity() *machine.Entity {
 		d.Location.String,
 		d.NoOfPosition,
 		d.NoOfEnd,
-		d.MCSpeed,
 		nullableFloat64Ptr(d.MachineRPM),
-		d.MCEfficiency,
 		nullableFloat64Ptr(d.PowerPerDay),
 		nullableFloat64Ptr(d.MpPerDay),
 		nullableFloat64Ptr(d.OhsPerDay),
@@ -389,8 +379,8 @@ func (r *MachineRepository) scanOne(row *sql.Row) (*machine.Entity, error) {
 	var d machineDTO
 	err := row.Scan(
 		&d.ID, &d.Code, &d.Name, &d.MCType, &d.Location,
-		&d.NoOfPosition, &d.NoOfEnd, &d.MCSpeed, &d.MachineRPM,
-		&d.MCEfficiency, &d.PowerPerDay,
+		&d.NoOfPosition, &d.NoOfEnd, &d.MachineRPM,
+		&d.PowerPerDay,
 		&d.MpPerDay, &d.OhsPerDay, &d.SparesPerDay, &d.KgsLostChange,
 		&d.Vb1Qty, &d.Vb2Qty, &d.Vb3Qty, &d.Vb4Qty, &d.Vb5Qty,
 		&d.McPoyBobbinWeight, &d.McTotFxdCst, &d.McBobbinPerTrolly,
@@ -411,8 +401,8 @@ func (r *MachineRepository) scanRow(rows *sql.Rows) (*machine.Entity, error) {
 	var d machineDTO
 	err := rows.Scan(
 		&d.ID, &d.Code, &d.Name, &d.MCType, &d.Location,
-		&d.NoOfPosition, &d.NoOfEnd, &d.MCSpeed, &d.MachineRPM,
-		&d.MCEfficiency, &d.PowerPerDay,
+		&d.NoOfPosition, &d.NoOfEnd, &d.MachineRPM,
+		&d.PowerPerDay,
 		&d.MpPerDay, &d.OhsPerDay, &d.SparesPerDay, &d.KgsLostChange,
 		&d.Vb1Qty, &d.Vb2Qty, &d.Vb3Qty, &d.Vb4Qty, &d.Vb5Qty,
 		&d.McPoyBobbinWeight, &d.McTotFxdCst, &d.McBobbinPerTrolly,

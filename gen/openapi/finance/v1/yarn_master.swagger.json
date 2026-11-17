@@ -5431,7 +5431,7 @@
         "mcSpeed": {
           "type": "number",
           "format": "double",
-          "description": "Updated machine speed."
+          "description": "Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server."
         },
         "machineRpm": {
           "type": "number",
@@ -5441,7 +5441,7 @@
         "mcEfficiency": {
           "type": "number",
           "format": "double",
-          "description": "Updated machine efficiency percentage."
+          "description": "Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server."
         },
         "powerPerDay": {
           "type": "number",
@@ -6574,7 +6574,7 @@
         "mcSpeed": {
           "type": "number",
           "format": "double",
-          "description": "Machine speed in m/min (≥ 0)."
+          "description": "Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server."
         },
         "machineRpm": {
           "type": "number",
@@ -6584,7 +6584,7 @@
         "mcEfficiency": {
           "type": "number",
           "format": "double",
-          "description": "Machine efficiency percentage (0-100)."
+          "description": "Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server."
         },
         "powerPerDay": {
           "type": "number",
@@ -7739,7 +7739,7 @@
             "type": "number",
             "format": "double"
           },
-          "description": "param_code → numeric value to fill (e.g., {\"MC_SPEED\": 800.0, \"MC_EFFICIENCY\": 92.0})."
+          "description": "param_code → numeric value to fill (e.g., {\"NO_OF_POSITION\": 504.0, \"NO_OF_END\": 2.0})."
         },
         "textFills": {
           "type": "object",
@@ -9440,7 +9440,7 @@
         "mcSpeed": {
           "type": "number",
           "format": "double",
-          "description": "Machine speed in m/min."
+          "description": "Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server."
         },
         "machineRpm": {
           "type": "number",
@@ -9450,7 +9450,7 @@
         "mcEfficiency": {
           "type": "number",
           "format": "double",
-          "description": "Machine efficiency as a percentage (default 95)."
+          "description": "Deprecated (2026-11): speed/efficiency are per-product params (MC_SPEED / MC_EFFICIENCY), no longer stored via the machine master. Ignored by the server."
         },
         "powerPerDay": {
           "type": "number",
