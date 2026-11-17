@@ -22,6 +22,7 @@ type HeadSnap struct {
 	FGProductID   *int64
 	ShadeCode     string
 	ShadeName     string
+	Code          string // mbh_code (Oracle CMBH_CODE), part of the head shade set (L-10 hshade)
 	IsBoughtout   bool
 	Denier        *float64
 	Filament      *int

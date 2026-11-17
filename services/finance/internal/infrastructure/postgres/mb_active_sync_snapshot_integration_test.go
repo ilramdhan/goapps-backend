@@ -44,8 +44,8 @@ func TestMBActiveSyncSnapshotReader(t *testing.T) {
 		VALUES ('ITEST-PROD', $1, 'prod', TRUE, 'itest', 'itest') RETURNING cpm_product_sys_id`, poyType).Scan(&mbProd))
 
 	headLive, headDead := uuid.New(), uuid.New()
-	exec(`INSERT INTO mst_mb_head (mbh_id, mbh_oracle_sys_id, mbh_mb_costing, mbh_is_active, mbh_check_status, mbh_current_version, mbh_entry_status, mbh_shade_code, created_by)
-		VALUES ($1, 'SYS1', 'H-LIVE', TRUE, 'Valid', 1, 'VALIDATED', 'Y-145-T', 'itest')`, headLive)
+	exec(`INSERT INTO mst_mb_head (mbh_id, mbh_oracle_sys_id, mbh_mb_costing, mbh_is_active, mbh_check_status, mbh_current_version, mbh_entry_status, mbh_shade_code, mbh_code, created_by)
+		VALUES ($1, 'SYS1', 'H-LIVE', TRUE, 'Valid', 1, 'VALIDATED', 'Y-145-T', 'C-145', 'itest')`, headLive)
 	exec(`INSERT INTO mst_mb_head (mbh_id, mbh_oracle_sys_id, mbh_mb_costing, mbh_is_active, mbh_current_version, mbh_entry_status, created_by, deleted_at)
 		VALUES ($1, 'SYS2', 'H-DEAD', FALSE, 1, 'VALIDATED', 'itest', NOW())`, headDead)
 
@@ -94,6 +94,7 @@ func TestMBActiveSyncSnapshotReader(t *testing.T) {
 	require.True(t, hl.Live())
 	require.Equal(t, "Valid", hl.CheckStatus)
 	require.Equal(t, "Y-145-T", hl.ShadeCode)
+	require.Equal(t, "C-145", hl.Code)
 	require.True(t, snap.Heads[byID[headDead]].Deleted)
 	require.False(t, snap.Heads[byID[headDead]].Live())
 

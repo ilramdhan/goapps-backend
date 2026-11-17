@@ -29,7 +29,7 @@ const mbasHeadsQuery = `
 	SELECT mbh_id, COALESCE(mbh_oracle_sys_id, ''), COALESCE(mbh_mb_costing, ''), COALESCE(mbh_orion_item_code, ''),
 	       mbh_is_active, deleted_at IS NOT NULL, COALESCE(mbh_check_status, ''), COALESCE(mbh_entry_status, ''),
 	       mbh_superseded_by_head_id, mbh_cost_product_id, mbh_fg_product_id,
-	       COALESCE(mbh_shade_code, ''), COALESCE(mbh_shade_name, ''), COALESCE(mbh_is_boughtout, FALSE),
+	       COALESCE(mbh_shade_code, ''), COALESCE(mbh_shade_name, ''), COALESCE(mbh_code, ''), COALESCE(mbh_is_boughtout, FALSE),
 	       mbh_denier, mbh_filament, created_at
 	FROM mst_mb_head
 	ORDER BY created_at, mbh_id`
@@ -124,7 +124,7 @@ func mbasQueryHeads(ctx context.Context, q supersedeQuerier) ([]mbactivesync.Hea
 			fil  sql.NullInt64
 		)
 		if err := rows.Scan(&h.ID, &h.SysID, &h.MBCosting, &h.OrionItemCode, &h.IsActive, &h.Deleted,
-			&h.CheckStatus, &h.EntryStatus, &sup, &cost, &fg, &h.ShadeCode, &h.ShadeName, &h.IsBoughtout,
+			&h.CheckStatus, &h.EntryStatus, &sup, &cost, &fg, &h.ShadeCode, &h.ShadeName, &h.Code, &h.IsBoughtout,
 			&den, &fil, &h.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan snapshot head: %w", err)
 		}
