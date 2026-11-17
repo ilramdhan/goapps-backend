@@ -30,8 +30,8 @@ func (r *Resolver) fillFromMachine(ctx context.Context, mcCode, triggerParamCode
 		}
 	}
 
-	label := fmt.Sprintf("%s (%s) — %d pos, %.0f m/min, %.1f%% eff",
-		mc.Name(), mc.MCType(), mc.NoOfPosition(), mc.MCSpeed(), mc.MCEfficiency())
+	label := fmt.Sprintf("%s (%s) — %d pos",
+		mc.Name(), mc.MCType(), mc.NoOfPosition())
 	return FillResult{
 		Numeric:      nums,
 		Text:         map[string]string{},
