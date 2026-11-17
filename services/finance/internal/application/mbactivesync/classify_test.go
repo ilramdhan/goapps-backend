@@ -198,6 +198,16 @@ func TestClassifyRows_UpdateShadeAndLDR(t *testing.T) {
 			t.Fatalf("%+v", got)
 		}
 	})
+	t.Run("Q14 empty head shade on root → SET_HEAD_SHADE + APPLY", func(t *testing.T) {
+		he := h
+		he.ShadeCode, he.ShadeName = "", ""
+		s2 := spin(1, he, 380, 144, "TBL", "Y145T", 1.39, named)
+		snap2 := &Snapshot{Heads: []HeadSnap{he}, Spins: []SpinSnap{s2}, POYs: snap.POYs}
+		got := classify(t, []FileRow{frow(1, "S1", "POY1", spec380, "Y145T", 1.39)}, snap2)[1]
+		if !got.HasSub(SubSetHeadShade) || got.HasReason(ReasonHeadShadeDiffers) || got.Decision != DecisionApply {
+			t.Fatalf("%+v", got)
+		}
+	})
 	t.Run("LDR not ACTUAL → SET_LDR even when equal", func(t *testing.T) {
 		s2 := spin(1, h, 380, 144, "TBL", "Y145T", 1.39, named, ldrCalc)
 		snap2 := &Snapshot{Heads: snap.Heads, Spins: []SpinSnap{s2}, POYs: snap.POYs}
@@ -578,4 +588,33 @@ func TestSelectDuplicateSource_DenTieExact(t *testing.T) {
 	if got := SelectDuplicateSource([]*SpinSnap{&b, &a}, r); got.ID != a.ID {
 		t.Errorf("den tie → created_at; got %v", got.ID)
 	}
+}
+
+func TestClassifyRows_EmptyHeadShadeMultiRoot(t *testing.T) {
+	he := head(1, "S1", "", true)
+	he.ShadeName = ""
+	pys := []POYSnap{poy(1, "POY1", "Y145T"), poy(2, "POY2", "X438T"), poy(3, "POY3", "Y-145-T")}
+	run := func(sh2, poy2 string) map[int]*RowPlan {
+		s1 := spin(1, he, 380, 144, "TBL", "Y145T", 1.39, named)
+		s2 := spin(2, he, 150, 48, "RD", sh2, 1.39, named)
+		snap := &Snapshot{Heads: []HeadSnap{he}, Spins: []SpinSnap{s1, s2}, POYs: pys}
+		return classify(t, []FileRow{
+			frow(1, "S1", "POY1", spec380, "Y145T", 1.39),
+			frow(2, "S1", poy2, "POY 150/48/RD", sh2, 1.39),
+		}, snap)
+	}
+	t.Run("different shades → both REVIEW", func(t *testing.T) {
+		for ln, p := range run("X438T", "POY2") {
+			if p.HasSub(SubSetHeadShade) || p.Decision != DecisionReview || !p.HasReason(ReasonHeadShadeDiffers) {
+				t.Fatalf("ln %d: %+v", ln, p)
+			}
+		}
+	})
+	t.Run("same loose shade → APPLY with SET_HEAD_SHADE", func(t *testing.T) {
+		for ln, p := range run("Y-145-T", "POY3") {
+			if p.HasReason(ReasonHeadShadeDiffers) || !p.HasSub(SubSetHeadShade) || p.Decision != DecisionApply {
+				t.Fatalf("ln %d: %+v", ln, p)
+			}
+		}
+	})
 }

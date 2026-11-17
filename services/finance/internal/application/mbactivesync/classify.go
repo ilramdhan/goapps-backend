@@ -304,6 +304,7 @@ func ClassifyRows(rows []FileRow, snap *Snapshot) ([]*RowPlan, error) {
 		c.classifyAllocated(p, allocs[p.Row.Ln])
 	}
 	c.assignGenerateRoles(plans)
+	finalizeHeadShade(plans)
 	for _, p := range plans {
 		p.decide()
 	}
@@ -475,15 +476,47 @@ func (p *RowPlan) headSubs() {
 // rootHeadShade is rule 7b / Q12 for a row whose spin is (or becomes) the root:
 // re-validate copies the head shade onto the root spin, so the head shade must
 // equal the target. Same loosely → SET_HEAD_SHADE (format only, no cascade);
-// really different (or empty) → REVIEW head_shade_differs.
+// really different → REVIEW head_shade_differs. Q14: an EMPTY head shade is
+// treated like a format-only difference (SET_HEAD_SHADE, stays APPLY).
 func (p *RowPlan) rootHeadShade() {
 	h := p.Head
-	if NormShadeLoose(h.ShadeCode) == "" || NormShadeLoose(h.ShadeCode) != NormShadeLoose(p.TargetShadeCode) {
+	hl := NormShadeLoose(h.ShadeCode)
+	if hl != "" && hl != NormShadeLoose(p.TargetShadeCode) {
 		p.addReason(ReasonHeadShadeDiffers)
 		return
 	}
 	if shadeDiffers(h.ShadeCode, h.ShadeName, p.TargetShadeCode, p.TargetShadeName) {
 		p.addSub(SubSetHeadShade)
+	}
+}
+
+// finalizeHeadShade completes Q14 per head: the head shade belongs to the whole
+// head, so when several root rows of one head with an EMPTY head shade would each
+// write SET_HEAD_SHADE, they must agree (NormShadeLoose) on the target shade.
+// Disagreement → every row of that head loses SET_HEAD_SHADE and becomes REVIEW
+// head_shade_differs (otherwise apply order decides and later rows get SKIPPED).
+func finalizeHeadShade(plans []*RowPlan) {
+	groups := map[*HeadSnap][]*RowPlan{}
+	for _, p := range plans {
+		if p.Head != nil && p.HasSub(SubSetHeadShade) && NormShadeLoose(p.Head.ShadeCode) == "" {
+			groups[p.Head] = append(groups[p.Head], p)
+		}
+	}
+	for _, g := range groups {
+		agree := true
+		for _, p := range g[1:] {
+			if NormShadeLoose(p.TargetShadeCode) != NormShadeLoose(g[0].TargetShadeCode) {
+				agree = false
+				break
+			}
+		}
+		if agree {
+			continue
+		}
+		for _, p := range g {
+			p.removeSub(SubSetHeadShade)
+			p.addReason(ReasonHeadShadeDiffers)
+		}
 	}
 }
 
