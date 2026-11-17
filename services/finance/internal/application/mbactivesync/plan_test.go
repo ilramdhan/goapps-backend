@@ -83,6 +83,9 @@ func TestWriteSummary_ExpectedVsActual(t *testing.T) {
 	assert.Contains(t, s, "KEEP")
 	assert.Contains(t, s, "TOTAL")
 	assert.Contains(t, s, "DEACTIVATE_HEAD")
+	assert.Contains(t, s, "SUPERSEDE_HEAD")
+	assert.Contains(t, s, "Supersede pairs:")
+	assert.NotContains(t, s, "no_live_spin")
 	assert.Contains(t, s, "Rows by decision")
 }
 

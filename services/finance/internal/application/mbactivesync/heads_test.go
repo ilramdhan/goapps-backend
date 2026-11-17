@@ -87,7 +87,7 @@ func checkHeadActions(t *testing.T, hp *HeadPlan, want map[string]headWant) {
 // ORCHID-like (old live head not in file, CS successor without spins → SUPERSEDE
 // phase C on the generated ROOT), RICH GOLD-like (successor live spin → phase B),
 // BERING-like reversed case (successor inactive → REACTIVATE row, phase D) and a
-// family pair whose old head has no live spin.
+// family pair whose old head has no live spin (head-only SUPERSEDE_HEAD, Q15).
 func TestPlanHeads_SupersedePairs(t *testing.T) {
 	orchOld := namedHead(1, "O-OLD", "MGT ORCHID MN 3299-B", "3299-01", true)
 	orchCS := namedHead(2, "O-CS", "MGT ORCHID MN 3299-CS-D-05094-B", "3299-01", true)
@@ -129,8 +129,8 @@ func TestPlanHeads_SupersedePairs(t *testing.T) {
 		sup(orchOld, sOrch):    {KindSupersede, PhaseC, DecisionApply, nil, "ln:1"},
 		sup(goldOld, sGoldOld): {KindSupersede, PhaseB, DecisionApply, nil, "spin:" + sGoldN.ID.String()},
 		sup(berOld, sBerOld):   {KindSupersede, PhaseD, DecisionApply, []string{ReasonNewHeadInactive}, "spin:" + sBerND.ID.String()},
-		// HEAVEN: pair found but the old head has no live spin → plain deactivate.
-		"dh:" + heavOld.ID.String(): {KindDeactivateHead, PhaseB, DecisionApply, []string{ReasonNoLiveSpin}, ""},
+		// HEAVEN: pair found, old head has no live spin, new head live → head-only supersede in B.
+		"suph:" + heavOld.ID.String(): {KindSupersedeHead, PhaseB, DecisionApply, nil, ""},
 	})
 	if len(hp.Pairs) != 4 {
 		t.Errorf("pairs = %d, want 4", len(hp.Pairs))
@@ -394,11 +394,9 @@ func TestPlanHeads_Deterministic(t *testing.T) {
 }
 
 // Reversed pair (Q2: new head inactive, reactivated by its row) whose old head has
-// no live spin: the planner emits DEACTIVATE_HEAD(no_live_spin) in phase B, not a
-// SUPERSEDE, so no superseded_by link (deliberate deviation from design §3.6, see
-// ReasonNoLiveSpin). Counts keeps the pair in Pairs and splits DEACTIVATE_HEAD so
-// the R2 §7 figure (170) excludes no_live_spin.
-func TestPlanHeads_ReversedPairWithoutLiveSpinIsDeactivate(t *testing.T) {
+// no live spin: head-only SUPERSEDE_HEAD (Q15) in phase D after the REACTIVATE row,
+// reason new_head_inactive, no new_spin_ref. Counts splits pairs spin-level/head-only.
+func TestPlanHeads_ReversedPairWithoutLiveSpinIsHeadOnlySupersede(t *testing.T) {
 	oldH := namedHead(1, "R-OLD", "MGT MILIM GR 7001-D-00100-C", "7001-01", true)
 	newH := namedHead(2, "R-NEW", "MGT MILIM GR 7001-ND-D-00200-B", "7001-01", false)
 	plain := namedHead(3, "D1", "MGT PLAIN 3", "A1", true)
@@ -417,13 +415,63 @@ func TestPlanHeads_ReversedPairWithoutLiveSpinIsDeactivate(t *testing.T) {
 		t.Fatalf("row 1 action = %s, want REACTIVATE", got[1].Action)
 	}
 	checkHeadActions(t, hp, map[string]headWant{
-		"dh:" + oldH.ID.String():  {KindDeactivateHead, PhaseB, DecisionApply, []string{ReasonNoLiveSpin}, ""},
-		"dh:" + plain.ID.String(): {KindDeactivateHead, PhaseB, DecisionApply, nil, ""},
+		"suph:" + oldH.ID.String(): {KindSupersedeHead, PhaseD, DecisionApply, []string{ReasonNewHeadInactive}, ""},
+		"dh:" + plain.ID.String():  {KindDeactivateHead, PhaseB, DecisionApply, nil, ""},
 	})
-	if a := actionsByKey(hp)["dh:"+oldH.ID.String()]; a.NewHead == nil || a.NewHead.ID != newH.ID {
-		t.Errorf("no_live_spin deactivate must keep the pair's new head for the report: %+v", a.NewHead)
+	a := actionsByKey(hp)["suph:"+oldH.ID.String()]
+	if a.NewHead == nil || a.NewHead.ID != newH.ID || a.OldSpin != nil || a.ActivatorRow != got[1] {
+		t.Errorf("head-only supersede: new head / old spin / activator wrong: %+v", a)
 	}
-	want := HeadCounts{Pairs: 1, PairsWithoutLiveSpin: 1, DeactivateHead: 1, DeactivateHeadNoLiveSpin: 1}
+	want := HeadCounts{Pairs: 1, PairsHeadOnly: 1, SupersedeHead: 1, DeactivateHead: 1}
+	if c := hp.Counts(); c != want {
+		t.Errorf("counts = %+v, want %+v", c, want)
+	}
+
+	// The activator row going to REVIEW pulls the head-only supersede to REVIEW too.
+	got[1].Decision = DecisionReview
+	hp.SyncDecisions()
+	if a.Decision != DecisionReview || !a.HasReason(ReasonTargetRowReview) {
+		t.Errorf("after activator REVIEW: %s %v", a.Decision, a.Reasons)
+	}
+	got[1].Decision = DecisionApply
+	hp.SyncDecisions()
+	if a.Decision != DecisionApply || a.HasReason(ReasonTargetRowReview) {
+		t.Errorf("after activator APPLY: %s %v", a.Decision, a.Reasons)
+	}
+}
+
+// Pair without live old spin whose new head is live (KEEP row): head-only
+// SUPERSEDE_HEAD in phase B, no activator row. An inactive new head without any
+// actionable row cannot be reactivated → REPORT_HEAD(new_head_inactive,no_activating_row).
+func TestPlanHeads_HeadOnlySupersedeLiveNewHeadAndNoActivator(t *testing.T) {
+	oldH := namedHead(1, "L-OLD", "MGT LARANJA OR 47-C", "Y47T", true)
+	newH := namedHead(2, "L-NEW", "MGT LARANJA OR 47-N-D-01795-C", "Y47T", true)
+	old2 := namedHead(3, "T-OLD", "MGT TURMERIC YW 2101-D-00860-C", "Y2101", true)
+	new2 := namedHead(4, "T-NEW", "MGT TURMERIC YW 2101-N-D-02227-B", "Y2101", false)
+
+	sNew := spin(1, newH, 380, 144, "TBL", "Y47T", 1.2, named)
+
+	snap := &Snapshot{
+		Heads: []HeadSnap{oldH, newH, old2, new2},
+		Spins: []SpinSnap{sNew},
+		POYs:  []POYSnap{poy(10, "P-L", "Y47T"), poy(11, "P-T", "Y2101")},
+	}
+	rows := []FileRow{
+		frow(1, "L-NEW", "P-L", spec380, "Y47T", 1.2),
+		frow(2, "T-NEW", "P-UNKNOWN", spec380, "Y2101", 1), // REPORT_ONLY: not actionable
+	}
+	got, hp := planAll(t, rows, snap)
+	if got[1].Action != ActionKeep || got[2].Action != ActionReportOnly {
+		t.Fatalf("row actions = %s %s, want KEEP REPORT_ONLY", got[1].Action, got[2].Action)
+	}
+	checkHeadActions(t, hp, map[string]headWant{
+		"suph:" + oldH.ID.String(): {KindSupersedeHead, PhaseB, DecisionApply, nil, ""},
+		"rh:" + old2.ID.String():   {KindReportHead, PhaseNone, DecisionSkip, []string{ReasonNewHeadInactive, ReasonNoActivatingRow}, ""},
+	})
+	if a := actionsByKey(hp)["suph:"+oldH.ID.String()]; a.ActivatorRow != nil {
+		t.Errorf("live new head must not have an activator row")
+	}
+	want := HeadCounts{Pairs: 2, PairsHeadOnly: 2, SupersedeHead: 1, ReportHead: 1}
 	if c := hp.Counts(); c != want {
 		t.Errorf("counts = %+v, want %+v", c, want)
 	}

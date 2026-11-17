@@ -12,7 +12,11 @@ type HeadKind string
 
 // Head/spin action kinds.
 const (
-	KindSupersede      HeadKind = "SUPERSEDE"
+	KindSupersede HeadKind = "SUPERSEDE"
+	// KindSupersedeHead is the head-only supersede (Q15): a family+shade pair whose
+	// old head has no live spin. Apply sets mbh_superseded_by_head_id old→new and
+	// deactivates the old head; no spin is repointed. item_key suph:<old_head>.
+	KindSupersedeHead  HeadKind = "SUPERSEDE_HEAD"
 	KindDeactivateHead HeadKind = "DEACTIVATE_HEAD"
 	KindDeactivateSpin HeadKind = "DEACTIVATE_SPIN"
 	KindReportSpin     HeadKind = "REPORT_SPIN"
@@ -20,7 +24,7 @@ const (
 )
 
 var headKindOrder = map[HeadKind]int{
-	KindSupersede: 0, KindDeactivateHead: 1, KindDeactivateSpin: 2, KindReportHead: 3, KindReportSpin: 4,
+	KindSupersede: 0, KindSupersedeHead: 1, KindDeactivateHead: 2, KindDeactivateSpin: 3, KindReportHead: 4, KindReportSpin: 5,
 }
 
 // Head/spin action reasons.
@@ -34,24 +38,16 @@ const (
 	ReasonDeadHead         = "dead_head"          // live spin under a non-live head whose SYSID is not in the file (Q6)
 	ReasonNewHeadInactive  = "new_head_inactive"  // reversed case (Q2): new head is reactivated by its row first
 	ReasonTargetRowReview  = "target_row_review"  // the new spin's row is not APPLY → the pair is reviewed too
-	// ReasonNoLiveSpin: the old head of a family+shade pair has no live spin, so it
-	// is a plain DEACTIVATE_HEAD in phase B instead of a SUPERSEDE.
-	//
-	// DEVIATION from design §3.6 (DEACTIVATE_HEAD excludes the old side of a pair),
-	// kept on purpose: with no live spin there is nothing to repoint. Consequence on
-	// real data (R2 §4: only ORCHID, MILIM, BERING have live spins among the 13 pair
-	// heads): ~10 pair heads (6 of the 7 Q2 reversed cases and HEAVEN BLUE) get no
-	// superseded_by link, no supersede batch and no MB cost product deactivation
-	// (DeactivateHead does not touch products, part2 §5.7). The summary must report
-	// len(Pairs) against R2 §7 SUPERSEDE=13 and split DEACTIVATE_HEAD by this reason
-	// (see HeadPlan.Counts) so the R2 §7 figure of 170 excludes these.
-	ReasonNoLiveSpin = "no_live_spin"
+	ReasonNoActivatingRow  = "no_activating_row"  // head-only supersede: new head inactive and no actionable row reactivates it
 )
 
 // SupersedePair is one old→new head pair found by the family+shade rule.
 type SupersedePair struct {
 	Old *HeadSnap
 	New *HeadSnap
+	// HeadOnly: the old head has no live spin, so the pair is one SUPERSEDE_HEAD
+	// item (Q15) instead of one SUPERSEDE item per live old spin.
+	HeadOnly bool
 }
 
 // HeadAction is one row of plan-heads.csv.
@@ -59,8 +55,13 @@ type HeadAction struct {
 	Kind    HeadKind
 	OldHead *HeadSnap // SUPERSEDE/DEACTIVATE_HEAD/REPORT_HEAD; head of the spin for *_SPIN
 	OldSpin *SpinSnap // SUPERSEDE (old live spin), DEACTIVATE_SPIN, REPORT_SPIN
-	NewHead *HeadSnap // SUPERSEDE; informative for supersede_no_live_spin
+	NewHead *HeadSnap // SUPERSEDE / SUPERSEDE_HEAD
 	NewRow  *RowPlan  // SUPERSEDE: the file row whose (existing or created) spin replaces OldSpin
+
+	// ActivatorRow (SUPERSEDE_HEAD, new head inactive): the new head's row whose
+	// ACT_HEAD reactivates it first (earliest phase, then ln). It drives Phase and
+	// Decision only; new_spin_ref stays empty (no spin is repointed).
+	ActivatorRow *RowPlan
 
 	// NewSysID is the successor SYSID without head (REPORT_HEAD pending_new_recipe).
 	NewSysID string
@@ -73,12 +74,14 @@ type HeadAction struct {
 	Decision Decision
 }
 
-// ItemKey is the stable key of the item: sup:<old_head>:<old_spin>, dh:<head>,
-// ds:<spin>, rs:<spin>, rh:<head>.
+// ItemKey is the stable key of the item: sup:<old_head>:<old_spin>,
+// suph:<old_head> (head-only supersede, Q15), dh:<head>, ds:<spin>, rs:<spin>, rh:<head>.
 func (a *HeadAction) ItemKey() string {
 	switch a.Kind {
 	case KindSupersede:
 		return "sup:" + a.OldHead.ID.String() + ":" + a.OldSpin.ID.String()
+	case KindSupersedeHead:
+		return "suph:" + a.OldHead.ID.String()
 	case KindDeactivateHead:
 		return "dh:" + a.OldHead.ID.String()
 	case KindDeactivateSpin:
@@ -115,40 +118,43 @@ func (a *HeadAction) addReason(r string) {
 // HeadPlan is the head/spin part of the plan.
 type HeadPlan struct {
 	Actions []*HeadAction   // sorted by kind, then item key
-	Pairs   []SupersedePair // family+shade pairs (R2: 13), including pairs without live old spins
+	Pairs   []SupersedePair // family+shade pairs (R2: 13), spin-level and head-only
 
 	// exempt[ln][oldSpinID]: old spins resolved by the SUPERSEDE whose new spin is row ln.
 	exempt map[int]map[uuid.UUID]bool
 }
 
-// HeadCounts reconciles the head plan with R2 §7 (see ReasonNoLiveSpin).
+// HeadCounts reconciles the head plan with R2 §7.
 type HeadCounts struct {
-	Pairs                    int // family+shade pairs (R2 §7 SUPERSEDE expectation: 13)
-	PairsWithoutLiveSpin     int // pairs resolved as DEACTIVATE_HEAD(no_live_spin) or REPORT_HEAD(no_live_spin,has_refs)
-	Supersede                int // SUPERSEDE items (one per live old spin)
-	DeactivateHead           int // DEACTIVATE_HEAD excluding no_live_spin (R2 §7: 170)
-	DeactivateHeadNoLiveSpin int // DEACTIVATE_HEAD of pair old heads without live spin
-	DeactivateSpin           int
-	ReportHead               int
-	ReportSpin               int
+	Pairs          int // family+shade pairs (R2 §7 SUPERSEDE expectation: 13) = PairsSpinLevel + PairsHeadOnly
+	PairsSpinLevel int // pairs whose old head has live spins (→ SUPERSEDE / REPORT_SPIN items)
+	PairsHeadOnly  int // pairs whose old head has no live spin (→ SUPERSEDE_HEAD, or REPORT_HEAD)
+	Supersede      int // SUPERSEDE items (one per live old spin)
+	SupersedeHead  int // SUPERSEDE_HEAD items (head-only, Q15)
+	DeactivateHead int // R2 §7: 170
+	DeactivateSpin int
+	ReportHead     int
+	ReportSpin     int
 }
 
-// Counts returns the per-kind totals with DEACTIVATE_HEAD split by no_live_spin.
+// Counts returns the per-kind totals and the spin-level / head-only pair split.
 func (hp *HeadPlan) Counts() HeadCounts {
 	c := HeadCounts{Pairs: len(hp.Pairs)}
-	for _, a := range hp.Actions {
-		if a.HasReason(ReasonNoLiveSpin) {
-			c.PairsWithoutLiveSpin++
+	for _, p := range hp.Pairs {
+		if p.HeadOnly {
+			c.PairsHeadOnly++
+		} else {
+			c.PairsSpinLevel++
 		}
+	}
+	for _, a := range hp.Actions {
 		switch a.Kind {
 		case KindSupersede:
 			c.Supersede++
+		case KindSupersedeHead:
+			c.SupersedeHead++
 		case KindDeactivateHead:
-			if a.HasReason(ReasonNoLiveSpin) {
-				c.DeactivateHeadNoLiveSpin++
-			} else {
-				c.DeactivateHead++
-			}
+			c.DeactivateHead++
 		case KindDeactivateSpin:
 			c.DeactivateSpin++
 		case KindReportHead:
@@ -169,19 +175,26 @@ func (hp *HeadPlan) FGExempt() FGHolderExempt {
 	}
 }
 
-// SyncDecisions re-derives SUPERSEDE decisions from the current decision of the
-// target rows. Call it again after GuardFGConflicts (which may move rows to REVIEW).
+// SyncDecisions re-derives SUPERSEDE / SUPERSEDE_HEAD decisions from the current
+// decision of the target (activator) rows. Call it again after GuardFGConflicts
+// (which may move rows to REVIEW).
 func (hp *HeadPlan) SyncDecisions() {
 	for _, a := range hp.Actions {
-		if a.Kind != KindSupersede {
-			continue
+		switch a.Kind {
+		case KindSupersede:
+			a.decideSupersede(a.NewRow)
+		case KindSupersedeHead:
+			a.decideSupersede(a.ActivatorRow) // nil when the new head is already live
+		default:
+			// Other kinds have no gating row.
 		}
-		a.decideSupersede()
 	}
 }
 
-func (a *HeadAction) decideSupersede() {
-	if a.NewRow.Decision == DecisionApply {
+// decideSupersede: APPLY when the gating row is APPLY (or there is none),
+// otherwise REVIEW(target_row_review).
+func (a *HeadAction) decideSupersede(gate *RowPlan) {
+	if gate == nil || gate.Decision == DecisionApply {
 		out := a.Reasons[:0]
 		for _, r := range a.Reasons {
 			if r != ReasonTargetRowReview {
@@ -414,13 +427,13 @@ func (h *headPlanner) deactivateOrReport(old, newHead *HeadSnap, extra string) {
 }
 
 // supersede pairs each live old spin with one row of the new head: same Loose
-// shade, narrowed by den/fil when several rows match.
+// shade, narrowed by den/fil when several rows match. An old head without live
+// spin becomes one head-only SUPERSEDE_HEAD item (Q15).
 func (h *headPlanner) supersede(old, newHead *HeadSnap) {
-	h.hp.Pairs = append(h.hp.Pairs, SupersedePair{Old: old, New: newHead})
 	spins := h.liveSpins(old)
+	h.hp.Pairs = append(h.hp.Pairs, SupersedePair{Old: old, New: newHead, HeadOnly: len(spins) == 0})
 	if len(spins) == 0 {
-		// Deliberate deviation from design §3.6, see ReasonNoLiveSpin.
-		h.deactivateOrReport(old, newHead, ReasonNoLiveSpin)
+		h.supersedeHead(old, newHead)
 		return
 	}
 	for _, sp := range spins {
@@ -444,6 +457,74 @@ func (h *headPlanner) supersede(old, newHead *HeadSnap) {
 		}
 		h.hp.exempt[row.Row.Ln][sp.ID] = true
 	}
+}
+
+// supersedeHead emits the head-only supersede (Q15): set superseded_by old→new
+// and deactivate the old head, no spin repoint. Phase B when the new head is live
+// after phase A; otherwise the new head is reactivated first by the ACT_HEAD of
+// its earliest-phase row (A→B, C→C, D→D; reason new_head_inactive). No actionable
+// row on an inactive new head → REPORT_HEAD(no_activating_row). Referrers are
+// summed over live spins like every head item, so they are 0 here; the has_refs
+// guard is kept for consistency with deactivateOrReport.
+func (h *headPlanner) supersedeHead(old, newHead *HeadSnap) {
+	a := &HeadAction{Kind: KindSupersedeHead, OldHead: old, NewHead: newHead, Phase: PhaseB}
+	h.sumHeadRefs(a, old)
+	if a.RefPointer > 0 || a.RefText > 0 {
+		a.Kind, a.Phase, a.Decision = KindReportHead, PhaseNone, DecisionSkip
+		a.addReason(ReasonHasRefs)
+		h.add(a)
+		return
+	}
+	if !newHead.IsActive {
+		a.addReason(ReasonNewHeadInactive)
+		act := h.activatorRow(newHead)
+		if act == nil {
+			a.Kind, a.Phase, a.Decision = KindReportHead, PhaseNone, DecisionSkip
+			a.addReason(ReasonNoActivatingRow)
+			h.add(a)
+			return
+		}
+		a.ActivatorRow = act
+		a.Phase = afterActivation(act.Phase)
+	}
+	h.add(a)
+}
+
+// activatorRow is the actionable row of hd with the earliest phase (then lowest
+// ln): its ACT_HEAD is the first write that makes hd active.
+func (h *headPlanner) activatorRow(hd *HeadSnap) *RowPlan {
+	var best *RowPlan
+	for _, p := range h.rowsByHead[hd.ID] {
+		if best == nil || phaseRank(p.Phase) < phaseRank(best.Phase) {
+			best = p
+		}
+	}
+	return best
+}
+
+func phaseRank(p Phase) int {
+	switch p {
+	case PhaseA:
+		return 0
+	case PhaseB:
+		return 1
+	case PhaseC:
+		return 2
+	case PhaseD:
+		return 3
+	case PhaseNone:
+		return 4
+	}
+	return 4
+}
+
+// afterActivation: the phase in which a head reactivated by a row of phase p is
+// live: A → B, otherwise the row's own phase (items run after rows in a phase).
+func afterActivation(p Phase) Phase {
+	if p == PhaseA {
+		return PhaseB
+	}
+	return p
 }
 
 func (h *headPlanner) targetRow(sp *SpinSnap, newHead *HeadSnap) (*RowPlan, string) {

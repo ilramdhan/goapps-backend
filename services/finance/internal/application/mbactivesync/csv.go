@@ -309,8 +309,10 @@ func WriteSummary(w io.Writer, pl *Plan) error {
 	for _, e := range R2HeadExpectations {
 		fmt.Fprintf(&b, "%-26s %9d %9d %+7d\n", e.Name, e.Want, actual[e.Name], actual[e.Name]-e.Want)
 	}
-	fmt.Fprintf(&b, "\nHead actions: SUPERSEDE=%d (pairs without live spin=%d) DEACTIVATE_HEAD=%d (+%d no_live_spin) DEACTIVATE_SPIN=%d REPORT_HEAD=%d REPORT_SPIN=%d\n\n",
-		c.Supersede, c.PairsWithoutLiveSpin, c.DeactivateHead, c.DeactivateHeadNoLiveSpin, c.DeactivateSpin, c.ReportHead, c.ReportSpin)
+	fmt.Fprintf(&b, "\nSupersede pairs: %d = spin-level %d (SUPERSEDE items=%d) + head-only %d (SUPERSEDE_HEAD items=%d)\n",
+		c.Pairs, c.PairsSpinLevel, c.Supersede, c.PairsHeadOnly, c.SupersedeHead)
+	fmt.Fprintf(&b, "Head actions: SUPERSEDE=%d SUPERSEDE_HEAD=%d DEACTIVATE_HEAD=%d DEACTIVATE_SPIN=%d REPORT_HEAD=%d REPORT_SPIN=%d\n\n",
+		c.Supersede, c.SupersedeHead, c.DeactivateHead, c.DeactivateSpin, c.ReportHead, c.ReportSpin)
 
 	writeCounts(&b, "Rows by action (all)", byAction)
 	writeCounts(&b, "Rows by phase", byPhase)
