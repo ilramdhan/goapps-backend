@@ -17,9 +17,7 @@ type UpdateCommand struct {
 	Location           *string
 	NoOfPosition       *int
 	NoOfEnd            *int
-	MCSpeed            *float64
 	MachineRPM         *float64
-	MCEfficiency       *float64
 	PowerPerDay        *float64
 	MpPerDay           *float64
 	OhsPerDay          *float64
@@ -64,9 +62,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*machine
 		Location:           cmd.Location,
 		NoOfPosition:       cmd.NoOfPosition,
 		NoOfEnd:            cmd.NoOfEnd,
-		MCSpeed:            cmd.MCSpeed,
 		MachineRPM:         cmd.MachineRPM,
-		MCEfficiency:       cmd.MCEfficiency,
 		PowerPerDay:        cmd.PowerPerDay,
 		MpPerDay:           cmd.MpPerDay,
 		OhsPerDay:          cmd.OhsPerDay,

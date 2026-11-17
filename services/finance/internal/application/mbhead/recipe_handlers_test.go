@@ -74,7 +74,7 @@ func newMachineMB(t *testing.T) *machine.Entity {
 	t.Helper()
 	e, err := machine.New(
 		mbhead.DefaultMachineCode, "Melange Batch", "MB", "PLANT",
-		1, 1, 1, nil, 1, nil,
+		1, 1, nil, nil,
 		nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
@@ -91,7 +91,7 @@ func newMBMachineRepo() *MockMachineRepository {
 	m := new(MockMachineRepository)
 	e, _ := machine.New(
 		mbhead.DefaultMachineCode, "Melange Batch", "MB", "PLANT",
-		1, 1, 1, nil, 1, nil,
+		1, 1, nil, nil,
 		nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,

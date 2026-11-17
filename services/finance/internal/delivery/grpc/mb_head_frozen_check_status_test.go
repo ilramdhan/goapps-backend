@@ -121,7 +121,7 @@ func (fakeMBMachineRepo) GetByID(_ context.Context, _ uuid.UUID) (*machine.Entit
 func (fakeMBMachineRepo) GetByCode(_ context.Context, _ string) (*machine.Entity, error) {
 	return machine.New(
 		"MB", "Melange Batch", "MB", "PLANT",
-		1, 1, 1, nil, 1, nil,
+		1, 1, nil, nil,
 		nil, nil, nil, nil,
 		nil, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,

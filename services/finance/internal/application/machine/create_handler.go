@@ -15,9 +15,7 @@ type CreateCommand struct {
 	Location           string
 	NoOfPosition       int
 	NoOfEnd            int
-	MCSpeed            float64
 	MachineRPM         *float64
-	MCEfficiency       float64
 	PowerPerDay        *float64
 	MpPerDay           *float64
 	OhsPerDay          *float64
@@ -60,8 +58,8 @@ func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*machine
 
 	entity, err := machine.New(
 		cmd.Code, cmd.Name, cmd.MCType, cmd.Location,
-		cmd.NoOfPosition, cmd.NoOfEnd, cmd.MCSpeed, cmd.MachineRPM,
-		cmd.MCEfficiency, cmd.PowerPerDay,
+		cmd.NoOfPosition, cmd.NoOfEnd, cmd.MachineRPM,
+		cmd.PowerPerDay,
 		cmd.MpPerDay, cmd.OhsPerDay, cmd.SparesPerDay, cmd.KgsLostChange,
 		cmd.Vb1Qty, cmd.Vb2Qty, cmd.Vb3Qty, cmd.Vb4Qty, cmd.Vb5Qty,
 		cmd.McPoyBobbinWeight, cmd.McTotFxdCst, cmd.McBobbinPerTrolly,

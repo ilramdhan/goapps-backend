@@ -57,9 +57,7 @@ func (h *MachineHandler) CreateMachine(ctx context.Context, req *financev1.Creat
 		Location:           req.McLocation,
 		NoOfPosition:       int(req.NoOfPosition),
 		NoOfEnd:            int(req.NoOfEnd),
-		MCSpeed:            req.McSpeed,
 		MachineRPM:         req.MachineRpm,
-		MCEfficiency:       req.McEfficiency,
 		PowerPerDay:        req.PowerPerDay,
 		MpPerDay:           req.MpPerDay,
 		OhsPerDay:          req.OhsPerDay,
@@ -167,12 +165,6 @@ func (h *MachineHandler) UpdateMachine(ctx context.Context, req *financev1.Updat
 	if req.NoOfEnd != nil {
 		v := int(*req.NoOfEnd)
 		cmd.NoOfEnd = &v
-	}
-	if req.McSpeed != nil {
-		cmd.MCSpeed = req.McSpeed
-	}
-	if req.McEfficiency != nil {
-		cmd.MCEfficiency = req.McEfficiency
 	}
 
 	entity, err := h.updateHandler.Handle(ctx, cmd)
@@ -290,9 +282,7 @@ func machineEntityToProto(e *machine.Entity) *financev1.Machine {
 		McLocation:         e.Location(),
 		NoOfPosition:       safeconv.IntToInt32(e.NoOfPosition()),
 		NoOfEnd:            safeconv.IntToInt32(e.NoOfEnd()),
-		McSpeed:            e.MCSpeed(),
 		MachineRpm:         e.MachineRPM(),
-		McEfficiency:       e.MCEfficiency(),
 		PowerPerDay:        e.PowerPerDay(),
 		MpPerDay:           e.MpPerDay(),
 		OhsPerDay:          e.OhsPerDay(),
