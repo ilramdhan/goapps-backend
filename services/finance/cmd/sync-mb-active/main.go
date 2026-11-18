@@ -6,7 +6,7 @@
 //	--report --plan-rows R --plan-heads H [--out F]
 //	                                read-only: simulates MB_SP_CODE + MB_SP_DOZING product impact
 //	--apply --plan-rows R --plan-heads H --phase A --actor NAME [--batch N] [--limit N] [--only-sysid S1,S2]
-//	                                writes to the DB (phase A only in this build); result/errors CSV in --out-dir
+//	                                writes to the DB (phases A and B in this build); result/errors CSV in --out-dir
 //
 // --plan never writes to the database (the snapshot runs in a read-only transaction).
 package main
