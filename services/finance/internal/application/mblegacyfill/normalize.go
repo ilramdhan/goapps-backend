@@ -27,3 +27,5 @@ func Equal(kind Kind, a, b string) bool {
 	}
 	return a == b
 }
+
+func upper(s string) string { return strings.ToUpper(s) }
