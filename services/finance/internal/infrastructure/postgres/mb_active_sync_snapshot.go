@@ -37,7 +37,7 @@ const mbasHeadsQuery = `
 const mbasSpinsQuery = `
 	SELECT mbs_id, mbs_mbh_id, mbs_parent_spin_id, mbs_is_active, mbs_superseded_by_spin_id,
 	       mbs_denier, mbs_filament,
-	       COALESCE(NULLIF(mbs_lesture, ''), NULLIF(mbs_cross_section, ''), ''),
+	       COALESCE(NULLIF(mbs_cross_section, ''), NULLIF(mbs_lesture, ''), ''),
 	       COALESCE(mbs_shade_code, ''), COALESCE(mbs_shade_name, ''), COALESCE(mbs_cc, ''),
 	       mbs_run_ldr_pct, COALESCE(mbs_ldr_type, ''), COALESCE(mbs_ldr_is_actual, FALSE), COALESCE(mbs_ldr_is_fixed, FALSE),
 	       mbs_fg_product_id, COALESCE(mbs_fg_link_source, ''),

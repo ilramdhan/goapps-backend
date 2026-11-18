@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbactivesync"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 	"github.com/mutugading/goapps-backend/services/finance/internal/testutil/pgcontainer"
 )
@@ -58,6 +59,10 @@ func TestMBActiveSyncSnapshotReader(t *testing.T) {
 	exec(`INSERT INTO mst_mb_spin (mbs_id, mbs_mbh_id, mbs_mgt_name, mbs_mb_costing, mbs_orion_item_code, mbs_denier, mbs_filament, mbs_lesture,
 			mbs_shade_code, mbs_run_ldr_pct, mbs_ldr_is_actual, mbs_fg_product_id, mbs_fg_link_source, mbs_is_active, created_at, created_by)
 		VALUES ($1, $2, 'S1', 'S1', 'orion-1', 380, 144, 'TBL', 'Y-145-T', 7.5, TRUE, $3, 'RECIPE', TRUE, NOW(), 'itest')`, spin, headLive, poyID)
+	// cross_section wins over a stale lesture (the sync writer sets only cross_section).
+	csSpin := uuid.New()
+	exec(`INSERT INTO mst_mb_spin (mbs_id, mbs_mbh_id, mbs_mgt_name, mbs_mb_costing, mbs_lesture, mbs_cross_section, mbs_is_active, created_at, created_by)
+		VALUES ($1, $2, 'CS', 'CS', 'TBL', 'RND', TRUE, NOW(), 'itest')`, csSpin, headLive)
 	exec(`INSERT INTO mst_mb_spin (mbs_id, mbs_mbh_id, mbs_mgt_name, mbs_mb_costing, mbs_is_active, created_at, created_by, deleted_at)
 		VALUES ($1, $2, 'DEL', 'DEL', TRUE, NOW(), 'itest', NOW())`, delSpin, headLive)
 	exec(`INSERT INTO cost_product_parameter (cpp_product_sys_id, cpp_param_id, cpp_value_text, cpp_value_mb_spin_id, cpp_filled_by, cpp_created_by)
@@ -104,8 +109,16 @@ func TestMBActiveSyncSnapshotReader(t *testing.T) {
 			mine = append(mine, i)
 		}
 	}
-	require.Len(t, mine, 1, "deleted spin excluded")
-	s := snap.Spins[mine[0]]
+	require.Len(t, mine, 2, "deleted spin excluded")
+	var s mbactivesync.SpinSnap
+	for _, i := range mine {
+		switch snap.Spins[i].ID {
+		case spin:
+			s = snap.Spins[i]
+		case csSpin:
+			require.Equal(t, "RND", snap.Spins[i].CrossSection, "cross_section preferred over lesture")
+		}
+	}
 	require.Equal(t, spin, s.ID)
 	require.Equal(t, "TBL", s.CrossSection)
 	require.NotNil(t, s.Denier)
