@@ -107,7 +107,7 @@ func LoadApplyItems(rows, heads *PlanCSV) ([]*ApplyItem, error) {
 	if rows == nil {
 		return nil, errors.New("plan-rows csv missing")
 	}
-	var items []*ApplyItem
+	items := make([]*ApplyItem, 0, len(rows.Records))
 	rowHdr := orderedHeader(rows)
 	for i := range rows.Records {
 		if Decision(strings.TrimSpace(rows.Get(i, "decision"))) != DecisionApply {
@@ -240,7 +240,7 @@ func SelectItems(items []*ApplyItem, opts ApplyOptions) []*ApplyItem {
 			only[s] = true
 		}
 	}
-	var out []*ApplyItem
+	out := make([]*ApplyItem, 0, len(items))
 	for _, it := range items {
 		if it.Phase != opts.Phase {
 			continue
