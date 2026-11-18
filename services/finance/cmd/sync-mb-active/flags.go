@@ -54,7 +54,7 @@ func parseFlags(args []string) (options, error) {
 	fs.SetOutput(io.Discard)
 	fs.BoolVar(&o.plan, "plan", false, "read-only: build plan CSVs + summary from the DB and --file")
 	fs.BoolVar(&o.report, "report", false, "read-only product-impact report (MB_SP_CODE + MB_SP_DOZING) from reviewed --plan-rows/--plan-heads")
-	fs.BoolVar(&o.apply, "apply", false, "apply reviewed plan (phases A, B and C in this build)")
+	fs.BoolVar(&o.apply, "apply", false, "apply reviewed plan (phases A, B, C and D)")
 	fs.StringVar(&o.file, "file", "", "mb-active file (normalized or original format), required for --plan")
 	fs.StringVar(&o.outDir, "out-dir", ".", "output directory for generated files")
 	fs.StringVar(&o.planRows, "plan-rows", "", "reviewed plan-rows CSV (--report/--apply)")

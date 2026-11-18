@@ -41,9 +41,6 @@ func splitCSVList(s string) []string {
 }
 
 func runApply(ctx context.Context, o options) error {
-	if o.phase == "D" {
-		return fmt.Errorf("--apply --phase %s: not wired in this build (only phases A, B and C)", o.phase)
-	}
 	rows, err := readPlanCSV(o.planRows, mbactivesync.RowsRequiredColumns)
 	if err != nil {
 		return err

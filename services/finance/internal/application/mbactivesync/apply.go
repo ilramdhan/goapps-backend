@@ -252,7 +252,9 @@ func SelectItems(items []*ApplyItem, opts ApplyOptions) []*ApplyItem {
 		sort.SliceStable(out, func(a, b int) bool { return phaseBRank(out[a]) < phaseBRank(out[b]) })
 	case PhaseC:
 		sort.SliceStable(out, func(a, b int) bool { return phaseCRank(out[a]) < phaseCRank(out[b]) })
-	case PhaseA, PhaseD, PhaseNone:
+	case PhaseD:
+		sort.SliceStable(out, func(a, b int) bool { return phaseDRank(out[a]) < phaseDRank(out[b]) })
+	case PhaseA, PhaseNone:
 	}
 	return out
 }
@@ -280,6 +282,30 @@ func phaseBRank(it *ApplyItem) int {
 }
 
 const phaseBRankOther = 4
+
+// Phase D ranks: REACTIVATE rows first (they make the new spin and its head live; ACT_HEAD
+// reactivates the head without cascade), then SUPERSEDE (old spin -> reactivated spin) and
+// SUPERSEDE_HEAD (Q15, new head must be live). Equal ranks keep plan order.
+const (
+	phaseDRankRow = iota
+	phaseDRankSupersede
+	phaseDRankSupersedeHead
+	phaseDRankOther
+)
+
+func phaseDRank(it *ApplyItem) int {
+	if it.Kind != applyKindHead {
+		return phaseDRankRow
+	}
+	switch HeadKind(it.Action) {
+	case KindSupersede:
+		return phaseDRankSupersede
+	case KindSupersedeHead:
+		return phaseDRankSupersedeHead
+	default:
+		return phaseDRankOther
+	}
+}
 
 // Phase C ranks: ROOT rows create/validate the first spin of a head, DUP rows clone a
 // freshly created root (source ln:<root>), DUPLICATE rows clone existing roots, then the
@@ -430,7 +456,7 @@ func (a *Applier) dispatch(ctx context.Context, it *ApplyItem, actor string, st 
 		out.Err = it.bad
 		return out
 	}
-	if it.Kind == applyKindHead && (it.Phase == PhaseB || it.Phase == PhaseC) {
+	if it.Kind == applyKindHead && (it.Phase == PhaseB || it.Phase == PhaseC || it.Phase == PhaseD) {
 		if o, ok := a.dispatchHead(ctx, it, actor, out, st); ok {
 			return o
 		}
@@ -516,7 +542,7 @@ func (it *ApplyItem) uuidCol(name string, required bool) (uuid.UUID, error) {
 // kind is not a wired action (REPORT_*, unknown): the caller reports SKIPPED not_wired.
 func (a *Applier) dispatchHead(ctx context.Context, it *ApplyItem, actor string, out ApplyOutcome, st *runState) (ApplyOutcome, bool) {
 	kind := HeadKind(it.Action)
-	if it.Phase == PhaseC && kind != KindSupersede && kind != KindSupersedeHead {
+	if (it.Phase == PhaseC || it.Phase == PhaseD) && kind != KindSupersede && kind != KindSupersedeHead {
 		return out, false
 	}
 	switch kind {
@@ -585,5 +611,5 @@ func (a *Applier) dispatchDeactivate(ctx context.Context, it *ApplyItem, kind He
 
 func isPhaseARowAction(a string) bool {
 	act := Action(a)
-	return act == ActionKeep || act == ActionUpdateLDR || act == ActionUpdateShade
+	return act == ActionKeep || act == ActionUpdateLDR || act == ActionUpdateShade || act == ActionReactivate
 }

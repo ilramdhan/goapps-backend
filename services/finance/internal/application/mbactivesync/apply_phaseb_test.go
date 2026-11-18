@@ -143,3 +143,41 @@ type emptyWriter struct{ recWriter }
 func (e *emptyWriter) DeactivateHead(context.Context, DeactivateHeadInput) (ItemResult, error) {
 	return ItemResult{}, nil
 }
+
+func TestSelectItemsPhaseDOrder(t *testing.T) {
+	head := func(key string, kind HeadKind) *ApplyItem {
+		return &ApplyItem{Kind: applyKindHead, Key: key, Action: string(kind), Phase: PhaseD}
+	}
+	row := func(key string) *ApplyItem {
+		return &ApplyItem{Kind: applyKindRow, Key: key, Action: string(ActionReactivate), Phase: PhaseD}
+	}
+	items := []*ApplyItem{head("suph:1", KindSupersedeHead), head("sup:1", KindSupersede), row("row:2"), row("row:1"),
+		{Kind: applyKindRow, Key: "row:A", Action: string(ActionKeep), Phase: PhaseA}}
+	var keys []string
+	for _, it := range SelectItems(items, ApplyOptions{Phase: PhaseD}) {
+		keys = append(keys, it.Key)
+	}
+	assert.Equal(t, []string{"row:2", "row:1", "sup:1", "suph:1"}, keys)
+}
+
+func TestDispatchPhaseDReactivateAndSupersede(t *testing.T) {
+	w := &recWriter{}
+	a := NewApplier(w)
+	spin := uuid.New()
+	row := &ApplyItem{Kind: applyKindRow, Key: "row:1", Action: string(ActionReactivate), Phase: PhaseD,
+		Spin: SyncSpinInput{SpinID: spin, SubActions: []string{SubActSpin, SubActHead}}}
+	out := a.dispatch(context.Background(), row, "me", newRunState(nil, nil))
+	assert.Equal(t, ResultApplied, out.Result.Result)
+
+	for _, kind := range []HeadKind{KindSupersede, KindSupersedeHead} {
+		it := bItem(kind, uuid.NewString(), uuid.NewString(), uuid.NewString(), "spin:"+uuid.NewString())
+		it.Phase = PhaseD
+		out = a.dispatch(context.Background(), it, "me", newRunState(nil, nil))
+		assert.Equal(t, ResultApplied, out.Result.Result, kind)
+	}
+	// Deactivate kinds are not phase D actions.
+	it := bItem(KindDeactivateHead, uuid.NewString(), "", "", "")
+	it.Phase = PhaseD
+	out = a.dispatch(context.Background(), it, "me", newRunState(nil, nil))
+	assert.Equal(t, ReasonNotWired, out.Result.Reason)
+}

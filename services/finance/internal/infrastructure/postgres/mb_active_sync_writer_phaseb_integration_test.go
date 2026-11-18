@@ -336,3 +336,56 @@ func TestMBActiveSyncWriter_Deactivate(t *testing.T) {
 		require.True(t, f.spinSup(s1).active)
 	})
 }
+
+// Phase D (Q2, Q15): REACTIVATE (SyncExistingSpin + ACT_SPIN/ACT_HEAD) makes the new
+// version live without cascade; the SUPERSEDE / SUPERSEDE_HEAD items then succeed.
+func TestMBActiveSyncWriter_PhaseDReactivateThenSupersede(t *testing.T) {
+	f := newMBASFixture(t, "mbas_writer_phased")
+	const actor = "sync-tester"
+	subs := []string{mbactivesync.SubSetFG, mbactivesync.SubActSpin, mbactivesync.SubActHead}
+
+	t.Run("reactivate head without cascade then supersede spin", func(t *testing.T) {
+		fg := f.poy("FG-D1", "D1")
+		newHead := f.head(false, "D1")
+		newSpin := f.spin(newHead, "D1", 6, false, nil)
+		sibling := f.spin(newHead, "SIB", 6, false, nil)
+		oldHead := f.head(true, "D1")
+		oldSpin := f.spin(oldHead, "D1", 5, true, nil)
+		sup := mbactivesync.SupersedeInput{OldHeadID: oldHead, OldSpinID: oldSpin, NewSpinID: newSpin, Actor: actor}
+
+		res, err := f.w.SupersedeExisting(f.ctx, sup)
+		require.NoError(t, err)
+		require.Equal(t, mbactivesync.ResultSkipped, res.Result, "new spin not live yet")
+		require.True(t, f.spinSup(oldSpin).active)
+
+		res, err = f.w.SyncExistingSpin(f.ctx, mbactivesync.SyncSpinInput{SpinID: newSpin, Actor: actor,
+			SubActions: subs, TargetShadeCode: "D1", TargetFG: &fg})
+		requireResult(t, res, err, mbactivesync.ResultApplied, "")
+		require.True(t, f.spinSup(newSpin).active)
+		require.True(t, f.headSup(newHead).active)
+		require.False(t, f.spinSup(sibling).active, "no cascade to sibling spins")
+
+		res, err = f.w.SupersedeExisting(f.ctx, sup)
+		requireResult(t, res, err, mbactivesync.ResultApplied, "")
+		require.Equal(t, newSpin.String(), f.spinSup(oldSpin).supersededBy.String)
+		require.False(t, f.headSup(oldHead).active)
+	})
+
+	t.Run("reactivate head then supersede head only", func(t *testing.T) {
+		newHead := f.head(false, "D2")
+		sp := f.spin(newHead, "D2", 6, false, nil)
+		oldHead := f.head(true, "D2")
+		in := mbactivesync.SupersedeHeadInput{OldHeadID: oldHead, NewHeadID: newHead, Actor: actor}
+
+		res, err := f.w.SupersedeHeadOnly(f.ctx, in)
+		requireResult(t, res, err, mbactivesync.ResultSkipped, mbactivesync.ReasonNewHeadNotReady)
+
+		res, err = f.w.SyncExistingSpin(f.ctx, mbactivesync.SyncSpinInput{SpinID: sp, Actor: actor,
+			SubActions: []string{mbactivesync.SubActSpin, mbactivesync.SubActHead}, TargetShadeCode: "D2"})
+		requireResult(t, res, err, mbactivesync.ResultApplied, "")
+
+		res, err = f.w.SupersedeHeadOnly(f.ctx, in)
+		requireResult(t, res, err, mbactivesync.ResultApplied, "")
+		require.Equal(t, newHead.String(), f.headSup(oldHead).supersededBy.String)
+	})
+}
