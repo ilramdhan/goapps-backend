@@ -84,7 +84,7 @@ const mbasHeadImageQuery = `
 func readMBASImage(ctx context.Context, tx *sql.Tx, spinID uuid.UUID, lock bool) (*mbasImage, bool, error) {
 	suffix := ""
 	if lock {
-		suffix = " FOR UPDATE"
+		suffix = mbasForUpdate
 	}
 	var img mbasImage
 	s := &img.Spin

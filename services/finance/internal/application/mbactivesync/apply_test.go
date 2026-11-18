@@ -31,6 +31,22 @@ func (f *fakeWriter) SyncExistingSpin(_ context.Context, in SyncSpinInput) (Item
 	return ItemResult{Result: ResultApplied, SpinID: in.SpinID.String(), BeforeJSON: "{}", AfterJSON: "{\"a\":1}"}, nil
 }
 
+func (f *fakeWriter) SupersedeExisting(context.Context, SupersedeInput) (ItemResult, error) {
+	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
+}
+
+func (f *fakeWriter) SupersedeHeadOnly(context.Context, SupersedeHeadInput) (ItemResult, error) {
+	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
+}
+
+func (f *fakeWriter) DeactivateSpin(context.Context, DeactivateSpinInput) (ItemResult, error) {
+	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
+}
+
+func (f *fakeWriter) DeactivateHead(context.Context, DeactivateHeadInput) (ItemResult, error) {
+	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
+}
+
 type memSink struct {
 	out []ApplyOutcome
 	err error
