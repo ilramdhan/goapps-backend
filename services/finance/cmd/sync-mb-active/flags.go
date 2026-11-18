@@ -17,7 +17,9 @@ type options struct {
 	plan   bool
 	report bool
 	apply  bool
+	revert bool
 
+	input     stringList // --input (--revert, repeatable)
 	file      string
 	outDir    string
 	planRows  string
@@ -32,6 +34,7 @@ type options struct {
 	prevResults stringList        // --prev-results (repeatable)
 	prevClones  map[int]uuid.UUID // loaded from prevResults at apply time
 	prevRoots   map[int]uuid.UUID // ROOT spins loaded from prevResults
+	manualPlan  [][]string        // NEW_RECIPE/REPORT_* records for manual-items.csv (apply phase D)
 }
 
 // stringList is a repeatable string flag.
@@ -55,6 +58,8 @@ func parseFlags(args []string) (options, error) {
 	fs.BoolVar(&o.plan, "plan", false, "read-only: build plan CSVs + summary from the DB and --file")
 	fs.BoolVar(&o.report, "report", false, "read-only product-impact report (MB_SP_CODE + MB_SP_DOZING) from reviewed --plan-rows/--plan-heads")
 	fs.BoolVar(&o.apply, "apply", false, "apply reviewed plan (phases A, B, C and D)")
+	fs.BoolVar(&o.revert, "revert", false, "roll back APPLIED items of earlier result CSVs (--input) whose columns still hold the after-image")
+	fs.Var(&o.input, "input", "result CSV to revert (--revert, repeatable, oldest first)")
 	fs.StringVar(&o.file, "file", "", "mb-active file (normalized or original format), required for --plan")
 	fs.StringVar(&o.outDir, "out-dir", ".", "output directory for generated files")
 	fs.StringVar(&o.planRows, "plan-rows", "", "reviewed plan-rows CSV (--report/--apply)")
@@ -74,16 +79,16 @@ func parseFlags(args []string) (options, error) {
 
 func validateOptions(o *options) error {
 	modes := 0
-	for _, m := range []bool{o.plan, o.report, o.apply} {
+	for _, m := range []bool{o.plan, o.report, o.apply, o.revert} {
 		if m {
 			modes++
 		}
 	}
 	switch {
 	case modes == 0:
-		return errors.New("exactly one of --plan, --report, --apply is required")
+		return errors.New("exactly one of --plan, --report, --apply, --revert is required")
 	case modes > 1:
-		return errors.New("--plan, --report and --apply are mutually exclusive")
+		return errors.New("--plan, --report, --apply and --revert are mutually exclusive")
 	case o.outDir == "":
 		return errors.New("--out-dir must not be empty")
 	case o.plan:
@@ -92,6 +97,8 @@ func validateOptions(o *options) error {
 		return validateReportOptions(o)
 	case o.apply:
 		return validateApplyOptions(o)
+	case o.revert:
+		return validateRevertOptions(o)
 	}
 	return nil
 }
@@ -100,7 +107,7 @@ func validatePlanOptions(o *options) error {
 	switch {
 	case o.file == "":
 		return errors.New("--plan requires --file")
-	case o.planRows != "" || o.planHeads != "" || o.phase != "" || o.actor != "" || o.out != "" || o.batch != 0 || o.limit != 0 || o.onlySysID != "" || len(o.prevResults) > 0:
+	case o.planRows != "" || o.planHeads != "" || o.phase != "" || o.actor != "" || o.out != "" || o.batch != 0 || o.limit != 0 || o.onlySysID != "" || len(o.prevResults) > 0 || len(o.input) > 0:
 		return errors.New("--plan only accepts --file and --out-dir")
 	}
 	return nil
@@ -110,7 +117,7 @@ func validateReportOptions(o *options) error {
 	switch {
 	case o.planRows == "" || o.planHeads == "":
 		return errors.New("--report requires --plan-rows and --plan-heads")
-	case o.file != "" || o.phase != "" || o.actor != "" || o.batch != 0 || o.limit != 0 || o.onlySysID != "" || len(o.prevResults) > 0:
+	case o.file != "" || o.phase != "" || o.actor != "" || o.batch != 0 || o.limit != 0 || o.onlySysID != "" || len(o.prevResults) > 0 || len(o.input) > 0:
 		return errors.New("--report only accepts --plan-rows, --plan-heads, --out and --out-dir")
 	}
 	return nil
@@ -120,8 +127,14 @@ func validateApplyOptions(o *options) error {
 	switch {
 	case o.planRows == "" || o.planHeads == "":
 		return errors.New("--apply requires --plan-rows and --plan-heads")
-	case o.file != "" || o.out != "":
-		return errors.New("--apply does not accept --file or --out")
+	case o.file != "" || o.out != "" || len(o.input) > 0:
+		return errors.New("--apply does not accept --file, --out or --input")
+	}
+	return validateApplyPhaseOptions(o)
+}
+
+func validateApplyPhaseOptions(o *options) error {
+	switch {
 	case o.phase != "A" && o.phase != "B" && o.phase != "C" && o.phase != "D":
 		return errors.New("--apply requires --phase A|B|C|D")
 	case strings.TrimSpace(o.actor) == "":
@@ -130,6 +143,20 @@ func validateApplyOptions(o *options) error {
 		return errors.New("--batch and --limit must not be negative")
 	case (o.phase == "C" || o.phase == "D") && o.batch <= 0:
 		return errors.New("--apply --phase C|D requires --batch N (N > 0)")
+	}
+	return nil
+}
+
+func validateRevertOptions(o *options) error {
+	switch {
+	case len(o.input) == 0:
+		return errors.New("--revert requires at least one --input result CSV")
+	case strings.TrimSpace(o.actor) == "":
+		return errors.New("--revert requires a non-empty --actor")
+	case o.file != "" || o.planRows != "" || o.planHeads != "" || o.out != "" || o.phase != "" || o.batch != 0 || len(o.prevResults) > 0:
+		return errors.New("--revert only accepts --input, --actor, --limit, --only-sysid and --out-dir")
+	case o.limit < 0:
+		return errors.New("--limit must not be negative")
 	}
 	return nil
 }

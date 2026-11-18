@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSelectItemsPhaseBOrder(t *testing.T) {
@@ -45,10 +46,12 @@ func TestSelectItemsPhaseAKeepsOrder(t *testing.T) {
 
 type recWriter struct {
 	fakeWriter
-	got []string
-	sup SupersedeInput
-	res ItemResult
-	err error
+	got  []string
+	sup  SupersedeInput
+	suph SupersedeHeadInput
+	rev  []RevertInput
+	res  ItemResult
+	err  error
 }
 
 func (r *recWriter) ret(n string) (ItemResult, error) {
@@ -62,7 +65,8 @@ func (r *recWriter) SupersedeExisting(_ context.Context, in SupersedeInput) (Ite
 	r.sup = in
 	return r.ret("sup")
 }
-func (r *recWriter) SupersedeHeadOnly(context.Context, SupersedeHeadInput) (ItemResult, error) {
+func (r *recWriter) SupersedeHeadOnly(_ context.Context, in SupersedeHeadInput) (ItemResult, error) {
+	r.suph = in
 	return r.ret("suph")
 }
 func (r *recWriter) DeactivateSpin(context.Context, DeactivateSpinInput) (ItemResult, error) {
@@ -70,6 +74,11 @@ func (r *recWriter) DeactivateSpin(context.Context, DeactivateSpinInput) (ItemRe
 }
 func (r *recWriter) DeactivateHead(context.Context, DeactivateHeadInput) (ItemResult, error) {
 	return r.ret("dh")
+}
+
+func (r *recWriter) Revert(_ context.Context, in RevertInput) (ItemResult, error) {
+	r.rev = append(r.rev, in)
+	return r.ret("rev")
 }
 
 func bItem(kind HeadKind, oh, os, nh, ref string) *ApplyItem {
@@ -168,16 +177,31 @@ func TestDispatchPhaseDReactivateAndSupersede(t *testing.T) {
 		Spin: SyncSpinInput{SpinID: spin, SubActions: []string{SubActSpin, SubActHead}}}
 	out := a.dispatch(context.Background(), row, "me", newRunState(nil, nil))
 	assert.Equal(t, ResultApplied, out.Result.Result)
+	// Routing: REACTIVATE goes to SyncExistingSpin with ACT_SPIN|ACT_HEAD and the actor.
+	require.Len(t, w.calls, 1)
+	assert.Equal(t, spin, w.calls[0].SpinID)
+	assert.Equal(t, []string{SubActSpin, SubActHead}, w.calls[0].SubActions)
+	assert.Equal(t, "me", w.calls[0].Actor)
+	assert.Empty(t, w.got, "no other writer method for REACTIVATE")
 
-	for _, kind := range []HeadKind{KindSupersede, KindSupersedeHead} {
-		it := bItem(kind, uuid.NewString(), uuid.NewString(), uuid.NewString(), "spin:"+uuid.NewString())
-		it.Phase = PhaseD
-		out = a.dispatch(context.Background(), it, "me", newRunState(nil, nil))
-		assert.Equal(t, ResultApplied, out.Result.Result, kind)
-	}
+	oldHead, oldSpin, newHead, newSpin := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	it := bItem(KindSupersede, oldHead.String(), oldSpin.String(), newHead.String(), "spin:"+newSpin.String())
+	it.Phase = PhaseD
+	out = a.dispatch(context.Background(), it, "me", newRunState(nil, nil))
+	assert.Equal(t, ResultApplied, out.Result.Result)
+	assert.Equal(t, SupersedeInput{OldHeadID: oldHead, OldSpinID: oldSpin, NewSpinID: newSpin, Actor: "me"}, w.sup)
+
+	it = bItem(KindSupersedeHead, oldHead.String(), "", newHead.String(), "")
+	it.Phase = PhaseD
+	out = a.dispatch(context.Background(), it, "me", newRunState(nil, nil))
+	assert.Equal(t, ResultApplied, out.Result.Result)
+	assert.Equal(t, SupersedeHeadInput{OldHeadID: oldHead, NewHeadID: newHead, Actor: "me"}, w.suph)
+	assert.Equal(t, []string{"sup", "suph"}, w.got)
+
 	// Deactivate kinds are not phase D actions.
-	it := bItem(KindDeactivateHead, uuid.NewString(), "", "", "")
+	it = bItem(KindDeactivateHead, uuid.NewString(), "", "", "")
 	it.Phase = PhaseD
 	out = a.dispatch(context.Background(), it, "me", newRunState(nil, nil))
 	assert.Equal(t, ReasonNotWired, out.Result.Reason)
+	assert.Equal(t, []string{"sup", "suph"}, w.got)
 }

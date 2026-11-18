@@ -56,6 +56,9 @@ func runApply(ctx context.Context, o options) error {
 	if o.prevClones, o.prevRoots, err = readPrevResults(o.prevResults); err != nil {
 		return err
 	}
+	if o.phase == "D" { // NEW_RECIPE / REPORT_* never apply; list them once, with the last phase
+		o.manualPlan = mbactivesync.ManualPlanRecords(rows, heads)
+	}
 	ap, cleanup, err := buildApplier()
 	if err != nil {
 		return err
@@ -100,7 +103,7 @@ func applyAndWrite(ctx context.Context, ap *mbactivesync.Applier, items []*mbact
 			err = fmt.Errorf("close %s: %w", manPath, cErr)
 		}
 	}()
-	sink := mbactivesync.NewCSVResultSink(rf, ef).WithManual(mf)
+	sink := mbactivesync.NewCSVResultSink(rf, ef).WithManual(mf).WithManualPlan(o.manualPlan)
 	opts := mbactivesync.ApplyOptions{
 		Phase: mbactivesync.Phase(o.phase), Actor: o.actor, OnlySysID: splitCSVList(o.onlySysID),
 		Limit: o.limit, Batch: o.batch, Logf: log.Printf, PrevClones: o.prevClones, PrevRoots: o.prevRoots,
@@ -147,4 +150,67 @@ func readPrevResults(paths []string) (clones, roots map[int]uuid.UUID, err error
 	}
 	log.Printf("prev-results: %d clone(s), %d root spin(s) recorded", len(clones), len(roots))
 	return clones, roots, nil
+}
+
+// runRevert reads the --input result CSVs and reverts their APPLIED items (design part 2 §8).
+func runRevert(ctx context.Context, o options) error {
+	bs := make([]io.Reader, 0, len(o.input))
+	for _, p := range o.input {
+		b, err := os.ReadFile(p) //nolint:gosec // operator-supplied input path for a one-shot CLI
+		if err != nil {
+			return fmt.Errorf("read %s: %w", p, err)
+		}
+		bs = append(bs, bytes.NewReader(b))
+	}
+	items, err := mbactivesync.LoadRevertItems(bs...)
+	if err != nil {
+		return err
+	}
+	ap, cleanup, err := buildApplier()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	return revertAndWrite(ctx, ap, items, o)
+}
+
+// revertAndWrite runs the revert writing revert-result / manual-items CSV files.
+func revertAndWrite(ctx context.Context, ap *mbactivesync.Applier, items []*mbactivesync.RevertItem, o options) (err error) {
+	if err := os.MkdirAll(o.outDir, 0o750); err != nil {
+		return fmt.Errorf("create out dir: %w", err)
+	}
+	ts := time.Now().Format("20060102-150405")
+	resPath := filepath.Join(o.outDir, fmt.Sprintf("%s-revert-result-%s.csv", cmdName, ts))
+	manPath := filepath.Join(o.outDir, fmt.Sprintf("%s-revert-manual-items-%s.csv", cmdName, ts))
+	rf, err := os.Create(resPath) //nolint:gosec // operator-supplied output dir for a one-shot CLI
+	if err != nil {
+		return fmt.Errorf("create %s: %w", resPath, err)
+	}
+	defer func() {
+		if cErr := rf.Close(); cErr != nil && err == nil {
+			err = fmt.Errorf("close %s: %w", resPath, cErr)
+		}
+	}()
+	mf, err := os.Create(manPath) //nolint:gosec // operator-supplied output dir for a one-shot CLI
+	if err != nil {
+		return fmt.Errorf("create %s: %w", manPath, err)
+	}
+	defer func() {
+		if cErr := mf.Close(); cErr != nil && err == nil {
+			err = fmt.Errorf("close %s: %w", manPath, cErr)
+		}
+	}()
+	sink := mbactivesync.NewCSVResultSink(rf, nil).WithManual(mf)
+	sum, runErr := ap.RunRevert(ctx, items, mbactivesync.RevertOptions{
+		Actor: o.actor, OnlySysID: splitCSVList(o.onlySysID), Limit: o.limit, Logf: log.Printf,
+	}, sink)
+	if cErr := sink.Close(); cErr != nil && runErr == nil {
+		runErr = cErr
+	}
+	log.Printf("wrote %s", resPath)
+	log.Printf("wrote %s (items the revert could not restore)", manPath)
+	if sum != nil {
+		logApplySummary(sum)
+	}
+	return runErr
 }

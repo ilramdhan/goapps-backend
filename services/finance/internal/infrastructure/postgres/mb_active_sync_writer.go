@@ -38,7 +38,7 @@ type mbasSpinImage struct {
 	RunLDRPct    *float64 `json:"run_ldr_pct"`
 	LDRType      string   `json:"ldr_type"`
 	LDRIsActual  bool     `json:"ldr_is_actual"`
-	LDRIsFixed   bool     `json:"ldr_is_fixed"`
+	LDRIsFixed   *bool    `json:"ldr_is_fixed"` // nil = NULL (migration 000486: unknown, treated as FIXED)
 	IsActive     bool     `json:"is_active"`
 	FGProductID  *int64   `json:"fg_product_id"`
 	FGItemCode   string   `json:"fg_item_code"`
@@ -68,7 +68,7 @@ type mbasImage struct {
 
 const mbasSpinImageQuery = `
 	SELECT COALESCE(mbs_shade_code, ''), COALESCE(mbs_shade_name, ''), COALESCE(mbs_cc, ''), COALESCE(mbs_cross_section, ''),
-	       mbs_run_ldr_pct, COALESCE(mbs_ldr_type, ''), COALESCE(mbs_ldr_is_actual, FALSE), COALESCE(mbs_ldr_is_fixed, FALSE),
+	       mbs_run_ldr_pct, COALESCE(mbs_ldr_type, ''), COALESCE(mbs_ldr_is_actual, FALSE), mbs_ldr_is_fixed,
 	       mbs_is_active, mbs_fg_product_id, COALESCE(mbs_fg_item_code, ''), COALESCE(mbs_fg_link_source, ''),
 	       mbs_mbh_id, mbs_superseded_by_spin_id IS NOT NULL, mbs_parent_spin_id IS NULL
 	  FROM mst_mb_spin
@@ -91,14 +91,19 @@ func readMBASImage(ctx context.Context, tx *sql.Tx, spinID uuid.UUID, lock bool)
 	s := &img.Spin
 	var ldr sql.NullFloat64
 	var fg sql.NullInt64
+	var fixed sql.NullBool
 	err := tx.QueryRowContext(ctx, mbasSpinImageQuery+suffix, spinID).Scan(
-		&s.ShadeCode, &s.ShadeName, &s.CC, &s.CrossSection, &ldr, &s.LDRType, &s.LDRIsActual, &s.LDRIsFixed,
+		&s.ShadeCode, &s.ShadeName, &s.CC, &s.CrossSection, &ldr, &s.LDRType, &s.LDRIsActual, &fixed,
 		&s.IsActive, &fg, &s.FGItemCode, &s.FGLinkSource, &s.headID, &s.superseded, &s.isRoot)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, fmt.Errorf("read spin image: %w", err)
+	}
+	if fixed.Valid {
+		v := fixed.Bool
+		s.LDRIsFixed = &v
 	}
 	if ldr.Valid {
 		v := ldr.Float64
@@ -153,7 +158,7 @@ func mbasComputeNeeds(in mbactivesync.SyncSpinInput, img *mbasImage) mbasNeeds {
 	if in.Has(mbactivesync.SubSetLDR) && in.TargetLDR != nil {
 		n.ldr = sp.RunLDRPct == nil ||
 			mbactivesync.Fix4(*sp.RunLDRPct) != mbactivesync.Fix4(*in.TargetLDR) ||
-			sp.LDRType != mbspin.LDRTypeActual || !sp.LDRIsActual || !sp.LDRIsFixed
+			sp.LDRType != mbspin.LDRTypeActual || !sp.LDRIsActual || sp.LDRIsFixed == nil || !*sp.LDRIsFixed
 	}
 	if in.Has(mbactivesync.SubSetFG) && in.TargetFG != nil {
 		n.fg = sp.FGProductID == nil || *sp.FGProductID != *in.TargetFG

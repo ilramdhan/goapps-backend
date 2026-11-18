@@ -72,6 +72,9 @@ type ResultSink interface {
 	Record(o ApplyOutcome) error
 }
 
+// StoppedSinkError is ApplySummary.Stopped when the result sink failed.
+const StoppedSinkError = "sink_error"
+
 // ApplySummary counts outcomes by result and reason.
 type ApplySummary struct {
 	Selected  int
@@ -409,7 +412,7 @@ func (a *Applier) runBatch(ctx context.Context, items []*ApplyItem, opts ApplyOp
 		}
 		out, perr := a.applyOne(ctx, it, opts.Actor, now, sink, st)
 		if perr != nil {
-			sum.Stopped = "sink_error"
+			sum.Stopped = StoppedSinkError
 			return true, fmt.Errorf("record partial result for %s: %w", it.Key, perr)
 		}
 		sum.Processed++
@@ -426,7 +429,7 @@ func (a *Applier) runBatch(ctx context.Context, items []*ApplyItem, opts ApplyOp
 			c.failed++
 		}
 		if serr := sink.Record(out); serr != nil {
-			sum.Stopped = "sink_error"
+			sum.Stopped = StoppedSinkError
 			return true, fmt.Errorf("record result for %s: %w", it.Key, serr)
 		}
 	}
@@ -464,7 +467,7 @@ func (a *Applier) dispatch(ctx context.Context, it *ApplyItem, actor string, st 
 	if isRootRow(it) {
 		return a.dispatchRoot(ctx, it, actor, out, st)
 	}
-	if it.Kind != applyKindRow || !isPhaseARowAction(it.Action) {
+	if it.Kind != applyKindRow || !isSyncRowAction(it.Action) {
 		out.Result = ItemResult{Result: ResultSkipped, Reason: ReasonNotWired, Message: fmt.Sprintf("%s %q is not wired in this build", it.Kind, it.Action)}
 		return out
 	}
@@ -501,6 +504,9 @@ func finishOutcome(out ApplyOutcome, res ItemResult, err error) ApplyOutcome {
 		if res.Message != "" {
 			out.Err += ": " + res.Message
 		}
+	}
+	if res.Result == ResultFailed && res.Reason == ReasonValidateGate && res.ManualReason == "" {
+		res.ManualReason = ReasonValidateGate // handled in the UI (manual-items.csv)
 	}
 	out.Result = res
 	return out
@@ -609,7 +615,9 @@ func (a *Applier) dispatchDeactivate(ctx context.Context, it *ApplyItem, kind He
 	return finishOutcome(out, res, werr)
 }
 
-func isPhaseARowAction(a string) bool {
+// isSyncRowAction reports the plan rows moved by Writer.SyncExistingSpin (phase A rows and
+// phase D REACTIVATE rows).
+func isSyncRowAction(a string) bool {
 	act := Action(a)
 	return act == ActionKeep || act == ActionUpdateLDR || act == ActionUpdateShade || act == ActionReactivate
 }

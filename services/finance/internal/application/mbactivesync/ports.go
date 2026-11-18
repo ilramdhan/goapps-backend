@@ -31,6 +31,13 @@ const (
 	ReasonShadeMismatch   = "shade_mismatch"
 	ReasonInvalidLDR      = "invalid_ldr"
 	ReasonDBError         = "db_error"
+	// ReasonChangedSinceApply: revert found a key column that no longer holds the
+	// after-image written by the apply (a later change) — the item is left alone.
+	ReasonChangedSinceApply = "changed_since_apply"
+	// ReasonAlreadyReverted: every column the item changed already holds its before-image.
+	ReasonAlreadyReverted = "already_reverted"
+	// ReasonNotRevertable: the tool does not revert this action (SUPERSEDE: use Un-supersede).
+	ReasonNotRevertable = "not_revertable"
 	// ReasonNewSpinNotReady: the superseding spin is missing, not live, on a non-live
 	// head, or has no shade/FG yet (its phase row has not run) — rerun after it.
 	ReasonNewSpinNotReady = "new_spin_not_ready"
@@ -174,6 +181,20 @@ type HeadWorkflow interface {
 	EnsureValidated(ctx context.Context, headID uuid.UUID, actor string, confirmSupersede bool) (ItemResult, error)
 }
 
+// RevertInput drives Writer.Revert: one APPLIED result.csv record (design part 2 §8).
+// Action/Phase are the original item's; BeforeJSON/AfterJSON are its images.
+type RevertInput struct {
+	Key         string
+	Action      string
+	Phase       Phase
+	SpinID      uuid.UUID
+	CloneSpinID uuid.UUID
+	HeadID      uuid.UUID
+	BeforeJSON  string
+	AfterJSON   string
+	Actor       string
+}
+
 // Writer applies reviewed plan items. One transaction per item; a non-nil error
 // is a database failure (the item's transaction is rolled back).
 type Writer interface {
@@ -191,4 +212,7 @@ type Writer interface {
 	DeactivateSpin(ctx context.Context, in DeactivateSpinInput) (ItemResult, error)
 	// DeactivateHead deactivates a head and its live spins when none is referenced.
 	DeactivateHead(ctx context.Context, in DeactivateHeadInput) (ItemResult, error)
+	// Revert restores the before-image of one APPLIED item when its columns still hold
+	// the after-image (optimistic, 1 tx); clones/generated spins are deactivated.
+	Revert(ctx context.Context, in RevertInput) (ItemResult, error)
 }

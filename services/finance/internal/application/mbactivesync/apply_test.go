@@ -55,6 +55,10 @@ func (f *fakeWriter) DeactivateHead(context.Context, DeactivateHeadInput) (ItemR
 	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
 }
 
+func (f *fakeWriter) Revert(context.Context, RevertInput) (ItemResult, error) {
+	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
+}
+
 type memSink struct {
 	out []ApplyOutcome
 	err error

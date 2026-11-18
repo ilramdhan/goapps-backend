@@ -5,8 +5,14 @@
 //	--plan --file F [--out-dir D]   read-only: writes plan-rows, plan-heads CSV and a summary
 //	--report --plan-rows R --plan-heads H [--out F]
 //	                                read-only: simulates MB_SP_CODE + MB_SP_DOZING product impact
-//	--apply --plan-rows R --plan-heads H --phase A --actor NAME [--batch N] [--limit N] [--only-sysid S1,S2]
-//	                                writes to the DB (phases A and B in this build); result/errors CSV in --out-dir
+//	--apply --plan-rows R --plan-heads H --phase A|B|C|D --actor NAME [--batch N] [--limit N] [--only-sysid S1,S2]
+//	                                writes to the DB; result/errors/manual-items CSV in --out-dir.
+//	                                Phases: A keep/LDR/shade/FG of existing spins, B supersede/deactivate,
+//	                                C duplicate/generate spins (+ supersede), D reactivate (+ supersede).
+//	                                --batch N (N > 0) is REQUIRED for phases C and D.
+//	--revert --input RESULT.csv [--input ...] --actor NAME [--limit N] [--only-sysid S1,S2]
+//	                                writes to the DB: restores the before-image of APPLIED items still holding
+//	                                their after-image (reverse order); SUPERSEDE items are not reverted.
 //
 // --plan never writes to the database (the snapshot runs in a read-only transaction).
 package main
@@ -43,6 +49,8 @@ func main() {
 
 func run(ctx context.Context, o options) error {
 	switch {
+	case o.revert:
+		return runRevert(ctx, o)
 	case o.report:
 		return runReport(ctx, o)
 	case o.apply:

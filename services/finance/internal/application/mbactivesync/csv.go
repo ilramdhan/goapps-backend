@@ -389,6 +389,7 @@ type CSVResultSink struct {
 	started       bool
 	errHeaderDone bool
 	manualStarted bool
+	manualPlan    [][]string
 }
 
 // ManualItemsHeader is the manual-items CSV header written by the apply sink for
@@ -403,15 +404,36 @@ func (s *CSVResultSink) WithManual(w io.Writer) *CSVResultSink {
 	return s
 }
 
+// WithManualPlan queues plan-level manual items (ManualPlanRecords: NEW_RECIPE,
+// REPORT_ONLY, REPORT_SPIN/HEAD) written right after the header of the manual file.
+func (s *CSVResultSink) WithManualPlan(recs [][]string) *CSVResultSink {
+	s.manualPlan = recs
+	return s
+}
+
+// startManual writes the manual-items header and the queued plan items once.
+func (s *CSVResultSink) startManual() error {
+	if s.manualStarted {
+		return nil
+	}
+	if err := s.manual.Write(ManualItemsHeader); err != nil {
+		return fmt.Errorf("write manual-items header: %w", err)
+	}
+	for _, r := range s.manualPlan {
+		if err := s.manual.Write(r); err != nil {
+			return fmt.Errorf("write manual plan item: %w", err)
+		}
+	}
+	s.manualStarted = true
+	return nil
+}
+
 func (s *CSVResultSink) recordManual(o ApplyOutcome) error {
 	if s.manual == nil || o.Result.ManualReason == "" {
 		return nil
 	}
-	if !s.manualStarted {
-		if err := s.manual.Write(ManualItemsHeader); err != nil {
-			return fmt.Errorf("write manual-items header: %w", err)
-		}
-		s.manualStarted = true
+	if err := s.startManual(); err != nil {
+		return err
 	}
 	it := o.Item
 	ln := ""
@@ -496,11 +518,8 @@ func (s *CSVResultSink) closeManual() error {
 	if s.manual == nil {
 		return nil
 	}
-	if !s.manualStarted {
-		if err := s.manual.Write(ManualItemsHeader); err != nil {
-			return fmt.Errorf("write manual-items header: %w", err)
-		}
-		s.manualStarted = true
+	if err := s.startManual(); err != nil {
+		return err
 	}
 	s.manual.Flush()
 	if err := s.manual.Error(); err != nil {

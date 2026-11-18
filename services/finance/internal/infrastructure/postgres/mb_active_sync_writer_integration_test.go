@@ -76,6 +76,7 @@ type mbasSpinRow struct {
 	active, actual bool
 	fg             sql.NullInt64
 	fgSrc          sql.NullString
+	fixed          sql.NullBool // NULL must survive a revert (migration 000486)
 }
 
 func (f *mbasFixture) readSpin(id uuid.UUID) mbasSpinRow {
@@ -83,8 +84,8 @@ func (f *mbasFixture) readSpin(id uuid.UUID) mbasSpinRow {
 	var r mbasSpinRow
 	require.NoError(f.t, f.raw.QueryRowContext(f.ctx, `
 		SELECT COALESCE(mbs_shade_code, ''), COALESCE(mbs_run_ldr_pct, 0), COALESCE(mbs_ldr_type, ''), COALESCE(mbs_ldr_is_actual, FALSE),
-		       mbs_is_active, mbs_fg_product_id, mbs_fg_link_source
-		  FROM mst_mb_spin WHERE mbs_id = $1`, id).Scan(&r.shade, &r.ldr, &r.ldrType, &r.actual, &r.active, &r.fg, &r.fgSrc))
+		       mbs_is_active, mbs_fg_product_id, mbs_fg_link_source, mbs_ldr_is_fixed
+		  FROM mst_mb_spin WHERE mbs_id = $1`, id).Scan(&r.shade, &r.ldr, &r.ldrType, &r.actual, &r.active, &r.fg, &r.fgSrc, &r.fixed))
 	return r
 }
 
