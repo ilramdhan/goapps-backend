@@ -295,7 +295,7 @@ func ClassifyRows(rows []FileRow, snap *Snapshot) ([]*RowPlan, error) {
 		p := c.prepare(r, seen)
 		plans = append(plans, p)
 		if p.Action == "" {
-			allocIn = append(allocIn, AllocInput{Row: r, HeadID: p.Head.ID})
+			allocIn = append(allocIn, AllocInput{Row: r, HeadID: p.Head.ID, TargetFG: p.TargetFG})
 			pending = append(pending, p)
 		}
 	}

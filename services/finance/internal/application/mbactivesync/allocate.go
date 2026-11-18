@@ -41,6 +41,8 @@ func absInt64(x int64) int64 {
 type AllocInput struct {
 	Row    FileRow
 	HeadID uuid.UUID
+	// TargetFG is the row's target FG (POY product sys id); nil = no FG preference.
+	TargetFG *int64
 }
 
 // AllocResult is the best candidate spin of one row and its rank on that spin.
@@ -54,6 +56,23 @@ type AllocResult struct {
 	// nil when the file has no RP-Doz (SQL NULL).
 	LDRD *int64
 	Rank int // 1 = the row owns the spin; >1 = spin taken by a better row
+	// FGRank is the FG affinity of the spin for this row: 0 = spin FG equals the
+	// row's target FG, 1 = spin FG NULL (or row has no target), 2 = another FG.
+	FGRank int
+}
+
+// fgRank is the first allocation key (P2h-4a): once a head carries several clones
+// identical on den/fil/cs/shade/LDR that differ only by FG, each row must prefer
+// the clone that already holds its own target FG, otherwise every row converges
+// on the same clone (uuid tiebreak) and the re-plan never reaches a fixed point.
+func fgRank(spinFG, targetFG *int64) int {
+	switch {
+	case spinFG == nil || targetFG == nil:
+		return 1
+	case *spinFG == *targetFG:
+		return 0
+	}
+	return 2
 }
 
 // shadeEq is the tri-state sh_eq of L-14.
@@ -150,9 +169,11 @@ func cmpBoolTrueFirst(a, b bool) int {
 func cmpUUID(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) }
 
 // Allocate ports L-14 best/alloc: every row picks its best candidate spin on its
-// own head (live or inactive, non-deleted) ordered lvl ASC, sh_eq DESC NULLS LAST,
-// ldr_d ASC, live DESC, mbs_id ASC; then the rows choosing the same spin are ranked
-// sh_eq DESC NULLS LAST, ldr_d ASC, ln ASC. There is deliberately no fallback to a
+// own head (live or inactive, non-deleted) ordered fg_rank ASC, lvl ASC, sh_eq DESC
+// NULLS LAST, ldr_d ASC, live DESC, mbs_id ASC; then the rows choosing the same spin
+// are ranked fg_rank ASC, sh_eq DESC NULLS LAST, ldr_d ASC, ln ASC. fg_rank (P2h-4a,
+// not in L-14) is 0 = spin FG equals the row target FG, 1 = spin FG NULL, 2 = other
+// FG; without it the re-plan after phase C oscillates. There is deliberately no fallback to a
 // second candidate (design §3.4). The result is keyed by ln and does not depend on
 // the order of rows or spins.
 func Allocate(rows []AllocInput, spinsByHead map[uuid.UUID][]*SpinSnap) map[int]*AllocResult {
@@ -169,6 +190,9 @@ func Allocate(rows []AllocInput, spinsByHead map[uuid.UUID][]*SpinSnap) map[int]
 	for _, list := range bySpin {
 		sort.Slice(list, func(i, j int) bool {
 			a, b := list[i], list[j]
+			if c := cmpInt(a.FGRank, b.FGRank); c != 0 {
+				return c < 0
+			}
 			if c := cmpInt(shEqRank(a.ShEq), shEqRank(b.ShEq)); c != 0 {
 				return c < 0
 			}
@@ -192,7 +216,8 @@ func bestCandidate(in AllocInput, spins []*SpinSnap) *AllocResult {
 		if lvl == 0 {
 			continue
 		}
-		c := &AllocResult{Ln: in.Row.Ln, Spin: sp, Lvl: lvl, ShEq: shadeEq(sp.ShadeCode, sp.CC, in.Row.Shade), LDRD: ldrDiff(sp, in.Row)}
+		c := &AllocResult{Ln: in.Row.Ln, Spin: sp, Lvl: lvl, ShEq: shadeEq(sp.ShadeCode, sp.CC, in.Row.Shade), LDRD: ldrDiff(sp, in.Row),
+			FGRank: fgRank(sp.FGProductID, in.TargetFG)}
 		if best == nil || betterCandidate(c, best) {
 			best = c
 		}
@@ -201,6 +226,9 @@ func bestCandidate(in AllocInput, spins []*SpinSnap) *AllocResult {
 }
 
 func betterCandidate(a, b *AllocResult) bool {
+	if c := cmpInt(a.FGRank, b.FGRank); c != 0 {
+		return c < 0
+	}
 	if c := cmpInt(a.Lvl, b.Lvl); c != 0 {
 		return c < 0
 	}

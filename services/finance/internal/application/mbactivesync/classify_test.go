@@ -263,7 +263,7 @@ func TestAllocate_OrderAndRank(t *testing.T) {
 	r1 := frow(1, "S1", "P", spec380, "Y145T", 1.39)
 	r2 := frow(2, "S1", "P", spec380, "Y145T", 1.40)
 	r3 := frow(3, "S1", "P", "POY 380/144/RD", "Q1", 1.0)
-	out := Allocate([]AllocInput{{r1, h.ID}, {r2, h.ID}, {r3, h.ID}}, spins)
+	out := Allocate([]AllocInput{{Row: r1, HeadID: h.ID}, {Row: r2, HeadID: h.ID}, {Row: r3, HeadID: h.ID}}, spins)
 	if out[1].Spin.ID != near.ID || out[2].Spin.ID != near.ID {
 		t.Fatalf("rows 1,2 must pick near (lvl2, sh_eq, min ldr_d): %v %v", out[1].Spin.ID, out[2].Spin.ID)
 	}
@@ -282,7 +282,7 @@ func TestAllocate_OrderAndRank(t *testing.T) {
 	a := spin(10, h, 380, 144, "TBL", "Y145T", 1.39, inactive)
 	b := spin(11, h, 380, 144, "TBL", "Y145T", 1.39)
 	c := spin(12, h, 380, 144, "TBL", "Y145T", 1.39)
-	out = Allocate([]AllocInput{{r1, h.ID}}, map[uuid.UUID][]*SpinSnap{h.ID: {&c, &a, &b}})
+	out = Allocate([]AllocInput{{Row: r1, HeadID: h.ID}}, map[uuid.UUID][]*SpinSnap{h.ID: {&c, &a, &b}})
 	if out[1].Spin.ID != b.ID {
 		t.Errorf("tie → live then lowest id; got %v", out[1].Spin.ID)
 	}
@@ -292,7 +292,7 @@ func TestAllocate_NullShadeSortsLast(t *testing.T) {
 	h := head(1, "S1", "", true)
 	noShade := spin(1, h, 380, 144, "TBL", "", 1.39)
 	other := spin(2, h, 380, 144, "TBL", "X438T", 5)
-	out := Allocate([]AllocInput{{frow(1, "S1", "P", spec380, "Y145T", 1.39), h.ID}},
+	out := Allocate([]AllocInput{{Row: frow(1, "S1", "P", spec380, "Y145T", 1.39), HeadID: h.ID}},
 		map[uuid.UUID][]*SpinSnap{h.ID: {&noShade, &other}})
 	if out[1].Spin.ID != other.ID {
 		t.Errorf("sh_eq false must beat sh_eq NULL; got %v", out[1].Spin.ID)
@@ -561,19 +561,19 @@ func TestAllocate_LDRDTieExact(t *testing.T) {
 	lo := spin(1, h, 380, 144, "TBL", "Y145T", 0.93) // |0.93-1.00| = 0.07
 	hi := spin(2, h, 380, 144, "TBL", "Y145T", 1.07) // |1.07-1.00| = 0.07
 	r := frow(1, "S1", "P", spec380, "Y145T", 1.00)
-	out := Allocate([]AllocInput{{r, h.ID}}, map[uuid.UUID][]*SpinSnap{h.ID: {&hi, &lo}})
+	out := Allocate([]AllocInput{{Row: r, HeadID: h.ID}}, map[uuid.UUID][]*SpinSnap{h.ID: {&hi, &lo}})
 	if out[1].Spin.ID != lo.ID {
 		t.Errorf("tie on ldr_d → lowest mbs_id; got %v", out[1].Spin.ID)
 	}
 	loIn := spin(1, h, 380, 144, "TBL", "Y145T", 0.93, inactive)
-	out = Allocate([]AllocInput{{r, h.ID}}, map[uuid.UUID][]*SpinSnap{h.ID: {&loIn, &hi}})
+	out = Allocate([]AllocInput{{Row: r, HeadID: h.ID}}, map[uuid.UUID][]*SpinSnap{h.ID: {&loIn, &hi}})
 	if out[1].Spin.ID != hi.ID {
 		t.Errorf("tie on ldr_d → live first; got %v", out[1].Spin.ID)
 	}
 	// rank: two rows on the same spin with equal ldr_d (1.07-1.00 vs 1.07-1.14) → ln order.
 	r2 := frow(2, "S1", "P", spec380, "Y145T", 1.00)
 	r1 := frow(1, "S1", "P", spec380, "Y145T", 1.14)
-	out = Allocate([]AllocInput{{r2, h.ID}, {r1, h.ID}}, map[uuid.UUID][]*SpinSnap{h.ID: {&hi}})
+	out = Allocate([]AllocInput{{Row: r2, HeadID: h.ID}, {Row: r1, HeadID: h.ID}}, map[uuid.UUID][]*SpinSnap{h.ID: {&hi}})
 	if out[1].Rank != 1 || out[2].Rank != 2 {
 		t.Errorf("rank tie → ln ASC: ln1 %d ln2 %d", out[1].Rank, out[2].Rank)
 	}
@@ -617,4 +617,53 @@ func TestClassifyRows_EmptyHeadShadeMultiRoot(t *testing.T) {
 			}
 		}
 	})
+}
+
+// P2h-4a bug 1: after phase C a head holds the source plus clones identical on
+// den/fil/cs/shade/LDR that differ only by FG. Each row must own the clone that
+// already carries its target FG (fg_rank first), leaving nothing unallocated.
+func TestAllocate_FGRankFirst(t *testing.T) {
+	h := head(1, "S1", "Y145T", true)
+	src := spin(1, h, 380, 144, "TBL", "Y145T", 1.39, named)
+	// ids chosen so the uuid tiebreak would favour cloneB for both rows without fg_rank
+	cloneA := spin(3, h, 380, 144, "TBL", "Y145T", 1.39, named, child(src.ID), withFG(10))
+	cloneB := spin(2, h, 380, 144, "TBL", "Y145T", 1.39, named, child(src.ID), withFG(11))
+	snap := &Snapshot{
+		Heads: []HeadSnap{h},
+		Spins: []SpinSnap{src, cloneA, cloneB},
+		POYs:  []POYSnap{poy(10, "PA", "Y145T"), poy(11, "PB", "Y145T")},
+	}
+	rows := []FileRow{
+		frow(1, "S1", "PA", spec380, "Y145T", 1.39),
+		frow(2, "S1", "PB", spec380, "Y145T", 1.39),
+	}
+	spins := snap.SpinsByHead()
+	out := Allocate([]AllocInput{{Row: rows[0], HeadID: h.ID, TargetFG: i64(10)}, {Row: rows[1], HeadID: h.ID, TargetFG: i64(11)}}, spins)
+	if out[1].Spin.ID != cloneA.ID || out[1].Rank != 1 || out[1].FGRank != 0 {
+		t.Errorf("row A: %+v", out[1])
+	}
+	if out[2].Spin.ID != cloneB.ID || out[2].Rank != 1 || out[2].FGRank != 0 {
+		t.Errorf("row B: %+v", out[2])
+	}
+	// NULL FG beats another FG, even when the other-FG spin is better on lvl/LDR.
+	other := spin(20, h, 380, 144, "TBL", "Y145T", 1.39, named, withFG(99))
+	nullFG := spin(21, h, 380, 144, "RD", "Y145T", 2.5, named)
+	out = Allocate([]AllocInput{{Row: rows[0], HeadID: h.ID, TargetFG: i64(10)}}, map[uuid.UUID][]*SpinSnap{h.ID: {&other, &nullFG}})
+	if out[1].Spin.ID != nullFG.ID || out[1].FGRank != 1 {
+		t.Errorf("NULL FG must beat other FG: %+v", out[1])
+	}
+
+	// Full plan: both rows KEEP on their own clone, no unallocated clone deactivated.
+	plans, hp := planAll(t, rows, snap)
+	for ln, want := range map[int]uuid.UUID{1: cloneA.ID, 2: cloneB.ID} {
+		p := plans[ln]
+		if p.Spin == nil || p.Spin.ID != want || p.Action != ActionKeep || p.Decision != DecisionApply {
+			t.Errorf("ln %d: action %s spin %v reasons %v", ln, p.Action, p.Spin, p.Reasons)
+		}
+	}
+	for _, a := range hp.Actions {
+		if a.OldSpin != nil && (a.OldSpin.ID == cloneA.ID || a.OldSpin.ID == cloneB.ID) {
+			t.Errorf("clone must not get a head action: %s %v", a.Kind, a.Reasons)
+		}
+	}
 }

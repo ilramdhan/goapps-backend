@@ -476,3 +476,26 @@ func TestPlanHeads_HeadOnlySupersedeLiveNewHeadAndNoActivator(t *testing.T) {
 		t.Errorf("counts = %+v, want %+v", c, want)
 	}
 }
+
+// P2h-4a bug 4 safety net: an unallocated live clone whose FG is a target FG of
+// an actionable row of its head is reported, never deactivated; a clone with a
+// foreign FG and a plain root are still deactivated (Q5).
+func TestPlanHeads_UnallocatedCloneWithFileFGNotDeactivated(t *testing.T) {
+	h := namedHead(1, "S1", "MGT S1", "Y145T", true)
+	src := spin(1, h, 380, 144, "TBL", "Y145T", 1.39, named)
+	// The row (cs TBL, den 380) cannot allocate these 160/36 clones.
+	cloneFile := spin(2, h, 160, 36, "TBL", "Y145T", 1.39, named, child(src.ID), withFG(10))
+	cloneOther := spin(3, h, 160, 36, "TBL", "Y145T", 1.39, named, child(src.ID), withFG(77))
+	rootFree := spin(4, h, 75, 36, "TBL", "Y145T", 1.39, named, withFG(10))
+	snap := &Snapshot{
+		Heads: []HeadSnap{h},
+		Spins: []SpinSnap{src, cloneFile, cloneOther, rootFree},
+		POYs:  []POYSnap{poy(10, "PA", "Y145T")},
+	}
+	_, hp := planAll(t, []FileRow{frow(1, "S1", "PA", spec380, "Y145T", 1.39)}, snap)
+	checkHeadActions(t, hp, map[string]headWant{
+		"rs:" + cloneFile.ID.String():  {KindReportSpin, PhaseNone, DecisionSkip, []string{ReasonUnallocated, ReasonCloneFGInFile}, ""},
+		"ds:" + cloneOther.ID.String(): {KindDeactivateSpin, PhaseB, DecisionApply, []string{ReasonUnallocated}, ""},
+		"ds:" + rootFree.ID.String():   {KindDeactivateSpin, PhaseB, DecisionApply, []string{ReasonUnallocated}, ""},
+	})
+}
