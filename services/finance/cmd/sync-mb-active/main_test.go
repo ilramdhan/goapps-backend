@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -97,4 +99,22 @@ func TestParseFlags(t *testing.T) {
 
 func TestNewHeadWorkflow_Wires(t *testing.T) {
 	require.NotNil(t, newHeadWorkflow(postgres.NewDBFromSQL(nil)))
+}
+
+func TestParseFlagsHelpPrintsUsage(t *testing.T) {
+	for _, arg := range []string{"-h", "--help"} {
+		var buf bytes.Buffer
+		_, err := parseFlagsTo([]string{arg}, &buf)
+		require.ErrorIs(t, err, flag.ErrHelp, arg)
+		out := buf.String()
+		assert.Contains(t, out, "Usage of "+cmdName, arg)
+		for _, f := range []string{"-plan", "-apply", "-phase", "-prev-results", "-revert"} {
+			assert.Contains(t, out, f, arg)
+		}
+	}
+	var buf bytes.Buffer
+	_, err := parseFlagsTo([]string{"--bogus"}, &buf)
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, flag.ErrHelp)
+	assert.Empty(t, buf.String(), "parse errors stay silent (main logs them)")
 }

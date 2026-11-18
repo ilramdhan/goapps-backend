@@ -20,6 +20,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -35,7 +36,10 @@ import (
 )
 
 func main() {
-	o, err := parseFlags(os.Args[1:])
+	o, err := parseFlagsTo(os.Args[1:], os.Stderr)
+	if errors.Is(err, flag.ErrHelp) {
+		return // usage already printed to stderr; exit 0
+	}
 	if err != nil {
 		log.Fatalf("%s: %v", cmdName, err)
 	}

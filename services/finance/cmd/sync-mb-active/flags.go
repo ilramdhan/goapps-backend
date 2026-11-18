@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"strings"
 
@@ -52,9 +53,16 @@ func (l *stringList) Set(v string) error {
 }
 
 func parseFlags(args []string) (options, error) {
+	return parseFlagsTo(args, io.Discard)
+}
+
+// parseFlagsTo parses args; on -h/--help the usage (flag defaults) goes to usage and
+// flag.ErrHelp is returned so main exits 0. Parse errors stay silent (main logs them).
+func parseFlagsTo(args []string, usage io.Writer) (options, error) {
 	var o options
 	fs := flag.NewFlagSet(cmdName, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+	fs.Usage = func() {} // usage only on -h/--help (below)
 	fs.BoolVar(&o.plan, "plan", false, "read-only: build plan CSVs + summary from the DB and --file")
 	fs.BoolVar(&o.report, "report", false, "read-only product-impact report (MB_SP_CODE + MB_SP_DOZING) from reviewed --plan-rows/--plan-heads")
 	fs.BoolVar(&o.apply, "apply", false, "apply reviewed plan (phases A, B, C and D)")
@@ -72,6 +80,13 @@ func parseFlags(args []string) (options, error) {
 	fs.StringVar(&o.onlySysID, "only-sysid", "", "comma-separated SYSIDs to apply (--apply)")
 	fs.Var(&o.prevResults, "prev-results", "earlier result CSV (--apply, repeatable): ln -> clone_spin_id to resume duplicates")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			if _, werr := fmt.Fprintf(usage, "Usage of %s (modes: --plan | --report | --apply | --revert, see README.md):\n", cmdName); werr != nil {
+				return o, errors.Join(err, werr)
+			}
+			fs.SetOutput(usage)
+			fs.PrintDefaults()
+		}
 		return o, err
 	}
 	return o, validateOptions(&o)
