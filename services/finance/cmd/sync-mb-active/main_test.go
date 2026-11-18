@@ -26,10 +26,21 @@ func TestParseFlags(t *testing.T) {
 		_, err := parseFlags(args)
 		assert.Error(t, err, "%v", args)
 	}
-	for _, m := range []string{"--report", "--apply"} {
-		o, err := parseFlags([]string{m})
-		require.NoError(t, err)
-		assert.Error(t, run(t.Context(), o))
-		assert.Contains(t, run(t.Context(), o).Error(), "not implemented yet")
+	o, err = parseFlags([]string{"--apply"})
+	require.NoError(t, err)
+	assert.Contains(t, run(t.Context(), o).Error(), "not implemented yet")
+
+	o, err = parseFlags([]string{"--report", "--plan-rows", "r.csv", "--plan-heads", "h.csv", "--out", "x.csv"})
+	require.NoError(t, err)
+	assert.True(t, o.report)
+	for _, args := range [][]string{
+		{"--report"},
+		{"--report", "--plan-rows", "r.csv"},
+		{"--report", "--plan-heads", "h.csv"},
+		{"--report", "--plan-rows", "r", "--plan-heads", "h", "--file", "f"},
+		{"--report", "--plan-rows", "r", "--plan-heads", "h", "--phase", "A"},
+	} {
+		_, err := parseFlags(args)
+		assert.Error(t, err, "%v", args)
 	}
 }

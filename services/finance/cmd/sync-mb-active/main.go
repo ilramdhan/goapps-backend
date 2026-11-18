@@ -3,7 +3,8 @@
 // Modes (mutually exclusive):
 //
 //	--plan --file F [--out-dir D]   read-only: writes plan-rows, plan-heads CSV and a summary
-//	--report                        declared, not implemented yet
+//	--report --plan-rows R --plan-heads H [--out F]
+//	                                read-only: simulates MB_SP_CODE + MB_SP_DOZING product impact
 //	--apply                         declared, not implemented yet
 //
 // --plan never writes to the database (the snapshot runs in a read-only transaction).
@@ -42,7 +43,7 @@ func main() {
 func run(ctx context.Context, o options) error {
 	switch {
 	case o.report:
-		return fmt.Errorf("--report: %s", errNotImpl)
+		return runReport(ctx, o)
 	case o.apply:
 		return fmt.Errorf("--apply: %s", errNotImpl)
 	case o.plan:

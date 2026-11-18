@@ -30,7 +30,7 @@ func parseFlags(args []string) (options, error) {
 	fs := flag.NewFlagSet(cmdName, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.BoolVar(&o.plan, "plan", false, "read-only: build plan CSVs + summary from the DB and --file")
-	fs.BoolVar(&o.report, "report", false, "read-only product-impact report (not implemented yet)")
+	fs.BoolVar(&o.report, "report", false, "read-only product-impact report (MB_SP_CODE + MB_SP_DOZING) from reviewed --plan-rows/--plan-heads")
 	fs.BoolVar(&o.apply, "apply", false, "apply reviewed plan (not implemented yet)")
 	fs.StringVar(&o.file, "file", "", "mb-active file (normalized or original format), required for --plan")
 	fs.StringVar(&o.outDir, "out-dir", ".", "output directory for generated files")
@@ -57,12 +57,32 @@ func validateOptions(o *options) error {
 		return errors.New("exactly one of --plan, --report, --apply is required")
 	case modes > 1:
 		return errors.New("--plan, --report and --apply are mutually exclusive")
-	case o.plan && o.file == "":
-		return errors.New("--plan requires --file")
-	case o.plan && (o.planRows != "" || o.planHeads != "" || o.phase != "" || o.actor != "" || o.out != ""):
-		return errors.New("--plan only accepts --file and --out-dir")
 	case o.outDir == "":
 		return errors.New("--out-dir must not be empty")
+	case o.plan:
+		return validatePlanOptions(o)
+	case o.report:
+		return validateReportOptions(o)
+	}
+	return nil
+}
+
+func validatePlanOptions(o *options) error {
+	switch {
+	case o.file == "":
+		return errors.New("--plan requires --file")
+	case o.planRows != "" || o.planHeads != "" || o.phase != "" || o.actor != "" || o.out != "":
+		return errors.New("--plan only accepts --file and --out-dir")
+	}
+	return nil
+}
+
+func validateReportOptions(o *options) error {
+	switch {
+	case o.planRows == "" || o.planHeads == "":
+		return errors.New("--report requires --plan-rows and --plan-heads")
+	case o.file != "" || o.phase != "" || o.actor != "":
+		return errors.New("--report only accepts --plan-rows, --plan-heads, --out and --out-dir")
 	}
 	return nil
 }
