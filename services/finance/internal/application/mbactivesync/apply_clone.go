@@ -294,7 +294,7 @@ func (a *Applier) dispatchRoot(ctx context.Context, it *ApplyItem, actor string,
 	}
 	in := it.Spin
 	in.Actor, in.SpinID = actor, rootID
-	in.TargetDen, in.TargetFil = it.TargetDen, it.TargetFil // root carries the head spec (P2h-4c)
+	in.TargetDen, in.TargetFil = it.TargetDen, it.TargetFil // move the generated root from the head spec to the row spec (P2h-4c)
 	res, serr := a.w.SyncExistingSpin(ctx, in)
 	res = finishRoot(it, st, rootID, gen, res, serr)
 	return finishOutcome(out, res, serr)
