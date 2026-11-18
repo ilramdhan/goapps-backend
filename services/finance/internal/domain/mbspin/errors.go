@@ -108,4 +108,6 @@ var (
 	// ErrUnsupersedeConflict is returned (409) when restoring the spin would collide on
 	// shade + FG with another live spin (other than the one that superseded it).
 	ErrUnsupersedeConflict = errors.New("cannot restore: another live spin has the same shade and fg product")
+	// ErrInvalidActualLDR is returned when SetActualLDR receives a non-positive percentage.
+	ErrInvalidActualLDR = errors.New("mb spin actual ldr percentage must be greater than zero")
 )

@@ -559,3 +559,49 @@ func (e *Entity) UnlockLDRActual() {
 		e.ldrType = LDRTypeNotCalculated
 	}
 }
+
+// =============================================================================
+// Shade / actual-LDR setters for MB Active Sync (design-part2 §5.2 K1, K2)
+// =============================================================================
+
+// SetShade sets the shade code/name and cross-section and mirrors the shade code
+// into cc, per the migration 000499 rule that mbs_cc carries the shade code.
+// All three values are applied as given: nil clears the field (name and
+// crossSection are set independently of code; nil code also clears cc). Callers
+// that want to keep the current cross-section pass e.CrossSection(). Returns
+// ErrAlreadyDeleted for a soft-deleted spin.
+func (e *Entity) SetShade(code, name, crossSection *string, updatedBy string) error {
+	if e.IsDeleted() {
+		return ErrAlreadyDeleted
+	}
+	e.shadeCode = code
+	e.shadeName = name
+	e.crossSection = crossSection
+	e.cc = code
+	now := time.Now()
+	e.updatedAt = &now
+	e.updatedBy = &updatedBy
+	return nil
+}
+
+// SetActualLDR records a human-confirmed actual LDR percentage: it sets
+// mbs_run_ldr_pct, marks the fixed flag, and locks the LDR as Actual
+// (LockLDRActual). pct must be > 0 (ErrInvalidActualLDR) and the spin must not
+// be soft-deleted (ErrAlreadyDeleted).
+func (e *Entity) SetActualLDR(pct float64, updatedBy string) error {
+	if e.IsDeleted() {
+		return ErrAlreadyDeleted
+	}
+	if pct <= 0 {
+		return ErrInvalidActualLDR
+	}
+	v := pct
+	e.mbsRunLdrPct = &v
+	fixed := true
+	e.ldrIsFixed = &fixed
+	e.LockLDRActual()
+	now := time.Now()
+	e.updatedAt = &now
+	e.updatedBy = &updatedBy
+	return nil
+}
