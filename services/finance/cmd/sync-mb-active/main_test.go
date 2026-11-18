@@ -40,6 +40,7 @@ func TestParseFlags(t *testing.T) {
 		{"--apply", "--plan-rows", "r", "--plan-heads", "h", "--phase", "A", "--actor", " "},
 		{"--apply", "--plan-rows", "r", "--plan-heads", "h", "--phase", "A", "--actor", "me", "--limit", "-1"},
 		{"--plan", "--file", "f", "--limit", "3"},
+		{"--apply", "--plan-rows", "r", "--plan-heads", "h", "--phase", "C", "--actor", "me"},
 	} {
 		_, err := parseFlags(args)
 		assert.Error(t, err, "%v", args)

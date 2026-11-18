@@ -39,7 +39,8 @@ type ApplyItem struct {
 	Role      string
 	TargetDen *float64
 	TargetFil *int
-	bad       string // non-empty: parse problem, item is reported FAILED(bad_plan_item)
+	HeadID    uuid.UUID // rows: head_id column (phase C ROOT rows; uuid.Nil when empty)
+	bad       string    // non-empty: parse problem, item is reported FAILED(bad_plan_item)
 }
 
 // ApplyOptions are the apply-run filters (design §2).
@@ -53,6 +54,8 @@ type ApplyOptions struct {
 	Logf      func(format string, args ...any)
 	// PrevClones is ln -> clone_spin_id from earlier result CSVs (--prev-results, §5.4).
 	PrevClones map[int]uuid.UUID
+	// PrevRoots is ln -> ROOT spin from earlier result CSVs (LoadPrevRoots).
+	PrevRoots map[int]uuid.UUID
 }
 
 // ApplyOutcome is one processed item with its result.
@@ -80,7 +83,16 @@ type ApplySummary struct {
 
 // Applier runs reviewed plan items through a Writer.
 type Applier struct {
-	w Writer
+	w  Writer
+	hw HeadWorkflow
+}
+
+// WithHeadWorkflow wires the Submit→Validate workflow used by phase C ROOT rows whose
+// head never got its cost product (design part 2 §5.5). Without it such rows are
+// SKIPPED not_wired.
+func (a *Applier) WithHeadWorkflow(hw HeadWorkflow) *Applier {
+	a.hw = hw
+	return a
 }
 
 // NewApplier returns an Applier over w.
@@ -148,6 +160,7 @@ func parseApplyRow(c *PlanCSV, hdr []string, i int) *ApplyItem {
 		it.Key = "row:" + strconv.Itoa(ln)
 	}
 	it.Source, it.Role = g("source_spin_id"), g("role")
+	it.HeadID = parseOptionalUUID(g("head_id"))
 	if err := parseCloneSpec(it, g("target_den"), g("target_fil")); err != nil {
 		it.bad = err.Error()
 		return it
@@ -188,6 +201,15 @@ func parseApplyRow(c *PlanCSV, hdr []string, i int) *ApplyItem {
 	return it
 }
 
+// parseOptionalUUID returns uuid.Nil for an empty or unparsable value.
+func parseOptionalUUID(v string) uuid.UUID {
+	id, err := uuid.Parse(v)
+	if err != nil {
+		return uuid.Nil
+	}
+	return id
+}
+
 func parseCloneSpec(it *ApplyItem, den, fil string) error {
 	if den != "" {
 		v, err := strconv.ParseFloat(den, 64)
@@ -225,8 +247,12 @@ func SelectItems(items []*ApplyItem, opts ApplyOptions) []*ApplyItem {
 		}
 		out = append(out, it)
 	}
-	if opts.Phase == PhaseB {
+	switch opts.Phase {
+	case PhaseB:
 		sort.SliceStable(out, func(a, b int) bool { return phaseBRank(out[a]) < phaseBRank(out[b]) })
+	case PhaseC:
+		sort.SliceStable(out, func(a, b int) bool { return phaseCRank(out[a]) < phaseCRank(out[b]) })
+	case PhaseA, PhaseD, PhaseNone:
 	}
 	return out
 }
@@ -255,6 +281,47 @@ func phaseBRank(it *ApplyItem) int {
 
 const phaseBRankOther = 4
 
+// Phase C ranks: ROOT rows create/validate the first spin of a head, DUP rows clone a
+// freshly created root (source ln:<root>), DUPLICATE rows clone existing roots, then the
+// SUPERSEDE pairs (new_spin_ref ln:<n> needs the spin of an earlier row) and finally
+// SUPERSEDE_HEAD. Equal ranks keep plan order (rows by sysid, ln; then heads).
+const (
+	phaseCRankRoot = iota
+	phaseCRankDup
+	phaseCRankDuplicate
+	phaseCRankSupersede
+	phaseCRankSupersedeHead
+	phaseCRankOther
+)
+
+func phaseCRank(it *ApplyItem) int {
+	if it.Kind == applyKindHead {
+		switch HeadKind(it.Action) {
+		case KindSupersede:
+			return phaseCRankSupersede
+		case KindSupersedeHead:
+			return phaseCRankSupersedeHead
+		default:
+			return phaseCRankOther
+		}
+	}
+	switch {
+	case isRootRow(it):
+		return phaseCRankRoot
+	case isCloneRow(it) && Action(it.Action) == ActionGenerateSpin:
+		return phaseCRankDup
+	case isCloneRow(it):
+		return phaseCRankDuplicate
+	}
+	return phaseCRankOther
+}
+
+// isRootRow reports a phase C GENERATE_SPIN row that builds the first spin of a head
+// (role ROOT, or an older plan without role and without an ln: source).
+func isRootRow(it *ApplyItem) bool {
+	return it.Kind == applyKindRow && it.Phase == PhaseC && Action(it.Action) == ActionGenerateSpin && !isCloneRow(it)
+}
+
 // Run applies the selected items in order, one writer call each. Continue-on-error:
 // a FAILED item does not stop the run. A cancelled ctx, a sink error or the limit stops
 // it (remaining items are not processed).
@@ -277,7 +344,8 @@ func (a *Applier) Run(ctx context.Context, items []*ApplyItem, opts ApplyOptions
 		logf = func(string, ...any) {}
 	}
 	sel := SelectItems(items, opts)
-	st := newRunState(opts.PrevClones)
+	st := newRunState(opts.PrevClones, opts.PrevRoots)
+	st.indexPlan(items)
 	sum := &ApplySummary{Selected: len(sel), ByResult: map[string]int{}, ByReason: map[string]int{}}
 	batch := opts.Batch
 	if batch <= 0 {
@@ -349,23 +417,26 @@ func (a *Applier) applyOne(ctx context.Context, it *ApplyItem, actor string, now
 		}
 		out = a.dispatchClone(ctx, it, actor, st, onCloned)
 	} else {
-		out = a.dispatch(ctx, it, actor)
+		out = a.dispatch(ctx, it, actor, st)
 	}
 	out.AppliedAt = now()
 	return out, perr
 }
 
-func (a *Applier) dispatch(ctx context.Context, it *ApplyItem, actor string) ApplyOutcome {
+func (a *Applier) dispatch(ctx context.Context, it *ApplyItem, actor string, st *runState) ApplyOutcome {
 	out := ApplyOutcome{Item: it, Actor: actor}
 	if it.bad != "" {
 		out.Result = ItemResult{Result: ResultFailed, Reason: ReasonBadPlanItem, Message: it.bad}
 		out.Err = it.bad
 		return out
 	}
-	if it.Kind == applyKindHead && it.Phase == PhaseB {
-		if o, ok := a.dispatchHead(ctx, it, actor, out); ok {
+	if it.Kind == applyKindHead && (it.Phase == PhaseB || it.Phase == PhaseC) {
+		if o, ok := a.dispatchHead(ctx, it, actor, out, st); ok {
 			return o
 		}
+	}
+	if isRootRow(it) {
+		return a.dispatchRoot(ctx, it, actor, out, st)
 	}
 	if it.Kind != applyKindRow || !isPhaseARowAction(it.Action) {
 		out.Result = ItemResult{Result: ResultSkipped, Reason: ReasonNotWired, Message: fmt.Sprintf("%s %q is not wired in this build", it.Kind, it.Action)}
@@ -441,75 +512,75 @@ func (it *ApplyItem) uuidCol(name string, required bool) (uuid.UUID, error) {
 	return id, nil
 }
 
-// dispatchHead routes a phase B head-plan item to its Writer method. ok=false means the
-// kind is not a phase B action (REPORT_*, unknown): the caller reports SKIPPED not_wired.
-func (a *Applier) dispatchHead(ctx context.Context, it *ApplyItem, actor string, out ApplyOutcome) (ApplyOutcome, bool) {
+// dispatchHead routes a phase B/C head-plan item to its Writer method. ok=false means the
+// kind is not a wired action (REPORT_*, unknown): the caller reports SKIPPED not_wired.
+func (a *Applier) dispatchHead(ctx context.Context, it *ApplyItem, actor string, out ApplyOutcome, st *runState) (ApplyOutcome, bool) {
 	kind := HeadKind(it.Action)
+	if it.Phase == PhaseC && kind != KindSupersede && kind != KindSupersedeHead {
+		return out, false
+	}
 	switch kind {
 	case KindSupersede:
-		oldSpin, err := it.uuidCol("old_spin_id", true)
-		if err != nil {
-			return badItem(out, err.Error()), true
-		}
-		oldHead, err := it.uuidCol("old_head_id", false)
-		if err != nil {
-			return badItem(out, err.Error()), true
-		}
-		newSpin, skip, perr := resolveNewSpin(it.col("new_spin_ref"))
-		if perr != nil {
-			return badItem(out, perr.Error()), true
-		}
-		if skip {
-			out.Result = ItemResult{Result: ResultSkipped, Reason: "new_spin_not_ready", Message: fmt.Sprintf("new_spin_ref %q has no existing spin yet", it.col("new_spin_ref"))}
-			return out, true
-		}
-		res, werr := a.w.SupersedeExisting(ctx, SupersedeInput{OldHeadID: oldHead, OldSpinID: oldSpin, NewSpinID: newSpin, Actor: actor})
-		return finishOutcome(out, res, werr), true
+		return a.dispatchSupersede(ctx, it, actor, out, st), true
 	case KindSupersedeHead:
-		oldHead, err := it.uuidCol("old_head_id", true)
-		if err != nil {
-			return badItem(out, err.Error()), true
-		}
-		newHead, err := it.uuidCol("new_head_id", true)
-		if err != nil {
-			return badItem(out, err.Error()), true
-		}
-		res, werr := a.w.SupersedeHeadOnly(ctx, SupersedeHeadInput{OldHeadID: oldHead, NewHeadID: newHead, Actor: actor})
-		return finishOutcome(out, res, werr), true
-	case KindDeactivateSpin:
-		spin, err := it.uuidCol("old_spin_id", true)
-		if err != nil {
-			return badItem(out, err.Error()), true
-		}
-		res, werr := a.w.DeactivateSpin(ctx, DeactivateSpinInput{SpinID: spin, Actor: actor})
-		return finishOutcome(out, res, werr), true
-	case KindDeactivateHead:
-		head, err := it.uuidCol("old_head_id", true)
-		if err != nil {
-			return badItem(out, err.Error()), true
-		}
-		res, werr := a.w.DeactivateHead(ctx, DeactivateHeadInput{HeadID: head, Actor: actor})
-		return finishOutcome(out, res, werr), true
+		return a.dispatchSupersedeHead(ctx, it, actor, out), true
+	case KindDeactivateSpin, KindDeactivateHead:
+		return a.dispatchDeactivate(ctx, it, kind, actor, out), true
 	case KindReportHead, KindReportSpin:
 		return out, false
 	}
 	return out, false
 }
 
-// resolveNewSpin parses new_spin_ref: "spin:<uuid>" -> the spin id; empty or "ln:<n>" (spin
-// created in phase C, P2g-3) -> skip=true; anything else is a parse error.
-func resolveNewSpin(ref string) (id uuid.UUID, skip bool, err error) {
-	if v, found := strings.CutPrefix(ref, "spin:"); found {
-		id, err = uuid.Parse(strings.TrimSpace(v))
-		if err != nil || id == uuid.Nil {
-			return uuid.Nil, false, fmt.Errorf("new_spin_ref %q is not spin:<uuid>", ref)
+func (a *Applier) dispatchSupersede(ctx context.Context, it *ApplyItem, actor string, out ApplyOutcome, st *runState) ApplyOutcome {
+	oldSpin, err := it.uuidCol("old_spin_id", true)
+	if err != nil {
+		return badItem(out, err.Error())
+	}
+	oldHead, err := it.uuidCol("old_head_id", false)
+	if err != nil {
+		return badItem(out, err.Error())
+	}
+	newSpin, skip, perr := st.resolveNewSpin(it.col("new_spin_ref"))
+	if perr != nil {
+		return badItem(out, perr.Error())
+	}
+	if skip {
+		out.Result = ItemResult{Result: ResultSkipped, Reason: "new_spin_not_ready", Message: fmt.Sprintf("new_spin_ref %q has no existing spin yet", it.col("new_spin_ref"))}
+		return out
+	}
+	res, werr := a.w.SupersedeExisting(ctx, SupersedeInput{OldHeadID: oldHead, OldSpinID: oldSpin, NewSpinID: newSpin, Actor: actor})
+	return finishOutcome(out, res, werr)
+}
+
+func (a *Applier) dispatchSupersedeHead(ctx context.Context, it *ApplyItem, actor string, out ApplyOutcome) ApplyOutcome {
+	oldHead, err := it.uuidCol("old_head_id", true)
+	if err != nil {
+		return badItem(out, err.Error())
+	}
+	newHead, err := it.uuidCol("new_head_id", true)
+	if err != nil {
+		return badItem(out, err.Error())
+	}
+	res, werr := a.w.SupersedeHeadOnly(ctx, SupersedeHeadInput{OldHeadID: oldHead, NewHeadID: newHead, Actor: actor})
+	return finishOutcome(out, res, werr)
+}
+
+func (a *Applier) dispatchDeactivate(ctx context.Context, it *ApplyItem, kind HeadKind, actor string, out ApplyOutcome) ApplyOutcome {
+	if kind == KindDeactivateSpin {
+		spin, err := it.uuidCol("old_spin_id", true)
+		if err != nil {
+			return badItem(out, err.Error())
 		}
-		return id, false, nil
+		res, werr := a.w.DeactivateSpin(ctx, DeactivateSpinInput{SpinID: spin, Actor: actor})
+		return finishOutcome(out, res, werr)
 	}
-	if ref == "" || strings.HasPrefix(ref, "ln:") {
-		return uuid.Nil, true, nil
+	head, err := it.uuidCol("old_head_id", true)
+	if err != nil {
+		return badItem(out, err.Error())
 	}
-	return uuid.Nil, false, fmt.Errorf("new_spin_ref %q is not spin:<uuid> or ln:<n>", ref)
+	res, werr := a.w.DeactivateHead(ctx, DeactivateHeadInput{HeadID: head, Actor: actor})
+	return finishOutcome(out, res, werr)
 }
 
 func isPhaseARowAction(a string) bool {

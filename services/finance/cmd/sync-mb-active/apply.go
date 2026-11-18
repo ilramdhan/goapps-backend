@@ -27,7 +27,7 @@ func buildApplier() (*mbactivesync.Applier, func(), error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("connect db: %w", err)
 	}
-	return mbactivesync.NewApplier(newWriter(db)), func() { logClose("database", db) }, nil
+	return mbactivesync.NewApplier(newWriter(db)).WithHeadWorkflow(newHeadWorkflow(db)), func() { logClose("database", db) }, nil
 }
 
 func splitCSVList(s string) []string {
@@ -56,7 +56,7 @@ func runApply(ctx context.Context, o options) error {
 	if err != nil {
 		return err
 	}
-	if o.prevClones, err = readPrevResults(o.prevResults); err != nil {
+	if o.prevClones, o.prevRoots, err = readPrevResults(o.prevResults); err != nil {
 		return err
 	}
 	ap, cleanup, err := buildApplier()
@@ -106,7 +106,7 @@ func applyAndWrite(ctx context.Context, ap *mbactivesync.Applier, items []*mbact
 	sink := mbactivesync.NewCSVResultSink(rf, ef).WithManual(mf)
 	opts := mbactivesync.ApplyOptions{
 		Phase: mbactivesync.Phase(o.phase), Actor: o.actor, OnlySysID: splitCSVList(o.onlySysID),
-		Limit: o.limit, Batch: o.batch, Logf: log.Printf, PrevClones: o.prevClones,
+		Limit: o.limit, Batch: o.batch, Logf: log.Printf, PrevClones: o.prevClones, PrevRoots: o.prevRoots,
 	}
 	sum, runErr := ap.Run(ctx, items, opts, sink)
 	if cErr := sink.Close(); cErr != nil && runErr == nil {
@@ -126,19 +126,28 @@ func logApplySummary(s *mbactivesync.ApplySummary) {
 }
 
 // readPrevResults loads ln -> clone_spin_id from the --prev-results files (§5.4).
-func readPrevResults(paths []string) (map[int]uuid.UUID, error) {
-	readers := make([]io.Reader, 0, len(paths))
+func readPrevResults(paths []string) (clones, roots map[int]uuid.UUID, err error) {
+	bs := make([][]byte, 0, len(paths))
 	for _, p := range paths {
 		b, err := os.ReadFile(p) //nolint:gosec // operator-supplied input path for a one-shot CLI
 		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", p, err)
+			return nil, nil, fmt.Errorf("read %s: %w", p, err)
 		}
-		readers = append(readers, bytes.NewReader(b))
+		bs = append(bs, b)
 	}
-	m, err := mbactivesync.LoadPrevClones(readers...)
-	if err != nil {
-		return nil, fmt.Errorf("--prev-results: %w", err)
+	rd := func() []io.Reader {
+		r := make([]io.Reader, len(bs))
+		for i, b := range bs {
+			r[i] = bytes.NewReader(b)
+		}
+		return r
 	}
-	log.Printf("prev-results: %d clone(s) recorded", len(m))
-	return m, nil
+	if clones, err = mbactivesync.LoadPrevClones(rd()...); err != nil {
+		return nil, nil, fmt.Errorf("--prev-results: %w", err)
+	}
+	if roots, err = mbactivesync.LoadPrevRoots(rd()...); err != nil {
+		return nil, nil, fmt.Errorf("--prev-results: %w", err)
+	}
+	log.Printf("prev-results: %d clone(s), %d root spin(s) recorded", len(clones), len(roots))
+	return clones, roots, nil
 }

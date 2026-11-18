@@ -31,6 +31,7 @@ type options struct {
 
 	prevResults stringList        // --prev-results (repeatable)
 	prevClones  map[int]uuid.UUID // loaded from prevResults at apply time
+	prevRoots   map[int]uuid.UUID // ROOT spins loaded from prevResults
 }
 
 // stringList is a repeatable string flag.
@@ -127,6 +128,8 @@ func validateApplyOptions(o *options) error {
 		return errors.New("--apply requires a non-empty --actor")
 	case o.batch < 0 || o.limit < 0:
 		return errors.New("--batch and --limit must not be negative")
+	case (o.phase == "C" || o.phase == "D") && o.batch <= 0:
+		return errors.New("--apply --phase C|D requires --batch N (N > 0)")
 	}
 	return nil
 }

@@ -68,7 +68,7 @@ func TestApplierCloneRows(t *testing.T) {
 	for _, o := range s.out {
 		results = append(results, o.Result.Result+"/"+o.Result.Reason)
 	}
-	assert.Equal(t, []string{"PARTIAL/", "APPLIED/", "PARTIAL/", "APPLIED/", "SKIPPED/" + ReasonSourceNotReady,
+	assert.Equal(t, []string{"PARTIAL/", "APPLIED/", "SKIPPED/" + ReasonSourceNotReady, "PARTIAL/", "APPLIED/",
 		"FAILED/" + ReasonBadPlanItem, "PARTIAL/", "APPLIED/"}, results)
 }
 

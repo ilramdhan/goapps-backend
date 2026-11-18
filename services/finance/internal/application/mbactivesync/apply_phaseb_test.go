@@ -108,7 +108,7 @@ func TestDispatchPhaseB(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := &recWriter{}
-			out := NewApplier(w).dispatch(context.Background(), tc.it, "me")
+			out := NewApplier(w).dispatch(context.Background(), tc.it, "me", newRunState(nil, nil))
 			assert.Equal(t, tc.wantResult, out.Result.Result)
 			assert.Equal(t, tc.wantReason, out.Result.Reason)
 			if tc.wantCall == "" {
@@ -123,17 +123,17 @@ func TestDispatchPhaseB(t *testing.T) {
 func TestDispatchPhaseBSupersedeFieldsAndErrors(t *testing.T) {
 	a, b, c := uuid.New(), uuid.New(), uuid.New()
 	w := &recWriter{}
-	NewApplier(w).dispatch(context.Background(), bItem(KindSupersede, a.String(), b.String(), "", "spin:"+c.String()), "me")
+	NewApplier(w).dispatch(context.Background(), bItem(KindSupersede, a.String(), b.String(), "", "spin:"+c.String()), "me", newRunState(nil, nil))
 	assert.Equal(t, SupersedeInput{OldHeadID: a, OldSpinID: b, NewSpinID: c, Actor: "me"}, w.sup)
 
 	w = &recWriter{err: errors.New("boom")}
-	out := NewApplier(w).dispatch(context.Background(), bItem(KindDeactivateHead, a.String(), "", "", ""), "me")
+	out := NewApplier(w).dispatch(context.Background(), bItem(KindDeactivateHead, a.String(), "", "", ""), "me", newRunState(nil, nil))
 	assert.Equal(t, ResultFailed, out.Result.Result)
 	assert.Equal(t, ReasonDBError, out.Result.Reason)
 	assert.Equal(t, "boom", out.Err)
 
 	empty := &emptyWriter{}
-	out = NewApplier(empty).dispatch(context.Background(), bItem(KindDeactivateHead, a.String(), "", "", ""), "me")
+	out = NewApplier(empty).dispatch(context.Background(), bItem(KindDeactivateHead, a.String(), "", "", ""), "me", newRunState(nil, nil))
 	assert.Equal(t, ResultFailed, out.Result.Result)
 	assert.NotEmpty(t, out.Err)
 }
