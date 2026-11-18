@@ -71,7 +71,16 @@ type SyncSpinInput struct {
 	TargetCS        string   // cross-section ("" keeps the current one)
 	TargetLDR       *float64 // doz -> ACTUAL run LDR
 	TargetFG        *int64   // POY product sys id
+	// TargetDen / TargetFil are set only for a GENERATE_SPIN role=ROOT row (P2h-4c): the
+	// generated root carries the head spec, so the writer also moves denier, filament
+	// and (with TargetCS) cross-section to the row spec when they differ. Spin only,
+	// never cascaded to the head. nil = leave the spin spec alone.
+	TargetDen *float64
+	TargetFil *int
 }
+
+// SyncSpec reports whether the input asks the writer to sync the spin spec (ROOT rows).
+func (in SyncSpinInput) SyncSpec() bool { return in.TargetDen != nil || in.TargetFil != nil }
 
 // Has reports whether sub is among the input sub-actions.
 func (in SyncSpinInput) Has(sub string) bool {

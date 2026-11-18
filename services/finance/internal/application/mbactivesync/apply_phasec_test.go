@@ -221,3 +221,24 @@ func TestLoadPrevRootsResolveWithoutRootRow(t *testing.T) {
 	require.Len(t, w.ins, 1)
 	assert.Equal(t, root, w.ins[0].SourceSpinID)
 }
+
+// P2h-4c: the ROOT sync carries the row spec (target_den/fil/cs) so the writer moves the
+// generated root off the head spec.
+func TestApplierRootSyncCarriesRowSpec(t *testing.T) {
+	head, gen := uuid.New(), uuid.New()
+	w := &orderWriter{genID: gen}
+	s := &memSink{}
+	hw := &fakeHW{confirm: map[uuid.UUID]bool{}, res: map[uuid.UUID]ItemResult{head: {Result: ResultSkipped, Reason: ReasonAlreadyInTarget}}}
+	it := cRow(1, ActionGenerateSpin, RoleRoot, head, "")
+	den, fil := 380.0, 144
+	it.TargetDen, it.TargetFil = &den, &fil
+	it.Spin.TargetCS = "TBL"
+	_, err := NewApplier(w).WithHeadWorkflow(hw).Run(t.Context(), []*ApplyItem{it}, ApplyOptions{Phase: PhaseC, Actor: "me"}, s)
+	require.NoError(t, err)
+	require.Len(t, w.syncs, 1)
+	in := w.syncs[0]
+	require.True(t, in.SyncSpec())
+	assert.InDelta(t, 380, *in.TargetDen, 1e-9)
+	assert.Equal(t, 144, *in.TargetFil)
+	assert.Equal(t, "TBL", in.TargetCS)
+}

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -43,6 +44,12 @@ type mbasSpinImage struct {
 	FGProductID  *int64   `json:"fg_product_id"`
 	FGItemCode   string   `json:"fg_item_code"`
 	FGLinkSource string   `json:"fg_link_source"`
+	// Denier / Filament (P2h-4c): spec of a generated ROOT synced to the row spec.
+	// Absent in result CSVs written before P2h-4c (nil both sides = group unchanged).
+	// HasSpec marks images that carry the spec (false = older image, spec group ignored).
+	Denier   *float64 `json:"denier"`
+	Filament *int     `json:"filament"`
+	HasSpec  bool     `json:"has_spec,omitempty"`
 
 	headID     uuid.UUID
 	superseded bool
@@ -70,7 +77,8 @@ const mbasSpinImageQuery = `
 	SELECT COALESCE(mbs_shade_code, ''), COALESCE(mbs_shade_name, ''), COALESCE(mbs_cc, ''), COALESCE(mbs_cross_section, ''),
 	       mbs_run_ldr_pct, COALESCE(mbs_ldr_type, ''), COALESCE(mbs_ldr_is_actual, FALSE), mbs_ldr_is_fixed,
 	       mbs_is_active, mbs_fg_product_id, COALESCE(mbs_fg_item_code, ''), COALESCE(mbs_fg_link_source, ''),
-	       mbs_mbh_id, mbs_superseded_by_spin_id IS NOT NULL, mbs_parent_spin_id IS NULL
+	       mbs_mbh_id, mbs_superseded_by_spin_id IS NOT NULL, mbs_parent_spin_id IS NULL,
+	       mbs_denier, mbs_filament
 	  FROM mst_mb_spin
 	 WHERE mbs_id = $1 AND deleted_at IS NULL`
 
@@ -92,9 +100,11 @@ func readMBASImage(ctx context.Context, tx *sql.Tx, spinID uuid.UUID, lock bool)
 	var ldr sql.NullFloat64
 	var fg sql.NullInt64
 	var fixed sql.NullBool
+	var den sql.NullFloat64
+	var fil sql.NullInt64
 	err := tx.QueryRowContext(ctx, mbasSpinImageQuery+suffix, spinID).Scan(
 		&s.ShadeCode, &s.ShadeName, &s.CC, &s.CrossSection, &ldr, &s.LDRType, &s.LDRIsActual, &fixed,
-		&s.IsActive, &fg, &s.FGItemCode, &s.FGLinkSource, &s.headID, &s.superseded, &s.isRoot)
+		&s.IsActive, &fg, &s.FGItemCode, &s.FGLinkSource, &s.headID, &s.superseded, &s.isRoot, &den, &fil)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -112,6 +122,15 @@ func readMBASImage(ctx context.Context, tx *sql.Tx, spinID uuid.UUID, lock bool)
 	if fg.Valid {
 		v := fg.Int64
 		s.FGProductID = &v
+	}
+	s.HasSpec = true
+	if den.Valid {
+		v := den.Float64
+		s.Denier = &v
+	}
+	if fil.Valid {
+		v := int(fil.Int64)
+		s.Filament = &v
 	}
 	h := &img.Head
 	var hfg sql.NullInt64
@@ -141,10 +160,11 @@ func (i *mbasImage) json() string {
 // mbasNeeds is the set of changes still required against the locked live state.
 type mbasNeeds struct {
 	shade, ldr, actSpin, actHead, headShade, fg bool
+	spec                                        bool // ROOT only: denier / filament / cross-section (P2h-4c)
 }
 
 func (n mbasNeeds) any() bool {
-	return n.shade || n.ldr || n.actSpin || n.actHead || n.headShade || n.fg
+	return n.shade || n.ldr || n.actSpin || n.actHead || n.headShade || n.fg || n.spec
 }
 
 func mbasComputeNeeds(in mbactivesync.SyncSpinInput, img *mbasImage) mbasNeeds {
@@ -163,7 +183,28 @@ func mbasComputeNeeds(in mbactivesync.SyncSpinInput, img *mbasImage) mbasNeeds {
 	if in.Has(mbactivesync.SubSetFG) && in.TargetFG != nil {
 		n.fg = sp.FGProductID == nil || *sp.FGProductID != *in.TargetFG
 	}
+	n.spec = mbasSpecDiffers(in, sp)
 	return n
+}
+
+// mbasSpecDiffers: the input asks for a spec sync (ROOT rows) and the spin denier
+// (fixed-point), filament or cross-section (case-insensitive, "" target keeps it) differs.
+func mbasSpecDiffers(in mbactivesync.SyncSpinInput, sp mbasSpinImage) bool {
+	if !in.SyncSpec() {
+		return false
+	}
+	if in.TargetDen != nil && (sp.Denier == nil || mbactivesync.Fix4(*sp.Denier) != mbactivesync.Fix4(*in.TargetDen)) {
+		return true
+	}
+	if in.TargetFil != nil && (sp.Filament == nil || *sp.Filament != *in.TargetFil) {
+		return true
+	}
+	return mbasCSDiffers(sp.CrossSection, in.TargetCS)
+}
+
+func mbasCSDiffers(cur, target string) bool {
+	t := trimSpaceStr(target)
+	return t != "" && !strings.EqualFold(trimSpaceStr(cur), t)
 }
 
 func mbasShadeDiffers(code, name string, in mbactivesync.SyncSpinInput) bool {
@@ -325,7 +366,7 @@ func (w *MBActiveSyncWriter) writeHead(ctx context.Context, tx *sql.Tx, in mbact
 
 // writeSpinFields applies shade / actual LDR / activation through the entity and the existing updateOn.
 func (w *MBActiveSyncWriter) writeSpinFields(ctx context.Context, tx *sql.Tx, in mbactivesync.SyncSpinInput, n mbasNeeds, res *mbactivesync.ItemResult) (mbactivesync.ItemResult, bool, error) {
-	if !n.shade && !n.ldr && !n.actSpin {
+	if !n.shade && !n.ldr && !n.actSpin && !n.spec {
 		return *res, false, nil
 	}
 	entity, err := loadSpinForRepointOn(ctx, tx, in.SpinID)
@@ -370,6 +411,11 @@ func mbasMutateEntity(entity *mbspin.Entity, in mbactivesync.SyncSpinInput, n mb
 			return fmt.Errorf("set shade: %w", err)
 		}
 	}
+	if n.spec {
+		if err := mbasMutateSpec(entity, in, n.shade); err != nil {
+			return err
+		}
+	}
 	if n.ldr {
 		if err := entity.SetActualLDR(*in.TargetLDR, in.Actor); err != nil {
 			return fmt.Errorf("set actual ldr: %w", err)
@@ -379,6 +425,37 @@ func mbasMutateEntity(entity *mbspin.Entity, in mbactivesync.SyncSpinInput, n mb
 		active := true
 		if err := entity.Update(mbspin.UpdateInput{IsActive: &active}, in.Actor); err != nil {
 			return fmt.Errorf("activate spin: %w", err)
+		}
+	}
+	return nil
+}
+
+// mbasMutateSpec moves a ROOT spin to the row spec (P2h-4c) through the existing
+// mbspin.UpdateInput (Denier, Filament); the cross-section goes through SetShade with the
+// current shade/name unless the shade setter already wrote it. Spin only: no head cascade.
+func mbasMutateSpec(entity *mbspin.Entity, in mbactivesync.SyncSpinInput, shadeDone bool) error {
+	var up mbspin.UpdateInput
+	if in.TargetDen != nil && (entity.Denier() == nil || mbactivesync.Fix4(*entity.Denier()) != mbactivesync.Fix4(*in.TargetDen)) {
+		d := *in.TargetDen
+		up.Denier = &d
+	}
+	if in.TargetFil != nil && (entity.Filament() == nil || *entity.Filament() != *in.TargetFil) {
+		f := *in.TargetFil
+		up.Filament = &f
+	}
+	if up.Denier != nil || up.Filament != nil {
+		if err := entity.Update(up, in.Actor); err != nil {
+			return fmt.Errorf("set spin spec: %w", err)
+		}
+	}
+	cur := ""
+	if c := entity.CrossSection(); c != nil {
+		cur = *c
+	}
+	if !shadeDone && mbasCSDiffers(cur, in.TargetCS) {
+		cs := trimSpaceStr(in.TargetCS)
+		if err := entity.SetShade(entity.ShadeCode(), entity.ShadeName(), &cs, in.Actor); err != nil {
+			return fmt.Errorf("set cross-section: %w", err)
 		}
 	}
 	return nil

@@ -137,7 +137,14 @@ func mbasEqBool(a, b *bool) bool {
 	return *a == *b
 }
 
-type mbasSpinGroups struct{ shade, ldr, active, fg bool }
+type mbasSpinGroups struct{ shade, ldr, active, fg, spec bool }
+
+func mbasEqI(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
 
 func mbasSpinEq(a, b mbasSpinImage) mbasSpinGroups { // true = group EQUAL
 	return mbasSpinGroups{
@@ -145,7 +152,17 @@ func mbasSpinEq(a, b mbasSpinImage) mbasSpinGroups { // true = group EQUAL
 		ldr:    mbasEqF4(a.RunLDRPct, b.RunLDRPct) && a.LDRType == b.LDRType && a.LDRIsActual == b.LDRIsActual && mbasEqBool(a.LDRIsFixed, b.LDRIsFixed),
 		active: a.IsActive == b.IsActive,
 		fg:     mbasEqI64(a.FGProductID, b.FGProductID) && a.FGItemCode == b.FGItemCode && a.FGLinkSource == b.FGLinkSource,
+		spec:   mbasSpecEq(a, b),
 	}
+}
+
+// mbasSpecEq compares denier/filament. Images written before P2h-4c carry no spec
+// (HasSpec false): the group then looks unchanged and is never restored.
+func mbasSpecEq(a, b mbasSpinImage) bool {
+	if !a.HasSpec || !b.HasSpec {
+		return true
+	}
+	return mbasEqF4(a.Denier, b.Denier) && mbasEqI(a.Filament, b.Filament)
 }
 
 type mbasHeadGroups struct{ active, fg, shade bool }
@@ -247,6 +264,7 @@ func mbasClassify(cur *mbasImage, before, after *mbasImage) (rs mbasSpinGroups, 
 		ldr:    acc.add(ch.ldr, sb.ldr, sa.ldr),
 		active: acc.add(ch.active, sb.active, sa.active),
 		fg:     acc.add(ch.fg, sb.fg, sa.fg),
+		spec:   acc.add(ch.spec, sb.spec, sa.spec),
 	}
 	rh = mbasClassifyHead(cur.Head, before.Head, after.Head, acc)
 	return rs, rh, acc.allBefore, acc.bad
@@ -272,6 +290,9 @@ func mbasRestoreSpin(ctx context.Context, tx *sql.Tx, id uuid.UUID, b mbasSpinIm
 			"mbs_ldr_type = COALESCE(NULLIF("+next(b.LDRType)+", ''), 'NOT_CALCULATED')",
 			"mbs_ldr_is_actual = "+next(b.LDRIsActual),
 			"mbs_ldr_is_fixed = "+next(b.LDRIsFixed))
+	}
+	if g.spec {
+		sets = append(sets, "mbs_denier = "+next(b.Denier), "mbs_filament = "+next(b.Filament))
 	}
 	if g.active {
 		sets = append(sets, "mbs_is_active = "+next(b.IsActive))

@@ -164,6 +164,9 @@ func TestClassifyRows_Rules(t *testing.T) {
 	}
 	if got[8].TargetDen == nil || *got[8].TargetDen != 150 || *got[8].TargetFil != 48 || got[8].TargetCS != "RD" {
 		t.Errorf("ln 8 spec targets: %+v", got[8])
+	}	// P2h-4c: the ROOT also targets the ROW spec (the generated root starts with the head spec).
+	if got[7].TargetDen == nil || *got[7].TargetDen != 380 || got[7].TargetFil == nil || *got[7].TargetFil != 144 || got[7].TargetCS != "TBL" {
+		t.Errorf("ln 7 ROOT spec targets: %+v", got[7])
 	}
 }
 
