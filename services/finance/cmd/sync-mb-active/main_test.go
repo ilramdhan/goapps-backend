@@ -26,9 +26,24 @@ func TestParseFlags(t *testing.T) {
 		_, err := parseFlags(args)
 		assert.Error(t, err, "%v", args)
 	}
-	o, err = parseFlags([]string{"--apply"})
+	o, err = parseFlags([]string{"--apply", "--plan-rows", "r.csv", "--plan-heads", "h.csv", "--phase", "A", "--actor", "me", "--batch", "5", "--limit", "2", "--only-sysid", "1,2"})
 	require.NoError(t, err)
-	assert.Contains(t, run(t.Context(), o).Error(), "not implemented yet")
+	assert.True(t, o.apply)
+	assert.Equal(t, []string{"1", "2"}, splitCSVList(o.onlySysID))
+	for _, args := range [][]string{
+		{"--apply"},
+		{"--apply", "--plan-rows", "r", "--plan-heads", "h", "--phase", "A"},
+		{"--apply", "--plan-rows", "r", "--plan-heads", "h", "--actor", "me"},
+		{"--apply", "--plan-rows", "r", "--plan-heads", "h", "--phase", "Z", "--actor", "me"},
+		{"--apply", "--plan-rows", "r", "--plan-heads", "h", "--phase", "A", "--actor", " "},
+		{"--apply", "--plan-rows", "r", "--plan-heads", "h", "--phase", "A", "--actor", "me", "--limit", "-1"},
+		{"--plan", "--file", "f", "--limit", "3"},
+	} {
+		_, err := parseFlags(args)
+		assert.Error(t, err, "%v", args)
+	}
+	o.phase = "B"
+	assert.Contains(t, run(t.Context(), o).Error(), "not wired")
 
 	o, err = parseFlags([]string{"--report", "--plan-rows", "r.csv", "--plan-heads", "h.csv", "--out", "x.csv"})
 	require.NoError(t, err)

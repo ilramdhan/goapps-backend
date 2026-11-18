@@ -4,11 +4,11 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"strings"
 )
 
 const (
-	cmdName    = "sync-mb-active"
-	errNotImpl = "not implemented yet"
+	cmdName = "sync-mb-active"
 )
 
 type options struct {
@@ -23,6 +23,9 @@ type options struct {
 	out       string
 	phase     string
 	actor     string
+	batch     int
+	limit     int
+	onlySysID string
 }
 
 func parseFlags(args []string) (options, error) {
@@ -31,7 +34,7 @@ func parseFlags(args []string) (options, error) {
 	fs.SetOutput(io.Discard)
 	fs.BoolVar(&o.plan, "plan", false, "read-only: build plan CSVs + summary from the DB and --file")
 	fs.BoolVar(&o.report, "report", false, "read-only product-impact report (MB_SP_CODE + MB_SP_DOZING) from reviewed --plan-rows/--plan-heads")
-	fs.BoolVar(&o.apply, "apply", false, "apply reviewed plan (not implemented yet)")
+	fs.BoolVar(&o.apply, "apply", false, "apply reviewed plan (phase A only in this build)")
 	fs.StringVar(&o.file, "file", "", "mb-active file (normalized or original format), required for --plan")
 	fs.StringVar(&o.outDir, "out-dir", ".", "output directory for generated files")
 	fs.StringVar(&o.planRows, "plan-rows", "", "reviewed plan-rows CSV (--report/--apply)")
@@ -39,6 +42,9 @@ func parseFlags(args []string) (options, error) {
 	fs.StringVar(&o.out, "out", "", "output file (--report)")
 	fs.StringVar(&o.phase, "phase", "", "phase A|B|C|D (--apply)")
 	fs.StringVar(&o.actor, "actor", "", "actor name (--apply)")
+	fs.IntVar(&o.batch, "batch", 0, "items per batch (--apply; 0 = one batch)")
+	fs.IntVar(&o.limit, "limit", 0, "stop after N processed items (--apply; 0 = unlimited)")
+	fs.StringVar(&o.onlySysID, "only-sysid", "", "comma-separated SYSIDs to apply (--apply)")
 	if err := fs.Parse(args); err != nil {
 		return o, err
 	}
@@ -63,6 +69,8 @@ func validateOptions(o *options) error {
 		return validatePlanOptions(o)
 	case o.report:
 		return validateReportOptions(o)
+	case o.apply:
+		return validateApplyOptions(o)
 	}
 	return nil
 }
@@ -71,7 +79,7 @@ func validatePlanOptions(o *options) error {
 	switch {
 	case o.file == "":
 		return errors.New("--plan requires --file")
-	case o.planRows != "" || o.planHeads != "" || o.phase != "" || o.actor != "" || o.out != "":
+	case o.planRows != "" || o.planHeads != "" || o.phase != "" || o.actor != "" || o.out != "" || o.batch != 0 || o.limit != 0 || o.onlySysID != "":
 		return errors.New("--plan only accepts --file and --out-dir")
 	}
 	return nil
@@ -81,8 +89,24 @@ func validateReportOptions(o *options) error {
 	switch {
 	case o.planRows == "" || o.planHeads == "":
 		return errors.New("--report requires --plan-rows and --plan-heads")
-	case o.file != "" || o.phase != "" || o.actor != "":
+	case o.file != "" || o.phase != "" || o.actor != "" || o.batch != 0 || o.limit != 0 || o.onlySysID != "":
 		return errors.New("--report only accepts --plan-rows, --plan-heads, --out and --out-dir")
+	}
+	return nil
+}
+
+func validateApplyOptions(o *options) error {
+	switch {
+	case o.planRows == "" || o.planHeads == "":
+		return errors.New("--apply requires --plan-rows and --plan-heads")
+	case o.file != "" || o.out != "":
+		return errors.New("--apply does not accept --file or --out")
+	case o.phase != "A" && o.phase != "B" && o.phase != "C" && o.phase != "D":
+		return errors.New("--apply requires --phase A|B|C|D")
+	case strings.TrimSpace(o.actor) == "":
+		return errors.New("--apply requires a non-empty --actor")
+	case o.batch < 0 || o.limit < 0:
+		return errors.New("--batch and --limit must not be negative")
 	}
 	return nil
 }
