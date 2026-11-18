@@ -90,7 +90,7 @@ func buildReport(ctx context.Context, d reportDeps, entries []applyEntry, simula
 			return nil, st, oErr
 		}
 		fgIDs = append(fgIDs, poyIDs...)
-		finder = &overlayFinder{base: d.spins, extra: extra}
+		finder = &mbsource.OverlaySpinShadeFgFinder{Base: d.spins, Extra: extra}
 		st.Overlay, st.OverlaySkp = len(extra), skipped
 	}
 	products, err := d.src.ListReportProducts(ctx)
