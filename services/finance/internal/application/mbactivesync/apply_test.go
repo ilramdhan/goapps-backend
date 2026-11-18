@@ -31,6 +31,10 @@ func (f *fakeWriter) SyncExistingSpin(_ context.Context, in SyncSpinInput) (Item
 	return ItemResult{Result: ResultApplied, SpinID: in.SpinID.String(), BeforeJSON: "{}", AfterJSON: "{\"a\":1}"}, nil
 }
 
+func (f *fakeWriter) DuplicateToTarget(context.Context, DuplicateTargetInput) (ItemResult, error) {
+	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
+}
+
 func (f *fakeWriter) SupersedeExisting(context.Context, SupersedeInput) (ItemResult, error) {
 	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
 }

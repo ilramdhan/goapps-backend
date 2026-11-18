@@ -385,8 +385,48 @@ func ResultRecord(o ApplyOutcome) []string {
 // errors may be nil. The error file's header is taken from the first failed item.
 type CSVResultSink struct {
 	res, errs     *csv.Writer
+	manual        *csv.Writer
 	started       bool
 	errHeaderDone bool
+	manualStarted bool
+}
+
+// ManualItemsHeader is the manual-items CSV header written by the apply sink for
+// items that need an operator follow-up (ItemResult.ManualReason, e.g. Q1 guard).
+var ManualItemsHeader = []string{"item_key", "ln", "sysid", "action", "phase", "reason", "spin_id", "clone_spin_id", "head_id", "message"}
+
+// WithManual adds a manual-items writer (items with ItemResult.ManualReason).
+func (s *CSVResultSink) WithManual(w io.Writer) *CSVResultSink {
+	if w != nil {
+		s.manual = csv.NewWriter(w)
+	}
+	return s
+}
+
+func (s *CSVResultSink) recordManual(o ApplyOutcome) error {
+	if s.manual == nil || o.Result.ManualReason == "" {
+		return nil
+	}
+	if !s.manualStarted {
+		if err := s.manual.Write(ManualItemsHeader); err != nil {
+			return fmt.Errorf("write manual-items header: %w", err)
+		}
+		s.manualStarted = true
+	}
+	it := o.Item
+	ln := ""
+	if it.Ln > 0 {
+		ln = strconv.Itoa(it.Ln)
+	}
+	if err := s.manual.Write([]string{it.Key, ln, it.SysID, it.Action, string(it.Phase), o.Result.ManualReason,
+		o.Result.SpinID, o.Result.CloneSpinID, o.Result.HeadID, o.Result.Message}); err != nil {
+		return fmt.Errorf("write manual item: %w", err)
+	}
+	s.manual.Flush()
+	if err := s.manual.Error(); err != nil {
+		return fmt.Errorf("flush manual-items: %w", err)
+	}
+	return nil
 }
 
 // NewCSVResultSink returns a sink over the result writer and the (optional) error writer.
@@ -412,6 +452,9 @@ func (s *CSVResultSink) Record(o ApplyOutcome) error {
 	s.res.Flush()
 	if err := s.res.Error(); err != nil {
 		return fmt.Errorf("flush result: %w", err)
+	}
+	if err := s.recordManual(o); err != nil {
+		return err
 	}
 	if o.Result.Result != ResultFailed || s.errs == nil {
 		return nil
@@ -442,5 +485,26 @@ func (s *CSVResultSink) Close() error {
 		s.started = true
 	}
 	s.res.Flush()
+	if err := s.closeManual(); err != nil {
+		return err
+	}
 	return s.res.Error()
+}
+
+// closeManual writes the manual-items header when nothing was listed and flushes.
+func (s *CSVResultSink) closeManual() error {
+	if s.manual == nil {
+		return nil
+	}
+	if !s.manualStarted {
+		if err := s.manual.Write(ManualItemsHeader); err != nil {
+			return fmt.Errorf("write manual-items header: %w", err)
+		}
+		s.manualStarted = true
+	}
+	s.manual.Flush()
+	if err := s.manual.Error(); err != nil {
+		return fmt.Errorf("flush manual-items: %w", err)
+	}
+	return nil
 }

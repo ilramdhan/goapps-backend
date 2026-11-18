@@ -36,6 +36,12 @@ const (
 	ReasonNewSpinNotReady = "new_spin_not_ready"
 	// ReasonNewHeadNotReady: SUPERSEDE_HEAD target head is deleted, inactive or superseded.
 	ReasonNewHeadNotReady = "new_head_not_ready"
+	// ReasonPartialClone: the clone exists (tx 1) but its target state (tx 2) failed;
+	// a rerun finishes tx 2 on the same clone (design part 2 §5.4).
+	ReasonPartialClone = "partial_clone"
+	// ReasonPartialCloneInactiveHead (manual-items): a partial clone on an inactive head
+	// was deactivated again (Q1 guard); a rerun reactivates it through tx 2.
+	ReasonPartialCloneInactiveHead = "partial_clone_inactive_head"
 )
 
 // SyncSpinInput drives Writer.SyncExistingSpin: one existing spin to its target
@@ -73,6 +79,8 @@ type ItemResult struct {
 	BeforeJSON  string
 	AfterJSON   string
 	Message     string
+	// ManualReason, when set, lists the item in manual-items.csv (operator follow-up).
+	ManualReason string
 }
 
 // SupersedeInput drives Writer.SupersedeExisting (SUPERSEDE, design part 2 §5.6):
@@ -105,11 +113,50 @@ type DeactivateHeadInput struct {
 	Actor  string
 }
 
+// DuplicateTargetInput drives Writer.DuplicateToTarget (DUPLICATE_SPIN, GENERATE
+// role=DUP — design part 2 §5.4): clone SourceSpinID through the existing duplicate
+// use case (tx 1, name = source name per Q10), then move the clone to the target
+// state with SyncExistingSpin semantics (tx 2).
+type DuplicateTargetInput struct {
+	Ln           int
+	SourceSpinID uuid.UUID
+	// CloneSpinID is the clone recorded for this ln by an earlier run (--prev-results);
+	// uuid.Nil = claim an existing clone (deterministic fallback) or create one.
+	CloneSpinID uuid.UUID
+	// ExcludeClones are clones already claimed by other rows (prev-results + this run).
+	ExcludeClones []uuid.UUID
+	TargetDen     *float64 // nil = keep the source denier
+	TargetFil     *int     // nil = keep the source filament
+	// Target is the tx 2 target (SpinID is ignored; the writer sets the clone id).
+	Target SyncSpinInput
+	// OnCloned is called right after tx 1 with the PARTIAL result (clone_spin_id set)
+	// so it is flushed before tx 2. An error stops the item before tx 2.
+	OnCloned func(ItemResult) error
+}
+
+// DuplicateSpinRequest is one call of the existing duplicate-spin use case.
+type DuplicateSpinRequest struct {
+	SourceSpinID uuid.UUID
+	MgtName      *string
+	Denier       *float64
+	Filament     *int
+	FgProductID  *int64
+	Actor        string
+}
+
+// SpinDuplicator runs the existing duplicate-spin use case (application/mbspin
+// DuplicateHandler, its own transaction) and returns the clone id. Wired in cmd.
+type SpinDuplicator interface {
+	Duplicate(ctx context.Context, req DuplicateSpinRequest) (uuid.UUID, error)
+}
+
 // Writer applies reviewed plan items. One transaction per item; a non-nil error
 // is a database failure (the item's transaction is rolled back).
 type Writer interface {
 	// SyncExistingSpin moves an existing spin (and optionally its head) to the target state.
 	SyncExistingSpin(ctx context.Context, in SyncSpinInput) (ItemResult, error)
+	// DuplicateToTarget clones a root spin (tx 1) and moves the clone to its target (tx 2).
+	DuplicateToTarget(ctx context.Context, in DuplicateTargetInput) (ItemResult, error)
 	// SupersedeExisting supersedes a live old spin by an existing new spin (phase B/C/D).
 	SupersedeExisting(ctx context.Context, in SupersedeInput) (ItemResult, error)
 	// SupersedeHeadOnly marks an old head without live spin superseded by the new head (Q15).

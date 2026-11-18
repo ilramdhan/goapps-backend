@@ -33,7 +33,13 @@ type ApplyItem struct {
 	Header []string
 	Record []string
 	Spin   SyncSpinInput // rows only: filled from the plan columns (Actor set at apply time)
-	bad    string        // non-empty: parse problem, item is reported FAILED(bad_plan_item)
+	// Phase C clone rows (DUPLICATE_SPIN, GENERATE_SPIN role=DUP): source_spin_id
+	// ("<uuid>" or "ln:<n>"), role and the target den/fil.
+	Source    string
+	Role      string
+	TargetDen *float64
+	TargetFil *int
+	bad       string // non-empty: parse problem, item is reported FAILED(bad_plan_item)
 }
 
 // ApplyOptions are the apply-run filters (design §2).
@@ -45,6 +51,8 @@ type ApplyOptions struct {
 	Batch     int      // 0 = one batch
 	Now       func() time.Time
 	Logf      func(format string, args ...any)
+	// PrevClones is ln -> clone_spin_id from earlier result CSVs (--prev-results, §5.4).
+	PrevClones map[int]uuid.UUID
 }
 
 // ApplyOutcome is one processed item with its result.
@@ -139,6 +147,11 @@ func parseApplyRow(c *PlanCSV, hdr []string, i int) *ApplyItem {
 	if it.Key == "" {
 		it.Key = "row:" + strconv.Itoa(ln)
 	}
+	it.Source, it.Role = g("source_spin_id"), g("role")
+	if err := parseCloneSpec(it, g("target_den"), g("target_fil")); err != nil {
+		it.bad = err.Error()
+		return it
+	}
 	in := SyncSpinInput{TargetShadeCode: g("target_shade_code"), TargetShadeName: g("target_shade_name"), TargetCS: g("target_cs")}
 	if s := g("sub_actions"); s != "" {
 		for _, p := range strings.Split(s, sep) {
@@ -173,6 +186,24 @@ func parseApplyRow(c *PlanCSV, hdr []string, i int) *ApplyItem {
 	}
 	it.Spin = in
 	return it
+}
+
+func parseCloneSpec(it *ApplyItem, den, fil string) error {
+	if den != "" {
+		v, err := strconv.ParseFloat(den, 64)
+		if err != nil {
+			return fmt.Errorf("bad target_den %q", den)
+		}
+		it.TargetDen = &v
+	}
+	if fil != "" {
+		v, err := strconv.Atoi(fil)
+		if err != nil {
+			return fmt.Errorf("bad target_fil %q", fil)
+		}
+		it.TargetFil = &v
+	}
+	return nil
 }
 
 // SelectItems applies the phase / only-sysid filters and keeps the dispatch order
@@ -246,6 +277,7 @@ func (a *Applier) Run(ctx context.Context, items []*ApplyItem, opts ApplyOptions
 		logf = func(string, ...any) {}
 	}
 	sel := SelectItems(items, opts)
+	st := newRunState(opts.PrevClones)
 	sum := &ApplySummary{Selected: len(sel), ByResult: map[string]int{}, ByReason: map[string]int{}}
 	batch := opts.Batch
 	if batch <= 0 {
@@ -259,7 +291,7 @@ func (a *Applier) Run(ctx context.Context, items []*ApplyItem, opts ApplyOptions
 	for b := 0; b < nBatches; b++ {
 		lo, hi := b*batch, min((b+1)*batch, len(sel))
 		var c batchCounts
-		stop, err := a.runBatch(ctx, sel[lo:hi], opts, now, sink, sum, &c)
+		stop, err := a.runBatch(ctx, sel[lo:hi], opts, now, sink, sum, &c, st)
 		logf("batch %d/%d: applied %d skipped %d failed %d (elapsed %s)", b+1, nBatches, c.applied, c.skipped, c.failed, now().Sub(start).Round(time.Millisecond))
 		if stop {
 			return sum, err
@@ -271,7 +303,7 @@ func (a *Applier) Run(ctx context.Context, items []*ApplyItem, opts ApplyOptions
 type batchCounts struct{ applied, skipped, failed int }
 
 // runBatch processes one batch; stop=true ends the whole run (err may be nil for the limit).
-func (a *Applier) runBatch(ctx context.Context, items []*ApplyItem, opts ApplyOptions, now func() time.Time, sink ResultSink, sum *ApplySummary, c *batchCounts) (stop bool, err error) {
+func (a *Applier) runBatch(ctx context.Context, items []*ApplyItem, opts ApplyOptions, now func() time.Time, sink ResultSink, sum *ApplySummary, c *batchCounts, st *runState) (stop bool, err error) {
 	for _, it := range items {
 		if cerr := ctx.Err(); cerr != nil {
 			sum.Stopped = "cancelled"
@@ -281,7 +313,11 @@ func (a *Applier) runBatch(ctx context.Context, items []*ApplyItem, opts ApplyOp
 			sum.Stopped = "limit"
 			return true, nil
 		}
-		out := a.applyOne(ctx, it, opts.Actor, now)
+		out, perr := a.applyOne(ctx, it, opts.Actor, now, sink, st)
+		if perr != nil {
+			sum.Stopped = "sink_error"
+			return true, fmt.Errorf("record partial result for %s: %w", it.Key, perr)
+		}
 		sum.Processed++
 		sum.ByResult[out.Result.Result]++
 		if out.Result.Reason != "" {
@@ -303,10 +339,20 @@ func (a *Applier) runBatch(ctx context.Context, items []*ApplyItem, opts ApplyOp
 	return false, nil
 }
 
-func (a *Applier) applyOne(ctx context.Context, it *ApplyItem, actor string, now func() time.Time) ApplyOutcome {
-	out := a.dispatch(ctx, it, actor)
+// applyOne dispatches one item. Clone rows flush their PARTIAL result (tx 1 done)
+// through sink before tx 2; a sink error there is returned as perr (run stops).
+func (a *Applier) applyOne(ctx context.Context, it *ApplyItem, actor string, now func() time.Time, sink ResultSink, st *runState) (out ApplyOutcome, perr error) {
+	if isCloneRow(it) && it.bad == "" {
+		onCloned := func(r ItemResult) error {
+			perr = sink.Record(ApplyOutcome{Item: it, Result: r, Actor: actor, AppliedAt: now()})
+			return perr
+		}
+		out = a.dispatchClone(ctx, it, actor, st, onCloned)
+	} else {
+		out = a.dispatch(ctx, it, actor)
+	}
 	out.AppliedAt = now()
-	return out
+	return out, perr
 }
 
 func (a *Applier) dispatch(ctx context.Context, it *ApplyItem, actor string) ApplyOutcome {

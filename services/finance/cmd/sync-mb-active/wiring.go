@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/uuid"
+
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbactivesync"
+	appmbspin "github.com/mutugading/goapps-backend/services/finance/internal/application/mbspin"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
@@ -74,4 +77,27 @@ func runReport(ctx context.Context, o options) error {
 		return err
 	}
 	return writeReport(res, o)
+}
+
+// spinDuplicator adapts the existing duplicate-spin use case (mbspin.DuplicateHandler,
+// no preview recalc) to mbactivesync.SpinDuplicator (design part 2 §5.4 tx 1).
+type spinDuplicator struct {
+	h *appmbspin.DuplicateHandler
+}
+
+func (d spinDuplicator) Duplicate(ctx context.Context, req mbactivesync.DuplicateSpinRequest) (uuid.UUID, error) {
+	res, err := d.h.Handle(ctx, appmbspin.DuplicateCommand{
+		SourceSpinID: req.SourceSpinID, MgtName: req.MgtName, Denier: req.Denier, Filament: req.Filament,
+		FgProductID: req.FgProductID, ActorUserID: req.Actor,
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return res.Output.NewSpinID, nil
+}
+
+// newWriter builds the apply writer with the duplicate use case wired in.
+func newWriter(db *postgres.DB) *postgres.MBActiveSyncWriter {
+	dup := spinDuplicator{h: appmbspin.NewDuplicateHandler(postgres.NewMBSpinRepository(db), nil)}
+	return postgres.NewMBActiveSyncWriter(db).WithDuplicator(dup)
 }

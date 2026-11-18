@@ -19,6 +19,7 @@ import (
 type MBActiveSyncWriter struct {
 	db   *DB
 	spin *MBSpinRepository
+	dup  mbactivesync.SpinDuplicator // tx 1 of DuplicateToTarget (WithDuplicator)
 }
 
 // NewMBActiveSyncWriter creates the writer.

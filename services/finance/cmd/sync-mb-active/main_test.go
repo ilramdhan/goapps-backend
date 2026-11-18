@@ -42,7 +42,7 @@ func TestParseFlags(t *testing.T) {
 		_, err := parseFlags(args)
 		assert.Error(t, err, "%v", args)
 	}
-	o.phase = "C"
+	o.phase = "D"
 	assert.Contains(t, run(t.Context(), o).Error(), "not wired")
 
 	o, err = parseFlags([]string{"--report", "--plan-rows", "r.csv", "--plan-heads", "h.csv", "--out", "x.csv"})
