@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
 
 func TestParseFlags(t *testing.T) {
@@ -58,4 +60,8 @@ func TestParseFlags(t *testing.T) {
 		_, err := parseFlags(args)
 		assert.Error(t, err, "%v", args)
 	}
+}
+
+func TestNewHeadWorkflow_Wires(t *testing.T) {
+	require.NotNil(t, newHeadWorkflow(postgres.NewDBFromSQL(nil)))
 }

@@ -35,6 +35,10 @@ func (f *fakeWriter) DuplicateToTarget(context.Context, DuplicateTargetInput) (I
 	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
 }
 
+func (f *fakeWriter) GenerateRootSpin(context.Context, GenerateRootInput) (ItemResult, error) {
+	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
+}
+
 func (f *fakeWriter) SupersedeExisting(context.Context, SupersedeInput) (ItemResult, error) {
 	return ItemResult{Result: ResultSkipped, Reason: ReasonNotWired}, nil
 }

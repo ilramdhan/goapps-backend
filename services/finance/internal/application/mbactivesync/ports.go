@@ -42,6 +42,13 @@ const (
 	// ReasonPartialCloneInactiveHead (manual-items): a partial clone on an inactive head
 	// was deactivated again (Q1 guard); a rerun reactivates it through tx 2.
 	ReasonPartialCloneInactiveHead = "partial_clone_inactive_head"
+	// ReasonValidateGate: the head could not be moved to VALIDATED through the existing
+	// Submit/Validate use cases (state cannot transition, composition-sum gate, missing
+	// param) — handled manually in the UI (design part 2 §5.5).
+	ReasonValidateGate = "validate_gate"
+	// ReasonSupersedeConfirmRequired: Validate would supersede live spins of other heads
+	// (same shade + FG) but the plan has no SUPERSEDE pair for the head (confirm=false).
+	ReasonSupersedeConfirmRequired = "supersede_confirmation_required"
 )
 
 // SyncSpinInput drives Writer.SyncExistingSpin: one existing spin to its target
@@ -150,6 +157,23 @@ type SpinDuplicator interface {
 	Duplicate(ctx context.Context, req DuplicateSpinRequest) (uuid.UUID, error)
 }
 
+// GenerateRootInput drives Writer.GenerateRootSpin (GENERATE_SPIN role=ROOT, K7 —
+// design part 2 §5.5): the first (root) spin of a head that already has its MB cost
+// product but no spin, built exactly like the Validate auto-gen root spin.
+type GenerateRootInput struct {
+	HeadID uuid.UUID
+	Actor  string
+}
+
+// HeadWorkflow moves a head that never got its cost product (cost_product_id = 0) to
+// VALIDATED through the existing UI use cases (Submit → Validate, boughtout: Validate
+// from DRAFT), which auto-generates the cost product and the root spin (§5.5).
+// confirmSupersede is true only when the plan pairs the head with a phase C SUPERSEDE.
+// On APPLIED/SKIPPED already_in_target the result SpinID is the head's root spin.
+type HeadWorkflow interface {
+	EnsureValidated(ctx context.Context, headID uuid.UUID, actor string, confirmSupersede bool) (ItemResult, error)
+}
+
 // Writer applies reviewed plan items. One transaction per item; a non-nil error
 // is a database failure (the item's transaction is rolled back).
 type Writer interface {
@@ -157,6 +181,8 @@ type Writer interface {
 	SyncExistingSpin(ctx context.Context, in SyncSpinInput) (ItemResult, error)
 	// DuplicateToTarget clones a root spin (tx 1) and moves the clone to its target (tx 2).
 	DuplicateToTarget(ctx context.Context, in DuplicateTargetInput) (ItemResult, error)
+	// GenerateRootSpin creates the root spin of a head with cost product and no spin (K7).
+	GenerateRootSpin(ctx context.Context, in GenerateRootInput) (ItemResult, error)
 	// SupersedeExisting supersedes a live old spin by an existing new spin (phase B/C/D).
 	SupersedeExisting(ctx context.Context, in SupersedeInput) (ItemResult, error)
 	// SupersedeHeadOnly marks an old head without live spin superseded by the new head (Q15).

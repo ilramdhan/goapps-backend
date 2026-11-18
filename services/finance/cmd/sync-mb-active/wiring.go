@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbactivesync"
+	appmbhead "github.com/mutugading/goapps-backend/services/finance/internal/application/mbhead"
 	appmbspin "github.com/mutugading/goapps-backend/services/finance/internal/application/mbspin"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/config"
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
@@ -100,4 +101,16 @@ func (d spinDuplicator) Duplicate(ctx context.Context, req mbactivesync.Duplicat
 func newWriter(db *postgres.DB) *postgres.MBActiveSyncWriter {
 	dup := spinDuplicator{h: appmbspin.NewDuplicateHandler(postgres.NewMBSpinRepository(db), nil)}
 	return postgres.NewMBActiveSyncWriter(db).WithDuplicator(dup)
+}
+
+// newHeadWorkflow wires mbactivesync.HeadWorkflow over the EXISTING Submit/Validate use
+// cases exactly as the gRPC MB head handler builds them (with composition gate) — design
+// part 2 §5.5. No notifier / lookup-sync trigger: the one-shot apply reports instead.
+func newHeadWorkflow(db *postgres.DB) *mbactivesync.HandlerHeadWorkflow {
+	compositionRepo := postgres.NewMBCompositionRepository(db)
+	headRepo := postgres.NewMBHeadRepository(db, compositionRepo)
+	paramRepo := postgres.NewMBParamRepository(db)
+	return mbactivesync.NewHandlerHeadWorkflow(headRepo, postgres.NewMBSpinRepository(db),
+		appmbhead.NewSubmitHandlerWithComposition(headRepo, compositionRepo),
+		appmbhead.NewValidateHandlerWithComposition(headRepo, paramRepo, compositionRepo))
 }
