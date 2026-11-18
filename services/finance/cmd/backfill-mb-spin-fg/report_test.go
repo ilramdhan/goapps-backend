@@ -122,24 +122,6 @@ func prod(id int64, shade string) postgres.BackfillReportProduct {
 
 func k(s string, fg int64) mbsource.ShadeFgKey { return mbsource.ShadeFgKey{Shade: s, FgProductID: fg} }
 
-func TestOverlayFinder_BaseWinsOverlayFillsOnlyMissing(t *testing.T) {
-	dbSpin := testSpin(t, "DB", "A", true, nil)
-	simA := testSpin(t, "SIM-A", "A", true, nil)
-	simB := testSpin(t, "SIM-B", "B", true, nil)
-	o := &overlayFinder{
-		base:  &fakeShadeFg{m: map[mbsource.ShadeFgKey]*mbspin.Entity{k("A", 1): dbSpin}},
-		extra: map[mbsource.ShadeFgKey]*mbspin.Entity{k("A", 1): simA, k("B", 2): simB},
-	}
-	got, err := o.FindByShadeAndFg(context.Background(), []mbsource.ShadeFgKey{k("A", 1), k("B", 2), k("C", 3)})
-	require.NoError(t, err)
-	assert.Same(t, dbSpin, got[k("A", 1)], "DB resolution is never overridden")
-	assert.Same(t, simB, got[k("B", 2)])
-	assert.NotContains(t, got, k("C", 3))
-
-	_, err = (&overlayFinder{base: &fakeShadeFg{err: errors.New("db")}}).FindByShadeAndFg(context.Background(), []mbsource.ShadeFgKey{k("A", 1)})
-	assert.Error(t, err)
-}
-
 func TestDiffProduct_Rules(t *testing.T) {
 	s1, s2 := uuid.New(), uuid.New()
 	fg := int64(7)

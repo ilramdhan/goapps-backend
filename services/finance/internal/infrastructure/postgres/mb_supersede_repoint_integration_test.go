@@ -309,3 +309,28 @@ func (s *MBSupersedeRepointSuite) TestApplyForceOverwritesAndRejectsLocked() {
 	_, has := s.row(locked, s.ps.TriggerID)
 	require.False(s.T(), has)
 }
+
+// K5 (mb-active-sync P2f-1): lookup by old spin id; legacy spin with NULL FG scans as 0.
+func (s *MBSupersedeRepointSuite) TestFindSupersedeCandidatesBySpin_NullFG() {
+	head := s.newHead("K5H")
+	orion := mbRptPrefix + "K5ORION"
+	spin := s.newSpin(head, "K5S", "", nil, &orion, 1)
+	tx, err := s.db.BeginTx(s.ctx, nil)
+	require.NoError(s.T(), err)
+	defer func() { _ = tx.Rollback() }()
+
+	got, err := findSupersedeCandidatesBySpinOn(s.ctx, tx, spin)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), got, 1)
+	require.Equal(s.T(), spin, got[0].SpinID)
+	require.Equal(s.T(), int64(0), got[0].FgProductID)
+	require.Equal(s.T(), head, got[0].HeadID)
+	require.Equal(s.T(), orion, got[0].SpinCode)
+
+	// inactive spin -> empty
+	_, err = tx.ExecContext(s.ctx, `UPDATE mst_mb_spin SET mbs_is_active = FALSE WHERE mbs_id = $1`, spin)
+	require.NoError(s.T(), err)
+	got, err = findSupersedeCandidatesBySpinOn(s.ctx, tx, spin)
+	require.NoError(s.T(), err)
+	require.Empty(s.T(), got)
+}

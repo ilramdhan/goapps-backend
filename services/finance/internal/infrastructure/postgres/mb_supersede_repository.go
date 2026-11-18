@@ -77,9 +77,39 @@ func findSupersedeCandidatesOn(ctx context.Context, q supersedeQuerier, newHeadI
 	if forUpdate {
 		query += " FOR UPDATE OF s"
 	}
-	rows, err := q.QueryContext(ctx, query, fgProductID, shade, newHeadID)
+	return queryCandidates(ctx, q, "find supersede candidates", query, fgProductID, shade, newHeadID)
+}
+
+// supersedeCandidatesBySpinQuery (K5): the same columns as supersedeCandidatesQuery
+// but selected by the OLD spin id, with COALESCE(s.mbs_fg_product_id, 0) because
+// legacy spins have a NULL FG (supersedeSpin.FgProductID is int64).
+const supersedeCandidatesBySpinQuery = `
+	SELECT s.mbs_id,
+	       COALESCE(NULLIF(s.mbs_orion_item_code, ''), NULLIF(s.mbs_mb_costing, ''), CAST(s.mbs_id AS TEXT)),
+	       s.mbs_orion_item_code, COALESCE(s.mbs_shade_code, ''), COALESCE(s.mbs_fg_product_id, 0),
+	       COALESCE(fg.cpm_product_code, ''),
+	       h.mbh_id, h.mbh_mb_costing, h.mbh_is_active, COALESCE(h.mbh_cost_product_id, 0)
+	FROM mst_mb_spin s
+	JOIN mst_mb_head h ON h.mbh_id = s.mbs_mbh_id
+	LEFT JOIN cost_product_master fg ON fg.cpm_product_sys_id = s.mbs_fg_product_id
+	WHERE s.deleted_at IS NULL
+	  AND s.mbs_is_active
+	  AND s.mbs_superseded_by_spin_id IS NULL
+	  AND s.mbs_id = $1
+	ORDER BY s.created_at, s.mbs_id`
+
+// findSupersedeCandidatesBySpinOn returns the single live, active, not-superseded
+// spin oldSpinID as a supersede candidate (empty when it is already superseded,
+// inactive or deleted). It does not require an FG or shade. Locks the row
+// (FOR UPDATE OF s) and must only be used inside a transaction.
+func findSupersedeCandidatesBySpinOn(ctx context.Context, q supersedeQuerier, oldSpinID uuid.UUID) ([]supersedeSpin, error) {
+	return queryCandidates(ctx, q, "find supersede candidate by spin", supersedeCandidatesBySpinQuery+" FOR UPDATE OF s", oldSpinID)
+}
+
+func queryCandidates(ctx context.Context, q supersedeQuerier, what, query string, args ...any) ([]supersedeSpin, error) {
+	rows, err := q.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("find supersede candidates: %w", err)
+		return nil, fmt.Errorf("%s: %w", what, err)
 	}
 	defer closeRows(rows)
 	var out []supersedeSpin

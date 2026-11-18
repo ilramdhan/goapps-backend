@@ -11,34 +11,6 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 )
 
-// overlayFinder answers FindByShadeAndFg from the base finder first and fills only the
-// keys the base does not resolve from the in-memory simulated (APPLY row) links.
-type overlayFinder struct {
-	base  mbsource.SpinShadeFgFinder
-	extra map[mbsource.ShadeFgKey]*mbspin.Entity
-}
-
-// FindByShadeAndFg implements mbsource.SpinShadeFgFinder.
-func (o *overlayFinder) FindByShadeAndFg(ctx context.Context, keys []mbsource.ShadeFgKey) (map[mbsource.ShadeFgKey]*mbspin.Entity, error) {
-	out, err := o.base.FindByShadeAndFg(ctx, keys)
-	if err != nil {
-		return nil, err
-	}
-	if out == nil {
-		out = make(map[mbsource.ShadeFgKey]*mbspin.Entity)
-	}
-	for _, k := range keys {
-		nk := mbsource.ShadeFgKey{Shade: mbsource.NormalizeShade(k.Shade), FgProductID: k.FgProductID}
-		if _, ok := out[k]; ok {
-			continue
-		}
-		if e, ok := o.extra[nk]; ok {
-			out[k] = e
-		}
-	}
-	return out, nil
-}
-
 // memoCandidates serves FgCandidates from a precomputed map (avoids a second query).
 type memoCandidates map[int64][]int64
 

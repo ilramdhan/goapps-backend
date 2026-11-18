@@ -41,7 +41,7 @@ type SpinSnap struct {
 	SupersededBy  *uuid.UUID
 	Denier        *float64
 	Filament      *int
-	CrossSection  string // COALESCE(NULLIF(lesture,''),NULLIF(cross_section,''))
+	CrossSection  string // COALESCE(NULLIF(cross_section,''),NULLIF(lesture,'')) (P2h-4b)
 	ShadeCode     string
 	ShadeName     string
 	CC            string

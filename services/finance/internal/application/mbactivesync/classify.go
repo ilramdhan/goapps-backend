@@ -295,7 +295,7 @@ func ClassifyRows(rows []FileRow, snap *Snapshot) ([]*RowPlan, error) {
 		p := c.prepare(r, seen)
 		plans = append(plans, p)
 		if p.Action == "" {
-			allocIn = append(allocIn, AllocInput{Row: r, HeadID: p.Head.ID})
+			allocIn = append(allocIn, AllocInput{Row: r, HeadID: p.Head.ID, TargetFG: p.TargetFG})
 			pending = append(pending, p)
 		}
 	}
@@ -542,6 +542,10 @@ func (c *classifier) assignGenerateRoles(plans []*RowPlan) {
 		if !ok {
 			roots[p.Row.SysID] = p
 			p.Role = RoleRoot
+			// The generated root starts with the HEAD spec (auto-gen copies den/fil from the
+			// head, cross-section empty): target the ROW spec so the apply moves it there and a
+			// re-plan of the row allocates it (KEEP) instead of duplicating again (P2h-4c).
+			p.setSpecTargets()
 			p.newSpinSubs(p.Head.ShadeCode, p.Head.ShadeName)
 			p.rootHeadShade()
 			continue

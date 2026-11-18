@@ -39,6 +39,9 @@ const (
 	ReasonNewHeadInactive  = "new_head_inactive"  // reversed case (Q2): new head is reactivated by its row first
 	ReasonTargetRowReview  = "target_row_review"  // the new spin's row is not APPLY → the pair is reviewed too
 	ReasonNoActivatingRow  = "no_activating_row"  // head-only supersede: new head inactive and no actionable row reactivates it
+	// ReasonCloneFGInFile (P2h-4a safety net): an unallocated live clone whose FG is
+	// the target FG of an actionable row of its head is reported, never deactivated.
+	ReasonCloneFGInFile = "clone_fg_in_file"
 )
 
 // SupersedePair is one old→new head pair found by the family+shade rule.
@@ -581,8 +584,28 @@ func (h *headPlanner) planUnallocatedSpins() {
 			a.Kind, a.Phase, a.Decision = KindReportSpin, PhaseNone, DecisionSkip
 			a.addReason(ReasonHasRefs)
 		}
+		if h.cloneFGInFile(sp) {
+			a.Kind, a.Phase, a.Decision = KindReportSpin, PhaseNone, DecisionSkip
+			a.addReason(ReasonCloneFGInFile)
+		}
 		h.add(a)
 	}
+}
+
+// cloneFGInFile (P2h-4a safety net, bug 4): sp is a clone (mbs_parent_spin_id set,
+// as every spin DUPLICATE_SPIN creates) whose FG equals the target FG of an
+// actionable row of the same head. Deactivating it would destroy the spin a row
+// needs (the next plan re-creates it), so the planner must never do that.
+func (h *headPlanner) cloneFGInFile(sp *SpinSnap) bool {
+	if sp.ParentID == nil || sp.FGProductID == nil {
+		return false
+	}
+	for _, p := range h.rowsByHead[sp.HeadID] {
+		if p.TargetFG != nil && *p.TargetFG == *sp.FGProductID {
+			return true
+		}
+	}
+	return false
 }
 
 // planDeadHeadSpins (Q6): live spins under a non-live head whose SYSID is not in

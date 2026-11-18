@@ -281,3 +281,112 @@ func TestHydrateLustureCode_NilClearsValue(t *testing.T) {
 	e.HydrateLustureCode(nil)
 	assert.Nil(t, e.LustureCode())
 }
+
+// =============================================================================
+// SetShade / SetActualLDR (MB Active Sync K1, K2)
+// =============================================================================
+
+func newSpinForSetters(t *testing.T) *mbspin.Entity {
+	t.Helper()
+	e, err := mbspin.New(uuid.New(), "MB Spin S", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "admin")
+	require.NoError(t, err)
+	return e
+}
+
+func TestSetShade_SetsShadeAndMirrorsCC(t *testing.T) {
+	e := newSpinForSetters(t)
+	code, name := "SH01", "Shade One"
+	require.NoError(t, e.SetShade(&code, &name, nil, "sync"))
+	require.NotNil(t, e.ShadeCode())
+	assert.Equal(t, "SH01", *e.ShadeCode())
+	require.NotNil(t, e.ShadeName())
+	assert.Equal(t, "Shade One", *e.ShadeName())
+	require.NotNil(t, e.CC())
+	assert.Equal(t, "SH01", *e.CC())
+	require.NotNil(t, e.UpdatedBy())
+	assert.Equal(t, "sync", *e.UpdatedBy())
+	assert.NotNil(t, e.UpdatedAt())
+}
+
+func TestSetShade_NilClearsCodeAndCC(t *testing.T) {
+	e := newSpinForSetters(t)
+	code := "SH01"
+	require.NoError(t, e.SetShade(&code, nil, nil, "sync"))
+	require.NoError(t, e.SetShade(nil, nil, nil, "sync"))
+	assert.Nil(t, e.ShadeCode())
+	assert.Nil(t, e.ShadeName())
+	assert.Nil(t, e.CC())
+}
+
+func TestSetShade_SetsCrossSection(t *testing.T) {
+	e := newSpinForSetters(t)
+	cs := "CS-B"
+	code := "SH02"
+	require.NoError(t, e.SetShade(&code, nil, &cs, "sync"))
+	require.NotNil(t, e.CrossSection())
+	assert.Equal(t, "CS-B", *e.CrossSection())
+}
+
+func TestSetShade_KeepsCrossSectionWhenPassedCurrent(t *testing.T) {
+	e := newSpinForSetters(t)
+	cs := "CS-A"
+	e.HydrateShadeAndLDR(mbspin.ShadeAndLDR{CrossSection: &cs, LDRType: mbspin.LDRTypeNotCalculated})
+	code := "SH02"
+	require.NoError(t, e.SetShade(&code, nil, e.CrossSection(), "sync"))
+	require.NotNil(t, e.CrossSection())
+	assert.Equal(t, "CS-A", *e.CrossSection())
+}
+
+func TestSetShade_NilClearsCrossSection(t *testing.T) {
+	e := newSpinForSetters(t)
+	cs := "CS-A"
+	e.HydrateShadeAndLDR(mbspin.ShadeAndLDR{CrossSection: &cs, LDRType: mbspin.LDRTypeNotCalculated})
+	require.NoError(t, e.SetShade(nil, nil, nil, "sync"))
+	assert.Nil(t, e.CrossSection())
+}
+
+func TestSetShade_RejectedWhenDeleted(t *testing.T) {
+	e := newSpinForSetters(t)
+	require.NoError(t, e.SoftDelete("admin"))
+	code := "SH01"
+	assert.ErrorIs(t, e.SetShade(&code, nil, nil, "sync"), mbspin.ErrAlreadyDeleted)
+	assert.Nil(t, e.ShadeCode())
+}
+
+func TestSetActualLDR_SetsPctFixedAndLocksActual(t *testing.T) {
+	e := newSpinForSetters(t)
+	require.NoError(t, e.SetActualLDR(12.5, "sync"))
+	require.NotNil(t, e.MBSRunLdrPct())
+	assert.InDelta(t, 12.5, *e.MBSRunLdrPct(), 1e-9)
+	require.NotNil(t, e.LDRIsFixed())
+	assert.True(t, *e.LDRIsFixed())
+	assert.True(t, e.LDRIsActual())
+	assert.Equal(t, mbspin.LDRTypeActual, e.LDRType())
+	require.NotNil(t, e.UpdatedBy())
+	assert.Equal(t, "sync", *e.UpdatedBy())
+}
+
+func TestSetActualLDR_RejectsNonPositive(t *testing.T) {
+	for _, pct := range []float64{0, -1} {
+		e := newSpinForSetters(t)
+		assert.ErrorIs(t, e.SetActualLDR(pct, "sync"), mbspin.ErrInvalidActualLDR)
+		assert.Nil(t, e.MBSRunLdrPct())
+		assert.False(t, e.LDRIsActual())
+	}
+}
+
+func TestSetActualLDR_RejectedWhenDeleted(t *testing.T) {
+	e := newSpinForSetters(t)
+	require.NoError(t, e.SoftDelete("admin"))
+	assert.ErrorIs(t, e.SetActualLDR(5, "sync"), mbspin.ErrAlreadyDeleted)
+	assert.False(t, e.LDRIsActual())
+}
+
+func TestSetActualLDR_BlocksAdjustmentUntilUnlocked(t *testing.T) {
+	e := newSpinForSetters(t)
+	require.NoError(t, e.SetActualLDR(7, "sync"))
+	adj := 1.0
+	assert.ErrorIs(t, e.SetLDRAdjustment(&adj), mbspin.ErrLDRLockedActual)
+	e.UnlockLDRActual()
+	require.NoError(t, e.SetLDRAdjustment(&adj))
+}

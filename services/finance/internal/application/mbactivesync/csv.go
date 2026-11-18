@@ -359,3 +359,171 @@ func writeCounts(b *strings.Builder, title string, m map[string]int) {
 	}
 	b.WriteString("\n")
 }
+
+// ResultHeader is the result-<phase>-<ts>.csv header (design §5).
+var ResultHeader = []string{
+	"item_key", "ln", "sysid", "action", "phase", "result", "reason", "spin_id", "clone_spin_id", "head_id",
+	"before_json", "after_json", "message", "actor", "applied_at",
+}
+
+// ResultRecord renders one outcome matching ResultHeader.
+func ResultRecord(o ApplyOutcome) []string {
+	it := o.Item
+	ln := ""
+	if it.Ln > 0 {
+		ln = strconv.Itoa(it.Ln)
+	}
+	return []string{
+		it.Key, ln, it.SysID, it.Action, string(it.Phase), o.Result.Result, o.Result.Reason,
+		o.Result.SpinID, o.Result.CloneSpinID, o.Result.HeadID, o.Result.BeforeJSON, o.Result.AfterJSON,
+		o.Result.Message, o.Actor, o.AppliedAt.UTC().Format("2006-01-02T15:04:05Z"),
+	}
+}
+
+// CSVResultSink writes result rows (every outcome) and error rows (FAILED only, original
+// plan columns + "error") flushing after every record so a crash loses nothing.
+// errors may be nil. The error file's header is taken from the first failed item.
+type CSVResultSink struct {
+	res, errs     *csv.Writer
+	manual        *csv.Writer
+	started       bool
+	errHeaderDone bool
+	manualStarted bool
+	manualPlan    [][]string
+}
+
+// ManualItemsHeader is the manual-items CSV header written by the apply sink for
+// items that need an operator follow-up (ItemResult.ManualReason, e.g. Q1 guard).
+var ManualItemsHeader = []string{"item_key", "ln", "sysid", "action", "phase", "reason", "spin_id", "clone_spin_id", "head_id", "message"}
+
+// WithManual adds a manual-items writer (items with ItemResult.ManualReason).
+func (s *CSVResultSink) WithManual(w io.Writer) *CSVResultSink {
+	if w != nil {
+		s.manual = csv.NewWriter(w)
+	}
+	return s
+}
+
+// WithManualPlan queues plan-level manual items (ManualPlanRecords: NEW_RECIPE,
+// REPORT_ONLY, REPORT_SPIN/HEAD) written right after the header of the manual file.
+func (s *CSVResultSink) WithManualPlan(recs [][]string) *CSVResultSink {
+	s.manualPlan = recs
+	return s
+}
+
+// startManual writes the manual-items header and the queued plan items once.
+func (s *CSVResultSink) startManual() error {
+	if s.manualStarted {
+		return nil
+	}
+	if err := s.manual.Write(ManualItemsHeader); err != nil {
+		return fmt.Errorf("write manual-items header: %w", err)
+	}
+	for _, r := range s.manualPlan {
+		if err := s.manual.Write(r); err != nil {
+			return fmt.Errorf("write manual plan item: %w", err)
+		}
+	}
+	s.manualStarted = true
+	return nil
+}
+
+func (s *CSVResultSink) recordManual(o ApplyOutcome) error {
+	if s.manual == nil || o.Result.ManualReason == "" {
+		return nil
+	}
+	if err := s.startManual(); err != nil {
+		return err
+	}
+	it := o.Item
+	ln := ""
+	if it.Ln > 0 {
+		ln = strconv.Itoa(it.Ln)
+	}
+	if err := s.manual.Write([]string{it.Key, ln, it.SysID, it.Action, string(it.Phase), o.Result.ManualReason,
+		o.Result.SpinID, o.Result.CloneSpinID, o.Result.HeadID, o.Result.Message}); err != nil {
+		return fmt.Errorf("write manual item: %w", err)
+	}
+	s.manual.Flush()
+	if err := s.manual.Error(); err != nil {
+		return fmt.Errorf("flush manual-items: %w", err)
+	}
+	return nil
+}
+
+// NewCSVResultSink returns a sink over the result writer and the (optional) error writer.
+func NewCSVResultSink(result, errors io.Writer) *CSVResultSink {
+	s := &CSVResultSink{res: csv.NewWriter(result)}
+	if errors != nil {
+		s.errs = csv.NewWriter(errors)
+	}
+	return s
+}
+
+// Record implements ResultSink.
+func (s *CSVResultSink) Record(o ApplyOutcome) error {
+	if !s.started {
+		if err := s.res.Write(ResultHeader); err != nil {
+			return fmt.Errorf("write result header: %w", err)
+		}
+		s.started = true
+	}
+	if err := s.res.Write(ResultRecord(o)); err != nil {
+		return fmt.Errorf("write result: %w", err)
+	}
+	s.res.Flush()
+	if err := s.res.Error(); err != nil {
+		return fmt.Errorf("flush result: %w", err)
+	}
+	if err := s.recordManual(o); err != nil {
+		return err
+	}
+	if o.Result.Result != ResultFailed || s.errs == nil {
+		return nil
+	}
+	if !s.errHeaderDone {
+		if err := s.errs.Write(append(append([]string{}, o.Item.Header...), "error")); err != nil {
+			return fmt.Errorf("write errors header: %w", err)
+		}
+		s.errHeaderDone = true
+	}
+	if err := s.errs.Write(append(append([]string{}, o.Item.Record...), o.Err)); err != nil {
+		return fmt.Errorf("write error row: %w", err)
+	}
+	s.errs.Flush()
+	if err := s.errs.Error(); err != nil {
+		return fmt.Errorf("flush errors: %w", err)
+	}
+	return nil
+}
+
+// Close writes the result header when nothing was recorded (so an empty run still
+// leaves a valid file) and flushes.
+func (s *CSVResultSink) Close() error {
+	if !s.started {
+		if err := s.res.Write(ResultHeader); err != nil {
+			return fmt.Errorf("write result header: %w", err)
+		}
+		s.started = true
+	}
+	s.res.Flush()
+	if err := s.closeManual(); err != nil {
+		return err
+	}
+	return s.res.Error()
+}
+
+// closeManual writes the manual-items header when nothing was listed and flushes.
+func (s *CSVResultSink) closeManual() error {
+	if s.manual == nil {
+		return nil
+	}
+	if err := s.startManual(); err != nil {
+		return err
+	}
+	s.manual.Flush()
+	if err := s.manual.Error(); err != nil {
+		return fmt.Errorf("flush manual-items: %w", err)
+	}
+	return nil
+}
