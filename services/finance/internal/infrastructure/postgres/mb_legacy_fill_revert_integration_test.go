@@ -119,3 +119,27 @@ func TestLegacyFillRevert_NonAppliedAndShadeCount(t *testing.T) {
 	require.Equal(t, "1", f.text(`SELECT CAST(COUNT(*) AS text) FROM cost_erp_shade WHERE ces_shade_code = 'ZZ-9'`), "master kept")
 	_ = uuid.Nil
 }
+
+func TestLegacyFillRevert_CascadeTargetChangedIsPartial(t *testing.T) {
+	f := newMBASFixture(t, "mblf_revert_casc")
+	db := postgres.NewDBFromSQL(f.raw)
+	w, rv := postgres.NewMBLegacyFillWriter(db), postgres.NewMBLegacyFillReverter(db)
+	h := f.head(true, "")
+	s2 := f.spin(h, "", 5, true, nil)
+	oldCosting := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h)
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "mb_costing", oldCosting, "NEW-COSTING"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, "NEW-COSTING", f.text(`SELECT mbs_mb_costing FROM mst_mb_spin WHERE mbs_id = $1`, s2))
+	f.exec(`UPDATE mst_mb_spin SET mbs_mb_costing = 'HUMAN' WHERE mbs_id = $1`, s2)
+
+	out, err := rv.Revert(f.ctx, "lf-rev", lfToItems(res))
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	require.Equal(t, mblegacyfill.RevertChangedSince, out[0].Result)
+	require.Equal(t, mblegacyfill.ReasonCascadePartial, out[0].Reason)
+	require.Equal(t, oldCosting, f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h), "head restored")
+	require.Equal(t, "HUMAN", f.text(`SELECT mbs_mb_costing FROM mst_mb_spin WHERE mbs_id = $1`, s2), "later edit kept")
+}

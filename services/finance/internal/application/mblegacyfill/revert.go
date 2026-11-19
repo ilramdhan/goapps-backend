@@ -18,6 +18,10 @@ const (
 	RevertChangedSince    = "CHANGED_SINCE_APPLY"
 	RevertSkipped         = "SKIPPED"
 	RevertFailed          = "FAILED"
+
+	// ReasonCascadePartial: the item's own columns were handled but a cascaded
+	// spin/cost-product target was changed after the apply or no longer exists.
+	ReasonCascadePartial = "cascade_partial"
 )
 
 // Revert reasons.

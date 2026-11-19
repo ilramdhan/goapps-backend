@@ -340,7 +340,7 @@ func (w *MBLegacyFillReverter) revertItem(ctx context.Context, tx *sql.Tx, actor
 	if state == lfRevChanged || state == lfRevMissing || it.SideEffects == "" {
 		return r, nil
 	}
-	cascade, cstate, err := revertCascade(ctx, tx, actor, it.SideEffects)
+	cascade, cstate, conflict, err := revertCascade(ctx, tx, actor, it.SideEffects)
 	if err != nil {
 		return mblegacyfill.RevertResult{}, err
 	}
@@ -348,17 +348,24 @@ func (w *MBLegacyFillReverter) revertItem(ctx context.Context, tx *sql.Tx, actor
 	if state == lfRevAlready && cstate == lfRevRestored {
 		r.Result, r.Reason = mblegacyfill.RevertReverted, ""
 	}
+	if conflict {
+		// A cascaded spin/product was changed after the apply (or is gone): the item is
+		// only partly reverted, so it must not read as a clean REVERTED.
+		r.Result, r.Reason = mblegacyfill.RevertChangedSince, mblegacyfill.ReasonCascadePartial
+	}
 	return r, nil
 }
 
 // revertCascade restores the spin/cost-product columns the head cascade changed.
-func revertCascade(ctx context.Context, tx *sql.Tx, actor, raw string) (string, lfRevState, error) {
+// conflict reports a cascaded target that is changed_since_apply or missing.
+func revertCascade(ctx context.Context, tx *sql.Tx, actor, raw string) (string, lfRevState, bool, error) {
 	var fx lfSideEffects
 	if err := json.Unmarshal([]byte(raw), &fx); err != nil {
-		return "", lfRevAlready, fmt.Errorf("bad side_effects_json: %w", err)
+		return "", lfRevAlready, false, fmt.Errorf("bad side_effects_json: %w", err)
 	}
 	summary := map[string]string{}
 	overall := lfRevAlready
+	conflict := false
 	ids := make([]string, 0, len(fx.SpinChanges))
 	for id := range fx.SpinChanges {
 		ids = append(ids, id)
@@ -367,28 +374,30 @@ func revertCascade(ctx context.Context, tx *sql.Tx, actor, raw string) (string, 
 	for _, id := range ids {
 		img := fx.SpinChanges[id]
 		if _, err := uuid.Parse(id); err != nil {
-			return "", overall, fmt.Errorf("cascade spin id %q: %w", id, err)
+			return "", overall, false, fmt.Errorf("cascade spin id %q: %w", id, err)
 		}
 		st, err := revertImage(ctx, tx, actor, lfEntityTarget(mblegacyfill.EntitySpin, id), img, func(c string) (mblegacyfill.Kind, bool) { return mblegacyfill.ColumnKind(mblegacyfill.EntitySpin, c) })
 		if err != nil {
-			return "", overall, err
+			return "", overall, false, err
 		}
 		summary["spin:"+id] = st.String()
 		overall = mergeRevState(overall, st)
+		conflict = conflict || st == lfRevChanged || st == lfRevMissing
 	}
 	if fx.CostProductChange != nil && fx.CostProductID != 0 {
 		st, err := revertImage(ctx, tx, actor, lfProductTarget(fx.CostProductID), *fx.CostProductChange, mblegacyfill.CostProductKind)
 		if err != nil {
-			return "", overall, err
+			return "", overall, false, err
 		}
 		summary["cost_product:"+strconv.FormatInt(fx.CostProductID, 10)] = st.String()
 		overall = mergeRevState(overall, st)
+		conflict = conflict || st == lfRevChanged || st == lfRevMissing
 	}
 	b, err := json.Marshal(summary)
 	if err != nil {
-		return "", overall, fmt.Errorf("marshal cascade summary: %w", err)
+		return "", overall, false, fmt.Errorf("marshal cascade summary: %w", err)
 	}
-	return string(b), overall, nil
+	return string(b), overall, conflict, nil
 }
 
 func revertImage(ctx context.Context, tx *sql.Tx, actor string, t lfRevTarget, img lfImage, kindOf func(string) (mblegacyfill.Kind, bool)) (lfRevState, error) {
