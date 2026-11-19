@@ -34,8 +34,22 @@ go run ./cmd/legacy-fill-mb --apply --plan-file out/legacy-fill-mb-plan-<ts>.csv
 go run ./cmd/legacy-fill-mb --revert --input out/legacy-fill-mb-result-<ts>.csv[,more.csv] \
   --actor ilham --out-dir out/
 
+# 4. recovery after an interrupted apply (recalc + affected-products from the result CSV(s))
+go run ./cmd/legacy-fill-mb --post-effects-only --input out/legacy-fill-mb-result-<ts>.csv[,more.csv] \
+  --actor ilham --out-dir out/
+
 go run ./cmd/legacy-fill-mb --help
 ```
+
+### Recovery after an interrupt
+
+On SIGINT/SIGTERM the batch loop stops, but the post-commit recalc and the output files still run
+to completion (detached from the signal context), so committed batches are never left un-recalculated.
+If the process was killed hard (SIGKILL, crash) before that step, re-running `--apply` will not help:
+rows already committed report `already_in_target` and are not recalculated. Run `--post-effects-only`
+with the result CSV(s) of the interrupted run instead; it writes fresh `recalc-results` and
+`affected-products` files. If no result CSV was written, re-run `--plan` and use its ALREADY rows
+to identify what was committed.
 
 `--batch N` = N head groups per batch (a head and all its spin rows stay together); head-bearing
 groups run first. `--only-sysid` selects whole head groups: every group containing at least one row

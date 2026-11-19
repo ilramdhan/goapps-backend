@@ -95,6 +95,26 @@ func newSpinRecalcer(db *postgres.DB) *mblegacyfill.SpinRecalcer {
 	return &mblegacyfill.SpinRecalcer{Repo: repo, Svc: svc}
 }
 
+func runPostEffectsOnly(ctx context.Context, o options) error {
+	items, err := mblegacyfill.ReadResultCSVs(o.input)
+	if err != nil {
+		return err
+	}
+	db, cleanup, err := openDB()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	nm, err := newOutNamer(o.outDir)
+	if err != nil {
+		return err
+	}
+	sr := newSpinRecalcer(db)
+	return postEffectsOnly(ctx, applyDeps{
+		rc: sr, rs: sr, impact: postgres.NewMBDozingImpactRepository(db), nm: nm,
+	}, items, o)
+}
+
 func runRevert(ctx context.Context, o options) error {
 	items, err := mblegacyfill.ReadResultCSVs(o.input)
 	if err != nil {

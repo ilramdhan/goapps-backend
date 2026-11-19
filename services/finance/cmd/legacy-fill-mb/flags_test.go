@@ -68,7 +68,7 @@ func TestSelectApplyRows(t *testing.T) {
 	require.Len(t, rows, 4)
 
 	g := selectApplyRows(rows, nil, nil, 0)
-	require.Len(t, g, 3) // unresolved spins group alone
+	require.Len(t, g, 3)                  // unresolved spins group alone
 	assert.Equal(t, "h1", g[0][0].Row.ID) // head-bearing group first
 	assert.Len(t, selectApplyRows(rows, nil, []string{"30"}, 0), 1)
 	assert.Len(t, selectApplyRows(rows, nil, nil, 1), 1)
@@ -99,4 +99,25 @@ func TestParsePlanKeepsRejectRows(t *testing.T) {
 		"head,h1,10,entry_status,a,b,,,,,L,APPLY,\n"
 	_, err = parsePlan(bytes.NewBufferString(bad))
 	assert.Error(t, err)
+}
+
+func TestParseFlagsPostEffectsOnly(t *testing.T) {
+	o, err := parseFlags([]string{"--post-effects-only", "--input", "a.csv,b.csv", "--actor", "me", "--out-dir", "/tmp/x"})
+	require.NoError(t, err)
+	assert.True(t, o.postEffectsOnly)
+	assert.Equal(t, stringList{"a.csv", "b.csv"}, o.input)
+
+	for _, args := range [][]string{
+		{"--post-effects-only"},
+		{"--post-effects-only", "--input", "a.csv"},
+		{"--post-effects-only", "--input", "a.csv", "--actor", " "},
+		{"--post-effects-only", "--input", "a.csv", "--actor", "x", "--plan"},
+		{"--post-effects-only", "--input", "a.csv", "--actor", "x", "--apply"},
+		{"--post-effects-only", "--input", "a.csv", "--actor", "x", "--revert"},
+		{"--post-effects-only", "--input", "a.csv", "--actor", "x", "--plan-file", "f"},
+		{"--post-effects-only", "--input", "a.csv", "--actor", "x", "--batch", "5"},
+	} {
+		_, err := parseFlags(args)
+		assert.Error(t, err, "args=%v", args)
+	}
 }

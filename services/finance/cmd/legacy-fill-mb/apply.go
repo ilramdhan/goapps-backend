@@ -46,8 +46,10 @@ func applyAll(ctx context.Context, d applyDeps, rows []mblegacyfill.PlanRow, o o
 		log.Printf("batch %d/%d done: %d row(s)", i+1, len(batches), len(res))
 	}
 	failed := countFailed(results)
-	outs := mblegacyfill.RunPostEffects(ctx, d.rc, o.actor, mblegacyfill.SelectRecalcTargets(results))
-	if err := writeApplyFiles(ctx, d, results, outs); err != nil && runErr == nil {
+	// Committed batches must get their recalc and output files even after SIGINT/SIGTERM.
+	pctx := context.WithoutCancel(ctx)
+	outs := mblegacyfill.RunPostEffects(pctx, d.rc, o.actor, mblegacyfill.SelectRecalcTargets(results))
+	if err := writeApplyFiles(pctx, d, results, outs); err != nil && runErr == nil {
 		runErr = err
 	}
 	log.Printf("apply summary: %v", summarize(results))
@@ -96,6 +98,38 @@ func writeApplyFiles(ctx context.Context, d applyDeps, results []mblegacyfill.Ro
 		{d.nm.path("recalc-results"), func(w io.Writer) error { return mblegacyfill.WriteRecalcCSV(w, outs) }},
 		{d.nm.path("affected-products"), func(w io.Writer) error {
 			rows, err := mblegacyfill.CollectAffectedProducts(ctx, d.impact, d.rs, results, outs)
+			if err != nil {
+				return fmt.Errorf("collect affected products: %w", err)
+			}
+			return mblegacyfill.WriteAffectedProductsCSV(w, rows)
+		}},
+	}
+	for _, f := range files {
+		if err := writeFile(f.path, f.fn); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		log.Printf("wrote %s", f.path)
+	}
+	return errors.Join(errs...)
+}
+
+// postEffectsOnly re-runs the recalc and affected-products passes over earlier apply result
+// CSV rows (recovery after an interrupted apply) and writes the two output files.
+func postEffectsOnly(ctx context.Context, d applyDeps, items []mblegacyfill.ResultRow, o options) error {
+	results := mblegacyfill.ResultRowsToRowResults(items)
+	targets := mblegacyfill.SelectRecalcTargets(results)
+	log.Printf("post-effects-only: %d result row(s), %d recalc target(s)", len(results), len(targets))
+	pctx := context.WithoutCancel(ctx)
+	outs := mblegacyfill.RunPostEffects(pctx, d.rc, o.actor, targets)
+	var errs []error
+	files := []struct {
+		path string
+		fn   func(io.Writer) error
+	}{
+		{d.nm.path("recalc-results"), func(w io.Writer) error { return mblegacyfill.WriteRecalcCSV(w, outs) }},
+		{d.nm.path("affected-products"), func(w io.Writer) error {
+			rows, err := mblegacyfill.CollectAffectedProducts(pctx, d.impact, d.rs, results, outs)
 			if err != nil {
 				return fmt.Errorf("collect affected products: %w", err)
 			}

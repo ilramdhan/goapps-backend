@@ -10,6 +10,9 @@
 //	--revert --input RESULT.csv[,RESULT2.csv] --actor NAME [--out-dir D]
 //	    writes to the DB: restores before-images of APPLIED rows still holding their after-image.
 //
+//	--post-effects-only --input RESULT.csv[,RESULT2.csv] --actor NAME [--out-dir D]
+//	    recovery: re-runs the recalc + affected-products passes from earlier apply result CSVs.
+//
 // Run order: legacy-fill-mb BEFORE sync-mb-active. See README.md.
 package main
 
@@ -49,6 +52,8 @@ func run(ctx context.Context, o options) error {
 	switch {
 	case o.revert:
 		return runRevert(ctx, o)
+	case o.postEffectsOnly:
+		return runPostEffectsOnly(ctx, o)
 	case o.apply:
 		return runApply(ctx, o)
 	case o.plan:
