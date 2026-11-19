@@ -120,13 +120,15 @@ func TestLegacyFillWriter_ClassD_CascadeSpinWins(t *testing.T) {
 	f.exec(`UPDATE mst_mb_head SET mbh_is_locked = TRUE WHERE mbh_id = $1`, h)
 	pid := f.costProduct(h)
 	s1, s2 := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
-	f.exec(`UPDATE mst_mb_head SET mbh_mgt_name = 'HM' WHERE mbh_id = $1`, h)
+	f.exec(`UPDATE mst_mb_head SET mbh_mgt_name = 'HM', mbh_denier = 380 WHERE mbh_id = $1`, h)
 	oldCosting := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h)
+	f.exec(`UPDATE mst_mb_spin SET mbs_mb_costing = $2 WHERE mbs_mbh_id = $1`, h, oldCosting)
+	f.exec(`UPDATE cost_product_master SET cpm_product_name = $2 WHERE cpm_product_sys_id = $1`, pid, oldCosting)
 
 	res, err := w.Apply(f.ctx, "lf-d", []mblegacyfill.PlanRow{
 		lfPlanRow(t, mblegacyfill.EntitySpin, s1, "den", "380", "999"), // spin wins over cascade
 		lfPlanRow(t, mblegacyfill.EntityHead, h, "mb_costing", oldCosting, "NEW-COSTING"),
-		lfPlanRow(t, mblegacyfill.EntityHead, h, "den", "", "150"),
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "den", "380", "150"),
 		lfPlanRow(t, mblegacyfill.EntitySpin, s1, "run_ldr", "5", "7.5"),
 	})
 	require.NoError(t, err)
@@ -243,11 +245,12 @@ func TestLegacyFillWriter_HeadFirstOrdering(t *testing.T) {
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	s1, s2 := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_head SET mbh_denier = 380 WHERE mbh_id = $1`, h)
 
 	// spin row listed BEFORE the head row: head must still go first so the spin value wins.
 	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{
 		lfPlanRow(t, mblegacyfill.EntitySpin, s1, "den", "380", "999"),
-		lfPlanRow(t, mblegacyfill.EntityHead, h, "den", "", "150"),
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "den", "380", "150"),
 	})
 	require.NoError(t, err)
 	require.Len(t, res, 2)
@@ -277,4 +280,70 @@ func TestLegacyFillWriter_ClassD_CodeSharedAndFgShadeGuard(t *testing.T) {
 	require.Equal(t, "REJECT", res[1].Decision)
 	require.Contains(t, res[1].Reason, "fg shade")
 	require.Equal(t, "", f.text(`SELECT COALESCE(mbh_code, '') FROM mst_mb_head WHERE mbh_id = $1`, h3))
+}
+
+func (f *mbasFixture) spinDen(id uuid.UUID) string {
+	return f.text(`SELECT COALESCE(CAST(mbs_denier AS text), '') FROM mst_mb_spin WHERE mbs_id = $1`, id)
+}
+
+func TestLegacyFillWriter_Targeted_DevOnlyTouchesNoSpin(t *testing.T) {
+	f := newMBASFixture(t, "mblf_tgt_dev")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "")
+	s1 := f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_head SET mbh_denier = 150 WHERE mbh_id = $1`, h) // head differs from spin: must NOT be pushed
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{lfPlanRow(t, mblegacyfill.EntityHead, h, "dev", "", "DEV-1")})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, "380.00", f.spinDen(s1))
+	require.Equal(t, "144", f.text(`SELECT CAST(mbs_filament AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s1))
+	require.NotContains(t, res[0].SideEffects, s1.String())
+}
+
+func TestLegacyFillWriter_Targeted_DenierFollowersOnly_AndRevert(t *testing.T) {
+	f := newMBASFixture(t, "mblf_tgt_den")
+	db := postgres.NewDBFromSQL(f.raw)
+	w, rv := postgres.NewMBLegacyFillWriter(db), postgres.NewMBLegacyFillReverter(db)
+	h := f.head(true, "")
+	f.exec(`UPDATE mst_mb_head SET mbh_denier = 380 WHERE mbh_id = $1`, h)
+	a, b := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_spin SET mbs_denier = 500 WHERE mbs_id = $1`, b)
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{lfPlanRow(t, mblegacyfill.EntityHead, h, "den", "380", "150")})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, "150.00", f.spinDen(a))
+	require.Equal(t, "500.00", f.spinDen(b))
+
+	out, err := rv.Revert(f.ctx, "lf-rev", lfToItems(res))
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.RevertReverted, out[0].Result, out[0].Reason)
+	require.Equal(t, "380.00", f.text(`SELECT CAST(mbh_denier AS text) FROM mst_mb_head WHERE mbh_id = $1`, h))
+	require.Equal(t, "380.00", f.spinDen(a))
+	require.Equal(t, "500.00", f.spinDen(b))
+}
+
+func TestLegacyFillWriter_Targeted_CostingRename(t *testing.T) {
+	f := newMBASFixture(t, "mblf_tgt_cost")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "")
+	pid := f.costProduct(h) // product name 'old name' != costing
+	old := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h)
+	a, b := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_spin SET mbs_mb_costing = $2 WHERE mbs_id = $1`, a, old)
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{lfPlanRow(t, mblegacyfill.EntityHead, h, "mb_costing", old, "NEW-C")})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, "NEW-C", f.text(`SELECT mbs_mb_costing FROM mst_mb_spin WHERE mbs_id = $1`, a))
+	require.Equal(t, "SP-"+b.String()[:8], f.text(`SELECT mbs_mb_costing FROM mst_mb_spin WHERE mbs_id = $1`, b))
+	require.Equal(t, "old name", f.text(`SELECT cpm_product_name FROM cost_product_master WHERE cpm_product_sys_id = $1`, pid))
+
+	// now a product that does equal the old costing follows
+	h2 := f.head(true, "")
+	pid2 := f.costProduct(h2)
+	old2 := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h2)
+	f.exec(`UPDATE cost_product_master SET cpm_product_name = $2 WHERE cpm_product_sys_id = $1`, pid2, old2)
+	res, err = w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{lfPlanRow(t, mblegacyfill.EntityHead, h2, "mb_costing", old2, "NEW-D")})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, "NEW-D", f.text(`SELECT cpm_product_name FROM cost_product_master WHERE cpm_product_sys_id = $1`, pid2))
 }

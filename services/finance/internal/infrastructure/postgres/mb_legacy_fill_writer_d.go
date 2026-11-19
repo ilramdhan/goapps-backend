@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -252,48 +253,148 @@ func (w *MBLegacyFillWriter) lockSpinGuards(ctx context.Context, tx *sql.Tx, g *
 	return nil
 }
 
-// cascadeHead reloads the head inside the tx and runs the UI cascade (spins, cost product).
-func (w *MBLegacyFillWriter) cascadeHead(ctx context.Context, tx *sql.Tx, g *lfGroup) (lfSideEffects, error) {
-	var fx lfSideEffects
-	hid, err := uuid.Parse(g.rows[0].Row.ID)
+// lfHeadToSpin maps a head column to the spin column that follows it, and its kind.
+// Static allow-list: column names in SQL come only from here. dev, code, orion, run_ldr,
+// labels and shade are deliberately absent (shade/lusture are never cascaded by legacy-fill).
+var lfHeadToSpin = map[string]struct {
+	spin string
+	kind mblegacyfill.Kind
+}{
+	"mbh_mb_costing":    {"mbs_mb_costing", mblegacyfill.KindText},
+	"mbh_mgt_name":      {"mbs_mgt_name", mblegacyfill.KindText},
+	"mbh_denier":        {"mbs_denier", mblegacyfill.KindNum},
+	"mbh_filament":      {"mbs_filament", mblegacyfill.KindInt},
+	"mbh_dozing":        {"mbs_dozing", mblegacyfill.KindNum},
+	"mbh_final_product": {"mbs_final_product", mblegacyfill.KindText},
+	"mbh_vs_number":     {"mbs_vs_number", mblegacyfill.KindText},
+}
+
+// lfChange is the before/after of one applied head column.
+type lfChange struct{ before, after string }
+
+// lfPropagateSpin moves one head column change to the spins that still carry the OLD
+// head value (spins that deliberately differ are untouched).
+func lfPropagateSpin(ctx context.Context, tx *sql.Tx, g *lfGroup, headID, headCol string, c lfChange) error {
+	m, ok := lfHeadToSpin[headCol]
+	if !ok {
+		return nil
+	}
+	newV, oldV := mblegacyfill.Normalize(c.after), mblegacyfill.Normalize(c.before)
+	var set, cmp string
+	switch m.kind {
+	case mblegacyfill.KindText:
+		if newV == "" {
+			return nil // never blank a spin text column from a head change
+		}
+		set = "NULLIF(TRIM(CAST($2 AS text)), '')"
+		cmp = "NULLIF(TRIM(" + m.spin + "), '') IS NOT DISTINCT FROM NULLIF(TRIM(CAST($3 AS text)), '')"
+	case mblegacyfill.KindInt:
+		set = "CAST(CAST(NULLIF(CAST($2 AS text), '') AS numeric) AS integer)"
+		cmp = "CAST(" + m.spin + " AS numeric) IS NOT DISTINCT FROM CAST(NULLIF(CAST($3 AS text), '') AS numeric)"
+	default:
+		set = "CAST(NULLIF(CAST($2 AS text), '') AS numeric)"
+		cmp = "CAST(" + m.spin + " AS numeric) IS NOT DISTINCT FROM CAST(NULLIF(CAST($3 AS text), '') AS numeric)"
+	}
+	//nolint:gosec // column names come from the static lfHeadToSpin map, values are bound
+	q := "UPDATE mst_mb_spin SET " + m.spin + " = " + set + ", updated_at = NOW(), updated_by = $4 " +
+		"WHERE mbs_mbh_id = CAST($1 AS uuid) AND deleted_at IS NULL AND " + cmp
+	if _, err := tx.ExecContext(ctx, q, headID, newV, oldV, g.actor); err != nil {
+		return fmt.Errorf("propagate %s to spins: %w", headCol, err)
+	}
+	return nil
+}
+
+// lfRenameCostProduct renames the MB-recipe cost product only when it still equals the old costing.
+func lfRenameCostProduct(ctx context.Context, tx *sql.Tx, g *lfGroup, headID string, c lfChange) error {
+	var pid int64
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(mbh_cost_product_id, 0) FROM mst_mb_head WHERE mbh_id = CAST($1 AS uuid)`, headID).Scan(&pid); err != nil {
+		return fmt.Errorf("read head cost product: %w", err)
+	}
+	newV := mblegacyfill.Normalize(c.after)
+	if pid == 0 || newV == "" {
+		return nil
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE cost_product_master SET cpm_product_name = $1, cpm_updated_at = NOW(), cpm_updated_by = $2
+		WHERE cpm_product_sys_id = $3 AND cpm_source = $4 AND cpm_product_name IS NOT DISTINCT FROM $5`,
+		newV, g.actor, pid, mbCostProductSource, mblegacyfill.Normalize(c.before)); err != nil {
+		return fmt.Errorf("rename cost product: %w", err)
+	}
+	return nil
+}
+
+// lfFillOrion fills the (empty) root spin orion code after the head orion changed (guarded helper).
+func (w *MBLegacyFillWriter) lfFillOrion(ctx context.Context, tx *sql.Tx, g *lfGroup, headID string) error {
+	hid, err := uuid.Parse(headID)
 	if err != nil {
-		return fx, fmt.Errorf("head id: %w", err)
+		return fmt.Errorf("head id: %w", err)
 	}
 	repo := &MBHeadRepository{db: w.db}
 	entity, err := repo.scanOne(tx.QueryRowContext(ctx, repo.selectCols()+` WHERE mbh_id = $1 AND deleted_at IS NULL`, hid))
 	if err != nil {
-		return fx, fmt.Errorf("reload head: %w", err)
+		return fmt.Errorf("reload head: %w", err)
 	}
-	spinsBefore, err := lfSnapSpins(ctx, tx, g.rows[0].Row.ID)
+	return fillRootSpinOrionTx(ctx, tx, entity, g.actor, nil)
+}
+
+// lfApplyTargeted runs the targeted cascade for the head columns applied in this tx.
+func (w *MBLegacyFillWriter) lfApplyTargeted(ctx context.Context, tx *sql.Tx, g *lfGroup, headID string) error {
+	cols := make([]string, 0, len(g.headChanges))
+	for c := range g.headChanges {
+		cols = append(cols, c)
+	}
+	sort.Strings(cols)
+	for _, c := range cols {
+		if err := lfPropagateSpin(ctx, tx, g, headID, c, g.headChanges[c]); err != nil {
+			return err
+		}
+	}
+	if c, ok := g.headChanges["mbh_mb_costing"]; ok {
+		if err := lfRenameCostProduct(ctx, tx, g, headID, c); err != nil {
+			return err
+		}
+	}
+	if _, ok := g.headChanges["mbh_orion_item_code"]; ok {
+		return w.lfFillOrion(ctx, tx, g, headID)
+	}
+	return nil
+}
+
+// cascadeHead runs the targeted cascade (NOT the UI cascade) and records before/after images
+// of the spins and cost product it changed, so revert can restore them.
+func (w *MBLegacyFillWriter) cascadeHead(ctx context.Context, tx *sql.Tx, g *lfGroup) (lfSideEffects, error) {
+	var fx lfSideEffects
+	headID := g.rows[0].Row.ID
+	spinsBefore, err := lfSnapSpins(ctx, tx, headID)
 	if err != nil {
 		return fx, err
 	}
-	ids, err := cascadeHeadToSpinsTx(ctx, tx, entity, g.actor)
-	if err != nil {
-		return fx, fmt.Errorf("cascade spins: %w", err)
+	var pid int64
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(mbh_cost_product_id, 0) FROM mst_mb_head WHERE mbh_id = CAST($1 AS uuid)`, headID).Scan(&pid); err != nil {
+		return fx, fmt.Errorf("read head cost product: %w", err)
 	}
-	fx.CascadedSpinIDs = make([]string, 0, len(ids))
-	for _, id := range ids {
-		fx.CascadedSpinIDs = append(fx.CascadedSpinIDs, id.String())
+	var pb map[string]string
+	if pid != 0 {
+		if pb, err = lfSnapProduct(ctx, tx, pid); err != nil {
+			return fx, err
+		}
 	}
-	spinsAfter, err := lfSnapSpins(ctx, tx, g.rows[0].Row.ID)
+	if err := w.lfApplyTargeted(ctx, tx, g, headID); err != nil {
+		return fx, err
+	}
+	spinsAfter, err := lfSnapSpins(ctx, tx, headID)
 	if err != nil {
 		return fx, err
 	}
+	fx.CascadedSpinIDs = []string{}
 	fx.SpinChanges = map[string]lfImage{}
 	for id, b := range spinsBefore {
 		if d := lfDiff(b, spinsAfter[id]); d != nil {
 			fx.SpinChanges[id] = *d
+			fx.CascadedSpinIDs = append(fx.CascadedSpinIDs, id)
 		}
 	}
-	if pid := entity.CostProductID(); pid != 0 {
-		pb, err := lfSnapProduct(ctx, tx, pid)
-		if err != nil {
-			return fx, err
-		}
-		if err := cascadeHeadToCostProductTx(ctx, tx, entity, pid, g.actor); err != nil {
-			return fx, fmt.Errorf("cascade cost product: %w", err)
-		}
+	sort.Strings(fx.CascadedSpinIDs)
+	if pid != 0 {
 		pa, err := lfSnapProduct(ctx, tx, pid)
 		if err != nil {
 			return fx, err

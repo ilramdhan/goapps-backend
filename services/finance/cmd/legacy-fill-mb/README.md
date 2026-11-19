@@ -56,3 +56,30 @@ groups run first. `--limit N` caps APPLY rows (whole groups). Apply is idempoten
 
 Exit code is non-zero when any row (or revert item) FAILED, or the run was interrupted; all files
 are still written.
+
+## Class D: targeted cascade
+
+When a head class-D row is APPLIED, legacy-fill does NOT run the UI cascade
+(`cascadeHeadToSpinsTx` / `cascadeHeadToCostProductTx`), because that overwrites every live
+spin with the head values. Instead only the head columns actually applied in the transaction
+are propagated, and only to spins that still carry the OLD head value
+(`spin col IS NOT DISTINCT FROM old head value`; numeric columns compared as NUMERIC, text
+TRIMmed with NULL and empty equivalent). Spins that deliberately differ stay untouched.
+
+| head column | spin column |
+|-------------|-------------|
+| mbh_mb_costing | mbs_mb_costing |
+| mbh_mgt_name | mbs_mgt_name |
+| mbh_denier | mbs_denier |
+| mbh_filament | mbs_filament |
+| mbh_dozing | mbs_dozing |
+| mbh_final_product | mbs_final_product |
+| mbh_vs_number | mbs_vs_number |
+
+- dev, code, run_ldr, labels: no propagation. Orion: only fills the empty root spin via
+  `fillRootSpinOrionTx` (guarded).
+- Shade and lusture are NOT cascaded (shade is class S and handled per row).
+- Cost product: when `mbh_mb_costing` changed, `cpm_product_name` is renamed only if the
+  product is `MB_RECIPE` and its name equals the old costing; its shade is never touched.
+- Spin legacy rows still run after the cascade and win. Spin/product before/after images are
+  stored in `side_effects_json`, so `--revert` restores them exactly.

@@ -58,6 +58,9 @@ type lfGroup struct {
 	pre map[string]string
 	// dApplied marks that a head class-D column was written (cascade needed).
 	dApplied bool
+	// headChanges holds before/after of each head class-D column applied in this tx
+	// (drives the targeted cascade).
+	headChanges map[string]lfChange
 }
 
 func lfPreKey(r mblegacyfill.Row) string {
@@ -249,6 +252,11 @@ func (w *MBLegacyFillWriter) applyRowInner(ctx context.Context, tx *sql.Tx, g *l
 	}
 	if r.Class == mblegacyfill.ClassD && r.Row.Entity == mblegacyfill.EntityHead && out.skipReason == "" {
 		g.dApplied = true
+		if g.headChanges == nil {
+			g.headChanges = map[string]lfChange{}
+		}
+		col := r.Row.Spec.Column
+		g.headChanges[col] = lfChange{before: out.before[col], after: out.after[col]}
 	}
 	if out.skipReason != "" {
 		res.Result, res.Reason = mblegacyfill.ResultSkipped, out.skipReason

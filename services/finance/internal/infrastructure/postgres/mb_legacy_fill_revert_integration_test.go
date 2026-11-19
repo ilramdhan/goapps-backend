@@ -29,6 +29,8 @@ func TestLegacyFillRevert_RestoresAndIdempotent(t *testing.T) {
 	s1, s2 := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
 	f.exec(`UPDATE mst_mb_head SET mbh_lesture = 'OLD' WHERE mbh_id = $1`, h)
 	oldCosting := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h)
+	f.exec(`UPDATE mst_mb_spin SET mbs_mb_costing = $2 WHERE mbs_mbh_id = $1`, h, oldCosting)
+	f.exec(`UPDATE cost_product_master SET cpm_product_name = $2 WHERE cpm_product_sys_id = $1`, pid, oldCosting)
 	oldS1 := f.text(`SELECT CAST(mbs_denier AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s1)
 	oldS2 := f.text(`SELECT COALESCE(CAST(mbs_denier AS text), '') FROM mst_mb_spin WHERE mbs_id = $1`, s2)
 	oldS2Costing := f.text(`SELECT COALESCE(mbs_mb_costing, '') FROM mst_mb_spin WHERE mbs_id = $1`, s2)
@@ -127,6 +129,7 @@ func TestLegacyFillRevert_CascadeTargetChangedIsPartial(t *testing.T) {
 	h := f.head(true, "")
 	s2 := f.spin(h, "", 5, true, nil)
 	oldCosting := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h)
+	f.exec(`UPDATE mst_mb_spin SET mbs_mb_costing = $2 WHERE mbs_id = $1`, s2, oldCosting)
 	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{
 		lfPlanRow(t, mblegacyfill.EntityHead, h, "mb_costing", oldCosting, "NEW-COSTING"),
 	})
