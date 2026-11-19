@@ -3,6 +3,7 @@ package mblegacyfill
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strings"
 )
 
@@ -94,6 +95,8 @@ func decideRow(snap Snapshot, r Row) PlanRow {
 		return reject("entity not found or deleted")
 	case IsEmpty(r.LegacyValue):
 		return reject("empty legacy value")
+	case fractionalInt(r.Spec.Kind, r.LegacyValue):
+		return reject(fmt.Sprintf("fractional legacy value %q for integer column %s", Normalize(r.LegacyValue), r.Spec.Column))
 	case Equal(r.Spec.Kind, cur, r.LegacyValue):
 		pr.Decision, pr.Reason = DecisionAlready, "current value already equals legacy"
 		return pr
@@ -109,6 +112,16 @@ func decideRow(snap Snapshot, r Row) PlanRow {
 	}
 	pr.Decision, pr.Reason = DecisionApply, "guard ok"
 	return pr
+}
+
+// fractionalInt reports a legacy value that parses as a number with a
+// fractional part for an integer column (must be rejected, never rounded).
+func fractionalInt(kind Kind, v string) bool {
+	if kind != KindInt {
+		return false
+	}
+	x, ok := new(big.Rat).SetString(Normalize(v))
+	return ok && !x.IsInt()
 }
 
 func uniqueClash(snap Snapshot, r Row) string {

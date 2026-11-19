@@ -166,3 +166,95 @@ func TestLegacyFillWriter_ClassD_UniquenessReject(t *testing.T) {
 	require.Equal(t, "", f.text(`SELECT COALESCE(mbh_vs_number, '') FROM mst_mb_head WHERE mbh_id = $1`, h2))
 	require.Equal(t, "still applied", f.text(`SELECT notes FROM mst_mb_head WHERE mbh_id = $1`, h2))
 }
+
+func TestLegacyFillWriter_ClassS_Guards(t *testing.T) {
+	f := newMBASFixture(t, "mblf_writer_s_guard")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	f.exec(`INSERT INTO cost_erp_shade (ces_shade_code, ces_shade_name, ces_shade_source) VALUES ('AX-7', 'Axe Seven', 'ORACLE')`)
+	h1, h2 := f.head(true, ""), f.head(true, "")
+	s1, s2 := f.spin(h1, "", 5, true, nil), f.spin(h2, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_head SET mbh_shade_code = 'OTHER' WHERE mbh_id = $1`, h1)
+	f.exec(`UPDATE mst_mb_spin SET mbs_shade_code = 'AX-7' WHERE mbs_id = $1`, s2)
+
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntityHead, h1, "shade_code", "", "AX7"),  // CHANGED (current OTHER)
+		lfPlanRow(t, mblegacyfill.EntitySpin, s2, "shade_code", "", "AX-7"), // ALREADY
+		lfPlanRow(t, mblegacyfill.EntitySpin, s1, "shade_code", "", "AX 7"), // applied, same master
+	})
+	require.NoError(t, err)
+	require.Equal(t, "CHANGED", res[0].Decision)
+	require.Equal(t, mblegacyfill.ResultSkipped, res[0].Result)
+	require.Equal(t, "ALREADY", res[1].Decision)
+	require.Equal(t, mblegacyfill.ResultSkipped, res[1].Result)
+	require.Equal(t, mblegacyfill.ResultApplied, res[2].Result, res[2].Reason)
+	require.Equal(t, "OTHER", f.text(`SELECT mbh_shade_code FROM mst_mb_head WHERE mbh_id = $1`, h1))
+	require.Equal(t, "AX-7", f.text(`SELECT mbs_shade_code FROM mst_mb_spin WHERE mbs_id = $1`, s1))
+	require.Equal(t, "1", f.text(`SELECT CAST(COUNT(*) AS text) FROM cost_erp_shade WHERE UPPER(REPLACE(ces_shade_code,'-','')) = 'AX7'`))
+}
+
+func TestLegacyFillWriter_SavepointIsolation(t *testing.T) {
+	f := newMBASFixture(t, "mblf_writer_sp")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "")
+	sp := f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_head SET mbh_ldr_prsn = 1 WHERE mbh_id = $1`, h)
+
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "notes", "", "before-bad"),
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "ldr_prsn", "1", "not-a-number"), // cast error
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "lesture", "", "after-bad"),
+		lfPlanRow(t, mblegacyfill.EntitySpin, sp, "notes", "", "spin-ok"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, mblegacyfill.ResultFailed, res[1].Result)
+	require.NotEmpty(t, res[1].Reason)
+	require.Equal(t, mblegacyfill.ResultApplied, res[2].Result, res[2].Reason)
+	require.Equal(t, mblegacyfill.ResultApplied, res[3].Result, res[3].Reason)
+	require.Equal(t, "before-bad", f.text(`SELECT notes FROM mst_mb_head WHERE mbh_id = $1`, h))
+	require.Equal(t, "after-bad", f.text(`SELECT mbh_lesture FROM mst_mb_head WHERE mbh_id = $1`, h))
+	require.Equal(t, "1.00", f.text(`SELECT CAST(mbh_ldr_prsn AS numeric(10,2)) FROM mst_mb_head WHERE mbh_id = $1`, h))
+	require.Equal(t, "spin-ok", f.text(`SELECT notes FROM mst_mb_spin WHERE mbs_id = $1`, sp))
+}
+
+func TestLegacyFillWriter_MissingAndDeletedSpin(t *testing.T) {
+	f := newMBASFixture(t, "mblf_writer_missing")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "")
+	good, gone := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_spin SET deleted_at = NOW() WHERE mbs_id = $1`, gone)
+
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntitySpin, gone, "notes", "", "x"),
+		lfPlanRow(t, mblegacyfill.EntitySpin, uuid.New(), "notes", "", "x"),
+		lfPlanRow(t, mblegacyfill.EntitySpin, good, "notes", "", "ok"),
+	})
+	require.NoError(t, err)
+	for _, r := range res[:2] {
+		require.Equal(t, mblegacyfill.ResultFailed, r.Result)
+		require.Equal(t, mblegacyfill.ReasonNotFound, r.Reason)
+	}
+	require.Equal(t, mblegacyfill.ResultApplied, res[2].Result, res[2].Reason)
+	require.Equal(t, "ok", f.text(`SELECT notes FROM mst_mb_spin WHERE mbs_id = $1`, good))
+}
+
+func TestLegacyFillWriter_HeadFirstOrdering(t *testing.T) {
+	f := newMBASFixture(t, "mblf_writer_order")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "")
+	s1, s2 := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
+
+	// spin row listed BEFORE the head row: head must still go first so the spin value wins.
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntitySpin, s1, "den", "380", "999"),
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "den", "", "150"),
+	})
+	require.NoError(t, err)
+	require.Len(t, res, 2)
+	require.Equal(t, mblegacyfill.EntitySpin, res[0].Row.Entity, "results keep input order")
+	for _, r := range res {
+		require.Equal(t, mblegacyfill.ResultApplied, r.Result, r.Reason)
+	}
+	require.Equal(t, "999.00", f.text(`SELECT CAST(mbs_denier AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s1))
+	require.Equal(t, "150.00", f.text(`SELECT CAST(mbs_denier AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s2))
+}

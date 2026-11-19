@@ -111,3 +111,20 @@ func TestPlanWriters(t *testing.T) {
 		}
 	}
 }
+
+func TestPlanRejectsFractionalInt(t *testing.T) {
+	const csv = "entity,id,sysid,field,goapps_value,legacy_value,match_method,ambiguous,usulan,note\n" +
+		"head,h1,1,fil,,144.5,s,N,FILL_EMPTY,\n" +
+		"head,h2,1,fil,,144.0,s,N,FILL_EMPTY,\n" +
+		"head,h3,1,fil,,144,s,N,FILL_EMPTY,\n"
+	s := fakeSnap{vals: map[string]string{"head|h1|mbh_filament": "", "head|h2|mbh_filament": "", "head|h3|mbh_filament": ""}}
+	pl := plan(t, csv, s)
+	if pl.Rows[0].Decision != DecisionReject || !strings.Contains(pl.Rows[0].Reason, "fractional") {
+		t.Errorf("fractional: %+v", pl.Rows[0])
+	}
+	for _, i := range []int{1, 2} {
+		if pl.Rows[i].Decision != DecisionApply {
+			t.Errorf("row %d: %+v", i, pl.Rows[i])
+		}
+	}
+}
