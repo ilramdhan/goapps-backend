@@ -18,8 +18,8 @@ func revertedSpins(res []RevertResult) map[string]*float64 {
 		if r.Result == RevertFailed {
 			continue
 		}
-		if r.Item.Entity == EntitySpin && restoredRecalcCol(r.Columns) {
-			set[r.Item.ID] = afterDozing(r.Item.AfterJSON)
+		if r.Item.Entity == EntitySpin && r.Result == RevertReverted && restoredRecalcCol(r.Columns) {
+			keepFirstDozing(set, r.Item.ID, afterDozing(r.Item.AfterJSON))
 		}
 		if r.Item.SideEffects != "" && r.Cascade != "" {
 			addRevertedCascade(r, set)
@@ -66,8 +66,17 @@ func addRevertedCascade(r RevertResult, set map[string]*float64) {
 				d = &f
 			}
 		}
-		set[id] = d
+		keepFirstDozing(set, id, d)
 	}
+}
+
+// keepFirstDozing records a spin, keeping the first non-nil "old" dozing seen for it so the
+// result does not depend on the order of the revert items.
+func keepFirstDozing(set map[string]*float64, id string, d *float64) {
+	if cur, ok := set[id]; ok && cur != nil {
+		return
+	}
+	set[id] = d
 }
 
 func touchesProductColsRecalc(after map[string]string) bool {
