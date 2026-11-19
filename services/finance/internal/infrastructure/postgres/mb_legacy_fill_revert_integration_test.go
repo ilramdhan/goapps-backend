@@ -19,8 +19,8 @@ func lfToItems(res []mblegacyfill.RowResult) []mblegacyfill.ResultRow {
 	return out
 }
 
-func TestLegacyFillRevert_RestoresAndIdempotent(t *testing.T) {
-	f := newMBASFixture(t, "mblf_revert")
+func lfCaseLegacyFillRevert_RestoresAndIdempotent(t *testing.T) {
+	f := newLFFixture(t, "mblf_revert")
 	db := postgres.NewDBFromSQL(f.raw)
 	w, rv := postgres.NewMBLegacyFillWriter(db), postgres.NewMBLegacyFillReverter(db)
 	h := f.head(true, "")
@@ -73,8 +73,8 @@ func TestLegacyFillRevert_RestoresAndIdempotent(t *testing.T) {
 	}
 }
 
-func TestLegacyFillRevert_ChangedSinceApply(t *testing.T) {
-	f := newMBASFixture(t, "mblf_revert_chg")
+func lfCaseLegacyFillRevert_ChangedSinceApply(t *testing.T) {
+	f := newLFFixture(t, "mblf_revert_chg")
 	db := postgres.NewDBFromSQL(f.raw)
 	w, rv := postgres.NewMBLegacyFillWriter(db), postgres.NewMBLegacyFillReverter(db)
 	h := f.head(true, "")
@@ -101,8 +101,8 @@ func TestLegacyFillRevert_ChangedSinceApply(t *testing.T) {
 	require.Equal(t, "", f.text(`SELECT COALESCE(notes, '') FROM mst_mb_head WHERE mbh_id = $1`, h))
 }
 
-func TestLegacyFillRevert_NonAppliedAndShadeCount(t *testing.T) {
-	f := newMBASFixture(t, "mblf_revert_shade")
+func lfCaseLegacyFillRevert_NonAppliedAndShadeCount(t *testing.T) {
+	f := newLFFixture(t, "mblf_revert_shade")
 	db := postgres.NewDBFromSQL(f.raw)
 	w, rv := postgres.NewMBLegacyFillWriter(db), postgres.NewMBLegacyFillReverter(db)
 	h := f.head(true, "")
@@ -122,8 +122,8 @@ func TestLegacyFillRevert_NonAppliedAndShadeCount(t *testing.T) {
 	_ = uuid.Nil
 }
 
-func TestLegacyFillRevert_CascadeTargetChangedIsPartial(t *testing.T) {
-	f := newMBASFixture(t, "mblf_revert_casc")
+func lfCaseLegacyFillRevert_CascadeTargetChangedIsPartial(t *testing.T) {
+	f := newLFFixture(t, "mblf_revert_casc")
 	db := postgres.NewDBFromSQL(f.raw)
 	w, rv := postgres.NewMBLegacyFillWriter(db), postgres.NewMBLegacyFillReverter(db)
 	h := f.head(true, "")

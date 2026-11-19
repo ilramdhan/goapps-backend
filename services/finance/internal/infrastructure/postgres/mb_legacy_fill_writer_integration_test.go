@@ -28,8 +28,8 @@ func (f *mbasFixture) text(q string, args ...any) string {
 	return s
 }
 
-func TestLegacyFillWriter_ClassL(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_l")
+func lfCaseLegacyFillWriter_ClassL(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_l")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	sp := f.spin(h, "", 5, true, nil)
@@ -75,8 +75,8 @@ func TestLegacyFillWriter_ClassL(t *testing.T) {
 	}
 }
 
-func TestLegacyFillWriter_ClassS(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_s")
+func lfCaseLegacyFillWriter_ClassS(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_s")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	f.exec(`INSERT INTO cost_erp_shade (ces_shade_code, ces_shade_name, ces_shade_source) VALUES ('AX-7', 'Axe Seven', 'ORACLE')`)
 	h1, h2 := f.head(true, ""), f.head(true, "")
@@ -113,8 +113,8 @@ func (f *mbasFixture) costProduct(h uuid.UUID) int64 {
 	return pid
 }
 
-func TestLegacyFillWriter_ClassD_CascadeSpinWins(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_d")
+func lfCaseLegacyFillWriter_ClassD_CascadeSpinWins(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_d")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	f.exec(`UPDATE mst_mb_head SET mbh_is_locked = TRUE WHERE mbh_id = $1`, h)
@@ -150,8 +150,8 @@ func TestLegacyFillWriter_ClassD_CascadeSpinWins(t *testing.T) {
 	require.Contains(t, res[1].SideEffects, "cost_product_id")
 }
 
-func TestLegacyFillWriter_ClassD_UniquenessReject(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_d_uniq")
+func lfCaseLegacyFillWriter_ClassD_UniquenessReject(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_d_uniq")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h1, h2 := f.head(true, ""), f.head(true, "")
 	f.exec(`UPDATE mst_mb_head SET mbh_vs_number = 'VS-1' WHERE mbh_id = $1`, h1)
@@ -169,8 +169,8 @@ func TestLegacyFillWriter_ClassD_UniquenessReject(t *testing.T) {
 	require.Equal(t, "still applied", f.text(`SELECT notes FROM mst_mb_head WHERE mbh_id = $1`, h2))
 }
 
-func TestLegacyFillWriter_ClassS_Guards(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_s_guard")
+func lfCaseLegacyFillWriter_ClassS_Guards(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_s_guard")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	f.exec(`INSERT INTO cost_erp_shade (ces_shade_code, ces_shade_name, ces_shade_source) VALUES ('AX-7', 'Axe Seven', 'ORACLE')`)
 	h1, h2 := f.head(true, ""), f.head(true, "")
@@ -194,8 +194,8 @@ func TestLegacyFillWriter_ClassS_Guards(t *testing.T) {
 	require.Equal(t, "1", f.text(`SELECT CAST(COUNT(*) AS text) FROM cost_erp_shade WHERE UPPER(REPLACE(ces_shade_code,'-','')) = 'AX7'`))
 }
 
-func TestLegacyFillWriter_SavepointIsolation(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_sp")
+func lfCaseLegacyFillWriter_SavepointIsolation(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_sp")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	sp := f.spin(h, "", 5, true, nil)
@@ -219,8 +219,8 @@ func TestLegacyFillWriter_SavepointIsolation(t *testing.T) {
 	require.Equal(t, "spin-ok", f.text(`SELECT notes FROM mst_mb_spin WHERE mbs_id = $1`, sp))
 }
 
-func TestLegacyFillWriter_MissingAndDeletedSpin(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_missing")
+func lfCaseLegacyFillWriter_MissingAndDeletedSpin(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_missing")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	good, gone := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
@@ -240,8 +240,8 @@ func TestLegacyFillWriter_MissingAndDeletedSpin(t *testing.T) {
 	require.Equal(t, "ok", f.text(`SELECT notes FROM mst_mb_spin WHERE mbs_id = $1`, good))
 }
 
-func TestLegacyFillWriter_HeadFirstOrdering(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_order")
+func lfCaseLegacyFillWriter_HeadFirstOrdering(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_order")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	s1, s2 := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
@@ -262,8 +262,8 @@ func TestLegacyFillWriter_HeadFirstOrdering(t *testing.T) {
 	require.Equal(t, "150.00", f.text(`SELECT CAST(mbs_denier AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s2))
 }
 
-func TestLegacyFillWriter_ClassD_CodeSharedAndFgShadeGuard(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_d_code")
+func lfCaseLegacyFillWriter_ClassD_CodeSharedAndFgShadeGuard(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_d_code")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h1, h2, h3 := f.head(true, ""), f.head(true, ""), f.head(true, "")
 	f.exec(`UPDATE mst_mb_head SET mbh_code = 'C-1' WHERE mbh_id = $1`, h1)
@@ -286,8 +286,8 @@ func (f *mbasFixture) spinDen(id uuid.UUID) string {
 	return f.text(`SELECT COALESCE(CAST(mbs_denier AS text), '') FROM mst_mb_spin WHERE mbs_id = $1`, id)
 }
 
-func TestLegacyFillWriter_Targeted_DevOnlyTouchesNoSpin(t *testing.T) {
-	f := newMBASFixture(t, "mblf_tgt_dev")
+func lfCaseLegacyFillWriter_Targeted_DevOnlyTouchesNoSpin(t *testing.T) {
+	f := newLFFixture(t, "mblf_tgt_dev")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	s1 := f.spin(h, "", 5, true, nil)
@@ -300,8 +300,8 @@ func TestLegacyFillWriter_Targeted_DevOnlyTouchesNoSpin(t *testing.T) {
 	require.NotContains(t, res[0].SideEffects, s1.String())
 }
 
-func TestLegacyFillWriter_Targeted_DenierFollowersOnly_AndRevert(t *testing.T) {
-	f := newMBASFixture(t, "mblf_tgt_den")
+func lfCaseLegacyFillWriter_Targeted_DenierFollowersOnly_AndRevert(t *testing.T) {
+	f := newLFFixture(t, "mblf_tgt_den")
 	db := postgres.NewDBFromSQL(f.raw)
 	w, rv := postgres.NewMBLegacyFillWriter(db), postgres.NewMBLegacyFillReverter(db)
 	h := f.head(true, "")
@@ -322,8 +322,8 @@ func TestLegacyFillWriter_Targeted_DenierFollowersOnly_AndRevert(t *testing.T) {
 	require.Equal(t, "500.00", f.spinDen(b))
 }
 
-func TestLegacyFillWriter_Targeted_CostingRename(t *testing.T) {
-	f := newMBASFixture(t, "mblf_tgt_cost")
+func lfCaseLegacyFillWriter_Targeted_CostingRename(t *testing.T) {
+	f := newLFFixture(t, "mblf_tgt_cost")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	pid := f.costProduct(h) // product name 'old name' != costing
@@ -348,8 +348,8 @@ func TestLegacyFillWriter_Targeted_CostingRename(t *testing.T) {
 	require.Equal(t, "NEW-D", f.text(`SELECT cpm_product_name FROM cost_product_master WHERE cpm_product_sys_id = $1`, pid2))
 }
 
-func TestLegacyFillWriter_ClassD_SpinOrionUniquenessReject(t *testing.T) {
-	f := newMBASFixture(t, "mblf_writer_d_spin_orion")
+func lfCaseLegacyFillWriter_ClassD_SpinOrionUniquenessReject(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_d_spin_orion")
 	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
 	h := f.head(true, "")
 	s1, s2 := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)

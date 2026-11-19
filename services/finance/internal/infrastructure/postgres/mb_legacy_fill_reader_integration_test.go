@@ -11,8 +11,8 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/infrastructure/postgres"
 )
 
-func TestMBLegacyFillReader_Integration(t *testing.T) {
-	f := newMBASFixture(t, "mblf_reader")
+func lfCaseMBLegacyFillReader_Integration(t *testing.T) {
+	f := newLFFixture(t, "mblf_reader")
 	h1, h2, hDel := f.head(true, ""), f.head(true, ""), f.head(true, "")
 	f.exec(`UPDATE mst_mb_head SET deleted_at = NOW() WHERE mbh_id = $1`, hDel)
 	f.exec(`UPDATE mst_mb_head SET mbh_dev_code = 'DEV1', mbh_denier = 2.60 WHERE mbh_id = $1`, h2)
