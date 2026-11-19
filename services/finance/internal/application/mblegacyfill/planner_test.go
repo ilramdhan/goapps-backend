@@ -60,20 +60,20 @@ func TestPlanDecisions(t *testing.T) {
 		"head,h7,1,vs,,0,s,N,FILL_EMPTY,\n" + // exempt
 		"head,h8,1,dev,,D1,s,N,FILL_EMPTY,\n" + // apply
 		"head,h9,1,dev,,D2,s,N,FILL_EMPTY,\n" + // apply
-		"head,h10,1,code,,C1,s,N,FILL_EMPTY,\n" + // live holder
+		"head,h10,1,code,,C1,s,N,FILL_EMPTY,\n" + // shared shade code: not unique -> apply
 		"head,h1,1,entry_status,A,X,s,N,OVERWRITE,\n" // class X
 	pl := plan(t, csv, s)
 	want := []Decision{
 		DecisionApply, DecisionChanged, DecisionAlready, DecisionReject, DecisionAlready,
-		DecisionReject, DecisionReject, DecisionApply, DecisionApply, DecisionApply, DecisionReject, DecisionReject,
+		DecisionReject, DecisionReject, DecisionApply, DecisionApply, DecisionApply, DecisionApply, DecisionReject,
 	}
 	for i, w := range want {
 		if pl.Rows[i].Decision != w {
 			t.Errorf("row %d (%s/%s): got %s (%s) want %s", i, pl.Rows[i].Row.ID, pl.Rows[i].Row.Field, pl.Rows[i].Decision, pl.Rows[i].Reason, w)
 		}
 	}
-	if pl.Rows[10].Decision != DecisionReject || pl.Rows[10].Class != ClassD {
-		t.Errorf("code clash: %+v", pl.Rows[10])
+	if pl.Rows[10].Decision != DecisionApply || pl.Rows[10].Class != ClassD {
+		t.Errorf("mbh_code is shared, must not be uniqueness-checked: %+v", pl.Rows[10])
 	}
 	if pl.Rows[11].Class != ClassX {
 		t.Errorf("entry_status class: %+v", pl.Rows[11])

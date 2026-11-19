@@ -173,7 +173,7 @@ func closeLFRows(rs *sql.Rows, errp *error) {
 
 func isLFUnique(field string) bool {
 	switch field {
-	case "mb_costing", "orion", "vs", "dev", "code":
+	case "mb_costing", "orion", "vs", "dev":
 		return true
 	}
 	return false

@@ -258,3 +258,23 @@ func TestLegacyFillWriter_HeadFirstOrdering(t *testing.T) {
 	require.Equal(t, "999.00", f.text(`SELECT CAST(mbs_denier AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s1))
 	require.Equal(t, "150.00", f.text(`SELECT CAST(mbs_denier AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s2))
 }
+
+func TestLegacyFillWriter_ClassD_CodeSharedAndFgShadeGuard(t *testing.T) {
+	f := newMBASFixture(t, "mblf_writer_d_code")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h1, h2, h3 := f.head(true, ""), f.head(true, ""), f.head(true, "")
+	f.exec(`UPDATE mst_mb_head SET mbh_code = 'C-1' WHERE mbh_id = $1`, h1)
+	fg := f.costProduct(h3)
+	f.exec(`UPDATE mst_mb_head SET mbh_fg_product_id = $2, mbh_shade_code = 'S9' WHERE mbh_id = $1`, h3, fg)
+
+	res, err := w.Apply(f.ctx, "lf-d", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntityHead, h2, "code", "", "C-1"), // shared with h1: allowed
+		lfPlanRow(t, mblegacyfill.EntityHead, h3, "code", "", "C-2"), // FG head, shade S9: rejected
+	})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, "C-1", f.text(`SELECT mbh_code FROM mst_mb_head WHERE mbh_id = $1`, h2))
+	require.Equal(t, "REJECT", res[1].Decision)
+	require.Contains(t, res[1].Reason, "fg shade")
+	require.Equal(t, "", f.text(`SELECT COALESCE(mbh_code, '') FROM mst_mb_head WHERE mbh_id = $1`, h3))
+}

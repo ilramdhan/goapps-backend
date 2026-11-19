@@ -48,8 +48,10 @@ type Plan struct {
 	Total   int
 }
 
-// uniqueFields are head fields that must stay unique among live heads.
-var uniqueFields = map[string]bool{"mb_costing": true, "orion": true, "vs": true, "dev": true, "code": true}
+// uniqueFields are head fields that must stay unique among live heads (the same set
+// the UI UpdateHandler checks). mbh_code is a shade code shared by many heads, so it is
+// not unique; its guard is the FG shade check in the writer.
+var uniqueFields = map[string]bool{"mb_costing": true, "orion": true, "vs": true, "dev": true}
 
 func needsUniqueCheck(r Row) bool {
 	return r.Entity == EntityHead && uniqueFields[r.Field]

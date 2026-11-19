@@ -96,7 +96,7 @@ func lfDiff(before, after map[string]string) *lfImage {
 
 // lfUniqueSQL maps a head column to its in-tx uniqueness probe (TRIM compared, non-empty values only).
 var lfUniqueCols = map[string]bool{
-	"mbh_mb_costing": true, "mbh_orion_item_code": true, "mbh_vs_number": true, "mbh_dev_code": true, "mbh_code": true,
+	"mbh_mb_costing": true, "mbh_orion_item_code": true, "mbh_vs_number": true, "mbh_dev_code": true,
 }
 
 // lfHandleD writes one class-D row. The lock is bypassed on purpose (like
@@ -128,6 +128,9 @@ func lfHandleD(ctx context.Context, tx *sql.Tx, g *lfGroup, r mblegacyfill.PlanR
 // lfCheckUnique returns a reject reason when a unique head column would clash.
 func lfCheckUnique(ctx context.Context, tx *sql.Tx, r mblegacyfill.PlanRow) (string, error) {
 	spec := r.Row.Spec
+	if r.Row.Entity == mblegacyfill.EntityHead && spec.Column == "mbh_code" {
+		return lfCheckCodeFgShade(ctx, tx, r.Row.ID, mblegacyfill.Normalize(r.Row.LegacyValue))
+	}
 	if r.Row.Entity != mblegacyfill.EntityHead || !lfUniqueCols[spec.Column] {
 		return "", nil
 	}
@@ -140,6 +143,26 @@ func lfCheckUnique(ctx context.Context, tx *sql.Tx, r mblegacyfill.PlanRow) (str
 		return "", err
 	}
 	return fmt.Sprintf("%s%s=%q already held by live head %s", mblegacyfill.ReasonUniquenessPrefix, spec.Column, v, clash), nil
+}
+
+// lfCheckCodeFgShade mirrors the UI rule checkHeadShadeConsistent: a head linked to an FG
+// POY must keep its code (mbh_code) equal to its shade code, otherwise the root spin would
+// carry another shade than the one the user sees.
+func lfCheckCodeFgShade(ctx context.Context, tx *sql.Tx, headID, code string) (string, error) {
+	if code == "" {
+		return "", nil
+	}
+	var hasFg bool
+	var shade string
+	err := tx.QueryRowContext(ctx, `SELECT mbh_fg_product_id IS NOT NULL, COALESCE(TRIM(mbh_shade_code), '')
+		FROM mst_mb_head WHERE mbh_id = CAST($1 AS uuid)`, headID).Scan(&hasFg, &shade)
+	if err != nil {
+		return "", fmt.Errorf("read head fg/shade: %w", err)
+	}
+	if hasFg && shade != "" && !strings.EqualFold(shade, code) {
+		return fmt.Sprintf("%sfg shade: head code %q differs from shade code %q of an FG-linked head", mblegacyfill.ReasonUniquenessPrefix, code, shade), nil
+	}
+	return "", nil
 }
 
 // lfHeadClash returns the id of another live head holding the value, or "".
