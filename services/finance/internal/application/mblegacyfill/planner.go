@@ -2,6 +2,7 @@ package mblegacyfill
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -95,10 +96,8 @@ func decideRow(snap Snapshot, r Row) PlanRow {
 	switch {
 	case !found:
 		return reject("entity not found or deleted")
-	case IsEmpty(r.LegacyValue):
-		return reject("empty legacy value")
-	case fractionalInt(r.Spec.Kind, r.LegacyValue):
-		return reject(fmt.Sprintf("fractional legacy value %q for integer column %s", Normalize(r.LegacyValue), r.Spec.Column))
+	case ValidateApplyRow(r) != nil:
+		return reject(ValidateApplyRow(r).Error())
 	case Equal(r.Spec.Kind, cur, r.LegacyValue):
 		pr.Decision, pr.Reason = DecisionAlready, "current value already equals legacy"
 		return pr
@@ -114,6 +113,18 @@ func decideRow(snap Snapshot, r Row) PlanRow {
 	}
 	pr.Decision, pr.Reason = DecisionApply, "guard ok"
 	return pr
+}
+
+// ValidateApplyRow runs the plan-time legacy-value validators (empty value, fractional
+// value for an integer column). Shared by the planner and the plan-file reader.
+func ValidateApplyRow(r Row) error {
+	if IsEmpty(r.LegacyValue) {
+		return errors.New("empty legacy value")
+	}
+	if fractionalInt(r.Spec.Kind, r.LegacyValue) {
+		return fmt.Errorf("fractional legacy value %q for integer column %s", Normalize(r.LegacyValue), r.Spec.Column)
+	}
+	return nil
 }
 
 // fractionalInt reports a legacy value that parses as a number with a

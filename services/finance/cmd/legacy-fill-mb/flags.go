@@ -60,9 +60,9 @@ func parseFlagsTo(args []string, usage io.Writer) (options, error) {
 	fs.StringVar(&o.planFile, "plan-file", "", "reviewed plan CSV (--apply)")
 	fs.Var(&o.input, "input", "apply result CSV(s) to revert (--revert, repeatable or comma separated, oldest first)")
 	fs.StringVar(&o.actor, "actor", "", "actor name written to updated_by (--apply/--revert)")
-	fs.IntVar(&o.batch, "batch", 0, "SYSID groups per batch (--apply; 0 = one batch)")
+	fs.IntVar(&o.batch, "batch", 0, "head groups (a head and all its spin rows) per batch (--apply; 0 = one batch)")
 	fs.IntVar(&o.limit, "limit", 0, "stop after N APPLY rows (--apply; 0 = unlimited)")
-	fs.StringVar(&o.onlySysID, "only-sysid", "", "comma-separated SYSIDs to apply (--apply)")
+	fs.StringVar(&o.onlySysID, "only-sysid", "", "comma-separated SYSIDs; selects whole head groups containing any such row (--apply)")
 	fs.StringVar(&o.outDir, "out-dir", ".", "output directory for generated files")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {

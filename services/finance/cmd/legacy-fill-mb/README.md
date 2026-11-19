@@ -37,8 +37,9 @@ go run ./cmd/legacy-fill-mb --revert --input out/legacy-fill-mb-result-<ts>.csv[
 go run ./cmd/legacy-fill-mb --help
 ```
 
-`--batch N` = N SYSID groups per batch (a SYSID's head and spin rows stay together); head-bearing
-groups run first. `--limit N` caps APPLY rows (whole groups). Apply is idempotent: re-running yields
+`--batch N` = N head groups per batch (a head and all its spin rows stay together); head-bearing
+groups run first. `--only-sysid` selects whole head groups: every group containing at least one row
+with a listed SYSID is kept (a spin keeps its head and vice versa). `--limit N` caps APPLY rows (whole groups). Apply is idempotent: re-running yields
 `ALREADY`/`already_in_target`.
 
 ## Outputs (`--out-dir`, files suffixed with a timestamp)

@@ -87,6 +87,7 @@ func planRowFromRecord(line int, rec []string) (mblegacyfill.PlanRow, error) {
 		Usulan: strings.TrimSpace(rec[8]), Note: rec[9],
 	}
 	decision := mblegacyfill.Decision(strings.TrimSpace(rec[11]))
+	class := mblegacyfill.Class(strings.TrimSpace(rec[10]))
 	// Only APPLY rows are written, so only they need a writable spec; REJECT/CHANGED/etc.
 	// rows (class-X fields, parse-rejected rows) are kept with an empty Spec.
 	if decision == mblegacyfill.DecisionApply {
@@ -95,14 +96,18 @@ func planRowFromRecord(line int, rec []string) (mblegacyfill.PlanRow, error) {
 			return mblegacyfill.PlanRow{}, fmt.Errorf("plan line %d: field %s/%s is not writable", line, row.Entity, row.Field)
 		}
 		row.Spec = spec
+		class = spec.Class
+		if got := strings.TrimSpace(rec[10]); got != "" && mblegacyfill.Class(got) != spec.Class {
+			return mblegacyfill.PlanRow{}, fmt.Errorf("plan line %d: class %s does not match registry %s", line, got, spec.Class)
+		}
+		if err := mblegacyfill.ValidateApplyRow(row); err != nil {
+			return mblegacyfill.PlanRow{}, fmt.Errorf("plan line %d: %w", line, err)
+		}
 	}
-	return mblegacyfill.PlanRow{
-		Row: row, Class: mblegacyfill.Class(strings.TrimSpace(rec[10])),
-		Decision: decision, Reason: rec[12],
-	}, nil
+	return mblegacyfill.PlanRow{Row: row, Class: class, Decision: decision, Reason: rec[12]}, nil
 }
 
-// selectApplyRows keeps APPLY rows (optionally of the given SYSIDs), then groups them by
+// selectApplyRows keeps APPLY rows (optionally only head groups containing a row of the given SYSIDs), then groups them by
 // HEAD id (a spin row joins its head's group via spinHead; an unresolved spin groups by
 // its own id), head-bearing groups first, so one batch — and so one writer tx — keeps a
 // head and all its spin rows together. Spin SYSIDs differ from their head's SYSID, so
@@ -129,8 +134,9 @@ func groupApplyRows(rows []mblegacyfill.PlanRow, spinHead map[string]string, onl
 	}
 	var order []string
 	groups := map[string][]mblegacyfill.PlanRow{}
+	matched := map[string]bool{}
 	for _, r := range rows {
-		if r.Decision != mblegacyfill.DecisionApply || (len(only) > 0 && !only[r.Row.SysID]) {
+		if r.Decision != mblegacyfill.DecisionApply {
 			continue
 		}
 		k := applyGroupKey(r, spinHead)
@@ -138,8 +144,22 @@ func groupApplyRows(rows []mblegacyfill.PlanRow, spinHead map[string]string, onl
 			order = append(order, k)
 		}
 		groups[k] = append(groups[k], r)
+		if only[r.Row.SysID] {
+			matched[k] = true
+		}
 	}
-	return order, groups
+	if len(only) == 0 {
+		return order, groups
+	}
+	var kept []string
+	for _, k := range order {
+		if matched[k] {
+			kept = append(kept, k)
+		} else {
+			delete(groups, k)
+		}
+	}
+	return kept, groups
 }
 
 // applyGroupKey is the head id a row belongs to (spin: via spinHead; unresolved spin: its own id).
