@@ -17,6 +17,7 @@ const (
 // Reasons produced by the writer.
 const (
 	ReasonClassDNotImplemented = "class_d_not_implemented"
+	ReasonUniquenessPrefix     = "uniqueness: "
 	ReasonChangedSince         = "changed_since_proposal"
 	ReasonAlreadyInTarget      = "already_in_target"
 	ReasonNotFound             = "entity_not_found_or_deleted"
@@ -30,6 +31,8 @@ type RowResult struct {
 	Reason     string
 	BeforeJSON string
 	AfterJSON  string
+	// SideEffects is a JSON blob of cascade effects (class D): cascaded spin ids, cost product id.
+	SideEffects string
 }
 
 // Writer applies APPLY plan rows. Implementations group rows per head and use
@@ -39,7 +42,7 @@ type Writer interface {
 }
 
 // ResultHeader is the result CSV header.
-var ResultHeader = append(append([]string{}, proposalHeader...), "decision", "result", "reason", "before_json", "after_json")
+var ResultHeader = append(append([]string{}, proposalHeader...), "decision", "result", "reason", "before_json", "after_json", "side_effects_json")
 
 // WriteResultCSV writes the apply results.
 func WriteResultCSV(w io.Writer, results []RowResult) error {
@@ -51,7 +54,7 @@ func WriteResultCSV(w io.Writer, results []RowResult) error {
 		r := rr.Row
 		rec := []string{
 			string(r.Entity), r.ID, r.SysID, r.Field, r.GoappsValue, r.LegacyValue,
-			r.MatchMethod, r.Ambiguous, r.Usulan, r.Note, rr.Decision, rr.Result, rr.Reason, rr.BeforeJSON, rr.AfterJSON,
+			r.MatchMethod, r.Ambiguous, r.Usulan, r.Note, rr.Decision, rr.Result, rr.Reason, rr.BeforeJSON, rr.AfterJSON, rr.SideEffects,
 		}
 		if err := cw.Write(rec); err != nil {
 			return fmt.Errorf("write result row: %w", err)

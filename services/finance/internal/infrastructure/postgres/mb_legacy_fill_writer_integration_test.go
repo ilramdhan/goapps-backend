@@ -57,14 +57,13 @@ func TestLegacyFillWriter_ClassL(t *testing.T) {
 	require.Equal(t, mblegacyfill.ResultApplied, by["head/notes"].Result, by["head/notes"].Reason)
 	require.Equal(t, "CHANGED", by["head/d_f"].Decision)
 	require.Equal(t, mblegacyfill.ResultSkipped, by["head/d_f"].Result)
-	require.Equal(t, mblegacyfill.ResultFailed, by["head/den"].Result)
-	require.Equal(t, mblegacyfill.ReasonClassDNotImplemented, by["head/den"].Reason)
+	require.Equal(t, mblegacyfill.ResultApplied, by["head/den"].Result, by["head/den"].Reason)
 	require.Equal(t, mblegacyfill.ResultApplied, by["spin/ldr_prsn"].Result, by["spin/ldr_prsn"].Reason)
 
 	require.Equal(t, "NEW", f.text(`SELECT mbh_lesture FROM mst_mb_head WHERE mbh_id = $1`, h))
 	require.Equal(t, "n1", f.text(`SELECT notes FROM mst_mb_head WHERE mbh_id = $1`, h))
 	require.Equal(t, "lf-tester", f.text(`SELECT updated_by FROM mst_mb_head WHERE mbh_id = $1`, h))
-	require.Equal(t, "2.60", f.text(`SELECT CAST(mbh_denier AS text) FROM mst_mb_head WHERE mbh_id = $1`, h), "class D untouched")
+	require.Equal(t, "3.00", f.text(`SELECT CAST(mbh_denier AS text) FROM mst_mb_head WHERE mbh_id = $1`, h))
 	require.Equal(t, "2.2500", f.text(`SELECT CAST(mbs_ldr_prsn AS text) FROM mst_mb_spin WHERE mbs_id = $1`, sp))
 
 	// second run = ALREADY
@@ -103,4 +102,67 @@ func TestLegacyFillWriter_ClassS(t *testing.T) {
 	require.Equal(t, "1", f.text(`SELECT CAST(COUNT(*) AS text) FROM cost_erp_shade WHERE UPPER(REPLACE(ces_shade_code,'-','')) = 'NEW1'`))
 	require.Equal(t, "MANUAL", f.text(`SELECT ces_shade_source FROM cost_erp_shade WHERE ces_shade_code = 'NEW-1'`))
 	require.Equal(t, "New One", f.text(`SELECT ces_shade_name FROM cost_erp_shade WHERE ces_shade_code = 'NEW-1'`))
+}
+
+func (f *mbasFixture) costProduct(h uuid.UUID) int64 {
+	f.t.Helper()
+	var pid int64
+	require.NoError(f.t, f.raw.QueryRowContext(f.ctx, `INSERT INTO cost_product_master (cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_source, cpm_created_by, cpm_updated_by)
+		VALUES ($1, (SELECT min(cpt_type_id) FROM cost_product_type), 'old name', 'MB_RECIPE', 'it', 'it') RETURNING cpm_product_sys_id`, "LF-"+h.String()[:8]).Scan(&pid))
+	f.exec(`UPDATE mst_mb_head SET mbh_cost_product_id = $2 WHERE mbh_id = $1`, h, pid)
+	return pid
+}
+
+func TestLegacyFillWriter_ClassD_CascadeSpinWins(t *testing.T) {
+	f := newMBASFixture(t, "mblf_writer_d")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "")
+	f.exec(`UPDATE mst_mb_head SET mbh_is_locked = TRUE WHERE mbh_id = $1`, h)
+	pid := f.costProduct(h)
+	s1, s2 := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_head SET mbh_mgt_name = 'HM' WHERE mbh_id = $1`, h)
+	oldCosting := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h)
+
+	res, err := w.Apply(f.ctx, "lf-d", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntitySpin, s1, "den", "380", "999"), // spin wins over cascade
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "mb_costing", oldCosting, "NEW-COSTING"),
+		lfPlanRow(t, mblegacyfill.EntityHead, h, "den", "", "150"),
+		lfPlanRow(t, mblegacyfill.EntitySpin, s1, "run_ldr", "5", "7.5"),
+	})
+	require.NoError(t, err)
+	for _, r := range res {
+		require.Equal(t, mblegacyfill.ResultApplied, r.Result, r.Row.Field+": "+r.Reason)
+	}
+	require.Equal(t, "150.00", f.text(`SELECT CAST(mbh_denier AS text) FROM mst_mb_head WHERE mbh_id = $1`, h))
+	require.Equal(t, "VALIDATED", f.text(`SELECT mbh_entry_status FROM mst_mb_head WHERE mbh_id = $1`, h))
+	require.Equal(t, "true", f.text(`SELECT CAST(mbh_is_locked AS text) FROM mst_mb_head WHERE mbh_id = $1`, h))
+	require.Equal(t, "1", f.text(`SELECT CAST(mbh_current_version AS text) FROM mst_mb_head WHERE mbh_id = $1`, h))
+	require.Equal(t, "NEW-COSTING", f.text(`SELECT cpm_product_name FROM cost_product_master WHERE cpm_product_sys_id = $1`, pid))
+	require.Equal(t, "999.00", f.text(`SELECT CAST(mbs_denier AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s1), "spin legacy wins")
+	require.Equal(t, "150.00", f.text(`SELECT CAST(mbs_denier AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s2), "cascaded")
+	require.Equal(t, "NEW-COSTING", f.text(`SELECT mbs_mb_costing FROM mst_mb_spin WHERE mbs_id = $1`, s2))
+	require.Equal(t, "ACTUAL", f.text(`SELECT mbs_ldr_type FROM mst_mb_spin WHERE mbs_id = $1`, s1))
+	require.Equal(t, "true", f.text(`SELECT CAST(mbs_ldr_is_actual AS text) FROM mst_mb_spin WHERE mbs_id = $1`, s1))
+	require.Contains(t, res[3].AfterJSON, "ACTUAL")
+	require.Contains(t, res[1].SideEffects, s2.String())
+	require.Contains(t, res[1].SideEffects, "cost_product_id")
+}
+
+func TestLegacyFillWriter_ClassD_UniquenessReject(t *testing.T) {
+	f := newMBASFixture(t, "mblf_writer_d_uniq")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h1, h2 := f.head(true, ""), f.head(true, "")
+	f.exec(`UPDATE mst_mb_head SET mbh_vs_number = 'VS-1' WHERE mbh_id = $1`, h1)
+
+	res, err := w.Apply(f.ctx, "lf-d", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntityHead, h2, "vs", "", "VS-1"),
+		lfPlanRow(t, mblegacyfill.EntityHead, h2, "notes", "", "still applied"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, "REJECT", res[0].Decision)
+	require.Equal(t, mblegacyfill.ResultSkipped, res[0].Result)
+	require.Contains(t, res[0].Reason, "uniqueness")
+	require.Equal(t, mblegacyfill.ResultApplied, res[1].Result, res[1].Reason)
+	require.Equal(t, "", f.text(`SELECT COALESCE(mbh_vs_number, '') FROM mst_mb_head WHERE mbh_id = $1`, h2))
+	require.Equal(t, "still applied", f.text(`SELECT notes FROM mst_mb_head WHERE mbh_id = $1`, h2))
 }

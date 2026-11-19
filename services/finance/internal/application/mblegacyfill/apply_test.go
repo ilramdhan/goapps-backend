@@ -21,7 +21,7 @@ func TestWriteResultCSV(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(b.String()), "\n")
-	if len(lines) != 2 || !strings.HasSuffix(lines[0], "decision,result,reason,before_json,after_json") {
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], "decision,result,reason,before_json,after_json,side_effects_json") {
 		t.Fatalf("unexpected csv: %q", b.String())
 	}
 }

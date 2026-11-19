@@ -28,22 +28,18 @@ var _ mblegacyfill.Writer = (*MBLegacyFillWriter)(nil)
 type lfOutcome struct {
 	before, after map[string]string
 	skipReason    string // non-empty: row skipped (e.g. already_in_target)
+	rejectReason  string // non-empty: row REJECTed (uniqueness clash); nothing written
 }
 
 // lfClassHandler writes one row inside the head tx (after the guard passed).
 type lfClassHandler func(ctx context.Context, tx *sql.Tx, g *lfGroup, row mblegacyfill.PlanRow, cur string) (lfOutcome, error)
-
-// errLFNotImplemented marks a class without a handler.
-var errLFNotImplemented = errors.New(mblegacyfill.ReasonClassDNotImplemented)
 
 // NewMBLegacyFillWriter creates the writer with classes L and S; D is a stub (T4).
 func NewMBLegacyFillWriter(db *DB) *MBLegacyFillWriter {
 	return &MBLegacyFillWriter{db: db, handlers: map[mblegacyfill.Class]lfClassHandler{
 		mblegacyfill.ClassL: lfHandleL,
 		mblegacyfill.ClassS: lfHandleS,
-		mblegacyfill.ClassD: func(context.Context, *sql.Tx, *lfGroup, mblegacyfill.PlanRow, string) (lfOutcome, error) {
-			return lfOutcome{}, errLFNotImplemented
-		},
+		mblegacyfill.ClassD: lfHandleD,
 	}}
 }
 
@@ -57,6 +53,15 @@ type lfGroup struct {
 	actor string
 	rows  []mblegacyfill.PlanRow // head rows first
 	idx   []int                  // positions in the input slice
+	// pre holds spin guard values read (and locked) before the head cascade, so
+	// the optimistic guard of spin rows is not fooled by the cascade itself.
+	pre map[string]string
+	// dApplied marks that a head class-D column was written (cascade needed).
+	dApplied bool
+}
+
+func lfPreKey(r mblegacyfill.Row) string {
+	return string(r.Entity) + "|" + strings.ToLower(r.ID) + "|" + r.Spec.Column
 }
 
 // Apply implements mblegacyfill.Writer. Results are returned in input order
@@ -177,8 +182,12 @@ func (w *MBLegacyFillWriter) applyGroup(ctx context.Context, g *lfGroup) []mbleg
 	if err != nil {
 		return failAll("begin tx: " + err.Error())
 	}
-	for i, r := range g.rows {
-		out[i] = w.applyRow(ctx, tx, g, r)
+	if err := w.applyRows(ctx, tx, g, out); err != nil {
+		msg := err.Error()
+		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
+			msg += "; rollback: " + rbErr.Error()
+		}
+		return failAll(msg)
 	}
 	if err := tx.Commit(); err != nil {
 		return failAll("commit: " + err.Error())
@@ -207,7 +216,7 @@ func (w *MBLegacyFillWriter) applyRow(ctx context.Context, tx *sql.Tx, g *lfGrou
 
 func (w *MBLegacyFillWriter) applyRowInner(ctx context.Context, tx *sql.Tx, g *lfGroup, r mblegacyfill.PlanRow) (mblegacyfill.RowResult, error) {
 	res := mblegacyfill.RowResult{Row: r.Row, Decision: string(r.Decision)}
-	cur, found, err := lfLockCurrent(ctx, tx, r.Row)
+	cur, found, err := lfGuardCurrent(ctx, tx, g, r.Row)
 	if err != nil {
 		return res, err
 	}
@@ -227,6 +236,13 @@ func (w *MBLegacyFillWriter) applyRowInner(ctx context.Context, tx *sql.Tx, g *l
 	out, err := h(ctx, tx, g, r, cur)
 	if err != nil {
 		return res, err
+	}
+	if out.rejectReason != "" {
+		res.Decision, res.Result, res.Reason = string(mblegacyfill.DecisionReject), mblegacyfill.ResultSkipped, out.rejectReason
+		return res, nil
+	}
+	if r.Class == mblegacyfill.ClassD && r.Row.Entity == mblegacyfill.EntityHead && out.skipReason == "" {
+		g.dApplied = true
 	}
 	if out.skipReason != "" {
 		res.Result, res.Reason = mblegacyfill.ResultSkipped, out.skipReason
@@ -249,6 +265,14 @@ func lfJSON(m map[string]string) string {
 		return ""
 	}
 	return string(b)
+}
+
+// lfGuardCurrent returns the pre-cascade value for spin rows when captured, else locks and reads.
+func lfGuardCurrent(ctx context.Context, tx *sql.Tx, g *lfGroup, row mblegacyfill.Row) (string, bool, error) {
+	if v, ok := g.pre[lfPreKey(row)]; ok {
+		return v, true, nil
+	}
+	return lfLockCurrent(ctx, tx, row)
 }
 
 // lfLockCurrent reads the current text value under FOR UPDATE.
