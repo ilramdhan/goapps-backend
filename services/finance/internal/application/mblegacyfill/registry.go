@@ -31,6 +31,7 @@ const (
 	KindText Kind = "text"
 	KindNum  Kind = "num"
 	KindInt  Kind = "int"
+	KindBool Kind = "bool"
 )
 
 // FieldSpec describes one writable (entity, field).
@@ -103,3 +104,39 @@ func Lookup(entity Entity, field string) (FieldSpec, bool) {
 
 // ValidEntity reports whether e is head or spin.
 func ValidEntity(e Entity) bool { return e == EntityHead || e == EntitySpin }
+
+// spinExtraCols are spin columns written outside the registry (ACTUAL marker and
+// head->spin cascade) that a revert is also allowed to restore.
+var spinExtraCols = map[string]Kind{
+	"mbs_ldr_type": KindText, "mbs_ldr_is_actual": KindBool,
+	"mbs_lusture_code": KindText, "mbs_cross_section": KindText,
+}
+
+// ColumnKind returns the kind of a column the tool may have written for the entity
+// (registry columns plus the spin extras). ok=false means the column is not
+// allow-listed (revert must never build SQL from it).
+func ColumnKind(entity Entity, col string) (Kind, bool) {
+	for _, d := range registryDefs {
+		c := d.headCol
+		if entity == EntitySpin {
+			c = d.spinCol
+		}
+		if c != "" && c == col {
+			return d.kind, true
+		}
+	}
+	if entity == EntitySpin {
+		k, ok := spinExtraCols[col]
+		return k, ok
+	}
+	return "", false
+}
+
+// CostProductKind returns the kind of a cost_product_master column touched by the head cascade.
+func CostProductKind(col string) (Kind, bool) {
+	switch col {
+	case "cpm_product_name", "cpm_shade_code", "cpm_shade_name":
+		return KindText, true
+	}
+	return "", false
+}
