@@ -39,6 +39,8 @@ type RowResult struct {
 // one transaction per head; non-APPLY rows are ignored.
 type Writer interface {
 	Apply(ctx context.Context, actor string, rows []PlanRow) ([]RowResult, error)
+	// SpinHeads maps lower-case spin id -> lower-case head id for live spins in rows.
+	SpinHeads(ctx context.Context, rows []PlanRow) (map[string]string, error)
 }
 
 // ResultHeader is the result CSV header.

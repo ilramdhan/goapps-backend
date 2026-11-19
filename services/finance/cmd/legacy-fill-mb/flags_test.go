@@ -67,12 +67,17 @@ func TestSelectApplyRows(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rows, 4)
 
-	g := selectApplyRows(rows, nil, 0)
-	require.Len(t, g, 2)
-	assert.Equal(t, "10", g[0][0].Row.SysID) // head-bearing group first
-	assert.Len(t, selectApplyRows(rows, []string{"30"}, 0), 1)
-	assert.Len(t, selectApplyRows(rows, nil, 1), 1)
-	assert.Len(t, chunkGroups(g, 1), 2)
+	g := selectApplyRows(rows, nil, nil, 0)
+	require.Len(t, g, 3) // unresolved spins group alone
+	assert.Equal(t, "h1", g[0][0].Row.ID) // head-bearing group first
+	assert.Len(t, selectApplyRows(rows, nil, []string{"30"}, 0), 1)
+	assert.Len(t, selectApplyRows(rows, nil, nil, 1), 1)
+
+	// a spin with another SYSID joins its head's group
+	joined := selectApplyRows(rows, map[string]string{"s1": "h1", "s3": "h1"}, nil, 0)
+	require.Len(t, joined, 1)
+	assert.Len(t, joined[0], 3)
+	assert.Len(t, chunkGroups(g, 1), 3)
 	assert.Len(t, chunkGroups(g, 0), 1)
 
 	_, err = parsePlan(bytes.NewBufferString(csvText[:20] + "\n"))
@@ -88,7 +93,7 @@ func TestParsePlanKeepsRejectRows(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rows, 3)
 	assert.Equal(t, mblegacyfill.DecisionReject, rows[0].Decision)
-	assert.Len(t, selectApplyRows(rows, nil, 0), 1)
+	assert.Len(t, selectApplyRows(rows, nil, nil, 0), 1)
 
 	bad := "entity,id,sysid,field,goapps_value,legacy_value,match_method,ambiguous,usulan,note,class,decision,reason\n" +
 		"head,h1,10,entry_status,a,b,,,,,L,APPLY,\n"

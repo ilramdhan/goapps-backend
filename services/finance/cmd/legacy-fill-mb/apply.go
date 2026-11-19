@@ -23,9 +23,13 @@ type applyDeps struct {
 // recalc and affected-products pass over all results, writing the output CSVs.
 // It returns an error when any row FAILED (after writing every file).
 func applyAll(ctx context.Context, d applyDeps, rows []mblegacyfill.PlanRow, o options) error {
-	groups := selectApplyRows(rows, splitList(o.onlySysID), o.limit)
+	spinHead, err := d.w.SpinHeads(ctx, rows)
+	if err != nil {
+		return fmt.Errorf("resolve spin heads: %w", err)
+	}
+	groups := selectApplyRows(rows, spinHead, splitList(o.onlySysID), o.limit)
 	batches := chunkGroups(groups, o.batch)
-	log.Printf("apply: %d sysid group(s) in %d batch(es)", len(groups), len(batches))
+	log.Printf("apply: %d head group(s) in %d batch(es)", len(groups), len(batches))
 	var results []mblegacyfill.RowResult
 	var runErr error
 	for i, b := range batches {

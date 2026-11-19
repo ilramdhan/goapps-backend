@@ -169,6 +169,12 @@ func (w *MBLegacyFillWriter) spinHeads(ctx context.Context, apply []mblegacyfill
 	return m, rs.Err()
 }
 
+// SpinHeads resolves the head id (lower-case) of each live spin among the rows' spin ids.
+// The CLI uses it to keep a head and all its spin rows in the same batch.
+func (w *MBLegacyFillWriter) SpinHeads(ctx context.Context, rows []mblegacyfill.PlanRow) (map[string]string, error) {
+	return w.spinHeads(ctx, rows)
+}
+
 // applyGroup runs one head tx; a tx-level error fails every row not yet decided.
 func (w *MBLegacyFillWriter) applyGroup(ctx context.Context, g *lfGroup) []mblegacyfill.RowResult {
 	out := make([]mblegacyfill.RowResult, len(g.rows))

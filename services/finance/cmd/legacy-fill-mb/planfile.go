@@ -103,11 +103,14 @@ func planRowFromRecord(line int, rec []string) (mblegacyfill.PlanRow, error) {
 }
 
 // selectApplyRows keeps APPLY rows (optionally of the given SYSIDs), then groups them by
-// SYSID (rows without SYSID group by entity|id), head-bearing groups first, so one batch
-// keeps a SYSID's head and spin rows together. limit caps the APPLY rows (0 = no cap);
+// HEAD id (a spin row joins its head's group via spinHead; an unresolved spin groups by
+// its own id), head-bearing groups first, so one batch — and so one writer tx — keeps a
+// head and all its spin rows together. Spin SYSIDs differ from their head's SYSID, so
+// grouping by SYSID would let a head cascade run in an earlier batch than the spin rows
+// that must win over it. limit caps the APPLY rows (0 = no cap);
 // the cap is applied at group granularity from the front, never splitting a group.
-func selectApplyRows(rows []mblegacyfill.PlanRow, onlySysID []string, limit int) [][]mblegacyfill.PlanRow {
-	order, groups := groupApplyRows(rows, onlySysID)
+func selectApplyRows(rows []mblegacyfill.PlanRow, spinHead map[string]string, onlySysID []string, limit int) [][]mblegacyfill.PlanRow {
+	order, groups := groupApplyRows(rows, spinHead, onlySysID)
 	var heads, rest [][]mblegacyfill.PlanRow
 	for _, k := range order {
 		if hasHead(groups[k]) {
@@ -119,7 +122,7 @@ func selectApplyRows(rows []mblegacyfill.PlanRow, onlySysID []string, limit int)
 	return capGroups(append(heads, rest...), limit)
 }
 
-func groupApplyRows(rows []mblegacyfill.PlanRow, onlySysID []string) ([]string, map[string][]mblegacyfill.PlanRow) {
+func groupApplyRows(rows []mblegacyfill.PlanRow, spinHead map[string]string, onlySysID []string) ([]string, map[string][]mblegacyfill.PlanRow) {
 	only := map[string]bool{}
 	for _, s := range onlySysID {
 		only[s] = true
@@ -130,16 +133,25 @@ func groupApplyRows(rows []mblegacyfill.PlanRow, onlySysID []string) ([]string, 
 		if r.Decision != mblegacyfill.DecisionApply || (len(only) > 0 && !only[r.Row.SysID]) {
 			continue
 		}
-		k := r.Row.SysID
-		if k == "" {
-			k = string(r.Row.Entity) + "|" + r.Row.ID
-		}
+		k := applyGroupKey(r, spinHead)
 		if _, ok := groups[k]; !ok {
 			order = append(order, k)
 		}
 		groups[k] = append(groups[k], r)
 	}
 	return order, groups
+}
+
+// applyGroupKey is the head id a row belongs to (spin: via spinHead; unresolved spin: its own id).
+func applyGroupKey(r mblegacyfill.PlanRow, spinHead map[string]string) string {
+	id := strings.ToLower(r.Row.ID)
+	if r.Row.Entity == mblegacyfill.EntitySpin {
+		if h, ok := spinHead[id]; ok {
+			return "head|" + h
+		}
+		return "spin|" + id
+	}
+	return "head|" + id
 }
 
 func capGroups(groups [][]mblegacyfill.PlanRow, limit int) [][]mblegacyfill.PlanRow {
