@@ -11,7 +11,7 @@ import (
 )
 
 const lfShadeLookup = `SELECT ces_shade_code, COALESCE(ces_shade_name, '') FROM cost_erp_shade
-	WHERE UPPER(REPLACE(REPLACE(ces_shade_code, '-', ''), ' ', '')) = $1 ORDER BY ces_shade_id LIMIT 1`
+	WHERE UPPER(REPLACE(REPLACE(REPLACE(ces_shade_code, '-', ''), ' ', ''), E'\t', '')) = $1 ORDER BY ces_shade_id LIMIT 1`
 
 // lfShadeMaster finds the master row by nk; ok=false when missing.
 func lfShadeMaster(ctx context.Context, tx *sql.Tx, code string) (mcode, mname string, ok bool, err error) {

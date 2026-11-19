@@ -64,7 +64,8 @@ func WriteResultCSV(w io.Writer, results []RowResult) error {
 	return cw.Error()
 }
 
-// ShadeNK is the shade-master dedupe key: UPPER with '-' and spaces removed.
+// ShadeNK is the shade-master dedupe key: UPPER with '-', spaces and tabs removed
+// (mirrors lfShadeLookup's SQL expression).
 func ShadeNK(code string) string {
 	out := make([]rune, 0, len(code))
 	for _, c := range code {
