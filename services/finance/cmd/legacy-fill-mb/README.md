@@ -68,6 +68,13 @@ with a listed SYSID is kept (a spin keeps its head and vice versa). `--limit N` 
 | apply | `legacy-fill-mb-recalc-results-*.csv` | post-commit R and D child recalc per parent spin |
 | apply | `legacy-fill-mb-affected-products-*.csv` | yarn products to lookup-sync by the operator (no queue here) |
 | revert | `legacy-fill-mb-revert-result-*.csv` | per item REVERTED / ALREADY_REVERTED / CHANGED_SINCE_APPLY / FAILED |
+| revert | `legacy-fill-mb-revert-recalc-results-*.csv` | post-commit R and D child recalc per spin whose den/fil/doz was restored |
+| revert | `legacy-fill-mb-revert-affected-products-*.csv` | yarn products bound to the reverted spins/children (operator lookup sync) |
+
+After a revert commits, the R and D children of every spin whose `mbs_denier`/`mbs_filament`/`mbs_dozing`
+was restored (directly or via the head cascade reversal) are recalculated from the restored parent
+values, so they return to the values scaled from the old parent. Children that were manually edited
+between apply and revert are recalculated too (same behavior as a UI parent edit).
 
 Exit code is non-zero when any row (or revert item) FAILED, or the run was interrupted; all files
 are still written.

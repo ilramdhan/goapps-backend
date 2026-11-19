@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -140,10 +141,46 @@ func runRevert(ctx context.Context, o options) error {
 	log.Printf("wrote %s", path)
 	sum := mblegacyfill.RevertSummary(res)
 	log.Printf("revert summary: %v", sum)
+	rerr := revertPostEffects(ctx, db, nm, o.actor, res)
 	if n := sum[mblegacyfill.RevertFailed]; n > 0 {
-		return fmt.Errorf("%d revert item(s) FAILED", n)
+		return errors.Join(fmt.Errorf("%d revert item(s) FAILED", n), rerr)
 	}
-	return nil
+	return rerr
+}
+
+// revertPostEffects recalcs the R/D children of spins whose den/fil/doz the revert restored
+// (the apply-time recalc results are otherwise left in place) and lists affected products.
+// It runs detached from ctx so a committed revert always gets its recalc and files.
+func revertPostEffects(ctx context.Context, db *postgres.DB, nm *outNamer, actor string, res []mblegacyfill.RevertResult) error {
+	pctx := context.WithoutCancel(ctx)
+	sr := newSpinRecalcer(db)
+	targets := mblegacyfill.SelectRevertRecalcTargets(res)
+	log.Printf("revert post-effects: %d recalc target(s)", len(targets))
+	outs := mblegacyfill.RunPostEffects(pctx, sr, actor, targets)
+	impact := postgres.NewMBDozingImpactRepository(db)
+	rows := mblegacyfill.RevertedRowResults(res)
+	files := []struct {
+		path string
+		fn   func(io.Writer) error
+	}{
+		{nm.path("revert-recalc-results"), func(w io.Writer) error { return mblegacyfill.WriteRecalcCSV(w, outs) }},
+		{nm.path("revert-affected-products"), func(w io.Writer) error {
+			ap, err := mblegacyfill.CollectAffectedProducts(pctx, impact, sr, rows, outs)
+			if err != nil {
+				return fmt.Errorf("collect affected products: %w", err)
+			}
+			return mblegacyfill.WriteAffectedProductsCSV(w, ap)
+		}},
+	}
+	var errs []error
+	for _, f := range files {
+		if err := writeFile(f.path, f.fn); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		log.Printf("wrote %s", f.path)
+	}
+	return errors.Join(errs...)
 }
 
 func writeRejected(w io.Writer, p *mblegacyfill.Proposal) error {
