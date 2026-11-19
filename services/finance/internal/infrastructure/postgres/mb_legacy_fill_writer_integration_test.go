@@ -347,3 +347,22 @@ func TestLegacyFillWriter_Targeted_CostingRename(t *testing.T) {
 	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
 	require.Equal(t, "NEW-D", f.text(`SELECT cpm_product_name FROM cost_product_master WHERE cpm_product_sys_id = $1`, pid2))
 }
+
+func TestLegacyFillWriter_ClassD_SpinOrionUniquenessReject(t *testing.T) {
+	f := newMBASFixture(t, "mblf_writer_d_spin_orion")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "")
+	s1, s2 := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_spin SET mbs_orion_item_code = 'ORX-1' WHERE mbs_id = $1`, s1)
+
+	res, err := w.Apply(f.ctx, "lf-d", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntitySpin, s2, "orion", "", " ORX-1 "),
+		lfPlanRow(t, mblegacyfill.EntitySpin, s2, "notes", "", "still applied"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, "REJECT", res[0].Decision)
+	require.Contains(t, res[0].Reason, "uniqueness")
+	require.Equal(t, mblegacyfill.ResultApplied, res[1].Result, res[1].Reason)
+	require.Equal(t, "", f.text(`SELECT COALESCE(mbs_orion_item_code, '') FROM mst_mb_spin WHERE mbs_id = $1`, s2))
+	require.Equal(t, "still applied", f.text(`SELECT notes FROM mst_mb_spin WHERE mbs_id = $1`, s2))
+}

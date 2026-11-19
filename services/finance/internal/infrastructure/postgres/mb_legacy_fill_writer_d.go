@@ -100,6 +100,9 @@ var lfUniqueCols = map[string]bool{
 	"mbh_mb_costing": true, "mbh_orion_item_code": true, "mbh_vs_number": true, "mbh_dev_code": true,
 }
 
+// lfSpinUniqueCols are spin columns unique among live spins.
+var lfSpinUniqueCols = map[string]bool{"mbs_orion_item_code": true}
+
 // lfHandleD writes one class-D row. The lock is bypassed on purpose (like
 // mb_active_sync_writer); entry_status/is_locked/version are never touched.
 func lfHandleD(ctx context.Context, tx *sql.Tx, g *lfGroup, r mblegacyfill.PlanRow, cur string) (lfOutcome, error) {
@@ -132,18 +135,19 @@ func lfCheckUnique(ctx context.Context, tx *sql.Tx, r mblegacyfill.PlanRow) (str
 	if r.Row.Entity == mblegacyfill.EntityHead && spec.Column == "mbh_code" {
 		return lfCheckCodeFgShade(ctx, tx, r.Row.ID, mblegacyfill.Normalize(r.Row.LegacyValue))
 	}
-	if r.Row.Entity != mblegacyfill.EntityHead || !lfUniqueCols[spec.Column] {
+	isSpin := r.Row.Entity == mblegacyfill.EntitySpin
+	if (isSpin && !lfSpinUniqueCols[spec.Column]) || (!isSpin && !lfUniqueCols[spec.Column]) {
 		return "", nil
 	}
 	v := mblegacyfill.Normalize(r.Row.LegacyValue)
 	if v == "" {
 		return "", nil
 	}
-	clash, err := lfHeadClash(ctx, tx, r.Row.ID, spec.Column, v)
+	clash, err := lfClash(ctx, tx, r.Row.Entity, r.Row.ID, spec.Column, v)
 	if err != nil || clash == "" {
 		return "", err
 	}
-	return fmt.Sprintf("%s%s=%q already held by live head %s", mblegacyfill.ReasonUniquenessPrefix, spec.Column, v, clash), nil
+	return fmt.Sprintf("%s%s=%q already held by live %s %s", mblegacyfill.ReasonUniquenessPrefix, spec.Column, v, r.Row.Entity, clash), nil
 }
 
 // lfCheckCodeFgShade mirrors the UI rule checkHeadShadeConsistent: a head linked to an FG
@@ -166,12 +170,14 @@ func lfCheckCodeFgShade(ctx context.Context, tx *sql.Tx, headID, code string) (s
 	return "", nil
 }
 
-// lfHeadClash returns the id of another live head holding the value, or "".
-func lfHeadClash(ctx context.Context, tx *sql.Tx, headID, col, val string) (string, error) {
+// lfClash returns the id of another live head/spin holding the value, or "".
+func lfClash(ctx context.Context, tx *sql.Tx, e mblegacyfill.Entity, rowID, col, val string) (string, error) {
+	t := lfTables[e]
 	//nolint:gosec // column comes from the static registry allow-list, value is bound
-	q := "SELECT CAST(mbh_id AS text) FROM mst_mb_head WHERE TRIM(" + col + ") = $1 AND deleted_at IS NULL AND mbh_id <> CAST($2 AS uuid) LIMIT 1"
+	q := "SELECT CAST(" + t.idCol + " AS text) FROM " + t.table + " WHERE TRIM(" + col +
+		") = $1 AND deleted_at IS NULL AND " + t.idCol + " <> CAST($2 AS uuid) LIMIT 1"
 	var id string
-	err := tx.QueryRowContext(ctx, q, val, headID).Scan(&id)
+	err := tx.QueryRowContext(ctx, q, val, rowID).Scan(&id)
 	if err == sql.ErrNoRows {
 		return "", nil
 	}

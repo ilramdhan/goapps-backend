@@ -126,7 +126,7 @@ func loadLFEntity(ctx context.Context, tx *sql.Tx, s *legacyFillSnapshot, e mble
 func loadLFHolders(ctx context.Context, tx *sql.Tx, s *legacyFillSnapshot, rows []mblegacyfill.Row) error {
 	byCol := map[string][]string{}
 	for _, row := range rows {
-		if row.Entity != mblegacyfill.EntityHead || !isLFUnique(row.Field) {
+		if !isLFUniqueRow(row) {
 			continue
 		}
 		if v := strings.TrimSpace(row.LegacyValue); v != "" {
@@ -142,8 +142,12 @@ func loadLFHolders(ctx context.Context, tx *sql.Tx, s *legacyFillSnapshot, rows 
 }
 
 func loadLFHolderCol(ctx context.Context, tx *sql.Tx, s *legacyFillSnapshot, col string, vals []string) (err error) {
+	table, idCol := "mst_mb_head", "mbh_id"
+	if strings.HasPrefix(col, "mbs_") {
+		table, idCol = "mst_mb_spin", "mbs_id"
+	}
 	//nolint:gosec // col comes from the static registry, values are bound
-	q := "SELECT CAST(mbh_id AS text), TRIM(CAST(" + col + " AS text)) FROM mst_mb_head" +
+	q := "SELECT CAST(" + idCol + " AS text), TRIM(CAST(" + col + " AS text)) FROM " + table +
 		" WHERE deleted_at IS NULL AND TRIM(CAST(" + col + " AS text)) = ANY($1)"
 	rs, err := tx.QueryContext(ctx, q, pq.Array(vals))
 	if err != nil {
@@ -169,6 +173,14 @@ func closeLFRows(rs *sql.Rows, errp *error) {
 	if cerr := rs.Close(); cerr != nil && *errp == nil {
 		*errp = cerr
 	}
+}
+
+// isLFUniqueRow: head unique fields plus spin orion.
+func isLFUniqueRow(row mblegacyfill.Row) bool {
+	if row.Entity == mblegacyfill.EntitySpin {
+		return row.Field == "orion"
+	}
+	return row.Entity == mblegacyfill.EntityHead && isLFUnique(row.Field)
 }
 
 func isLFUnique(field string) bool {

@@ -128,3 +128,29 @@ func TestPlanRejectsFractionalInt(t *testing.T) {
 		}
 	}
 }
+
+func TestPlanSpinOrionUnique(t *testing.T) {
+	const csv = "entity,id,sysid,field,goapps_value,legacy_value,match_method,ambiguous,usulan,note\n" +
+		"spin,s1,1,orion,,O1,s,N,FILL_EMPTY,\n" +
+		"spin,s2,1,orion,,O2,s,N,FILL_EMPTY,\n" +
+		"spin,s3,1,orion,,O3,s,N,FILL_EMPTY,\n" +
+		"spin,s4,1,orion,,O3,s,N,FILL_EMPTY,\n" +
+		"spin,s5,1,orion,,O5,s,N,FILL_EMPTY,\n"
+	s := fakeSnap{
+		vals: map[string]string{
+			"spin|s1|mbs_orion_item_code": "", "spin|s2|mbs_orion_item_code": "", "spin|s3|mbs_orion_item_code": "",
+			"spin|s4|mbs_orion_item_code": "", "spin|s5|mbs_orion_item_code": "",
+		},
+		holders: map[string][]string{"mbs_orion_item_code\x00O1": {"other"}, "mbs_orion_item_code\x00O2": {"s2"}},
+	}
+	pl := plan(t, csv, s)
+	want := []Decision{DecisionReject, DecisionApply, DecisionReject, DecisionReject, DecisionApply}
+	for i, w := range want {
+		if pl.Rows[i].Decision != w {
+			t.Errorf("row %d: %+v want %v", i, pl.Rows[i], w)
+		}
+	}
+	if !strings.Contains(pl.Rows[0].Reason, "uniqueness") || !strings.Contains(pl.Rows[2].Reason, "uniqueness") {
+		t.Errorf("reasons: %q %q", pl.Rows[0].Reason, pl.Rows[2].Reason)
+	}
+}

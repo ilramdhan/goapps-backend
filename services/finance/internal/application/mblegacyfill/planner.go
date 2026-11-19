@@ -24,8 +24,8 @@ type Snapshot interface {
 	// Current returns the stored text value of a column. found=false means the
 	// entity row is missing or soft-deleted.
 	Current(entity Entity, id, column string) (value string, found bool)
-	// Holders returns the ids of live heads whose column (a head uniqueness
-	// column) currently equals value (trimmed compare).
+	// Holders returns the ids of live heads/spins whose column (a uniqueness
+	// column, head or spin orion) currently equals value (trimmed compare).
 	Holders(column, value string) []string
 }
 
@@ -49,12 +49,17 @@ type Plan struct {
 	Total   int
 }
 
+// Spin orion (mbs_orion_item_code) is also unique among live spins: the lookup sync
+// MB_SP_* resolves by that code, so no other live spin may carry it.
 // uniqueFields are head fields that must stay unique among live heads (the same set
 // the UI UpdateHandler checks). mbh_code is a shade code shared by many heads, so it is
 // not unique; its guard is the FG shade check in the writer.
 var uniqueFields = map[string]bool{"mb_costing": true, "orion": true, "vs": true, "dev": true}
 
 func needsUniqueCheck(r Row) bool {
+	if r.Entity == EntitySpin {
+		return r.Field == "orion"
+	}
 	return r.Entity == EntityHead && uniqueFields[r.Field]
 }
 
@@ -151,7 +156,7 @@ func uniqueClash(snap Snapshot, r Row) string {
 	if len(others) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("uniqueness: %s=%q already held by live head %s", r.Spec.Column, target, others[0])
+	return fmt.Sprintf("uniqueness: %s=%q already held by live %s %s", r.Spec.Column, target, r.Entity, others[0])
 }
 
 // markDuplicateTargets rejects every APPLY row that targets the same unique
@@ -175,8 +180,8 @@ func markDuplicateTargets(rows []PlanRow) {
 		}
 		for _, i := range idx {
 			rows[i].Decision = DecisionReject
-			rows[i].Reason = fmt.Sprintf("uniqueness: %s=%q targeted by more than one head in this proposal",
-				rows[i].Row.Spec.Column, Normalize(rows[i].Row.LegacyValue))
+			rows[i].Reason = fmt.Sprintf("uniqueness: %s=%q targeted by more than one %s in this proposal",
+				rows[i].Row.Spec.Column, Normalize(rows[i].Row.LegacyValue), rows[i].Row.Entity)
 		}
 	}
 }
