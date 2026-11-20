@@ -20,7 +20,7 @@ Laravel servers: staging `192.168.0.252`, prod `192.168.0.248` (PHP-FPM `pm.max_
 | `mgtapps_app` | Runtime DML; `CONNECTION LIMIT 20` staging / `30` prod, `statement_timeout 30s`, `idle_in_transaction_session_timeout 60s` |
 | `mgtapps_ro` | NOLOGIN read group |
 | pg_hba | `hostssl`, scram-sha-256, only `<laravel ip>/32` (staging `.252`, prod `.248`); never `192.168.0.0/24` |
-| Isolation | No access to `iam_db` / `finance_db` / `ppc_db` (CONNECT revoked) |
+| Isolation | No access to `iam_db` / `finance_db` / `ppc_db` (CONNECT revoked); the `mgtapps_*` roles get nothing there. Shared roles (`report_ro`, `backup_ro`, `monitor`, `dba_read`/`dba_write`) get the same generic access to `mgtapps_db` as to every DB (`report_ro`: CONNECT + schema, no table data unless granted) |
 | Standard entries | `dba_read` / `dba_write`, backup (`pg-backup.env` `DATABASES`), monitor (exporter `--include-databases` + monitor pg_hba line) |
 | Data class | T2 (`sensitive-data-policy.md`); re-classify if T0/T1 data appears |
 | Connection | Direct to VPS `:5432`, `sslmode=require`, no PgBouncer for now |
@@ -45,7 +45,7 @@ Costs:
 
 | Item | Status |
 |---|---|
-| `new-service-db.sh --external --client-cidr` | In progress (goapps-infra, parallel branch) |
+| `new-service-db.sh --external --client-cidr` | Done (goapps-infra `feat/non-goapps-app-db_infra`); `--app-conn-limit` is mandatory with `--external` |
 | `v2/roles-and-access.md` section "Non-goapps apps" | Done |
 | Laravel runbook `v2/non-goapps-app-laravel.md` | Done |
 | `90-verify.sql` on `mgtapps_db` after provisioning | At provisioning |
