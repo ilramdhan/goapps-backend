@@ -6,3 +6,4 @@ A new ADR takes the next number; an ADR is never rewritten after it is accepted 
 | # | Title | Status |
 |---|---|---|
 | 0001 | [One database per service](0001-one-database-per-service.md) | Accepted (2026-10-28) |
+| 0002 | [Non-goapps app databases on the goapps Postgres VPS](0002-non-goapps-app-databases.md) | Accepted (2026-11-20) |
