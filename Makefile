@@ -161,6 +161,10 @@ v2-migrate:
 # Existing volumes skip init: create missing roles/DBs (00+10 are idempotent; empty -v *_pw= keeps existing
 # passwords; mgtapps gets its dev password only while the role is still missing). No-op when up to date.
 v2-ensure-dbs:
+	@# The container mounts deploy/local-v2/sql of the checkout that started it; an older 00-cluster-roles.sql
+	@# (no empty-password guard) would blank every role password -> refuse instead.
+	@$(V2_COMPOSE) exec -T postgres-v2 grep -q 'mgtapps_owner_pw' /v2/sql/00-cluster-roles.sql || { \
+	  echo "❌ /v2/sql in the running container is older than this Makefile; restart it from this checkout: make v2-down && make v2-up"; exit 1; }
 	@pw=$$($(V2_PG) -d postgres -Atc "select case when to_regrole('mgtapps_owner') is null then 'dev_mgtapps_owner' end"); \
 	 ap=$$([ -n "$$pw" ] && echo dev_mgtapps_app || true); \
 	 $(V2_PG) -d postgres -v mgtapps_owner_pw=$$pw -v mgtapps_app_pw=$$ap \
