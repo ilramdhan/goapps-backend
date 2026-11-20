@@ -65,9 +65,16 @@ const (
 	SubActSpin      = "ACT_SPIN"
 	SubActHead      = "ACT_HEAD"
 	SubSetHeadShade = "SET_HEAD_SHADE"
+	// SubKeepHeadShade: root spin of a head whose Excel rows carry several shades and
+	// the head shade is one of them; the spin shade is written, the head is left alone.
+	SubKeepHeadShade = "KEEP_HEAD_SHADE"
+	// SubForceHeadShade: Excel wins over a head shade that differs beyond format
+	// (single Excel shade, or the lowest-ln root row when the head shade is in none of
+	// several Excel shades); always paired with SET_HEAD_SHADE, still without cascade.
+	SubForceHeadShade = "FORCE_HEAD_SHADE"
 )
 
-var subActionOrder = []string{SubSetFG, SubSetLDR, SubSetShade, SubActSpin, SubActHead, SubSetHeadShade}
+var subActionOrder = []string{SubSetFG, SubSetLDR, SubSetShade, SubActSpin, SubActHead, SubSetHeadShade, SubKeepHeadShade, SubForceHeadShade}
 
 // Reasons. Blocking reasons turn an APPLY row into REVIEW.
 const (
@@ -114,7 +121,12 @@ type RowPlan struct {
 	SubActions []string
 
 	SourceSpin *SpinSnap // DUPLICATE_SPIN source (root spin of the head)
-	SourceLn   int       // GENERATE_SPIN role=DUP: ln of the ROOT row
+	rootRow    bool      // the row's spin is (or becomes) a root: rootHeadShade ran
+	// HeadShadeCode is the exact head shade a FORCE_HEAD_SHADE row writes ("" = the
+	// row's TargetShadeCode).
+	HeadShadeCode string
+	headForced    string // exact head shade the plan forces on this row's head ("" = none)
+	SourceLn      int    // GENERATE_SPIN role=DUP: ln of the ROOT row
 
 	TargetFG        *int64
 	TargetShadeCode string // exact POY shade code
@@ -305,6 +317,8 @@ func ClassifyRows(rows []FileRow, snap *Snapshot) ([]*RowPlan, error) {
 	}
 	c.assignGenerateRoles(plans)
 	finalizeHeadShade(plans)
+	resolveHeadShadeDiffers(plans)
+	reshadeDuplicatesOfReshadedSources(plans)
 	for _, p := range plans {
 		p.decide()
 	}
@@ -479,6 +493,7 @@ func (p *RowPlan) headSubs() {
 // really different → REVIEW head_shade_differs. Q14: an EMPTY head shade is
 // treated like a format-only difference (SET_HEAD_SHADE, stays APPLY).
 func (p *RowPlan) rootHeadShade() {
+	p.rootRow = true
 	h := p.Head
 	hl := NormShadeLoose(h.ShadeCode)
 	if hl != "" && hl != NormShadeLoose(p.TargetShadeCode) {
@@ -518,6 +533,93 @@ func finalizeHeadShade(plans []*RowPlan) {
 			p.addReason(ReasonHeadShadeDiffers)
 		}
 	}
+}
+
+// Only ROOT rows count as head shades: re-validate copies the head shade onto every
+// root spin (syncRootSpinShadeFromHead), so child/duplicate rows never conflict.
+//
+// resolveHeadShadeDiffers turns head_shade_differs on root rows (head shade different
+// beyond format, or EMPTY with disagreeing Excel shades, see finalizeHeadShade) into an
+// explicit decision, Excel wins:
+//   - head has several Excel shades and the head shade is one of them → KEEP_HEAD_SHADE
+//     on every such row (spin shade only, head untouched);
+//   - several Excel shades, head shade in none → the lowest-ln such row sets the head
+//     (SET_HEAD_SHADE+FORCE_HEAD_SHADE), rows with the same loose shade too, others KEEP;
+//   - one Excel shade → SET_HEAD_SHADE+FORCE_HEAD_SHADE (no cascade, revertible).
+//
+// An empty head shade is never one of the Excel shades, so it follows the second case.
+// plans is sorted by ln.
+func resolveHeadShadeDiffers(plans []*RowPlan) {
+	shades := map[*HeadSnap]map[string]bool{}
+	differs := map[*HeadSnap][]*RowPlan{}
+	for _, p := range plans {
+		if p.Head == nil {
+			continue
+		}
+		if shades[p.Head] == nil {
+			shades[p.Head] = map[string]bool{}
+		}
+		if s := NormShadeLoose(p.TargetShadeCode); s != "" && p.rootRow {
+			shades[p.Head][s] = true
+		}
+		if p.HasReason(ReasonHeadShadeDiffers) {
+			differs[p.Head] = append(differs[p.Head], p)
+		}
+	}
+	for h, g := range differs {
+		forced := ""
+		if len(shades[h]) <= 1 || !shades[h][NormShadeLoose(h.ShadeCode)] {
+			forced = g[0].TargetShadeCode
+		}
+		decideHeadShade(g, forced)
+	}
+}
+
+// decideHeadShade marks one head's rows: those matching forced (loose) FORCE the head to
+// forced, exactly (one exact code per head, so two winners never flip the head format;
+// each spin keeps its own exact POY shade); the rest KEEP. forced "" = KEEP all.
+func decideHeadShade(g []*RowPlan, forced string) {
+	winner := NormShadeLoose(forced)
+	for _, p := range g {
+		p.headForced = forced
+		p.Reasons = removeStr(p.Reasons, ReasonHeadShadeDiffers)
+		if winner != "" && NormShadeLoose(p.TargetShadeCode) == winner {
+			p.addSub(SubSetHeadShade)
+			p.addSub(SubForceHeadShade)
+			p.HeadShadeCode = forced
+			continue
+		}
+		p.addSub(SubKeepHeadShade)
+	}
+}
+
+// reshadeDuplicatesOfReshadedSources: phase A re-shades a source spin (another row's
+// SET_SHADE) before phase C clones it, so a DUPLICATE_SPIN row planned without
+// SET_SHADE (source shade == target at plan time) would get the new shade and fail
+// the FG shade check. Such rows always carry SET_SHADE (writer applies it only when
+// the live shade differs).
+func reshadeDuplicatesOfReshadedSources(plans []*RowPlan) {
+	reshaded := map[uuid.UUID]bool{}
+	for _, p := range plans {
+		if p.Spin != nil && p.HasSub(SubSetShade) {
+			reshaded[p.Spin.ID] = true
+		}
+	}
+	for _, p := range plans {
+		if p.Action == ActionDuplicateSpin && p.SourceSpin != nil && reshaded[p.SourceSpin.ID] {
+			p.addSub(SubSetShade)
+		}
+	}
+}
+
+func removeStr(list []string, v string) []string {
+	out := list[:0]
+	for _, x := range list {
+		if x != v {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 // shadeDiffers compares code exactly (UPPER(TRIM)) and the name trimmed; an empty

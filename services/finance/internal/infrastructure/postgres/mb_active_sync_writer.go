@@ -63,6 +63,9 @@ type mbasHeadImage struct {
 	FGItemCode  string `json:"mbh_fg_item_code"`
 	ShadeCode   string `json:"mbh_shade_code"`
 	ShadeName   string `json:"mbh_shade_name"`
+	// Code is mbh_code: FORCE_HEAD_SHADE moves it with the shade when it held the old
+	// shade (checkHeadShadeConsistent). Absent in older result CSVs ("" = not tracked).
+	Code string `json:"mbh_code,omitempty"`
 
 	deleted    bool
 	superseded bool
@@ -84,7 +87,7 @@ const mbasSpinImageQuery = `
 
 const mbasHeadImageQuery = `
 	SELECT mbh_is_active, mbh_fg_product_id, COALESCE(mbh_fg_item_code, ''),
-	       COALESCE(mbh_shade_code, ''), COALESCE(mbh_shade_name, ''),
+	       COALESCE(mbh_shade_code, ''), COALESCE(mbh_shade_name, ''), COALESCE(mbh_code, ''),
 	       deleted_at IS NOT NULL, mbh_superseded_by_head_id IS NOT NULL
 	  FROM mst_mb_head
 	 WHERE mbh_id = $1`
@@ -135,7 +138,7 @@ func readMBASImage(ctx context.Context, tx *sql.Tx, spinID uuid.UUID, lock bool)
 	h := &img.Head
 	var hfg sql.NullInt64
 	err = tx.QueryRowContext(ctx, mbasHeadImageQuery+suffix, s.headID).Scan(
-		&h.IsActive, &hfg, &h.FGItemCode, &h.ShadeCode, &h.ShadeName, &h.deleted, &h.superseded)
+		&h.IsActive, &hfg, &h.FGItemCode, &h.ShadeCode, &h.ShadeName, &h.Code, &h.deleted, &h.superseded)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -216,9 +219,16 @@ func mbasShadeDiffers(code, name string, in mbactivesync.SyncSpinInput) bool {
 }
 
 func mbasHeadShadeNeeded(in mbactivesync.SyncSpinInput, img *mbasImage) bool {
-	if !img.Spin.isRoot || (!in.Has(mbactivesync.SubSetHeadShade) && !in.Has(mbactivesync.SubSetShade)) ||
+	if !img.Spin.isRoot || in.Has(mbactivesync.SubKeepHeadShade) ||
+		(!in.Has(mbactivesync.SubSetHeadShade) && !in.Has(mbactivesync.SubSetShade)) ||
 		mbactivesync.NormShadeLoose(in.TargetShadeCode) == "" {
 		return false
+	}
+	if in.Has(mbactivesync.SubForceHeadShade) {
+		// FORCE: compare to the per-head exact code (the spin may keep another format).
+		hin := in
+		hin.TargetShadeCode = in.HeadShadeCode()
+		return mbasShadeDiffers(img.Head.ShadeCode, img.Head.ShadeName, hin)
 	}
 	return mbasShadeDiffers(img.Head.ShadeCode, img.Head.ShadeName, in)
 }
@@ -294,14 +304,31 @@ func mbasPrecheck(in mbactivesync.SyncSpinInput, before *mbasImage, found bool, 
 	return needs, *res, false
 }
 
+// mbasHeadAtTarget: a FORCE row whose head already holds the forced shade (an earlier
+// winner row of the same head, or a rerun) is not stale.
+func mbasHeadAtTarget(in mbactivesync.SyncSpinInput, before *mbasImage) bool {
+	return in.Has(mbactivesync.SubForceHeadShade) &&
+		mbactivesync.NormShadeExact(before.Head.ShadeCode) == mbactivesync.NormShadeExact(in.HeadShadeCode())
+}
+
+// mbasRootHeadShadeBlocked is the Q12 re-check: a ROOT head shade that differs beyond
+// format must not be touched, unless the plan decided it explicitly (KEEP/FORCE_HEAD_SHADE).
+func mbasRootHeadShadeBlocked(in mbactivesync.SyncSpinInput, before *mbasImage) bool {
+	if !before.Spin.isRoot || in.Has(mbactivesync.SubKeepHeadShade) || in.Has(mbactivesync.SubForceHeadShade) ||
+		(!in.Has(mbactivesync.SubSetHeadShade) && !in.Has(mbactivesync.SubSetShade)) {
+		return false
+	}
+	hl := mbactivesync.NormShadeLoose(before.Head.ShadeCode)
+	return hl != "" && hl != mbactivesync.NormShadeLoose(in.TargetShadeCode)
+}
+
 // mbasBlocked returns the skip/fail verdict (reason != "") for the locked state.
 func mbasBlocked(in mbactivesync.SyncSpinInput, before *mbasImage, needs mbasNeeds) (status, reason, msg string) {
-	// Q12 re-check: a ROOT head shade that differs beyond format must not be touched.
-	if before.Spin.isRoot && (in.Has(mbactivesync.SubSetHeadShade) || in.Has(mbactivesync.SubSetShade)) {
-		hl := mbactivesync.NormShadeLoose(before.Head.ShadeCode)
-		if hl != "" && hl != mbactivesync.NormShadeLoose(in.TargetShadeCode) {
-			return mbactivesync.ResultSkipped, mbactivesync.ReasonHeadShadeDiffers, "head shade differs from target beyond format"
-		}
+	if before.Spin.isRoot && in.HeadShadeStale(before.Head.ShadeCode) && !mbasHeadAtTarget(in, before) {
+		return mbactivesync.ResultSkipped, mbactivesync.ReasonStalePlan, "head shade changed since plan; re-plan"
+	}
+	if mbasRootHeadShadeBlocked(in, before) {
+		return mbactivesync.ResultSkipped, mbactivesync.ReasonHeadShadeDiffers, "head shade differs from target beyond format"
 	}
 	if !needs.any() {
 		return mbactivesync.ResultSkipped, mbactivesync.ReasonAlreadyInTarget, ""
@@ -462,13 +489,20 @@ func mbasMutateSpec(entity *mbspin.Entity, in mbactivesync.SyncSpinInput, shadeD
 }
 
 // mbasUpdateHeadShade writes the head shade WITHOUT cascade (Q12/Q14); an empty target name keeps the current one.
+// FORCE_HEAD_SHADE also moves mbh_code when it held the old shade (loose), so
+// checkHeadShadeConsistent keeps accepting FG links from the UI; any other code stays.
 func mbasUpdateHeadShade(ctx context.Context, tx *sql.Tx, headID uuid.UUID, in mbactivesync.SyncSpinInput) error {
 	const q = `
 		UPDATE mst_mb_head
 		   SET mbh_shade_code = $2, mbh_shade_name = COALESCE(NULLIF($3, ''), mbh_shade_name),
+		       mbh_code = CASE WHEN $5 AND NULLIF(TRIM(mbh_code), '') IS NOT NULL
+		                        AND UPPER(REPLACE(REPLACE(mbh_code, '-', ''), ' ', ''))
+		                          = UPPER(REPLACE(REPLACE(COALESCE(mbh_shade_code, ''), '-', ''), ' ', ''))
+		                       THEN $2 ELSE mbh_code END,
 		       updated_at = NOW(), updated_by = $4
 		 WHERE mbh_id = $1 AND deleted_at IS NULL`
-	if _, err := tx.ExecContext(ctx, q, headID, in.TargetShadeCode, trimSpaceStr(in.TargetShadeName), in.Actor); err != nil {
+	force := in.Has(mbactivesync.SubForceHeadShade)
+	if _, err := tx.ExecContext(ctx, q, headID, in.HeadShadeCode(), trimSpaceStr(in.TargetShadeName), in.Actor, force); err != nil {
 		return fmt.Errorf("update head shade: %w", err)
 	}
 	return nil

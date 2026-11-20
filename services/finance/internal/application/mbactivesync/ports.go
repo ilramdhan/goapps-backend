@@ -2,6 +2,7 @@ package mbactivesync
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -66,11 +67,16 @@ type SyncSpinInput struct {
 	SpinID          uuid.UUID
 	Actor           string
 	SubActions      []string
-	TargetShadeCode string   // exact POY shade code
-	TargetShadeName string   // file shade name ("" keeps the current name)
-	TargetCS        string   // cross-section ("" keeps the current one)
-	TargetLDR       *float64 // doz -> ACTUAL run LDR
-	TargetFG        *int64   // POY product sys id
+	TargetShadeCode string // exact POY shade code
+	TargetShadeName string // file shade name ("" keeps the current name)
+	// TargetHeadShadeCode is the exact head shade of a FORCE_HEAD_SHADE row ("" = TargetShadeCode).
+	TargetHeadShadeCode string
+	// PlanHeadShadeCode lists (";") the head shades a KEEP/FORCE row accepts ("<empty>" =
+	// empty, "" = unchecked); the writer skips the row when the live head is none of them.
+	PlanHeadShadeCode string
+	TargetCS          string   // cross-section ("" keeps the current one)
+	TargetLDR         *float64 // doz -> ACTUAL run LDR
+	TargetFG          *int64   // POY product sys id
 	// TargetDen / TargetFil are set only for a GENERATE_SPIN role=ROOT row (P2h-4c): the
 	// generated root carries the head spec, so the writer also moves denier, filament
 	// and (with TargetCS) cross-section to the row spec when they differ. Spin only,
@@ -81,6 +87,31 @@ type SyncSpinInput struct {
 
 // SyncSpec reports whether the input asks the writer to sync the spin spec (ROOT rows).
 func (in SyncSpinInput) SyncSpec() bool { return in.TargetDen != nil || in.TargetFil != nil }
+
+// HeadShadeStale reports whether the live head shade moved since the plan (KEEP/FORCE).
+func (in SyncSpinInput) HeadShadeStale(live string) bool {
+	if in.PlanHeadShadeCode == "" {
+		return false
+	}
+	l := NormShadeLoose(live)
+	for _, want := range strings.Split(in.PlanHeadShadeCode, sep) {
+		if want == emptyShadeMark {
+			want = ""
+		}
+		if NormShadeLoose(want) == l {
+			return false
+		}
+	}
+	return true
+}
+
+// HeadShadeCode is the exact shade the head takes for SET_HEAD_SHADE.
+func (in SyncSpinInput) HeadShadeCode() string {
+	if in.TargetHeadShadeCode != "" {
+		return in.TargetHeadShadeCode
+	}
+	return in.TargetShadeCode
+}
 
 // Has reports whether sub is among the input sub-actions.
 func (in SyncSpinInput) Has(sub string) bool {

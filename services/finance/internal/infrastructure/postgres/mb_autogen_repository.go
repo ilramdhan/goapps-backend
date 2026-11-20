@@ -217,6 +217,9 @@ func mbResolveRootSpinLDRPct(entity *mbhead.Entity) *float64 {
 //
 // Purely additive and non-duplicating: it UPDATEs the single existing root spin row identified by
 // mbs_mbh_id = headID AND mbs_parent_spin_id IS NULL AND deleted_at IS NULL — it never INSERTs.
+// A root spin whose non-RECIPE FG POY has another shade is left alone (same rule as
+// checkCascadeFgShadeTx: never leave a spin whose shade differs from its FG POY). Legacy
+// heads carry several root spins with their own shade + FG (mb-active-sync KEEP_HEAD_SHADE).
 func syncRootSpinShadeFromHead(ctx context.Context, tx *sql.Tx, headID uuid.UUID, entity *mbhead.Entity, actorUserID string) error {
 	shadeCode := mbEmptyStringToPtr(entity.ShadeCode())
 	shadeName := mbEmptyStringToPtr(entity.ShadeName())
@@ -226,9 +229,14 @@ func syncRootSpinShadeFromHead(ctx context.Context, tx *sql.Tx, headID uuid.UUID
 	}
 	const q = `
 		UPDATE mst_mb_spin
-		SET mbs_shade_code = $1, mbs_shade_name = $2, mbs_cross_section = $3, mbs_cc = $1,
+		SET mbs_shade_code = CAST($1 AS text), mbs_shade_name = $2, mbs_cross_section = $3, mbs_cc = CAST($1 AS text),
 		    updated_at = NOW(), updated_by = $4
-		WHERE mbs_mbh_id = $5 AND mbs_parent_spin_id IS NULL AND deleted_at IS NULL`
+		WHERE mbs_mbh_id = $5 AND mbs_parent_spin_id IS NULL AND deleted_at IS NULL
+		  AND NOT EXISTS (
+		        SELECT 1 FROM cost_product_master p
+		         WHERE p.cpm_product_sys_id = mst_mb_spin.mbs_fg_product_id
+		           AND mst_mb_spin.mbs_fg_link_source IS DISTINCT FROM 'RECIPE'
+		           AND COALESCE(UPPER(TRIM(p.cpm_shade_code)), '') <> COALESCE(UPPER(TRIM(CAST($1 AS text))), ''))`
 	if _, err := tx.ExecContext(ctx, q, shadeCode, shadeName, crossSection, actorUserID, headID); err != nil {
 		return fmt.Errorf("mb_autogen: sync root spin shade from head: %w", err)
 	}
