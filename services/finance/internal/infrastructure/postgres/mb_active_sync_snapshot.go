@@ -48,8 +48,19 @@ const mbasSpinsQuery = `
 
 const mbasPOYQuery = `
 	SELECT m.cpm_product_sys_id, COALESCE(m.cpm_product_code, ''), COALESCE(m.cpm_erp_item_code, ''),
-	       COALESCE(m.cpm_shade_code, ''), COALESCE(m.cpm_shade_name, ''), m.cpm_is_active
+	       COALESCE(m.cpm_shade_code, ''), COALESCE(m.cpm_shade_name, ''), m.cpm_is_active,
+	       sp.den, sp.fil, COALESCE(sp.cs, '')
 	FROM cost_product_master m
+	LEFT JOIN (
+	    SELECT v.cpp_product_sys_id AS sys_id,
+	           MAX(v.cpp_value_numeric) FILTER (WHERE pm.param_code = 'DENIER') AS den,
+	           MAX(v.cpp_value_numeric) FILTER (WHERE pm.param_code = 'NO_OF_FILAMENTS') AS fil,
+	           MAX(v.cpp_value_text) FILTER (WHERE pm.param_code = 'CROSS_SECTION') AS cs
+	    FROM cost_product_parameter v
+	    JOIN mst_parameter pm ON pm.id = v.cpp_param_id
+	    WHERE pm.param_code IN ('DENIER', 'NO_OF_FILAMENTS', 'CROSS_SECTION')
+	    GROUP BY v.cpp_product_sys_id
+	) sp ON sp.sys_id = m.cpm_product_sys_id
 	JOIN cost_product_type t ON t.cpt_type_id = m.cpm_product_type_id
 	WHERE t.cpt_type_code = 'POY'
 	ORDER BY m.cpm_product_sys_id`
@@ -204,8 +215,16 @@ func mbasQueryPOYs(ctx context.Context, q supersedeQuerier) ([]mbactivesync.POYS
 	var out []mbactivesync.POYSnap
 	for rows.Next() {
 		var p mbactivesync.POYSnap
-		if err := rows.Scan(&p.SysID, &p.ProductCode, &p.ERPItemCode, &p.ShadeCode, &p.ShadeName, &p.IsActive); err != nil {
+		var den, fil sql.NullFloat64
+		if err := rows.Scan(&p.SysID, &p.ProductCode, &p.ERPItemCode, &p.ShadeCode, &p.ShadeName, &p.IsActive, &den, &fil, &p.CS); err != nil {
 			return nil, fmt.Errorf("scan snapshot POY: %w", err)
+		}
+		if den.Valid {
+			p.Den = &den.Float64
+		}
+		if fil.Valid {
+			n := int(fil.Float64)
+			p.Fil = &n
 		}
 		out = append(out, p)
 	}

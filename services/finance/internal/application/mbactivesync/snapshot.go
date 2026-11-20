@@ -85,6 +85,9 @@ type POYSnap struct {
 	ShadeCode   string // exact
 	ShadeName   string
 	IsActive    bool
+	Den         *float64 // DENIER param (nil if absent)
+	Fil         *int     // NO_OF_FILAMENTS param
+	CS          string   // CROSS_SECTION param
 }
 
 // Snapshot is the full consistent read used by the planner.

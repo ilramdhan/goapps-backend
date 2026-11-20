@@ -272,18 +272,41 @@ func (c *classifier) matchPOY(r FileRow) (*POYSnap, bool) {
 	if fs == "" || r.POY == "" {
 		return nil, false
 	}
-	var best *POYSnap
-	n := 0
+	var cands []*POYSnap
 	for _, p := range c.poyByCode[r.POY] {
-		if !p.IsActive || NormShadeLoose(p.ShadeCode) != fs {
-			continue
+		if p.IsActive && NormShadeLoose(p.ShadeCode) == fs {
+			cands = append(cands, p)
 		}
-		n++
+	}
+	cands = narrowPOY(cands, func(p *POYSnap) bool {
+		return strings.EqualFold(strings.TrimSpace(p.ShadeName), strings.TrimSpace(r.ShadeName))
+	})
+	cands = narrowPOY(cands, func(p *POYSnap) bool { return NormShadeExact(p.ShadeCode) == NormShadeExact(r.Shade) })
+	var best *POYSnap
+	for _, p := range cands {
 		if best == nil || p.SysID < best.SysID {
 			best = p
 		}
 	}
-	return best, n > 1
+	return best, len(cands) > 1
+}
+
+// narrowPOY keeps the candidates satisfying keep when there are several and at
+// least one satisfies it; otherwise returns cands unchanged.
+func narrowPOY(cands []*POYSnap, keep func(*POYSnap) bool) []*POYSnap {
+	if len(cands) < 2 {
+		return cands
+	}
+	var out []*POYSnap
+	for _, p := range cands {
+		if keep(p) {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return cands
+	}
+	return out
 }
 
 // ClassifyRows applies rules 1–10 of design §3.5 to every file row, including
@@ -307,7 +330,7 @@ func ClassifyRows(rows []FileRow, snap *Snapshot) ([]*RowPlan, error) {
 		p := c.prepare(r, seen)
 		plans = append(plans, p)
 		if p.Action == "" {
-			allocIn = append(allocIn, AllocInput{Row: r, HeadID: p.Head.ID, TargetFG: p.TargetFG})
+			allocIn = append(allocIn, AllocInput{Row: p.Row, HeadID: p.Head.ID, TargetFG: p.TargetFG})
 			pending = append(pending, p)
 		}
 	}
@@ -338,18 +361,24 @@ func (c *classifier) prepare(r FileRow, seen map[string]bool) *RowPlan {
 	if ambiguous {
 		p.addReason(ReasonPOYAmbiguous)
 	}
-	if poy == nil || r.Den == nil { // rule 2
+	if poy != nil && p.Row.Den == nil && poy.Den != nil { // spec fallback from the POY product
+		p.Row.Den, p.Row.Fil = poy.Den, poy.Fil
+		if poy.CS != "" { // the parsed CS of an unparsed name is a name segment, not a cross-section
+			p.Row.CS = poy.CS
+		}
+	}
+	if poy == nil || p.Row.Den == nil { // rule 2
 		p.Action = ActionReportOnly
 		if poy == nil {
 			p.addReason(ReasonPOYNotFound)
 		}
-		if r.Den == nil {
+		if p.Row.Den == nil {
 			p.addReason(ReasonSpecUnparsed)
 		}
 		return p
 	}
 	c.fillTargets(p)
-	key := r.SysID + "\x00" + NormShadeLoose(r.Shade) + "\x00" + r.POY
+	key := r.SysID + "\x00" + strconv.FormatInt(poy.SysID, 10)
 	if seen[key] { // rule 3
 		p.Action = ActionReportOnly
 		p.addReason(ReasonDupRow)
