@@ -136,10 +136,12 @@ endif
 V2_COMPOSE  := docker compose -f docker-compose.v2.yaml
 V2_PG       := docker exec -i goapps-v2-postgres psql -X -q -v ON_ERROR_STOP=1 -U postgres
 V2_SERVICES := iam finance ppc
+# + non-goapps DBs (Laravel mgtapps): roles/DB/grants/verify only, no goapps migrate/seed
+V2_DBS      := $(V2_SERVICES) mgtapps
 
 V2_SQL_SRC  ?= ../docs/migration-postgres/v2/sql
 
-.PHONY: v2-sync v2-refresh v2-up v2-down v2-migrate v2-grants v2-seed v2-verify v2-sync-check v2-env-on v2-env-off migration-lint
+.PHONY: v2-sync v2-refresh v2-up v2-down v2-ensure-dbs v2-migrate v2-grants v2-seed v2-verify v2-sync-check v2-env-on v2-env-off migration-lint
 
 v2-up:
 	$(V2_COMPOSE) up -d --wait
@@ -156,8 +158,18 @@ v2-migrate:
 	@$(MAKE) --no-print-directory v2-grants
 
 # Same order as the VPS after a restore/release: 20 per DB, then 25 (MV MAINTAIN) and 30 (restricted IAM).
-v2-grants:
-	@for s in $(V2_SERVICES); do $(V2_PG) -d $${s}_db -v svc=$$s -f /v2/sql/20-db-grants.sql || exit 1; done
+# Existing volumes skip init: create missing roles/DBs (00+10 are idempotent; empty -v *_pw= keeps existing
+# passwords; mgtapps gets its dev password only while the role is still missing). No-op when up to date.
+v2-ensure-dbs:
+	@pw=$$($(V2_PG) -d postgres -Atc "select case when to_regrole('mgtapps_owner') is null then 'dev_mgtapps_owner' end"); \
+	 ap=$$([ -n "$$pw" ] && echo dev_mgtapps_app || true); \
+	 $(V2_PG) -d postgres -v mgtapps_owner_pw=$$pw -v mgtapps_app_pw=$$ap \
+	  -v iam_owner_pw= -v iam_app_pw= -v finance_owner_pw= -v finance_app_pw= -v ppc_owner_pw= -v ppc_app_pw= \
+	  -v backup_pw= -v monitor_pw= -v report_pw= -v ilham_pw= -v indra_pw= -c 'set client_min_messages=warning' -f /v2/sql/00-cluster-roles.sql >/dev/null && \
+	 $(V2_PG) -d postgres -c 'set client_min_messages=warning' -f /v2/sql/10-create-databases.sql >/dev/null
+
+v2-grants: v2-ensure-dbs
+	@for s in $(V2_DBS); do $(V2_PG) -d $${s}_db -v svc=$$s -f /v2/sql/20-db-grants.sql || exit 1; done
 	@$(V2_PG) -d finance_db -f /v2/sql/25-finance-runtime.sql
 	@$(V2_PG) -d iam_db -f /v2/sql/30-restricted-iam.sql
 
@@ -180,7 +192,7 @@ v2-refresh:
 	@scripts/v2-refresh.sh
 
 v2-verify:
-	@for d in iam_db finance_db ppc_db; do echo "=== $$d"; docker exec -i goapps-v2-postgres psql -X -U postgres -d $$d -f /v2/sql/90-verify.sql || exit 1; done
+	@for d in $(addsuffix _db,$(V2_DBS)); do echo "=== $$d"; docker exec -i goapps-v2-postgres psql -X -U postgres -d $$d -f /v2/sql/90-verify.sql || exit 1; done
 
 # Switch local services between the classic DBs and v2. Every service Makefile
 # auto-loads services/<svc>/.env.local, so the switch is just that file.

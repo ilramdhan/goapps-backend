@@ -10,6 +10,9 @@
 --   -v backup_pw=... -v monitor_pw=... -v report_pw=... \
 --   -v ilham_pw=... -v indra_pw=... \
 --   -f 00-cluster-roles.sql
+-- Optional (LOCAL v2 only): -v mgtapps_owner_pw=... -v mgtapps_app_pw=... creates the non-goapps
+-- Laravel DB roles. Without them the mgtapps block is skipped (VPS: new-service-db.sh --external).
+-- An EMPTY -v <x>_pw= leaves that role's password untouched (local `make v2-ensure-dbs`).
 -- Generate each password with: openssl rand -hex 24   (hex only: DSNs are built unquoted
 -- by the services — spaces, quotes, backslashes or '=' would break them; audit §PgBouncer)
 -- Secrets never go into Git; store them in the team password manager.
@@ -26,7 +29,7 @@ BEGIN
   ELSE
     EXECUTE format('ALTER ROLE %I %s', r, attrs);
   END IF;
-  IF pw IS NOT NULL THEN
+  IF pw IS NOT NULL AND pw <> '' THEN
     EXECUTE format('ALTER ROLE %I PASSWORD %L', r, pw);
   END IF;
 END $$;
@@ -45,6 +48,18 @@ SELECT pg_temp.ensure_role('ppc_owner',     'LOGIN NOSUPERUSER NOCREATEDB NOCREA
 SELECT pg_temp.ensure_role('ppc_app',       'LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT CONNECTION LIMIT 60',  :'ppc_app_pw');
 SELECT pg_temp.ensure_role('ppc_ro',        'NOLOGIN', NULL);
 
+-- mgtapps (Laravel, non-goapps): opt-in, same shape as new-service-db.sh --external
+\if :{?mgtapps_owner_pw}
+SELECT pg_temp.ensure_role('mgtapps_owner', 'LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT CONNECTION LIMIT 5',  :'mgtapps_owner_pw');
+SELECT pg_temp.ensure_role('mgtapps_app',   'LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT CONNECTION LIMIT 20', :'mgtapps_app_pw');
+SELECT pg_temp.ensure_role('mgtapps_ro',    'NOLOGIN', NULL);
+ALTER ROLE mgtapps_owner SET lock_timeout = '10s';
+ALTER ROLE mgtapps_owner SET statement_timeout = '15min';
+ALTER ROLE mgtapps_owner SET idle_in_transaction_session_timeout = '5min';
+ALTER ROLE mgtapps_app   SET statement_timeout = '30s';
+ALTER ROLE mgtapps_app   SET idle_in_transaction_session_timeout = '60s';
+\endif
+
 -- ---------------------------------------------------------------- humans/tools
 SELECT pg_temp.ensure_role('dba_read',  'NOLOGIN', NULL);
 SELECT pg_temp.ensure_role('dba_write', 'NOLOGIN', NULL);
@@ -52,7 +67,9 @@ SELECT pg_temp.ensure_role('ilham',     'LOGIN INHERIT CONNECTION LIMIT 10', :'i
 SELECT pg_temp.ensure_role('indra',     'LOGIN INHERIT CONNECTION LIMIT 10', :'indra_pw');
 SELECT pg_temp.ensure_role('report_ro', 'LOGIN INHERIT CONNECTION LIMIT 10', :'report_pw');
 SELECT pg_temp.ensure_role('backup_ro', 'LOGIN INHERIT CONNECTION LIMIT 4',  :'backup_pw');
-SELECT pg_temp.ensure_role('monitor',   'LOGIN INHERIT CONNECTION LIMIT 3',  :'monitor_pw');
+-- monitor limit 6 (was 3): exporter = master conn (postgres) + 1 per discovered app DB (3) + collector conn = 5; 6 leaves 1 spare.
+-- New service DB: raise to 2 + number of app DBs (docs/migration-postgres/v2/monitoring-new-service-db.md).
+SELECT pg_temp.ensure_role('monitor',   'LOGIN INHERIT CONNECTION LIMIT 6',  :'monitor_pw');
 
 -- read: humans see every *_ro (restricted columns excluded by 30-restricted.sql)
 GRANT iam_ro, finance_ro, ppc_ro TO dba_read;
@@ -61,6 +78,10 @@ GRANT iam_owner, finance_owner, ppc_owner TO dba_write WITH INHERIT FALSE, SET T
 GRANT dba_read, dba_write TO ilham, indra;
 GRANT finance_ro, ppc_ro TO report_ro;
 -- report_ro gets iam_ro-equivalent grants directly in 30-restricted.sql (minus chatbot log)
+\if :{?mgtapps_owner_pw}
+GRANT mgtapps_ro TO dba_read;
+GRANT mgtapps_owner TO dba_write WITH INHERIT FALSE, SET TRUE;
+\endif
 GRANT pg_read_all_data TO backup_ro;
 GRANT pg_monitor TO monitor;
 
