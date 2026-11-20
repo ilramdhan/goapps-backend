@@ -145,6 +145,15 @@ EOT
 for s in $SERVICES; do
   case "$FILES" in *"$PROFILE/${s}_db.dump"*) ;; *) die "snapshot lacks $PROFILE/${s}_db.dump" ;; esac
 done
+# mgtapps (Laravel, non-goapps) is optional: restored only when the snapshot carries it, else local mgtapps_db stays as-is
+case "$FILES" in
+  *"$PROFILE/mgtapps_db.dump"*)
+    c="$(sed -n 's/^comment\.mgtapps_db=//p' "$MAN" | head -n1)"
+    case "$c" in "sanitized p9 $SRC_RUN"*) ;; *) die "REFUSING mgtapps_db: MANIFEST comment is not 'sanitized p9 $SRC_RUN' (got: '$c')" ;; esac
+    make -C "$REPO_ROOT" --no-print-directory v2-ensure-dbs >/dev/null 2>&1 || true  # roles/DB must exist before restore
+    SERVICES="$SERVICES mgtapps" ;;
+  *) echo "  WARN: snapshot has no mgtapps_db.dump; local mgtapps_db left untouched" ;;
+esac
 echo "  download size: $((TOTAL_BYTES / 1048576)) MiB"
 
 # Disk space: restored DB is larger than the compressed dump; require 3x
@@ -263,7 +272,7 @@ SWAP_SQL="$WORK/swap.sql"
     echo "ALTER DATABASE ${s}_db ALLOW_CONNECTIONS false;"
     echo "ALTER DATABASE ${s}_db_refresh ALLOW_CONNECTIONS false;"
   done
-  echo "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ('iam_db','finance_db','ppc_db','iam_db_refresh','finance_db_refresh','ppc_db_refresh') AND pid <> pg_backend_pid();"
+  echo "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ($(for x in $SERVICES; do printf "'%s_db','%s_db_refresh'," "$x" "$x"; done | sed 's/,$//')) AND pid <> pg_backend_pid();"
   echo "BEGIN;"
   for s in $SERVICES; do echo "ALTER DATABASE ${s}_db RENAME TO ${s}_db_old;"; done
   for s in $SERVICES; do echo "ALTER DATABASE ${s}_db_refresh RENAME TO ${s}_db;"; done
@@ -295,7 +304,10 @@ fi
 echo
 echo "schema_migrations versions:"
 for s in $SERVICES; do
-  v="$(loc_psql -d "${s}_db" -Atc "SELECT version || CASE WHEN dirty THEN ' (DIRTY)' ELSE '' END FROM schema_migrations_${s} LIMIT 1" 2>/dev/null || echo '?')"
+  mt="schema_migrations_${s}"; [ "$s" = mgtapps ] && mt=migrations  # Laravel: one row per migration
+  if [ "$s" = mgtapps ]; then q="SELECT count(*) || ' laravel migrations' FROM $mt"
+  else q="SELECT version || CASE WHEN dirty THEN ' (DIRTY)' ELSE '' END FROM $mt LIMIT 1"; fi
+  v="$(loc_psql -d "${s}_db" -Atc "$q" 2>/dev/null || echo '?')"
   echo "  $s: $v"
 done
 echo "source_run: $SRC_RUN  (profile: $PROFILE)"
