@@ -343,7 +343,7 @@ func TestClassifyRows_POYAmbiguousAndInactive(t *testing.T) {
 	h := head(1, "S1", "Y145T", true)
 	h.ShadeName = "N Y145T"
 	sp := spin(1, h, 380, 144, "TBL", "Y145T", 1.39, named)
-	p3 := poy(30, "POY1", "Y-145-T")
+	p3 := poy(30, "POY1", "Y145T")
 	p2 := poy(20, "POY1", "Y145T")
 	p1 := poy(5, "POY1", "Y145T")
 	p1.IsActive = false
@@ -768,5 +768,83 @@ func TestClassifyRows_ForceOneExactCodePerHead(t *testing.T) {
 		if !p.HasSub(SubForceHeadShade) || p.HeadShadeCode != "Y145T" {
 			t.Fatalf("ln %d: %+v", ln, p)
 		}
+	}
+}
+
+func TestClassifyRows_POYShadeNameTieBreak(t *testing.T) {
+	h1, h2 := head(1, "S1", "X121T", true), head(2, "S2", "X 121T", true)
+	pa, pb := poy(1545, "POY1", "X121T"), poy(1548, "POY1", "X 121T")
+	pa.ShadeName, pb.ShadeName = "WHITE PLUS", "BLANCO OPTICO WHITE PLUS"
+	snap := &Snapshot{Heads: []HeadSnap{h1, h2}, POYs: []POYSnap{pa, pb}}
+	r1, r2 := frow(1, "S1", "POY1", spec380, "X121T", 1), frow(2, "S2", "POY1", spec380, "X 121T", 1)
+	r1.ShadeName, r2.ShadeName = " white plus ", "BLANCO OPTICO WHITE PLUS"
+	// same head so the old (loose shade, POY) dup key would collide
+	h2.SysID = "S1"
+	snap.Heads = []HeadSnap{h1}
+	r2.SysID = "S1"
+	got := classify(t, []FileRow{r1, r2}, snap)
+	for ln, want := range map[int]int64{1: 1545, 2: 1548} {
+		p := got[ln]
+		if p.POY == nil || p.POY.SysID != want || p.HasReason(ReasonPOYAmbiguous) || p.HasReason(ReasonDupRow) {
+			t.Fatalf("ln %d want POY %d: %+v", ln, want, p)
+		}
+	}
+}
+
+func TestMatchPOY_NarrowOrder(t *testing.T) {
+	mk := func(id int64, shade, name string) POYSnap {
+		p := poy(id, "P", shade)
+		p.ShadeName = name
+		return p
+	}
+	tests := []struct {
+		name      string
+		poys      []POYSnap
+		shade, sn string
+		want      int64
+		ambiguous bool
+	}{
+		{"name wins", []POYSnap{mk(1, "Z1", "A"), mk(2, "Z1", "B")}, "Z1", "b", 2, false},
+		{"name none -> exact code", []POYSnap{mk(1, "Z-1", "A"), mk(2, "Z1", "B")}, "Z1", "C", 2, false},
+		{"still tied -> min id", []POYSnap{mk(5, "Z1", "A"), mk(3, "Z1", "A")}, "Z1", "A", 3, true},
+		{"nothing narrows -> min id", []POYSnap{mk(5, "Z1", "A"), mk(3, "Z1", "B")}, "Z1", "C", 3, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newClassifier(&Snapshot{POYs: tc.poys})
+			got, amb := c.matchPOY(FileRow{POY: "P", Shade: tc.shade, ShadeName: tc.sn})
+			if got == nil || got.SysID != tc.want || amb != tc.ambiguous {
+				t.Fatalf("got %+v amb=%v", got, amb)
+			}
+		})
+	}
+}
+
+func TestClassifyRows_SpecFallbackFromPOY(t *testing.T) {
+	h := head(1, "S1", "Y145T", true)
+	p := poy(10, "POY1", "Y145T")
+	p.Den, p.Fil, p.CS = fp(250), ip(48), "RND"
+	tests := []struct {
+		name   string
+		poy    POYSnap
+		wantOK bool
+	}{
+		{"filled from POY", p, true},
+		{"neither has spec", poy(10, "POY1", "Y145T"), false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			snap := &Snapshot{Heads: []HeadSnap{h}, POYs: []POYSnap{tc.poy}}
+			got := classify(t, []FileRow{frow(1, "S1", "POY1", "POY MGT/MIX/B/JLT", "Y145T", 1)}, snap)[1]
+			if tc.wantOK {
+				if got.HasReason(ReasonSpecUnparsed) || got.Row.Den == nil || *got.Row.Den != 250 || *got.Row.Fil != 48 || got.Row.CS != "RND" {
+					t.Fatalf("%+v", got)
+				}
+				return
+			}
+			if got.Action != ActionReportOnly || !got.HasReason(ReasonSpecUnparsed) {
+				t.Fatalf("%+v", got)
+			}
+		})
 	}
 }
