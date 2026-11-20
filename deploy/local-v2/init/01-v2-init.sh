@@ -11,11 +11,12 @@ $P -d postgres \
   -v iam_owner_pw=dev_iam_owner         -v iam_app_pw=dev_iam_app \
   -v finance_owner_pw=dev_finance_owner -v finance_app_pw=dev_finance_app \
   -v ppc_owner_pw=dev_ppc_owner         -v ppc_app_pw=dev_ppc_app \
+  -v mgtapps_owner_pw=dev_mgtapps_owner -v mgtapps_app_pw=dev_mgtapps_app \
   -v backup_pw=dev_backup_ro -v monitor_pw=dev_monitor -v report_pw=dev_report_ro \
   -v ilham_pw=dev_ilham -v indra_pw=dev_indra \
   -f $SQL/00-cluster-roles.sql
 $P -d postgres -f $SQL/10-create-databases.sql
-for s in iam finance ppc; do
+for s in iam finance ppc mgtapps; do
   $P -d ${s}_db -v svc=$s -f $SQL/20-db-grants.sql
 done
 $P -d finance_db -f $SQL/25-finance-runtime.sql

@@ -145,6 +145,15 @@ EOT
 for s in $SERVICES; do
   case "$FILES" in *"$PROFILE/${s}_db.dump"*) ;; *) die "snapshot lacks $PROFILE/${s}_db.dump" ;; esac
 done
+# mgtapps (Laravel, non-goapps) is optional: restored only when the snapshot carries it, else local mgtapps_db stays as-is
+case "$FILES" in
+  *"$PROFILE/mgtapps_db.dump"*)
+    c="$(sed -n 's/^comment\.mgtapps_db=//p' "$MAN" | head -n1)"
+    case "$c" in "sanitized p9 $SRC_RUN"*) ;; *) die "REFUSING mgtapps_db: MANIFEST comment is not 'sanitized p9 $SRC_RUN' (got: '$c')" ;; esac
+    if [ "$DRY" = 0 ]; then make -C "$REPO_ROOT" --no-print-directory v2-ensure-dbs || die "v2-ensure-dbs failed (mgtapps roles/DB must exist before restore)"; fi
+    SERVICES="$SERVICES mgtapps" ;;
+  *) echo "  WARN: snapshot has no mgtapps_db.dump; local mgtapps_db left untouched" ;;
+esac
 echo "  download size: $((TOTAL_BYTES / 1048576)) MiB"
 
 # Disk space: restored DB is larger than the compressed dump; require 3x
@@ -215,7 +224,8 @@ fi
 step 5 "confirm"
 if [ "$YES" -ne 1 ]; then
   if [ -t 0 ]; then
-    printf '  This REPLACES your local iam_db, finance_db and ppc_db (container %s) with snapshot %s. Continue? [y/N] ' "$CONTAINER" "$SRC_RUN"
+    # shellcheck disable=SC2086  # SERVICES is a space-separated word list
+    printf '  This REPLACES your local %s (container %s) with snapshot %s. Continue? [y/N] ' "$(printf "%s_db " $SERVICES)" "$CONTAINER" "$SRC_RUN"
     read -r ans
     case "$ans" in y|Y|yes|YES) ;; *) die "aborted by user" ;; esac
   else
@@ -256,14 +266,14 @@ for s in $SERVICES; do
   fi
 done
 
-echo "== swap (all three in one transaction)"
+echo "== swap (all in one transaction)"
 SWAP_SQL="$WORK/swap.sql"
 {
   for s in $SERVICES; do
     echo "ALTER DATABASE ${s}_db ALLOW_CONNECTIONS false;"
     echo "ALTER DATABASE ${s}_db_refresh ALLOW_CONNECTIONS false;"
   done
-  echo "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ('iam_db','finance_db','ppc_db','iam_db_refresh','finance_db_refresh','ppc_db_refresh') AND pid <> pg_backend_pid();"
+  echo "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ($(for x in $SERVICES; do printf "'%s_db','%s_db_refresh'," "$x" "$x"; done | sed 's/,$//')) AND pid <> pg_backend_pid();"
   echo "BEGIN;"
   for s in $SERVICES; do echo "ALTER DATABASE ${s}_db RENAME TO ${s}_db_old;"; done
   for s in $SERVICES; do echo "ALTER DATABASE ${s}_db_refresh RENAME TO ${s}_db;"; done
@@ -295,7 +305,10 @@ fi
 echo
 echo "schema_migrations versions:"
 for s in $SERVICES; do
-  v="$(loc_psql -d "${s}_db" -Atc "SELECT version || CASE WHEN dirty THEN ' (DIRTY)' ELSE '' END FROM schema_migrations_${s} LIMIT 1" 2>/dev/null || echo '?')"
+  mt="schema_migrations_${s}"; [ "$s" = mgtapps ] && mt=migrations  # Laravel: one row per migration
+  if [ "$s" = mgtapps ]; then q="SELECT count(*) || ' laravel migrations' FROM $mt"
+  else q="SELECT version || CASE WHEN dirty THEN ' (DIRTY)' ELSE '' END FROM $mt LIMIT 1"; fi
+  v="$(loc_psql -d "${s}_db" -Atc "$q" 2>/dev/null || echo '?')"
   echo "  $s: $v"
 done
 echo "source_run: $SRC_RUN  (profile: $PROFILE)"

@@ -8,8 +8,9 @@
 
 SELECT format('CREATE DATABASE %I OWNER %I TEMPLATE template0 ENCODING ''UTF8'' LC_COLLATE ''en_US.UTF-8'' LC_CTYPE ''en_US.UTF-8''',
               s || '_db', s || '_owner')
-FROM (VALUES ('iam'), ('finance'), ('ppc')) AS v(s)
+FROM (VALUES ('iam'), ('finance'), ('ppc'), ('mgtapps')) AS v(s)
 WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = s || '_db')
+  AND to_regrole(s || '_owner') IS NOT NULL  -- mgtapps roles exist only where 00 was given mgtapps_*_pw
 \gexec
 
 -- Extensions need superuser; create them in every DB so restore (as <svc>_owner) never has to.
