@@ -200,6 +200,11 @@ type detailDTO struct {
 
 func (d *detailDTO) toEntity() (*rmgroup.Detail, error) {
 	itemCode, err := rmgroup.NewItemCode(d.ItemCode)
+	// Legacy Oracle DUMMY rows (seeds 000460 / 000581 / 000612) carry no item code: reading
+	// them must not break the whole group. Empty is accepted ONLY for is_dummy rows.
+	if errors.Is(err, rmgroup.ErrEmptyItemCode) && d.IsDummy {
+		itemCode, err = rmgroup.ItemCode{}, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("invalid item_code from db: %w", err)
 	}
