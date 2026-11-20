@@ -733,3 +733,40 @@ func TestClassifyRows_DuplicateOfReshadedSource(t *testing.T) {
 		t.Fatalf("ln 3 duplicates re-shaded r2 without SET_SHADE: %+v", p)
 	}
 }
+
+// Review 2026-11-20 #1: a child/duplicate row with another shade must not make a
+// single-root head "multi-shade" (KEEP would leave root != head, undone on re-validate).
+func TestClassifyRows_HeadShadeCountsRootRowsOnly(t *testing.T) {
+	h := head(1, "S1", "X438T", true)
+	h.ShadeName = "N X438T"
+	root := spin(1, h, 380, 144, "TBL", "X438T", 1.39, named)
+	kid := spin(2, h, 150, 48, "RD", "X438T", 1.39, named, child(root.ID))
+	snap := &Snapshot{Heads: []HeadSnap{h}, Spins: []SpinSnap{root, kid},
+		POYs: []POYSnap{poy(1, "POY1", "Y145T"), poy(2, "POY2", "X438T")}}
+	got := classify(t, []FileRow{
+		frow(1, "S1", "POY1", spec380, "Y145T", 1.39),
+		frow(2, "S1", "POY2", "POY 150/48/RD", "X438T", 1.39),
+	}, snap)
+	if p := got[1]; p.HasSub(SubKeepHeadShade) || !p.HasSub(SubForceHeadShade) || p.HeadShadeCode != "Y145T" {
+		t.Fatalf("root row must FORCE the head (child shade does not count): %+v", p)
+	}
+}
+
+// Review #4: two winner rows with the same loose shade write ONE exact head code.
+func TestClassifyRows_ForceOneExactCodePerHead(t *testing.T) {
+	h := head(1, "S1", "Z999T", true)
+	h.ShadeName = "N Z999T"
+	r1 := spin(1, h, 380, 144, "TBL", "Z999T", 1.39, named)
+	r2 := spin(2, h, 150, 48, "RD", "Z999T", 1.39, named)
+	snap := &Snapshot{Heads: []HeadSnap{h}, Spins: []SpinSnap{r1, r2},
+		POYs: []POYSnap{poy(1, "POY1", "Y145T"), poy(2, "POY2", "Y-145-T")}}
+	got := classify(t, []FileRow{
+		frow(1, "S1", "POY1", spec380, "Y145T", 1.39),
+		frow(2, "S1", "POY2", "POY 150/48/RD", "Y-145-T", 1.39),
+	}, snap)
+	for ln, p := range got {
+		if !p.HasSub(SubForceHeadShade) || p.HeadShadeCode != "Y145T" {
+			t.Fatalf("ln %d: %+v", ln, p)
+		}
+	}
+}

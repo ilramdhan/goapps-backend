@@ -80,4 +80,39 @@ func TestMBActiveSyncWriter_HeadShadeDecisions(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, mbactivesync.ResultApplied, res.Result, "second root no longer fails fg_follows_recipe: %s", res.Message)
 	})
+
+	t.Run("FORCE moves mbh_code that held the old shade; revert restores it", func(t *testing.T) {
+		poy := f.poy("P-FCD", "FD2")
+		h := f.head(true, "FD-1")
+		f.exec(`UPDATE mst_mb_head SET mbh_code = 'FD1' WHERE mbh_id = $1`, h)
+		root := f.spin(h, "FD-1", 6, true, nil)
+		res, err := f.w.SyncExistingSpin(f.ctx, mbactivesync.SyncSpinInput{SpinID: root, Actor: actor,
+			SubActions:      subs(mbactivesync.SubSetFG, mbactivesync.SubSetShade, mbactivesync.SubSetHeadShade, mbactivesync.SubForceHeadShade),
+			TargetShadeCode: "FD2", TargetFG: &poy, PlanHeadShadeCode: "FD-1"})
+		require.NoError(t, err)
+		require.Equal(t, mbactivesync.ResultApplied, res.Result, res.Message)
+		var code string
+		require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT mbh_code FROM mst_mb_head WHERE mbh_id = $1`, h).Scan(&code))
+		require.Equal(t, "FD2", code)
+
+		rr, err := f.w.Revert(f.ctx, mbactivesync.RevertInput{Key: "row:9", Action: "UPDATE_SHADE", Phase: mbactivesync.PhaseA,
+			SpinID: root, HeadID: h, BeforeJSON: res.BeforeJSON, AfterJSON: res.AfterJSON, Actor: "r"})
+		require.NoError(t, err)
+		require.Equal(t, mbactivesync.ResultApplied, rr.Result, rr.Message)
+		require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT mbh_code FROM mst_mb_head WHERE mbh_id = $1`, h).Scan(&code))
+		require.Equal(t, "FD1", code)
+	})
+
+	t.Run("head shade changed since plan → stale_plan, nothing written", func(t *testing.T) {
+		poy := f.poy("P-STL", "SB1")
+		h := f.head(true, "SA2")
+		root := f.spin(h, "SA2", 6, true, nil)
+		res, err := f.w.SyncExistingSpin(f.ctx, mbactivesync.SyncSpinInput{SpinID: root, Actor: actor,
+			SubActions:      subs(mbactivesync.SubSetFG, mbactivesync.SubSetShade, mbactivesync.SubSetHeadShade, mbactivesync.SubForceHeadShade),
+			TargetShadeCode: "SB1", TargetFG: &poy, PlanHeadShadeCode: "SA1"})
+		require.NoError(t, err)
+		require.Equal(t, mbactivesync.ReasonStalePlan, res.Reason)
+		_, hs, _ := f.readHead(h)
+		require.Equal(t, "SA2", hs)
+	})
 }

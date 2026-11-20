@@ -20,7 +20,7 @@ var RowsHeader = []string{
 	"action", "role", "reason", "sub_actions", "phase",
 	"source_spin_id",
 	"target_fg", "target_shade_code", "target_shade_name", "target_den", "target_fil", "target_cs", "target_ldr",
-	"item_key", "decision",
+	"item_key", "decision", "target_head_shade_code", "plan_head_shade_code",
 }
 
 // HeadsHeader is the fixed plan-heads.csv header (design §3.8).
@@ -88,9 +88,32 @@ func RowRecord(p *RowPlan) []string {
 	rec = append(rec, string(p.Action), string(p.Role), strings.Join(p.Reasons, sep), strings.Join(p.SubActions, sep), string(p.Phase))
 	rec = append(rec, p.SourceRef())
 	rec = append(rec, fmtI64(p.TargetFG), p.TargetShadeCode, p.TargetShadeName, fmtF(p.TargetDen), fmtI(p.TargetFil), p.TargetCS, fmtF(p.TargetLDR))
-	rec = append(rec, "row:"+strconv.Itoa(r.Ln), string(p.Decision))
+	rec = append(rec, "row:"+strconv.Itoa(r.Ln), string(p.Decision), p.HeadShadeCode, planHeadShade(p))
 	return rec
 }
+
+// planHeadShade lists the head shades a FORCE/KEEP row accepts at apply time: the
+// head shade seen at plan time and, when the plan forces the head, the forced shade
+// (another row of the same head may already have written it). The writer skips the
+// row (stale_plan) when the live head shade is none of them.
+func planHeadShade(p *RowPlan) string {
+	if p.Head == nil || (!p.HasSub(SubForceHeadShade) && !p.HasSub(SubKeepHeadShade)) {
+		return ""
+	}
+	out := []string{p.Head.ShadeCode}
+	if p.headForced != "" {
+		out = append(out, p.headForced)
+	}
+	for i, v := range out {
+		if v == "" {
+			out[i] = emptyShadeMark
+		}
+	}
+	return strings.Join(out, sep)
+}
+
+// emptyShadeMark encodes an empty head shade in plan_head_shade_code ("" = unchecked).
+const emptyShadeMark = "<empty>"
 
 func headCols(h *HeadSnap) []string {
 	if h == nil {

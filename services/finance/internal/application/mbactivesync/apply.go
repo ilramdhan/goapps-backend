@@ -168,7 +168,8 @@ func parseApplyRow(c *PlanCSV, hdr []string, i int) *ApplyItem {
 		it.bad = err.Error()
 		return it
 	}
-	in := SyncSpinInput{TargetShadeCode: g("target_shade_code"), TargetShadeName: g("target_shade_name"), TargetCS: g("target_cs")}
+	in := SyncSpinInput{TargetShadeCode: g("target_shade_code"), TargetShadeName: g("target_shade_name"), TargetCS: g("target_cs"),
+		TargetHeadShadeCode: g("target_head_shade_code"), PlanHeadShadeCode: g("plan_head_shade_code")}
 	if s := g("sub_actions"); s != "" {
 		for _, p := range strings.Split(s, sep) {
 			if p = strings.TrimSpace(p); p != "" {

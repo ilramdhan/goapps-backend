@@ -171,7 +171,7 @@ func mbasHeadEq(a, b mbasHeadImage) mbasHeadGroups {
 	return mbasHeadGroups{
 		active: a.IsActive == b.IsActive,
 		fg:     mbasEqI64(a.FGProductID, b.FGProductID) && a.FGItemCode == b.FGItemCode,
-		shade:  a.ShadeCode == b.ShadeCode && a.ShadeName == b.ShadeName,
+		shade:  a.ShadeCode == b.ShadeCode && a.ShadeName == b.ShadeName && a.Code == b.Code,
 	}
 }
 
@@ -329,6 +329,9 @@ func mbasRestoreHead(ctx context.Context, tx *sql.Tx, id uuid.UUID, b mbasHeadIm
 	}
 	if g.shade {
 		sets = append(sets, "mbh_shade_code = NULLIF("+next(b.ShadeCode)+", '')", "mbh_shade_name = NULLIF("+next(b.ShadeName)+", '')")
+		if b.Code != "" {
+			sets = append(sets, "mbh_code = "+next(b.Code))
+		}
 	}
 	if len(sets) == 2 {
 		return nil

@@ -121,7 +121,12 @@ type RowPlan struct {
 	SubActions []string
 
 	SourceSpin *SpinSnap // DUPLICATE_SPIN source (root spin of the head)
-	SourceLn   int       // GENERATE_SPIN role=DUP: ln of the ROOT row
+	rootRow    bool      // the row's spin is (or becomes) a root: rootHeadShade ran
+	// HeadShadeCode is the exact head shade a FORCE_HEAD_SHADE row writes ("" = the
+	// row's TargetShadeCode).
+	HeadShadeCode string
+	headForced    string // exact head shade the plan forces on this row's head ("" = none)
+	SourceLn      int    // GENERATE_SPIN role=DUP: ln of the ROOT row
 
 	TargetFG        *int64
 	TargetShadeCode string // exact POY shade code
@@ -488,6 +493,7 @@ func (p *RowPlan) headSubs() {
 // really different → REVIEW head_shade_differs. Q14: an EMPTY head shade is
 // treated like a format-only difference (SET_HEAD_SHADE, stays APPLY).
 func (p *RowPlan) rootHeadShade() {
+	p.rootRow = true
 	h := p.Head
 	hl := NormShadeLoose(h.ShadeCode)
 	if hl != "" && hl != NormShadeLoose(p.TargetShadeCode) {
@@ -529,6 +535,9 @@ func finalizeHeadShade(plans []*RowPlan) {
 	}
 }
 
+// Only ROOT rows count as head shades: re-validate copies the head shade onto every
+// root spin (syncRootSpinShadeFromHead), so child/duplicate rows never conflict.
+//
 // resolveHeadShadeDiffers turns head_shade_differs on root rows (head shade different
 // beyond format, or EMPTY with disagreeing Excel shades, see finalizeHeadShade) into an
 // explicit decision, Excel wins:
@@ -550,7 +559,7 @@ func resolveHeadShadeDiffers(plans []*RowPlan) {
 		if shades[p.Head] == nil {
 			shades[p.Head] = map[string]bool{}
 		}
-		if s := NormShadeLoose(p.Row.Shade); s != "" {
+		if s := NormShadeLoose(p.TargetShadeCode); s != "" && p.rootRow {
 			shades[p.Head][s] = true
 		}
 		if p.HasReason(ReasonHeadShadeDiffers) {
@@ -558,21 +567,29 @@ func resolveHeadShadeDiffers(plans []*RowPlan) {
 		}
 	}
 	for h, g := range differs {
-		hl := NormShadeLoose(h.ShadeCode)
-		multi := len(shades[h]) > 1
-		winner := ""
-		if !multi || !shades[h][hl] {
-			winner = NormShadeLoose(g[0].TargetShadeCode)
+		forced := ""
+		if len(shades[h]) <= 1 || !shades[h][NormShadeLoose(h.ShadeCode)] {
+			forced = g[0].TargetShadeCode
 		}
-		for _, p := range g {
-			p.Reasons = removeStr(p.Reasons, ReasonHeadShadeDiffers)
-			if winner != "" && NormShadeLoose(p.TargetShadeCode) == winner {
-				p.addSub(SubSetHeadShade)
-				p.addSub(SubForceHeadShade)
-				continue
-			}
-			p.addSub(SubKeepHeadShade)
+		decideHeadShade(g, forced)
+	}
+}
+
+// decideHeadShade marks one head's rows: those matching forced (loose) FORCE the head to
+// forced, exactly (one exact code per head, so two winners never flip the head format;
+// each spin keeps its own exact POY shade); the rest KEEP. forced "" = KEEP all.
+func decideHeadShade(g []*RowPlan, forced string) {
+	winner := NormShadeLoose(forced)
+	for _, p := range g {
+		p.headForced = forced
+		p.Reasons = removeStr(p.Reasons, ReasonHeadShadeDiffers)
+		if winner != "" && NormShadeLoose(p.TargetShadeCode) == winner {
+			p.addSub(SubSetHeadShade)
+			p.addSub(SubForceHeadShade)
+			p.HeadShadeCode = forced
+			continue
 		}
+		p.addSub(SubKeepHeadShade)
 	}
 }
 
