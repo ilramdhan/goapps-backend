@@ -13,6 +13,7 @@ prod backup -> staging .60 (every Sunday ~06:30 WIB: restore + SANITIZE)
 Raw/unsanitized production data never reaches a laptop. The script refuses any snapshot whose database comments do not start with `sanitized p9`.
 
 Profiles:
+- `mgtapps_db` (Laravel, non-goapps) is optional: restored only if the snapshot has `mgtapps_db.dump`; otherwise v2-sync prints a WARN and keeps your local `mgtapps_db`.
 - `slim` (default): iam_db, ppc_db complete; finance_db without the data of the big history/log tables (schema kept). Much faster.
 - `remote`: like `slim` but also without the data of `cst_product_cost` and `cst_mb_cost` (the largest finance tables); much smaller download for slow VPN links. Cost screens stay empty until you calculate data locally.
 - `full`: everything (finance_db is ~30 GB restored, large download).

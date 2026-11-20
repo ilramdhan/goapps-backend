@@ -18,6 +18,7 @@ Rule behind it: `docs/adr/0001-one-database-per-service.md` (workspace docs) and
 | `iam_db` | `iam_owner` / `dev_iam_owner` | `iam_app` / `dev_iam_app` | `schema_migrations_iam` |
 | `finance_db` | `finance_owner` / `dev_finance_owner` | `finance_app` / `dev_finance_app` | `schema_migrations_finance` |
 | `ppc_db` | `ppc_owner` / `dev_ppc_owner` | `ppc_app` / `dev_ppc_app` | `schema_migrations_ppc` |
+| `mgtapps_db` | `mgtapps_owner` / `dev_mgtapps_owner` | `mgtapps_app` / `dev_mgtapps_app` | Laravel `migrations` (non-goapps app: no goapps migrate/seed; `make v2-ensure-dbs` creates it on an old volume) |
 
 Superuser: `postgres` / `dev_postgres` on `:5440` (break-glass only, like on the VPS).
 All passwords here are **dev-only**; real ones live in the password manager, never in Git.
