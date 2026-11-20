@@ -195,7 +195,7 @@ v2-sync:
 v2-refresh:
 	@scripts/v2-refresh.sh
 
-v2-verify:
+v2-verify: v2-ensure-dbs
 	@for d in $(addsuffix _db,$(V2_DBS)); do echo "=== $$d"; docker exec -i goapps-v2-postgres psql -X -U postgres -d $$d -f /v2/sql/90-verify.sql || exit 1; done
 
 # Switch local services between the classic DBs and v2. Every service Makefile

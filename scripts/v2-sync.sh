@@ -150,7 +150,7 @@ case "$FILES" in
   *"$PROFILE/mgtapps_db.dump"*)
     c="$(sed -n 's/^comment\.mgtapps_db=//p' "$MAN" | head -n1)"
     case "$c" in "sanitized p9 $SRC_RUN"*) ;; *) die "REFUSING mgtapps_db: MANIFEST comment is not 'sanitized p9 $SRC_RUN' (got: '$c')" ;; esac
-    make -C "$REPO_ROOT" --no-print-directory v2-ensure-dbs >/dev/null 2>&1 || true  # roles/DB must exist before restore
+    if [ "$DRY" = 0 ]; then make -C "$REPO_ROOT" --no-print-directory v2-ensure-dbs || die "v2-ensure-dbs failed (mgtapps roles/DB must exist before restore)"; fi
     SERVICES="$SERVICES mgtapps" ;;
   *) echo "  WARN: snapshot has no mgtapps_db.dump; local mgtapps_db left untouched" ;;
 esac
@@ -224,7 +224,7 @@ fi
 step 5 "confirm"
 if [ "$YES" -ne 1 ]; then
   if [ -t 0 ]; then
-    printf '  This REPLACES your local iam_db, finance_db and ppc_db (container %s) with snapshot %s. Continue? [y/N] ' "$CONTAINER" "$SRC_RUN"
+    printf '  This REPLACES your local %s (container %s) with snapshot %s. Continue? [y/N] ' "$(printf "%s_db " $SERVICES)" "$CONTAINER" "$SRC_RUN"
     read -r ans
     case "$ans" in y|Y|yes|YES) ;; *) die "aborted by user" ;; esac
   else
@@ -265,7 +265,7 @@ for s in $SERVICES; do
   fi
 done
 
-echo "== swap (all three in one transaction)"
+echo "== swap (all in one transaction)"
 SWAP_SQL="$WORK/swap.sql"
 {
   for s in $SERVICES; do
