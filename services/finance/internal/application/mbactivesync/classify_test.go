@@ -112,7 +112,7 @@ func TestClassifyRows_Rules(t *testing.T) {
 		frow(8, "S3", "POY2", "POY 150/48/RD", "X438T", 2), // rule 4 DUP
 		frow(9, "S2", "POY5", spec380, "Y145T", 1.39),      // rule 10 REACTIVATE
 		frow(10, "S4", "POY6", spec380, "Y145T", 1.39),     // KEEP→UPDATE_SHADE(format)+SET_HEAD_SHADE
-		frow(11, "S5", "POY7", spec380, "Y145T", 1.39),     // 7b REVIEW head_shade_differs
+		frow(11, "S5", "POY7", spec380, "Y145T", 1.39),     // 7b single Excel shade → Excel wins (FORCE)
 		frow(12, "S1", "POY8", spec380, "X438T", 1.39),     // rule 6 spin_taken
 	}
 	got := classify(t, rows, snap)
@@ -137,7 +137,7 @@ func TestClassifyRows_Rules(t *testing.T) {
 		8:  {ActionGenerateSpin, RoleDup, PhaseC, DecisionApply, nil, []string{SubSetFG, SubSetLDR, SubSetShade}, "ln:7"},
 		9:  {ActionReactivate, RoleNone, PhaseD, DecisionApply, nil, []string{SubSetFG, SubActSpin, SubActHead}, ""},
 		10: {ActionUpdateShade, RoleNone, PhaseA, DecisionApply, []string{ReasonShadeFormat}, []string{SubSetFG, SubSetShade, SubSetHeadShade}, ""},
-		11: {ActionKeep, RoleNone, PhaseA, DecisionReview, []string{ReasonHeadShadeDiffers}, []string{SubSetFG}, ""},
+		11: {ActionKeep, RoleNone, PhaseA, DecisionApply, nil, []string{SubSetFG, SubSetHeadShade, SubForceHeadShade}, ""},
 		12: {ActionDuplicateSpin, RoleNone, PhaseC, DecisionApply, []string{ReasonSpinTaken}, []string{SubSetFG, SubSetLDR, SubSetShade}, root1.ID.String()},
 	}
 	for ln, w := range cases {
@@ -195,9 +195,10 @@ func TestClassifyRows_UpdateShadeAndLDR(t *testing.T) {
 			t.Fatalf("%+v", got)
 		}
 	})
-	t.Run("UPDATE_SHADE real shade on root → REVIEW head_shade_differs", func(t *testing.T) {
+	t.Run("UPDATE_SHADE real shade on root, single Excel shade → FORCE head shade", func(t *testing.T) {
 		got := classify(t, []FileRow{frow(1, "S1", "POY1", spec380, "X438T", 1.39)}, snap)[1]
-		if got.Action != ActionUpdateShade || !got.HasSub(SubSetShade) || got.Decision != DecisionReview || !got.HasReason(ReasonHeadShadeDiffers) {
+		if got.Action != ActionUpdateShade || !got.HasSub(SubSetShade) || got.Decision != DecisionApply ||
+			got.HasReason(ReasonHeadShadeDiffers) || !got.HasSub(SubSetHeadShade) || !got.HasSub(SubForceHeadShade) {
 			t.Fatalf("%+v", got)
 		}
 	})
@@ -606,11 +607,13 @@ func TestClassifyRows_EmptyHeadShadeMultiRoot(t *testing.T) {
 			frow(2, "S1", poy2, "POY 150/48/RD", sh2, 1.39),
 		}, snap)
 	}
-	t.Run("different shades → both REVIEW", func(t *testing.T) {
-		for ln, p := range run("X438T", "POY2") {
-			if p.HasSub(SubSetHeadShade) || p.Decision != DecisionReview || !p.HasReason(ReasonHeadShadeDiffers) {
-				t.Fatalf("ln %d: %+v", ln, p)
-			}
+	t.Run("different shades → lowest ln sets the head, other KEEP", func(t *testing.T) {
+		got := run("X438T", "POY2")
+		if p := got[1]; p.Decision != DecisionApply || !p.HasSub(SubSetHeadShade) || p.HasReason(ReasonHeadShadeDiffers) {
+			t.Fatalf("ln 1: %+v", p)
+		}
+		if p := got[2]; p.Decision != DecisionApply || p.HasSub(SubSetHeadShade) || !p.HasSub(SubKeepHeadShade) {
+			t.Fatalf("ln 2: %+v", p)
 		}
 	})
 	t.Run("same loose shade → APPLY with SET_HEAD_SHADE", func(t *testing.T) {
@@ -668,5 +671,65 @@ func TestAllocate_FGRankFirst(t *testing.T) {
 		if a.OldSpin != nil && (a.OldSpin.ID == cloneA.ID || a.OldSpin.ID == cloneB.ID) {
 			t.Errorf("clone must not get a head action: %s %v", a.Kind, a.Reasons)
 		}
+	}
+}
+
+// Residual 2026-11-20: legacy heads carry several parentless spins, so one head can
+// have several Excel shades on "root" rows. (a) head shade is one of them → KEEP_HEAD_SHADE
+// (spin only); (a2) head shade in none → lowest-ln row's shade wins (FORCE), others KEEP.
+func TestClassifyRows_MultiShadeHead(t *testing.T) {
+	pys := []POYSnap{poy(1, "POY1", "Y145T"), poy(2, "POY2", "X438T"), poy(3, "POY3", "Z111T")}
+	run := func(headShade string) map[int]*RowPlan {
+		h := head(1, "S1", headShade, true)
+		h.ShadeName = "N " + headShade
+		s1 := spin(1, h, 380, 144, "TBL", headShade, 1.39, named)
+		s2 := spin(2, h, 150, 48, "RD", headShade, 1.39, named)
+		snap := &Snapshot{Heads: []HeadSnap{h}, Spins: []SpinSnap{s1, s2}, POYs: pys}
+		return classify(t, []FileRow{
+			frow(1, "S1", "POY1", spec380, "Y145T", 1.39),
+			frow(2, "S1", "POY2", "POY 150/48/RD", "X438T", 1.39),
+		}, snap)
+	}
+	t.Run("(a) head shade is an Excel shade → KEEP on the other row", func(t *testing.T) {
+		got := run("Y145T")
+		if p := got[2]; p.Decision != DecisionApply || !p.HasSub(SubKeepHeadShade) || p.HasSub(SubSetHeadShade) || !p.HasSub(SubSetShade) {
+			t.Fatalf("ln 2: %+v", p)
+		}
+		if p := got[1]; p.Decision != DecisionApply || p.HasSub(SubKeepHeadShade) || p.HasSub(SubSetHeadShade) {
+			t.Fatalf("ln 1: %+v", p)
+		}
+	})
+	t.Run("(a2) head shade in none → lowest ln FORCE, other KEEP", func(t *testing.T) {
+		got := run("Z111T")
+		if p := got[1]; p.Decision != DecisionApply || !p.HasSub(SubSetHeadShade) || !p.HasSub(SubForceHeadShade) || p.HasSub(SubKeepHeadShade) {
+			t.Fatalf("ln 1: %+v", p)
+		}
+		if p := got[2]; p.Decision != DecisionApply || !p.HasSub(SubKeepHeadShade) || p.HasSub(SubSetHeadShade) {
+			t.Fatalf("ln 2: %+v", p)
+		}
+	})
+}
+
+// A source spin re-shaded in phase A must not hand its new shade to a phase-C clone
+// planned without SET_SHADE (residual partial_clone shade_mismatch).
+func TestClassifyRows_DuplicateOfReshadedSource(t *testing.T) {
+	h := head(1, "S1", "Y145T", true)
+	h.ShadeName = "N Y145T"
+	r1 := spin(1, h, 380, 144, "TBL", "Y145T", 1.39, named)
+	r2 := spin(2, h, 150, 48, "RD", "Y145T", 1.39, named)
+	snap := &Snapshot{Heads: []HeadSnap{h}, Spins: []SpinSnap{r1, r2},
+		POYs: []POYSnap{poy(1, "POY1", "Y145T"), poy(2, "POY2", "X438T"), poy(3, "POY3", "Y145T")}}
+	got := classify(t, []FileRow{
+		frow(1, "S1", "POY1", spec380, "Y145T", 1.39),
+		frow(2, "S1", "POY2", "POY 150/48/RD", "X438T", 1.39),
+		frow(3, "S1", "POY3", "POY 150/72/RD", "Y145T", 1.39),
+	}, snap)
+	if p := got[2]; p.Spin == nil || p.Spin.ID != r2.ID || !p.HasSub(SubSetShade) {
+		t.Fatalf("ln 2 must re-shade r2: %+v", p)
+	}
+	if p := got[3]; p.Action != ActionDuplicateSpin || p.SourceSpin == nil {
+		t.Fatalf("ln 3 must duplicate: %+v", p)
+	} else if p.SourceSpin.ID == r2.ID && !p.HasSub(SubSetShade) {
+		t.Fatalf("ln 3 duplicates re-shaded r2 without SET_SHADE: %+v", p)
 	}
 }

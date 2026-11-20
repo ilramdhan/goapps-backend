@@ -216,7 +216,8 @@ func mbasShadeDiffers(code, name string, in mbactivesync.SyncSpinInput) bool {
 }
 
 func mbasHeadShadeNeeded(in mbactivesync.SyncSpinInput, img *mbasImage) bool {
-	if !img.Spin.isRoot || (!in.Has(mbactivesync.SubSetHeadShade) && !in.Has(mbactivesync.SubSetShade)) ||
+	if !img.Spin.isRoot || in.Has(mbactivesync.SubKeepHeadShade) ||
+		(!in.Has(mbactivesync.SubSetHeadShade) && !in.Has(mbactivesync.SubSetShade)) ||
 		mbactivesync.NormShadeLoose(in.TargetShadeCode) == "" {
 		return false
 	}
@@ -294,14 +295,21 @@ func mbasPrecheck(in mbactivesync.SyncSpinInput, before *mbasImage, found bool, 
 	return needs, *res, false
 }
 
+// mbasRootHeadShadeBlocked is the Q12 re-check: a ROOT head shade that differs beyond
+// format must not be touched, unless the plan decided it explicitly (KEEP/FORCE_HEAD_SHADE).
+func mbasRootHeadShadeBlocked(in mbactivesync.SyncSpinInput, before *mbasImage) bool {
+	if !before.Spin.isRoot || in.Has(mbactivesync.SubKeepHeadShade) || in.Has(mbactivesync.SubForceHeadShade) ||
+		(!in.Has(mbactivesync.SubSetHeadShade) && !in.Has(mbactivesync.SubSetShade)) {
+		return false
+	}
+	hl := mbactivesync.NormShadeLoose(before.Head.ShadeCode)
+	return hl != "" && hl != mbactivesync.NormShadeLoose(in.TargetShadeCode)
+}
+
 // mbasBlocked returns the skip/fail verdict (reason != "") for the locked state.
 func mbasBlocked(in mbactivesync.SyncSpinInput, before *mbasImage, needs mbasNeeds) (status, reason, msg string) {
-	// Q12 re-check: a ROOT head shade that differs beyond format must not be touched.
-	if before.Spin.isRoot && (in.Has(mbactivesync.SubSetHeadShade) || in.Has(mbactivesync.SubSetShade)) {
-		hl := mbactivesync.NormShadeLoose(before.Head.ShadeCode)
-		if hl != "" && hl != mbactivesync.NormShadeLoose(in.TargetShadeCode) {
-			return mbactivesync.ResultSkipped, mbactivesync.ReasonHeadShadeDiffers, "head shade differs from target beyond format"
-		}
+	if mbasRootHeadShadeBlocked(in, before) {
+		return mbactivesync.ResultSkipped, mbactivesync.ReasonHeadShadeDiffers, "head shade differs from target beyond format"
 	}
 	if !needs.any() {
 		return mbactivesync.ResultSkipped, mbactivesync.ReasonAlreadyInTarget, ""
