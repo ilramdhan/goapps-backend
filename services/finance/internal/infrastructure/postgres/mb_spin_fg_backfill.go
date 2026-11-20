@@ -267,7 +267,7 @@ func writeBackfill(ctx context.Context, tx *sql.Tx, in mbspin.BackfillApplyReque
 			   AND NOT EXISTS (
 			         SELECT 1 FROM mst_mb_spin o
 			          WHERE o.mbs_mbh_id = CAST($1 AS uuid) AND o.mbs_parent_spin_id IS NULL
-			            AND o.deleted_at IS NULL AND o.mbs_is_active AND o.mbs_superseded_by_spin_id IS NULL
+			            AND o.deleted_at IS NULL AND o.mbs_superseded_by_spin_id IS NULL
 			            AND o.mbs_id <> CAST($5 AS uuid))`
 		hres, err := tx.ExecContext(ctx, updHead, spin.headID, in.PoyProductSysID, item, in.Actor, in.SpinID)
 		if err != nil {
@@ -279,7 +279,7 @@ func writeBackfill(ctx context.Context, tx *sql.Tx, in mbspin.BackfillApplyReque
 		}
 		headUpdated = hn == 1
 		if !headUpdated {
-			msg = "head FG not set (head already has FG, or head has multiple live root spins)"
+			msg = "head FG not set (head already has FG, or head has other root spins, active or not)"
 		}
 	}
 	return mbspin.BackfillApplyOutcome{
