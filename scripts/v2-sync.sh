@@ -224,6 +224,7 @@ fi
 step 5 "confirm"
 if [ "$YES" -ne 1 ]; then
   if [ -t 0 ]; then
+    # shellcheck disable=SC2086  # SERVICES is a space-separated word list
     printf '  This REPLACES your local %s (container %s) with snapshot %s. Continue? [y/N] ' "$(printf "%s_db " $SERVICES)" "$CONTAINER" "$SRC_RUN"
     read -r ans
     case "$ans" in y|Y|yes|YES) ;; *) die "aborted by user" ;; esac
