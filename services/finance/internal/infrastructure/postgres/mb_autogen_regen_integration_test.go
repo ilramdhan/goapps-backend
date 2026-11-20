@@ -307,6 +307,25 @@ func (s *MBAutoGenRegenSuite) TestRegenerate_ShadeAlwaysOverwritesPriorValue() {
 	require.Equal(s.T(), "NEW", cc.String)
 }
 
+// Root spin with a non-RECIPE FG POY of another shade (legacy multi-root head, mb-active-sync
+// KEEP_HEAD_SHADE) must keep its shade on regenerate: never leave spin shade != FG POY shade.
+func (s *MBAutoGenRegenSuite) TestRegenerate_KeepsRootSpinShadeOfOwnFG() {
+	spinID := s.seedRootSpin(false)
+	var poyID int64
+	require.NoError(s.T(), s.db.QueryRowContext(s.ctx, `
+		INSERT INTO cost_product_master (cpm_product_code, cpm_product_type_id, cpm_product_name, cpm_shade_code, cpm_is_active, cpm_created_by, cpm_updated_by)
+		SELECT CAST($1 AS text), cpt_type_id, CAST($1 AS text), 'OWN', TRUE, 'itest2', 'itest2' FROM cost_product_type WHERE cpt_type_code = 'POY'
+		RETURNING cpm_product_sys_id`, mbRegenFixturePrefix+"OWNPOY").Scan(&poyID))
+	_, err := s.db.ExecContext(s.ctx, `UPDATE mst_mb_spin SET mbs_shade_code = 'OWN', mbs_cc = 'OWN',
+		mbs_fg_product_id = $2, mbs_fg_link_source = 'BACKFILL' WHERE mbs_id = $1`, spinID, poyID)
+	require.NoError(s.T(), err)
+
+	s.runRegenWithEntity(2, s.regenHeadEntity(func(p *mbhead.NewParams) { p.ShadeCode = "HEAD" }))
+
+	code, _, _, _ := s.rootSpinShade(spinID)
+	require.Equal(s.T(), "OWN", code.String)
+}
+
 // (x): when the recipe has no shade at all (empty ShadeCode/ShadeName/CrossSection), the sync must
 // be a no-op — it must never overwrite an existing shade with NULL.
 func (s *MBAutoGenRegenSuite) TestRegenerate_NilHeadShade_DoesNotOverwriteWithNull() {
