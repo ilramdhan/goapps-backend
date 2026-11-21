@@ -70,9 +70,9 @@ type VBLossInheritance struct {
 //     PRODUCT RMs' snapshot values into scope for each of the five params,
 //     clears them from zeroFilled (so they are persisted in ParamSnapshot even
 //     when this product's CAPP lacks the params — that is what lets FG <- DTY
-//     <- POY chain transitively), and returns the set of param codes whose
-//     producing formulas evalFormulaChain must skip.
-func applyInheritedVBLoss(in ComputeInput, scope map[string]any, zeroFilled map[string]bool) map[string]bool {
+//     <- POY chain transitively), and returns the param codes whose producing
+//     formulas evalFormulaChain must skip, mapped to the trace expression.
+func applyInheritedVBLoss(in ComputeInput, scope map[string]any, zeroFilled map[string]bool) map[string]string {
 	vb := in.VBLoss
 	if vb == nil {
 		return nil
@@ -90,11 +90,11 @@ func applyInheritedVBLoss(in ComputeInput, scope map[string]any, zeroFilled map[
 	}
 
 	values := inheritedVBLossValues(in, vb)
-	inherited := make(map[string]bool, len(vbLossParamCodes))
+	inherited := make(map[string]string, len(vbLossParamCodes))
 	for i, code := range vbLossParamCodes {
 		scope[code] = values[i]
 		delete(zeroFilled, code)
-		inherited[code] = true
+		inherited[code] = inheritedVBLossExpression
 	}
 	return inherited
 }
@@ -176,12 +176,13 @@ func warnMissingUpstreamVBLoss(in ComputeInput, upstreamID int64, code string, h
 const inheritedVBLossExpression = "inherited: ratio-weighted average of direct upstream PRODUCT RMs' snapshot value (VB loss is computed at POY only)"
 
 // inheritedFormulaTrace builds the trace entry for a formula whose result
-// param was injected by applyInheritedVBLoss and therefore not evaluated.
-func inheritedFormulaTrace(f Formula, scope map[string]any) FormulaEvalTrace {
+// param was injected (applyInheritedVBLoss / applyMachineDefaults) and
+// therefore not evaluated; expr says why.
+func inheritedFormulaTrace(f Formula, scope map[string]any, expr string) FormulaEvalTrace {
 	v, _ := scopeFloat(scope, f.ResultParamCode)
 	return FormulaEvalTrace{
 		FormulaCode:     f.FormulaCode,
-		Expression:      inheritedVBLossExpression,
+		Expression:      expr,
 		ResultParamCode: f.ResultParamCode,
 		Output:          v,
 	}

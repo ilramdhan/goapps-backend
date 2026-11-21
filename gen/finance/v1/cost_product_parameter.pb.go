@@ -390,9 +390,13 @@ type RequiredParamEntry struct {
 	// Optional read-time display text that replaces/augments the stored value in
 	// the UI (e.g. Superba colour name for MB_SP_DYE on SUPERBA products). Empty =
 	// none. Never stored; the stored value stays editable.
-	DisplayValue  string `protobuf:"bytes,32,opt,name=display_value,json=displayValue,proto3" json:"display_value,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	DisplayValue string `protobuf:"bytes,32,opt,name=display_value,json=displayValue,proto3" json:"display_value,omitempty"`
+	// Machine-specific initial value for a CALCULATED param (mst_machine_param_default), as a
+	// decimal string. Non-empty = the product's machine (MC_NAME) overrides the formula: the
+	// stored product value is used (editable), falling back to this default. Empty = normal.
+	MachineDefaultValue string `protobuf:"bytes,33,opt,name=machine_default_value,json=machineDefaultValue,proto3" json:"machine_default_value,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RequiredParamEntry) Reset() {
@@ -589,6 +593,13 @@ func (x *RequiredParamEntry) GetFilledBy() string {
 func (x *RequiredParamEntry) GetDisplayValue() string {
 	if x != nil {
 		return x.DisplayValue
+	}
+	return ""
+}
+
+func (x *RequiredParamEntry) GetMachineDefaultValue() string {
+	if x != nil {
+		return x.MachineDefaultValue
 	}
 	return ""
 }
@@ -2613,7 +2624,7 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"\fhas_filament\x18\x06 \x01(\bR\vhasFilament\x12\x19\n" +
 	"\bldr_prsn\x18\a \x01(\tR\aldrPrsn\x12\x1e\n" +
 	"\vrun_ldr_pct\x18\b \x01(\tR\trunLdrPct\x12\x16\n" +
-	"\x06status\x18\t \x01(\tR\x06status\"\xcd\a\n" +
+	"\x06status\x18\t \x01(\tR\x06status\"\x81\b\n" +
 	"\x12RequiredParamEntry\x12\x19\n" +
 	"\bparam_id\x18\x01 \x01(\tR\aparamId\x12\x1d\n" +
 	"\n" +
@@ -2643,7 +2654,8 @@ const file_finance_v1_cost_product_parameter_proto_rawDesc = "" +
 	"value_flag\x18\x17 \x01(\bR\tvalueFlag\x12\x1b\n" +
 	"\tfilled_at\x18\x1e \x01(\tR\bfilledAt\x12\x1b\n" +
 	"\tfilled_by\x18\x1f \x01(\tR\bfilledBy\x12#\n" +
-	"\rdisplay_value\x18  \x01(\tR\fdisplayValue\"v\n" +
+	"\rdisplay_value\x18  \x01(\tR\fdisplayValue\x122\n" +
+	"\x15machine_default_value\x18! \x01(\tR\x13machineDefaultValue\"v\n" +
 	" ListProductRequiredParamsRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\fproductSysId\x12#\n" +
 	"\rrequired_only\x18\x02 \x01(\bR\frequiredOnly\"\x84\x01\n" +

@@ -151,6 +151,8 @@ type loadedBundle struct {
 	oil map[int64]*OilInput
 	// superba is the per-product Superba Cost SP resolution (SUPERBA-class only).
 	superba map[int64]*SuperbaCost
+	// machineDefaults is paramCode -> machine default per product (000614).
+	machineDefaults map[int64]map[string]float64
 	// txWeight is the per-product TX Weight rules (TxWeightLoader), keyed by
 	// grade. Products whose type has no rule are absent (fallback formula).
 	txWeight map[int64]map[string]TxWeightRule
@@ -273,6 +275,11 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		return nil, err
 	}
 
+	machineDefaults, err := s.loader.LoadMachineParamDefaults(ctx, in.Products)
+	if err != nil {
+		return nil, fmt.Errorf("load machine param defaults: %w", err)
+	}
+
 	b := &loadedBundle{
 		txWeight:          txWeight,
 		routes:            routes,
@@ -288,6 +295,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		rmLandedOrder:     s.loadRMLandedOrder(ctx),
 		oil:               oil,
 		superba:           superba,
+		machineDefaults:   machineDefaults,
 		typeCodes:         typeCodes,
 		upstreamSnapshots: upstreamSnapshots,
 	}
@@ -462,6 +470,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		RMLandedOrder:    loaded.rmLandedOrder,
 		Oil:              loaded.oil[pid],
 		Superba:          loaded.superba[pid],
+		MachineDefaults:  loaded.machineDefaults[pid],
 		TxWeight:         loaded.txWeight[pid],
 		VBLoss: &VBLossInheritance{
 			ProductTypeCode:        loaded.typeCodes[pid],

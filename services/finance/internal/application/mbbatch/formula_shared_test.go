@@ -341,3 +341,8 @@ func (f *noSharingLoader) LoadUpstreamDeniers(context.Context, []int64) (map[int
 func (f *noSharingLoader) LoadRMDenierOverrides(context.Context, []int64) (map[int64]costroute.DenierOverrides, error) {
 	return map[int64]costroute.DenierOverrides{}, nil
 }
+
+// LoadMachineParamDefaults reports no machine param defaults.
+func (f *noSharingLoader) LoadMachineParamDefaults(context.Context, []int64) (map[int64]map[string]float64, error) {
+	return map[int64]map[string]float64{}, nil
+}
