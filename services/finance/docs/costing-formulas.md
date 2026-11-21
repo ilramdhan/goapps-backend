@@ -288,3 +288,12 @@ The user only enters the product **shade**; the backend fills the MB source para
   get rate/dozing/spin id; finally drop the `IS_SUPERBA` branch of `F_YARN_MB_COST` with a guarded
   (prod-text) formula migration, 000568-style. No per-product source is persisted, so no product
   rewrite is required.
+
+## 7. Boughtout MB: cost = MB_RM_COST (migration `000613`, 2026-11)
+
+Source of truth: `mst_mb_head.mbh_is_boughtout` -> frozen CPP `IS_BOUGHTOUT` (written by
+`mbFreezeCostParams` at validate time). For `IS_BOUGHTOUT == 1`, `F_MB_WASTE_VAL`, `F_MB_FIXED_COST`,
+`F_MB_COST_OTHERS` and `F_MB_CONV_COST` return 0, so `MB_RM_COST == MB_FINAL_COST` (total). Own-production
+MBs are unchanged. `000613` also re-synced 58 stale CPP `IS_BOUGHTOUT` values (head flag later switched off).
+`mbh_status = 'Boughtout'` (Oracle text) is NOT used. Existing `cst_product_cost` rows change only after an
+MB batch re-run for the period.
