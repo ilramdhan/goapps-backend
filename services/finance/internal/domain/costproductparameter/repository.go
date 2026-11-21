@@ -71,6 +71,14 @@ type Repository interface {
 	// formatted as a human-readable string. Returns empty string when no value exists.
 	GetCurrentValueAsText(ctx context.Context, productSysID int64, paramID uuid.UUID) (string, error)
 
+	// ApplyMachineParamDefaults resolves machineText (trimmed, case-insensitive
+	// mst_machine.mc_name, preferred, or mc_code) and, for every active
+	// mst_machine_param_default row of that machine, marks the param applicable
+	// to the product and overwrites its numeric CPP value with the default.
+	// Returns the number of params applied (0 when the machine is unknown or has
+	// no defaults).
+	ApplyMachineParamDefaults(ctx context.Context, productSysID int64, machineText, actor string) (int, error)
+
 	// AddApplicableWithChildren adds a MASTER_LOOKUP or CALCULATED param and all its
 	// children (fill-group or formula inputs) atomically. isRequired applies only to the
 	// trigger param; children are always inserted as not-required.

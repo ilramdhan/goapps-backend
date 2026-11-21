@@ -275,9 +275,14 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		return nil, err
 	}
 
-	machineDefaults, err := s.loader.LoadMachineParamDefaults(ctx, in.Products)
-	if err != nil {
-		return nil, fmt.Errorf("load machine param defaults: %w", err)
+	machineDefaults, mdErr := s.loader.LoadMachineParamDefaults(ctx, in.Products)
+	if mdErr != nil {
+		// Non-fatal (like LoadSellingSnapshots): a missing/unreadable
+		// mst_machine_param_default (e.g. binary rolled out before 000614) must
+		// not abort the chunk; every product then computes its formulas as before.
+		log.Warn().Err(mdErr).Str("period", in.Period).
+			Msg("machine param defaults unavailable; computing MB_COST_MKT/STEAM_COST_CNG by formula")
+		machineDefaults = nil
 	}
 
 	b := &loadedBundle{

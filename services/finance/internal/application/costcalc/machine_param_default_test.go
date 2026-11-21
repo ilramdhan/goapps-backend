@@ -87,3 +87,15 @@ func TestComputeProduct_MachineDefault_NilKeepsFormula(t *testing.T) {
 	assert.InDelta(t, 1.5, out.CostPerUnit, 1e-12)
 	assert.Equal(t, "MB_SP_DOZING * MB_RATE_MKT / 100.0", mbCostTrace(t, out).Expression)
 }
+
+func TestComputeProduct_MachineDefault_NotApplicableParamIgnored(t *testing.T) {
+	// STEAM_COST_CNG has a machine default but no formula for this product (not
+	// applicable): it must not enter the snapshot, and MB_COST_MKT computes normally.
+	out := runMachineDefault(t,
+		map[string]float64{"MB_SP_DOZING": 10, "MB_RATE_MKT": 5},
+		map[string]float64{"STEAM_COST_CNG": 0.019})
+	_, has := out.ParamSnapshot["STEAM_COST_CNG"]
+	assert.False(t, has)
+	assert.InDelta(t, 0.5, out.ParamSnapshot["MB_COST_MKT"], 1e-12)
+	assert.Equal(t, "MB_SP_DOZING * MB_RATE_MKT / 100.0", mbCostTrace(t, out).Expression)
+}

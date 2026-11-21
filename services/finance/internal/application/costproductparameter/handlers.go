@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	cpp "github.com/mutugading/goapps-backend/services/finance/internal/domain/costproductparameter"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
@@ -166,10 +167,43 @@ func (h *Handlers) Upsert(ctx context.Context, cmd UpsertCommand) (*cpp.Value, e
 	case meta.LookupMasterCode == mbSpinLookupMasterCode:
 		v.ValueMBSpinID = h.resolveMBSpinID(ctx, cmd.ValueText)
 	}
+	prevMachine := h.previousMachine(ctx, meta.ParamCode, cmd)
 	if err := h.repo.Upsert(ctx, v); err != nil {
 		return nil, fmt.Errorf("upsert cpp: %w", err)
 	}
+	h.applyMachineDefaults(ctx, meta.ParamCode, prevMachine, cmd)
 	return v, nil
+}
+
+// previousMachine returns the stored MC_NAME before the write ("" for other
+// params or when unreadable; an unreadable value is treated as "changed").
+func (h *Handlers) previousMachine(ctx context.Context, paramCode string, cmd UpsertCommand) string {
+	if paramCode != cpp.MachineNameParamCode || cmd.ValueText == nil {
+		return ""
+	}
+	prev, err := h.repo.GetCurrentValueAsText(ctx, cmd.ProductSysID, cmd.ParamID)
+	if err != nil {
+		log.Warn().Err(err).Int64("product", cmd.ProductSysID).Msg("read previous MC_NAME failed")
+		return ""
+	}
+	return prev
+}
+
+// applyMachineDefaults re-applies the new machine's initial param values
+// (mst_machine_param_default) after an MC_NAME change. Best-effort: the MC_NAME
+// save is already committed, so failures are logged, never returned.
+func (h *Handlers) applyMachineDefaults(ctx context.Context, paramCode, prev string, cmd UpsertCommand) {
+	if paramCode != cpp.MachineNameParamCode || cmd.ValueText == nil {
+		return
+	}
+	next := strings.TrimSpace(*cmd.ValueText)
+	if next == "" || strings.EqualFold(next, strings.TrimSpace(prev)) {
+		return
+	}
+	if _, err := h.repo.ApplyMachineParamDefaults(ctx, cmd.ProductSysID, next, cmd.FilledBy); err != nil {
+		log.Warn().Err(err).Int64("product", cmd.ProductSysID).Str("machine", next).
+			Msg("apply machine param defaults failed (MC_NAME saved)")
+	}
 }
 
 // validatedMeta loads the param meta and applies the per-param value rules

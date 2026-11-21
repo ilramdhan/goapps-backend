@@ -1106,6 +1106,50 @@ WHERE cpp_product_sys_id = $1 AND cpp_param_id = $2`
 	}
 }
 
+// ApplyMachineParamDefaults applies the machine's per-param default values to a
+// product (CAPP attach + CPP numeric overwrite) in one transaction.
+func (r *CostProductParameterRepository) ApplyMachineParamDefaults(ctx context.Context, productSysID int64, machineText, actor string) (int, error) {
+	const q = `
+WITH m AS (
+    SELECT mc_id FROM mst_machine
+    WHERE deleted_at IS NULL
+      AND (LOWER(BTRIM(mc_name)) = LOWER(BTRIM($2)) OR LOWER(BTRIM(mc_code)) = LOWER(BTRIM($2)))
+      AND EXISTS (SELECT 1 FROM mst_machine_param_default d
+                  WHERE d.mmpd_machine_id = mc_id AND d.deleted_at IS NULL)
+    ORDER BY (LOWER(BTRIM(mc_name)) = LOWER(BTRIM($2))) DESC, mc_code
+    LIMIT 1
+), d AS (
+    SELECT d.mmpd_param_id AS param_id, d.mmpd_default_value AS val
+    FROM mst_machine_param_default d JOIN m ON m.mc_id = d.mmpd_machine_id
+    WHERE d.deleted_at IS NULL
+), capp AS (
+    INSERT INTO cost_product_applicable_param
+        (capp_product_sys_id, capp_param_id, capp_is_required, capp_created_by)
+    SELECT $1, param_id, FALSE, $3 FROM d
+    ON CONFLICT (capp_product_sys_id, capp_param_id) DO NOTHING
+)
+INSERT INTO cost_product_parameter (
+    cpp_product_sys_id, cpp_param_id, cpp_value_numeric,
+    cpp_filled_at, cpp_filled_by, cpp_created_at, cpp_created_by
+)
+SELECT $1, param_id, val, NOW(), $3, NOW(), $3 FROM d
+ON CONFLICT (cpp_product_sys_id, cpp_param_id) DO UPDATE SET
+    cpp_value_numeric = EXCLUDED.cpp_value_numeric,
+    cpp_filled_at     = EXCLUDED.cpp_filled_at,
+    cpp_filled_by     = EXCLUDED.cpp_filled_by,
+    cpp_updated_at    = EXCLUDED.cpp_filled_at,
+    cpp_updated_by    = EXCLUDED.cpp_filled_by`
+	res, err := r.db.ExecContext(ctx, q, productSysID, machineText, actor)
+	if err != nil {
+		return 0, fmt.Errorf("apply machine param defaults: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("apply machine param defaults rows: %w", err)
+	}
+	return int(n), nil
+}
+
 // BulkUpsertValues upserts CPP value rows in a single transaction with batches of 200.
 func (r *CostProductParameterRepository) BulkUpsertValues(ctx context.Context, items []cpp.CPPUpsertInput, actor string) (inserted, updated int, err error) {
 	const batchSize = 200

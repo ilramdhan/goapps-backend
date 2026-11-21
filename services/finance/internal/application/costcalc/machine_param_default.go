@@ -15,7 +15,8 @@ import (
 // product's MC_NAME text value. The machine matches on trimmed,
 // case-insensitive mc_name OR mc_code (same rule as the 000614 backfill).
 const loadMachineParamDefaultsQuery = `
-	SELECT DISTINCT cpp.cpp_product_sys_id, p.param_code, d.mmpd_default_value::float8
+	SELECT DISTINCT ON (cpp.cpp_product_sys_id, p.param_code)
+	       cpp.cpp_product_sys_id, p.param_code, d.mmpd_default_value::float8
 	FROM cost_product_parameter cpp
 	JOIN mst_parameter mc
 	     ON mc.id = cpp.cpp_param_id
@@ -32,7 +33,9 @@ const loadMachineParamDefaultsQuery = `
 	     ON p.id = d.mmpd_param_id
 	    AND p.deleted_at IS NULL
 	WHERE cpp.cpp_product_sys_id = ANY($1)
-	  AND NULLIF(BTRIM(cpp.cpp_value_text), '') IS NOT NULL`
+	  AND NULLIF(BTRIM(cpp.cpp_value_text), '') IS NOT NULL
+	ORDER BY cpp.cpp_product_sys_id, p.param_code,
+	         (LOWER(BTRIM(m.mc_name)) = LOWER(BTRIM(cpp.cpp_value_text))) DESC, m.mc_code`
 
 // MachineParamDefaultLoader is the narrow read used by the product parameter form
 // to flag params whose formula is skipped for the product's machine.
@@ -77,12 +80,9 @@ func (l *productLoader) LoadMachineParamDefaults(ctx context.Context, productSys
 			inner = map[string]float64{}
 			out[pid] = inner
 		}
-		// ponytail: a product whose MC_NAME matches two machines (one by name,
-		// another by code) with different defaults keeps the larger value
-		// deterministically; add a tie-break rule if that ever happens in data.
-		if prev, seen := inner[code]; !seen || val > prev {
-			inner[code] = val
-		}
+		// One row per (product, param): DISTINCT ON prefers a mc_name match over a
+		// mc_code match, the same tie-break as the 000614 backfill.
+		inner[code] = val
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate machine param default rows: %w", err)
@@ -99,14 +99,25 @@ func applyMachineDefaults(in ComputeInput, scope map[string]any, zeroFilled map[
 	if len(in.MachineDefaults) == 0 {
 		return inherited
 	}
-	if inherited == nil {
-		inherited = make(map[string]string, len(in.MachineDefaults))
+	// Only params this product actually produces (its formula list is filtered
+	// by applicability), so a non-applicable param never enters the snapshot.
+	produced := make(map[string]bool, len(in.Formulas))
+	for _, f := range in.Formulas {
+		produced[f.ResultParamCode] = true
 	}
 	codes := make([]string, 0, len(in.MachineDefaults))
 	for code := range in.MachineDefaults {
-		codes = append(codes, code)
+		if produced[code] {
+			codes = append(codes, code)
+		}
+	}
+	if len(codes) == 0 {
+		return inherited
 	}
 	sort.Strings(codes)
+	if inherited == nil {
+		inherited = make(map[string]string, len(codes))
+	}
 	for _, code := range codes {
 		def := in.MachineDefaults[code]
 		value, source := def, fmt.Sprintf("machine initial %g", def)
