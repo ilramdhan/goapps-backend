@@ -75,11 +75,16 @@ func TestHRWorkforceMigrations(t *testing.T) {
 	})
 
 	t.Run("596/597 idempotent re-run", func(t *testing.T) {
+		// Re-run at 597, not at head: later migrations (e.g. 000598 merging nav_tab into
+		// layout_config) legitimately change rows that 596 sets wholesale, so a head-level
+		// re-run of 596 would compare against post-598 state and "fail" for no real reason.
+		require.NoError(t, m.DownTo(ctx, hrOTOverMonthVer))
 		before := hrDashboardSnapshot(ctx, t, db)
 		for _, f := range []string{"000596_bi_hr_ot_trend.up.sql", "000597_bi_hr_ot_over_month.up.sql"} {
 			require.NoError(t, pgcontainer.ExecFile(ctx, db, f))
 		}
 		assert.Equal(t, before, hrDashboardSnapshot(ctx, t, db))
+		require.NoError(t, m.Up(ctx))
 	})
 
 	t.Run("596/597 down/up", func(t *testing.T) {
