@@ -297,3 +297,30 @@ Source of truth: `mst_mb_head.mbh_is_boughtout` -> frozen CPP `IS_BOUGHTOUT` (wr
 MBs are unchanged. `000613` also re-synced 58 stale CPP `IS_BOUGHTOUT` values (head flag later switched off).
 `mbh_status = 'Boughtout'` (Oracle text) is NOT used. Existing `cst_product_cost` rows change only after an
 MB batch re-run for the period.
+||||||| parent of fb022a5b (feat(finance): machine-specific initial value for MB_COST_MKT and STEAM_COST_CNG)
+
+## 8. Machine-fixed CALCULATED params (`mst_machine_param_default`, 000614)
+
+Some machines use a fixed number instead of a CALCULATED param's formula (Finance feedback, 2026-11):
+`MB_COST_MKT`: SP Dyeing 0.08, Hanking (Cone to Hank) 0.02; `STEAM_COST_CNG`: Washing 0.019.
+All other machines keep the formula.
+
+- **Config**: `mst_machine_param_default` (machine, param, `mmpd_default_value`), one live row per
+  (machine, param). Product machine = the `MC_NAME` text CPP, matched on trimmed, case-insensitive
+  `mc_name` OR `mc_code`.
+- **Engine**: `LoadMachineParamDefaults` (per chunk) -> `ComputeInput.MachineDefaults` ->
+  `applyMachineDefaults` (`machine_param_default.go`, right after `applyInheritedVBLoss`). Value = the
+  product's stored `cpp_value_numeric` if any (editable per product), else the machine default. The
+  formula is skipped; its trace expression reads `machine default (product value | machine initial X)`.
+  `MachineDefaults` nil (mbbatch) = old behavior.
+- **Backfill** (000614 PART 3): attaches the param (CAPP) and stores the default only where the product
+  has no value; edited values are kept. Marker `machine_param_default_000614`.
+- **Machine change**: saving `MC_NAME` (`Handlers.Upsert`, also via `UpsertBatch`) to a different
+  configured machine attaches the param and overwrites its value with the machine default, so a stale
+  legacy value (e.g. an imported STEAM 0) never wins. Excel/bulk param imports write directly and skip
+  this hook. Only params the product has a formula for (applicable) are fixed.
+- **Safety**: if the table cannot be read (binary deployed before 000614) the load is non-fatal and
+  every product computes by formula. The Param tab shows `machine_default_value` and a
+  "Reset to default" action. Down keeps values a user edited after the backfill.
+- **Add a machine/param**: insert a row into `mst_machine_param_default` (guarded migration), plus the
+  same CAPP/CPP backfill if the products should show the value in the Param tab. No code change.

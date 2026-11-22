@@ -34,6 +34,13 @@ type fakeRepo struct {
 	paramCodeByID string
 	// currentValueText is returned by GetCurrentValueAsText.
 	currentValueText string
+	// machineDefaultCalls records ApplyMachineParamDefaults machine args.
+	machineDefaultCalls []string
+}
+
+func (f *fakeRepo) ApplyMachineParamDefaults(_ context.Context, _ int64, machine, _ string) (int, error) {
+	f.machineDefaultCalls = append(f.machineDefaultCalls, machine)
+	return 1, nil
 }
 
 type removeKey struct {
@@ -530,4 +537,35 @@ func TestUpsert_MBSpinResolution(t *testing.T) {
 			t.Fatalf("save must still succeed unchanged, got %d upserts", len(repo.upsertedValues))
 		}
 	})
+}
+
+func TestUpsert_MachineChange_AppliesDefaults(t *testing.T) {
+	str := func(s string) *string { return &s }
+	tests := []struct {
+		name, code, prev, next string
+		wantCalls              []string
+	}{
+		{"changed", "MC_NAME", "SP Dyeing", "Washing", []string{"Washing"}},
+		{"changed from empty", "MC_NAME", "", " Washing ", []string{"Washing"}},
+		{"unchanged case-insensitive", "MC_NAME", "washing", "Washing ", nil},
+		{"other param", "OTHER", "A", "B", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &fakeRepo{productExists: true, paramCodeByID: tt.code, currentValueText: tt.prev,
+				getMeta: cpp.ParamMeta{ParamCode: tt.code, DataType: "TEXT"}}
+			_, err := app.New(repo, nil).Upsert(context.Background(), app.UpsertCommand{
+				ProductSysID: 1, ParamID: uuid.New(), ValueText: str(tt.next), FilledBy: "u"})
+			if err != nil {
+				t.Fatalf("upsert: %v", err)
+			}
+			if len(repo.upsertedValues) != 1 {
+				t.Fatalf("MC_NAME save lost")
+			}
+			if len(repo.machineDefaultCalls) != len(tt.wantCalls) ||
+				(len(tt.wantCalls) > 0 && repo.machineDefaultCalls[0] != tt.wantCalls[0]) {
+				t.Fatalf("calls = %v, want %v", repo.machineDefaultCalls, tt.wantCalls)
+			}
+		})
+	}
 }

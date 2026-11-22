@@ -317,3 +317,8 @@ func (f *spinFakeLoader) LoadUpstreamDeniers(context.Context, []int64) (map[int6
 func (f *spinFakeLoader) LoadRMDenierOverrides(context.Context, []int64) (map[int64]costroute.DenierOverrides, error) {
 	return map[int64]costroute.DenierOverrides{}, nil
 }
+
+// LoadMachineParamDefaults reports no machine param defaults.
+func (f *spinFakeLoader) LoadMachineParamDefaults(context.Context, []int64) (map[int64]map[string]float64, error) {
+	return map[int64]map[string]float64{}, nil
+}

@@ -151,6 +151,12 @@ type ComputeInput struct {
 	// own F_YARN_VBn_LOSS formulas, preserving pre-rule behavior for callers
 	// that do not supply it (e.g. mbbatch). See applyInheritedVBLoss.
 	VBLoss *VBLossInheritance
+	// MachineDefaults is paramCode -> machine default for this product's
+	// MC_NAME machine (mst_machine_param_default, 000614), loaded once per
+	// chunk via loader.LoadMachineParamDefaults. Each listed param skips its
+	// formula and takes the product's stored CAPP value, else the default.
+	// Nil leaves behavior unchanged (formulas evaluated, e.g. mbbatch).
+	MachineDefaults map[string]float64
 	// RMRatioMode is the product type's cpt_rm_ratio_mode (000570). "" or
 	// "INPUT" keeps every route RM ratio as entered (legacy behavior, e.g.
 	// mbbatch); "DENIER" derives the ratio of PRODUCT lines and denier GROUP
@@ -287,6 +293,11 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	// concept). inherited names the params whose producing formulas the chain
 	// below must skip; nil means "compute as before".
 	inherited := applyInheritedVBLoss(in, scope, zeroFilled)
+
+	// 1-''. Machine-fixed params (000614): a product whose MC_NAME machine has a
+	// mst_machine_param_default row uses its stored value or the machine
+	// default instead of the param's formula. Nil MachineDefaults: no-op.
+	inherited = applyMachineDefaults(in, scope, zeroFilled, inherited)
 
 	// DENIER-mode products derive their RM line ratios from denier share;
 	// nil for INPUT-mode products, which keeps the legacy aggregation intact.
@@ -612,8 +623,8 @@ func injectMarketingResult(scope map[string]any, sellingSnap map[string]float64)
 // products is not yet wired, so mbCosts is nil for any product without one resolved.
 // CALCULATION formulas are evaluated by the expr-lang evaluator.
 // Formulas whose ResultParamCode is in inherited are NOT evaluated: their value
-// was injected by applyInheritedVBLoss and must survive, so only a trace entry
-// documenting the inheritance is recorded for them.
+// was injected by applyInheritedVBLoss / applyMachineDefaults and must survive,
+// so only a trace entry (expression = inherited[code]) is recorded for them.
 func evalFormulaChain(
 	ctx context.Context,
 	cache *evaluator.Cache,
@@ -625,12 +636,12 @@ func evalFormulaChain(
 	mbCosts map[string]float64,
 	calcType costcalcdom.CalculationType,
 	zeroFilled map[string]bool,
-	inherited map[string]bool,
+	inherited map[string]string,
 ) ([]FormulaEvalTrace, error) {
 	trace := make([]FormulaEvalTrace, 0, len(formulas))
 	for _, f := range formulas {
-		if inherited[f.ResultParamCode] {
-			trace = append(trace, inheritedFormulaTrace(f, scope))
+		if expr, ok := inherited[f.ResultParamCode]; ok {
+			trace = append(trace, inheritedFormulaTrace(f, scope, expr))
 			continue
 		}
 		t, err := evalSingleFormulaStep(ctx, cache, scope, totalRM, landedRM, f, productSysID, mbCosts, calcType)

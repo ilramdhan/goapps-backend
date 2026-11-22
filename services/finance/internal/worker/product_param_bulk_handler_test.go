@@ -406,3 +406,7 @@ func TestProductParamBulkHandler_ChildCompletion_TerminalStatusOnce(t *testing.T
 		jobRepo.AssertNotCalled(t, "GetByID", mock.Anything, mock.Anything)
 	})
 }
+
+func (f *fakeCPPRepo) ApplyMachineParamDefaults(_ context.Context, _ int64, _, _ string) (int, error) {
+	return 0, nil
+}

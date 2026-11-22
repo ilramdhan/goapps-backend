@@ -151,6 +151,8 @@ type loadedBundle struct {
 	oil map[int64]*OilInput
 	// superba is the per-product Superba Cost SP resolution (SUPERBA-class only).
 	superba map[int64]*SuperbaCost
+	// machineDefaults is paramCode -> machine default per product (000614).
+	machineDefaults map[int64]map[string]float64
 	// txWeight is the per-product TX Weight rules (TxWeightLoader), keyed by
 	// grade. Products whose type has no rule are absent (fallback formula).
 	txWeight map[int64]map[string]TxWeightRule
@@ -273,6 +275,16 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		return nil, err
 	}
 
+	machineDefaults, mdErr := s.loader.LoadMachineParamDefaults(ctx, in.Products)
+	if mdErr != nil {
+		// Non-fatal (like LoadSellingSnapshots): a missing/unreadable
+		// mst_machine_param_default (e.g. binary rolled out before 000614) must
+		// not abort the chunk; every product then computes its formulas as before.
+		log.Warn().Err(mdErr).Str("period", in.Period).
+			Msg("machine param defaults unavailable; computing MB_COST_MKT/STEAM_COST_CNG by formula")
+		machineDefaults = nil
+	}
+
 	b := &loadedBundle{
 		txWeight:          txWeight,
 		routes:            routes,
@@ -288,6 +300,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		rmLandedOrder:     s.loadRMLandedOrder(ctx),
 		oil:               oil,
 		superba:           superba,
+		machineDefaults:   machineDefaults,
 		typeCodes:         typeCodes,
 		upstreamSnapshots: upstreamSnapshots,
 	}
@@ -462,6 +475,7 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 		RMLandedOrder:    loaded.rmLandedOrder,
 		Oil:              loaded.oil[pid],
 		Superba:          loaded.superba[pid],
+		MachineDefaults:  loaded.machineDefaults[pid],
 		TxWeight:         loaded.txWeight[pid],
 		VBLoss: &VBLossInheritance{
 			ProductTypeCode:        loaded.typeCodes[pid],

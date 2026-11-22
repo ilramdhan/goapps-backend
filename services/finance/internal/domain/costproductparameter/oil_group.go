@@ -11,6 +11,10 @@ import (
 // allowed for the product's type (oil-cost-rm-group, D3/D4).
 const OilNameParamCode = "OIL_NAME"
 
+// MachineNameParamCode is the mst_parameter code of the product's machine
+// (TEXT); changing it re-applies the machine's mst_machine_param_default rows.
+const MachineNameParamCode = "MC_NAME"
+
 // ErrOilGroupNotAllowed is returned when an OIL_NAME value is not in the set of
 // oil groups allowed for the product's type.
 var ErrOilGroupNotAllowed = errors.New("oil group not allowed for product type")

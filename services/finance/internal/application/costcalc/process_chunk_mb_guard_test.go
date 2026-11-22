@@ -278,3 +278,8 @@ func (f *mbGuardLoader) LoadUpstreamDeniers(context.Context, []int64) (map[int64
 func (f *mbGuardLoader) LoadRMDenierOverrides(context.Context, []int64) (map[int64]costroute.DenierOverrides, error) {
 	return map[int64]costroute.DenierOverrides{}, nil
 }
+
+// LoadMachineParamDefaults reports no machine param defaults.
+func (f *mbGuardLoader) LoadMachineParamDefaults(context.Context, []int64) (map[int64]map[string]float64, error) {
+	return map[int64]map[string]float64{}, nil
+}

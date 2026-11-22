@@ -27,8 +27,16 @@ type CostProductParameterHandler struct {
 	editLogRepo cprapp.ParamEditLogByLevelReader
 	paramRepo   parameter.Repository
 	formulaRepo formula.Repository
-	auditRepo   costauditlog.Repository         // optional; nil = no audit
-	superba     costcalcapp.SuperbaColourLoader // optional; nil = no display override
+	auditRepo   costauditlog.Repository               // optional; nil = no audit
+	superba     costcalcapp.SuperbaColourLoader       // optional; nil = no display override
+	machineDefs costcalcapp.MachineParamDefaultLoader // optional; nil = no machine_default_value
+}
+
+// WithMachineParamDefaults attaches the optional loader that fills
+// RequiredParamEntry.machine_default_value (formula skipped for the product's machine).
+func (h *CostProductParameterHandler) WithMachineParamDefaults(l costcalcapp.MachineParamDefaultLoader) *CostProductParameterHandler {
+	h.machineDefs = l
+	return h
 }
 
 // WithSuperbaColours attaches the optional Superba colour resolver used to fill
@@ -125,6 +133,7 @@ func (h *CostProductParameterHandler) ListProductRequiredParams(ctx context.Cont
 		out = append(out, requiredEntryToProto(e))
 	}
 	h.applySuperbaDisplay(ctx, req.ProductSysId, out)
+	h.applyMachineDefaults(ctx, req.ProductSysId, out)
 	return &financev1.ListProductRequiredParamsResponse{
 		Base: cppSuccessResponse("Product required params loaded"),
 		Data: out,
@@ -160,6 +169,28 @@ func (h *CostProductParameterHandler) applySuperbaDisplay(ctx context.Context, p
 	for _, e := range entries {
 		if e.ParamCode == costcalcapp.ParamCodeMBSpDye {
 			e.DisplayValue = name
+		}
+	}
+}
+
+// applyMachineDefaults sets machine_default_value on params whose formula the
+// engine skips for this product's machine (mst_machine_param_default). Display
+// only: a load error leaves the form exactly as before.
+func (h *CostProductParameterHandler) applyMachineDefaults(ctx context.Context, productSysID int64, entries []*financev1.RequiredParamEntry) {
+	if h.machineDefs == nil {
+		return
+	}
+	defs, err := h.machineDefs.LoadMachineParamDefaults(ctx, []int64{productSysID})
+	if err != nil {
+		return
+	}
+	byCode := defs[productSysID]
+	if len(byCode) == 0 {
+		return
+	}
+	for _, e := range entries {
+		if v, ok := byCode[e.ParamCode]; ok {
+			e.MachineDefaultValue = strconv.FormatFloat(v, 'f', -1, 64)
 		}
 	}
 }
