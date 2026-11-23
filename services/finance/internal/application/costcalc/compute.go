@@ -901,9 +901,16 @@ func resolveRMUnitCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
 		// (migration 000518; in.RMRateOrder, loaded once per chunk -- see
 		// loader.LoadRMRateOrder). This cascade is independent of ACTUAL/
 		// FORECAST/SELLING calc type, unlike cost_val which is calc-type
-		// selected. All three zero (or missing) is a valid "no rate yet"
-		// state, not an error — only a missing row (!ok above) is.
+		// selected. All-zero CR/SR/PR with a non-INIT flag stays 0 (locks
+		// 000518 behavior). Only when the used flag is INIT does it fall back
+		// to rates.CostVal: placeholder groups (dummy items, no Oracle sync
+		// data) are priced manually via INIT + init_val, which lands in
+		// cost_val. Zero is a valid "no rate yet" state, not an error -- only
+		// a missing row (!ok above) is.
 		cost, _ := rmcost.FirstNonZeroWithLabel(rmRateCandidates(in.RMRateOrder, rates))
+		if cost == 0 && rmcost.Stage(rates.CostFlag).IsInit() {
+			cost = rates.CostVal
+		}
 		return cost, nil
 	default:
 		return 0, fmt.Errorf("unknown RM type %q", rm.RmType)
