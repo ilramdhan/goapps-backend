@@ -1257,18 +1257,15 @@ func topoSortFormulas(fs []Formula) ([]Formula, error) { //nolint:gocognit,gocyc
 // resolveRMLandedCost).
 type RMCostRates struct {
 	CostVal float64
-	// CostFlag is the group's used flag for the calc type (valuation/marketing/
-	// simulation); empty means unknown, so no cost_val fallback.
-	CostFlag string
-	CrRate   float64
-	SrRate   float64
-	PrRate   float64
-	ClRate   float64
-	SlRate   float64
-	FlRate   float64
-	SpRate   float64
-	PpRate   float64
-	FpRate   float64
+	CrRate  float64
+	SrRate  float64
+	PrRate  float64
+	ClRate  float64
+	SlRate  float64
+	FlRate  float64
+	SpRate  float64
+	PpRate  float64
+	FpRate  float64
 }
 
 // LoadRMCosts returns the landed cost per RM identity. The returned map key is
@@ -1292,11 +1289,6 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 		           WHEN 'SELLING'  THEN COALESCE(cost_sim,  0)
 		           ELSE COALESCE(cost_val, 0)
 		       END,
-		       CASE $3
-		           WHEN 'FORECAST' THEN COALESCE(flag_marketing_used, '')
-		           WHEN 'SELLING'  THEN COALESCE(flag_simulation_used, '')
-		           ELSE COALESCE(flag_valuation_used, '')
-		       END,
 		       COALESCE(cr_rate, 0), COALESCE(sr_rate, 0), COALESCE(pr_rate, 0),
 		       COALESCE(cl_rate, 0), COALESCE(sl_rate, 0), COALESCE(fl_rate, 0),
 		       COALESCE(sp_rate, 0), COALESCE(pp_rate, 0), COALESCE(fp_rate, 0)
@@ -1318,7 +1310,7 @@ func (l *productLoader) LoadRMCosts(ctx context.Context, itemCodes []string, per
 			itemCode string
 			rates    RMCostRates
 		)
-		if err := rows.Scan(&rmCode, &itemCode, &rates.CostVal, &rates.CostFlag,
+		if err := rows.Scan(&rmCode, &itemCode, &rates.CostVal,
 			&rates.CrRate, &rates.SrRate, &rates.PrRate,
 			&rates.ClRate, &rates.SlRate, &rates.FlRate,
 			&rates.SpRate, &rates.PpRate, &rates.FpRate); err != nil {

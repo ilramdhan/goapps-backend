@@ -158,16 +158,10 @@ func TestComputeProduct_GroupRM_CascadesCrSrPr(t *testing.T) {
 		assert.InDelta(t, 3.25, out.CostPerUnit, 1e-9)
 	})
 
-	t.Run("all three zero, INIT flag -> falls back to cost_val", func(t *testing.T) {
-		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{CostVal: 5, CostFlag: "INIT"}))
+	t.Run("all three zero, cost_val 999 -> falls back to cost_val", func(t *testing.T) {
+		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{CostVal: 999.0}))
 		require.NoError(t, err)
-		assert.InDelta(t, 5, out.CostPerUnit, 1e-9)
-	})
-
-	t.Run("all three zero, non-INIT flag, cost_val 999 -> zero", func(t *testing.T) {
-		out, err := ComputeProduct(context.Background(), baseIn(RMCostRates{CostVal: 999.0, CostFlag: "FP"}))
-		require.NoError(t, err)
-		assert.InDelta(t, 0, out.CostPerUnit, 1e-9)
+		assert.InDelta(t, 999.0, out.CostPerUnit, 1e-9)
 	})
 
 	t.Run("all four zero -> zero cost, not an error", func(t *testing.T) {
@@ -185,10 +179,9 @@ func TestResolveRMUnitCost_Group_CostValFallback(t *testing.T) {
 		want    float64
 		wantErr error
 	}{
-		{"cr non-zero + INIT ignores cost_val", map[string]RMCostRates{"GRP001|": {CostVal: 5, CrRate: 3, CostFlag: "INIT"}}, 3, nil},
-		{"all zero + INIT uses cost_val", map[string]RMCostRates{"GRP001|": {CostVal: 5, CostFlag: "INIT"}}, 5, nil},
-		{"all zero + FP stays zero", map[string]RMCostRates{"GRP001|": {CostVal: 5, CostFlag: "FP"}}, 0, nil},
-		{"all zero + INIT + cost_val 0 is zero", map[string]RMCostRates{"GRP001|": {CostFlag: "INIT"}}, 0, nil},
+		{"cr non-zero ignores cost_val", map[string]RMCostRates{"GRP001|": {CostVal: 5, CrRate: 3}}, 3, nil},
+		{"all zero uses cost_val", map[string]RMCostRates{"GRP001|": {CostVal: 5}}, 5, nil},
+		{"all zero + cost_val 0 is zero", map[string]RMCostRates{"GRP001|": {}}, 0, nil},
 		{"missing row errors", map[string]RMCostRates{}, 0, costcalcdom.ErrMissingRMCost},
 	}
 	for _, tt := range tests {
