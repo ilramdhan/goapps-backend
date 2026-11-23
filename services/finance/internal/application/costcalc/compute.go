@@ -895,20 +895,16 @@ func resolveRMUnitCost(in ComputeInput, rm *costroute.Rm) (float64, error) {
 		if !ok {
 			return 0, fmt.Errorf("%w: group %s", costcalcdom.ErrMissingRMCost, rm.RmGroupCode)
 		}
-		// GROUP-type RMs deliberately override the group's valuation_flag_v2
-		// selection (cost_val) with the first non-zero of cr_rate, sr_rate,
-		// and pr_rate, in the order F_YARN_RM_RATE's expression configures
-		// (migration 000518; in.RMRateOrder, loaded once per chunk -- see
-		// loader.LoadRMRateOrder). This cascade is independent of ACTUAL/
-		// FORECAST/SELLING calc type, unlike cost_val which is calc-type
-		// selected. All-zero CR/SR/PR with a non-INIT flag stays 0 (locks
-		// 000518 behavior). Only when the used flag is INIT does it fall back
-		// to rates.CostVal: placeholder groups (dummy items, no Oracle sync
-		// data) are priced manually via INIT + init_val, which lands in
-		// cost_val. Zero is a valid "no rate yet" state, not an error -- only
-		// a missing row (!ok above) is.
+		// GROUP-type RMs use the first non-zero of cr_rate, sr_rate, pr_rate,
+		// in the order F_YARN_RM_RATE configures (migration 000518;
+		// in.RMRateOrder, see loader.LoadRMRateOrder). When all are zero, fall
+		// back to rates.CostVal, which is calc-type selected (cost_val /
+		// cost_mark / cost_sim): this is how manually priced groups
+		// (marketing_default_value -> FP, landed FL) reach MB/yarn. Zero is a
+		// valid "no rate yet" state, not an error -- only a missing row (!ok
+		// above) is.
 		cost, _ := rmcost.FirstNonZeroWithLabel(rmRateCandidates(in.RMRateOrder, rates))
-		if cost == 0 && rmcost.Stage(rates.CostFlag).IsInit() {
+		if cost == 0 {
 			cost = rates.CostVal
 		}
 		return cost, nil
