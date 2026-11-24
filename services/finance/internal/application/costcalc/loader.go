@@ -41,6 +41,7 @@ const (
 	loaderKindUpstreamDenier  = "upstream_denier"
 	loaderKindRMDenierOvr     = "rm_denier_override"
 	loaderKindMachineDefault  = "machine_param_default"
+	loaderKindFixCostMin      = "fixcost_min_threshold"
 )
 
 // rmRateOrderFormulaCode is the mst_formula row whose expression column, since
@@ -329,6 +330,11 @@ type ProductLoader interface {
 	// Products whose machine has no default are absent. Feeds
 	// ComputeInput.MachineDefaults.
 	LoadMachineParamDefaults(ctx context.Context, productSysIDs []int64) (map[int64]map[string]float64, error)
+	// LoadFixCostMinThresholds returns, per product, the fixed cost floor per
+	// kg (000615): product cpm_fixcost_min_threshold, else its MC_NAME
+	// machine's mc_fixcost_min_threshold. Products with neither are absent.
+	// Feeds ComputeInput.FixCostMinThreshold.
+	LoadFixCostMinThresholds(ctx context.Context, productSysIDs []int64) (map[int64]float64, error)
 }
 
 // SpinPool is the POY spin fixed-cost pool resolved for a period, together with

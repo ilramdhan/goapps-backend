@@ -157,6 +157,12 @@ type ComputeInput struct {
 	// formula and takes the product's stored CAPP value, else the default.
 	// Nil leaves behavior unchanged (formulas evaluated, e.g. mbbatch).
 	MachineDefaults map[string]float64
+	// FixCostMinThreshold is the fixed cost floor per kg (000615): product
+	// cpm_fixcost_min_threshold, else its MC_NAME machine's threshold, loaded
+	// once per chunk via loader.LoadFixCostMinThresholds. Nil leaves behavior
+	// unchanged (no floor, no FIXEDCOST_SHORTFALL key; e.g. mbbatch, tests).
+	// See applyFixCostFloor.
+	FixCostMinThreshold *float64
 	// RMRatioMode is the product type's cpt_rm_ratio_mode (000570). "" or
 	// "INPUT" keeps every route RM ratio as entered (legacy behavior, e.g.
 	// mbbatch); "DENIER" derives the ratio of PRODUCT lines and denier GROUP
