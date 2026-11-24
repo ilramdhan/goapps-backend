@@ -153,6 +153,8 @@ type loadedBundle struct {
 	superba map[int64]*SuperbaCost
 	// machineDefaults is paramCode -> machine default per product (000614).
 	machineDefaults map[int64]map[string]float64
+	// fixCostMin is the fixed cost floor per kg per product (000615).
+	fixCostMin map[int64]float64
 	// txWeight is the per-product TX Weight rules (TxWeightLoader), keyed by
 	// grade. Products whose type has no rule are absent (fallback formula).
 	txWeight map[int64]map[string]TxWeightRule
@@ -301,6 +303,7 @@ func (s *Service) bulkLoad(ctx context.Context, in ProcessChunkInput) (*loadedBu
 		oil:               oil,
 		superba:           superba,
 		machineDefaults:   machineDefaults,
+		fixCostMin:        s.loadFixCostMin(ctx, in),
 		typeCodes:         typeCodes,
 		upstreamSnapshots: upstreamSnapshots,
 	}
@@ -458,6 +461,10 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 	if sellingSnap == nil {
 		sellingSnap = map[string]float64{}
 	}
+	var fixCostMin *float64
+	if v, ok := loaded.fixCostMin[pid]; ok {
+		fixCostMin = &v
+	}
 	out, err := ComputeProduct(ctx, ComputeInput{
 		ProductSysID:     pid,
 		Period:           in.Period,
@@ -482,12 +489,13 @@ func (s *Service) computeOne(ctx context.Context, in ProcessChunkInput, pid int6
 			UpstreamTypeCodes:      loaded.typeCodes,
 			UpstreamParamSnapshots: loaded.upstreamSnapshots,
 		},
-		RMRatioMode:       loaded.rmRatioModes[pid],
-		RMGroupDenier:     loaded.rmGroupDeniers,
-		RMGroupUseDraft:   loaded.rmGroupUseDraft,
-		UpstreamDenier:    loaded.upstreamDeniers,
-		RMDenierOverride:  loaded.rmDenierOverrides[pid],
-		UpstreamSnapshots: loaded.upstreamSnapshots,
+		RMRatioMode:         loaded.rmRatioModes[pid],
+		RMGroupDenier:       loaded.rmGroupDeniers,
+		RMGroupUseDraft:     loaded.rmGroupUseDraft,
+		UpstreamDenier:      loaded.upstreamDeniers,
+		RMDenierOverride:    loaded.rmDenierOverrides[pid],
+		UpstreamSnapshots:   loaded.upstreamSnapshots,
+		FixCostMinThreshold: fixCostMin,
 	})
 	if err != nil {
 		return s.recordComputeError(ctx, in, pid, err)
@@ -611,6 +619,19 @@ func extractCaptiveDeliveryCosts(snap map[string]float64) captiveDeliveryCosts {
 		cc.vb[i] = snap[k]
 	}
 	return cc
+}
+
+// loadFixCostMin loads the per-product fixed cost floor (000615). Non-fatal
+// like machine defaults: a binary rolled out before 000615 computes without
+// the floor.
+func (s *Service) loadFixCostMin(ctx context.Context, in ProcessChunkInput) map[int64]float64 {
+	out, err := s.loader.LoadFixCostMinThresholds(ctx, in.Products)
+	if err != nil {
+		log.Warn().Err(err).Str("period", in.Period).
+			Msg("fixed cost min thresholds unavailable; TOTAL_FIXEDCOST_PER_KG not floored")
+		return nil
+	}
+	return out
 }
 
 // persistResult upserts the cost result, writes audit-history on supersede,

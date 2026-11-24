@@ -78,6 +78,14 @@ const (
 	// ScopeKeySpinConsSprsMonth is the shared monthly spin consumables and
 	// spares cost.
 	ScopeKeySpinConsSprsMonth = "SPIN_CONSSPRS_MONTH"
+	// ScopeKeyTotalFixedCostPerKg is the fixed cost per kg floored by
+	// applyFixCostFloor (000615).
+	ScopeKeyTotalFixedCostPerKg = "TOTAL_FIXEDCOST_PER_KG"
+	// ScopeKeyFixedCostShortfall is the engine-injected gap between the fixed
+	// cost floor and the computed TOTAL_FIXEDCOST_PER_KG (000615).
+	ScopeKeyFixedCostShortfall = "FIXEDCOST_SHORTFALL"
+	// fixCostFloorTraceCode names the synthetic trace entry of the floor step.
+	fixCostFloorTraceCode = "ENGINE_FIXCOST_FLOOR"
 )
 
 // ComputeInput aggregates everything ComputeProduct needs for one product.
@@ -157,6 +165,12 @@ type ComputeInput struct {
 	// formula and takes the product's stored CAPP value, else the default.
 	// Nil leaves behavior unchanged (formulas evaluated, e.g. mbbatch).
 	MachineDefaults map[string]float64
+	// FixCostMinThreshold is the fixed cost floor per kg (000615): product
+	// cpm_fixcost_min_threshold, else its MC_NAME machine's threshold, loaded
+	// once per chunk via loader.LoadFixCostMinThresholds. Nil leaves behavior
+	// unchanged (no floor, no FIXEDCOST_SHORTFALL key; e.g. mbbatch, tests).
+	// See applyFixCostFloor.
+	FixCostMinThreshold *float64
 	// RMRatioMode is the product type's cpt_rm_ratio_mode (000570). "" or
 	// "INPUT" keeps every route RM ratio as entered (legacy behavior, e.g.
 	// mbbatch); "DENIER" derives the ratio of PRODUCT lines and denier GROUP
@@ -358,7 +372,7 @@ func ComputeProduct(ctx context.Context, in ComputeInput) (*ComputeOutput, error
 	}
 
 	// 3. Evaluate formulas in topo order (loader pre-sorted).
-	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, landedRM, in.Formulas, in.ProductSysID, in.MBCosts, in.CalcType, zeroFilled, inherited)
+	formulaTrace, err := evalFormulaChain(ctx, in.EvalCache, scope, totalRM, landedRM, in.Formulas, in.ProductSysID, in.MBCosts, in.CalcType, zeroFilled, inherited, in.FixCostMinThreshold)
 	if err != nil {
 		recordProductSpanError(span, err)
 		return nil, err
@@ -637,6 +651,7 @@ func evalFormulaChain(
 	calcType costcalcdom.CalculationType,
 	zeroFilled map[string]bool,
 	inherited map[string]string,
+	fixCostMin *float64,
 ) ([]FormulaEvalTrace, error) {
 	trace := make([]FormulaEvalTrace, 0, len(formulas))
 	for _, f := range formulas {
@@ -661,8 +676,40 @@ func evalFormulaChain(
 		// is NOT touched by this delete, so the evidence survives into
 		// cpc_formula_trace even though the snapshot cannot express it.
 		delete(zeroFilled, f.ResultParamCode)
+		if f.ResultParamCode == ScopeKeyTotalFixedCostPerKg {
+			trace = applyFixCostFloor(scope, zeroFilled, fixCostMin, trace)
+		}
 	}
 	return trace, nil
+}
+
+// applyFixCostFloor floors TOTAL_FIXEDCOST_PER_KG at threshold (000615) right
+// after its formula ran, so downstream formulas read the floored value, and
+// records the gap in FIXEDCOST_SHORTFALL (+ a trace entry when it applies).
+// Nil threshold: no-op, the shortfall key stays absent (legacy snapshot).
+// ponytail: only after a real evaluation; an inherited / machine-default
+// TOTAL_FIXEDCOST_PER_KG is not floored. Move the call if that case appears.
+func applyFixCostFloor(scope map[string]any, zeroFilled map[string]bool, threshold *float64, trace []FormulaEvalTrace) []FormulaEvalTrace {
+	if threshold == nil {
+		return trace
+	}
+	t := *threshold
+	fixed, _ := scopeFloat(scope, ScopeKeyTotalFixedCostPerKg)
+	delete(zeroFilled, ScopeKeyFixedCostShortfall)
+	if t <= 0 || fixed >= t {
+		scope[ScopeKeyFixedCostShortfall] = float64(0)
+		return trace
+	}
+	scope[ScopeKeyFixedCostShortfall] = t - fixed
+	scope[ScopeKeyTotalFixedCostPerKg] = t
+	delete(zeroFilled, ScopeKeyTotalFixedCostPerKg)
+	return append(trace, FormulaEvalTrace{
+		FormulaCode:     fixCostFloorTraceCode,
+		Expression:      "max(TOTAL_FIXEDCOST_PER_KG, threshold)",
+		Inputs:          map[string]float64{ScopeKeyTotalFixedCostPerKg: fixed, "threshold": t},
+		ResultParamCode: ScopeKeyTotalFixedCostPerKg,
+		Output:          t,
+	})
 }
 
 // evalSingleFormulaStep dispatches one formula by type and returns its trace entry.

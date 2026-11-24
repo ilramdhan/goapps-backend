@@ -43,6 +43,7 @@ type CostProductMasterHandler struct {
 	erpAttrs          erpAttrUpdater                    // optional; nil ignores ERP attribute fields
 	overrideRepo      domain.RMDenierOverrideRepository // RM denier override RPCs; nil → 500
 	rmRatioMode       rmRatioModeUpdater                // optional; nil ignores rm_ratio_mode_override
+	fixCostMinThr     fixCostMinThresholdUpdater        // optional; nil ignores fixcost_min_threshold
 }
 
 // rmRatioModeUpdater is the seam over app.UpdateRMRatioModeHandler.
@@ -60,6 +61,29 @@ func (h *CostProductMasterHandler) applyRMRatioMode(ctx context.Context, cur *do
 		return cur, nil
 	}
 	up, err := h.rmRatioMode.Handle(ctx, app.UpdateRMRatioModeCommand{ProductSysID: cur.ProductSysID(), Mode: *mode, ActorUserID: actor})
+	if err != nil || up == nil {
+		return cur, err
+	}
+	return up, nil
+}
+
+// fixCostMinThresholdUpdater is the seam over app.UpdateFixCostMinThresholdHandler.
+type fixCostMinThresholdUpdater interface {
+	Handle(ctx context.Context, cmd app.UpdateFixCostMinThresholdCommand) (*domain.CostProductMaster, error)
+}
+
+// WithFixCostMinThreshold enables persisting the per-product fixcost_min_threshold carried by Update (000615).
+func (h *CostProductMasterHandler) WithFixCostMinThreshold(u fixCostMinThresholdUpdater) {
+	h.fixCostMinThr = u
+}
+
+// applyFixCostMinThreshold applies the optional threshold after the main write succeeded.
+// thr nil = unchanged; 0 = floor off.
+func (h *CostProductMasterHandler) applyFixCostMinThreshold(ctx context.Context, cur *domain.CostProductMaster, thr *float64, actor string) (*domain.CostProductMaster, error) {
+	if h.fixCostMinThr == nil || thr == nil {
+		return cur, nil
+	}
+	up, err := h.fixCostMinThr.Handle(ctx, app.UpdateFixCostMinThresholdCommand{ProductSysID: cur.ProductSysID(), Threshold: *thr, ActorUserID: actor})
 	if err != nil || up == nil {
 		return cur, err
 	}
@@ -260,6 +284,11 @@ func (h *CostProductMasterHandler) UpdateCostProductMaster(ctx context.Context, 
 	up, merr := h.applyRMRatioMode(ctx, p, req.RmRatioModeOverride, actor)
 	if merr != nil {
 		return &financev1.UpdateCostProductMasterResponse{Base: productMasterErrToBase(merr)}, nil
+	}
+	p = up
+	up, terr := h.applyFixCostMinThreshold(ctx, p, req.FixcostMinThreshold, actor)
+	if terr != nil {
+		return &financev1.UpdateCostProductMasterResponse{Base: productMasterErrToBase(terr)}, nil
 	}
 	p = up
 	h.emitAudit(ctx, costauditlog.OpUpdate, p.ProductSysID(), actor)
@@ -489,6 +518,8 @@ func costProductMasterToProto(p *domain.CostProductMaster) *financev1.CostProduc
 		// 000579 per-product RM ratio mode.
 		RmRatioModeOverride:  p.RMRatioModeOverride(),
 		EffectiveRmRatioMode: p.EffectiveRMRatioMode(),
+		// 000615 per-product fixed-cost minimum threshold (nil stays unset).
+		FixcostMinThreshold: p.FixCostMinThreshold(),
 		Audit: &commonv1.AuditInfo{
 			CreatedAt: p.CreatedAt().Format(time.RFC3339),
 			CreatedBy: p.CreatedBy(),
@@ -512,7 +543,8 @@ func productMasterErrToBase(err error) *commonv1.BaseResponse {
 	case errors.Is(err, domain.ErrInvalidProductName),
 		errors.Is(err, domain.ErrInvalidGradeCode),
 		errors.Is(err, domain.ErrInactive),
-		errors.Is(err, domain.ErrInvalidRMRatioModeOverride):
+		errors.Is(err, domain.ErrInvalidRMRatioModeOverride),
+		errors.Is(err, domain.ErrInvalidFixCostMinThreshold):
 		return ErrorResponse("400", err.Error())
 	// ErrMBProductNotManuallyCreatable → 400: the caller asked for a product type that is
 	// not addressable through this API at all. Without this arm it fell through to

@@ -346,3 +346,8 @@ func (f *noSharingLoader) LoadRMDenierOverrides(context.Context, []int64) (map[i
 func (f *noSharingLoader) LoadMachineParamDefaults(context.Context, []int64) (map[int64]map[string]float64, error) {
 	return map[int64]map[string]float64{}, nil
 }
+
+// LoadFixCostMinThresholds reports no fixed cost min thresholds.
+func (f *noSharingLoader) LoadFixCostMinThresholds(context.Context, []int64) (map[int64]float64, error) {
+	return nil, nil
+}

@@ -57,8 +57,10 @@ type CostProductMaster struct {
 	RmRatioModeOverride string `protobuf:"bytes,28,opt,name=rm_ratio_mode_override,json=rmRatioModeOverride,proto3" json:"rm_ratio_mode_override,omitempty"`
 	// COALESCE(product override, product type mode); read-only.
 	EffectiveRmRatioMode string `protobuf:"bytes,29,opt,name=effective_rm_ratio_mode,json=effectiveRmRatioMode,proto3" json:"effective_rm_ratio_mode,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Fixed-cost floor per kg (migration 000615): unset = auto (machine default), 0 = off, > 0 = floor.
+	FixcostMinThreshold *float64 `protobuf:"fixed64,30,opt,name=fixcost_min_threshold,json=fixcostMinThreshold,proto3,oneof" json:"fixcost_min_threshold,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *CostProductMaster) Reset() {
@@ -292,6 +294,13 @@ func (x *CostProductMaster) GetEffectiveRmRatioMode() string {
 		return x.EffectiveRmRatioMode
 	}
 	return ""
+}
+
+func (x *CostProductMaster) GetFixcostMinThreshold() float64 {
+	if x != nil && x.FixcostMinThreshold != nil {
+		return *x.FixcostMinThreshold
+	}
+	return 0
 }
 
 type CreateCostProductMasterRequest struct {
@@ -708,6 +717,8 @@ type UpdateCostProductMasterRequest struct {
 	ErpPrdPerDay   string `protobuf:"bytes,13,opt,name=erp_prd_per_day,json=erpPrdPerDay,proto3" json:"erp_prd_per_day,omitempty"` // decimal string
 	// Per-product RM ratio mode override. Absent = unchanged; "" = clear (follow product type).
 	RmRatioModeOverride *string `protobuf:"bytes,14,opt,name=rm_ratio_mode_override,json=rmRatioModeOverride,proto3,oneof" json:"rm_ratio_mode_override,omitempty"`
+	// Fixed-cost floor per kg. Absent = unchanged; 0 = floor off; no reset-to-auto path.
+	FixcostMinThreshold *float64 `protobuf:"fixed64,15,opt,name=fixcost_min_threshold,json=fixcostMinThreshold,proto3,oneof" json:"fixcost_min_threshold,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -838,6 +849,13 @@ func (x *UpdateCostProductMasterRequest) GetRmRatioModeOverride() string {
 		return *x.RmRatioModeOverride
 	}
 	return ""
+}
+
+func (x *UpdateCostProductMasterRequest) GetFixcostMinThreshold() float64 {
+	if x != nil && x.FixcostMinThreshold != nil {
+		return *x.FixcostMinThreshold
+	}
+	return 0
 }
 
 type UpdateCostProductMasterResponse struct {
@@ -3462,7 +3480,7 @@ var File_finance_v1_cost_product_master_proto protoreflect.FileDescriptor
 const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\n" +
 	"$finance/v1/cost_product_master.proto\x12\n" +
-	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\xb2\b\n" +
+	"finance.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16common/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\"\x85\t\n" +
 	"\x11CostProductMaster\x12$\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03R\fproductSysId\x12!\n" +
 	"\fproduct_code\x18\x02 \x01(\tR\vproductCode\x12&\n" +
@@ -3496,7 +3514,9 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\rerp_item_type\x18\x1a \x01(\tR\verpItemType\x12%\n" +
 	"\x0ferp_prd_per_day\x18\x1b \x01(\tR\ferpPrdPerDay\x123\n" +
 	"\x16rm_ratio_mode_override\x18\x1c \x01(\tR\x13rmRatioModeOverride\x125\n" +
-	"\x17effective_rm_ratio_mode\x18\x1d \x01(\tR\x14effectiveRmRatioMode\"\x9f\x05\n" +
+	"\x17effective_rm_ratio_mode\x18\x1d \x01(\tR\x14effectiveRmRatioMode\x127\n" +
+	"\x15fixcost_min_threshold\x18\x1e \x01(\x01H\x00R\x13fixcostMinThreshold\x88\x01\x01B\x18\n" +
+	"\x16_fixcost_min_threshold\"\x9f\x05\n" +
 	"\x1eCreateCostProductMasterRequest\x12/\n" +
 	"\x0fproduct_type_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rproductTypeId\x12-\n" +
 	"\fproduct_name\x18\x02 \x01(\tB\n" +
@@ -3528,7 +3548,7 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\fproduct_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x14R\vproductCode\"\x84\x01\n" +
 	"\"GetCostProductMasterByCodeResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
-	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xdd\x05\n" +
+	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xc9\x06\n" +
 	"\x1eUpdateCostProductMasterRequest\x12-\n" +
 	"\x0eproduct_sys_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\fproductSysId\x12-\n" +
 	"\fproduct_name\x18\x02 \x01(\tB\n" +
@@ -3547,8 +3567,10 @@ const file_finance_v1_cost_product_master_proto_rawDesc = "" +
 	"\x11erp_ms_batch_item\x18\v \x01(\tB\a\xbaH\x04r\x02\x18\fR\x0eerpMsBatchItem\x12+\n" +
 	"\rerp_item_type\x18\f \x01(\tB\a\xbaH\x04r\x02\x18\x14R\verpItemType\x12M\n" +
 	"\x0ferp_prd_per_day\x18\r \x01(\tB&\xbaH#r!2\x1f^([0-9]{1,12}(\\.[0-9]{1,6})?)?$R\ferpPrdPerDay\x12P\n" +
-	"\x16rm_ratio_mode_override\x18\x0e \x01(\tB\x16\xbaH\x13r\x11R\x00R\x05INPUTR\x06DENIERH\x00R\x13rmRatioModeOverride\x88\x01\x01B\x19\n" +
-	"\x17_rm_ratio_mode_override\"\x81\x01\n" +
+	"\x16rm_ratio_mode_override\x18\x0e \x01(\tB\x16\xbaH\x13r\x11R\x00R\x05INPUTR\x06DENIERH\x00R\x13rmRatioModeOverride\x88\x01\x01\x12P\n" +
+	"\x15fixcost_min_threshold\x18\x0f \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?)\x00\x00\x00\x00\x00\x00\x00\x00H\x01R\x13fixcostMinThreshold\x88\x01\x01B\x19\n" +
+	"\x17_rm_ratio_mode_overrideB\x18\n" +
+	"\x16_fixcost_min_threshold\"\x81\x01\n" +
 	"\x1fUpdateCostProductMasterResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x121\n" +
 	"\x04data\x18\x02 \x01(\v2\x1d.finance.v1.CostProductMasterR\x04data\"\xf7\x03\n" +
@@ -3943,6 +3965,7 @@ func file_finance_v1_cost_product_master_proto_init() {
 	if File_finance_v1_cost_product_master_proto != nil {
 		return
 	}
+	file_finance_v1_cost_product_master_proto_msgTypes[0].OneofWrappers = []any{}
 	file_finance_v1_cost_product_master_proto_msgTypes[7].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
