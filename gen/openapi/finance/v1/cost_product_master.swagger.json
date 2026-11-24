@@ -807,6 +807,11 @@
         "rmRatioModeOverride": {
           "type": "string",
           "description": "Per-product RM ratio mode override. Absent = unchanged; \"\" = clear (follow product type)."
+        },
+        "fixcostMinThreshold": {
+          "type": "number",
+          "format": "double",
+          "description": "Fixed-cost floor per kg. Absent = unchanged; 0 = floor off; no reset-to-auto path."
         }
       }
     },
@@ -1068,6 +1073,11 @@
         "effectiveRmRatioMode": {
           "type": "string",
           "description": "COALESCE(product override, product type mode); read-only."
+        },
+        "fixcostMinThreshold": {
+          "type": "number",
+          "format": "double",
+          "description": "Fixed-cost floor per kg (migration 000615): unset = auto (machine default), 0 = off, \u003e 0 = floor."
         }
       }
     },
