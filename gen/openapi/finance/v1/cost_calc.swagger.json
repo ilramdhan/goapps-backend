@@ -484,6 +484,74 @@
         ]
       }
     },
+    "/api/v1/finance/cost-results/bulk-approve": {
+      "post": {
+        "summary": "BulkApproveCostResults approves many VERIFIED results; same semantics as\nBulkVerifyCostResults.\nRequired permission: finance.cost.result.approve.",
+        "operationId": "CostCalcService_BulkApproveCostResults",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BulkApproveCostResultsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BulkApproveCostResultsRequest approves many VERIFIED results at once.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BulkApproveCostResultsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostCalcService"
+        ]
+      }
+    },
+    "/api/v1/finance/cost-results/bulk-verify": {
+      "post": {
+        "summary": "BulkVerifyCostResults verifies many CALCULATED results; each row runs the\nsingle-row rules in its own transaction, failures don't abort the rest.\nRequired permission: finance.cost.result.verify.",
+        "operationId": "CostCalcService_BulkVerifyCostResults",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BulkVerifyCostResultsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "BulkVerifyCostResultsRequest verifies many CALCULATED results at once.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BulkVerifyCostResultsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CostCalcService"
+        ]
+      }
+    },
     "/api/v1/finance/cost-results/exports": {
       "get": {
         "summary": "ListExportJobs lists recent cost-sheet export jobs (batch parents and\nstandalone jobs) for a \"recent exports\" UI.",
@@ -1148,6 +1216,82 @@
       },
       "description": "BaseResponse is the standard response wrapper for all API responses."
     },
+    "v1BulkApproveCostResultsRequest": {
+      "type": "object",
+      "properties": {
+        "selection": {
+          "$ref": "#/definitions/v1CostResultBulkSelection",
+          "description": "Rows to approve."
+        }
+      },
+      "description": "BulkApproveCostResultsRequest approves many VERIFIED results at once."
+    },
+    "v1BulkApproveCostResultsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "okCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows approved."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows refused."
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostResultBulkFailure"
+          },
+          "description": "Per-row refusals."
+        }
+      },
+      "description": "BulkApproveCostResultsResponse summarizes a bulk approve."
+    },
+    "v1BulkVerifyCostResultsRequest": {
+      "type": "object",
+      "properties": {
+        "selection": {
+          "$ref": "#/definitions/v1CostResultBulkSelection",
+          "description": "Rows to verify."
+        }
+      },
+      "description": "BulkVerifyCostResultsRequest verifies many CALCULATED results at once."
+    },
+    "v1BulkVerifyCostResultsResponse": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/v1BaseResponse",
+          "description": "Standard response envelope."
+        },
+        "okCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows verified."
+        },
+        "failedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Rows refused."
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CostResultBulkFailure"
+          },
+          "description": "Per-row refusals."
+        }
+      },
+      "description": "BulkVerifyCostResultsResponse summarizes a bulk verify."
+    },
     "v1CalJob": {
       "type": "object",
       "properties": {
@@ -1790,6 +1934,73 @@
         }
       },
       "description": "CostResult is the persisted cost summary for a product/period/type."
+    },
+    "v1CostResultBulkFailure": {
+      "type": "object",
+      "properties": {
+        "costId": {
+          "type": "string",
+          "format": "int64",
+          "description": "Cost id of the failed row."
+        },
+        "productCode": {
+          "type": "string",
+          "description": "Product code (empty when the row could not be resolved)."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable reason (e.g. wrong status, locked period, MB row)."
+        }
+      },
+      "description": "CostResultBulkFailure is one row a bulk transition could not apply."
+    },
+    "v1CostResultBulkSelection": {
+      "type": "object",
+      "properties": {
+        "costIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "int64"
+          },
+          "description": "Explicit cost ids (max 2000). Non-empty = id mode."
+        },
+        "period": {
+          "type": "string",
+          "description": "Filter mode: period YYYYMM (required when cost_ids is empty)."
+        },
+        "calculationType": {
+          "$ref": "#/definitions/v1CalculationType",
+          "description": "Filter mode: calculation type (UNSPECIFIED = all types)."
+        },
+        "search": {
+          "type": "string",
+          "description": "Filter mode: product code/name search."
+        },
+        "productTypeIds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Filter mode: product type ids."
+        },
+        "shadeCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Filter mode: shade codes."
+        },
+        "rmGroupCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Filter mode: RM group codes."
+        }
+      },
+      "description": "CostResultBulkSelection picks the rows of a bulk verify / approve. When\ncost_ids is non-empty only those rows are processed and the filter fields\nare ignored; otherwise the filter (period required) selects every active\nrow in the transition's source status (CALCULATED for verify, VERIFIED for\napprove), capped server-side at 2000 rows."
     },
     "v1CostResultStatus": {
       "type": "string",

@@ -38,6 +38,8 @@ type CostCalcHandler struct {
 	periodsH         *costcalc.PeriodsHandler
 	verifyH          *costcalc.VerifyCostHandler
 	approveH         *costcalc.ApproveCostHandler
+	bulkVerifyH      *costcalc.BulkTransitionHandler
+	bulkApproveH     *costcalc.BulkTransitionHandler
 	routeSheetH      *costcalc.GetRouteCostSheetHandler
 	sheetExportH     *costsheet.RequestExportHandler
 	sheetURLH        *costsheet.GetExportURLHandler
@@ -93,6 +95,8 @@ func NewCostCalcHandler(
 		periodsH:         periodsH,
 		verifyH:          verifyH,
 		approveH:         approveH,
+		bulkVerifyH:      costcalc.NewBulkVerifyHandler(svc, verifyH),
+		bulkApproveH:     costcalc.NewBulkApproveHandler(svc, approveH),
 		routeSheetH:      routeSheetH,
 		sheetExportH:     sheetExportH,
 		sheetURLH:        sheetURLH,
@@ -716,6 +720,82 @@ func (h *CostCalcHandler) ApproveCostResult(ctx context.Context, req *financev1.
 	return &financev1.ApproveCostResultResponse{
 		Base: successResponse("cost result approved"),
 	}, nil
+}
+
+// BulkVerifyCostResults verifies many CALCULATED results, one transaction per row.
+func (h *CostCalcHandler) BulkVerifyCostResults(ctx context.Context, req *financev1.BulkVerifyCostResultsRequest) (*financev1.BulkVerifyCostResultsResponse, error) {
+	res, base := h.runBulk(ctx, h.bulkVerifyH, req.GetSelection(), "verified")
+	if res == nil {
+		return &financev1.BulkVerifyCostResultsResponse{Base: base}, nil
+	}
+	return &financev1.BulkVerifyCostResultsResponse{
+		Base: base, OkCount: res.ok, FailedCount: res.failed, Failures: res.failures,
+	}, nil
+}
+
+// BulkApproveCostResults approves many VERIFIED results, one transaction per row.
+func (h *CostCalcHandler) BulkApproveCostResults(ctx context.Context, req *financev1.BulkApproveCostResultsRequest) (*financev1.BulkApproveCostResultsResponse, error) {
+	res, base := h.runBulk(ctx, h.bulkApproveH, req.GetSelection(), "approved")
+	if res == nil {
+		return &financev1.BulkApproveCostResultsResponse{Base: base}, nil
+	}
+	return &financev1.BulkApproveCostResultsResponse{
+		Base: base, OkCount: res.ok, FailedCount: res.failed, Failures: res.failures,
+	}, nil
+}
+
+type bulkProtoResult struct {
+	ok, failed int32
+	failures   []*financev1.CostResultBulkFailure
+}
+
+// runBulk maps the selection, runs the bulk handler and converts the outcome.
+// A nil result means the whole request was refused (base carries the error).
+func (h *CostCalcHandler) runBulk(ctx context.Context, bh *costcalc.BulkTransitionHandler, sel *financev1.CostResultBulkSelection, verb string) (*bulkProtoResult, *commonv1.BaseResponse) {
+	actor, _ := GetUserIDFromCtx(ctx)
+	out, err := bh.Handle(ctx, costcalc.BulkSelection{
+		CostIDs:        sel.GetCostIds(),
+		Period:         sel.GetPeriod(),
+		CalcType:       protoToCalcType(sel.GetCalculationType()),
+		Search:         sel.GetSearch(),
+		ProductTypeIDs: sel.GetProductTypeIds(),
+		ShadeCodes:     sel.GetShadeCodes(),
+		RMGroupCodes:   sel.GetRmGroupCodes(),
+	}, actor)
+	if err != nil {
+		if errors.Is(err, costcalc.ErrBulkSelectionTooLarge) || errors.Is(err, costcalc.ErrBulkPeriodRequired) {
+			return nil, ErrorResponse("400", err.Error())
+		}
+		return nil, costCalcErrToBase(err)
+	}
+	res := &bulkProtoResult{
+		ok:       safeIntToInt32(out.OK),
+		failed:   safeIntToInt32(len(out.Failures)),
+		failures: make([]*financev1.CostResultBulkFailure, 0, len(out.Failures)),
+	}
+	for _, f := range out.Failures {
+		res.failures = append(res.failures, &financev1.CostResultBulkFailure{
+			CostId: f.CostID, ProductCode: f.ProductCode, Reason: bulkFailureReason(f.Err),
+		})
+	}
+	return res, successResponse(strconv.Itoa(out.OK) + " cost results " + verb + ", " + strconv.Itoa(len(out.Failures)) + " failed")
+}
+
+// bulkFailureReason turns a per-row error into a client-safe reason; unknown
+// (infrastructure) errors are not echoed.
+func bulkFailureReason(err error) string {
+	switch {
+	case errors.Is(err, costcalcdom.ErrPeriodLocked):
+		return "period is locked"
+	case errors.Is(err, costcalcdom.ErrCostInvalidStatus):
+		return "status does not allow this transition (already done or superseded)"
+	case errors.Is(err, costcalc.ErrMBCostNotManuallyTransitionable):
+		return costcalc.ErrMBCostNotManuallyTransitionable.Error()
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+		return "not processed: request timed out, retry the remaining rows"
+	default:
+		return "internal error"
+	}
 }
 
 // ProcessChunkInternal computes one chunk of products synchronously.

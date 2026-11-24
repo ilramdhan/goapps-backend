@@ -73,6 +73,8 @@ var longRunningMethods = map[string]time.Duration{
 	"ProcessChunkInternal":        5 * time.Minute,
 	"ImportCostApplicableParams":  3 * time.Minute,
 	"ImportCostProductParameters": 3 * time.Minute,
+	"BulkVerifyCostResults":       5 * time.Minute,
+	"BulkApproveCostResults":      5 * time.Minute,
 }
 
 // TimeoutInterceptor enforces request timeout. RPCs listed in

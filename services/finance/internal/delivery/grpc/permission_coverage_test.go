@@ -743,7 +743,8 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 468 -> 469: BiJobService.GetEtlStatus (HD-27, H062a).
 	// 469 -> 475: mb-spin-fg-poy-link adds 6 RPCs (PreviewMBHeadSupersede, UnsupersedeMBSpin,
 	// GetCostProductMbLink, RelinkCostProductMb, Preview/ApplyProductEtlFromOracle).
-	assert.Len(t, reachable, 475,
+	// 475 -> 477: cost-result bulk verify/approve (BulkVerifyCostResults, BulkApproveCostResults).
+	assert.Len(t, reachable, 477,
 		"reachable RPC count changed (398 in gen − 17 on the 3 unregistered services + 6 for the "+
 			"previously-omitted-from-this-list ShadeService + 5 new Bulk MB Head Regenerate RPCs + 1 new "+
 			"DuplicateProduct RPC + 3 new CostProductParamBulkService RPCs, product-route-fork-attach-bulk "+
@@ -807,7 +808,8 @@ func TestPermissionCoverageCountsAreStable(t *testing.T) {
 	// 239 -> 242: List/Upsert/DeleteRMDenierOverride guarded FROM BIRTH by finance.product.route.view/create.
 	// 242 -> 243: BiJobService.GetEtlStatus guarded FROM BIRTH by finance.bi.etlstatus.view (HD-27).
 	// 243 -> 249: mb-spin-fg-poy-link adds 6 guarded RPCs (supersede preview/unsupersede, MB link/relink, product ETL preview/apply).
-	assert.Equal(t, 249, guarded, "number of properly guarded RPCs changed")
+	// 249 -> 251: the two bulk cost-result RPCs, guarded by .verify / .approve.
+	assert.Equal(t, 251, guarded, "number of properly guarded RPCs changed")
 	assert.Len(t, intentionallyAuthenticatedOnly, 7, "the deliberate authenticated-only set changed")
 	// 237 -> 235: dua kunci basi UOM diperbaiki sehingga ImportUOMs/ExportUOMs keluar dari baseline, K-36
 	// 235 -> 232: tiga bulk RPC CostProductMasterService keluar dari baseline karena kini terjaga, K-43
