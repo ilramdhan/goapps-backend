@@ -74,6 +74,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o /bin/legacy-fill-mb \
     ./cmd/legacy-fill-mb
 
+# Build mb-comparison-fill binary (one-shot: plan/apply/revert nilai aktual MB dari Excel Finance)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w" \
+    -o /bin/mb-comparison-fill \
+    ./cmd/mb-comparison-fill
+
 # Build pp-facts-rebuild binary (one-shot: re-aggregates PP_PACK_* facts from staging, P007)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-s -w" \
@@ -104,6 +110,7 @@ COPY --from=builder /bin/backfill-mb-validate /app/backfill-mb-validate
 COPY --from=builder /bin/backfill-mb-spin-fg /app/backfill-mb-spin-fg
 COPY --from=builder /bin/sync-mb-active /app/sync-mb-active
 COPY --from=builder /bin/legacy-fill-mb /app/legacy-fill-mb
+COPY --from=builder /bin/mb-comparison-fill /app/mb-comparison-fill
 COPY --from=builder /bin/pp-facts-rebuild /app/pp-facts-rebuild
 COPY --from=builder /bin/migrate /app/migrate
 
