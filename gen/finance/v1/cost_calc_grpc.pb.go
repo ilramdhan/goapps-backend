@@ -32,6 +32,8 @@ const (
 	CostCalcService_ListCostHistory_FullMethodName                    = "/finance.v1.CostCalcService/ListCostHistory"
 	CostCalcService_VerifyCostResult_FullMethodName                   = "/finance.v1.CostCalcService/VerifyCostResult"
 	CostCalcService_ApproveCostResult_FullMethodName                  = "/finance.v1.CostCalcService/ApproveCostResult"
+	CostCalcService_BulkVerifyCostResults_FullMethodName              = "/finance.v1.CostCalcService/BulkVerifyCostResults"
+	CostCalcService_BulkApproveCostResults_FullMethodName             = "/finance.v1.CostCalcService/BulkApproveCostResults"
 	CostCalcService_GetRouteCostSheet_FullMethodName                  = "/finance.v1.CostCalcService/GetRouteCostSheet"
 	CostCalcService_RequestProductCostSheetExport_FullMethodName      = "/finance.v1.CostCalcService/RequestProductCostSheetExport"
 	CostCalcService_GetProductCostSheetDownloadURL_FullMethodName     = "/finance.v1.CostCalcService/GetProductCostSheetDownloadURL"
@@ -89,6 +91,14 @@ type CostCalcServiceClient interface {
 	// ApproveCostResult marks a cost result as approved.
 	// Required permission: finance.cost.result.approve.
 	ApproveCostResult(ctx context.Context, in *ApproveCostResultRequest, opts ...grpc.CallOption) (*ApproveCostResultResponse, error)
+	// BulkVerifyCostResults verifies many CALCULATED results; each row runs the
+	// single-row rules in its own transaction, failures don't abort the rest.
+	// Required permission: finance.cost.result.verify.
+	BulkVerifyCostResults(ctx context.Context, in *BulkVerifyCostResultsRequest, opts ...grpc.CallOption) (*BulkVerifyCostResultsResponse, error)
+	// BulkApproveCostResults approves many VERIFIED results; same semantics as
+	// BulkVerifyCostResults.
+	// Required permission: finance.cost.result.approve.
+	BulkApproveCostResults(ctx context.Context, in *BulkApproveCostResultsRequest, opts ...grpc.CallOption) (*BulkApproveCostResultsResponse, error)
 	// ProcessChunkInternal computes one chunk of products synchronously.
 	// Invoked by finance-cost-worker after consuming a chunk message from RMQ.
 	// NOT exposed via REST gateway; intended for service-to-service traffic only.
@@ -256,6 +266,26 @@ func (c *costCalcServiceClient) ApproveCostResult(ctx context.Context, in *Appro
 	return out, nil
 }
 
+func (c *costCalcServiceClient) BulkVerifyCostResults(ctx context.Context, in *BulkVerifyCostResultsRequest, opts ...grpc.CallOption) (*BulkVerifyCostResultsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkVerifyCostResultsResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_BulkVerifyCostResults_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *costCalcServiceClient) BulkApproveCostResults(ctx context.Context, in *BulkApproveCostResultsRequest, opts ...grpc.CallOption) (*BulkApproveCostResultsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkApproveCostResultsResponse)
+	err := c.cc.Invoke(ctx, CostCalcService_BulkApproveCostResults_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *costCalcServiceClient) GetRouteCostSheet(ctx context.Context, in *GetRouteCostSheetRequest, opts ...grpc.CallOption) (*GetRouteCostSheetResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetRouteCostSheetResponse)
@@ -392,6 +422,14 @@ type CostCalcServiceServer interface {
 	// ApproveCostResult marks a cost result as approved.
 	// Required permission: finance.cost.result.approve.
 	ApproveCostResult(context.Context, *ApproveCostResultRequest) (*ApproveCostResultResponse, error)
+	// BulkVerifyCostResults verifies many CALCULATED results; each row runs the
+	// single-row rules in its own transaction, failures don't abort the rest.
+	// Required permission: finance.cost.result.verify.
+	BulkVerifyCostResults(context.Context, *BulkVerifyCostResultsRequest) (*BulkVerifyCostResultsResponse, error)
+	// BulkApproveCostResults approves many VERIFIED results; same semantics as
+	// BulkVerifyCostResults.
+	// Required permission: finance.cost.result.approve.
+	BulkApproveCostResults(context.Context, *BulkApproveCostResultsRequest) (*BulkApproveCostResultsResponse, error)
 	// ProcessChunkInternal computes one chunk of products synchronously.
 	// Invoked by finance-cost-worker after consuming a chunk message from RMQ.
 	// NOT exposed via REST gateway; intended for service-to-service traffic only.
@@ -467,6 +505,12 @@ func (UnimplementedCostCalcServiceServer) VerifyCostResult(context.Context, *Ver
 }
 func (UnimplementedCostCalcServiceServer) ApproveCostResult(context.Context, *ApproveCostResultRequest) (*ApproveCostResultResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveCostResult not implemented")
+}
+func (UnimplementedCostCalcServiceServer) BulkVerifyCostResults(context.Context, *BulkVerifyCostResultsRequest) (*BulkVerifyCostResultsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkVerifyCostResults not implemented")
+}
+func (UnimplementedCostCalcServiceServer) BulkApproveCostResults(context.Context, *BulkApproveCostResultsRequest) (*BulkApproveCostResultsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkApproveCostResults not implemented")
 }
 func (UnimplementedCostCalcServiceServer) GetRouteCostSheet(context.Context, *GetRouteCostSheetRequest) (*GetRouteCostSheetResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRouteCostSheet not implemented")
@@ -750,6 +794,42 @@ func _CostCalcService_ApproveCostResult_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CostCalcService_BulkVerifyCostResults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkVerifyCostResultsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).BulkVerifyCostResults(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_BulkVerifyCostResults_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).BulkVerifyCostResults(ctx, req.(*BulkVerifyCostResultsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CostCalcService_BulkApproveCostResults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkApproveCostResultsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CostCalcServiceServer).BulkApproveCostResults(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CostCalcService_BulkApproveCostResults_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CostCalcServiceServer).BulkApproveCostResults(ctx, req.(*BulkApproveCostResultsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CostCalcService_GetRouteCostSheet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetRouteCostSheetRequest)
 	if err := dec(in); err != nil {
@@ -970,6 +1050,14 @@ var CostCalcService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApproveCostResult",
 			Handler:    _CostCalcService_ApproveCostResult_Handler,
+		},
+		{
+			MethodName: "BulkVerifyCostResults",
+			Handler:    _CostCalcService_BulkVerifyCostResults_Handler,
+		},
+		{
+			MethodName: "BulkApproveCostResults",
+			Handler:    _CostCalcService_BulkApproveCostResults_Handler,
 		},
 		{
 			MethodName: "GetRouteCostSheet",

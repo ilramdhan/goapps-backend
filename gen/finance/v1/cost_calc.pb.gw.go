@@ -636,6 +636,60 @@ func local_request_CostCalcService_ApproveCostResult_0(ctx context.Context, mars
 	return msg, metadata, err
 }
 
+func request_CostCalcService_BulkVerifyCostResults_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq BulkVerifyCostResultsRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.BulkVerifyCostResults(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_BulkVerifyCostResults_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq BulkVerifyCostResultsRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.BulkVerifyCostResults(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_CostCalcService_BulkApproveCostResults_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq BulkApproveCostResultsRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.BulkApproveCostResults(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CostCalcService_BulkApproveCostResults_0(ctx context.Context, marshaler runtime.Marshaler, server CostCalcServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq BulkApproveCostResultsRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.BulkApproveCostResults(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 func request_CostCalcService_GetRouteCostSheet_0(ctx context.Context, marshaler runtime.Marshaler, client CostCalcServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq GetRouteCostSheetRequest
@@ -1250,6 +1304,46 @@ func RegisterCostCalcServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		}
 		forward_CostCalcService_ApproveCostResult_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_CostCalcService_BulkVerifyCostResults_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/BulkVerifyCostResults", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/bulk-verify"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_BulkVerifyCostResults_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_BulkVerifyCostResults_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_CostCalcService_BulkApproveCostResults_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/finance.v1.CostCalcService/BulkApproveCostResults", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/bulk-approve"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CostCalcService_BulkApproveCostResults_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_BulkApproveCostResults_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_CostCalcService_GetRouteCostSheet_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1671,6 +1765,40 @@ func RegisterCostCalcServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		}
 		forward_CostCalcService_ApproveCostResult_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_CostCalcService_BulkVerifyCostResults_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/BulkVerifyCostResults", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/bulk-verify"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_BulkVerifyCostResults_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_BulkVerifyCostResults_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_CostCalcService_BulkApproveCostResults_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/finance.v1.CostCalcService/BulkApproveCostResults", runtime.WithHTTPPathPattern("/api/v1/finance/cost-results/bulk-approve"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CostCalcService_BulkApproveCostResults_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CostCalcService_BulkApproveCostResults_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_CostCalcService_GetRouteCostSheet_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1824,6 +1952,8 @@ var (
 	pattern_CostCalcService_ListCostHistory_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "history"}, ""))
 	pattern_CostCalcService_VerifyCostResult_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "cost_id", "verify"}, ""))
 	pattern_CostCalcService_ApproveCostResult_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "v1", "finance", "cost-results", "cost_id", "approve"}, ""))
+	pattern_CostCalcService_BulkVerifyCostResults_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "cost-results", "bulk-verify"}, ""))
+	pattern_CostCalcService_BulkApproveCostResults_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "cost-results", "bulk-approve"}, ""))
 	pattern_CostCalcService_GetRouteCostSheet_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"api", "v1", "finance", "cost-results", "product_sys_id", "period", "calculation_type", "route-sheet"}, ""))
 	pattern_CostCalcService_RequestProductCostSheetExport_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "finance", "cost-results", "request-export"}, ""))
 	pattern_CostCalcService_GetProductCostSheetDownloadURL_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"api", "v1", "finance", "cost-results", "exports", "job_id", "download"}, ""))
@@ -1848,6 +1978,8 @@ var (
 	forward_CostCalcService_ListCostHistory_0                    = runtime.ForwardResponseMessage
 	forward_CostCalcService_VerifyCostResult_0                   = runtime.ForwardResponseMessage
 	forward_CostCalcService_ApproveCostResult_0                  = runtime.ForwardResponseMessage
+	forward_CostCalcService_BulkVerifyCostResults_0              = runtime.ForwardResponseMessage
+	forward_CostCalcService_BulkApproveCostResults_0             = runtime.ForwardResponseMessage
 	forward_CostCalcService_GetRouteCostSheet_0                  = runtime.ForwardResponseMessage
 	forward_CostCalcService_RequestProductCostSheetExport_0      = runtime.ForwardResponseMessage
 	forward_CostCalcService_GetProductCostSheetDownloadURL_0     = runtime.ForwardResponseMessage
