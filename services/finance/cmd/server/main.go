@@ -890,6 +890,7 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 	// Core RPCs exposed via ErpIntegrationService (P6-T3a).
 	costProductMasterHandler.WithErpAttributes(cpmapp.NewUpdateErpAttributesHandler(costProductMasterRepo, costProductMasterRepo, auditapp.NewEmitter(costAuditLogRepo)))
 	costProductMasterHandler.WithRMRatioMode(cpmapp.NewUpdateRMRatioModeHandler(costProductMasterRepo, costProductMasterRepo, auditapp.NewEmitter(costAuditLogRepo)))
+	costProductMasterHandler.WithFixCostMinThreshold(cpmapp.NewUpdateFixCostMinThresholdHandler(costProductMasterRepo, costProductMasterRepo, auditapp.NewEmitter(costAuditLogRepo)))
 	erpInt := setupErpIntegration(cfg, db, jobRepo, periodLockRepo, costAuditLogRepo, oracleClient, oracleErr, rmqAdapter, erpWriter, costProductMasterRepo, costProductTypeRepo)
 	erpIntegrationHandler := grpcdelivery.NewErpIntegrationGRPCHandler(grpcdelivery.ErpIntegrationDeps{
 		Create: erpInt.createBatch, Steps: erpInt.stepTrigger, Batches: erpInt.batches, Ack: erpInt.ackWarnings,
