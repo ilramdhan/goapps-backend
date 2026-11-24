@@ -150,16 +150,17 @@ func planRecord(r PlanRow) []string {
 // WriteSummaryCSV writes section,key,count lines.
 func WriteSummaryCSV(w io.Writer, plan *Plan) error {
 	cw := csv.NewWriter(w)
-	recs := [][]string{{"section", "key", "count"}, {"plan", "rows", strconv.Itoa(len(plan.Rows))}}
 	c := plan.Counts()
-	for _, d := range []Decision{DecisionApply, DecisionSkipSame, DecisionReview, DecisionReport} {
-		recs = append(recs, []string{"decision", string(d), strconv.Itoa(c[d])})
-	}
 	reasons := map[string]int{}
 	for _, r := range plan.Rows {
 		if r.Decision == DecisionReport || r.Decision == DecisionReview {
 			reasons[string(r.Decision)+"/"+strings.SplitN(r.Reason, "(", 2)[0]]++
 		}
+	}
+	recs := make([][]string, 0, 6+len(reasons)+2)
+	recs = append(recs, []string{"section", "key", "count"}, []string{"plan", "rows", strconv.Itoa(len(plan.Rows))})
+	for _, d := range []Decision{DecisionApply, DecisionSkipSame, DecisionReview, DecisionReport} {
+		recs = append(recs, []string{"decision", string(d), strconv.Itoa(c[d])})
 	}
 	for k, v := range reasons {
 		recs = append(recs, []string{"reason", k, strconv.Itoa(v)})
@@ -213,8 +214,11 @@ func ReadPlanCSVRecord(rec []string) (PlanRow, error) {
 }
 
 func unmarshalAll(src []string, dst ...any) error {
-	for i, s := range src {
-		if err := json.Unmarshal([]byte(s), dst[i]); err != nil {
+	if len(src) != len(dst) {
+		return fmt.Errorf("json columns: got %d, want %d", len(src), len(dst))
+	}
+	for i, d := range dst {
+		if err := json.Unmarshal([]byte(src[i]), d); err != nil {
 			return fmt.Errorf("json column %d: %w", i, err)
 		}
 	}
