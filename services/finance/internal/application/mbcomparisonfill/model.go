@@ -33,7 +33,6 @@ var Params = []Param{
 	{"MB_SP_CODE", mblegacyfill.KindText}, {"MB_SP_DYE", mblegacyfill.KindText},
 	{"MB_SP_DENIER", mblegacyfill.KindNum}, {"MB_SP_FILAMENT", mblegacyfill.KindNum},
 	{"MB_SP_CC", mblegacyfill.KindText}, {"MB_SP_DOZING", mblegacyfill.KindNum},
-	{"RP_CC", mblegacyfill.KindText},
 	{"CONV_FACTOR_ACTUAL", mblegacyfill.KindNum}, {"RP_DOZING_ACTUAL", mblegacyfill.KindNum},
 }
 
@@ -72,6 +71,7 @@ type Product struct {
 	Locked   bool
 	Values   map[string]string // existing CPP value by param code (absent key = no CPP row)
 	HasCAPP  map[string]bool
+	SpinPtr  string // cpp_value_mb_spin_id of MB_SP_CODE ("" = NULL / no row)
 }
 
 // ShadeKey normalizes a shade: upper-case, without '-' and spaces.

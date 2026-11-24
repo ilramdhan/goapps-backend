@@ -17,11 +17,11 @@ func xrow(item, shade, sysid string, cells map[string]string) ExcelRow {
 }
 
 var fullCells = map[string]string{"MB_SP_CODE": "CMB1", "MB_SP_DYE": "DYE", "MB_SP_DENIER": "380", "MB_SP_FILAMENT": "108",
-	"MB_SP_CC": "TBL", "MB_SP_DOZING": "1.45", "CONV_FACTOR_ACTUAL": "1.6743", "RP_CC": "TBL", "RP_DOZING_ACTUAL": "1.6743"}
+	"MB_SP_CC": "TBL", "MB_SP_DOZING": "1.45", "CONV_FACTOR_ACTUAL": "1.6743", "RP_DOZING_ACTUAL": "1.6743"}
 
 func sameValues() map[string]string {
 	return map[string]string{"MB_SP_CODE": "CMB1", "MB_SP_DYE": "DYE", "MB_SP_DENIER": "380.000000", "MB_SP_FILAMENT": "108.000000",
-		"MB_SP_CC": "TBL", "MB_SP_DOZING": "1.450000", "CONV_FACTOR_ACTUAL": "1.674300", "RP_CC": "TBL", "RP_DOZING_ACTUAL": "1.674300"}
+		"MB_SP_CC": "TBL", "MB_SP_DOZING": "1.450000", "CONV_FACTOR_ACTUAL": "1.674300", "RP_DOZING_ACTUAL": "1.674300"}
 }
 
 func allCAPP() map[string]bool {
@@ -50,8 +50,8 @@ func TestBuildPlanDecisions(t *testing.T) {
 	}{
 		{"same", xrow("POY1", "Y145T", "1", fullCells), []Product{prod(1, false, sameValues(), allCAPP())}, nil, DecisionSkipSame, "same", nil, 0},
 		{"changed dozing", xrow("POY1", "Y145T", "1", fullCells), []Product{prod(1, false, diff, allCAPP())}, nil, DecisionApply, "changed:MB_SP_DOZING", map[string]string{"MB_SP_DOZING": "1.45"}, 0},
-		{"new product values + capp", xrow("POY1", "Y145T", "1", fullCells), []Product{prod(1, false, map[string]string{}, map[string]bool{})}, nil, DecisionApply, "", nil, 9},
-		{"capp only", xrow("POY1", "Y145T", "1", fullCells), []Product{prod(1, false, sameValues(), map[string]bool{"RP_DOZING_ACTUAL": true})}, nil, DecisionApply, "capp_only", map[string]string{}, 8},
+		{"new product values + capp", xrow("POY1", "Y145T", "1", fullCells), []Product{prod(1, false, map[string]string{}, map[string]bool{})}, nil, DecisionApply, "", nil, 8},
+		{"capp only", xrow("POY1", "Y145T", "1", fullCells), []Product{prod(1, false, sameValues(), map[string]bool{"RP_DOZING_ACTUAL": true})}, nil, DecisionApply, "capp_only", map[string]string{}, 7},
 		{"locked", xrow("POY1", "Y145T", "1", fullCells), []Product{prod(1, true, diff, allCAPP())}, nil, DecisionReport, "product_locked", nil, 0},
 		{"not found", xrow("POY9", "Y145T", "1", fullCells), nil, nil, DecisionReport, "product_not_found", nil, 0},
 		{"multi", xrow("POY1", "Y145T", "1", fullCells), []Product{prod(1, false, diff, allCAPP()), prod(2, false, diff, allCAPP())}, nil, DecisionReview, "multiple_products(2)", nil, 0},
@@ -188,4 +188,20 @@ func TestApplyLimitBatchPreflightActor(t *testing.T) {
 	rev, err := Revert(context.Background(), w, "mbcmp-local", []RowResult{{Result: ResultApplied}, {Result: ResultWouldApply}})
 	require.NoError(t, err)
 	assert.Len(t, rev, 1)
+}
+
+func TestSpinPtrClearedCountAndRPCCIgnored(t *testing.T) {
+	p := Product{SysID: 1, ItemCode: "P", Shade: "S", SpinPtr: "spin-1", HasCAPP: allCAPP(),
+		Values: map[string]string{"MB_SP_CODE": "OLD"}}
+	prods := map[string][]Product{ProductKey("P", "S"): {p}}
+	plan := BuildPlan([]ExcelRow{xrow("P", "S", "1", map[string]string{"MB_SP_CODE": "NEW", "RP_CC": "RND"})}, prods, nil)
+	assert.Equal(t, 1, plan.SpinPtrCleared)
+	assert.Equal(t, "spin-1", plan.Rows[0].SpinPtr)
+	assert.Equal(t, map[string]bool{"MB_SP_CODE": true}, plan.Rows[0].BeforeExisted)
+	_, rpcc := plan.Rows[0].After["RP_CC"]
+	assert.False(t, rpcc, "RP_CC is calculated, never written")
+
+	same := BuildPlan([]ExcelRow{xrow("P", "S", "1", map[string]string{"MB_SP_CODE": "OLD"})}, prods, nil)
+	assert.Equal(t, DecisionSkipSame, same.Rows[0].Decision)
+	assert.Equal(t, 0, same.SpinPtrCleared)
 }

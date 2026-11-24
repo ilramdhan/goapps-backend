@@ -19,12 +19,17 @@ type PlanRow struct {
 	Before    map[string]string // current value of each changed param ("" = no CPP row)
 	After     map[string]string // value to write per changed param
 	CAPP      []string          // params whose CAPP row is missing and must be inserted
+	// BeforeExisted: whether a CPP row existed per changed param (distinguishes "no row" from "empty value").
+	BeforeExisted map[string]bool
+	// SpinPtr is the cpp_value_mb_spin_id of MB_SP_CODE that is cleared when the code changes ("" = none).
+	SpinPtr string
 }
 
 // Plan is the planner output.
 type Plan struct {
 	Rows           []PlanRow
 	CPPWithoutCAPP int // products having any written-param CPP without its CAPP
+	SpinPtrCleared int // products whose MB_SP_CODE changes and had a non-NULL spin pointer
 }
 
 // Counts returns rows per decision.
@@ -66,6 +71,9 @@ func BuildPlan(rows []ExcelRow, products map[string][]Product, orion map[string]
 				seen[ps[0].SysID] = true
 				if cppWithoutCAPP(ps[0]) {
 					plan.CPPWithoutCAPP++
+				}
+				if pr.SpinPtr != "" {
+					plan.SpinPtrCleared++
 				}
 			}
 		}
@@ -109,7 +117,7 @@ func classify(pr *PlanRow, r ExcelRow, p Product, orion map[string]string) {
 		return
 	}
 	want := desired(r, orion)
-	pr.Before, pr.After = map[string]string{}, map[string]string{}
+	pr.Before, pr.After, pr.BeforeExisted = map[string]string{}, map[string]string{}, map[string]bool{}
 	codes := make([]string, 0, len(want))
 	for _, pa := range Params {
 		if _, ok := want[pa.Code]; ok {
@@ -121,11 +129,14 @@ func classify(pr *PlanRow, r ExcelRow, p Product, orion map[string]string) {
 		cur, has := p.Values[code]
 		k, _ := ParamKind(code)
 		if !has || !mblegacyfill.Equal(k, cur, want[code]) {
-			pr.Before[code], pr.After[code] = cur, want[code]
+			pr.Before[code], pr.After[code], pr.BeforeExisted[code] = cur, want[code], has
 		}
 		if !p.HasCAPP[code] {
 			pr.CAPP = append(pr.CAPP, code)
 		}
+	}
+	if _, ok := pr.After["MB_SP_CODE"]; ok {
+		pr.SpinPtr = p.SpinPtr
 	}
 	switch {
 	case len(want) == 0:

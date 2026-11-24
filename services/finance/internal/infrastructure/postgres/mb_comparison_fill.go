@@ -103,6 +103,9 @@ func snapshotParams(ctx context.Context, tx *sql.Tx, byID map[int64]*fill.Produc
 	if err = finishRows(rs); err != nil {
 		return err
 	}
+	if err = snapshotSpinPtr(ctx, tx, byID); err != nil {
+		return err
+	}
 	rs, err = tx.QueryContext(ctx, `SELECT a.capp_product_sys_id, p.param_code
 		FROM cost_product_applicable_param a JOIN mst_parameter p ON p.id = a.capp_param_id
 		WHERE p.param_code = ANY($1)`, pq.Array(fillCodes()))
@@ -121,6 +124,38 @@ func snapshotParams(ctx context.Context, tx *sql.Tx, byID map[int64]*fill.Produc
 		}
 	}
 	return finishRows(rs)
+}
+
+func snapshotSpinPtr(ctx context.Context, tx *sql.Tx, byID map[int64]*fill.Product) error {
+	rs, err := tx.QueryContext(ctx, `SELECT c.cpp_product_sys_id, CAST(c.cpp_value_mb_spin_id AS text)
+		FROM cost_product_parameter c JOIN mst_parameter p ON p.id = c.cpp_param_id
+		WHERE p.param_code = 'MB_SP_CODE' AND c.cpp_value_mb_spin_id IS NOT NULL`)
+	if err != nil {
+		return fmt.Errorf("query spin pointers: %w", err)
+	}
+	defer closeRows(rs)
+	for rs.Next() {
+		var id int64
+		var ptr string
+		if err = rs.Scan(&id, &ptr); err != nil {
+			return fmt.Errorf("scan spin pointer: %w", err)
+		}
+		if p := byID[id]; p != nil {
+			p.SpinPtr = ptr
+		}
+	}
+	return finishRows(rs)
+}
+
+// readSpinPtr returns the MB_SP_CODE cpp_value_mb_spin_id ("" = NULL / no row).
+func readSpinPtr(ctx context.Context, tx *sql.Tx, pid int64, paramID string) (string, error) {
+	var ptr sql.NullString
+	err := tx.QueryRowContext(ctx, `SELECT CAST(cpp_value_mb_spin_id AS text) FROM cost_product_parameter
+		WHERE cpp_product_sys_id = $1 AND cpp_param_id = CAST($2 AS uuid)`, pid, paramID).Scan(&ptr)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("read spin pointer: %w", err)
+	}
+	return ptr.String, nil
 }
 
 // Preflight requires the three formulas to carry the migration 000616 marker.
@@ -298,23 +333,48 @@ func rollbackIgnoringDone(tx *sql.Tx) error {
 }
 
 // applyRow returns the CAPP params inserted, or a non-empty reason when the row must be skipped (FAILED).
+// guardRow is the optimistic check: every written param (and the spin pointer) still equals the plan's before-image.
+func guardRow(ctx context.Context, tx *sql.Tx, r fill.PlanRow, ids map[string]string) (string, error) {
+	for _, code := range sortedParamCodes(r.After) {
+		cur, has, err := readCPP(ctx, tx, r.ProductID, ids[code])
+		if err != nil {
+			return "", err
+		}
+		k, _ := fill.ParamKind(code)
+		if has != r.BeforeExisted[code] || !mblegacyfill.Equal(k, cur, r.Before[code]) {
+			return "changed_since_plan:" + code, nil
+		}
+	}
+	if _, ok := r.After["MB_SP_CODE"]; ok {
+		ptr, err := readSpinPtr(ctx, tx, r.ProductID, ids["MB_SP_CODE"])
+		if err != nil {
+			return "", err
+		}
+		if !strings.EqualFold(ptr, r.SpinPtr) {
+			return "changed_since_plan:spin_ptr", nil
+		}
+	}
+	return "", nil
+}
+
 func (m *MBComparisonFill) applyRow(ctx context.Context, tx *sql.Tx, actor string, r fill.PlanRow, ids map[string]string) (inserted []string, reason string, err error) {
 	if reason, err = lockProduct(ctx, tx, r.ProductID); reason != "" || err != nil {
 		return nil, reason, err
 	}
-	for _, code := range sortedParamCodes(r.After) { // optimistic guard: still the plan's before-image
-		cur, _, rerr := readCPP(ctx, tx, r.ProductID, ids[code])
-		if rerr != nil {
-			return nil, "", rerr
-		}
-		k, _ := fill.ParamKind(code)
-		if !mblegacyfill.Equal(k, cur, r.Before[code]) {
-			return nil, "changed_since_plan:" + code, nil
-		}
+	if reason, err = guardRow(ctx, tx, r, ids); reason != "" || err != nil {
+		return nil, reason, err
 	}
+	_, codeChanges := r.After["MB_SP_CODE"]
 	for _, code := range sortedParamCodes(r.After) {
 		if err = writeCPP(ctx, tx, actor, r.ProductID, code, ids[code], r.After[code]); err != nil {
 			return nil, "", err
+		}
+	}
+	if codeChanges && r.SpinPtr != "" {
+		// A lookup sync lets the pointer win over the code text: drop it so the new code is resolved.
+		if _, err = tx.ExecContext(ctx, `UPDATE cost_product_parameter SET cpp_value_mb_spin_id = NULL
+			WHERE cpp_product_sys_id = $1 AND cpp_param_id = CAST($2 AS uuid)`, r.ProductID, ids["MB_SP_CODE"]); err != nil {
+			return nil, "", fmt.Errorf("clear spin pointer: %w", err)
 		}
 	}
 	for _, code := range r.CAPP {
@@ -352,21 +412,20 @@ func (m *MBComparisonFill) Revert(ctx context.Context, actor string, r fill.RowR
 	if err != nil {
 		return r, err
 	}
-	if _, err = tx.ExecContext(ctx, `SELECT 1 FROM cost_product_master WHERE cpm_product_sys_id = $1 FOR UPDATE`, r.ProductID); err != nil {
-		return r, fmt.Errorf("lock product: %w", err)
+	reason, err := lockProduct(ctx, tx, r.ProductID)
+	if err != nil {
+		return r, err
+	}
+	if reason == "product_locked" {
+		res.Result, res.Detail = fill.ResultFailed, reason
+		return res, nil
 	}
 	notes, changed, restored, err := revertParams(ctx, tx, actor, r, ids)
 	if err != nil {
 		return r, err
 	}
-	for _, code := range r.CAPPInserted {
-		if changed[code] {
-			continue
-		}
-		if _, err = tx.ExecContext(ctx, `DELETE FROM cost_product_applicable_param
-			WHERE capp_product_sys_id = $1 AND capp_param_id = CAST($2 AS uuid)`, r.ProductID, ids[code]); err != nil {
-			return r, fmt.Errorf("delete capp %s: %w", code, err)
-		}
+	if err = deleteInsertedCAPP(ctx, tx, r, ids, changed); err != nil {
+		return r, err
 	}
 	if err = tx.Commit(); err != nil {
 		return r, fmt.Errorf("commit: %w", err)
@@ -383,6 +442,20 @@ func (m *MBComparisonFill) Revert(ctx context.Context, actor string, r fill.RowR
 	return res, nil
 }
 
+// deleteInsertedCAPP deletes the CAPP rows this run inserted, except those of params changed since apply.
+func deleteInsertedCAPP(ctx context.Context, tx *sql.Tx, r fill.RowResult, ids map[string]string, changed map[string]bool) error {
+	for _, code := range r.CAPPInserted {
+		if changed[code] {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM cost_product_applicable_param
+			WHERE capp_product_sys_id = $1 AND capp_param_id = CAST($2 AS uuid)`, r.ProductID, ids[code]); err != nil {
+			return fmt.Errorf("delete capp %s: %w", code, err)
+		}
+	}
+	return nil
+}
+
 // revertParams restores each written param still holding its after-image.
 func revertParams(ctx context.Context, tx *sql.Tx, actor string, r fill.RowResult, ids map[string]string) (notes []string, changed map[string]bool, restored int, err error) {
 	changed = map[string]bool{}
@@ -394,11 +467,14 @@ func revertParams(ctx context.Context, tx *sql.Tx, actor string, r fill.RowResul
 		k, _ := fill.ParamKind(code)
 		switch {
 		case has && mblegacyfill.Equal(k, cur, r.After[code]):
-			if err = restoreCPP(ctx, tx, actor, r.ProductID, code, ids[code], r.Before[code]); err != nil {
+			if err = restoreCPP(ctx, tx, actor, r.ProductID, code, ids[code], r.Before[code], r.BeforeExisted[code]); err != nil {
+				return nil, nil, 0, err
+			}
+			if err = restoreSpinPtr(ctx, tx, r, code, ids[code]); err != nil {
 				return nil, nil, 0, err
 			}
 			restored++
-		case (!has && r.Before[code] == "") || (has && mblegacyfill.Equal(k, cur, r.Before[code])):
+		case (!has && !r.BeforeExisted[code]) || (has && mblegacyfill.Equal(k, cur, r.Before[code])):
 			notes = append(notes, code+":already")
 		default:
 			changed[code] = true
@@ -408,8 +484,21 @@ func revertParams(ctx context.Context, tx *sql.Tx, actor string, r fill.RowResul
 	return notes, changed, restored, nil
 }
 
-func restoreCPP(ctx context.Context, tx *sql.Tx, actor string, pid int64, code, paramID, before string) error {
-	if before == "" {
+// restoreSpinPtr puts the cleared MB_SP_CODE pointer back (only if the spin still exists).
+func restoreSpinPtr(ctx context.Context, tx *sql.Tx, r fill.RowResult, code, paramID string) error {
+	if code != "MB_SP_CODE" || r.SpinPtr == "" {
+		return nil
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE cost_product_parameter
+		SET cpp_value_mb_spin_id = (SELECT mbs_id FROM mst_mb_spin WHERE mbs_id = CAST($3 AS uuid))
+		WHERE cpp_product_sys_id = $1 AND cpp_param_id = CAST($2 AS uuid)`, r.ProductID, paramID, r.SpinPtr); err != nil {
+		return fmt.Errorf("restore spin pointer: %w", err)
+	}
+	return nil
+}
+
+func restoreCPP(ctx context.Context, tx *sql.Tx, actor string, pid int64, code, paramID, before string, existed bool) error {
+	if !existed {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM cost_product_parameter
 			WHERE cpp_product_sys_id = $1 AND cpp_param_id = CAST($2 AS uuid)`, pid, paramID); err != nil {
 			return fmt.Errorf("delete cpp %s: %w", code, err)

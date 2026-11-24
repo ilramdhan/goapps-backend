@@ -9,18 +9,20 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/mblegacyfill"
 )
 
 // Column indexes of dozing.csv (column 0 = Excel row; header = first record).
 const (
 	colItem, colShade, colCode, colDye, colDen, colFil, colCC = 3, 5, 7, 8, 9, 10, 11
-	colSPDoz, colConv, colRPCC, colRPDoz, colSysID            = 12, 13, 14, 15, 16
+	colSPDoz, colConv, colRPDoz, colSysID                     = 12, 13, 15, 16
 	minCols                                                   = 17
 )
 
 var cellParams = map[int]string{
 	colCode: "MB_SP_CODE", colDye: "MB_SP_DYE", colDen: "MB_SP_DENIER", colFil: "MB_SP_FILAMENT", colCC: "MB_SP_CC",
-	colSPDoz: "MB_SP_DOZING", colConv: "CONV_FACTOR_ACTUAL", colRPCC: "RP_CC", colRPDoz: "RP_DOZING_ACTUAL",
+	colSPDoz: "MB_SP_DOZING", colConv: "CONV_FACTOR_ACTUAL", colRPDoz: "RP_DOZING_ACTUAL",
 }
 
 func readCSV(path string) (recs [][]string, err error) {
@@ -75,7 +77,7 @@ func ParseRow(n int, rec []string) ExcelRow {
 			r.HasNA = true
 		}
 		k, _ := ParamKind(code)
-		if k == "num" && c != "" && !r.HasNA {
+		if k == mblegacyfill.KindNum && c != "" && !r.HasNA {
 			if _, ok := NormNum(c); !ok {
 				r.Malformed = code + "=" + c
 			}
@@ -122,7 +124,7 @@ func ParseOrion(path string) (map[string]string, error) {
 }
 
 // PlanHeader is the plan CSV header.
-var PlanHeader = []string{"excel_row", "item_code", "shade", "product_sys_id", "decision", "reason", "before_json", "after_json", "capp_json"}
+var PlanHeader = []string{"excel_row", "item_code", "shade", "product_sys_id", "decision", "reason", "before_json", "after_json", "capp_json", "before_existed_json", "spin_ptr_cleared"}
 
 // WritePlanCSV writes the plan rows.
 func WritePlanCSV(w io.Writer, plan *Plan) error {
@@ -132,7 +134,7 @@ func WritePlanCSV(w io.Writer, plan *Plan) error {
 	}
 	for _, r := range plan.Rows {
 		rec := []string{strconv.Itoa(r.ExcelRow), r.ItemCode, r.Shade, strconv.FormatInt(r.ProductID, 10),
-			string(r.Decision), r.Reason, mustJSON(r.Before), mustJSON(r.After), mustJSON(r.CAPP)}
+			string(r.Decision), r.Reason, mustJSON(r.Before), mustJSON(r.After), mustJSON(r.CAPP), mustJSON(r.BeforeExisted), r.SpinPtr}
 		if err := cw.Write(rec); err != nil {
 			return fmt.Errorf("write plan row: %w", err)
 		}
@@ -158,7 +160,8 @@ func WriteSummaryCSV(w io.Writer, plan *Plan) error {
 	for k, v := range reasons {
 		recs = append(recs, []string{"reason", k, strconv.Itoa(v)})
 	}
-	recs = append(recs, []string{"capp", "products_with_cpp_but_no_capp", strconv.Itoa(plan.CPPWithoutCAPP)})
+	recs = append(recs, []string{"capp", "products_with_cpp_but_no_capp", strconv.Itoa(plan.CPPWithoutCAPP)},
+		[]string{"spin_ptr", "products_with_spin_ptr_cleared", strconv.Itoa(plan.SpinPtrCleared)})
 	if err := cw.WriteAll(recs); err != nil {
 		return fmt.Errorf("write summary: %w", err)
 	}
@@ -198,8 +201,8 @@ func ReadPlanCSVRecord(rec []string) (PlanRow, error) {
 	if pr.ProductID, err = strconv.ParseInt(rec[3], 10, 64); err != nil {
 		return pr, fmt.Errorf("product_sys_id %q: %w", rec[3], err)
 	}
-	pr.ItemCode, pr.Shade, pr.Decision, pr.Reason = rec[1], rec[2], Decision(rec[4]), rec[5]
-	if err = unmarshalAll(rec[6:9], &pr.Before, &pr.After, &pr.CAPP); err != nil {
+	pr.ItemCode, pr.Shade, pr.Decision, pr.Reason, pr.SpinPtr = rec[1], rec[2], Decision(rec[4]), rec[5], rec[10]
+	if err = unmarshalAll(rec[6:10], &pr.Before, &pr.After, &pr.CAPP, &pr.BeforeExisted); err != nil {
 		return pr, fmt.Errorf("excel_row %d: %w", pr.ExcelRow, err)
 	}
 	return pr, nil

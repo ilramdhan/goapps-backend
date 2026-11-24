@@ -20,4 +20,4 @@ mb-comparison-fill revert --results out/mb-comparison-fill-apply-result-*.csv --
 - Values are used as-is (no calculation). Not touched: entry_status, spin, recipe, run_ldr, relink.
 
 CSV mapping (0 = Excel row): 3 item, 5 shade, 7 MB_SP_CODE (empty -> orion code via SYSID col 16, else unset), 8 MB_SP_DYE, 9 MB_SP_DENIER,
-10 MB_SP_FILAMENT, 11 MB_SP_CC, 12 MB_SP_DOZING, 13 CONV_FACTOR_ACTUAL, 14 RP_CC, 15 RP_DOZING_ACTUAL, 16 SYSID.
+10 MB_SP_FILAMENT, 11 MB_SP_CC, 12 MB_SP_DOZING, 13 CONV_FACTOR_ACTUAL, 15 RP_DOZING_ACTUAL, 16 SYSID.
