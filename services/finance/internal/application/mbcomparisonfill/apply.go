@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 )
 
@@ -117,9 +116,7 @@ func WriteResultCSV(w io.Writer, rs []RowResult) error {
 		return fmt.Errorf("write result header: %w", err)
 	}
 	for _, r := range rs {
-		rec := []string{strconv.Itoa(r.ExcelRow), r.ItemCode, r.Shade, strconv.FormatInt(r.ProductID, 10),
-			string(r.Decision), r.Reason, mustJSON(r.Before), mustJSON(r.After), mustJSON(r.CAPP),
-			r.Result, r.Detail, mustJSON(r.CAPPInserted)}
+		rec := append(planRecord(r.PlanRow), r.Result, r.Detail, mustJSON(r.CAPPInserted))
 		if err := cw.Write(rec); err != nil {
 			return fmt.Errorf("write result row: %w", err)
 		}
@@ -147,8 +144,9 @@ func ReadResultCSVs(paths []string) ([]RowResult, error) {
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", p, err)
 			}
-			rr := RowResult{PlanRow: pr, Result: rec[9], Detail: rec[10]}
-			if err := unmarshalAll(rec[11:12], &rr.CAPPInserted); err != nil {
+			n := len(PlanHeader)
+			rr := RowResult{PlanRow: pr, Result: rec[n], Detail: rec[n+1]}
+			if err := unmarshalAll(rec[n+2:n+3], &rr.CAPPInserted); err != nil {
 				return nil, fmt.Errorf("%s: %w", p, err)
 			}
 			out = append(out, rr)

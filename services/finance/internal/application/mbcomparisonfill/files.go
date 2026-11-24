@@ -133,14 +133,18 @@ func WritePlanCSV(w io.Writer, plan *Plan) error {
 		return fmt.Errorf("write plan header: %w", err)
 	}
 	for _, r := range plan.Rows {
-		rec := []string{strconv.Itoa(r.ExcelRow), r.ItemCode, r.Shade, strconv.FormatInt(r.ProductID, 10),
-			string(r.Decision), r.Reason, mustJSON(r.Before), mustJSON(r.After), mustJSON(r.CAPP), mustJSON(r.BeforeExisted), r.SpinPtr}
-		if err := cw.Write(rec); err != nil {
+		if err := cw.Write(planRecord(r)); err != nil {
 			return fmt.Errorf("write plan row: %w", err)
 		}
 	}
 	cw.Flush()
 	return cw.Error()
+}
+
+// planRecord renders one row in PlanHeader order (shared by the plan and result CSVs).
+func planRecord(r PlanRow) []string {
+	return []string{strconv.Itoa(r.ExcelRow), r.ItemCode, r.Shade, strconv.FormatInt(r.ProductID, 10),
+		string(r.Decision), r.Reason, mustJSON(r.Before), mustJSON(r.After), mustJSON(r.CAPP), mustJSON(r.BeforeExisted), r.SpinPtr}
 }
 
 // WriteSummaryCSV writes section,key,count lines.

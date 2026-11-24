@@ -205,3 +205,19 @@ func TestSpinPtrClearedCountAndRPCCIgnored(t *testing.T) {
 	assert.Equal(t, DecisionSkipSame, same.Rows[0].Decision)
 	assert.Equal(t, 0, same.SpinPtrCleared)
 }
+
+func TestResultCSVRoundTrip(t *testing.T) {
+	in := RowResult{PlanRow: PlanRow{ExcelRow: 22, ItemCode: "POY1", Shade: "Z1", ProductID: 7, Decision: DecisionApply,
+		Reason: "changed:MB_SP_CODE", Before: map[string]string{"MB_SP_CODE": "A"}, After: map[string]string{"MB_SP_CODE": "B"},
+		CAPP: []string{"RP_DOZING_ACTUAL"}, BeforeExisted: map[string]bool{"MB_SP_CODE": true}, SpinPtr: "spin-uuid"},
+		Result: "APPLIED", Detail: "d", CAPPInserted: []string{"RP_DOZING_ACTUAL"}}
+	p := filepath.Join(t.TempDir(), "r.csv")
+	f, err := os.Create(p)
+	require.NoError(t, err)
+	require.NoError(t, WriteResultCSV(f, []RowResult{in}))
+	require.NoError(t, f.Close())
+	out, err := ReadResultCSVs([]string{p})
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	assert.Equal(t, in, out[0])
+}
