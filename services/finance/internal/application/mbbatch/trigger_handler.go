@@ -32,6 +32,7 @@ type TriggerHandler struct {
 	svc        *Service
 	jobRepo    costcalcdom.JobRepository
 	periodLock costcalcdom.PeriodLockChecker
+	periods    SnapshotPeriodReader
 }
 
 // TriggerOption customizes the handler at construction.
@@ -61,7 +62,15 @@ func (h *TriggerHandler) Handle(ctx context.Context, period, actor string) (*Tri
 	if err := costcalcdom.CheckPeriodUnlocked(ctx, h.periodLock, period, costcalcdom.CalcTypeActual); err != nil {
 		return nil, fmt.Errorf("mb batch period %s: %w", period, err)
 	}
-	job, err := costcalcdom.NewJob(period, costcalcdom.CalcTypeActual, costcalcdom.ScopeMBBatch, nil, triggeredByMBBatch, actor)
+	return h.track(ctx, period, actor, triggeredByMBBatch, nil, func(jobID int64) (*BatchResult, error) {
+		return h.svc.RunMBBatch(ctx, period, jobID)
+	})
+}
+
+// track runs one batch under a fresh cal_job (scope MB_BATCH): create, PLANNING,
+// PROCESSING, run, then SUCCESS/PARTIAL_FAILED/FAILED with the per-MB errors.
+func (h *TriggerHandler) track(ctx context.Context, period, actor, triggeredBy string, filter []byte, run func(jobID int64) (*BatchResult, error)) (*TriggerResult, error) {
+	job, err := costcalcdom.NewJob(period, costcalcdom.CalcTypeActual, costcalcdom.ScopeMBBatch, filter, triggeredBy, actor)
 	if err != nil {
 		return nil, fmt.Errorf("new job: %w", err)
 	}
@@ -75,7 +84,7 @@ func (h *TriggerHandler) Handle(ctx context.Context, period, actor string) (*Tri
 		return nil, err
 	}
 
-	batchResult, runErr := h.svc.RunMBBatch(ctx, period, job.ID())
+	batchResult, runErr := run(job.ID())
 	if runErr != nil {
 		if compErr := h.failJob(ctx, job, runErr); compErr != nil {
 			return nil, compErr

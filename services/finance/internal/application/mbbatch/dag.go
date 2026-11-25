@@ -16,12 +16,19 @@ import (
 // the MB-to-MB composition graph contains a cycle (PRD §8.4 explicit requirement — must fail
 // the job with a clear error, not infinite-loop or silently pick an arbitrary order).
 func BuildDAG(ctx context.Context, headReader MBHeadReader, edgeReader MBEdgeReader) ([]MBHeadCandidate, error) {
+	sorted, _, err := buildDAG(ctx, headReader, edgeReader)
+	return sorted, err
+}
+
+// buildDAG is BuildDAG that also returns the MB-to-MB edges it sorted by, so the
+// re-validate recompute can walk dependents without a second edge read.
+func buildDAG(ctx context.Context, headReader MBHeadReader, edgeReader MBEdgeReader) ([]MBHeadCandidate, []MBEdge, error) {
 	candidates, err := headReader.ListValidated(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("build mb dag: list validated: %w", err)
+		return nil, nil, fmt.Errorf("build mb dag: list validated: %w", err)
 	}
 	if len(candidates) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	byID := make(map[string]MBHeadCandidate, len(candidates))
@@ -35,10 +42,14 @@ func BuildDAG(ctx context.Context, headReader MBHeadReader, edgeReader MBEdgeRea
 
 	edges, err := edgeReader.ListMBEdgesBulk(ctx, mbhIDs, versions)
 	if err != nil {
-		return nil, fmt.Errorf("build mb dag: list edges: %w", err)
+		return nil, nil, fmt.Errorf("build mb dag: list edges: %w", err)
 	}
 
-	return topoSortMBHeads(candidates, byID, edges)
+	sorted, err := topoSortMBHeads(candidates, byID, edges)
+	if err != nil {
+		return nil, nil, err
+	}
+	return sorted, edges, nil
 }
 
 // topoSortMBHeads performs a Kahn's-algorithm topological sort, modeled stylistically on

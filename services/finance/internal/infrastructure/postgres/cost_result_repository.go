@@ -1078,3 +1078,34 @@ func scanResult(s rowScanner) (*costcalc.Result, error) {
 		vb4DelCost, vb5DelCost,
 	).WithApprovedTrail(approvedPtr, approvedBy), nil
 }
+
+// ListActiveSnapshotPeriods returns, per period, which of productSysIDs hold at least one
+// non-SUPERSEDED cst_product_cost row (any calc type). Used by the MB recompute after a
+// recipe re-validate to find the periods whose snapshots went stale.
+func (r *CostResultRepository) ListActiveSnapshotPeriods(ctx context.Context, productSysIDs []int64) (map[string][]int64, error) {
+	out := map[string][]int64{}
+	if len(productSysIDs) == 0 {
+		return out, nil
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT DISTINCT cpc_period, cpc_product_sys_id
+		  FROM cst_product_cost
+		 WHERE cpc_product_sys_id = ANY($1)
+		   AND cpc_status <> 'SUPERSEDED'`, pq.Array(productSysIDs))
+	if err != nil {
+		return nil, fmt.Errorf("list active snapshot periods: %w", err)
+	}
+	defer closeRows(rows)
+	for rows.Next() {
+		var period string
+		var pid int64
+		if err := rows.Scan(&period, &pid); err != nil {
+			return nil, fmt.Errorf("scan active snapshot period: %w", err)
+		}
+		out[period] = append(out[period], pid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate active snapshot periods: %w", err)
+	}
+	return out, nil
+}

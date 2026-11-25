@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -31,7 +32,16 @@ type MBBulkTransitionHandler struct {
 	forceUnvalidateH *appmbhead.ForceUnvalidateHandler
 	submitH          *appmbhead.SubmitHandler
 	validateH        *appmbhead.ValidateHandler
+	recompute        appmbhead.RevalidateRecomputer
 	logger           zerolog.Logger
+}
+
+// WithRevalidateRecompute attaches the MB cost snapshot recompute run ONCE when a bulk
+// Validate batch finishes, over every successfully validated head (deduped), instead of
+// once per child. nil disables it.
+func (h *MBBulkTransitionHandler) WithRevalidateRecompute(r appmbhead.RevalidateRecomputer) *MBBulkTransitionHandler {
+	h.recompute = r
+	return h
 }
 
 // NewMBBulkTransitionHandler constructs the handler. submitH and validateH are the
@@ -213,7 +223,52 @@ func (h *MBBulkTransitionHandler) completeParentJob(ctx context.Context, parentI
 			Msg("mb bulk transition: persist parent batch completion status failed")
 		return
 	}
+	h.triggerRecompute(ctx, parent)
 	_ = msg // msg is retained on the signature for logging-context symmetry with markCompleted/markFailed.
+}
+
+// triggerRecompute hands the successfully validated heads of a finished bulk Validate batch
+// to the snapshot recompute (detached; it never affects the batch outcome). Heads come from
+// the persisted child rows, so a worker restart mid-batch loses none. First validates are
+// harmless: they have no snapshot yet, so the recompute selects no period for them.
+func (h *MBBulkTransitionHandler) triggerRecompute(ctx context.Context, parent *job.Execution) {
+	if h.recompute == nil || parent.Subtype() != mbheadbulk.ActionValidate {
+		return
+	}
+	children, err := h.jobRepo.ListChildren(ctx, parent.ID())
+	if err != nil {
+		h.logger.Error().Err(err).Str("parent_job_id", parent.ID().String()).
+			Msg("mb bulk transition: list children for snapshot recompute failed; snapshots not refreshed")
+		return
+	}
+	ids := validatedChildMBHIDs(children)
+	if len(ids) > 0 {
+		h.recompute.TriggerRevalidateRecompute(ctx, ids, parent.CreatedBy())
+	}
+}
+
+// validatedChildMBHIDs returns the distinct mbh_id of every SUCCESS child, read from the
+// child params JSON written by mbheadbulk.buildParams.
+func validatedChildMBHIDs(children []*job.Execution) []string {
+	seen := make(map[string]struct{}, len(children))
+	out := make([]string, 0, len(children))
+	for _, c := range children {
+		if c.Status() != job.StatusSuccess {
+			continue
+		}
+		var p struct {
+			MBHID string `json:"mbh_id"`
+		}
+		if err := json.Unmarshal(c.Params(), &p); err != nil || p.MBHID == "" {
+			continue
+		}
+		if _, dup := seen[p.MBHID]; dup {
+			continue
+		}
+		seen[p.MBHID] = struct{}{}
+		out = append(out, p.MBHID)
+	}
+	return out
 }
 
 // supersedeConfirmationPrefix marks a child failure caused by a shade+FG collision that

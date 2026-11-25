@@ -154,6 +154,13 @@ func (h *MBHeadHandler) WithFgReader(r mbspin.FgProductReader) *MBHeadHandler {
 	return h
 }
 
+// WithRevalidateRecompute attaches the after-commit MB cost snapshot recompute run when an
+// already-costed recipe is re-validated (best-effort, detached). nil disables it.
+func (h *MBHeadHandler) WithRevalidateRecompute(r appmbhead.RevalidateRecomputer) *MBHeadHandler {
+	h.validateHandler.WithRevalidateRecompute(r)
+	return h
+}
+
 // WithLookupSyncTrigger attaches the after-commit lookup-sync port used when an edit of an
 // already-validated recipe cascades into its MB Spins (best-effort — a queueing failure
 // is logged and never fails the save). A nil trigger leaves it disabled. Returns the
