@@ -3,6 +3,7 @@ package mbbatch
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	costcalcdom "github.com/mutugading/goapps-backend/services/finance/internal/domain/costcalc"
 )
@@ -33,6 +34,10 @@ type TriggerHandler struct {
 	jobRepo    costcalcdom.JobRepository
 	periodLock costcalcdom.PeriodLockChecker
 	periods    SnapshotPeriodReader
+	// recomputeMu serializes detached re-validate recomputes so a burst of approvals
+	// holds at most one batch tx (+ its loader conn) instead of one per approval, each
+	// parked on the period advisory lock while pinning a pool connection.
+	recomputeMu sync.Mutex
 }
 
 // TriggerOption customizes the handler at construction.

@@ -46,6 +46,8 @@ func (h *TriggerHandler) TriggerRevalidateRecompute(ctx context.Context, mbhIDs 
 				log.Error().Interface("panic", r).Strs("mbh_ids", ids).Msg("mb recompute after re-validate panicked")
 			}
 		}()
+		h.recomputeMu.Lock()
+		defer h.recomputeMu.Unlock()
 		ctx, cancel := context.WithTimeout(bg, recomputeTimeout)
 		defer cancel()
 		h.RecomputeRevalidated(ctx, ids, actor)
