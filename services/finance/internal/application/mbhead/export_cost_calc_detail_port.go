@@ -1,6 +1,9 @@
 package mbhead
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // CostCalcDetailFilter narrows the flat MB cost-calculation detail dump.
 //
@@ -158,6 +161,24 @@ type CostCalcDetailRow struct {
 	RMRateTier string
 	// CostActual is cpc_rm_cost_detail[].contribution (== Komposisi * RMRateActual).
 	CostActual *float64
+
+	// Staleness block (appended columns). CalcPeriod is cst_product_cost.cpc_period;
+	// CompositionVersion is mst_mb_head.mbh_current_version; SnapshotCalculatedAt is
+	// cpc_calculated_at; CompositionValidatedAt is MAX(mbcv_validated_at) of the head's
+	// current composition version (nil when unknown). SnapshotStale is IsSnapshotStale
+	// of the two timestamps.
+	CalcPeriod             string
+	CompositionVersion     int32
+	SnapshotCalculatedAt   *time.Time
+	CompositionValidatedAt *time.Time
+	SnapshotStale          bool
+}
+
+// IsSnapshotStale is true when the cost snapshot was calculated BEFORE the head's current
+// composition version was validated, i.e. the snapshot predates the recipe. Unknown
+// timestamps are never flagged.
+func IsSnapshotStale(calculatedAt, validatedAt *time.Time) bool {
+	return calculatedAt != nil && validatedAt != nil && calculatedAt.Before(*validatedAt)
 }
 
 // CostCalcDetailReader is the single read-only port the calc-detail dump depends on.

@@ -7,6 +7,7 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -134,9 +135,9 @@ func TestCostCalcDetail_ReferenceIdentities(t *testing.T) {
 	}
 }
 
-// TestCostCalcDetail_HeaderIsExactly29SnakeCaseColumns pins the contract with the
+// TestCostCalcDetail_HeaderIs29OriginalPlus5StalenessColumns pins the contract with the
 // downstream tooling that keys on these exact names.
-func TestCostCalcDetail_HeaderIsExactly29SnakeCaseColumns(t *testing.T) {
+func TestCostCalcDetail_HeaderIs29OriginalPlus5StalenessColumns(t *testing.T) {
 	want := []string{
 		"mb_code", "mb_name", "total_fix", "pct_waste", "pct_quality_loss",
 		"pct_efficiency", "dev_expense", "packing", "prod_per_day",
@@ -145,6 +146,8 @@ func TestCostCalcDetail_HeaderIsExactly29SnakeCaseColumns(t *testing.T) {
 		"mb_total_cost", "mb_cost_per_unit", "calc_version", "calc_status", "row_no",
 		"rm_type", "rm_ref", "rm_group_name", "komposisi", "rm_rate_actual",
 		"rm_rate_tier", "cost_actual",
+		"calc_period", "composition_version", "snapshot_calculated_at",
+		"composition_validated_at", "snapshot_stale",
 	}
 
 	rows := sheetRows(t, []mbhead.CostCalcDetailRow{referenceRow()})
@@ -470,4 +473,41 @@ func sheetRowsFrom(t *testing.T, reader *stubCostCalcDetailReader) [][]string {
 		t.Fatalf("get rows: %v", err)
 	}
 	return got
+}
+
+func TestIsSnapshotStale(t *testing.T) {
+	old := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
+	newer := old.Add(time.Hour)
+	cases := []struct {
+		name       string
+		calc, vald *time.Time
+		want       bool
+	}{
+		{"snapshot older than validation", &old, &newer, true},
+		{"snapshot newer", &newer, &old, false},
+		{"equal", &old, &old, false},
+		{"validated unknown", &old, nil, false},
+		{"calculated unknown", nil, &old, false},
+	}
+	for _, c := range cases {
+		if got := mbhead.IsSnapshotStale(c.calc, c.vald); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestCostCalcDetail_StalenessColumnsRender(t *testing.T) {
+	calc := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
+	vald := calc.Add(time.Hour)
+	r := referenceRow()
+	r.CalcPeriod, r.CompositionVersion = "202611", 3
+	r.SnapshotCalculatedAt, r.CompositionValidatedAt, r.SnapshotStale = &calc, &vald, true
+	rows := sheetRows(t, []mbhead.CostCalcDetailRow{r})
+	got := rows[1][29:]
+	want := []string{"202611", "3", "2026-11-01T00:00:00Z", "2026-11-01T01:00:00Z", "Y"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("col %d: got %q, want %q", 30+i, got[i], want[i])
+		}
+	}
 }

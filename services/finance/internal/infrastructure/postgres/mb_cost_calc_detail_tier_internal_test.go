@@ -42,8 +42,16 @@ func TestCostCalcDetailQuery_SelectsFlagValuationUsed(t *testing.T) {
 // against a historical calculation. If a future edit reintroduces that join, the dump
 // silently regains its ~5x multiplication with no error anywhere.
 func TestCostCalcDetailQuery_NoCompositionFanOut(t *testing.T) {
-	for _, banned := range []string{"mst_mb_composition", "mbcm_", "mst_mb_composition_version", "mbcv_"} {
-		if strings.Contains(costCalcDetailQuery, banned) {
+	// The staleness columns read mst_mb_composition_version, but ONLY through a
+	// single-row MAX() aggregate LATERAL (cv) that cannot multiply rows. Anything else
+	// touching the composition tables is still banned.
+	if !strings.Contains(costCalcDetailQuery, "SELECT MAX(v.mbcv_validated_at) AS validated_at") {
+		t.Fatalf("composition_version must be read via the single-row MAX aggregate:\n%s", costCalcDetailQuery)
+	}
+	q := strings.ReplaceAll(costCalcDetailQuery, "mst_mb_composition_version v", "")
+	q = strings.ReplaceAll(q, "v.mbcv_", "")
+	for _, banned := range []string{"mst_mb_composition", "mbcm_", "mbcv_"} {
+		if strings.Contains(q, banned) {
 			t.Fatalf("costCalcDetailQuery must never touch the live composition tables "+
 				"(found %q) — RM lines come from cpc_rm_cost_detail, and joining "+
 				"composition multiplies every cost row by n_composition_rows:\n%s",
