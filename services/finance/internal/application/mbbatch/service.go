@@ -166,7 +166,7 @@ func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadC
 	costs := newBatchCosts(candidates)
 	for _, c := range candidates {
 		if err := s.runOneMB(ctx, tx, c, period, jobID, costs, audits); err != nil {
-			result.Errors = append(result.Errors, BatchError{MBHID: c.MBHID, Error: err.Error()})
+			result.Errors = append(result.Errors, newBatchError(c, err))
 			continue
 		}
 		result.MBCount++
@@ -420,4 +420,9 @@ func jsonOrNil(v any) []byte {
 		return nil
 	}
 	return b
+}
+
+// newBatchError prefixes the MB code so cj_error_summary / the UI name the failing MB.
+func newBatchError(c MBHeadCandidate, err error) BatchError {
+	return BatchError{MBHID: c.MBHID, Error: c.Code + ": " + err.Error()}
 }
