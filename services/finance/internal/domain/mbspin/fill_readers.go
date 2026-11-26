@@ -23,7 +23,21 @@ var NumericFillReaders = map[string]func(*Entity) (float64, bool){
 		return 0, false
 	},
 	// D30: mbs_run_ldr_pct is the actual LDR used in production — the correct value for costing.
+	// mb-comparison-p2 item 2: honor the manual LDR adjustment. When adjustment is
+	// non-zero the value is (calculated, else run_ldr) + adjustment (same as the
+	// effective LDR shown in the form); otherwise raw run_ldr, unchanged. Requires the
+	// entity loaded with HydrateShadeAndLDR (all repository paths do).
 	"mbs_run_ldr_pct": func(e *Entity) (float64, bool) {
+		if adj := e.LDRAdjustmentPct(); adj != nil && *adj != 0 {
+			base := e.LDRCalculatedPct()
+			if base == nil {
+				base = e.MBSRunLdrPct()
+			}
+			if base == nil {
+				return 0, false
+			}
+			return *base + *adj, true
+		}
 		if v := e.MBSRunLdrPct(); v != nil {
 			return *v, true
 		}
