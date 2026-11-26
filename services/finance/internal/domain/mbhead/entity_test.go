@@ -15,8 +15,25 @@ func TestNew_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "MBH-2024-001", e.MBCosting())
 	assert.NotNil(t, e.MgtName())
-	assert.Equal(t, "MB Head A", *e.MgtName())
+	assert.Equal(t, "MBH-2024-001", *e.MgtName(), "name must equal costing, input ignored")
 	assert.True(t, e.IsActive())
+}
+
+func TestNew_NilMgtNameDefaultsToCosting(t *testing.T) {
+	e, err := mbhead.New(mbhead.NewParams{MBCosting: "MBH-X", CreatedBy: "admin"})
+	require.NoError(t, err)
+	require.NotNil(t, e.MgtName())
+	assert.Equal(t, "MBH-X", *e.MgtName())
+}
+
+func TestUpdate_NameFollowsCosting(t *testing.T) {
+	e, err := mbhead.New(mbhead.NewParams{MBCosting: "OLD", CreatedBy: "admin"})
+	require.NoError(t, err)
+	other, next := "other", "NEW"
+	require.NoError(t, e.Update(mbhead.UpdateInput{MgtName: &other}, "u"))
+	assert.Equal(t, "OLD", *e.MgtName())
+	require.NoError(t, e.Update(mbhead.UpdateInput{MBCosting: &next}, "u"))
+	assert.Equal(t, "NEW", *e.MgtName())
 }
 
 func TestNew_EmptyMBCosting(t *testing.T) {

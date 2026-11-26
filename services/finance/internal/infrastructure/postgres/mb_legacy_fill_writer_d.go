@@ -107,6 +107,10 @@ var lfSpinUniqueCols = map[string]bool{"mbs_orion_item_code": true}
 // mb_active_sync_writer); entry_status/is_locked/version are never touched.
 func lfHandleD(ctx context.Context, tx *sql.Tx, g *lfGroup, r mblegacyfill.PlanRow, cur string) (lfOutcome, error) {
 	spec := r.Row.Spec
+	if r.Row.Entity == mblegacyfill.EntityHead && spec.Column == "mbh_mgt_name" {
+		// MB Name always equals MB Costing (mb-comparison-p2 item 3): never written independently.
+		return lfOutcome{rejectReason: "mb_name_follows_costing"}, nil
+	}
 	if reject, err := lfCheckUnique(ctx, tx, r); err != nil {
 		return lfOutcome{}, err
 	} else if reject != "" {

@@ -55,7 +55,6 @@ func TestValidateRecipeFields_RuleSetSize(t *testing.T) {
 
 func TestValidateRecipeFields_EachFieldMissing_ReturnsErrRecipeFieldRequired(t *testing.T) {
 	blank := map[string]func(p *mbhead.NewParams){
-		"mbh_mgt_name":      func(p *mbhead.NewParams) { p.MgtName = nil },
 		"mbh_dev_code":      func(p *mbhead.NewParams) { p.DevCode = "" },
 		"mbh_vs_number":     func(p *mbhead.NewParams) { p.VSNumber = nil },
 		"mbh_shade_code":    func(p *mbhead.NewParams) { p.ShadeCode = "" },
@@ -66,8 +65,10 @@ func TestValidateRecipeFields_EachFieldMissing_ReturnsErrRecipeFieldRequired(t *
 		"mbh_ldr_prsn":      func(p *mbhead.NewParams) { p.MBHLdrPrsn = nil },
 		"mbh_final_product": func(p *mbhead.NewParams) { p.MBHFinalProduct = nil },
 	}
-	require.Len(t, blank, len(mbhead.RequiredRecipeFields()),
-		"every required field must have a blanking case")
+	// mbh_mgt_name is excluded: the name always equals the (mandatory) costing code, so it
+	// can never be blank (see TestNew_NilMgtNameDefaultsToCosting).
+	require.Len(t, blank, len(mbhead.RequiredRecipeFields())-1,
+		"every required field except the derived mbh_mgt_name must have a blanking case")
 
 	for column, clear := range blank {
 		t.Run(column, func(t *testing.T) {

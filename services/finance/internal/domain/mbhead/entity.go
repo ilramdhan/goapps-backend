@@ -163,8 +163,9 @@ func New(p NewParams) (*Entity, error) {
 	if p.CreatedBy == "" {
 		return nil, ErrEmptyCreatedBy
 	}
+	costingName := p.MBCosting // MB Name always equals MB Costing code; p.MgtName is ignored
 	e := &Entity{
-		id: uuid.New(), oracleSysID: p.OracleSysID, mbCosting: p.MBCosting, mgtName: p.MgtName,
+		id: uuid.New(), oracleSysID: p.OracleSysID, mbCosting: p.MBCosting, mgtName: &costingName,
 		denier: p.Denier, filament: p.Filament, dozing: p.Dozing,
 		mbhStatus: p.MBHStatus, mbhLdrPrsn: p.MBHLdrPrsn,
 		mbhRunLdrPct:    p.MBHRunLdrPct,
@@ -539,6 +540,8 @@ func (e *Entity) Update(in UpdateInput, updatedBy string) error {
 	if err := e.applyMBCosting(in.MBCosting); err != nil {
 		return err
 	}
+	costingName := e.mbCosting // MB Name follows MB Costing; in.MgtName is ignored
+	e.mgtName = &costingName
 	e.applyOptionalFields(in)
 	e.applyRecipeIdentityFields(in)
 	e.applyRecipeExtraFields(in)
@@ -808,9 +811,6 @@ func (e *Entity) Revoke(_ string) error {
 }
 
 func (e *Entity) applyOptionalFields(in UpdateInput) {
-	if in.MgtName != nil {
-		e.mgtName = in.MgtName
-	}
 	if in.Denier != nil {
 		e.denier = in.Denier
 	}
