@@ -16,6 +16,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -340,7 +341,7 @@ func (r *MBSpinRepository) txParentLookup(ctx context.Context, tx *sql.Tx) mbspi
 //
 //	mbs_oracle_sys_id / mbs_orion_item_code                  => NULL (D19, unchanged)
 //	mbs_status                                                => 'R and D' (D5)
-//	mbs_ldr_is_fixed / mbs_dozing_is_fixed                    => FALSE, explicit
+//	mbs_ldr_is_fixed / mbs_dozing_is_fixed                    => FALSE, explicit (ldr_is_fixed TRUE when an explicit LDR is given)
 //	mbs_mb_costing                                            => COPIED from source (D31=B)
 //	mbs_shade_code / mbs_shade_name / mbs_cross_section       => COPIED from source
 //	mbs_vs_number / mbs_lusture_code                          => COPIED from source
@@ -380,10 +381,11 @@ func (r *MBSpinRepository) insertClone(
 		ldrType = mbspin.LDRTypeCalculated
 	}
 	// Explicit LDR for the clone: run_ldr = calculated = value, adjustment NULL,
-	// locked ACTUAL (LockLDRActual semantics) so the parent's cascade skips it.
+	// locked ACTUAL + fixed (SetActualLDR semantics) so the parent's cascade skips it.
 	runLDR, ldrCalc, ldrAdj, ldrActual := src.MBSRunLdrPct, src.LDRCalculatedPct, src.LDRAdjustmentPct, false
 	if in.RunLDRPct != nil {
-		v := sql.NullFloat64{Float64: *in.RunLDRPct, Valid: true}
+		// Round to 4dp (the column scale) so the stored value is deterministic.
+		v := sql.NullFloat64{Float64: math.Round(*in.RunLDRPct*1e4) / 1e4, Valid: true}
 		runLDR, ldrCalc, ldrAdj, ldrActual = v, v, sql.NullFloat64{}, true
 		ldrType = mbspin.LDRTypeActual
 	}
@@ -423,7 +425,7 @@ func (r *MBSpinRepository) insertClone(
 			$5, $6, $7,
 			$8, $9,
 			$10, $11, $12, $13, $14,
-			FALSE, FALSE,
+			$32, FALSE,
 			$15, $16, $17,
 			$18, $19,
 			$20, $21, $22, $31,
@@ -443,7 +445,7 @@ func (r *MBSpinRepository) insertClone(
 		in.SourceSpinID, now, in.ActorUserID,
 		src.CostProductID,
 		fgID, fgItem, fgSource,
-		now, ldrActual,
+		now, ldrActual, ldrActual,
 	)
 	if err != nil {
 		if mapped := mapMBSpinUniqueErr(err); mapped != nil {

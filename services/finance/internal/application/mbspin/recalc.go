@@ -289,11 +289,11 @@ func scaleChildDozing(parent, child *mbspin.Entity) (float64, bool) {
 // down to the LDR-eligible subset and scales/converts each one, populating
 // res.LDRRecalculated / res.LDRIncomplete.
 //
-// Eligibility (Task D business rule 2): a candidate is LDR-eligible only when
-// child.LDRIsActual() is false. A child already locked ACTUAL is excluded from
-// the LDR cascade even though it may still be dozing-eligible — classify's
-// dozing-only candidate slice is reused as-is (⛔ its signature/behavior is not
-// changed), the LDR filter is applied on top of it here instead.
+// Eligibility: an R&D child locked ACTUAL (LDRIsActual, e.g. a duplicate
+// created with its own LDR) is frozen for BOTH cascades — classify already
+// skips it for dozing and reports SkipReasonLDRActual, so it never reaches
+// candidates. The LDRIsActual check below is a defensive second guard; the
+// persistence WHERE clause is the concurrency-safe third.
 //
 // Called from BOTH Preview and Apply: it only ever appends to res, it never
 // writes to the database — the actual persistence happens in Apply, via

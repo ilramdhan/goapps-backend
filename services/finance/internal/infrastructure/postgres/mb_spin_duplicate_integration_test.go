@@ -474,6 +474,7 @@ func (s *MBSpinDuplicateSuite) TestDuplicateSpin_ExplicitLDR() {
 	require.InDelta(s.T(), ldr, *clone.LDRCalculatedPct(), 1e-9)
 	require.Nil(s.T(), clone.LDRAdjustmentPct())
 	require.True(s.T(), clone.LDRIsActual())
+	require.True(s.T(), clone.IsFixedLDR())
 	require.Equal(s.T(), mbspin.LDRTypeActual, clone.LDRType())
 
 	out2, err := s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{SourceSpinID: src, ActorUserID: "itest-actor"})
