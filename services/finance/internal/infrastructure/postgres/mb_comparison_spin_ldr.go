@@ -19,6 +19,9 @@ type MBComparisonSpinLDR struct {
 	spin *MBSpinRepository
 }
 
+// reasonAlreadyTarget is the internal "nothing to do" signal of applyRow (not a failure).
+const reasonAlreadyTarget = "already_target"
+
 var _ fill.SpinStore = (*MBComparisonSpinLDR)(nil)
 
 // NewMBComparisonSpinLDR creates the adapter.
@@ -56,6 +59,20 @@ func (m *MBComparisonSpinLDR) Live(ctx context.Context, ids []string) (res map[s
 
 func spinLiveOf(s mbasSpinImage) fill.SpinLive {
 	return fill.SpinLive{Found: true, RunLDR: s.RunLDRPct, Adj: s.LDRAdjustmentPct, IsActual: s.LDRIsActual}
+}
+
+// spinPreCheck returns a reason when the locked spin must not be written (or needs nothing).
+func spinPreCheck(r fill.SpinRow, img *mbasImage) string {
+	if img.Spin.superseded {
+		return "spin_superseded"
+	}
+	if img.Head.deleted {
+		return "head_deleted"
+	}
+	if l := spinLiveOf(img.Spin); l.Adj == nil && l.IsActual && l.RunLDR != nil && fill.Fix4(*l.RunLDR) == fill.Fix4(r.Target) {
+		return reasonAlreadyTarget
+	}
+	return spinGuard(r, img.Spin)
 }
 
 // spinGuard returns a reason when the locked live spin differs from the plan's CSV snapshot.
@@ -114,12 +131,15 @@ func (m *MBComparisonSpinLDR) applyRowSP(ctx context.Context, tx *sql.Tx, actor 
 	if werr != nil && reason == "" {
 		reason = werr.Error()
 	}
-	if reason != "" {
+	switch {
+	case reason == reasonAlreadyTarget:
+		rr.Result, rr.Detail = fill.ResultAlreadyApplied, reason
+	case reason != "":
 		rr.Result, rr.Detail = fill.ResultFailed, reason
 		if _, err := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT spin_sp"); err != nil {
 			return rr, fmt.Errorf("rollback to savepoint: %w", err)
 		}
-	} else {
+	default:
 		rr.Before, rr.After = before, after
 	}
 	if _, err := tx.ExecContext(ctx, "RELEASE SAVEPOINT spin_sp"); err != nil {
@@ -140,7 +160,7 @@ func (m *MBComparisonSpinLDR) applyRow(ctx context.Context, tx *sql.Tx, actor st
 	if !ok {
 		return "", "", "spin_not_found", nil
 	}
-	if reason = spinGuard(r, img.Spin); reason != "" {
+	if reason = spinPreCheck(r, img); reason != "" {
 		return "", "", reason, nil
 	}
 	entity, err := loadSpinForRepointOn(ctx, tx, id)

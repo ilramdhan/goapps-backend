@@ -1,6 +1,7 @@
 package mbcomparisonfill
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,7 +16,9 @@ func TestPlanSpinLDR(t *testing.T) {
 	base := func(verdict string) SpinRow {
 		return SpinRow{ID: "a", Verdict: verdict, RunLDR: f64(1.87), Calc: f64(2), IsActual: true, Distinct: 1, Min: f64(2.28), Max: f64(2.28)}
 	}
-	liveOf := func(r SpinRow) SpinLive { return SpinLive{Found: true, RunLDR: r.RunLDR, Adj: r.Adj, IsActual: r.IsActual} }
+	liveOf := func(r SpinRow) SpinLive {
+		return SpinLive{Found: true, RunLDR: r.RunLDR, Adj: r.Adj, IsActual: r.IsActual}
+	}
 	tests := []struct {
 		name string
 		mut  func(*SpinRow, *SpinLive)
@@ -77,4 +80,48 @@ func TestReadSpinCSV_Q1AndRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, SpinApplySet, back[0].Decision)
 	assert.InDelta(t, 2.28, back[0].Target, 1e-9)
+}
+
+func TestApplySpinLDR_PlanTampered(t *testing.T) {
+	ok := SpinRow{ID: "a", Verdict: VerdictSetLDR, Distinct: 1, Min: f64(2.28), Max: f64(2.28), Target: 2.28, Decision: SpinApplySet}
+	badTarget := ok
+	badTarget.ID, badTarget.Target = "b", 9
+	badVerdict := ok
+	badVerdict.ID, badVerdict.Verdict = "c", VerdictSame
+	spread := ok
+	spread.ID, spread.Max = "d", f64(3)
+	st := &recStore{}
+	res, err := ApplySpinLDR(context.Background(), st, "mbcmp-x", []SpinRow{ok, badTarget, badVerdict, spread}, 0, 0, true)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a"}, st.ids)
+	failed := 0
+	for _, r := range res {
+		if r.Result == ResultFailed {
+			failed++
+			assert.Equal(t, "plan_tampered", r.Detail)
+		}
+	}
+	assert.Equal(t, 3, failed)
+}
+
+type recStore struct{ ids []string }
+
+func (*recStore) Live(context.Context, []string) (map[string]SpinLive, error) { return nil, nil }
+func (s *recStore) ApplyBatch(_ context.Context, _ string, rows []SpinRow, _ bool) ([]SpinResult, error) {
+	var out []SpinResult
+	for _, r := range rows {
+		s.ids = append(s.ids, r.ID)
+		out = append(out, SpinResult{SpinRow: r, Result: ResultApplied})
+	}
+	return out, nil
+}
+func (*recStore) Revert(context.Context, string, SpinResult) (SpinResult, error) {
+	return SpinResult{}, nil
+}
+
+func TestReadSpinCSV_HeaderMustMatch(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "x.csv")
+	require.NoError(t, os.WriteFile(p, []byte("mbs_id,spin_code,run_ldr,calc,adj,is_actual,excel_products,distinct_sp68,sp68_min,sp68_max,WRONG,verdict\n"), 0o600))
+	_, err := ReadSpinCSV(p)
+	require.Error(t, err)
 }

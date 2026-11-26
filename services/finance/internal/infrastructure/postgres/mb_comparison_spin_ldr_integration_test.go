@@ -77,3 +77,27 @@ func TestMBComparisonSpinLDR_Integration(t *testing.T) {
 	require.NotNil(t, adj)
 	assert.InDelta(t, 0.5, *adj, 1e-9)
 }
+
+// TestMBComparisonSpinLDR_IdempotentAndSuperseded: re-apply after commit = ALREADY_APPLIED; superseded spin = FAILED.
+func TestMBComparisonSpinLDR_IdempotentAndSuperseded(t *testing.T) {
+	f := newMBASFixture(t, "mbcmp_spinldr2")
+	pg := postgres.NewMBComparisonSpinLDR(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "Y1")
+	a := f.spin(h, "Y1", 1.87, true, nil)
+	b := f.spin(h, "Y1", 1.87, true, nil)
+	other := f.spin(h, "Y1", 1.87, true, nil)
+	f.exec(`UPDATE mst_mb_spin SET mbs_ldr_is_actual = TRUE WHERE mbs_id = $1`, a)
+	f.exec(`UPDATE mst_mb_spin SET mbs_ldr_is_actual = TRUE, mbs_superseded_by_spin_id = $2 WHERE mbs_id = $1`, b, other)
+	mk := func(id string) fill.SpinRow {
+		return fill.SpinRow{ID: id, Verdict: fill.VerdictSetLDR, RunLDR: f64p(1.87), IsActual: true, Distinct: 1, Min: f64p(2.28), Max: f64p(2.28), Target: 2.28, Decision: fill.SpinApplySet}
+	}
+	res, err := fill.ApplySpinLDR(f.ctx, pg, "mbcmp-test", []fill.SpinRow{mk(a.String()), mk(b.String())}, 0, 10, true)
+	require.NoError(t, err)
+	assert.Equal(t, fill.ResultApplied, res[0].Result, res[0].Detail)
+	assert.Equal(t, fill.ResultFailed, res[1].Result)
+	assert.Equal(t, "spin_superseded", res[1].Detail)
+
+	again, err := fill.ApplySpinLDR(f.ctx, pg, "mbcmp-test", []fill.SpinRow{mk(a.String())}, 0, 10, true)
+	require.NoError(t, err)
+	assert.Equal(t, fill.ResultAlreadyApplied, again[0].Result, again[0].Detail)
+}

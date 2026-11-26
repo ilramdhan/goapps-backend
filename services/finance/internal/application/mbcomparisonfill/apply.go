@@ -17,6 +17,8 @@ const (
 	ResultReverted   = "REVERTED"
 	ResultChanged    = "CHANGED_SINCE_APPLY"
 	ResultAlready    = "ALREADY_REVERTED"
+	// ResultAlreadyApplied: live spin already at the target (idempotent re-apply).
+	ResultAlreadyApplied = "ALREADY_APPLIED"
 )
 
 // ActorPrefix is required on every actor (cpp_filled_by marker).

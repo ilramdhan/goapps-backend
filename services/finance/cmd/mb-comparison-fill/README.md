@@ -47,4 +47,6 @@ Run steps:
 5. Lookup Sync PREVIEW (UI or `PreviewLookupSync`, scope master_ref = changed spins): MB_SP_DOZING items must equal sp68; review non-DOZING items before any apply.
 6. Re-run sql/06: every verdict should now be SAMA.
 7. Revert (if needed): `revert --results <apply-result csv(s), oldest first>`; restores the LDR group (run_ldr, type, actual, fixed, calc, adj) only where the spin still equals the after-image.
+Re-running `apply --commit` after a commit is idempotent: rows already at target report `ALREADY_APPLIED` (exit 0). FAILED reasons also include `plan_tampered` (plan CSV decision/target inconsistent with sp68), `spin_superseded`, `head_deleted`.
+Children of APPLY_SET parents are NOT re-cascaded by this tool (only the listed spins are written).
 Result CSVs carry `before_json` / `after_json` images. Marker: `updated_by` = actor (`mbcmp-<env>`).

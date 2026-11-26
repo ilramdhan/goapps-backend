@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -131,16 +132,30 @@ func SpinPlanIDs(rows []SpinRow) []string {
 	return ids
 }
 
+// planConsistent re-runs the static decision: the plan CSV must not be able to widen what gets written.
+func planConsistent(r SpinRow) bool {
+	if d, _ := staticSpinDecision(&r); d != "" {
+		return false
+	}
+	return r.Target == Fix4(*r.Min)
+}
+
 // ApplySpinLDR runs the APPLY_* rows in batches. limit 0 = all, batch 0 = one batch.
 func ApplySpinLDR(ctx context.Context, s SpinStore, actor string, rows []SpinRow, limit, batch int, commit bool) ([]SpinResult, error) {
 	if err := ValidateActor(actor); err != nil {
 		return nil, err
 	}
 	var todo []SpinRow
+	var out []SpinResult
 	for _, r := range rows {
-		if r.Decision == SpinApplySet || r.Decision == SpinApplyClearAdj {
-			todo = append(todo, r)
+		if r.Decision != SpinApplySet && r.Decision != SpinApplyClearAdj {
+			continue
 		}
+		if !planConsistent(r) {
+			out = append(out, SpinResult{SpinRow: r, Result: ResultFailed, Detail: "plan_tampered"})
+			continue
+		}
+		todo = append(todo, r)
 	}
 	if limit > 0 && len(todo) > limit {
 		todo = todo[:limit]
@@ -148,7 +163,6 @@ func ApplySpinLDR(ctx context.Context, s SpinStore, actor string, rows []SpinRow
 	if batch <= 0 {
 		batch = len(todo)
 	}
-	var out []SpinResult
 	for i := 0; i < len(todo); i += batch {
 		if err := ctx.Err(); err != nil {
 			return out, err
@@ -188,6 +202,8 @@ func RevertSpinLDR(ctx context.Context, s SpinStore, actor string, items []SpinR
 // ---- CSV ----
 
 var spinPlanHeader = []string{"mbs_id", "spin_code", "verdict", "run_ldr", "calc", "adj", "is_actual", "distinct_sp68", "sp68_min", "sp68_max", "target", "decision", "reason"}
+
+var spinQ1Header = []string{"mbs_id", "spin_code", "run_ldr", "calc", "adj", "is_actual", "excel_products", "distinct_sp68", "sp68_min", "sp68_max", "all_linked_products", "verdict"}
 
 // SpinResultHeader is the result CSV header.
 var SpinResultHeader = append(append([]string{}, spinPlanHeader...), "result", "detail", "before_json", "after_json")
@@ -248,11 +264,14 @@ func ReadSpinCSV(path string) ([]SpinRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(recs) == 0 || len(recs[0]) < 10 || recs[0][0] != "mbs_id" {
+	if len(recs) == 0 || recs[0][0] != "mbs_id" {
 		return nil, fmt.Errorf("%s: not a spin-ldr csv (header mbs_id,... expected)", path)
 	}
 	// 06-q1 has all_linked_products + verdict at 10,11; reorder to the plan layout.
-	q1 := recs[0][len(recs[0])-1] == "verdict" && len(recs[0]) == 12
+	q1 := slices.Equal(recs[0], spinQ1Header)
+	if !q1 && !slices.Equal(recs[0], spinPlanHeader) {
+		return nil, fmt.Errorf("%s: header is neither the 06-q1 nor the plan layout", path)
+	}
 	var out []SpinRow
 	for _, c := range recs[1:] {
 		if q1 {
