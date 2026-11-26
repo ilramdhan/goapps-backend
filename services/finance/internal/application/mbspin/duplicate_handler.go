@@ -16,6 +16,9 @@ import (
 
 // DuplicateCommand is the application-level payload of DuplicateMBSpin.
 type DuplicateCommand struct {
+	// RequireLiveHead rejects an inactive/superseded source head. Only the
+	// interactive gRPC path sets it; batch syncs stay permissive.
+	RequireLiveHead bool
 	// SourceSpinID is the spin being cloned; it becomes the clone's
 	// mbs_parent_spin_id.
 	SourceSpinID uuid.UUID
@@ -118,7 +121,7 @@ func (h *DuplicateHandler) Handle(ctx context.Context, cmd DuplicateCommand) (*D
 		Filament:        cmd.Filament,
 		FgProductID:     cmd.FgProductID,
 		RunLDRPct:       cmd.RunLDRPct,
-		RequireLiveHead: true,
+		RequireLiveHead: cmd.RequireLiveHead,
 		ActorUserID:     cmd.ActorUserID,
 	})
 	if err != nil {

@@ -468,13 +468,14 @@ func (h *MBSpinHandler) DuplicateMBSpin(ctx context.Context, req *financev1.Dupl
 	}
 
 	result, err := h.duplicateHandler.Handle(ctx, appmbspin.DuplicateCommand{
-		FgProductID:  fgID,
-		RunLDRPct:    req.MbsRunLdrPct,
-		SourceSpinID: spinID,
-		HeadID:       &headID,
-		MgtName:      req.MbsMgtName,
-		Denier:       req.MbsDenier,
-		Filament:     filament,
+		RequireLiveHead: true,
+		FgProductID:     fgID,
+		RunLDRPct:       req.MbsRunLdrPct,
+		SourceSpinID:    spinID,
+		HeadID:          &headID,
+		MgtName:         req.MbsMgtName,
+		Denier:          req.MbsDenier,
+		Filament:        filament,
 		// OrionItemCode stays nil: D19 requires the clone's ERP keys to be NULL,
 		// which is why DuplicateMBSpinRequest carries no such field.
 		ActorUserID: getUserFromContext(ctx),
