@@ -231,6 +231,17 @@ func (s *RecalcService) classify(ctx context.Context, parentID uuid.UUID) ([]*mb
 	candidates := make([]*mbspin.Entity, 0, len(children))
 	skipped := make([]SkippedChild, 0)
 	for _, child := range children {
+		if child.LDRIsActual() {
+			// An LDR-locked child (e.g. a duplicate with its own LDR) is frozen
+			// for the dozing cascade as well.
+			skipped = append(skipped, SkippedChild{
+				SpinID:  child.ID(),
+				MgtName: child.MgtName(),
+				Status:  child.MBSStatus(),
+				Reason:  mbspin.SkipReasonLDRActual,
+			})
+			continue
+		}
 		if !child.IsRnD() {
 			// ⛔ A7 ENFORCED HERE: a child in Spinning / Boughtout / no status
 			// holds an ACTUAL value. It is recorded and skipped — it never

@@ -164,6 +164,10 @@ type DuplicateInput struct {
 	// POY-ness and shade (vs the SOURCE spin) in the same tx (ErrFgNotPoy,
 	// ErrFgShadeMismatch) and maps a unique violation to ErrSpinShadeFgExists.
 	FgProductID *int64
+	// RunLDRPct, when non-nil (> 0), is the clone's own LDR: run_ldr and
+	// ldr_calculated = value, adjustment NULL, LDR locked ACTUAL (immune to the
+	// parent's LDR cascade). nil => copy the source LDR values (legacy behavior).
+	RunLDRPct *float64
 }
 
 // DuplicateOutput is the result of a successful DuplicateSpin.

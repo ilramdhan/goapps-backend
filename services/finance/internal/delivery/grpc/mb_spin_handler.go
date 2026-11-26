@@ -466,6 +466,7 @@ func (h *MBSpinHandler) DuplicateMBSpin(ctx context.Context, req *financev1.Dupl
 
 	result, err := h.duplicateHandler.Handle(ctx, appmbspin.DuplicateCommand{
 		FgProductID:  fgID,
+		RunLDRPct:    req.MbsRunLdrPct,
 		SourceSpinID: spinID,
 		HeadID:       &headID,
 		MgtName:      req.MbsMgtName,
@@ -592,6 +593,8 @@ func mbSpinErrorToBaseResponse(err error) *commonv1.BaseResponse {
 	case errors.Is(err, mbspin.ErrParentCycle),
 		errors.Is(err, mbspin.ErrMaxDuplicateDepth),
 		errors.Is(err, mbspin.ErrAlreadyDeleted),
+		errors.Is(err, mbspin.ErrDuplicateSourceNotLive),
+		errors.Is(err, mbspin.ErrInvalidDuplicateLDR),
 		errors.Is(err, mbspin.ErrLDRLockedActual):
 		return BadRequestResponse(err.Error())
 	case errors.Is(err, mbspin.ErrTooManyChildren):

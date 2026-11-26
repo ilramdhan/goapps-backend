@@ -256,6 +256,8 @@ type mbSpinCloneSource struct {
 	// source is itself a previously duplicated child, which DuplicateSpin must
 	// reject (ErrAlreadyDuplicated) before any further lineage/insert work.
 	ParentSpinID sql.NullString
+	// HeadLive is false when the parent MB head is soft-deleted or inactive.
+	HeadLive bool
 }
 
 // lockSourceSpin loads the clonable columns of the source under FOR UPDATE.
@@ -279,7 +281,8 @@ func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uu
 		       s.mbs_vs_number, s.mbs_lusture_code,
 		       s.mbs_ldr_calculated_pct, s.mbs_ldr_adjustment_pct,
 		       s.mbs_ldr_type, s.mbs_ldr_is_actual,
-		       s.mbs_mb_costing, s.mbs_parent_spin_id
+		       s.mbs_mb_costing, s.mbs_parent_spin_id,
+		       (h.deleted_at IS NULL AND h.mbh_is_active)
 		  FROM mst_mb_spin s
 		  JOIN mst_mb_head h ON h.mbh_id = s.mbs_mbh_id
 		 WHERE s.mbs_id = $1 AND s.deleted_at IS NULL
@@ -294,13 +297,16 @@ func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uu
 		&s.VSNumber, &s.LustureCode,
 		&s.LDRCalculatedPct, &s.LDRAdjustmentPct,
 		&s.LDRType, &s.LDRIsActual,
-		&s.MBCosting, &s.ParentSpinID,
+		&s.MBCosting, &s.ParentSpinID, &s.HeadLive,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, mbspin.ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("lock source mb spin: %w", err)
+	}
+	if !s.HeadLive {
+		return nil, mbspin.ErrDuplicateSourceNotLive
 	}
 	return &s, nil
 }
@@ -373,6 +379,14 @@ func (r *MBSpinRepository) insertClone(
 	if ldrType == mbspin.LDRTypeActual {
 		ldrType = mbspin.LDRTypeCalculated
 	}
+	// Explicit LDR for the clone: run_ldr = calculated = value, adjustment NULL,
+	// locked ACTUAL (LockLDRActual semantics) so the parent's cascade skips it.
+	runLDR, ldrCalc, ldrAdj, ldrActual := src.MBSRunLdrPct, src.LDRCalculatedPct, src.LDRAdjustmentPct, false
+	if in.RunLDRPct != nil {
+		v := sql.NullFloat64{Float64: *in.RunLDRPct, Valid: true}
+		runLDR, ldrCalc, ldrAdj, ldrActual = v, v, sql.NullFloat64{}, true
+		ldrType = mbspin.LDRTypeActual
+	}
 
 	// FG link: only when the caller chose one (validated by prepareCloneFg). The source's own
 	// FG is NEVER copied — it would immediately violate uix_mbs_shade_fg_live (same shade+FG).
@@ -412,7 +426,7 @@ func (r *MBSpinRepository) insertClone(
 			FALSE, FALSE,
 			$15, $16, $17,
 			$18, $19,
-			$20, $21, $22, FALSE,
+			$20, $21, $22, $31,
 			$23, $24, $25,
 			$26,
 			$27, $28, $29,
@@ -422,14 +436,14 @@ func (r *MBSpinRepository) insertClone(
 		src.MBCosting,
 		denier, filament, src.Dozing,
 		src.CC, src.CostRateMkt,
-		mbspin.StatusRnD, src.MBSLdrPrsn, src.MBSRunLdrPct, src.MBSFinalProduct, src.Lesture,
+		mbspin.StatusRnD, src.MBSLdrPrsn, runLDR, src.MBSFinalProduct, src.Lesture,
 		src.ShadeCode, src.ShadeName, src.CrossSection,
 		src.VSNumber, src.LustureCode,
-		src.LDRCalculatedPct, src.LDRAdjustmentPct, ldrType,
+		ldrCalc, ldrAdj, ldrType,
 		in.SourceSpinID, now, in.ActorUserID,
 		src.CostProductID,
 		fgID, fgItem, fgSource,
-		now,
+		now, ldrActual,
 	)
 	if err != nil {
 		if mapped := mapMBSpinUniqueErr(err); mapped != nil {
