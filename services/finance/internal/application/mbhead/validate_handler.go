@@ -47,6 +47,22 @@ type ValidateHandler struct {
 	compositionRepo mbcomposition.Repository
 	// lookupSync is the after-commit lookup-sync port; nil disables it.
 	lookupSync LookupSyncTrigger
+	// recompute refreshes cost snapshots after a re-validate; nil disables it.
+	recompute RevalidateRecomputer
+}
+
+// RevalidateRecomputer recomputes, after commit and detached from the request, the MB
+// cost snapshots of re-validated heads (and their MB dependents) for every unlocked
+// period that already holds one. Implemented by mbbatch.TriggerHandler; must never block
+// or fail the caller.
+type RevalidateRecomputer interface {
+	TriggerRevalidateRecompute(ctx context.Context, mbhIDs []string, actor string)
+}
+
+// WithRevalidateRecompute attaches the after-commit snapshot recompute. nil disables it.
+func (h *ValidateHandler) WithRevalidateRecompute(r RevalidateRecomputer) *ValidateHandler {
+	h.recompute = r
+	return h
 }
 
 // WithLookupSyncTrigger attaches the after-commit lookup-sync port used to refresh
@@ -206,6 +222,11 @@ func (h *ValidateHandler) HandleWithOutcome(ctx context.Context, cmd ValidateCom
 		return nil, nil, err
 	}
 	h.triggerSupersedeSync(ctx, outcome, cmd.ActorUserID)
+	// Only a re-validate (cost product already existed) can leave stale snapshots; a first
+	// validate has none yet.
+	if h.recompute != nil && entity.CostProductID() != 0 {
+		h.recompute.TriggerRevalidateRecompute(ctx, []string{entity.ID().String()}, cmd.ActorUserID)
+	}
 	return entity, outcome, nil
 }
 

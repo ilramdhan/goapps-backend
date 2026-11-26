@@ -22,6 +22,7 @@ import (
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/costproductparameter"
 	erpapp "github.com/mutugading/goapps-backend/services/finance/internal/application/erpintegration"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/lookupsync"
+	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbbatch"
 	appmbhead "github.com/mutugading/goapps-backend/services/finance/internal/application/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/mbsourceautofill"
 	"github.com/mutugading/goapps-backend/services/finance/internal/application/oraclesync"
@@ -213,7 +214,7 @@ func run() error { //nolint:gocognit,gocyclo // linear setup function
 		appmbhead.NewSubmitHandlerWithComposition(mbHeadRepo, mbCompositionRepo),
 		appmbhead.NewValidateHandlerWithComposition(mbHeadRepo, mbParamRepo, mbCompositionRepo),
 		log.Logger,
-	)
+	).WithRevalidateRecompute(buildMBRecompute(db, mbHeadRepo, mbCompositionRepo))
 
 	// Bulk Edit Product Params (F4, B4). cppRepo is the SAME
 	// CostProductParameterRepository instance built above for the costing
@@ -603,4 +604,23 @@ func setupIAMClient(cfg *config.Config) (iamclient.NotificationClient, func()) {
 		return iamclient.NewNopClient(), nil
 	}
 	return cli, func() { closeResource("iam-client", cli) }
+}
+
+// buildMBRecompute wires the MB_BATCH trigger used to refresh cost snapshots once a bulk
+// Validate batch finishes (same Service wiring as cmd/server's MB_BATCH).
+func buildMBRecompute(db *postgres.DB, mbHeadRepo *postgres.MBHeadRepository, mbCompositionRepo *postgres.MBCompositionRepository) *mbbatch.TriggerHandler {
+	calcJobRepo := postgres.NewCostCalcJobRepository(db)
+	costResultRepo := postgres.NewCostResultRepository(db)
+	svc := mbbatch.NewService(
+		db,
+		mbbatch.NewMBHeadReaderAdapter(mbHeadRepo),
+		mbbatch.NewMBEdgeReaderAdapter(mbCompositionRepo),
+		mbbatch.NewResultWriterAdapter(costResultRepo),
+		costcalc.NewProductLoader(db.DB), evaluator.NewCache(),
+		postgres.NewCostAuditHistoryRepository(db),
+		calcJobRepo,
+	)
+	return mbbatch.NewTriggerHandler(svc, calcJobRepo,
+		mbbatch.WithPeriodLock(postgres.NewPeriodLockRepository(db)),
+		mbbatch.WithSnapshotPeriods(costResultRepo))
 }

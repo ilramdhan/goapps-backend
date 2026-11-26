@@ -440,3 +440,62 @@ func TestValidateHandler_Handle_OriginGateTruthTable(t *testing.T) {
 		})
 	}
 }
+
+type spyRecomputer struct{ calls [][]string }
+
+func (s *spyRecomputer) TriggerRevalidateRecompute(_ context.Context, ids []string, _ string) {
+	s.calls = append(s.calls, ids)
+}
+
+func costedApprovedHead(costProductID int64) *mbheaddomain.Entity {
+	return mbheaddomain.Reconstruct(
+		uuid.New(), nil, "MB001", nil, nil,
+		nil, nil, nil, nil, nil,
+		nil, nil, nil, true, time.Now(), "admin",
+		nil, nil, nil, nil,
+		mbheaddomain.StatusApproved, false, 1, nil,
+		"", "", "", "", "", "",
+		costProductID, nil, "",
+		nil, nil, nil, nil, nil,
+		nil, "34", "S",
+		nil,
+	)
+}
+
+// The snapshot recompute fires only after a successful RE-validate (cost product already
+// exists), never on a first validate or a failed transition.
+func TestValidateHandler_Handle_RevalidateRecomputeTrigger(t *testing.T) {
+	for name, tc := range map[string]struct {
+		costProductID int64
+		transErr      error
+		wantCalls     int
+	}{
+		"re-validate":       {costProductID: 42, wantCalls: 1},
+		"first validate":    {costProductID: 0, wantCalls: 0},
+		"transition failed": {costProductID: 42, transErr: assert.AnError, wantCalls: 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			mockRepo := new(MockRepository)
+			mockParams := new(MockParamRepository)
+			spy := &spyRecomputer{}
+			handler := mbhead.NewValidateHandler(mockRepo, mockParams).WithRevalidateRecompute(spy)
+			ctx := context.Background()
+			entity := costedApprovedHead(tc.costProductID)
+			mockRepo.On("GetByID", ctx, entity.ID()).Return(entity, nil)
+			mockParams.On("ListActive", ctx).Return(activeParamMasters(t), nil)
+			mockRepo.On("TransitionWithAutoGen", ctx, entity.ID(), mock.Anything, mock.Anything,
+				mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.transErr)
+
+			_, err := handler.Handle(ctx, mbhead.ValidateCommand{MbhID: entity.ID(), ActorUserID: "tester"})
+			if tc.transErr != nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Len(t, spy.calls, tc.wantCalls)
+			if tc.wantCalls == 1 {
+				assert.Equal(t, []string{entity.ID().String()}, spy.calls[0])
+			}
+		})
+	}
+}

@@ -92,8 +92,16 @@ func (s *Service) RunMBBatch(ctx context.Context, period string, jobID int64) (*
 	if err != nil {
 		return nil, fmt.Errorf("run mb batch: %w", err)
 	}
+	return s.runCandidates(ctx, period, jobID, candidates, candidates)
+}
+
+// runCandidates computes run (a topo-ordered subset of scheduled, or scheduled itself) for
+// period. scheduled is every VALIDATED MB of the DAG: a nested child in scheduled but not in
+// run is VALIDATED and simply not recomputed here, so its parent prices it from the
+// committed cst_product_cost row without the "not VALIDATED" warning.
+func (s *Service) runCandidates(ctx context.Context, period string, jobID int64, scheduled, run []MBHeadCandidate) (*BatchResult, error) {
 	result := &BatchResult{Period: period}
-	if len(candidates) == 0 {
+	if len(run) == 0 {
 		return result, nil
 	}
 	// Audit entries are COLLECTED inside the transaction and WRITTEN after it commits.
@@ -101,8 +109,8 @@ func (s *Service) RunMBBatch(ctx context.Context, period string, jobID int64) (*
 	// audit INSERT failure inside tx would abort the cost rows that already computed
 	// correctly. Losing a history row is strictly better than losing the cost.
 	var audits []*costcalcdom.AuditHistoryEntry
-	err = s.db.Transaction(ctx, func(tx *sql.Tx) error {
-		return s.runBatch(ctx, tx, candidates, period, jobID, result, &audits)
+	err := s.db.Transaction(ctx, func(tx *sql.Tx) error {
+		return s.runBatch(ctx, tx, scheduled, run, period, jobID, result, &audits)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("run mb batch: %w", err)
@@ -159,14 +167,14 @@ func (s *Service) resolveActor(ctx context.Context, jobID int64) string {
 	return job.CreatedBy()
 }
 
-func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, candidates []MBHeadCandidate, period string, jobID int64, result *BatchResult, audits *[]*costcalcdom.AuditHistoryEntry) error {
+func (s *Service) runBatch(ctx context.Context, tx *sql.Tx, scheduled, run []MBHeadCandidate, period string, jobID int64, result *BatchResult, audits *[]*costcalcdom.AuditHistoryEntry) error {
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "mb_batch:"+period); err != nil {
 		return fmt.Errorf("acquire mb batch lock for period %s: %w", period, err)
 	}
-	costs := newBatchCosts(candidates)
-	for _, c := range candidates {
+	costs := newBatchCosts(scheduled)
+	for _, c := range run {
 		if err := s.runOneMB(ctx, tx, c, period, jobID, costs, audits); err != nil {
-			result.Errors = append(result.Errors, BatchError{MBHID: c.MBHID, Error: err.Error()})
+			result.Errors = append(result.Errors, newBatchError(c, err))
 			continue
 		}
 		result.MBCount++
@@ -420,4 +428,9 @@ func jsonOrNil(v any) []byte {
 		return nil
 	}
 	return b
+}
+
+// newBatchError prefixes the MB code so cj_error_summary / the UI name the failing MB.
+func newBatchError(c MBHeadCandidate, err error) BatchError {
+	return BatchError{MBHID: c.MBHID, Error: c.Code + ": " + err.Error()}
 }

@@ -3,6 +3,7 @@ package mbbatch
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -285,4 +286,10 @@ func (f *fakeLoader) LoadMachineParamDefaults(context.Context, []int64) (map[int
 // LoadFixCostMinThresholds reports no fixed cost min thresholds.
 func (f *fakeLoader) LoadFixCostMinThresholds(context.Context, []int64) (map[int64]float64, error) {
 	return nil, nil
+}
+
+func TestNewBatchError_PrefixesMBCode(t *testing.T) {
+	e := newBatchError(MBHeadCandidate{MBHID: "h1", Code: "CSTMB2609000223"}, errors.New("boom"))
+	require.Equal(t, "CSTMB2609000223: boom", e.Error)
+	require.Equal(t, "h1", e.MBHID)
 }

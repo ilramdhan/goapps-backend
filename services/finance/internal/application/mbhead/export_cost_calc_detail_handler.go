@@ -3,6 +3,7 @@ package mbhead
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
@@ -67,6 +68,9 @@ var costCalcDetailHeaders = []string{
 	// RM line
 	"rm_type", "rm_ref", "rm_group_name", "komposisi",
 	"rm_rate_actual", "rm_rate_tier", "cost_actual",
+	// Staleness block, appended after the original 29.
+	"calc_period", "composition_version", "snapshot_calculated_at",
+	"composition_validated_at", "snapshot_stale",
 }
 
 // Handle executes the calc-detail dump and returns the workbook bytes and file name.
@@ -235,6 +239,7 @@ var costCalcDetailColumnWidths = []struct {
 	{"T", "W", 16}, // calc_version .. rm_type
 	{"X", "X", 22}, // rm_ref, holds long codes
 	{"Y", "AC", 16},
+	{"AD", "AH", 24}, // staleness block
 }
 
 // setCostCalcDetailColumnWidths widens the calc-dump columns so the sheet is readable.
@@ -308,6 +313,11 @@ func writeCostCalcDetailRow(w *excelWriter, row int, r *CostCalcDetailRow) {
 		// so it renders as a blank cell without any placeholder text.
 		r.RMRateTier,
 		optFloat(r.CostActual),
+		r.CalcPeriod,
+		r.CompositionVersion,
+		optTime(r.SnapshotCalculatedAt),
+		optTime(r.CompositionValidatedAt),
+		yesNo(r.SnapshotStale),
 	}
 	for col, v := range values {
 		cell, err := excelize.CoordinatesToCellName(col+1, row)
@@ -316,4 +326,19 @@ func writeCostCalcDetailRow(w *excelWriter, row int, r *CostCalcDetailRow) {
 		}
 		w.setCellValue(cell, v)
 	}
+}
+
+// optTime renders a timestamp as RFC3339 UTC, or an empty cell when unknown.
+func optTime(t *time.Time) any {
+	if t == nil {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339)
+}
+
+func yesNo(b bool) string {
+	if b {
+		return "Y"
+	}
+	return "N"
 }

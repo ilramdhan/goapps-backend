@@ -213,13 +213,20 @@ SELECT
     rc.valuation_flag_v2,
     rc.flag_valuation_used,
     (rc.rm_code IS NOT NULL) AS has_rm_cost,
-    rc.cl_rate, rc.sl_rate, rc.fl_rate, rc.cr_rate, rc.sr_rate, rc.pr_rate
+    rc.cl_rate, rc.sl_rate, rc.fl_rate, rc.cr_rate, rc.sr_rate, rc.pr_rate,
+    -- Staleness block, APPENDED (existing columns keep name+order). Per-head values,
+    -- repeated on each RM line.
+    pc.cpc_period,
+    h.mbh_current_version,
+    pc.cpc_calculated_at,
+    cv.validated_at
 FROM mst_mb_head h
 CROSS JOIN target_period tp
 JOIN cost_product_master p
        ON p.cpm_product_sys_id = h.mbh_cost_product_id
 JOIN LATERAL (
     SELECT x.cpc_cost_id, x.cpc_version, x.cpc_status, x.cpc_period,
+           x.cpc_calculated_at,
            x.cpc_param_snapshot, x.cpc_rm_cost_detail
     FROM cst_product_cost x
     WHERE x.cpc_product_sys_id = h.mbh_cost_product_id
@@ -230,6 +237,15 @@ JOIN LATERAL (
     ORDER BY x.cpc_version DESC, x.cpc_cost_id DESC
     LIMIT 1
 ) pc ON TRUE
+-- cv: when the head's CURRENT composition version was validated. Evaluated once per
+-- head (before the RM-line explosion) via the (head, version) index; NULL when no snapshot
+-- rows exist, which renders snapshot_stale "N" (unknown is never flagged).
+LEFT JOIN LATERAL (
+    SELECT MAX(v.mbcv_validated_at) AS validated_at
+    FROM mst_mb_composition_version v
+    WHERE v.mbcv_mbh_id = h.mbh_id
+      AND v.mbcv_version = h.mbh_current_version
+) cv ON TRUE
 CROSS JOIN LATERAL jsonb_array_elements(
     CASE WHEN jsonb_typeof(pc.cpc_rm_cost_detail) = 'array'
          THEN pc.cpc_rm_cost_detail
@@ -433,6 +449,11 @@ type costCalcDetailDTO struct {
 	HasRMCost              bool
 	CLRate, SLRate, FLRate sql.NullFloat64
 	CRRate, SRRate, PRRate sql.NullFloat64
+
+	CalcPeriod         string
+	CompositionVersion int32
+	CalculatedAt       sql.NullTime
+	ValidatedAt        sql.NullTime
 }
 
 func scanCostCalcDetailRow(rows *sql.Rows) (appmbhead.CostCalcDetailRow, error) {
@@ -448,6 +469,7 @@ func scanCostCalcDetailRow(rows *sql.Rows) (appmbhead.CostCalcDetailRow, error) 
 		&d.Komposisi, &d.RMRate, &d.CostActual,
 		&d.ValuationFlagV2, &d.FlagValuationUsed, &d.HasRMCost,
 		&d.CLRate, &d.SLRate, &d.FLRate, &d.CRRate, &d.SRRate, &d.PRRate,
+		&d.CalcPeriod, &d.CompositionVersion, &d.CalculatedAt, &d.ValidatedAt,
 	)
 	if err != nil {
 		return appmbhead.CostCalcDetailRow{}, fmt.Errorf("mb_cost_calc_detail_export_repository: scan row: %w", err)
@@ -483,6 +505,13 @@ func scanCostCalcDetailRow(rows *sql.Rows) (appmbhead.CostCalcDetailRow, error) 
 		RMRateActual:    nullFloatPtr(d.RMRate),
 		RMRateTier:      resolveRMRateTier(&d),
 		CostActual:      nullFloatPtr(d.CostActual),
+
+		CalcPeriod:             d.CalcPeriod,
+		CompositionVersion:     d.CompositionVersion,
+		SnapshotCalculatedAt:   nullTimePtr(d.CalculatedAt),
+		CompositionValidatedAt: nullTimePtr(d.ValidatedAt),
+		SnapshotStale: appmbhead.IsSnapshotStale(
+			nullTimePtr(d.CalculatedAt), nullTimePtr(d.ValidatedAt)),
 	}, nil
 }
 

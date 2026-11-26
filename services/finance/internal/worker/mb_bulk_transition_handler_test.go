@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -551,4 +552,59 @@ func TestMBBulkTransitionHandler_ChildCompletion_TerminalStatusOnce(t *testing.T
 		jobRepo.AssertNotCalled(t, "IncrementChildProgress", mock.Anything, mock.Anything, mock.Anything)
 		jobRepo.AssertNotCalled(t, "GetByID", mock.Anything, mock.Anything)
 	})
+}
+
+type spyWorkerRecompute struct{ calls [][]string }
+
+func (s *spyWorkerRecompute) TriggerRevalidateRecompute(_ context.Context, ids []string, _ string) {
+	s.calls = append(s.calls, ids)
+}
+
+func childWithParams(t *testing.T, mbhID string, parentID uuid.UUID, ok bool) *job.Execution {
+	t.Helper()
+	exec, err := job.NewChildExecution(job.TypeMBBulkTransition, mbheadbulk.ActionValidate, "", "admin", 5,
+		[]byte(`{"mbh_id":"`+mbhID+`"}`), parentID)
+	require.NoError(t, err)
+	require.NoError(t, exec.Start())
+	if ok {
+		require.NoError(t, exec.Complete(nil))
+	} else {
+		require.NoError(t, exec.Fail("boom"))
+	}
+	return exec
+}
+
+// A finished bulk Validate batch triggers ONE recompute over the distinct successfully
+// validated heads; a bulk Submit triggers none.
+func TestMBBulkTransitionHandler_BatchComplete_TriggersRecomputeOnceDeduped(t *testing.T) {
+	t.Parallel()
+	parentID := uuid.New()
+	children := []*job.Execution{
+		childWithParams(t, "h1", parentID, true),
+		childWithParams(t, "h1", parentID, true),
+		childWithParams(t, "h2", parentID, false),
+		childWithParams(t, "h3", parentID, true),
+	}
+	code, err := job.NewCode("MBBULK-2")
+	require.NoError(t, err)
+	parent := job.Reconstitute(parentID, code, job.TypeMBBulkTransition, mbheadbulk.ActionValidate,
+		"", job.StatusProcessing, 5, nil, nil, "", 0, 0, 3, time.Now(), nil, nil,
+		"admin", "", nil, nil, nil, 4, 3, 1)
+
+	jobRepo := &workerJobRepoMock{}
+	jobRepo.On("GetByID", mock.Anything, parentID).Return(parent, nil)
+	jobRepo.On("UpdateStatus", mock.Anything, mock.Anything).Return(nil)
+	jobRepo.On("ListChildren", mock.Anything, parentID).Return(children, nil)
+	spy := &spyWorkerRecompute{}
+	h := NewMBBulkTransitionHandler(jobRepo, nil, nil, nil, zerolog.Nop()).WithRevalidateRecompute(spy)
+
+	h.completeParentJob(context.Background(), parentID, rabbitmq.JobMessage{})
+
+	require.Len(t, spy.calls, 1)
+	assert.Equal(t, []string{"h1", "h3"}, spy.calls[0])
+
+	submitParent := newParentExecWorker(t, uuid.New(), 1, 1, 0)
+	jobRepo.On("GetByID", mock.Anything, submitParent.ID()).Return(submitParent, nil)
+	h.completeParentJob(context.Background(), submitParent.ID(), rabbitmq.JobMessage{})
+	require.Len(t, spy.calls, 1, "bulk submit must not trigger a recompute")
 }

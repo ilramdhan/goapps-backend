@@ -792,7 +792,11 @@ func run() error { //nolint:gocognit,gocyclo // linear service wiring / DI setup
 		costAuditHistoryRepo,
 		calcJobRepo,
 	)
-	mbBatchTriggerHandler := mbbatch.NewTriggerHandler(mbBatchSvc, calcJobRepo, mbbatch.WithPeriodLock(periodLockRepo))
+	mbBatchTriggerHandler := mbbatch.NewTriggerHandler(mbBatchSvc, calcJobRepo, mbbatch.WithPeriodLock(periodLockRepo),
+		mbbatch.WithSnapshotPeriods(costResultRepo))
+	// Re-validating an already-costed recipe refreshes its snapshots (+ MB dependents) for
+	// every unlocked period that has one, after commit, detached from the approve request.
+	mbHeadHandler = mbHeadHandler.WithRevalidateRecompute(mbBatchTriggerHandler)
 	mbBatchHandler, err := grpcdelivery.NewMBBatchHandler(mbBatchTriggerHandler)
 	if err != nil {
 		return err
