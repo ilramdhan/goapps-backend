@@ -300,3 +300,29 @@ func TestAllDataCellValue_SpDozingOverride(t *testing.T) {
 	require.Equal(t, "2", allDataCellValue(col, 1, st(map[string]string{"MB_SP_DOZING": "2", "MB_LDR_OVERRIDE": "0"})))
 	require.Equal(t, "2", allDataCellValue(col, 1, st(map[string]string{"MB_SP_DOZING": "2"})))
 }
+
+func TestEffectiveSpDozing(t *testing.T) {
+	st := func(m map[string]string) Stage { return Stage{HasCost: true, ParamSnapshot: m} }
+	tests := []struct {
+		name string
+		m    map[string]string
+		want string
+	}{
+		{"override wins", map[string]string{"MB_SP_DOZING": "1.5", "MB_LDR_OVERRIDE": "2.28"}, "2.28"},
+		{"zero override ignored", map[string]string{"MB_SP_DOZING": "1.5", "MB_LDR_OVERRIDE": "0"}, "1.5"},
+		{"no override", map[string]string{"MB_SP_DOZING": "1.5"}, "1.5"},
+		{"junk override ignored", map[string]string{"MB_SP_DOZING": "1.5", "MB_LDR_OVERRIDE": "x"}, "1.5"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := effectiveSpDozing(st(tc.m)); got != tc.want {
+				t.Fatalf("got %q want %q", got, tc.want)
+			}
+		})
+	}
+	// row 12 "Dozing %" uses the same value
+	cell, _ := numericCell(sheetRow{ParamCode: paramSpDozing, NumFmt: numFmtDecimal}, st(map[string]string{"MB_SP_DOZING": "1.5", "MB_LDR_OVERRIDE": "2.28"}), &sheetStyles{})
+	if cell != 2.28 {
+		t.Fatalf("row 12 cell = %v", cell)
+	}
+}

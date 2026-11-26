@@ -261,6 +261,16 @@ const (
 	paramLDROverride = "MB_LDR_OVERRIDE"
 )
 
+// effectiveSpDozing is the dozing shown on the sheets: the MB_LDR_OVERRIDE (000618) when > 0, else MB_SP_DOZING.
+func effectiveSpDozing(stage Stage) string {
+	if ov := snapshotValue(paramLDROverride, stage); ov != "" {
+		if f, err := strconv.ParseFloat(ov, 64); err == nil && f > 0 {
+			return ov
+		}
+	}
+	return snapshotValue(paramSpDozing, stage)
+}
+
 // WriteAllDataSheet renders the flat "all data" sheet into f: a single header
 // row followed by one row per stage, 153 columns wide.
 //
@@ -380,10 +390,7 @@ func allDataCellValue(col allDataColumn, no int, stage Stage) string {
 	case paramShadeName:
 		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ShadeName)
 	case paramSpDozing:
-		if ov, err := strconv.ParseFloat(snapshotValue(paramLDROverride, stage), 64); err == nil && ov > 0 {
-			return snapshotValue(paramLDROverride, stage)
-		}
-		return snapshotValue(col.ParamCode, stage)
+		return effectiveSpDozing(stage)
 	case paramOilName:
 		// Same HasCost gate as every snapshot column: only a stage that shows
 		// an OIL_NAME code at all is given the resolved group name.
