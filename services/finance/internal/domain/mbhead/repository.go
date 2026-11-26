@@ -143,6 +143,8 @@ type ListFilter struct {
 	// filter — this column is only populated once a head reaches VALIDATED
 	// (see mb_autogen_repository.go), so a still-DRAFT head is never matched here.
 	CostProductID *int64
+	// EntryStatuses filters by mbh_entry_status (OR-ed). Empty means no filter.
+	EntryStatuses []string
 }
 
 // Validate normalizes filter values to safe defaults.

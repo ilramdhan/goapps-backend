@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
@@ -129,6 +130,11 @@ func buildMBHeadListWhere(filter mbhead.ListFilter) (string, []interface{}) {
 	if filter.CostProductID != nil {
 		base += fmt.Sprintf(` AND mbh_cost_product_id = $%d`, idx)
 		args = append(args, *filter.CostProductID)
+		idx++
+	}
+	if len(filter.EntryStatuses) > 0 {
+		base += fmt.Sprintf(` AND mbh_entry_status = ANY($%d)`, idx)
+		args = append(args, pq.Array(filter.EntryStatuses))
 	}
 
 	return base, args

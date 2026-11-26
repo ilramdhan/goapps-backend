@@ -54,3 +54,19 @@ func TestMBHeadHandler_ListMBHeads_CostProductIDFilter(t *testing.T) {
 		require.Equal(t, int64(987), *repo.lastFilter.CostProductID)
 	})
 }
+
+func TestMBHeadHandler_ListMBHeads_EntryStatuses(t *testing.T) {
+	repo := &captureListMBHeadRepo{}
+	h, err := NewMBHeadHandler(repo, nil, fakeMBMachineRepo{})
+	require.NoError(t, err)
+
+	_, err = h.ListMBHeads(context.Background(), &financev1.ListMBHeadsRequest{Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Empty(t, repo.lastFilter.EntryStatuses)
+
+	_, err = h.ListMBHeads(context.Background(), &financev1.ListMBHeadsRequest{
+		Page: 1, PageSize: 10, EntryStatuses: []string{"SUBMITTED", "APPROVED"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"SUBMITTED", "APPROVED"}, repo.lastFilter.EntryStatuses)
+}

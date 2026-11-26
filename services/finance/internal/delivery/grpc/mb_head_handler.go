@@ -747,6 +747,8 @@ func (h *MBHeadHandler) ListMBHeads(ctx context.Context, req *financev1.ListMBHe
 		query.CostProductID = &costProductID
 	}
 
+	query.EntryStatuses = req.EntryStatuses // empty = no filter; values validated by buf.validate
+
 	result, err := h.listHandler.Handle(ctx, query)
 	if err != nil {
 		RecordMBHeadOperation("list", false)
