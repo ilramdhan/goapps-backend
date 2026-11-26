@@ -109,7 +109,7 @@ func TestDuplicateHandler_Handle(t *testing.T) {
 
 		mockRepo.On("GetByID", ctx, sourceID).Return(newTestSpin(t, headID, nil), nil)
 		mockRepo.On("DuplicateSpin", ctx, mock.MatchedBy(func(in mbspindomain.DuplicateInput) bool {
-			return in.RunLDRPct != nil && *in.RunLDRPct == ldr
+			return in.RunLDRPct != nil && *in.RunLDRPct == ldr && in.RequireLiveHead
 		})).Return(mbspindomain.DuplicateOutput{NewSpinID: newID, ParentSpinID: sourceID, HeadID: headID}, nil)
 		mockRepo.On("GetByID", ctx, newID).Return(newTestSpin(t, headID, &sourceID), nil)
 

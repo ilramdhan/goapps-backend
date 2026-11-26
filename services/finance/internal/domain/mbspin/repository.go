@@ -168,6 +168,10 @@ type DuplicateInput struct {
 	// ldr_calculated = value, adjustment NULL, LDR locked ACTUAL (immune to the
 	// parent's LDR cascade). nil => copy the source LDR values (legacy behavior).
 	RunLDRPct *float64
+	// RequireLiveHead makes DuplicateSpin reject (ErrDuplicateSourceNotLive) a
+	// source whose MB head is soft-deleted or inactive. Set by the user-facing
+	// handler only; the active-sync tool duplicates onto inactive heads on purpose.
+	RequireLiveHead bool
 }
 
 // DuplicateOutput is the result of a successful DuplicateSpin.

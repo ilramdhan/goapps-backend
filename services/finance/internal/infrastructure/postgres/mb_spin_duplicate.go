@@ -56,7 +56,7 @@ func (r *MBSpinRepository) DuplicateSpin(ctx context.Context, in mbspin.Duplicat
 		}
 	}()
 
-	src, err := r.lockSourceSpin(ctx, tx, in.SourceSpinID)
+	src, err := r.lockSourceSpin(ctx, tx, in.SourceSpinID, in.RequireLiveHead)
 	if err != nil {
 		return mbspin.DuplicateOutput{}, err
 	}
@@ -269,7 +269,7 @@ type mbSpinCloneSource struct {
 //
 // FOR UPDATE OF s pins only mst_mb_spin — the joined head must not be locked by
 // a duplicate.
-func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uuid.UUID) (*mbSpinCloneSource, error) {
+func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uuid.UUID, requireLiveHead bool) (*mbSpinCloneSource, error) {
 	var s mbSpinCloneSource
 	err := tx.QueryRowContext(ctx, `
 		SELECT s.mbs_mbh_id, s.mbs_mgt_name,
@@ -305,7 +305,7 @@ func (r *MBSpinRepository) lockSourceSpin(ctx context.Context, tx *sql.Tx, id uu
 	if err != nil {
 		return nil, fmt.Errorf("lock source mb spin: %w", err)
 	}
-	if !s.HeadLive {
+	if requireLiveHead && !s.HeadLive {
 		return nil, mbspin.ErrDuplicateSourceNotLive
 	}
 	return &s, nil

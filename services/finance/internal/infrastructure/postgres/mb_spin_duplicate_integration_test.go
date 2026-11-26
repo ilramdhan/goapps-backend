@@ -484,3 +484,20 @@ func (s *MBSpinDuplicateSuite) TestDuplicateSpin_ExplicitLDR() {
 	require.False(s.T(), c2.LDRIsActual())
 	require.InDelta(s.T(), -0.15, *c2.LDRAdjustmentPct(), 1e-9)
 }
+
+// TestDuplicateSpin_RequireLiveHead: an inactive head is rejected only when the
+// caller opts in (user-facing handler); the sync tool path stays permissive.
+func (s *MBSpinDuplicateSuite) TestDuplicateSpin_RequireLiveHead() {
+	src := s.insertSource(mbspin.StatusRnD)
+	_, err := s.db.ExecContext(s.ctx, `UPDATE mst_mb_head SET mbh_is_active = FALSE WHERE mbh_id = $1`, s.headID)
+	require.NoError(s.T(), err)
+	s.T().Cleanup(func() {
+		_, _ = s.db.ExecContext(s.ctx, `UPDATE mst_mb_head SET mbh_is_active = TRUE WHERE mbh_id = $1`, s.headID)
+	})
+
+	_, err = s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{SourceSpinID: src, ActorUserID: "itest", RequireLiveHead: true})
+	require.ErrorIs(s.T(), err, mbspin.ErrDuplicateSourceNotLive)
+
+	_, err = s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{SourceSpinID: src, ActorUserID: "itest"})
+	require.NoError(s.T(), err)
+}

@@ -112,13 +112,14 @@ func (h *DuplicateHandler) Handle(ctx context.Context, cmd DuplicateCommand) (*D
 	}
 
 	out, err := h.repo.DuplicateSpin(ctx, mbspin.DuplicateInput{
-		SourceSpinID: cmd.SourceSpinID,
-		MgtName:      cmd.MgtName,
-		Denier:       cmd.Denier,
-		Filament:     cmd.Filament,
-		FgProductID:  cmd.FgProductID,
-		RunLDRPct:    cmd.RunLDRPct,
-		ActorUserID:  cmd.ActorUserID,
+		SourceSpinID:    cmd.SourceSpinID,
+		MgtName:         cmd.MgtName,
+		Denier:          cmd.Denier,
+		Filament:        cmd.Filament,
+		FgProductID:     cmd.FgProductID,
+		RunLDRPct:       cmd.RunLDRPct,
+		RequireLiveHead: true,
+		ActorUserID:     cmd.ActorUserID,
 	})
 	if err != nil {
 		return nil, err
