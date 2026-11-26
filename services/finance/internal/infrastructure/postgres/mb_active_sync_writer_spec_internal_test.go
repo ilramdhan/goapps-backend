@@ -30,3 +30,9 @@ func TestMBASSpecEqIgnoresOldImages(t *testing.T) {
 	assert.True(t, mbasSpecEq(mbasSpinImage{Denier: &a}, mbasSpinImage{Denier: &b}), "images without has_spec")
 	assert.False(t, mbasSpecEq(mbasSpinImage{Denier: &a, HasSpec: true}, mbasSpinImage{Denier: &b, HasSpec: true}))
 }
+
+func TestMBASLDRSplitEq(t *testing.T) {
+	a, b := 1.6, 1.52
+	assert.True(t, mbasLDRSplitEq(mbasSpinImage{LDRCalculatedPct: &a}, mbasSpinImage{LDRCalculatedPct: &b}), "old image ignored")
+	assert.False(t, mbasLDRSplitEq(mbasSpinImage{LDRCalculatedPct: &a, HasLDRSplit: true}, mbasSpinImage{LDRCalculatedPct: &b, HasLDRSplit: true}))
+}

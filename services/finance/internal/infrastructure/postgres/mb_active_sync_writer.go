@@ -50,6 +50,11 @@ type mbasSpinImage struct {
 	Denier   *float64 `json:"denier"`
 	Filament *int     `json:"filament"`
 	HasSpec  bool     `json:"has_spec,omitempty"`
+	// LDR calculated/adjustment (mb-comparison-p2 item 2): SetActualLDR clears the adjustment, so
+	// revert must restore them. HasLDRSplit false = older image: columns left untouched on restore.
+	LDRCalculatedPct *float64 `json:"ldr_calculated_pct,omitempty"`
+	LDRAdjustmentPct *float64 `json:"ldr_adjustment_pct,omitempty"`
+	HasLDRSplit      bool     `json:"has_ldr_split,omitempty"`
 
 	headID     uuid.UUID
 	superseded bool
@@ -81,7 +86,7 @@ const mbasSpinImageQuery = `
 	       mbs_run_ldr_pct, COALESCE(mbs_ldr_type, ''), COALESCE(mbs_ldr_is_actual, FALSE), mbs_ldr_is_fixed,
 	       mbs_is_active, mbs_fg_product_id, COALESCE(mbs_fg_item_code, ''), COALESCE(mbs_fg_link_source, ''),
 	       mbs_mbh_id, mbs_superseded_by_spin_id IS NOT NULL, mbs_parent_spin_id IS NULL,
-	       mbs_denier, mbs_filament
+	       mbs_denier, mbs_filament, mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct
 	  FROM mst_mb_spin
 	 WHERE mbs_id = $1 AND deleted_at IS NULL`
 
@@ -105,9 +110,10 @@ func readMBASImage(ctx context.Context, tx *sql.Tx, spinID uuid.UUID, lock bool)
 	var fixed sql.NullBool
 	var den sql.NullFloat64
 	var fil sql.NullInt64
+	var calc, adj sql.NullFloat64
 	err := tx.QueryRowContext(ctx, mbasSpinImageQuery+suffix, spinID).Scan(
 		&s.ShadeCode, &s.ShadeName, &s.CC, &s.CrossSection, &ldr, &s.LDRType, &s.LDRIsActual, &fixed,
-		&s.IsActive, &fg, &s.FGItemCode, &s.FGLinkSource, &s.headID, &s.superseded, &s.isRoot, &den, &fil)
+		&s.IsActive, &fg, &s.FGItemCode, &s.FGLinkSource, &s.headID, &s.superseded, &s.isRoot, &den, &fil, &calc, &adj)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -127,6 +133,15 @@ func readMBASImage(ctx context.Context, tx *sql.Tx, spinID uuid.UUID, lock bool)
 		s.FGProductID = &v
 	}
 	s.HasSpec = true
+	s.HasLDRSplit = true
+	if calc.Valid {
+		v := calc.Float64
+		s.LDRCalculatedPct = &v
+	}
+	if adj.Valid {
+		v := adj.Float64
+		s.LDRAdjustmentPct = &v
+	}
 	if den.Valid {
 		v := den.Float64
 		s.Denier = &v

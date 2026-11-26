@@ -149,11 +149,19 @@ func mbasEqI(a, b *int) bool {
 func mbasSpinEq(a, b mbasSpinImage) mbasSpinGroups { // true = group EQUAL
 	return mbasSpinGroups{
 		shade:  a.ShadeCode == b.ShadeCode && a.ShadeName == b.ShadeName && a.CC == b.CC && a.CrossSection == b.CrossSection,
-		ldr:    mbasEqF4(a.RunLDRPct, b.RunLDRPct) && a.LDRType == b.LDRType && a.LDRIsActual == b.LDRIsActual && mbasEqBool(a.LDRIsFixed, b.LDRIsFixed),
+		ldr:    mbasEqF4(a.RunLDRPct, b.RunLDRPct) && a.LDRType == b.LDRType && a.LDRIsActual == b.LDRIsActual && mbasEqBool(a.LDRIsFixed, b.LDRIsFixed) && mbasLDRSplitEq(a, b),
 		active: a.IsActive == b.IsActive,
 		fg:     mbasEqI64(a.FGProductID, b.FGProductID) && a.FGItemCode == b.FGItemCode && a.FGLinkSource == b.FGLinkSource,
 		spec:   mbasSpecEq(a, b),
 	}
+}
+
+// mbasLDRSplitEq compares calculated/adjustment; images without them (older CSVs) look unchanged.
+func mbasLDRSplitEq(a, b mbasSpinImage) bool {
+	if !a.HasLDRSplit || !b.HasLDRSplit {
+		return true
+	}
+	return mbasEqF4(a.LDRCalculatedPct, b.LDRCalculatedPct) && mbasEqF4(a.LDRAdjustmentPct, b.LDRAdjustmentPct)
 }
 
 // mbasSpecEq compares denier/filament. Images written before P2h-4c carry no spec
@@ -290,6 +298,11 @@ func mbasRestoreSpin(ctx context.Context, tx *sql.Tx, id uuid.UUID, b mbasSpinIm
 			"mbs_ldr_type = COALESCE(NULLIF("+next(b.LDRType)+", ''), 'NOT_CALCULATED')",
 			"mbs_ldr_is_actual = "+next(b.LDRIsActual),
 			"mbs_ldr_is_fixed = "+next(b.LDRIsFixed))
+		if b.HasLDRSplit {
+			sets = append(sets,
+				"mbs_ldr_calculated_pct = "+next(b.LDRCalculatedPct),
+				"mbs_ldr_adjustment_pct = "+next(b.LDRAdjustmentPct))
+		}
 	}
 	if g.spec {
 		sets = append(sets, "mbs_denier = "+next(b.Denier), "mbs_filament = "+next(b.Filament))
