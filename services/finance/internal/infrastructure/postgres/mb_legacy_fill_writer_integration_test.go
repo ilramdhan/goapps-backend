@@ -366,3 +366,43 @@ func lfCaseLegacyFillWriter_ClassD_SpinOrionUniquenessReject(t *testing.T) {
 	require.Equal(t, "", f.text(`SELECT COALESCE(mbs_orion_item_code, '') FROM mst_mb_spin WHERE mbs_id = $1`, s2))
 	require.Equal(t, "still applied", f.text(`SELECT notes FROM mst_mb_spin WHERE mbs_id = $1`, s2))
 }
+
+func lfCaseLegacyFillWriter_CostingRename_NameFollowsAndRevert(t *testing.T) {
+	f := newLFFixture(t, "mblf_cost_name")
+	db := postgres.NewDBFromSQL(f.raw)
+	w, rv := postgres.NewMBLegacyFillWriter(db), postgres.NewMBLegacyFillReverter(db)
+	h := f.head(true, "")
+	old := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h)
+	f.exec(`UPDATE mst_mb_head SET mbh_mgt_name = $2 WHERE mbh_id = $1`, h, old)
+	a, b := f.spin(h, "", 5, true, nil), f.spin(h, "", 5, true, nil)
+	f.exec(`UPDATE mst_mb_spin SET mbs_mb_costing = $2, mbs_mgt_name = $2 WHERE mbs_id = $1`, a, old)
+	f.exec(`UPDATE mst_mb_spin SET mbs_mgt_name = 'DIVERGED' WHERE mbs_id = $1`, b)
+	name := func(q string, id uuid.UUID) string { return f.text(q, id) }
+	const hq, sq = `SELECT mbh_mgt_name FROM mst_mb_head WHERE mbh_id = $1`, `SELECT COALESCE(mbs_mgt_name, '') FROM mst_mb_spin WHERE mbs_id = $1`
+
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{lfPlanRow(t, mblegacyfill.EntityHead, h, "mb_costing", old, "NEW-N")})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, "NEW-N", name(hq, h))
+	require.Equal(t, "NEW-N", name(sq, a))
+	require.Equal(t, "DIVERGED", name(sq, b))
+
+	out, err := rv.Revert(f.ctx, "lf-rev", lfToItems(res))
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.RevertReverted, out[0].Result, out[0].Reason)
+	require.Equal(t, old, name(hq, h))
+	require.Equal(t, old, name(sq, a))
+	require.Equal(t, "DIVERGED", name(sq, b))
+}
+
+func lfCaseLegacyFillWriter_HeadMgtNameRejected(t *testing.T) {
+	f := newLFFixture(t, "mblf_name_rej")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "")
+	f.exec(`UPDATE mst_mb_head SET mbh_mgt_name = 'KEEP' WHERE mbh_id = $1`, h)
+	res, err := w.Apply(f.ctx, "lf", []mblegacyfill.PlanRow{lfPlanRow(t, mblegacyfill.EntityHead, h, "mgt_name", "KEEP", "OTHER")})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultSkipped, res[0].Result)
+	require.Equal(t, mblegacyfill.ReasonNameFollowsCosting, res[0].Reason)
+	require.Equal(t, "KEEP", f.text(`SELECT mbh_mgt_name FROM mst_mb_head WHERE mbh_id = $1`, h))
+}

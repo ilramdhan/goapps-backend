@@ -412,12 +412,11 @@ func TestUpdateHandler_LegacyHeadWithNullCrossSectionSucceeds(t *testing.T) {
 	repo.On("Update", ctx, e).Return(nil)
 
 	got, err := mbhead.NewUpdateHandler(repo, nil).Handle(ctx, mbhead.UpdateCommand{
-		ID: e.ID(), UpdatedBy: "admin", MgtName: strptr("renamed"),
+		ID: e.ID(), UpdatedBy: "admin", Denier: func() *float64 { d := 1.5; return &d }(),
 	})
 
 	require.NoError(t, err, "a legacy head with NULL cross_section must remain editable")
-	require.NotNil(t, got.MgtName())
-	assert.Equal(t, "renamed", *got.MgtName())
+	require.NotNil(t, got.Denier())
 	assert.Empty(t, got.CrossSection())
 }
 

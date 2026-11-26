@@ -257,6 +257,9 @@ func (w *MBLegacyFillWriter) applyRowInner(ctx context.Context, tx *sql.Tx, g *l
 		}
 		col := r.Row.Spec.Column
 		g.headChanges[col] = lfChange{before: out.before[col], after: out.after[col]}
+		if nb, ok := out.before["mbh_mgt_name"]; ok { // name followed costing: spins follow name
+			g.headChanges["mbh_mgt_name"] = lfChange{before: nb, after: out.after["mbh_mgt_name"]}
+		}
 	}
 	if out.skipReason != "" {
 		res.Result, res.Reason = mblegacyfill.ResultSkipped, out.skipReason

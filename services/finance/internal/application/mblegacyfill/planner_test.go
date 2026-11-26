@@ -154,3 +154,12 @@ func TestPlanSpinOrionUnique(t *testing.T) {
 		t.Errorf("reasons: %q %q", pl.Rows[0].Reason, pl.Rows[2].Reason)
 	}
 }
+
+func TestPlanRejectsHeadMgtName(t *testing.T) {
+	const csv = "entity,id,sysid,field,goapps_value,legacy_value,match_method,ambiguous,usulan,note\n" +
+		"head,h1,1,mgt_name,A,B,s,N,OVERWRITE,\n"
+	pl := plan(t, csv, fakeSnap{vals: map[string]string{"head|h1|mbh_mgt_name": "A"}})
+	if r := pl.Rows[0]; r.Decision != DecisionReject || r.Reason != ReasonNameFollowsCosting {
+		t.Fatalf("%+v", r)
+	}
+}

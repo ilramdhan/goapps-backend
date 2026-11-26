@@ -206,7 +206,7 @@ func (s *MBHeadCascadeSuite) TestCascade_AllLiveSpinsGetHeadFields_ForbiddenColu
 	for _, id := range []uuid.UUID{s.rootSpin, s.childSpin} {
 		r := s.spin(id)
 		require.Equal(s.T(), mbCascFixturePrefix+"NEW", r.costing.String, "costing overwritten even on a manually edited child")
-		require.Equal(s.T(), "new mgt", r.mgt.String)
+		require.Equal(s.T(), mbCascFixturePrefix+"NEW", r.mgt.String)
 		require.InDelta(s.T(), 75, r.denier.Float64, 1e-9)
 		require.InDelta(s.T(), 2.25, r.dozing.Float64, 1e-9)
 		require.Equal(s.T(), int64(36), r.filament.Int64)
@@ -400,7 +400,7 @@ func (s *MBHeadCascadeSuite) TestCascade_NilParams_CPPAndFrozenSnapshotUntouched
 		`SELECT mbh_param_throughput_per_hour, mbh_param_no_of_process FROM mst_mb_head WHERE mbh_id = $1`, s.mbhID).Scan(&tp, &np))
 	require.Equal(s.T(), "C", tp)
 	require.Equal(s.T(), "T", np)
-	require.Equal(s.T(), "typo fixed", s.spin(s.rootSpin).mgt.String, "spins still cascade")
+	require.Equal(s.T(), mbCascFixturePrefix+"NEW", s.spin(s.rootSpin).mgt.String, "spins still cascade")
 }
 
 // Orion Item Code goes to the ROOT spin only, only when it is empty (NULL / blank), and an

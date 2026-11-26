@@ -245,7 +245,7 @@ func TestUpdateMBHead_WithoutCheckStatusSucceedsAndPreservesTrace(t *testing.T) 
 	assert.Equal(t, "Current", *repo.stored.MBHCheckStatus(),
 		"the seal must PRESERVE the Oracle trace, never blank it")
 	require.NotNil(t, repo.stored.MgtName())
-	assert.Equal(t, "renamed", *repo.stored.MgtName())
+	assert.Equal(t, repo.stored.MBCosting(), *repo.stored.MgtName(), "MB Name always equals MB Costing; the requested name is ignored")
 
 	// The frozen column is still READ back to the client — sealing the write path
 	// must not hide the value.

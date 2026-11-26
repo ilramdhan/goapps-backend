@@ -146,15 +146,16 @@ func TestUpdate_LockedHead_Rejected(t *testing.T) {
 	name := "changed"
 
 	locked := newLockedEntityAt(StatusApproved)
-	assert.ErrorIs(t, locked.Update(UpdateInput{MgtName: &name}, "user1"), ErrHeadLocked)
-	assert.Nil(t, locked.MgtName(), "⛔ the edit must not have landed")
+	before := locked.MBCosting()
+	assert.ErrorIs(t, locked.Update(UpdateInput{MBCosting: &name}, "user1"), ErrHeadLocked)
+	assert.Equal(t, before, locked.MBCosting(), "⛔ the edit must not have landed")
 
 	parked := newEntityAt(StatusUnlockRequested, false)
 	assert.ErrorIs(t, parked.Update(UpdateInput{MgtName: &name}, "user1"), ErrHeadLocked)
 
 	// An unlocked head still updates normally — the guard must not break the base case.
 	open := newEntityAt(StatusDraft, false)
-	require.NoError(t, open.Update(UpdateInput{MgtName: &name}, "user1"))
+	require.NoError(t, open.Update(UpdateInput{MBCosting: &name}, "user1"))
 	require.NotNil(t, open.MgtName())
 	assert.Equal(t, "changed", *open.MgtName())
 }

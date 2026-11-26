@@ -409,7 +409,7 @@ func TestD7_SaveAfterGrantedUnlock_StaysInDraft(t *testing.T) {
 
 	name := "reworked while the window is open"
 	for i := 0; i < 3; i++ {
-		require.NoError(t, granted.Update(mbheaddomain.UpdateInput{MgtName: &name}, "editor-1"))
+		require.NoError(t, granted.Update(mbheaddomain.UpdateInput{MBCosting: &name}, "editor-1"))
 		assert.Equal(t, mbheaddomain.StatusDraft, granted.EntryStatus(),
 			"⛔ a save must NEVER promote the recipe out of DRAFT")
 		assert.False(t, granted.IsLocked(), "⛔ a save must not re-lock the recipe either")
@@ -432,7 +432,7 @@ func TestD7_NoSavePathBypassesTheLock(t *testing.T) {
 	for _, status := range []string{mbheaddomain.StatusApproved, mbheaddomain.StatusValidated} {
 		t.Run(status+"/locked", func(t *testing.T) {
 			e := lockedHead(status, true, nil, "")
-			err := e.Update(mbheaddomain.UpdateInput{MgtName: &name}, "editor-1")
+			err := e.Update(mbheaddomain.UpdateInput{MBCosting: &name}, "editor-1")
 			require.ErrorIs(t, err, mbheaddomain.ErrHeadLocked)
 			assert.Nil(t, e.MgtName(), "⛔ the edit must not have landed")
 			assert.Equal(t, status, e.EntryStatus(), "the refusal must not move the state either")
@@ -441,7 +441,7 @@ func TestD7_NoSavePathBypassesTheLock(t *testing.T) {
 
 	// Parked awaiting a decision: asking for an unlock is not the same as getting one.
 	parked := lockedHead(mbheaddomain.StatusUnlockRequested, true, nil, mbheaddomain.StatusValidated)
-	require.ErrorIs(t, parked.Update(mbheaddomain.UpdateInput{MgtName: &name}, "editor-1"),
+	require.ErrorIs(t, parked.Update(mbheaddomain.UpdateInput{MBCosting: &name}, "editor-1"),
 		mbheaddomain.ErrHeadLocked)
 	assert.Nil(t, parked.MgtName())
 }
@@ -477,7 +477,7 @@ func TestD7_LegacyNullLockRow_IsStillSavableWithoutUnlock(t *testing.T) {
 
 	require.True(t, legacy.IsEditable(),
 		"⚠ known hole: a legacy NULL-lock VALIDATED head is still editable")
-	require.NoError(t, legacy.Update(mbheaddomain.UpdateInput{MgtName: &name}, "editor-1"),
+	require.NoError(t, legacy.Update(mbheaddomain.UpdateInput{MBCosting: &name}, "editor-1"),
 		"⚠ known hole: the save is accepted with no unlock")
 	assert.Equal(t, mbheaddomain.StatusValidated, legacy.EntryStatus(),
 		"⚠ known hole: and it does NOT fall back to DRAFT — this is the open D7 question")
