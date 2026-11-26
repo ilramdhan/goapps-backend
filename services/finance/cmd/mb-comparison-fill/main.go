@@ -5,6 +5,10 @@
 //	mb-comparison-fill apply  --plan-file PLAN.csv --actor mbcmp-<env> [--limit N] [--batch N] [--commit] [--out-dir D]
 //	mb-comparison-fill revert --results RESULT.csv[,R2.csv] --actor mbcmp-<env> [--out-dir D]
 //
+//	mb-comparison-fill spin-ldr plan   --file 06-q1.csv [--out-dir D]
+//	mb-comparison-fill spin-ldr apply  --plan-file PLAN.csv --actor mbcmp-<env> [--limit N] [--batch N] [--commit] [--out-dir D]
+//	mb-comparison-fill spin-ldr revert --results RESULT.csv[,R2.csv] --actor mbcmp-<env> [--out-dir D]
+//
 // apply is a DRY-RUN (everything rolled back) unless --commit is given. See README.md.
 package main
 
@@ -34,6 +38,7 @@ const (
 	modePlan   = "plan"
 	modeApply  = "apply"
 	modeRevert = "revert"
+	modeSpin   = "spin-ldr"
 )
 
 type options struct {
@@ -43,6 +48,7 @@ type options struct {
 	limit, batch                 int
 	commit                       bool
 	outDir                       string
+	spin                         bool // spin-ldr mode: mode holds the sub-mode
 }
 
 func parseArgs(args []string, usage io.Writer) (o options, err error) {
@@ -50,13 +56,19 @@ func parseArgs(args []string, usage io.Writer) (o options, err error) {
 		return o, errors.New("mode required: plan | apply | revert")
 	}
 	o.mode = args[0]
+	if o.mode == modeSpin {
+		if len(args) < 2 {
+			return o, errors.New("spin-ldr needs a sub-mode: plan | apply | revert")
+		}
+		o.spin, o.mode, args = true, args[1], args[1:]
+	}
 	fs := flag.NewFlagSet(cmdName+" "+o.mode, flag.ContinueOnError)
 	fs.SetOutput(usage)
 	var results string
 	fs.StringVar(&o.outDir, "out-dir", ".", "output directory")
 	switch o.mode {
 	case modePlan:
-		fs.StringVar(&o.file, "file", "", "Excel dump CSV (dozing.csv)")
+		fs.StringVar(&o.file, "file", "", "Excel dump CSV (dozing.csv); spin-ldr: 06-q1.csv")
 		fs.StringVar(&o.orion, "orion", "", "Oracle head dump O-01b-head-all-by-sysid.csv (empty MB_SP_CODE fallback)")
 	case modeApply:
 		fs.StringVar(&o.planFile, "plan-file", "", "reviewed plan CSV")
@@ -85,8 +97,8 @@ func (o options) validate() error {
 	switch {
 	case o.outDir == "":
 		return errors.New("--out-dir must not be empty")
-	case o.mode == modePlan && (o.file == "" || o.orion == ""):
-		return errors.New("plan requires --file and --orion")
+	case o.mode == modePlan && (o.file == "" || (!o.spin && o.orion == "")):
+		return errors.New("plan requires --file (and --orion unless spin-ldr)")
 	case o.mode == modeApply && o.planFile == "":
 		return errors.New("apply requires --plan-file")
 	case o.mode == modeApply && (o.limit < 0 || o.batch < 0):
@@ -129,6 +141,9 @@ func run(ctx context.Context, o options) error {
 			log.Printf("WARN: close database: %v", cErr)
 		}
 	}()
+	if o.spin {
+		return runSpin(ctx, o, postgres.NewMBComparisonSpinLDR(db))
+	}
 	pg := postgres.NewMBComparisonFill(db)
 	switch o.mode {
 	case modePlan:
