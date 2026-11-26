@@ -158,11 +158,11 @@ func readSpinPtr(ctx context.Context, tx *sql.Tx, pid int64, paramID string) (st
 	return ptr.String, nil
 }
 
-// Preflight requires the three formulas to carry the migration 000616 marker.
+// Preflight requires the three formulas to carry the migration 000616 marker (000618 re-stamps RP_DOZING/MB_COST).
 func (m *MBComparisonFill) Preflight(ctx context.Context) error {
 	var n int
 	err := m.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM mst_formula
-		WHERE formula_code = ANY($1) AND deleted_at IS NULL AND updated_by = $2`,
+		WHERE formula_code = ANY($1) AND deleted_at IS NULL AND updated_by IN ($2, 'migration_000618')`,
 		pq.Array(fill.PreflightFormulas), fill.MigrationMarker).Scan(&n)
 	if err != nil {
 		return fmt.Errorf("preflight query: %w", err)
