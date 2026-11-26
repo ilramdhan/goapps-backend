@@ -1,6 +1,8 @@
 package postgres_test
 
 import (
+	"database/sql"
+	"encoding/json"
 	"testing"
 
 	"github.com/google/uuid"
@@ -325,4 +327,55 @@ func TestMBActiveSyncWriter_Revert_LDRKeepsNullIsFixed(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, mbactivesync.ResultApplied, rr.Result, rr.Message)
 	require.Equal(t, before, f.readSpin(sp), "ldr_is_fixed NULL, ldr_is_actual and LDR restored")
+}
+
+// mb-comparison-p2 item 2: SetActualLDR clears the adjustment; revert must restore calc/adj,
+// and an older image without the keys must leave both columns untouched.
+func TestMBActiveSyncWriter_Revert_LDRCalcAdjustment(t *testing.T) {
+	for _, oldImage := range []bool{false, true} {
+		f := newMBASFixture(t, "mbas_writer_revert_ldradj")
+		h := f.head(true, "LA1")
+		sp := f.spin(h, "LA1", 1.6, true, nil)
+		f.exec(`UPDATE mst_mb_spin SET mbs_ldr_calculated_pct = 1.6, mbs_ldr_adjustment_pct = -0.15 WHERE mbs_id = $1`, sp)
+		tgt := 1.52
+		res, err := f.w.SyncExistingSpin(f.ctx, mbactivesync.SyncSpinInput{SpinID: sp, Actor: "sync",
+			SubActions: subs(mbactivesync.SubSetLDR), TargetShadeCode: "LA1", TargetLDR: &tgt})
+		require.NoError(t, err)
+		require.Equal(t, mbactivesync.ResultApplied, res.Result, res.Message)
+		var calc, adj sql.NullFloat64
+		read := func() {
+			require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT mbs_ldr_calculated_pct, mbs_ldr_adjustment_pct FROM mst_mb_spin WHERE mbs_id = $1`, sp).Scan(&calc, &adj))
+		}
+		read()
+		require.False(t, adj.Valid, "sync cleared adjustment")
+		require.InDelta(t, 1.52, calc.Float64, 1e-9)
+		in := revertIn("UPDATE_LDR", mbactivesync.PhaseA, sp, h, res)
+		if oldImage {
+			in.BeforeJSON, in.AfterJSON = stripLDRSplit(t, in.BeforeJSON), stripLDRSplit(t, in.AfterJSON)
+		}
+		rr, err := f.w.Revert(f.ctx, in)
+		require.NoError(t, err)
+		require.Equal(t, mbactivesync.ResultApplied, rr.Result, rr.Message)
+		read()
+		if oldImage {
+			require.False(t, adj.Valid, "old image: columns untouched")
+			require.InDelta(t, 1.52, calc.Float64, 1e-9)
+		} else {
+			require.True(t, adj.Valid)
+			require.InDelta(t, -0.15, adj.Float64, 1e-9)
+			require.InDelta(t, 1.6, calc.Float64, 1e-9)
+		}
+	}
+}
+
+func stripLDRSplit(t *testing.T, js string) string {
+	t.Helper()
+	var m map[string]map[string]any
+	require.NoError(t, json.Unmarshal([]byte(js), &m))
+	for _, k := range []string{"ldr_calculated_pct", "ldr_adjustment_pct", "has_ldr_split"} {
+		delete(m["spin"], k)
+	}
+	b, err := json.Marshal(m)
+	require.NoError(t, err)
+	return string(b)
 }
