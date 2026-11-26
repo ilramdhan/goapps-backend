@@ -162,14 +162,14 @@ func readSpinPtr(ctx context.Context, tx *sql.Tx, pid int64, paramID string) (st
 func (m *MBComparisonFill) Preflight(ctx context.Context) error {
 	var n int
 	err := m.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM mst_formula
-		WHERE formula_code = ANY($1) AND deleted_at IS NULL AND updated_by IN ($2, 'migration_000618')`,
-		pq.Array(fill.PreflightFormulas), fill.MigrationMarker).Scan(&n)
+		WHERE formula_code = ANY($1) AND deleted_at IS NULL AND updated_by IN ($2, $3)`,
+		pq.Array(fill.PreflightFormulas), fill.MigrationMarker, fill.MigrationMarker618).Scan(&n)
 	if err != nil {
 		return fmt.Errorf("preflight query: %w", err)
 	}
 	if n != len(fill.PreflightFormulas) {
-		return fmt.Errorf("preflight: only %d/%d formulas (%s) have updated_by=%q: migration 000616 not applied or formulas edited since; aborting",
-			n, len(fill.PreflightFormulas), strings.Join(fill.PreflightFormulas, ","), fill.MigrationMarker)
+		return fmt.Errorf("preflight: only %d/%d formulas (%s) have updated_by=%q or %q: migration 000616/000618 not applied or formulas edited since; aborting",
+			n, len(fill.PreflightFormulas), strings.Join(fill.PreflightFormulas, ","), fill.MigrationMarker, fill.MigrationMarker618)
 	}
 	return nil
 }
