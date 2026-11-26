@@ -292,3 +292,11 @@ func TestAllDataColumns_VLossSources(t *testing.T) {
 		}
 	}
 }
+
+func TestAllDataCellValue_SpDozingOverride(t *testing.T) {
+	col := allDataColumn{Kind: allDataParam, ParamCode: "MB_SP_DOZING"}
+	st := func(snap map[string]string) Stage { return Stage{HasCost: true, ParamSnapshot: snap} }
+	require.Equal(t, "1.5", allDataCellValue(col, 1, st(map[string]string{"MB_SP_DOZING": "2", "MB_LDR_OVERRIDE": "1.5"})))
+	require.Equal(t, "2", allDataCellValue(col, 1, st(map[string]string{"MB_SP_DOZING": "2", "MB_LDR_OVERRIDE": "0"})))
+	require.Equal(t, "2", allDataCellValue(col, 1, st(map[string]string{"MB_SP_DOZING": "2"})))
+}

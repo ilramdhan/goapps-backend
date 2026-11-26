@@ -255,6 +255,10 @@ const (
 	// group code (OIL_NAME is a RM_GROUP_OIL master lookup since 000523); the
 	// sheet shows the group NAME instead (D18), falling back to the code.
 	paramOilName = "OIL_NAME"
+	// paramSpDozing is the "68.SP-Dozing" column; paramLDROverride (000618)
+	// replaces it when > 0, mirroring the formulas.
+	paramSpDozing    = "MB_SP_DOZING"
+	paramLDROverride = "MB_LDR_OVERRIDE"
 )
 
 // WriteAllDataSheet renders the flat "all data" sheet into f: a single header
@@ -375,6 +379,11 @@ func allDataCellValue(col allDataColumn, no int, stage Stage) string {
 		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ShadeCode)
 	case paramShadeName:
 		return firstNonEmpty(snapshotValue(col.ParamCode, stage), stage.ShadeName)
+	case paramSpDozing:
+		if ov, err := strconv.ParseFloat(snapshotValue(paramLDROverride, stage), 64); err == nil && ov > 0 {
+			return snapshotValue(paramLDROverride, stage)
+		}
+		return snapshotValue(col.ParamCode, stage)
 	case paramOilName:
 		// Same HasCost gate as every snapshot column: only a stage that shows
 		// an OIL_NAME code at all is given the resolved group name.
