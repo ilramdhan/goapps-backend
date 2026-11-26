@@ -2936,6 +2936,17 @@
             "required": false,
             "type": "string",
             "format": "int64"
+          },
+          {
+            "name": "entryStatuses",
+            "description": "Filter by entry status (mbh_entry_status). Empty = no filter (backward compatible).\nMultiple values are OR-ed. Allowed: DRAFT, SUBMITTED, APPROVED, VALIDATED, UN_APPROVED, REVOKED, REJECTED.",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
           }
         ],
         "tags": [

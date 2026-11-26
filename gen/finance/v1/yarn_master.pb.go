@@ -7363,6 +7363,9 @@ type ListMBHeadsRequest struct {
 	// has no column pointing back to MB. NOTE: this column is only populated when a head reaches
 	// VALIDATED (mb_autogen_repository.go), so a still-DRAFT head will not be found by this filter.
 	CostProductId int64 `protobuf:"varint,7,opt,name=cost_product_id,json=costProductId,proto3" json:"cost_product_id,omitempty"`
+	// Filter by entry status (mbh_entry_status). Empty = no filter (backward compatible).
+	// Multiple values are OR-ed. Allowed: DRAFT, SUBMITTED, APPROVED, VALIDATED, UN_APPROVED, REVOKED, REJECTED.
+	EntryStatuses []string `protobuf:"bytes,8,rep,name=entry_statuses,json=entryStatuses,proto3" json:"entry_statuses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7444,6 +7447,13 @@ func (x *ListMBHeadsRequest) GetCostProductId() int64 {
 		return x.CostProductId
 	}
 	return 0
+}
+
+func (x *ListMBHeadsRequest) GetEntryStatuses() []string {
+	if x != nil {
+		return x.EntryStatuses
+	}
+	return nil
 }
 
 // ListMBHeadsResponse is the response for listing MB Head records.
@@ -22018,7 +22028,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x13DeleteMBHeadRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\"C\n" +
 	"\x14DeleteMBHeadResponse\x12+\n" +
-	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xec\x02\n" +
+	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\"\xe8\x03\n" +
 	"\x12ListMBHeadsRequest\x12\x1b\n" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\x12\x1f\n" +
@@ -22029,7 +22039,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"created_atR\x06sortBy\x121\n" +
 	"\n" +
 	"sort_order\x18\x06 \x01(\tB\x12\xbaH\x0fr\rR\x00R\x03ascR\x04descR\tsortOrder\x12&\n" +
-	"\x0fcost_product_id\x18\a \x01(\x03R\rcostProductId\"\xa9\x01\n" +
+	"\x0fcost_product_id\x18\a \x01(\x03R\rcostProductId\x12z\n" +
+	"\x0eentry_statuses\x18\b \x03(\tBS\xbaHP\x92\x01M\x10\a\"IrGR\x05DRAFTR\tSUBMITTEDR\bAPPROVEDR\tVALIDATEDR\vUN_APPROVEDR\aREVOKEDR\bREJECTEDR\rentryStatuses\"\xa9\x01\n" +
 	"\x13ListMBHeadsResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12&\n" +
 	"\x04data\x18\x02 \x03(\v2\x12.finance.v1.MBHeadR\x04data\x12=\n" +

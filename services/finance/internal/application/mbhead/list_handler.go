@@ -19,6 +19,8 @@ type ListQuery struct {
 	// CostProductID filters to the head(s) linked to one cost product (R16). Nil means
 	// no filter.
 	CostProductID *int64
+	// EntryStatuses filters by entry status (OR-ed). Empty means no filter.
+	EntryStatuses []string
 }
 
 // ListResult represents the list MB Heads result.
@@ -50,6 +52,7 @@ func (h *ListHandler) Handle(ctx context.Context, query ListQuery) (*ListResult,
 		SortOrder:     query.SortOrder,
 		IsActive:      query.IsActive,
 		CostProductID: query.CostProductID,
+		EntryStatuses: query.EntryStatuses,
 	}
 	filter.Validate()
 
