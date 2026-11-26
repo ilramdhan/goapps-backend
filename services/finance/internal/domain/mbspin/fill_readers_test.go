@@ -24,6 +24,8 @@ func TestNumericFillReaders_RunLdrPct_EffectiveLDR(t *testing.T) {
 		{"adj zero -> raw run_ldr", f(1.60), f(1.50), f(0), 1.60, true},
 		{"negative adj with calc", f(1.60), f(1.60), f(-0.15), 1.45, true},
 		{"negative adj calc nil -> run_ldr base", f(1.60), nil, f(-0.15), 1.45, true},
+		{"effective zero -> not filled", f(1.60), f(0.15), f(-0.15), 0, false},
+		{"effective negative -> not filled", f(1.60), f(0.10), f(-0.15), 0, false},
 		{"adj but no base at all", nil, nil, f(-0.15), 0, false},
 		{"all nil", nil, nil, nil, 0, false},
 	}
@@ -36,4 +38,29 @@ func TestNumericFillReaders_RunLdrPct_EffectiveLDR(t *testing.T) {
 			assert.InDelta(t, c.want, got, 1e-9)
 		})
 	}
+}
+
+func spinWithAdj(calc, adj float64) *mbspin.Entity {
+	e := mbspin.Reconstruct(uuid.New(), nil, nil, uuid.New(), "x", nil, nil, nil, nil, nil, nil, nil, nil, f(calc), nil, nil, nil, true, time.Now(), "t", nil, nil, nil, nil)
+	e.HydrateShadeAndLDR(mbspin.ShadeAndLDR{LDRType: mbspin.LDRTypeCalculated, LDRCalculatedPct: f(calc), LDRAdjustmentPct: f(adj)})
+	return e
+}
+
+func TestSetActualLDR_ClearsAdjustment_ReaderReturnsActual(t *testing.T) {
+	e := spinWithAdj(1.60, -0.15)
+	assert.NoError(t, e.SetActualLDR(1.52, "sync"))
+	assert.Nil(t, e.LDRAdjustmentPct())
+	assert.InDelta(t, 1.52, *e.LDRCalculatedPct(), 1e-9)
+	got, ok := mbspin.NumericFillReaders["mbs_run_ldr_pct"](e)
+	assert.True(t, ok)
+	assert.InDelta(t, 1.52, got, 1e-9)
+}
+
+func TestLockLDRActual_KeepsAdjustment_ReaderReturnsCalcPlusAdj(t *testing.T) {
+	e := spinWithAdj(1.60, -0.15)
+	e.LockLDRActual()
+	assert.NotNil(t, e.LDRAdjustmentPct())
+	got, ok := mbspin.NumericFillReaders["mbs_run_ldr_pct"](e)
+	assert.True(t, ok)
+	assert.InDelta(t, 1.45, got, 1e-9)
 }

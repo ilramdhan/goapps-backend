@@ -597,6 +597,10 @@ func (e *Entity) SetActualLDR(pct float64, updatedBy string) error {
 	}
 	v := pct
 	e.mbsRunLdrPct = &v
+	// Confirmed Actual wins: drop any stale manual adjustment so effective LDR == pct.
+	c := pct
+	e.ldrCalculatedPct = &c
+	e.ldrAdjustmentPct = nil
 	fixed := true
 	e.ldrIsFixed = &fixed
 	e.LockLDRActual()

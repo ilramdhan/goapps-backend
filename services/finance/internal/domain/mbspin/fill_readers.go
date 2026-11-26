@@ -36,7 +36,11 @@ var NumericFillReaders = map[string]func(*Entity) (float64, bool){
 			if base == nil {
 				return 0, false
 			}
-			return *base + *adj, true
+			// Guard: a zero/negative effective LDR must not become dozing — fill nothing.
+			if v := *base + *adj; v > 0 {
+				return v, true
+			}
+			return 0, false
 		}
 		if v := e.MBSRunLdrPct(); v != nil {
 			return *v, true
