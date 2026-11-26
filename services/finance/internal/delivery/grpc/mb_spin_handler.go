@@ -369,6 +369,9 @@ func mbSpinEntityToProto(e *mbspin.Entity) *financev1.MBSpin {
 	p.MbsLdrCalculatedPct = e.LDRCalculatedPct()
 	p.MbsLdrAdjustmentPct = e.LDRAdjustmentPct()
 	p.MbsLdrIsActual = e.LDRIsActual()
+	if pid := e.ParentSpinID(); pid != nil {
+		p.ParentSpinId = pid.String()
+	}
 	p.MbsVsNumber = e.VSNumber()
 	if e.ShadeCode() != nil {
 		p.MbsShadeCode = *e.ShadeCode()
