@@ -3,6 +3,8 @@
 -- Precedence: RP_DOZING_ACTUAL (000616) > MB_LDR_OVERRIDE > MB_SP_DOZING. Override = actual LDR used as-is (no conv factor).
 -- Each of F_YARN_RP_DOZING / F_YARN_MB_COST / F_YARN_MB_FLAG is rewritten ONLY when its expression equals EXACTLY
 -- the expected current text (else NOTICE + no-op). Products without an override (0/empty) compute identically.
+-- All-or-nothing: if 0 < (matches of the exact old text) < 3 the migration RAISEs (partial drift = RP vs MB cost inconsistent);
+-- 0 matches with all three already new = no-op; 0 otherwise = NOTICE + skip.
 -- Backup bak_000618_formula holds old text/audit cols + whether THIS migration inserted the formula_param edge.
 BEGIN;
 
@@ -24,12 +26,8 @@ CREATE TABLE IF NOT EXISTS bak_000618_formula (
 );
 COMMENT ON TABLE bak_000618_formula IS 'Backup written by migration 000618; read by its down migration.';
 
-DO $$
-DECLARE
-    r   RECORD;
-    v_n INTEGER;
-BEGIN
-    FOR r IN SELECT * FROM (VALUES
+CREATE TEMP TABLE _f618 (fcode TEXT, old_expr TEXT, new_expr TEXT) ON COMMIT DROP;
+INSERT INTO _f618 VALUES
         ('F_YARN_RP_DOZING',
          'RP_DOZING_ACTUAL > 0 ? RP_DOZING_ACTUAL : (MB_SP_DOZING > 0 ? MB_SP_DOZING : 0)',
          'RP_DOZING_ACTUAL > 0 ? RP_DOZING_ACTUAL : (MB_LDR_OVERRIDE > 0 ? MB_LDR_OVERRIDE : (MB_SP_DOZING > 0 ? MB_SP_DOZING : 0))'),
@@ -39,7 +37,31 @@ BEGIN
         ('F_YARN_MB_FLAG',
          'MB_SP_DOZING > 0 ? ''Y'' : ''N''',
          '(MB_LDR_OVERRIDE > 0 ? MB_LDR_OVERRIDE : MB_SP_DOZING) > 0 ? ''Y'' : ''N''')
-    ) AS t(fcode, old_expr, new_expr)
+    ;
+
+DO $$
+DECLARE
+    r       RECORD;
+    v_n     INTEGER;
+    v_old   INTEGER;
+    v_new   INTEGER;
+BEGIN
+    SELECT COUNT(*) FILTER (WHERE f.expression = t.old_expr), COUNT(*) FILTER (WHERE f.expression = t.new_expr)
+      INTO v_old, v_new
+      FROM _f618 t JOIN mst_formula f ON f.formula_code = t.fcode AND f.deleted_at IS NULL;
+    IF v_old > 0 AND v_old < 3 THEN
+        RAISE EXCEPTION '000618: partial formula drift (% of 3 expressions match the expected old text); aborting so RP and MB cost stay consistent', v_old;
+    END IF;
+    IF v_old = 0 THEN
+        IF v_new = 3 THEN
+            RAISE NOTICE '000618: formulas already migrated; no-op.';
+        ELSE
+            RAISE NOTICE '000618: formula expressions drifted from the expected text; formulas not rewritten.';
+        END IF;
+        RETURN;
+    END IF;
+
+    FOR r IN SELECT * FROM _f618
     LOOP
         INSERT INTO bak_000618_formula (formula_code, old_expression, old_updated_at, old_updated_by, edge_inserted)
         SELECT f.formula_code, f.expression, f.updated_at, f.updated_by,

@@ -48,31 +48,41 @@ func TestMBLDROverride618Migration(t *testing.T) {
 	}
 	pin("F_YARN_RP_DOZING", rpOld)
 	pin("F_YARN_MB_COST", costOld)
-	pin("F_YARN_MB_FLAG", driftd) // drifted on purpose: must stay untouched
+	pin("F_YARN_MB_FLAG", driftd) // partial drift: 2 of 3 match -> migration must abort, nothing changes
 
-	require.NoError(t, m.UpTo(ctx, ver))
-	assert.Contains(t, expr("F_YARN_RP_DOZING"), "RP_DOZING_ACTUAL > 0 ? RP_DOZING_ACTUAL : (MB_LDR_OVERRIDE > 0 ? MB_LDR_OVERRIDE :")
-	assert.Contains(t, expr("F_YARN_MB_COST"), "(MB_LDR_OVERRIDE > 0 ? MB_LDR_OVERRIDE : MB_SP_DOZING)")
-	assert.Equal(t, driftd, expr("F_YARN_MB_FLAG"))
-	assert.Equal(t, 1, edge("F_YARN_RP_DOZING"))
-	assert.Equal(t, 1, edge("F_YARN_MB_COST"))
-	assert.Equal(t, 0, edge("F_YARN_MB_FLAG"))
-	assert.Equal(t, 1, count(ctx, t, db, `SELECT count(*) FROM mst_parameter WHERE param_code='MB_LDR_OVERRIDE' AND param_category='INPUT' AND deleted_at IS NULL`))
-
-	// Down, then restore the flag to the exact text and re-apply: all three rewritten, then idempotent re-run is a no-op.
-	require.NoError(t, m.DownTo(ctx, ver-1))
+	require.Error(t, m.UpTo(ctx, ver))
 	assert.Equal(t, rpOld, expr("F_YARN_RP_DOZING"))
 	assert.Equal(t, costOld, expr("F_YARN_MB_COST"))
 	assert.Equal(t, driftd, expr("F_YARN_MB_FLAG"))
-	assert.Equal(t, 0, edge("F_YARN_RP_DOZING")+edge("F_YARN_MB_COST"))
-	assert.Equal(t, 0, count(ctx, t, db, `SELECT count(*) FROM mst_parameter WHERE param_code='MB_LDR_OVERRIDE'`))
-	assert.Equal(t, 0, count(ctx, t, db, `SELECT count(*) FROM information_schema.tables WHERE table_name='bak_000618_formula'`))
+	assert.Equal(t, 0, count(ctx, t, db, `SELECT count(*) FROM mst_parameter WHERE param_code='MB_LDR_OVERRIDE'`), "aborted migration leaves no param")
 
+	// Restore the exact flag text: all three are rewritten.
 	pin("F_YARN_MB_FLAG", flagOld)
 	require.NoError(t, m.UpTo(ctx, ver))
-	assert.Equal(t, `(MB_LDR_OVERRIDE > 0 ? MB_LDR_OVERRIDE : MB_SP_DOZING) > 0 ? 'Y' : 'N'`, expr("F_YARN_MB_FLAG"))
-	assert.Equal(t, 1, edge("F_YARN_MB_FLAG"))
+	const flagNew = `(MB_LDR_OVERRIDE > 0 ? MB_LDR_OVERRIDE : MB_SP_DOZING) > 0 ? 'Y' : 'N'`
+	assert.Contains(t, expr("F_YARN_RP_DOZING"), "RP_DOZING_ACTUAL > 0 ? RP_DOZING_ACTUAL : (MB_LDR_OVERRIDE > 0 ? MB_LDR_OVERRIDE :")
+	assert.Contains(t, expr("F_YARN_MB_COST"), "(MB_LDR_OVERRIDE > 0 ? MB_LDR_OVERRIDE : MB_SP_DOZING)")
+	assert.Equal(t, flagNew, expr("F_YARN_MB_FLAG"))
+	for _, f := range []string{"F_YARN_RP_DOZING", "F_YARN_MB_COST", "F_YARN_MB_FLAG"} {
+		assert.Equal(t, 1, edge(f), f)
+	}
+	assert.Equal(t, 1, count(ctx, t, db, `SELECT count(*) FROM mst_parameter WHERE param_code='MB_LDR_OVERRIDE' AND param_category='INPUT' AND deleted_at IS NULL`))
+
+	// Re-running the up SQL is a no-op (expressions and edge counts unchanged).
+	before := []string{expr("F_YARN_RP_DOZING"), expr("F_YARN_MB_COST"), expr("F_YARN_MB_FLAG")}
+	up, err := os.ReadFile("000618_mb_ldr_override.up.sql")
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, string(up))
+	require.NoError(t, err)
+	assert.Equal(t, before, []string{expr("F_YARN_RP_DOZING"), expr("F_YARN_MB_COST"), expr("F_YARN_MB_FLAG")})
+	assert.Equal(t, 3, edge("F_YARN_RP_DOZING")+edge("F_YARN_MB_COST")+edge("F_YARN_MB_FLAG"))
+
+	// Down restores the exact old texts, edges, param and backup table.
 	require.NoError(t, m.DownTo(ctx, ver-1))
+	assert.Equal(t, rpOld, expr("F_YARN_RP_DOZING"))
+	assert.Equal(t, costOld, expr("F_YARN_MB_COST"))
 	assert.Equal(t, flagOld, expr("F_YARN_MB_FLAG"))
-	assert.Equal(t, 0, edge("F_YARN_MB_FLAG"))
+	assert.Equal(t, 0, edge("F_YARN_RP_DOZING")+edge("F_YARN_MB_COST")+edge("F_YARN_MB_FLAG"))
+	assert.Equal(t, 0, count(ctx, t, db, `SELECT count(*) FROM mst_parameter WHERE param_code='MB_LDR_OVERRIDE'`))
+	assert.Equal(t, 0, count(ctx, t, db, `SELECT count(*) FROM information_schema.tables WHERE table_name='bak_000618_formula'`))
 }
