@@ -19,6 +19,9 @@ const (
 	DecisionReject  Decision = "REJECT"
 )
 
+// ReasonNameFollowsCosting rejects head mgt_name rows: the name is derived from MB Costing.
+const ReasonNameFollowsCosting = "mb_name_follows_costing"
+
 // Snapshot is the DB state read for a proposal inside one read-only tx.
 type Snapshot interface {
 	// Current returns the stored text value of a column. found=false means the
@@ -101,6 +104,9 @@ func decideRow(snap Snapshot, r Row) PlanRow {
 	switch {
 	case !found:
 		return reject("entity not found or deleted")
+	case r.Entity == EntityHead && r.Spec.Column == "mbh_mgt_name":
+		// MB Name always equals MB Costing (mb-comparison-p2 item 3); the writer guard is a backstop.
+		return reject(ReasonNameFollowsCosting)
 	case ValidateApplyRow(r) != nil:
 		return reject(ValidateApplyRow(r).Error())
 	case Equal(r.Spec.Kind, cur, r.LegacyValue):

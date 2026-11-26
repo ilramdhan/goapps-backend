@@ -109,7 +109,7 @@ func lfHandleD(ctx context.Context, tx *sql.Tx, g *lfGroup, r mblegacyfill.PlanR
 	spec := r.Row.Spec
 	if r.Row.Entity == mblegacyfill.EntityHead && spec.Column == "mbh_mgt_name" {
 		// MB Name always equals MB Costing (mb-comparison-p2 item 3): never written independently.
-		return lfOutcome{rejectReason: "mb_name_follows_costing"}, nil
+		return lfOutcome{rejectReason: mblegacyfill.ReasonNameFollowsCosting}, nil
 	}
 	if reject, err := lfCheckUnique(ctx, tx, r); err != nil {
 		return lfOutcome{}, err
@@ -130,7 +130,31 @@ func lfHandleD(ctx context.Context, tx *sql.Tx, g *lfGroup, r mblegacyfill.PlanR
 		return lfOutcome{}, err
 	}
 	out.after[spec.Column] = after
+	if r.Row.Entity == mblegacyfill.EntityHead && spec.Column == "mbh_mb_costing" {
+		// MB Name follows MB Costing: write it too; images carry it so revert restores it.
+		if err := lfFollowName(ctx, tx, g, r, spec, &out); err != nil {
+			return lfOutcome{}, err
+		}
+	}
 	return out, nil
+}
+
+// lfFollowName sets head mbh_mgt_name = the new costing and records before/after images.
+func lfFollowName(ctx context.Context, tx *sql.Tx, g *lfGroup, r mblegacyfill.PlanRow, spec mblegacyfill.FieldSpec, out *lfOutcome) error {
+	const nameCol = "mbh_mgt_name"
+	prev, _, err := lfReadColumn(ctx, tx, r.Row.Entity, r.Row.ID, nameCol, "")
+	if err != nil {
+		return err
+	}
+	if err := lfWriteColumn(ctx, tx, g, r.Row.Entity, r.Row.ID, spec, nameCol, r.Row.LegacyValue); err != nil {
+		return err
+	}
+	now, _, err := lfReadColumn(ctx, tx, r.Row.Entity, r.Row.ID, nameCol, "")
+	if err != nil {
+		return err
+	}
+	out.before[nameCol], out.after[nameCol] = mblegacyfill.Normalize(prev), now
+	return nil
 }
 
 // lfCheckUnique returns a reject reason when a unique head column would clash.

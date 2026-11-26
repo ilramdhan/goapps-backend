@@ -74,6 +74,8 @@ func TestLegacyFillIntegration(t *testing.T) {
 		{"LegacyFillWriter_Targeted_DevOnlyTouchesNoSpin", lfCaseLegacyFillWriter_Targeted_DevOnlyTouchesNoSpin},
 		{"LegacyFillWriter_Targeted_DenierFollowersOnly_AndRevert", lfCaseLegacyFillWriter_Targeted_DenierFollowersOnly_AndRevert},
 		{"LegacyFillWriter_Targeted_CostingRename", lfCaseLegacyFillWriter_Targeted_CostingRename},
+		{"LegacyFillWriter_CostingRename_NameFollowsAndRevert", lfCaseLegacyFillWriter_CostingRename_NameFollowsAndRevert},
+		{"LegacyFillWriter_HeadMgtNameRejected", lfCaseLegacyFillWriter_HeadMgtNameRejected},
 		{"LegacyFillWriter_ClassD_SpinOrionUniquenessReject", lfCaseLegacyFillWriter_ClassD_SpinOrionUniquenessReject},
 	}
 	for _, c := range cases {
