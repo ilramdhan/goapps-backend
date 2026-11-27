@@ -50,3 +50,35 @@ Run steps:
 Re-running `apply --commit` after a commit is idempotent: rows already at target report `ALREADY_APPLIED` (exit 0). FAILED reasons also include `plan_tampered` (plan CSV decision/target inconsistent with sp68), `spin_superseded`, `head_deleted`.
 Children of APPLY_SET parents are NOT re-cascaded by this tool (only the listed spins are written).
 Result CSVs carry `before_json` / `after_json` images. Marker: `updated_by` = actor (`mbcmp-<env>`).
+
+## relink mode (mb-comparison p2 p4: MB_SP_CODE pointer = the spin the Excel means)
+
+Sets only `cost_product_parameter.cpp_value_mb_spin_id` of `MB_SP_CODE` (the text stays). No other param is written, no lookup
+sync, no recalc. Input = the `sql/10-parity-plan` per-env exports: `plan-E-relink.csv` (action `RELINK`), optional
+`plan-D-names.csv` (`RELINK_TO_NAMED_HEAD_SPIN`, uses `goapps_value` as the current pointer), optional `plan-CONFLICT-child.csv`
+(`MOVE_TO_CHILD`: `parent_spin_id`, `target_den_fil_ldr` = den/fil/ldr, `child_key`). Every other action is ignored. All rows must
+carry the same `env` (mixed env = error). Spec: `docs/mb-comparison-p2/PARITY-PLAN.md`.
+
+```
+mb-comparison-fill relink plan   --e plan-E-relink.csv [--d plan-D-names.csv] [--conflict plan-CONFLICT-child.csv] --out-dir out/
+mb-comparison-fill relink apply  --plan-file out/mb-comparison-fill-relink-plan-*.csv --actor mbcmp-<env> [--limit N] [--batch N] [--commit]
+mb-comparison-fill relink revert --results out/mb-comparison-fill-relink-apply-result-*.csv --actor mbcmp-<env>
+```
+
+Decisions: `POINTER` (set the pointer; inactive / TIE_EQUIVALENT targets are allowed, soft-deleted ones are not), `CHILD` (reuse or create
+the child spin of the parent, then point), `SKIP_SAME` (already on the target / on a matching child), `REPORT` (product not found /
+inactive / locked, no MB_SP_CODE row, target or parent spin missing or deleted, pointer differs from the export, product in several
+input rows). The plan snapshots the live text + pointer (`snap_text`, `snap_ptr`).
+
+Run steps (same shape as spin-ldr):
+1. `plan` (read-only, re-reads the live DB). Review decision counts; REPORT rows are never written. Run pointers (E + D) first, re-export sql/10, then the CONFLICT children.
+2. `apply` without `--commit` = DRY-RUN (rolled back, `*-relink-apply-dryrun-*.csv`): all rows `WOULD_APPLY`. Dry-run never creates children.
+3. Canary `apply --commit --limit 1`, then `--limit 5`, then the full run (re-run `plan` between runs so done rows become `SKIP_SAME`).
+4. Apply guard (one tx per `--batch`, savepoint per row): product `FOR UPDATE` + CPP row `FOR UPDATE`, product active and unlocked, live pointer AND text equal the plan snapshot (else `FAILED changed_since_plan`), target spin not soft-deleted.
+5. Children: rows are grouped by (parent, den/fil/LDR 4dp). An existing live ACTUAL child of that parent with the same den/fil/LDR is reused. Otherwise the existing `DuplicateSpin` creates it in its OWN tx, BEFORE the pointer batch (it cannot join the batch tx): den/fil/LDR from the target, no FG, `RequireLiveHead=false`, LDR locked ACTUAL. A crash between the two leaves an unreferenced child; the re-run reuses it. Result CSV: `child_spin_id`, `child_created` (true only on the first row of a group that really created it).
+6. Revert: `revert --results <apply-result csv(s), oldest first>` restores the before-pointer only where the live pointer still equals the after-pointer (else `CHANGED_SINCE_APPLY`), then soft-deletes the children this run created only when no `cost_product_parameter` row points at them, they have no child spins and `mbs_duplicated_by` = actor; otherwise `KEPT_REFERENCED`.
+Re-running `apply --commit` is idempotent (`ALREADY_APPLIED`). FAILED reasons also include `plan_tampered`, `target_spin_missing_or_deleted`, `child: duplicate_spin: ...`.
+Apply and revert require `--actor mbcmp-<env>` where `<env>` is the plan's `env` column (rows are applied in product_sys_id order). `--batch` defaults to 100 (same as every mode); keep it. A mid-batch DB error aborts the batch and reports none of its rows as APPLIED.
+Children: created with the PARENT's name (no "(copy)"). Revert considers every child id any result row recorded (also FAILED rows, since the child commits before the pointer batch) and deletes it only if unreferenced, childless and created by the actor.
+Result CSV columns: `env, row, product_sys_id, decision, status, reason, before_json, after_json, child_spin_id, child_created`. Marker: `cpp_updated_by` = actor.
+Caveat: a UI save of the MB_SP_CODE parameter re-resolves the pointer from the text and would undo a relink.
