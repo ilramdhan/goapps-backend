@@ -54,7 +54,7 @@ func TestBatchCandidates_ActiveFlagRules(t *testing.T) {
 	ref := func(parent, child string, version int) {
 		_, e := db.ExecContext(ctx, `INSERT INTO mst_mb_composition_version (mbcv_mbh_id, mbcv_version, mbcv_validated_at,
 			mbcv_validated_by, mbcv_seq_no, mbcv_group_head_id, mbcv_composition_pct, mbcv_source_type, mbcv_mb_ref_mbh_id)
-			VALUES ($1,$2,NOW(),'itest',1,$3,100,'MB',$4)`, ids[parent], version, uuid.New(), ids[child])
+			VALUES ($1,$2,NOW(),'itest',(SELECT COALESCE(MAX(mbcv_seq_no),0)+1 FROM mst_mb_composition_version WHERE mbcv_mbh_id=$1 AND mbcv_version=$2),$3,100,'MB',$4)`, ids[parent], version, uuid.New(), ids[child])
 		require.NoError(t, e)
 	}
 	head("A", true, "VALIDATED", false)   // active root

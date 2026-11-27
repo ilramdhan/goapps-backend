@@ -182,8 +182,16 @@ func (r *MBHeadRepository) List(ctx context.Context, filter mbhead.ListFilter) (
 }
 
 // Update persists changes to an existing MB Head.
+//
+// An is_active flip made through here (the app's Update path) is guarded and cascaded in the
+// same transaction (mb-active-flag-rules 3+4), see applyActiveFlagTx.
 func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) error {
-	return r.updateOn(ctx, r.db, entity)
+	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
+		if err := applyActiveFlagTx(ctx, tx, entity); err != nil {
+			return err
+		}
+		return r.updateOn(ctx, tx, entity)
+	})
 }
 
 // UpdateWithCascade persists the head exactly like Update and, in the SAME transaction,
@@ -215,6 +223,9 @@ func (r *MBHeadRepository) UpdateWithCascade(ctx context.Context, entity *mbhead
 	}
 	var spinIDs []uuid.UUID
 	err := r.db.Transaction(ctx, func(tx *sql.Tx) error {
+		if err := applyActiveFlagTx(ctx, tx, entity); err != nil {
+			return err
+		}
 		if err := r.updateOn(ctx, tx, entity); err != nil {
 			return err
 		}

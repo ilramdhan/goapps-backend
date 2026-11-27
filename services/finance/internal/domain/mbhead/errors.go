@@ -1,7 +1,10 @@
 // Package mbhead provides domain logic for Melange Batch Head (MEL product type) management.
 package mbhead
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 // Domain errors for MB Head operations.
 var (
@@ -57,3 +60,18 @@ var (
 	// APPROVED — or the reverse — would silently rewrite its costing standing.
 	ErrUnlockOriginUnknown = errors.New("mbhead: cannot determine the state to return to after rejecting an unlock")
 )
+
+// ErrDeactivateInUse is returned when deactivating an MB head that is still part of the
+// current composition of an active MB (directly, or via an inactive MB that an active MB
+// still needs). Use errors.Is; the concrete *InUseError names the blocking MBs.
+var ErrDeactivateInUse = errors.New("mbhead: cannot deactivate, still used by active MB")
+
+// InUseError carries the MB costing codes that block a deactivation.
+type InUseError struct{ UsedBy []string }
+
+func (e *InUseError) Error() string {
+	return ErrDeactivateInUse.Error() + ": " + strings.Join(e.UsedBy, ", ")
+}
+
+// Is makes errors.Is(err, ErrDeactivateInUse) true.
+func (e *InUseError) Is(target error) bool { return target == ErrDeactivateInUse }

@@ -415,6 +415,9 @@ func mbHeadWriteErrToBase(err error) *commonv1.BaseResponse {
 	if errors.Is(err, mbhead.ErrDuplicateOrionItemCode) {
 		return ConflictResponse("Orion Item Code already exists")
 	}
+	if errors.Is(err, mbhead.ErrDeactivateInUse) {
+		return ConflictResponse(err.Error())
+	}
 	if resp := fgErrToBase(err); resp != nil {
 		return resp
 	}
