@@ -51,6 +51,7 @@ func (r *CstMBCostRepository) ListStalePushedMBHIDs(ctx context.Context, period 
 		JOIN mst_mb_head mbh
 		  ON mbh.mbh_id = mbc.mbc_mbh_id
 		 AND mbh.mbh_entry_status = 'VALIDATED'
+		 AND mbh.mbh_is_active = TRUE
 		 AND mbh.deleted_at IS NULL
 		LEFT JOIN cst_product_cost src ON src.cpc_cost_id = mbc.mbc_source_cpc_id
 		WHERE mbc.mbc_period = $1

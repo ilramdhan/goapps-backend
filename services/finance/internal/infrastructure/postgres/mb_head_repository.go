@@ -182,8 +182,16 @@ func (r *MBHeadRepository) List(ctx context.Context, filter mbhead.ListFilter) (
 }
 
 // Update persists changes to an existing MB Head.
+//
+// An is_active flip made through here (the app's Update path) is guarded and cascaded in the
+// same transaction (mb-active-flag-rules 3+4), see applyActiveFlagTx.
 func (r *MBHeadRepository) Update(ctx context.Context, entity *mbhead.Entity) error {
-	return r.updateOn(ctx, r.db, entity)
+	return r.db.Transaction(ctx, func(tx *sql.Tx) error {
+		if err := applyActiveFlagTx(ctx, tx, entity); err != nil {
+			return err
+		}
+		return r.updateOn(ctx, tx, entity)
+	})
 }
 
 // UpdateWithCascade persists the head exactly like Update and, in the SAME transaction,
@@ -215,6 +223,9 @@ func (r *MBHeadRepository) UpdateWithCascade(ctx context.Context, entity *mbhead
 	}
 	var spinIDs []uuid.UUID
 	err := r.db.Transaction(ctx, func(tx *sql.Tx) error {
+		if err := applyActiveFlagTx(ctx, tx, entity); err != nil {
+			return err
+		}
 		if err := r.updateOn(ctx, tx, entity); err != nil {
 			return err
 		}
@@ -592,18 +603,53 @@ type MBHeadCandidate struct {
 	CurrentVersion int32
 }
 
-// ListValidated returns all VALIDATED MB Heads, the candidate set for a push-to-head
-// preview/execute pass (PR-01/PR-02), and — via CurrentVersion — for the mbbatch DAG
-// builder's per-mbh_id version resolution (Task 21b) without a separate GetByID call.
+// ListValidated returns the VALIDATED, ACTIVE, non-deleted MB Heads: the push-to-head
+// candidate set (rule 2 of mb-active-flag-rules; inactive heads are never pushed).
+// The MB batch uses ListBatchCandidates instead.
 func (r *MBHeadRepository) ListValidated(ctx context.Context) ([]MBHeadCandidate, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	return r.listCandidates(ctx, listValidatedActiveSQL, "list validated mb heads")
+}
+
+const listValidatedActiveSQL = `
 		SELECT mbh_id, mbh_mb_costing, COALESCE(mbh_mgt_name, ''),
 		       COALESCE(mbh_cost_product_id, 0), mbh_is_boughtout, mbh_current_version
 		FROM mst_mb_head
-		WHERE mbh_entry_status = 'VALIDATED' AND deleted_at IS NULL
-	`)
+		WHERE mbh_entry_status = 'VALIDATED' AND mbh_is_active = TRUE AND deleted_at IS NULL
+	`
+
+// listBatchCandidatesSQL: VALIDATED+active heads, plus VALIDATED inactive heads reachable
+// transitively from an active head's CURRENT composition version through source_type='MB'
+// refs (rule 1). UNION (not UNION ALL) in the recursive CTE makes it cycle-safe.
+const listBatchCandidatesSQL = `
+		WITH RECURSIVE live AS (
+		    SELECT mbh_id FROM mst_mb_head
+		    WHERE mbh_entry_status = 'VALIDATED' AND mbh_is_active = TRUE AND deleted_at IS NULL
+		  UNION
+		    SELECT ref.mbh_id
+		    FROM live l
+		    JOIN mst_mb_head p ON p.mbh_id = l.mbh_id
+		    JOIN mst_mb_composition_version v
+		      ON v.mbcv_mbh_id = p.mbh_id AND v.mbcv_version = p.mbh_current_version
+		     AND v.mbcv_source_type = 'MB'
+		    JOIN mst_mb_head ref ON ref.mbh_id = v.mbcv_mb_ref_mbh_id
+		     AND ref.mbh_entry_status = 'VALIDATED' AND ref.deleted_at IS NULL
+		)
+		SELECT h.mbh_id, h.mbh_mb_costing, COALESCE(h.mbh_mgt_name, ''),
+		       COALESCE(h.mbh_cost_product_id, 0), h.mbh_is_boughtout, h.mbh_current_version
+		FROM mst_mb_head h
+		WHERE h.mbh_id IN (SELECT mbh_id FROM live)
+	`
+
+// ListBatchCandidates returns the MB batch candidate set (rules 1): see listBatchCandidatesSQL.
+// Also drives RecomputeRevalidated's DAG.
+func (r *MBHeadRepository) ListBatchCandidates(ctx context.Context) ([]MBHeadCandidate, error) {
+	return r.listCandidates(ctx, listBatchCandidatesSQL, "list mb batch candidates")
+}
+
+func (r *MBHeadRepository) listCandidates(ctx context.Context, q, what string) ([]MBHeadCandidate, error) {
+	rows, err := r.db.QueryContext(ctx, q)
 	if err != nil {
-		return nil, fmt.Errorf("list validated mb heads: %w", err)
+		return nil, fmt.Errorf("%s: %w", what, err)
 	}
 	defer closeRows(rows)
 
@@ -611,12 +657,12 @@ func (r *MBHeadRepository) ListValidated(ctx context.Context) ([]MBHeadCandidate
 	for rows.Next() {
 		var c MBHeadCandidate
 		if err := rows.Scan(&c.MBHID, &c.Code, &c.Name, &c.CostProductID, &c.IsBoughtout, &c.CurrentVersion); err != nil {
-			return nil, fmt.Errorf("scan validated mb head: %w", err)
+			return nil, fmt.Errorf("scan %s: %w", what, err)
 		}
 		out = append(out, c)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate validated mb heads: %w", err)
+		return nil, fmt.Errorf("iterate %s: %w", what, err)
 	}
 	return out, nil
 }

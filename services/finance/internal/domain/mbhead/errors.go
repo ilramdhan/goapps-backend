@@ -1,7 +1,11 @@
 // Package mbhead provides domain logic for Melange Batch Head (MEL product type) management.
 package mbhead
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 // Domain errors for MB Head operations.
 var (
@@ -57,3 +61,29 @@ var (
 	// APPROVED — or the reverse — would silently rewrite its costing standing.
 	ErrUnlockOriginUnknown = errors.New("mbhead: cannot determine the state to return to after rejecting an unlock")
 )
+
+// ErrDeactivateInUse is returned when deactivating an MB head that is still part of the
+// current composition of an active MB (directly, or via an inactive MB that an active MB
+// still needs). Use errors.Is; the concrete *InUseError names the blocking MBs.
+var ErrDeactivateInUse = errors.New("mbhead: cannot deactivate, still used by active MB")
+
+// InUseError carries the MB costing codes that block a deactivation.
+type InUseError struct{ UsedBy []string }
+
+func (e *InUseError) Error() string {
+	const maxListed = 10
+	u := e.UsedBy
+	more := ""
+	if len(u) > maxListed {
+		more = fmt.Sprintf(" +%d more", len(u)-maxListed)
+		u = u[:maxListed]
+	}
+	return ErrDeactivateInUse.Error() + ": " + strings.Join(u, ", ") + more
+}
+
+// Is makes errors.Is(err, ErrDeactivateInUse) true.
+func (e *InUseError) Is(target error) bool { return target == ErrDeactivateInUse }
+
+// ErrReactivateSuperseded is returned when reactivating a head that was superseded; the
+// message keeps "already" out so it is mapped explicitly to 409 by the handler.
+var ErrReactivateSuperseded = errors.New("mbhead: head is superseded, use un-supersede to reactivate it")

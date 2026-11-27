@@ -23,7 +23,7 @@ var allowedTransitions = map[string]map[string]struct{}{
 	// DRAFT → SUBMITTED → APPROVED and asked for the Validate BUTTON to disappear, with
 	// the MB product auto-generation moved onto Approve.
 	//
-	// ⚠ Validate could NOT simply be deleted. mb_head_repository.ListValidated() filters
+	// ⚠ Validate could NOT simply be deleted. mb_head_repository.ListValidated() (VALIDATED and active) filters
 	// WHERE mbh_entry_status = 'VALIDATED', and TWO engines read it: MB Push to Head
 	// (application/mbpush) and Trigger MB Batch (application/mbbatch/dag.go). Stopping the
 	// workflow at APPROVED would leave both permanently empty and kill the whole MB cost calculation.
