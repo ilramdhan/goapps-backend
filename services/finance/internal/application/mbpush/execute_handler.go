@@ -103,7 +103,7 @@ func (h *ExecuteHandler) executeBatch(ctx context.Context, tx *sql.Tx, byID map[
 	for _, mbhID := range mbhIDs {
 		c, ok := byID[mbhID]
 		if !ok {
-			result.Errors = append(result.Errors, PushError{MBHID: mbhID, Error: "not in VALIDATED set (race with preview)"})
+			result.Errors = append(result.Errors, PushError{MBHID: mbhID, Error: "not in VALIDATED active set (race with preview)"})
 			continue
 		}
 		if pushErr := h.pushOneMB(ctx, tx, c, period, actorUserID); pushErr != nil {

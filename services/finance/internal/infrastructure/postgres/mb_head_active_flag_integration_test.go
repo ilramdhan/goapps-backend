@@ -6,14 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbspin"
 )
 
 // Gated by INTEGRATION_TEST=true. Fixtures prefixed ITEST-ACTFLAG2- and hard-deleted around the test.
@@ -59,6 +60,9 @@ func (e *actFlagEnv) clean() {
 	e.exec(`DELETE FROM cost_route_rm WHERE crm_parent_product_sys_id IN (SELECT cpm_product_sys_id FROM cost_product_master WHERE cpm_product_code LIKE $1)`, p)
 	e.exec(`DELETE FROM mst_mb_spin WHERE mbs_parent_spin_id IS NOT NULL AND mbs_mbh_id IN (SELECT mbh_id FROM mst_mb_head WHERE mbh_mb_costing LIKE $1)`, p)
 	e.exec(`DELETE FROM mst_mb_spin WHERE mbs_mbh_id IN (SELECT mbh_id FROM mst_mb_head WHERE mbh_mb_costing LIKE $1)`, p)
+	e.exec(`DELETE FROM mst_mb_composition WHERE mbcm_mbh_id IN (SELECT mbh_id FROM mst_mb_head WHERE mbh_mb_costing LIKE $1)`, p)
+	e.exec(`DELETE FROM cst_mb_cost WHERE mbc_mbh_id IN (SELECT mbh_id FROM mst_mb_head WHERE mbh_mb_costing LIKE $1)`, p)
+	e.exec(`DELETE FROM cst_product_cost WHERE cpc_product_sys_id IN (SELECT cpm_product_sys_id FROM cost_product_master WHERE cpm_product_code LIKE $1)`, p)
 	e.exec(`DELETE FROM mst_mb_head WHERE mbh_mb_costing LIKE $1`, p)
 	e.exec(`DELETE FROM cost_product_master WHERE cpm_product_code LIKE $1`, p)
 }
@@ -173,5 +177,129 @@ func TestActiveFlag_WriterPathBypassesGuardAndCascade(t *testing.T) {
 	h, r, c, p := e.state("B")
 	require.True(t, h)
 	require.False(t, r || c || p, "writer path must not cascade")
-	_ = strings.TrimSpace
+}
+
+func (e *actFlagEnv) cascadeSet(name string, active bool) error {
+	ent, err := e.repo.GetByID(e.ctx, e.heads[name])
+	require.NoError(e.t, err)
+	require.NoError(e.t, ent.Update(mbhead.UpdateInput{IsActive: &active}, "itest"))
+	_, err = e.repo.UpdateWithCascade(e.ctx, ent, ent.MBCosting(), nil)
+	return err
+}
+
+func TestActiveFlag_UpdateWithCascadePathGuardsToo(t *testing.T) {
+	e := newActFlagEnv(t)
+	e.head("A")
+	e.head("B")
+	e.head("C")
+	e.uses("A", "B")
+	require.ErrorIs(t, e.cascadeSet("B", false), mbhead.ErrDeactivateInUse)
+	require.NoError(t, e.cascadeSet("C", false))
+	h, r, c, p := e.state("C")
+	require.False(t, h || r || c || p)
+}
+
+func TestActiveFlag_InactiveChainMemberNamesActiveRoot(t *testing.T) {
+	e := newActFlagEnv(t)
+	e.head("A")
+	e.head("I1")
+	e.head("I2")
+	e.uses("A", "I1")
+	e.uses("I1", "I2")
+	e.exec(`UPDATE mst_mb_head SET mbh_is_active = FALSE WHERE mbh_id = $1`, e.heads["I1"])
+	err := e.setActive("I2", false)
+	var inUse *mbhead.InUseError
+	require.True(t, errors.As(err, &inUse), "got %v", err)
+	require.Contains(t, err.Error(), actFlag2Prefix+"A (via "+actFlag2Prefix+"I1)")
+}
+
+func TestActiveFlag_WorkingCompositionWhenVersionZero(t *testing.T) {
+	e := newActFlagEnv(t)
+	e.head("A")
+	e.head("B")
+	e.exec(`UPDATE mst_mb_head SET mbh_current_version = 0 WHERE mbh_id = $1`, e.heads["A"])
+	e.exec(`INSERT INTO mst_mb_composition (mbcm_mbh_id, mbcm_seq_no, mbcm_group_head_id, mbcm_composition_pct, mbcm_source_type, mbcm_mb_ref_mbh_id, mbcm_created_by)
+		SELECT $1, 1, group_head_id, 100, 'MB', $2, 'itest' FROM cst_rm_group_head LIMIT 1`, e.heads["A"], e.heads["B"])
+	var n int
+	require.NoError(t, e.db.QueryRowContext(e.ctx, `SELECT COUNT(*) FROM mst_mb_composition WHERE mbcm_mbh_id=$1`, e.heads["A"]).Scan(&n))
+	if n == 0 {
+		t.Skip("no cst_rm_group_head row to reference")
+	}
+	require.ErrorIs(t, e.setActive("B", false), mbhead.ErrDeactivateInUse)
+}
+
+func TestActiveFlag_ReactivateShadeFgConflict(t *testing.T) {
+	e := newActFlagEnv(t)
+	e.head("X")
+	e.head("Y")
+	e.head("FG")
+	fg := e.products["FG"]
+	e.exec(`UPDATE mst_mb_spin SET mbs_shade_code='SH1', mbs_fg_product_id=$2 WHERE mbs_mbh_id=$1 AND mbs_parent_spin_id IS NULL`, e.heads["X"], fg)
+	require.NoError(t, e.setActive("X", false))
+	e.exec(`UPDATE mst_mb_spin SET mbs_shade_code='SH1', mbs_fg_product_id=$2 WHERE mbs_mbh_id=$1 AND mbs_parent_spin_id IS NULL`, e.heads["Y"], fg)
+	// Y now holds the live (SH1, FG) slot; X reactivation must hit the unique index.
+	require.ErrorIs(t, e.setActive("X", true), mbspin.ErrSpinShadeFgExists)
+}
+
+func TestActiveFlag_ReactivateOnlyOneRoot(t *testing.T) {
+	e := newActFlagEnv(t)
+	e.head("M")
+	e.exec(`INSERT INTO mst_mb_spin (mbs_id, mbs_mbh_id, mbs_mgt_name, mbs_mb_costing, mbs_cost_product_id, mbs_status, mbs_is_active, created_by)
+		VALUES ($1,$2,'itest',$3,$4,'Spinning',TRUE,'itest')`, uuid.New(), e.heads["M"], actFlag2Prefix+"M-R2", e.products["M"])
+	require.NoError(t, e.setActive("M", false))
+	require.NoError(t, e.setActive("M", true))
+	var n int
+	require.NoError(t, e.db.QueryRowContext(e.ctx, `SELECT COUNT(*) FROM mst_mb_spin WHERE mbs_mbh_id=$1 AND mbs_parent_spin_id IS NULL AND mbs_is_active`, e.heads["M"]).Scan(&n))
+	require.Equal(t, 1, n)
+}
+
+func TestActiveFlag_ReactivateSupersededRejected(t *testing.T) {
+	e := newActFlagEnv(t)
+	e.head("OLD")
+	e.head("NEW")
+	require.NoError(t, e.setActive("OLD", false))
+	e.exec(`UPDATE mst_mb_head SET mbh_superseded_by_head_id=$2 WHERE mbh_id=$1`, e.heads["OLD"], e.heads["NEW"])
+	require.ErrorIs(t, e.setActive("OLD", true), mbhead.ErrReactivateSuperseded)
+	h, r, _, p := e.state("OLD")
+	require.False(t, h || r || p)
+}
+
+func TestActiveFlag_UnchangedFlagIsNoOp(t *testing.T) {
+	e := newActFlagEnv(t)
+	e.head("N")
+	// Make spin/product state differ from the head so any cascade write would be visible.
+	e.exec(`UPDATE mst_mb_spin SET mbs_is_active = FALSE WHERE mbs_mbh_id=$1`, e.heads["N"])
+	e.exec(`UPDATE cost_product_master SET cpm_is_active = FALSE WHERE cpm_product_sys_id=$1`, e.products["N"])
+	require.NoError(t, e.setActive("N", true)) // head already active
+	h, r, c, p := e.state("N")
+	require.True(t, h)
+	require.False(t, r || c || p, "no cascade when is_active is unchanged")
+}
+
+func TestStalePushedExcludesInactive(t *testing.T) {
+	e := newActFlagEnv(t)
+	e.head("S1")
+	e.head("S2")
+	for _, n := range []string{"S1", "S2"} {
+		e.exec(`INSERT INTO cst_mb_cost (mbc_mbh_id, mbc_period, mbc_cost_type, mbc_cost_value, mbc_source_cpc_id, mbc_pushed_by)
+			VALUES ($1,'209901','ACTUAL',1,NULL,'itest')`, e.heads[n])
+	}
+	// stale needs a non-superseded cpc row for the product/period/type
+	var routeHead int64
+	if err := e.db.QueryRowContext(e.ctx, `SELECT crh_head_id FROM cost_route_head LIMIT 1`).Scan(&routeHead); err != nil {
+		t.Skip("no cost_route_head row for the cst_product_cost fixture")
+	}
+	for _, n := range []string{"S1", "S2"} {
+		e.exec(`INSERT INTO cst_product_cost (cpc_product_sys_id, cpc_period, cpc_calculation_type, cpc_route_head_id, cpc_cost_per_unit, cpc_calculated_by, cpc_status)
+			VALUES ($1,'209901','ACTUAL',$2,1,'itest','CALCULATED')`, e.products[n], routeHead)
+	}
+	e.exec(`UPDATE mst_mb_head SET mbh_is_active=FALSE WHERE mbh_id=$1`, e.heads["S2"])
+	t.Cleanup(func() {
+		e.exec(`DELETE FROM cst_mb_cost WHERE mbc_period='209901' AND mbc_pushed_by='itest'`)
+		e.exec(`DELETE FROM cst_product_cost WHERE cpc_period='209901' AND cpc_product_sys_id = ANY($1)`, pq.Array([]int64{e.products["S1"], e.products["S2"]}))
+	})
+	ids, err := NewCstMBCostRepository(e.db).ListStalePushedMBHIDs(e.ctx, "209901")
+	require.NoError(t, err)
+	require.Contains(t, ids, e.heads["S1"].String())
+	require.NotContains(t, ids, e.heads["S2"].String())
 }

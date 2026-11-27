@@ -3,6 +3,7 @@ package mbhead
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -70,8 +71,19 @@ var ErrDeactivateInUse = errors.New("mbhead: cannot deactivate, still used by ac
 type InUseError struct{ UsedBy []string }
 
 func (e *InUseError) Error() string {
-	return ErrDeactivateInUse.Error() + ": " + strings.Join(e.UsedBy, ", ")
+	const maxListed = 10
+	u := e.UsedBy
+	more := ""
+	if len(u) > maxListed {
+		more = fmt.Sprintf(" +%d more", len(u)-maxListed)
+		u = u[:maxListed]
+	}
+	return ErrDeactivateInUse.Error() + ": " + strings.Join(u, ", ") + more
 }
 
 // Is makes errors.Is(err, ErrDeactivateInUse) true.
 func (e *InUseError) Is(target error) bool { return target == ErrDeactivateInUse }
+
+// ErrReactivateSuperseded is returned when reactivating a head that was superseded; the
+// message keeps "already" out so it is mapped explicitly to 409 by the handler.
+var ErrReactivateSuperseded = errors.New("mbhead: head is superseded, use un-supersede to reactivate it")

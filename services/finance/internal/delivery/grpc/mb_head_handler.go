@@ -415,7 +415,7 @@ func mbHeadWriteErrToBase(err error) *commonv1.BaseResponse {
 	if errors.Is(err, mbhead.ErrDuplicateOrionItemCode) {
 		return ConflictResponse("Orion Item Code already exists")
 	}
-	if errors.Is(err, mbhead.ErrDeactivateInUse) {
+	if errors.Is(err, mbhead.ErrDeactivateInUse) || errors.Is(err, mbhead.ErrReactivateSuperseded) {
 		return ConflictResponse(err.Error())
 	}
 	if resp := fgErrToBase(err); resp != nil {
@@ -516,7 +516,7 @@ func (h *MBHeadHandler) SubmitMBHead(ctx context.Context, req *financev1.SubmitM
 // freeze the 8 params, bump mbh_current_version, run the composition-sum gate, snapshot
 // the composition version, auto-generate the MB cost product, and lock the recipe.
 //
-// ⚠ Why not simply stop at APPROVED: mb_head_repository.ListValidated() filters
+// ⚠ Why not simply stop at APPROVED: mb_head_repository.ListValidated() (push; VALIDATED and active) and ListBatchCandidates() (batch) filter
 // WHERE mbh_entry_status = 'VALIDATED', and it feeds BOTH MB Push to Head
 // (application/mbpush) and Trigger MB Batch (application/mbbatch/dag.go). A workflow that
 // ended at APPROVED would leave those two permanently empty and stop MB costing dead.
