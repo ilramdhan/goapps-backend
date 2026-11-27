@@ -39,7 +39,7 @@ func relinkPlan(t *testing.T, f *mbasFixture, pg *postgres.MBComparisonRelink, r
 func TestMBComparisonRelink_Pointer(t *testing.T) {
 	f := newMBASFixture(t, "mbcmp_relink")
 	pg := postgres.NewMBComparisonRelink(postgres.NewDBFromSQL(f.raw))
-	const actor = "mbcmp-test"
+	const actor = "mbcmp-staging"
 	activeHead, inactiveHead := f.head(true, "R1"), f.head(false, "R1")
 	old := f.spin(activeHead, "R1", 1, true, nil)
 	inactiveTarget := f.spin(inactiveHead, "R1", 1, false, nil)
@@ -117,7 +117,7 @@ func TestMBComparisonRelink_Pointer(t *testing.T) {
 func TestMBComparisonRelink_Child(t *testing.T) {
 	f := newMBASFixture(t, "mbcmp_relink_child")
 	pg := postgres.NewMBComparisonRelink(postgres.NewDBFromSQL(f.raw))
-	const actor = "mbcmp-test"
+	const actor = "mbcmp-staging"
 	inactiveHead := f.head(false, "R2") // RequireLiveHead=false must still allow the child
 	parent := f.spin(inactiveHead, "R2", 1.45, false, nil)
 	p1, p2, p3 := f.poy("RLC1", "R2"), f.poy("RLC2", "R2"), f.poy("RLC3", "R2")
@@ -198,14 +198,69 @@ func TestMBComparisonRelink_Child(t *testing.T) {
 	require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT deleted_at IS NOT NULL FROM mst_mb_spin WHERE mbs_id = $1`, res[2].ChildID).Scan(&deleted))
 	assert.True(t, deleted)
 
-	// revert p4 too: now the shared child is unreferenced, but it was created by run 1 only; run 1 revert again deletes it
-	_, err = fill.RevertRelink(f.ctx, pg, actor, rres)
+	// revert the reusing run (p4): the shared child is now unreferenced and every run that recorded it may delete it
+	rev, err = fill.RevertRelink(f.ctx, pg, actor, rres)
 	require.NoError(t, err)
+	var gone bool
+	require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT deleted_at IS NOT NULL FROM mst_mb_spin WHERE mbs_id = $1`, res[0].ChildID).Scan(&gone))
+	assert.True(t, gone, "child deleted once the last reference is reverted")
+	// a later revert of the first run sees it already deleted
 	rev, err = fill.RevertRelink(f.ctx, pg, actor, res)
 	require.NoError(t, err)
 	for _, r := range rev {
 		if r.Decision == fill.DecisionChildDelete && r.ChildID == res[0].ChildID {
-			assert.Equal(t, fill.ResultReverted, r.Status, r.Reason)
+			assert.Equal(t, fill.ResultAlready, r.Status)
 		}
 	}
+}
+
+func TestMBComparisonRelink_FailedFirstRowChildDeletedAndDryRunReuse(t *testing.T) {
+	f := newMBASFixture(t, "mbcmp_relink_child2")
+	pg := postgres.NewMBComparisonRelink(postgres.NewDBFromSQL(f.raw))
+	const actor = "mbcmp-staging"
+	parent := f.spin(f.head(false, "R3"), "R3", 1.45, false, nil)
+	p1, p2 := f.poy("RLD1", "R3"), f.poy("RLD2", "R3")
+	f.seedCPP(p1, "MB_SP_CODE", "PC", &parent)
+	f.seedCPP(p2, "MB_SP_CODE", "PC", &parent)
+	mk := func(pid int64) fill.RelinkRow {
+		return fill.RelinkRow{Row: int(pid), Env: "staging", Source: "CONFLICT", Product: pid, Kind: fill.RelinkChild,
+			ParentSpin: parent.String(), ChildKey: "K#2", Den: 250, Fil: 144, LDR: 1.45}
+	}
+	plan := relinkPlan(t, f, pg, []fill.RelinkRow{mk(p1)})
+	// a user moves the pointer after the plan: the row FAILS, but the child was already committed
+	other := f.spin(f.head(true, "R3"), "R3", 1, true, nil)
+	f.exec(`UPDATE cost_product_parameter SET cpp_value_mb_spin_id = $2 WHERE cpp_product_sys_id = $1`, p1, other)
+	res, err := fill.ApplyRelink(f.ctx, pg, actor, plan, 0, 10, true)
+	require.NoError(t, err)
+	require.Equal(t, fill.ResultFailed, res[0].Status)
+	require.NotEmpty(t, res[0].ChildID)
+	child := res[0].ChildID
+
+	// dry-run with the (still unreferenced, live) child present: WOULD_APPLY, no new spin
+	f.exec(`UPDATE cost_product_parameter SET cpp_value_mb_spin_id = $2 WHERE cpp_product_sys_id = $1`, p1, parent)
+	plan2 := relinkPlan(t, f, pg, []fill.RelinkRow{mk(p1)})
+	var before int
+	require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT COUNT(*) FROM mst_mb_spin`).Scan(&before))
+	dry, err := fill.ApplyRelink(f.ctx, pg, actor, plan2, 0, 10, false)
+	require.NoError(t, err)
+	assert.Equal(t, fill.ResultWouldApply, dry[0].Status, dry[0].Reason)
+	assert.Equal(t, child, dry[0].ChildID)
+	assert.False(t, dry[0].ChildCreated)
+	var after int
+	require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT COUNT(*) FROM mst_mb_spin`).Scan(&after))
+	assert.Equal(t, before, after)
+	var name, pname string
+	require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT c.mbs_mgt_name, p.mbs_mgt_name FROM mst_mb_spin c JOIN mst_mb_spin p ON p.mbs_id = c.mbs_parent_spin_id WHERE c.mbs_id = $1`, child).Scan(&name, &pname))
+	assert.Equal(t, pname, name, "child keeps the parent name")
+
+	// reverting the FAILED result alone still removes the orphan child (re-run reuse case: another run reuses it, revert of either run deletes once unreferenced)
+	res[0].Env = "staging"
+	rev, err := fill.RevertRelink(f.ctx, pg, actor, res)
+	require.NoError(t, err)
+	require.Len(t, rev, 1)
+	assert.Equal(t, fill.ResultReverted, rev[0].Status, rev[0].Reason)
+	var deleted bool
+	require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT deleted_at IS NOT NULL FROM mst_mb_spin WHERE mbs_id = $1`, child).Scan(&deleted))
+	assert.True(t, deleted)
+	_ = p2
 }

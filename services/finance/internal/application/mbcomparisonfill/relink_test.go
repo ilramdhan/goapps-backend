@@ -18,7 +18,7 @@ const (
 
 func TestPlanRelink(t *testing.T) {
 	okProd := RelinkProduct{Found: true, Active: true, HasRow: true, Text: "X", Ptr: uA}
-	spins := map[string]RelinkSpin{uA: {}, uB: {}, uC: {Parent: uA, Den: 250, Fil: 144, LDR: 1.45, Actual: true}}
+	spins := map[string]RelinkSpin{uA: {}, uB: {}, uC: {Parent: uA, Den: 250, Fil: 144, LDR: 1.45, Actual: true, Active: true}}
 	ptr := RelinkRow{Product: 1, Kind: RelinkPointer, TargetSpin: uB}
 	child := RelinkRow{Product: 1, Kind: RelinkChild, ParentSpin: uA, ChildKey: "k", Den: 250, Fil: 144, LDR: 1.45}
 	tests := []struct {
@@ -149,15 +149,15 @@ func (f *fakeRelink) ApplyBatch(_ context.Context, _ string, rows []RelinkRow, _
 
 func TestApplyRelink_GroupsChildrenAndRejectsTamper(t *testing.T) {
 	ch := func(row int, p int64) RelinkRow {
-		return RelinkRow{Row: row, Product: p, Kind: RelinkChild, Decision: RelinkChild, ParentSpin: uA, ChildKey: "k", Den: 250, Fil: 144, LDR: 1.45}
+		return RelinkRow{Env: "staging", Row: row, Product: p, Kind: RelinkChild, Decision: RelinkChild, ParentSpin: uA, ChildKey: "k", Den: 250, Fil: 144, LDR: 1.45}
 	}
 	rows := []RelinkRow{
 		ch(1, 1), ch(2, 2),
-		{Row: 3, Product: 3, Kind: RelinkPointer, Decision: RelinkPointer, TargetSpin: "bad"},
-		{Row: 4, Product: 4, Kind: RelinkPointer, Decision: DecisionSkipSame},
+		{Env: "staging", Row: 3, Product: 3, Kind: RelinkPointer, Decision: RelinkPointer, TargetSpin: "bad"},
+		{Env: "staging", Row: 4, Product: 4, Kind: RelinkPointer, Decision: DecisionSkipSame},
 	}
 	f := &fakeRelink{}
-	res, err := ApplyRelink(context.Background(), f, "mbcmp-test", rows, 0, 1, true)
+	res, err := ApplyRelink(context.Background(), f, "mbcmp-staging", rows, 0, 1, true)
 	require.NoError(t, err)
 	assert.Len(t, f.ensured, 1, "one child per (parent,key-spec) group")
 	assert.Equal(t, []string{ResultFailed, ResultApplied, ResultApplied}, []string{res[0].Status, res[1].Status, res[2].Status})
@@ -168,4 +168,48 @@ func TestApplyRelink_GroupsChildrenAndRejectsTamper(t *testing.T) {
 
 	_, err = ApplyRelink(context.Background(), f, "bob", rows, 0, 1, true)
 	assert.Error(t, err)
+	_, err = ApplyRelink(context.Background(), f, "mbcmp-prod", rows, 0, 1, true)
+	assert.ErrorContains(t, err, "must be")
+}
+
+type fakeRevert struct {
+	RelinkStore
+	deleted []string
+}
+
+func (f *fakeRevert) RevertPointer(_ context.Context, _ string, r RelinkResult) (RelinkResult, error) {
+	r.Status = ResultReverted
+	return r, nil
+}
+
+func (f *fakeRevert) DeleteChild(_ context.Context, _, id string) (string, string, error) {
+	f.deleted = append(f.deleted, id)
+	return ResultReverted, "", nil
+}
+
+func TestRevertRelink_ChildCandidatesFromAllRows(t *testing.T) {
+	items := []RelinkResult{
+		{Env: "staging", Row: 1, Decision: RelinkChild, Status: ResultFailed, Reason: "changed_since_plan", ChildID: uC, ChildCreated: true},
+		{Env: "staging", Row: 2, Decision: RelinkChild, Status: ResultApplied, ChildID: uC},
+		{Env: "staging", Row: 3, Decision: RelinkChild, Status: ResultAlreadyApplied, ChildID: uB},
+	}
+	f := &fakeRevert{}
+	out, err := RevertRelink(context.Background(), f, "mbcmp-staging", items)
+	require.NoError(t, err)
+	assert.Equal(t, []string{uC, uB}, f.deleted)
+	assert.Len(t, out, 3) // 1 reverted pointer + 2 child rows
+
+	_, err = RevertRelink(context.Background(), f, "mbcmp-prod", items)
+	assert.ErrorContains(t, err, "must be")
+	mixed := append(items, RelinkResult{Env: "prod"})
+	_, err = RevertRelink(context.Background(), f, "mbcmp-staging", mixed)
+	assert.ErrorContains(t, err, "mixed")
+}
+
+func TestRelinkSpinMatches_RequiresActive(t *testing.T) {
+	c := RelinkChildSpec{Parent: uA, Den: 250, Fil: 144, LDR: 1.45}
+	s := RelinkSpin{Parent: uA, Den: 250, Fil: 144, LDR: 1.45, Actual: true, Active: true}
+	assert.True(t, s.matches(c))
+	s.Active = false
+	assert.False(t, s.matches(c))
 }

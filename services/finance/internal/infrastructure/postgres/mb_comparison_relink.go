@@ -34,7 +34,7 @@ func NewMBComparisonRelink(db *DB) *MBComparisonRelink {
 const (
 	relinkSelPtr = `SELECT CAST(c.cpp_value_mb_spin_id AS text), COALESCE(c.cpp_value_text, '')
 		FROM cost_product_parameter c JOIN mst_parameter p ON p.id = c.cpp_param_id
-		WHERE c.cpp_product_sys_id = $1 AND p.param_code = 'MB_SP_CODE'`
+		WHERE c.cpp_product_sys_id = $1 AND p.param_code = 'MB_SP_CODE' AND p.deleted_at IS NULL`
 )
 
 func (m *MBComparisonRelink) readTx(ctx context.Context) (*sql.Tx, error) {
@@ -89,7 +89,7 @@ func (m *MBComparisonRelink) Spins(ctx context.Context, ids []string) (map[strin
 		}
 	}
 	rs, err := m.db.QueryContext(ctx, `SELECT CAST(mbs_id AS text), COALESCE(CAST(mbs_parent_spin_id AS text), ''),
-		COALESCE(mbs_denier, 0), COALESCE(mbs_filament, 0), COALESCE(mbs_run_ldr_pct, 0), COALESCE(mbs_ldr_is_actual, FALSE)
+		COALESCE(mbs_denier, 0), COALESCE(mbs_filament, 0), COALESCE(mbs_run_ldr_pct, 0), COALESCE(mbs_ldr_is_actual, FALSE), mbs_is_active
 		FROM mst_mb_spin WHERE deleted_at IS NULL AND mbs_id = ANY(CAST($1 AS uuid[]))`, pq.Array(valid))
 	if err != nil {
 		return nil, fmt.Errorf("query spins: %w", err)
@@ -99,7 +99,7 @@ func (m *MBComparisonRelink) Spins(ctx context.Context, ids []string) (map[strin
 	for rs.Next() {
 		var id string
 		var s fill.RelinkSpin
-		if err = rs.Scan(&id, &s.Parent, &s.Den, &s.Fil, &s.LDR, &s.Actual); err != nil {
+		if err = rs.Scan(&id, &s.Parent, &s.Den, &s.Fil, &s.LDR, &s.Actual, &s.Active); err != nil {
 			return nil, fmt.Errorf("scan spin: %w", err)
 		}
 		out[id] = s
@@ -114,6 +114,7 @@ func (m *MBComparisonRelink) EnsureChild(ctx context.Context, actor string, c fi
 		return "", false, "bad_parent_spin_id", nil //nolint:nilerr // reported as a FAILED row
 	}
 	var found sql.NullString
+	var parentName string
 	err = m.db.QueryRowContext(ctx, `SELECT CAST(mbs_id AS text) FROM mst_mb_spin
 		WHERE mbs_parent_spin_id = $1 AND deleted_at IS NULL AND mbs_is_active AND COALESCE(mbs_ldr_is_actual, FALSE)
 		  AND mbs_filament = $2 AND mbs_denier = ROUND(CAST($3 AS numeric), 2) AND mbs_run_ldr_pct = ROUND(CAST($4 AS numeric), 4)
@@ -127,9 +128,12 @@ func (m *MBComparisonRelink) EnsureChild(ctx context.Context, actor string, c fi
 	if !commit {
 		return "", true, "", nil
 	}
+	if err = m.db.QueryRowContext(ctx, `SELECT mbs_mgt_name FROM mst_mb_spin WHERE mbs_id = $1 AND deleted_at IS NULL`, pid).Scan(&parentName); err != nil {
+		return "", false, "parent_spin_not_found", nil //nolint:nilerr // reported as a FAILED row
+	}
 	den, ldr, fil := c.Den, c.LDR, c.Fil
 	out, derr := m.spin.DuplicateSpin(ctx, mbspin.DuplicateInput{
-		SourceSpinID: pid, Denier: &den, Filament: &fil, RunLDRPct: &ldr, ActorUserID: actor, RequireLiveHead: false,
+		SourceSpinID: pid, MgtName: &parentName, Denier: &den, Filament: &fil, RunLDRPct: &ldr, ActorUserID: actor, RequireLiveHead: false,
 	})
 	if derr != nil {
 		return "", false, "duplicate_spin: " + derr.Error(), nil //nolint:nilerr // reported as a FAILED row
@@ -155,7 +159,7 @@ func (m *MBComparisonRelink) ApplyBatch(ctx context.Context, actor string, rows 
 	for _, r := range rows {
 		rr, rerr := m.applyRowSP(ctx, tx, actor, r, okRes)
 		if rerr != nil {
-			return out, rerr
+			return nil, rerr // tx rolls back: never report rolled-back rows as APPLIED
 		}
 		out = append(out, rr)
 	}
@@ -224,9 +228,17 @@ func (m *MBComparisonRelink) applyRow(ctx context.Context, tx *sql.Tx, actor str
 	if !live {
 		return "", "", "target_spin_missing_or_deleted", nil
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE cost_product_parameter SET cpp_value_mb_spin_id = CAST($2 AS uuid), cpp_updated_at = NOW(), cpp_updated_by = $3
-		WHERE cpp_product_sys_id = $1 AND cpp_param_id = (SELECT id FROM mst_parameter WHERE param_code = 'MB_SP_CODE' AND deleted_at IS NULL)`, r.Product, r.Resolved, actor); err != nil {
+	res, err := tx.ExecContext(ctx, `UPDATE cost_product_parameter SET cpp_value_mb_spin_id = CAST($2 AS uuid), cpp_updated_at = NOW(), cpp_updated_by = $3
+		WHERE cpp_product_sys_id = $1 AND cpp_param_id = (SELECT id FROM mst_parameter WHERE param_code = 'MB_SP_CODE' AND deleted_at IS NULL)`, r.Product, r.Resolved, actor)
+	if err != nil {
 		return "", "", "", fmt.Errorf("update pointer: %w", err)
+	}
+	n, nerr := res.RowsAffected()
+	if nerr != nil {
+		return "", "", "", fmt.Errorf("rows affected: %w", nerr)
+	}
+	if n != 1 {
+		return "", "", fmt.Sprintf("update_affected_%d_rows", n), nil
 	}
 	return EncodeImage(ptr.String, text), EncodeImage(r.Resolved, text), "", nil
 }
@@ -272,10 +284,9 @@ func (m *MBComparisonRelink) RevertPointer(ctx context.Context, actor string, r 
 	case !strings.EqualFold(ptr.String, after.Ptr):
 		res.Status = fill.ResultChanged
 	default:
-		if _, err = tx.ExecContext(ctx, `UPDATE cost_product_parameter SET cpp_value_mb_spin_id = CAST(NULLIF($2, '') AS uuid), cpp_updated_at = NOW(), cpp_updated_by = $3
-			WHERE cpp_product_sys_id = $1 AND cpp_param_id = (SELECT id FROM mst_parameter WHERE param_code = 'MB_SP_CODE' AND deleted_at IS NULL)`,
-			r.Product, before.Ptr, actor); err != nil {
-			return r, fmt.Errorf("restore pointer: %w", err)
+		if reason, rerr := restorePointer(ctx, tx, r.Product, before.Ptr, actor); rerr != nil || reason != "" {
+			res.Status, res.Reason = fill.ResultFailed, reason
+			return res, rerr
 		}
 		res.Status = fill.ResultReverted
 	}
@@ -327,4 +338,20 @@ func (m *MBComparisonRelink) DeleteChild(ctx context.Context, actor, id string) 
 		return "", "", fmt.Errorf("commit: %w", err)
 	}
 	return fill.ResultReverted, "child_soft_deleted", nil
+}
+
+func restorePointer(ctx context.Context, tx *sql.Tx, pid int64, ptr, actor string) (string, error) {
+	r, err := tx.ExecContext(ctx, `UPDATE cost_product_parameter SET cpp_value_mb_spin_id = CAST(NULLIF($2, '') AS uuid), cpp_updated_at = NOW(), cpp_updated_by = $3
+		WHERE cpp_product_sys_id = $1 AND cpp_param_id = (SELECT id FROM mst_parameter WHERE param_code = 'MB_SP_CODE' AND deleted_at IS NULL)`, pid, ptr, actor)
+	if err != nil {
+		return "", fmt.Errorf("restore pointer: %w", err)
+	}
+	n, err := r.RowsAffected()
+	if err != nil {
+		return "", fmt.Errorf("rows affected: %w", err)
+	}
+	if n != 1 {
+		return fmt.Sprintf("restore_affected_%d_rows", n), nil
+	}
+	return "", nil
 }

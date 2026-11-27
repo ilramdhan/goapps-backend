@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -43,8 +44,8 @@ type RelinkRow struct {
 	Kind              Decision // RelinkPointer | RelinkChild (what the input asked for)
 	TargetSpin        string   // pointer target
 	ParentSpin        string   // child parent
-	ChildKey          string
-	Den, LDR          float64 // child spec
+	ChildKey          string   // label only: children are grouped by (parent, den, fil, ldr)
+	Den, LDR          float64  // child spec
 	Fil               int
 	SnapText, SnapPtr string // live MB_SP_CODE text + pointer at plan time (apply guard)
 	Decision          Decision
@@ -66,6 +67,7 @@ type RelinkSpin struct {
 	Den, LDR float64
 	Fil      int
 	Actual   bool
+	Active   bool
 }
 
 // RelinkChildSpec identifies a child to reuse/create.
@@ -77,6 +79,7 @@ type RelinkChildSpec struct {
 
 // RelinkResult is the outcome of one row (also the revert input).
 type RelinkResult struct {
+	Env          string
 	Row          int
 	Product      int64
 	Decision     Decision
@@ -110,11 +113,11 @@ type RelinkStore interface {
 // ---- planning (pure) ----
 
 func (r RelinkRow) spec() RelinkChildSpec {
-	return RelinkChildSpec{Parent: r.ParentSpin, Den: r.Den, Fil: r.Fil, LDR: r.LDR}
+	return RelinkChildSpec{Parent: r.ParentSpin, Den: Fix4(r.Den), Fil: r.Fil, LDR: Fix4(r.LDR)}
 }
 
 func (s RelinkSpin) matches(c RelinkChildSpec) bool {
-	return s.Parent == c.Parent && s.Actual && s.Fil == c.Fil && Fix4(s.Den) == Fix4(c.Den) && Fix4(s.LDR) == Fix4(c.LDR)
+	return s.Parent == c.Parent && s.Actual && s.Active && s.Fil == c.Fil && Fix4(s.Den) == Fix4(c.Den) && Fix4(s.LDR) == Fix4(c.LDR)
 }
 
 // RelinkProductIDs / RelinkSpinIDs list what PlanRelink needs from the store.
@@ -238,7 +241,11 @@ type childRes struct {
 
 // ApplyRelink runs the POINTER/CHILD rows in batches. limit 0 = all, batch 0 = one batch.
 func ApplyRelink(ctx context.Context, s RelinkStore, actor string, rows []RelinkRow, limit, batch int, commit bool) ([]RelinkResult, error) {
-	if err := ValidateActor(actor); err != nil {
+	envs := make([]string, len(rows))
+	for i, r := range rows {
+		envs[i] = r.Env
+	}
+	if _, err := checkActorEnv(actor, envs); err != nil {
 		return nil, err
 	}
 	var todo []RelinkRow
@@ -248,11 +255,12 @@ func ApplyRelink(ctx context.Context, s RelinkStore, actor string, rows []Relink
 			continue
 		}
 		if r.Decision != r.Kind || r.validate() != nil {
-			out = append(out, RelinkResult{Row: r.Row, Product: r.Product, Decision: r.Decision, Status: ResultFailed, Reason: "plan_tampered"})
+			out = append(out, RelinkResult{Env: r.Env, Row: r.Row, Product: r.Product, Decision: r.Decision, Status: ResultFailed, Reason: "plan_tampered"})
 			continue
 		}
 		todo = append(todo, r)
 	}
+	sort.SliceStable(todo, func(i, j int) bool { return todo[i].Product < todo[j].Product }) // stable lock order
 	if limit > 0 && len(todo) > limit {
 		todo = todo[:limit]
 	}
@@ -294,7 +302,7 @@ func applyRelinkBatch(ctx context.Context, s RelinkStore, actor string, rows []R
 			children[r.spec()] = c
 		}
 		if c.reason != "" {
-			out = append(out, RelinkResult{Row: r.Row, Product: r.Product, Decision: r.Decision, Status: ResultFailed, Reason: "child: " + c.reason})
+			out = append(out, RelinkResult{Env: r.Env, Row: r.Row, Product: r.Product, Decision: r.Decision, Status: ResultFailed, Reason: "child: " + c.reason})
 			continue
 		}
 		r.Resolved = c.id
@@ -305,7 +313,12 @@ func applyRelinkBatch(ctx context.Context, s RelinkStore, actor string, rows []R
 		return out, nil
 	}
 	res, err := s.ApplyBatch(ctx, actor, run, commit)
+	envOf := map[int]string{}
+	for _, r := range run {
+		envOf[r.Row] = r.Env
+	}
 	for _, x := range res {
+		x.Env = envOf[x.Row]
 		if e, ok := extra[x.Row]; ok {
 			x.ChildID, x.ChildCreated = e.ChildID, e.ChildCreated
 		}
@@ -314,14 +327,48 @@ func applyRelinkBatch(ctx context.Context, s RelinkStore, actor string, rows []R
 	return out, err
 }
 
-// RevertRelink restores APPLIED pointer rows newest first, then soft-deletes the children this run created
-// (only when nothing references them).
-func RevertRelink(ctx context.Context, s RelinkStore, actor string, items []RelinkResult) ([]RelinkResult, error) {
+func checkActorEnv(actor string, envs []string) (string, error) {
 	if err := ValidateActor(actor); err != nil {
+		return "", err
+	}
+	env := ""
+	for _, e := range envs {
+		if e == "" || (env != "" && e != env) {
+			return "", errors.New("empty or mixed env: one env per run")
+		}
+		env = e
+	}
+	if env != "" && actor != ActorPrefix+env {
+		return "", fmt.Errorf("actor %q must be %s<env> = %q", actor, ActorPrefix, ActorPrefix+env)
+	}
+	return env, nil
+}
+
+// childCandidates lists every child id any row recorded, whatever the row status: the child commits in its own tx,
+// so a FAILED first row or a re-run that reused it still leaves it behind. DeleteChild is the guard.
+func childCandidates(items []RelinkResult) []string {
+	var cands []string
+	for _, it := range items {
+		if it.ChildID != "" && !slices.Contains(cands, it.ChildID) {
+			cands = append(cands, it.ChildID)
+		}
+	}
+	return cands
+}
+
+// RevertRelink restores APPLIED pointer rows newest first, then soft-deletes the candidate children
+// (only when unreferenced, childless and created by the actor).
+func RevertRelink(ctx context.Context, s RelinkStore, actor string, items []RelinkResult) ([]RelinkResult, error) {
+	envs := make([]string, len(items))
+	for i, it := range items {
+		envs[i] = it.Env
+	}
+	env, err := checkActorEnv(actor, envs)
+	if err != nil {
 		return nil, err
 	}
+	cands := childCandidates(items)
 	var out []RelinkResult
-	var created []string
 	for i := len(items) - 1; i >= 0; i-- {
 		it := items[i]
 		if it.Status != ResultApplied || (it.Decision != RelinkPointer && it.Decision != RelinkChild) {
@@ -336,16 +383,13 @@ func RevertRelink(ctx context.Context, s RelinkStore, actor string, items []Reli
 			r.Status, r.Reason = ResultFailed, err.Error()
 		}
 		out = append(out, r)
-		if it.ChildCreated && it.ChildID != "" && !slices.Contains(created, it.ChildID) {
-			created = append(created, it.ChildID)
-		}
 	}
-	for _, id := range created {
+	for _, id := range cands {
 		status, detail, err := s.DeleteChild(ctx, actor, id)
 		if err != nil {
 			status, detail = ResultFailed, err.Error()
 		}
-		out = append(out, RelinkResult{Decision: DecisionChildDelete, Status: status, Reason: detail, ChildID: id})
+		out = append(out, RelinkResult{Env: env, Decision: DecisionChildDelete, Status: status, Reason: detail, ChildID: id})
 	}
 	return out, nil
 }
@@ -356,7 +400,7 @@ var relinkPlanHeader = []string{"env", "source", "product_sys_id", "item_code", 
 	"den", "fil", "ldr", "snap_text", "snap_ptr", "decision", "reason"}
 
 // RelinkResultHeader is the result CSV header.
-var RelinkResultHeader = []string{"row", "product_sys_id", "decision", "status", "reason", "before_json", "after_json", "child_spin_id", "child_created"}
+var RelinkResultHeader = []string{"env", "row", "product_sys_id", "decision", "status", "reason", "before_json", "after_json", "child_spin_id", "child_created"}
 
 func csvMaps(path string) ([]map[string]string, error) {
 	recs, err := readCSV(path)
@@ -541,7 +585,7 @@ func WriteRelinkResultCSV(w io.Writer, rs []RelinkResult) error {
 		return fmt.Errorf("write header: %w", err)
 	}
 	for _, r := range rs {
-		if err := cw.Write([]string{strconv.Itoa(r.Row), strconv.FormatInt(r.Product, 10), string(r.Decision), r.Status, r.Reason,
+		if err := cw.Write([]string{r.Env, strconv.Itoa(r.Row), strconv.FormatInt(r.Product, 10), string(r.Decision), r.Status, r.Reason,
 			r.Before, r.After, r.ChildID, strconv.FormatBool(r.ChildCreated)}); err != nil {
 			return fmt.Errorf("write row: %w", err)
 		}
@@ -565,13 +609,13 @@ func ReadRelinkResultCSVs(paths []string) ([]RelinkResult, error) {
 			if len(c) != len(RelinkResultHeader) {
 				return nil, errors.New("result row column count mismatch in " + p)
 			}
-			row, e1 := strconv.Atoi(c[0])
-			pid, e2 := strconv.ParseInt(c[1], 10, 64)
+			row, e1 := strconv.Atoi(c[1])
+			pid, e2 := strconv.ParseInt(c[2], 10, 64)
 			if err = errors.Join(e1, e2); err != nil {
 				return nil, fmt.Errorf("%s: %w", p, err)
 			}
-			out = append(out, RelinkResult{Row: row, Product: pid, Decision: Decision(c[2]), Status: c[3], Reason: c[4],
-				Before: c[5], After: c[6], ChildID: c[7], ChildCreated: c[8] == "true"})
+			out = append(out, RelinkResult{Env: c[0], Row: row, Product: pid, Decision: Decision(c[3]), Status: c[4], Reason: c[5],
+				Before: c[6], After: c[7], ChildID: c[8], ChildCreated: c[9] == "true"})
 		}
 	}
 	return out, nil
