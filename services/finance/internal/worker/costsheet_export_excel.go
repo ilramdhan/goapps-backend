@@ -512,6 +512,9 @@ func textOrDash(value string, styles *sheetStyles) (any, int) {
 // negatives (e.g. an oil gain) are preserved.
 func numericCell(row sheetRow, stage Stage, styles *sheetStyles) (any, int) {
 	raw := snapshotValue(row.ParamCode, stage)
+	if row.ParamCode == paramSpDozing {
+		raw = effectiveSpDozing(stage)
+	}
 	if raw == "" {
 		return dashValue, styles.dash
 	}

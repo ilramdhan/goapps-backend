@@ -52,6 +52,9 @@ var PreflightFormulas = []string{"F_YARN_CONV_FACTOR", "F_YARN_RP_DOZING", "F_YA
 // MigrationMarker is the updated_by written by migration 000616.
 const MigrationMarker = "migration_000616"
 
+// MigrationMarker618 is the updated_by written by migration 000618 on RP_DOZING / MB_COST (also accepted by Preflight).
+const MigrationMarker618 = "migration_000618"
+
 // ExcelRow is one data row of dozing.csv (Excel row, columns 63-71).
 type ExcelRow struct {
 	Row       int
