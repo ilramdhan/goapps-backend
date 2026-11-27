@@ -22,10 +22,10 @@ func NewMBHeadReaderAdapter(repo *postgres.MBHeadRepository) *MBHeadReaderAdapte
 
 var _ MBHeadReader = (*MBHeadReaderAdapter)(nil)
 
-// ListValidated maps postgres.MBHeadCandidate rows into mbbatch's own port type, including
+// ListValidated (batch candidates: active + transitively referenced inactive) maps postgres.MBHeadCandidate rows into mbbatch's own port type, including
 // CurrentVersion (which mbpush's equivalent adapter deliberately omits).
 func (a *MBHeadReaderAdapter) ListValidated(ctx context.Context) ([]MBHeadCandidate, error) {
-	rows, err := a.repo.ListValidated(ctx)
+	rows, err := a.repo.ListBatchCandidates(ctx)
 	if err != nil {
 		return nil, err
 	}
