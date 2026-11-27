@@ -24,6 +24,9 @@ const (
 	// status is itself a skip reason: it is treated as non-recalculable rather
 	// than optimistically assumed to be R&D.
 	SkipReasonStatusAbsent = "STATUS_ABSENT"
+	// SkipReasonLDRActual marks a child whose LDR is locked ACTUAL; it is frozen
+	// for both the dozing and the LDR cascade.
+	SkipReasonLDRActual = "LDR_ACTUAL"
 )
 
 // SkipReasonFor returns the A7 skip reason for a child spin that is NOT a recalc

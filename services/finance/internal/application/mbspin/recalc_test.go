@@ -482,10 +482,13 @@ func TestRunLDRCascade_LDRIsActualChild_NeverTouched(t *testing.T) {
 	require.Len(t, res.LDRRecalculated, 1)
 	assert.Equal(t, freeID, res.LDRRecalculated[0].SpinID)
 
-	// Dozing recalculation is a SEPARATE mechanism (gated by IsRnD status, not
-	// LDRIsActual) — both children remain dozing-candidates regardless of the
-	// LDR lock, confirming the two buckets are independent per business rule 7.
-	assert.Len(t, res.Recalculated, 2)
+	// An LDR-locked child is frozen for the dozing cascade too (classify skips
+	// it with SkipReasonLDRActual); only the free sibling is dozing-recalculated.
+	require.Len(t, res.Recalculated, 1)
+	assert.Equal(t, freeID, res.Recalculated[0].SpinID)
+	require.Len(t, res.Skipped, 1)
+	assert.Equal(t, lockedID, res.Skipped[0].SpinID)
+	assert.Equal(t, mbspindomain.SkipReasonLDRActual, res.Skipped[0].Reason)
 }
 
 // --- P7-T4 property 3: Scale runs BEFORE CrossSection conversion. ----------

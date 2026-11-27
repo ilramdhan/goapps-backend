@@ -84,4 +84,54 @@ func TestDuplicateHandler_Handle(t *testing.T) {
 		assert.Equal(t, newID, result.Output.NewSpinID)
 		mockRepo.AssertExpectations(t)
 	})
+
+	t.Run("error - non-positive LDR rejected before any write", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		handler := mbspin.NewDuplicateHandler(mockRepo, nil)
+		ctx := context.Background()
+		sourceID := uuid.New()
+		mockRepo.On("GetByID", ctx, sourceID).Return(newTestSpin(t, uuid.New(), nil), nil)
+
+		zero := 0.0
+		result, err := handler.Handle(ctx, mbspin.DuplicateCommand{SourceSpinID: sourceID, ActorUserID: "admin", RunLDRPct: &zero})
+
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, mbspindomain.ErrInvalidDuplicateLDR)
+		mockRepo.AssertNotCalled(t, "DuplicateSpin", mock.Anything, mock.Anything)
+	})
+
+	t.Run("success - LDR is passed through to the repository", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		handler := mbspin.NewDuplicateHandler(mockRepo, nil)
+		ctx := context.Background()
+		headID, sourceID, newID := uuid.New(), uuid.New(), uuid.New()
+		ldr := 0.1234
+
+		mockRepo.On("GetByID", ctx, sourceID).Return(newTestSpin(t, headID, nil), nil)
+		mockRepo.On("DuplicateSpin", ctx, mock.MatchedBy(func(in mbspindomain.DuplicateInput) bool {
+			return in.RunLDRPct != nil && *in.RunLDRPct == ldr && in.RequireLiveHead
+		})).Return(mbspindomain.DuplicateOutput{NewSpinID: newID, ParentSpinID: sourceID, HeadID: headID}, nil)
+		mockRepo.On("GetByID", ctx, newID).Return(newTestSpin(t, headID, &sourceID), nil)
+
+		_, err := handler.Handle(ctx, mbspin.DuplicateCommand{SourceSpinID: sourceID, ActorUserID: "admin", RunLDRPct: &ldr, RequireLiveHead: true})
+		require.NoError(t, err)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("success - command without the flag does not require a live head", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		handler := mbspin.NewDuplicateHandler(mockRepo, nil)
+		ctx := context.Background()
+		headID, sourceID, newID := uuid.New(), uuid.New(), uuid.New()
+
+		mockRepo.On("GetByID", ctx, sourceID).Return(newTestSpin(t, headID, nil), nil)
+		mockRepo.On("DuplicateSpin", ctx, mock.MatchedBy(func(in mbspindomain.DuplicateInput) bool {
+			return !in.RequireLiveHead
+		})).Return(mbspindomain.DuplicateOutput{NewSpinID: newID, ParentSpinID: sourceID, HeadID: headID}, nil)
+		mockRepo.On("GetByID", ctx, newID).Return(newTestSpin(t, headID, &sourceID), nil)
+
+		_, err := handler.Handle(ctx, mbspin.DuplicateCommand{SourceSpinID: sourceID, ActorUserID: "admin"})
+		require.NoError(t, err)
+		mockRepo.AssertExpectations(t)
+	})
 }

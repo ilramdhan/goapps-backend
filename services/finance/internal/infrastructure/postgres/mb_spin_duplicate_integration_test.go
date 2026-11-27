@@ -456,3 +456,49 @@ func (s *MBSpinDuplicateSuite) TestDuplicateSpin_FgRules() {
 	_, err = s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{SourceSpinID: src, ActorUserID: "a", FgProductID: &poy})
 	require.ErrorIs(s.T(), err, mbspin.ErrSpinShadeFgExists)
 }
+
+// TestDuplicateSpin_ExplicitLDR: run_ldr = calculated = value, adjustment NULL,
+// LDR locked ACTUAL; without the field the source values are copied.
+func (s *MBSpinDuplicateSuite) TestDuplicateSpin_ExplicitLDR() {
+	src := s.insertSource(mbspin.StatusRnD)
+	_, err := s.db.ExecContext(s.ctx,
+		`UPDATE mst_mb_spin SET mbs_ldr_calculated_pct = 0.5, mbs_ldr_adjustment_pct = -0.15 WHERE mbs_id = $1`, src)
+	require.NoError(s.T(), err)
+
+	ldr := 0.2345
+	out, err := s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{SourceSpinID: src, ActorUserID: "itest-actor", RunLDRPct: &ldr})
+	require.NoError(s.T(), err)
+	clone, err := s.repo.GetByID(s.ctx, out.NewSpinID)
+	require.NoError(s.T(), err)
+	require.InDelta(s.T(), ldr, *clone.MBSRunLdrPct(), 1e-9)
+	require.InDelta(s.T(), ldr, *clone.LDRCalculatedPct(), 1e-9)
+	require.Nil(s.T(), clone.LDRAdjustmentPct())
+	require.True(s.T(), clone.LDRIsActual())
+	require.True(s.T(), clone.IsFixedLDR())
+	require.Equal(s.T(), mbspin.LDRTypeActual, clone.LDRType())
+
+	out2, err := s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{SourceSpinID: src, ActorUserID: "itest-actor"})
+	require.NoError(s.T(), err)
+	c2, err := s.repo.GetByID(s.ctx, out2.NewSpinID)
+	require.NoError(s.T(), err)
+	require.InDelta(s.T(), 1.75, *c2.MBSRunLdrPct(), 1e-9)
+	require.False(s.T(), c2.LDRIsActual())
+	require.InDelta(s.T(), -0.15, *c2.LDRAdjustmentPct(), 1e-9)
+}
+
+// TestDuplicateSpin_RequireLiveHead: an inactive head is rejected only when the
+// caller opts in (user-facing handler); the sync tool path stays permissive.
+func (s *MBSpinDuplicateSuite) TestDuplicateSpin_RequireLiveHead() {
+	src := s.insertSource(mbspin.StatusRnD)
+	_, err := s.db.ExecContext(s.ctx, `UPDATE mst_mb_head SET mbh_is_active = FALSE WHERE mbh_id = $1`, s.headID)
+	require.NoError(s.T(), err)
+	s.T().Cleanup(func() {
+		_, _ = s.db.ExecContext(s.ctx, `UPDATE mst_mb_head SET mbh_is_active = TRUE WHERE mbh_id = $1`, s.headID)
+	})
+
+	_, err = s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{SourceSpinID: src, ActorUserID: "itest", RequireLiveHead: true})
+	require.ErrorIs(s.T(), err, mbspin.ErrDuplicateSourceNotLive)
+
+	_, err = s.repo.DuplicateSpin(s.ctx, mbspin.DuplicateInput{SourceSpinID: src, ActorUserID: "itest"})
+	require.NoError(s.T(), err)
+}

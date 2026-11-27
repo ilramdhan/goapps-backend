@@ -16,6 +16,9 @@ import (
 
 // DuplicateCommand is the application-level payload of DuplicateMBSpin.
 type DuplicateCommand struct {
+	// RequireLiveHead rejects an inactive/superseded source head. Only the
+	// interactive gRPC path sets it; batch syncs stay permissive.
+	RequireLiveHead bool
 	// SourceSpinID is the spin being cloned; it becomes the clone's
 	// mbs_parent_spin_id.
 	SourceSpinID uuid.UUID
@@ -39,6 +42,8 @@ type DuplicateCommand struct {
 	OrionItemCode *string
 	// FgProductID optionally links the clone to an FG (POY) product (>0 = set).
 	FgProductID *int64
+	// RunLDRPct optionally gives the clone its own locked-actual LDR (> 0).
+	RunLDRPct *float64
 	// ActorUserID lands in created_by and mbs_duplicated_by.
 	ActorUserID string
 }
@@ -78,11 +83,8 @@ func NewDuplicateHandler(repo mbspin.Repository, recalc *RecalcService) *Duplica
 // (they are only classified and reported), and above all not on yarn products
 // (D24). The impact_* figures are counted with a SELECT.
 func (h *DuplicateHandler) Handle(ctx context.Context, cmd DuplicateCommand) (*DuplicateResult, error) {
-	if cmd.SourceSpinID == uuid.Nil {
-		return nil, mbspin.ErrNotFound
-	}
-	if cmd.ActorUserID == "" {
-		return nil, mbspin.ErrEmptyCreatedBy
+	if err := validateDuplicateCommand(cmd); err != nil {
+		return nil, err
 	}
 
 	source, err := h.repo.GetByID(ctx, cmd.SourceSpinID)
@@ -113,12 +115,14 @@ func (h *DuplicateHandler) Handle(ctx context.Context, cmd DuplicateCommand) (*D
 	}
 
 	out, err := h.repo.DuplicateSpin(ctx, mbspin.DuplicateInput{
-		SourceSpinID: cmd.SourceSpinID,
-		MgtName:      cmd.MgtName,
-		Denier:       cmd.Denier,
-		Filament:     cmd.Filament,
-		FgProductID:  cmd.FgProductID,
-		ActorUserID:  cmd.ActorUserID,
+		SourceSpinID:    cmd.SourceSpinID,
+		MgtName:         cmd.MgtName,
+		Denier:          cmd.Denier,
+		Filament:        cmd.Filament,
+		FgProductID:     cmd.FgProductID,
+		RunLDRPct:       cmd.RunLDRPct,
+		RequireLiveHead: cmd.RequireLiveHead,
+		ActorUserID:     cmd.ActorUserID,
 	})
 	if err != nil {
 		return nil, err
@@ -170,6 +174,20 @@ func ensureOrionItemCodeUnique(ctx context.Context, repo mbspin.Repository, cand
 	}
 	if exists {
 		return fmt.Errorf("%w: %q", mbspin.ErrDuplicateOrionItemCode, *candidate)
+	}
+	return nil
+}
+
+// validateDuplicateCommand checks the command fields that need no DB read.
+func validateDuplicateCommand(cmd DuplicateCommand) error {
+	if cmd.SourceSpinID == uuid.Nil {
+		return mbspin.ErrNotFound
+	}
+	if cmd.ActorUserID == "" {
+		return mbspin.ErrEmptyCreatedBy
+	}
+	if cmd.RunLDRPct != nil && *cmd.RunLDRPct <= 0 {
+		return mbspin.ErrInvalidDuplicateLDR
 	}
 	return nil
 }

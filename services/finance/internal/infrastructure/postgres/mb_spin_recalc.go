@@ -169,7 +169,8 @@ func (r *MBSpinRepository) updateRecalcedLDRChildren(ctx context.Context, tx *sq
 		WHERE mbs_id = $1
 		  AND mbs_parent_spin_id = $6
 		  AND deleted_at IS NULL
-		  AND mbs_status = $7`
+		  AND mbs_status = $7
+		  AND mbs_ldr_is_actual = FALSE`
 	for i := range in.LDRUpdates {
 		u := in.LDRUpdates[i]
 		if _, err := tx.ExecContext(ctx, q,

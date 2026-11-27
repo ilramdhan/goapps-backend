@@ -10205,8 +10205,11 @@ type MBSpin struct {
 	// True when the FG link follows the recipe and cannot be edited on the spin
 	// (link source RECIPE, or root spin of a recipe that has an FG). Read-only.
 	FgFollowsRecipe bool `protobuf:"varint,36,opt,name=fg_follows_recipe,json=fgFollowsRecipe,proto3" json:"fg_follows_recipe,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// UUID of the spin this one was duplicated from (empty = root spin). Child
+	// spins (non-empty) cannot be duplicated again.
+	ParentSpinId  string `protobuf:"bytes,37,opt,name=parent_spin_id,json=parentSpinId,proto3" json:"parent_spin_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MBSpin) Reset() {
@@ -10489,6 +10492,13 @@ func (x *MBSpin) GetFgFollowsRecipe() bool {
 		return x.FgFollowsRecipe
 	}
 	return false
+}
+
+func (x *MBSpin) GetParentSpinId() string {
+	if x != nil {
+		return x.ParentSpinId
+	}
+	return ""
 }
 
 // CreateMBSpinRequest is the request for creating an MB Spin record.
@@ -11867,7 +11877,12 @@ type DuplicateMBSpinRequest struct {
 	// Create/Update reasoning as mbs_denier above.
 	MbsFilament *int32 `protobuf:"varint,5,opt,name=mbs_filament,json=mbsFilament,proto3,oneof" json:"mbs_filament,omitempty"`
 	// FG product link for the clone (cost_product_master id). 0 = no FG link (the source FG is never copied; it would collide on shade+FG).
-	FgProductId   int64 `protobuf:"varint,6,opt,name=fg_product_id,json=fgProductId,proto3" json:"fg_product_id,omitempty"`
+	FgProductId int64 `protobuf:"varint,6,opt,name=fg_product_id,json=fgProductId,proto3" json:"fg_product_id,omitempty"`
+	// Optional LDR for the clone, strictly greater than zero. When set the clone
+	// gets run_ldr = ldr_calculated = this value, adjustment NULL and the LDR is
+	// locked as actual (immune to the parent's LDR cascade). Absent means the
+	// source LDR values are copied as before.
+	MbsRunLdrPct  *float64 `protobuf:"fixed64,7,opt,name=mbs_run_ldr_pct,json=mbsRunLdrPct,proto3,oneof" json:"mbs_run_ldr_pct,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11940,6 +11955,13 @@ func (x *DuplicateMBSpinRequest) GetMbsFilament() int32 {
 func (x *DuplicateMBSpinRequest) GetFgProductId() int64 {
 	if x != nil {
 		return x.FgProductId
+	}
+	return 0
+}
+
+func (x *DuplicateMBSpinRequest) GetMbsRunLdrPct() float64 {
+	if x != nil && x.MbsRunLdrPct != nil {
+		return *x.MbsRunLdrPct
 	}
 	return 0
 }
@@ -22198,7 +22220,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x06mbh_id\x18\x01 \x01(\tR\x05mbhId\x12\x1d\n" +
 	"\n" +
 	"mb_costing\x18\x02 \x01(\tR\tmbCosting\x12#\n" +
-	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"\xe6\r\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"\x8c\x0e\n" +
 	"\x06MBSpin\x12\x15\n" +
 	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12)\n" +
 	"\x11mbs_oracle_sys_id\x18\x02 \x01(\tR\x0embsOracleSysId\x12\x1c\n" +
@@ -22245,7 +22267,8 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x15superseded_by_spin_id\x18! \x01(\tR\x12supersededBySpinId\x12#\n" +
 	"\rsuperseded_at\x18\" \x01(\tR\fsupersededAt\x125\n" +
 	"\x17superseded_by_spin_code\x18# \x01(\tR\x14supersededBySpinCode\x12*\n" +
-	"\x11fg_follows_recipe\x18$ \x01(\bR\x0ffgFollowsRecipeB\r\n" +
+	"\x11fg_follows_recipe\x18$ \x01(\bR\x0ffgFollowsRecipe\x12$\n" +
+	"\x0eparent_spin_id\x18% \x01(\tR\fparentSpinIdB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
 	"\r_mbs_filamentB\r\n" +
 	"\v_mbs_dozingB\t\n" +
@@ -22412,7 +22435,7 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\x1eDownloadMBSpinTemplateResponse\x12+\n" +
 	"\x04base\x18\x01 \x01(\v2\x17.common.v1.BaseResponseR\x04base\x12!\n" +
 	"\ffile_content\x18\x02 \x01(\fR\vfileContent\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\xcf\x02\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\"\x9f\x03\n" +
 	"\x16DuplicateMBSpinRequest\x12\x1f\n" +
 	"\x06mbh_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbhId\x12\x1f\n" +
 	"\x06mbs_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05mbsId\x120\n" +
@@ -22421,10 +22444,12 @@ const file_finance_v1_yarn_master_proto_rawDesc = "" +
 	"\n" +
 	"mbs_denier\x18\x04 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00H\x01R\tmbsDenier\x88\x01\x01\x12/\n" +
 	"\fmbs_filament\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00H\x02R\vmbsFilament\x88\x01\x01\x12+\n" +
-	"\rfg_product_id\x18\x06 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\vfgProductIdB\x0f\n" +
+	"\rfg_product_id\x18\x06 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\vfgProductId\x12:\n" +
+	"\x0fmbs_run_ldr_pct\x18\a \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00H\x03R\fmbsRunLdrPct\x88\x01\x01B\x0f\n" +
 	"\r_mbs_mgt_nameB\r\n" +
 	"\v_mbs_denierB\x0f\n" +
-	"\r_mbs_filament\"\x99\x01\n" +
+	"\r_mbs_filamentB\x12\n" +
+	"\x10_mbs_run_ldr_pct\"\x99\x01\n" +
 	"\x13MBSpinRecalcSkipped\x12\x15\n" +
 	"\x06mbs_id\x18\x01 \x01(\tR\x05mbsId\x12 \n" +
 	"\fmbs_mgt_name\x18\x02 \x01(\tR\n" +

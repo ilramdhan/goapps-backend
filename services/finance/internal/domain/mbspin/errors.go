@@ -40,6 +40,11 @@ var (
 	// 000486's unique index was permanently abandoned, so this is the sole
 	// enforcer of the invariant.
 	ErrDuplicateOrionItemCode = errors.New("mb spin orion_item_code already in use")
+	// ErrDuplicateSourceNotLive is returned when the source spin's MB head is
+	// soft-deleted or inactive (checked under the duplicate tx).
+	ErrDuplicateSourceNotLive = errors.New("mb spin or its MB head is not live (deleted or inactive) and cannot be duplicated")
+	// ErrInvalidDuplicateLDR is returned when the duplicate LDR override is not > 0.
+	ErrInvalidDuplicateLDR = errors.New("duplicate ldr must be greater than zero")
 	// ErrAlreadyDuplicated is returned when the SOURCE spin passed to
 	// DuplicateMBSpin already has a non-nil mbs_parent_spin_id, i.e. it is
 	// itself the result of a prior duplicate. Only a root spin (mbs_parent_spin_id

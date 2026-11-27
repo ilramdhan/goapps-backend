@@ -5301,6 +5301,11 @@
           "type": "string",
           "format": "int64",
           "description": "FG product link for the clone (cost_product_master id). 0 = no FG link (the source FG is never copied; it would collide on shade+FG)."
+        },
+        "mbsRunLdrPct": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional LDR for the clone, strictly greater than zero. When set the clone\ngets run_ldr = ldr_calculated = this value, adjustment NULL and the LDR is\nlocked as actual (immune to the parent's LDR cascade). Absent means the\nsource LDR values are copied as before."
         }
       },
       "description": "DuplicateMBSpinRequest is the request for duplicating an MB Spin record.\n\nShape follows design §3.7. mbs_oracle_sys_id, mbs_orion_item_code and\nmbs_mb_costing are DELIBERATELY ABSENT: decision D19 requires all three to be\nNULL on the clone, so there is no field to carry them. The user fills them in\nafterwards via UpdateMBSpin."
@@ -9242,6 +9247,10 @@
         "fgFollowsRecipe": {
           "type": "boolean",
           "description": "True when the FG link follows the recipe and cannot be edited on the spin\n(link source RECIPE, or root spin of a recipe that has an FG). Read-only."
+        },
+        "parentSpinId": {
+          "type": "string",
+          "description": "UUID of the spin this one was duplicated from (empty = root spin). Child\nspins (non-empty) cannot be duplicated again."
         }
       },
       "description": "MBSpin represents a Melange Batch spin detail record (child of MBHead)."

@@ -231,6 +231,17 @@ func (s *RecalcService) classify(ctx context.Context, parentID uuid.UUID) ([]*mb
 	candidates := make([]*mbspin.Entity, 0, len(children))
 	skipped := make([]SkippedChild, 0)
 	for _, child := range children {
+		if child.LDRIsActual() {
+			// An LDR-locked child (e.g. a duplicate with its own LDR) is frozen
+			// for the dozing cascade as well.
+			skipped = append(skipped, SkippedChild{
+				SpinID:  child.ID(),
+				MgtName: child.MgtName(),
+				Status:  child.MBSStatus(),
+				Reason:  mbspin.SkipReasonLDRActual,
+			})
+			continue
+		}
 		if !child.IsRnD() {
 			// ⛔ A7 ENFORCED HERE: a child in Spinning / Boughtout / no status
 			// holds an ACTUAL value. It is recorded and skipped — it never
@@ -278,11 +289,11 @@ func scaleChildDozing(parent, child *mbspin.Entity) (float64, bool) {
 // down to the LDR-eligible subset and scales/converts each one, populating
 // res.LDRRecalculated / res.LDRIncomplete.
 //
-// Eligibility (Task D business rule 2): a candidate is LDR-eligible only when
-// child.LDRIsActual() is false. A child already locked ACTUAL is excluded from
-// the LDR cascade even though it may still be dozing-eligible — classify's
-// dozing-only candidate slice is reused as-is (⛔ its signature/behavior is not
-// changed), the LDR filter is applied on top of it here instead.
+// Eligibility: an R&D child locked ACTUAL (LDRIsActual, e.g. a duplicate
+// created with its own LDR) is frozen for BOTH cascades — classify already
+// skips it for dozing and reports SkipReasonLDRActual, so it never reaches
+// candidates. The LDRIsActual check below is a defensive second guard; the
+// persistence WHERE clause is the concurrency-safe third.
 //
 // Called from BOTH Preview and Apply: it only ever appends to res, it never
 // writes to the database — the actual persistence happens in Apply, via
