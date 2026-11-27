@@ -9,6 +9,10 @@
 //	mb-comparison-fill spin-ldr apply  --plan-file PLAN.csv --actor mbcmp-<env> [--limit N] [--batch N] [--commit] [--out-dir D]
 //	mb-comparison-fill spin-ldr revert --results RESULT.csv[,R2.csv] --actor mbcmp-<env> [--out-dir D]
 //
+//	mb-comparison-fill relink plan   --e plan-E.csv [--d plan-D.csv] [--conflict plan-CONFLICT.csv] [--out-dir D]
+//	mb-comparison-fill relink apply  --plan-file PLAN.csv --actor mbcmp-<env> [--limit N] [--batch N] [--commit] [--out-dir D]
+//	mb-comparison-fill relink revert --results RESULT.csv[,R2.csv] --actor mbcmp-<env> [--out-dir D]
+//
 // apply is a DRY-RUN (everything rolled back) unless --commit is given. See README.md.
 package main
 
@@ -39,6 +43,7 @@ const (
 	modeApply  = "apply"
 	modeRevert = "revert"
 	modeSpin   = "spin-ldr"
+	modeRelink = "relink"
 )
 
 type options struct {
@@ -49,6 +54,8 @@ type options struct {
 	commit                       bool
 	outDir                       string
 	spin                         bool // spin-ldr mode: mode holds the sub-mode
+	relink                       bool // relink mode: mode holds the sub-mode
+	eFile, dFile, conflictFile   string
 }
 
 func parseArgs(args []string, usage io.Writer) (o options, err error) {
@@ -56,11 +63,12 @@ func parseArgs(args []string, usage io.Writer) (o options, err error) {
 		return o, errors.New("mode required: plan | apply | revert")
 	}
 	o.mode = args[0]
-	if o.mode == modeSpin {
+	if o.mode == modeSpin || o.mode == modeRelink {
 		if len(args) < 2 {
-			return o, errors.New("spin-ldr needs a sub-mode: plan | apply | revert")
+			return o, fmt.Errorf("%s needs a sub-mode: plan | apply | revert", o.mode)
 		}
-		o.spin, o.mode, args = true, args[1], args[1:]
+		o.spin, o.relink = o.mode == modeSpin, o.mode == modeRelink
+		o.mode, args = args[1], args[1:]
 	}
 	fs := flag.NewFlagSet(cmdName+" "+o.mode, flag.ContinueOnError)
 	fs.SetOutput(usage)
@@ -69,6 +77,9 @@ func parseArgs(args []string, usage io.Writer) (o options, err error) {
 	switch o.mode {
 	case modePlan:
 		fs.StringVar(&o.file, "file", "", "Excel dump CSV (dozing.csv); spin-ldr: 06-q1.csv")
+		fs.StringVar(&o.eFile, "e", "", "relink: plan-E-relink.csv")
+		fs.StringVar(&o.dFile, "d", "", "relink: plan-D-names.csv (optional)")
+		fs.StringVar(&o.conflictFile, "conflict", "", "relink: plan-CONFLICT-child.csv (optional)")
 		fs.StringVar(&o.orion, "orion", "", "Oracle head dump O-01b-head-all-by-sysid.csv (empty MB_SP_CODE fallback)")
 	case modeApply:
 		fs.StringVar(&o.planFile, "plan-file", "", "reviewed plan CSV")
@@ -97,16 +108,30 @@ func (o options) validate() error {
 	switch {
 	case o.outDir == "":
 		return errors.New("--out-dir must not be empty")
-	case o.mode == modePlan && (o.file == "" || (!o.spin && o.orion == "")):
-		return errors.New("plan requires --file (and --orion unless spin-ldr)")
+	case o.mode == modePlan:
+		return o.validatePlan()
 	case o.mode == modeApply && o.planFile == "":
 		return errors.New("apply requires --plan-file")
 	case o.mode == modeApply && (o.limit < 0 || o.batch < 0):
 		return errors.New("--limit and --batch must not be negative")
 	case o.mode == modeRevert && len(o.results) == 0:
 		return errors.New("revert requires --results")
-	case o.mode != modePlan:
+	}
+	if o.mode != modePlan {
 		return fill.ValidateActor(o.actor)
+	}
+	return nil
+}
+
+func (o options) validatePlan() error {
+	if o.relink {
+		if o.eFile == "" && o.dFile == "" && o.conflictFile == "" {
+			return errors.New("relink plan requires --e and/or --d and/or --conflict")
+		}
+		return nil
+	}
+	if o.file == "" || (!o.spin && o.orion == "") {
+		return errors.New("plan requires --file (and --orion unless spin-ldr)")
 	}
 	return nil
 }
@@ -141,6 +166,9 @@ func run(ctx context.Context, o options) error {
 			log.Printf("WARN: close database: %v", cErr)
 		}
 	}()
+	if o.relink {
+		return runRelink(ctx, o, postgres.NewMBComparisonRelink(db))
+	}
 	if o.spin {
 		return runSpin(ctx, o, postgres.NewMBComparisonSpinLDR(db))
 	}
