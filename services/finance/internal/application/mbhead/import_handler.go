@@ -187,7 +187,7 @@ func (h *ImportHandler) processRow(ctx context.Context, row []string, rowNum int
 		result.Errors = append(result.Errors, ImportError{
 			RowNumber: rowNum,
 			Field:     "mb_costing",
-			Message:   fmt.Sprintf("MB costing name is ambiguous (%d heads); use sys id", n),
+			Message:   fmt.Sprintf("MB costing name matches %d heads; update it in the UI instead", n),
 		})
 		return
 	}

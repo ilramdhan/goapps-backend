@@ -118,6 +118,8 @@ func (r *Resolver) fillFromProductGrade(ctx context.Context, pgCode, triggerPara
 	}, nil
 }
 
+// fillFromMBHead: the MB_HEAD lookup key is still the name; duplicate names are skipped
+// (SkipMBHeadAmbiguous). A UUID key is the upgrade path.
 func (r *Resolver) fillFromMBHead(ctx context.Context, mbCosting, triggerParamCode string) (FillResult, error) {
 	if n, cErr := r.mbHeadRepo.CountByMBCosting(ctx, mbCosting); cErr != nil {
 		return FillResult{}, cErr

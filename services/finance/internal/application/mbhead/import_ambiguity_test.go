@@ -36,7 +36,7 @@ func TestImport_AmbiguousName_RowFailsAndNothingWritten(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 1, res.FailedCount)
 	require.Len(t, res.Errors, 1)
-	require.Equal(t, "MB costing name is ambiguous (2 heads); use sys id", res.Errors[0].Message)
+	require.Equal(t, "MB costing name matches 2 heads; update it in the UI instead", res.Errors[0].Message)
 	repo.AssertNotCalled(t, "GetByMBCosting", mock.Anything, mock.Anything)
 	repo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
 	repo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
