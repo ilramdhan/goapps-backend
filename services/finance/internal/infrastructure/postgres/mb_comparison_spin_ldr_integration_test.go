@@ -101,3 +101,59 @@ func TestMBComparisonSpinLDR_IdempotentAndSuperseded(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fill.ResultAlreadyApplied, again[0].Result, again[0].Detail)
 }
+
+// TestMBComparisonSpinAdjClear_Integration: scope (active+inactive, locked ACTUAL with adj), run_ldr kept, dry-run, guard, revert.
+func TestMBComparisonSpinAdjClear_Integration(t *testing.T) {
+	f := newMBASFixture(t, "mbcmp_adjclear")
+	pg := postgres.NewMBComparisonSpinAdjClear(postgres.NewDBFromSQL(f.raw))
+	h := f.head(true, "Y1")
+	adjID := f.spin(h, "Y1", 2.28, true, nil)
+	cleanID := f.spin(h, "Y1", 1.5, true, nil)
+	f.exec(`UPDATE mst_mb_spin SET mbs_ldr_is_actual = TRUE, mbs_ldr_type = 'ACTUAL', mbs_ldr_calculated_pct = 2, mbs_ldr_adjustment_pct = 0.28 WHERE mbs_id = $1`, adjID)
+	f.exec(`UPDATE mst_mb_spin SET mbs_ldr_is_actual = TRUE, mbs_ldr_type = 'ACTUAL', mbs_ldr_calculated_pct = 1.5, mbs_ldr_adjustment_pct = NULL WHERE mbs_id = $1`, cleanID)
+
+	cand, err := pg.Candidates(f.ctx)
+	require.NoError(t, err)
+	var rows []fill.AdjRow
+	for _, c := range cand {
+		if c.ID == adjID.String() {
+			rows = append(rows, c)
+		}
+		assert.NotEqual(t, cleanID.String(), c.ID, "clean spin is out of scope")
+	}
+	require.Len(t, rows, 1)
+	plan := fill.PlanAdjClear(rows)
+	require.Equal(t, fill.DecisionApply, plan[0].Decision)
+
+	res, err := fill.ApplyAdjClear(f.ctx, pg, "mbcmp-test", plan, 0, 10, false)
+	require.NoError(t, err)
+	assert.Equal(t, fill.ResultWouldApply, res[0].Result, res[0].Detail)
+	assert.InDelta(t, 2.28, f.readSpin(adjID).ldr, 1e-9)
+
+	f.exec(`UPDATE mst_mb_spin SET mbs_ldr_adjustment_pct = 0.1 WHERE mbs_id = $1`, adjID)
+	res, err = fill.ApplyAdjClear(f.ctx, pg, "mbcmp-test", plan, 0, 10, true)
+	require.NoError(t, err)
+	assert.Equal(t, "changed_since_plan", res[0].Detail)
+	f.exec(`UPDATE mst_mb_spin SET mbs_ldr_adjustment_pct = 0.28 WHERE mbs_id = $1`, adjID)
+
+	res, err = fill.ApplyAdjClear(f.ctx, pg, "mbcmp-test", plan, 1, 10, true)
+	require.NoError(t, err)
+	require.Equal(t, fill.ResultApplied, res[0].Result, res[0].Detail)
+	var adj, calc *float64
+	read := func() {
+		require.NoError(t, f.raw.QueryRowContext(f.ctx, `SELECT mbs_ldr_adjustment_pct, mbs_ldr_calculated_pct FROM mst_mb_spin WHERE mbs_id = $1`, adjID).Scan(&adj, &calc))
+	}
+	read()
+	assert.Nil(t, adj)
+	require.NotNil(t, calc)
+	assert.InDelta(t, 2.28, *calc, 1e-9)
+	assert.InDelta(t, 2.28, f.readSpin(adjID).ldr, 1e-9, "run_ldr unchanged")
+
+	rev, err := fill.RevertAdjClear(f.ctx, pg, "mbcmp-test", res)
+	require.NoError(t, err)
+	assert.Equal(t, fill.ResultReverted, rev[0].Result, rev[0].Detail)
+	read()
+	require.NotNil(t, adj)
+	assert.InDelta(t, 0.28, *adj, 1e-9)
+	assert.InDelta(t, 2, *calc, 1e-9)
+}

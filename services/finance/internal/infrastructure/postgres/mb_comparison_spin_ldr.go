@@ -20,7 +20,11 @@ type MBComparisonSpinLDR struct {
 }
 
 // reasonAlreadyTarget is the internal "nothing to do" signal of applyRow (not a failure).
-const reasonAlreadyTarget = "already_target"
+const (
+	reasonAlreadyTarget    = "already_target"
+	reasonChangedSincePlan = "changed_since_plan"
+	reasonSpinNotFound     = "spin_not_found"
+)
 
 var _ fill.SpinStore = (*MBComparisonSpinLDR)(nil)
 
@@ -79,7 +83,7 @@ func spinPreCheck(r fill.SpinRow, img *mbasImage) string {
 func spinGuard(r fill.SpinRow, s mbasSpinImage) string {
 	l := spinLiveOf(s)
 	if !eqF4Ptr(l.RunLDR, r.RunLDR) || !eqF4Ptr(l.Adj, r.Adj) || l.IsActual != r.IsActual {
-		return "changed_since_plan"
+		return reasonChangedSincePlan
 	}
 	return ""
 }
@@ -158,7 +162,7 @@ func (m *MBComparisonSpinLDR) applyRow(ctx context.Context, tx *sql.Tx, actor st
 		return "", "", "", err
 	}
 	if !ok {
-		return "", "", "spin_not_found", nil
+		return "", "", reasonSpinNotFound, nil
 	}
 	if reason = spinPreCheck(r, img); reason != "" {
 		return "", "", reason, nil
@@ -208,7 +212,7 @@ func (m *MBComparisonSpinLDR) Revert(ctx context.Context, actor string, r fill.S
 		return r, err
 	}
 	if !ok {
-		res.Result, res.Detail = fill.ResultFailed, "spin_not_found"
+		res.Result, res.Detail = fill.ResultFailed, reasonSpinNotFound
 		return res, nil
 	}
 	switch {
