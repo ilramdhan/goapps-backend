@@ -2,6 +2,7 @@ package lookupsync
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/machine"
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/parameter"
 )
 
@@ -17,12 +19,16 @@ import (
 
 type fakeResolver struct {
 	results map[string]FillResult // master|key|trigger
+	errs    map[string]error
 	calls   map[string]int
 }
 
 func (f *fakeResolver) Resolve(_ context.Context, master, key, trigger string) (FillResult, error) {
 	k := master + "|" + key + "|" + trigger
 	f.calls[k]++
+	if err, ok := f.errs[k]; ok {
+		return FillResult{}, err
+	}
 	res, ok := f.results[k]
 	if !ok {
 		return FillResult{}, machine.ErrNotFound
@@ -424,4 +430,23 @@ func TestWalk_NilVisitReturnsSummary(t *testing.T) {
 	sum, err := f.planner().Walk(context.Background(), Scope{}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, sum.TotalValueChanges)
+}
+
+func TestPlanSync_MBHead_AmbiguousNameSkipsAndRunContinues(t *testing.T) {
+	f := newFixture(t)
+	code := newParam(t, "MB_X", parameter.DataTypeNumber, "MBH_CODE")
+	f.kids["MBH_CODE"] = []*parameter.Parameter{code}
+	f.res.errs = map[string]error{"MB_HEAD|DUP|MBH_CODE": fmt.Errorf("%w: x", mbhead.ErrMBCostingAmbiguous)}
+	f.res.results["MB_HEAD|OK|MBH_CODE"] = FillResult{Numeric: map[string]float64{"MB_X": 3}}
+	f.reader.rows = []TriggerRow{
+		{ProductSysID: 1, TriggerParamCode: "MBH_CODE", LookupMasterCode: MasterMBHead, StoredKey: "DUP"},
+		{ProductSysID: 2, TriggerParamCode: "MBH_CODE", LookupMasterCode: MasterMBHead, StoredKey: "OK"},
+	}
+	f.applicable(1, code, nil)
+	f.applicable(2, code, nil)
+	pl := plan(t, f.planner())
+	assert.Equal(t, SkipMBHeadAmbiguous, pl.Items[0].SkipReason)
+	assert.Equal(t, 1, pl.Summary.SkipCounts[SkipMBHeadAmbiguous])
+	assert.Empty(t, pl.Items[1].SkipReason)
+	assert.Equal(t, "3", pl.Items[1].Changes[0].NewValue)
 }

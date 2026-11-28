@@ -95,9 +95,9 @@ func (r *MBHeadRepository) GetByID(ctx context.Context, id uuid.UUID) (*mbhead.E
 	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbh_id = $1 AND deleted_at IS NULL`, id))
 }
 
-// GetByMBCosting retrieves an MB Head by its unique mb_costing value.
+// GetByMBCosting retrieves the oldest live MB Head with this mb_costing (name is not unique).
 func (r *MBHeadRepository) GetByMBCosting(ctx context.Context, mbCosting string) (*mbhead.Entity, error) {
-	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbh_mb_costing = $1 AND deleted_at IS NULL`, mbCosting))
+	return r.scanOne(r.db.QueryRowContext(ctx, r.selectCols()+` WHERE mbh_mb_costing = $1 AND deleted_at IS NULL ORDER BY created_at, mbh_id LIMIT 1`, mbCosting))
 }
 
 // buildMBHeadListWhere renders the WHERE clause and its positional args for List, kept as
@@ -567,16 +567,16 @@ func (r *MBHeadRepository) SoftDelete(ctx context.Context, id uuid.UUID, deleted
 	return nil
 }
 
-// ExistsByMBCosting checks if an MB Head with the given mb_costing exists.
-func (r *MBHeadRepository) ExistsByMBCosting(ctx context.Context, mbCosting string) (bool, error) {
-	var exists bool
+// CountByMBCosting counts live MB Heads sharing this mb_costing.
+func (r *MBHeadRepository) CountByMBCosting(ctx context.Context, mbCosting string) (int, error) {
+	var n int
 	err := r.db.QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM mst_mb_head WHERE mbh_mb_costing=$1 AND deleted_at IS NULL)`, mbCosting,
-	).Scan(&exists)
+		`SELECT COUNT(*) FROM mst_mb_head WHERE mbh_mb_costing=$1 AND deleted_at IS NULL`, mbCosting,
+	).Scan(&n)
 	if err != nil {
-		return false, fmt.Errorf("exists by mb_costing: %w", err)
+		return 0, fmt.Errorf("count by mb_costing: %w", err)
 	}
-	return exists, nil
+	return n, nil
 }
 
 // ExistsByID checks if an MB Head with the given UUID exists.

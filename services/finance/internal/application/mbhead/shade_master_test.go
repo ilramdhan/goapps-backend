@@ -108,7 +108,6 @@ func TestCreateHandler_ShadeMasterAutoCreate(t *testing.T) {
 	t.Run("missing shade - created after head is persisted", func(t *testing.T) {
 		repo := new(MockRepository)
 		srepo := new(MockShadeRepository)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 		srepo.On("GetByCode", ctx, "Z114S").Return(nil, shade.ErrNotFound)
 		srepo.On("Create", ctx, mock.MatchedBy(func(s *shade.Shade) bool {
@@ -128,7 +127,6 @@ func TestCreateHandler_ShadeMasterAutoCreate(t *testing.T) {
 	t.Run("existing shade - skipped", func(t *testing.T) {
 		repo := new(MockRepository)
 		srepo := new(MockShadeRepository)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 		srepo.On("GetByCode", ctx, "NL").Return(mustShade(t, "NL"), nil)
 
@@ -143,7 +141,6 @@ func TestCreateHandler_ShadeMasterAutoCreate(t *testing.T) {
 	t.Run("head create fails - no shade work", func(t *testing.T) {
 		repo := new(MockRepository)
 		srepo := new(MockShadeRepository)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(errors.New("boom"))
 
 		_, err := mbhead.NewCreateHandler(repo, newMBMachineRepo(), srepo).Handle(ctx, mbhead.CreateCommand{
@@ -157,7 +154,6 @@ func TestCreateHandler_ShadeMasterAutoCreate(t *testing.T) {
 	t.Run("falls back to shade_code when mbh_code empty", func(t *testing.T) {
 		repo := new(MockRepository)
 		srepo := new(MockShadeRepository)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 		srepo.On("GetByCode", ctx, "AB1").Return(mustShade(t, "AB1"), nil)
 

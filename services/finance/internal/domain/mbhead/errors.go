@@ -11,8 +11,10 @@ import (
 var (
 	// ErrNotFound is returned when an MB head record is not found.
 	ErrNotFound = errors.New("mb head not found")
-	// ErrAlreadyExists is returned when attempting to create a record with an existing mb_costing.
-	ErrAlreadyExists = errors.New("mb head mb_costing already exists")
+	// ErrAlreadyExists is returned on a unique violation at write time (e.g. duplicate oracle sys id).
+	ErrAlreadyExists = errors.New("mb head already exists")
+	// ErrMBCostingAmbiguous is returned when a lookup by mb_costing name matches more than one live head.
+	ErrMBCostingAmbiguous = errors.New("mb head mb_costing name is ambiguous")
 	// ErrEmptyMBCosting is returned when mb_costing is empty.
 	ErrEmptyMBCosting = errors.New("mb head mb_costing cannot be empty")
 	// ErrMBCostingTooLong is returned when mb_costing exceeds 100 characters.

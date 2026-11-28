@@ -57,8 +57,8 @@ func (f *fakeFrozenMBHeadRepo) UpdateWithCascade(ctx context.Context, e *mbhead.
 
 func (f *fakeFrozenMBHeadRepo) SoftDelete(_ context.Context, _ uuid.UUID, _ string) error { return nil }
 
-func (f *fakeFrozenMBHeadRepo) ExistsByMBCosting(_ context.Context, _ string) (bool, error) {
-	return false, nil
+func (f *fakeFrozenMBHeadRepo) CountByMBCosting(_ context.Context, _ string) (int, error) {
+	return 0, nil
 }
 
 func (f *fakeFrozenMBHeadRepo) ExistsByID(_ context.Context, _ uuid.UUID) (bool, error) {

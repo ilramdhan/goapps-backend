@@ -115,14 +115,6 @@ func (h *CreateHandler) WithShadeRepo(shadeRepo shade.Repository) *CreateHandler
 
 // Handle executes the create MB Head command.
 func (h *CreateHandler) Handle(ctx context.Context, cmd CreateCommand) (*mbhead.Entity, error) {
-	exists, err := h.repo.ExistsByMBCosting(ctx, cmd.MBCosting)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return nil, mbhead.ErrAlreadyExists
-	}
-
 	if err := h.assertVSNumberFree(ctx, cmd.VSNumber, uuid.Nil); err != nil {
 		return nil, err
 	}

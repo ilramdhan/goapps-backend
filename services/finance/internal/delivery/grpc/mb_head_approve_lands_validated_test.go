@@ -82,8 +82,8 @@ func (f *approveFakeRepo) UpdateWithCascade(_ context.Context, _ *mbhead.Entity,
 
 func (f *approveFakeRepo) SoftDelete(_ context.Context, _ uuid.UUID, _ string) error { return nil }
 
-func (f *approveFakeRepo) ExistsByMBCosting(_ context.Context, _ string) (bool, error) {
-	return false, nil
+func (f *approveFakeRepo) CountByMBCosting(_ context.Context, _ string) (int, error) {
+	return 0, nil
 }
 
 func (f *approveFakeRepo) ExistsByID(_ context.Context, _ uuid.UUID) (bool, error) {

@@ -149,11 +149,7 @@ func (h *UpdateHandler) Handle(ctx context.Context, cmd UpdateCommand) (*mbhead.
 	oldMachineID := copyUUIDPtr(entity.MachineID())
 	costingChanged := mbCostingChanged(oldCosting, cmd.MBCosting)
 	mbCosting := cmd.MBCosting
-	if costingChanged {
-		if err := h.assertMBCostingFree(ctx, *cmd.MBCosting); err != nil {
-			return nil, err
-		}
-	} else {
+	if !costingChanged {
 		// A trim-equal value is a no-op: never let a whitespace-only edit drift the
 		// head away from the cost product / spin rows that copied its costing.
 		mbCosting = nil
@@ -328,20 +324,6 @@ func mbCostingChanged(current string, incoming *string) bool {
 		return false
 	}
 	return strings.TrimSpace(*incoming) != strings.TrimSpace(current)
-}
-
-// assertMBCostingFree rejects a rename onto an MB Costing another live head already
-// uses (unique index uix_mst_mb_head_mb_costing). Only called when the value changes,
-// so the head's own row can never collide with itself.
-func (h *UpdateHandler) assertMBCostingFree(ctx context.Context, incoming string) error {
-	taken, err := h.repo.ExistsByMBCosting(ctx, incoming)
-	if err != nil {
-		return err
-	}
-	if taken {
-		return mbhead.ErrAlreadyExists
-	}
-	return nil
 }
 
 // assertVSNumberFree checks VS Number uniqueness ONLY when the value actually

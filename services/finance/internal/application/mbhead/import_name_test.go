@@ -27,7 +27,7 @@ func TestImport_MgtNameColumnIgnored_NameEqualsCosting(t *testing.T) {
 	require.NoError(t, err)
 
 	repo := new(MockRepository)
-	repo.On("ExistsByMBCosting", mock.Anything, "COST-IMP-1").Return(false, nil)
+	repo.On("CountByMBCosting", mock.Anything, "COST-IMP-1").Return(0, nil)
 	var created *mbheaddomain.Entity
 	repo.On("Create", mock.Anything, mock.Anything).Run(func(a mock.Arguments) {
 		created = a.Get(1).(*mbheaddomain.Entity)

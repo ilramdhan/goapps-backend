@@ -113,7 +113,6 @@ func TestCreateHandler_MachineIsAlwaysMB(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
 		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
@@ -130,7 +129,6 @@ func TestCreateHandler_MachineIsAlwaysMB(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil)
-		repo.On("ExistsByMBCosting", ctx, "MB002").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
 		other := uuid.New()
@@ -158,7 +156,6 @@ func TestCreateHandler_MissingMBMachineIsAnError(t *testing.T) {
 			repo := new(MockRepository)
 			mrepo := new(MockMachineRepository)
 			mrepo.On("GetByCode", ctx, "MB").Return(nil, lookupErr)
-			repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 
 			got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 				MBCosting: "MB001", CreatedBy: "admin",
@@ -174,7 +171,6 @@ func TestCreateHandler_MissingMBMachineIsAnError(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(nil, machine.ErrNotFound)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 
 		_, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin",
@@ -193,7 +189,6 @@ func TestCreateHandler_DefaultStatus(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil)
-		repo.On("ExistsByMBCosting", ctx, costing).Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 		return mbhead.NewCreateHandler(repo, mrepo, nil), repo
 	}
@@ -224,7 +219,6 @@ func TestCreateHandler_LegacyPayloadStoresNulls(t *testing.T) {
 	repo := new(MockRepository)
 	mrepo := new(MockMachineRepository)
 	mrepo.On("GetByCode", ctx, "MB").Return(newMachineMB(t), nil)
-	repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 	repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
 	// Exactly the shape the legacy form sends: no mbhVsNumber, no mbhNoOfProcess,
@@ -251,7 +245,6 @@ func TestCreateHandler_StoresSuppliedRecipeFields(t *testing.T) {
 	repo := new(MockRepository)
 	mrepo := new(MockMachineRepository)
 	mrepo.On("GetByCode", ctx, "MB").Return(newMachineMB(t), nil)
-	repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 	repo.On("ExistsByVSNumber", ctx, "VS-9", uuid.Nil).Return(false, nil)
 	repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
@@ -277,7 +270,6 @@ func TestCreateHandler_VSNumberUniqueness(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil).Maybe()
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("ExistsByVSNumber", ctx, "VS-1", uuid.Nil).Return(true, nil)
 
 		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
@@ -296,7 +288,6 @@ func TestCreateHandler_VSNumberUniqueness(t *testing.T) {
 			repo := new(MockRepository)
 			mrepo := new(MockMachineRepository)
 			mrepo.On("GetByCode", ctx, "MB").Return(mb, nil)
-			repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 			repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
 			got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
@@ -315,7 +306,6 @@ func TestCreateHandler_VSNumberUniqueness(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("ExistsByVSNumber", ctx, "NA", uuid.Nil).Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
@@ -516,7 +506,6 @@ func TestCreateHandler_ShadesAllowedAtCreate(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(newMachineMB(t), nil)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 		// Name may be empty — mbhs_shade_name is nullable.
 		want := []mbheaddomain.Shade{{SeqNo: 1, Code: "SH-A", Name: "Alpha"}, {SeqNo: 2, Code: "SH-B"}}
@@ -535,7 +524,6 @@ func TestCreateHandler_ShadesAllowedAtCreate(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(newMachineMB(t), nil)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 
 		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
 			MBCosting: "MB001", CreatedBy: "admin",
@@ -566,7 +554,6 @@ func TestCreateHandler_DevCodeUniqueness(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil).Maybe()
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("ExistsByDevCode", ctx, "DEV-1", uuid.Nil).Return(true, nil)
 
 		got, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{
@@ -582,7 +569,6 @@ func TestCreateHandler_DevCodeUniqueness(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("ExistsByDevCode", ctx, "DEV-2", uuid.Nil).Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
@@ -600,7 +586,6 @@ func TestCreateHandler_DevCodeUniqueness(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil)
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
 		_, err := mbhead.NewCreateHandler(repo, mrepo, nil).Handle(ctx, mbhead.CreateCommand{

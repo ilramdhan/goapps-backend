@@ -112,6 +112,9 @@ func fillErrorToBaseResponse(masterCode string, err error) *commonv1.BaseRespons
 	if errors.Is(err, lookupsync.ErrUnknownMaster) {
 		return ErrorResponse("404", err.Error())
 	}
+	if errors.Is(err, mbhead.ErrMBCostingAmbiguous) {
+		return ConflictResponse("MB Head name is ambiguous: more than one MB head has this name")
+	}
 	var fgErr *lookupsync.FillGroupError
 	if masterCode == lookupsync.MasterMBSpin && errors.As(err, &fgErr) {
 		return ErrorResponse("500", err.Error())

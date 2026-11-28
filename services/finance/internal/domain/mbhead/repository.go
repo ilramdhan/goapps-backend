@@ -16,7 +16,8 @@ type Repository interface {
 	// GetByID retrieves an MB Head by its UUID primary key.
 	GetByID(ctx context.Context, id uuid.UUID) (*Entity, error)
 
-	// GetByMBCosting retrieves an MB Head by its unique mb_costing value.
+	// GetByMBCosting retrieves the OLDEST live MB Head with this mb_costing (deterministic:
+	// ORDER BY created_at, mbh_id). The name is NOT unique; use CountByMBCosting to detect ambiguity.
 	GetByMBCosting(ctx context.Context, mbCosting string) (*Entity, error)
 
 	// List retrieves MB Heads with filtering and pagination.
@@ -37,8 +38,8 @@ type Repository interface {
 	// SoftDelete marks an MB Head as deleted.
 	SoftDelete(ctx context.Context, id uuid.UUID, deletedBy string) error
 
-	// ExistsByMBCosting checks if an MB Head with the given mb_costing exists.
-	ExistsByMBCosting(ctx context.Context, mbCosting string) (bool, error)
+	// CountByMBCosting counts live MB Heads sharing this mb_costing (names may repeat).
+	CountByMBCosting(ctx context.Context, mbCosting string) (int, error)
 
 	// ExistsByID checks if an MB Head with the given UUID exists.
 	ExistsByID(ctx context.Context, id uuid.UUID) (bool, error)

@@ -2,11 +2,13 @@ package lookupsync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
 	"github.com/mutugading/goapps-backend/services/finance/internal/domain/parameter"
 )
 
@@ -16,6 +18,9 @@ const (
 	SkipKeyEmpty        = "KEY_EMPTY"
 	SkipKeyNotFound     = "KEY_NOT_FOUND"
 	SkipMBSpinAmbiguous = "MB_SPIN_AMBIGUOUS"
+	// SkipMBHeadAmbiguous: the stored MB_HEAD key (an MB costing name) matches more than one live head.
+	// MB_HEAD lookup key is still the name; duplicate names are skipped. A UUID key is the upgrade path.
+	SkipMBHeadAmbiguous = "MB_HEAD_AMBIGUOUS"
 	// SkipChildNotApplicable is not an item skip reason: it names the
 	// per-child case where a fill-group child is not in
 	// cost_product_applicable_param for the product. Such children are ignored
@@ -192,8 +197,9 @@ func (p *Planner) Walk(ctx context.Context, scope Scope, visit func(Item) error)
 
 // fillOutcome is a memoized Resolve result.
 type fillOutcome struct {
-	res      FillResult
-	notFound bool
+	res       FillResult
+	notFound  bool
+	ambiguous bool
 }
 
 // planRun holds the per-call memo and running totals.
@@ -431,6 +437,8 @@ func (r *planRun) resolveKey(ctx context.Context, master, key, trigger string) (
 			out = fillOutcome{res: res}
 		case IsNotFound(err):
 			out = fillOutcome{notFound: true}
+		case errors.Is(err, mbhead.ErrMBCostingAmbiguous):
+			out = fillOutcome{ambiguous: true}
 		default:
 			return FillResult{}, "", fmt.Errorf("resolve %s %q for %s: %w", master, key, trigger, err)
 		}
@@ -438,6 +446,9 @@ func (r *planRun) resolveKey(ctx context.Context, master, key, trigger string) (
 	}
 	if out.notFound {
 		return FillResult{}, SkipKeyNotFound, nil
+	}
+	if out.ambiguous {
+		return FillResult{}, SkipMBHeadAmbiguous, nil
 	}
 	return out.res, "", nil
 }
