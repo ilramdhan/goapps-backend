@@ -406,3 +406,20 @@ func lfCaseLegacyFillWriter_HeadMgtNameRejected(t *testing.T) {
 	require.Equal(t, mblegacyfill.ReasonNameFollowsCosting, res[0].Reason)
 	require.Equal(t, "KEEP", f.text(`SELECT mbh_mgt_name FROM mst_mb_head WHERE mbh_id = $1`, h))
 }
+
+// Since migration 000619 two live heads may share mbh_mb_costing (MB name follows the
+// Finance Excel), so a rename onto a name held by another live head is applied.
+func lfCaseLegacyFillWriter_ClassD_CostingDuplicateAllowed(t *testing.T) {
+	f := newLFFixture(t, "mblf_writer_d_costing_dup")
+	w := postgres.NewMBLegacyFillWriter(postgres.NewDBFromSQL(f.raw))
+	h1, h2 := f.head(true, ""), f.head(true, "")
+	f.exec(`UPDATE mst_mb_head SET mbh_mb_costing = 'SHARED NAME DUP' WHERE mbh_id = $1`, h1)
+	old := f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h2)
+
+	res, err := w.Apply(f.ctx, "lf-d", []mblegacyfill.PlanRow{
+		lfPlanRow(t, mblegacyfill.EntityHead, h2, "mb_costing", old, "SHARED NAME DUP"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, mblegacyfill.ResultApplied, res[0].Result, res[0].Reason)
+	require.Equal(t, "SHARED NAME DUP", f.text(`SELECT mbh_mb_costing FROM mst_mb_head WHERE mbh_id = $1`, h2))
+}

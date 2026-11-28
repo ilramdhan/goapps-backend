@@ -163,3 +163,19 @@ func TestPlanRejectsHeadMgtName(t *testing.T) {
 		t.Fatalf("%+v", r)
 	}
 }
+
+func TestPlanHeadCostingNotUnique(t *testing.T) {
+	const csv = "entity,id,sysid,field,goapps_value,legacy_value,match_method,ambiguous,usulan,note\n" +
+		"head,h1,1,mb_costing,OLD,SHARED NAME,sysid,N,OVERWRITE,\n" +
+		"head,h2,2,mb_costing,OLD2,SHARED NAME,sysid,N,OVERWRITE,\n"
+	s := fakeSnap{
+		vals:    map[string]string{"head|h1|mbh_mb_costing": "OLD", "head|h2|mbh_mb_costing": "OLD2"},
+		holders: map[string][]string{"mbh_mb_costing\x00SHARED NAME": {"other"}},
+	}
+	pl := plan(t, csv, s)
+	for i := range pl.Rows {
+		if pl.Rows[i].Decision != DecisionApply {
+			t.Errorf("row %d: %+v want APPLY (mb_costing is not unique since 000619)", i, pl.Rows[i])
+		}
+	}
+}

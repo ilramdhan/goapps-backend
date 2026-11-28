@@ -66,6 +66,7 @@ func TestLegacyFillIntegration(t *testing.T) {
 		{"LegacyFillWriter_ClassS", lfCaseLegacyFillWriter_ClassS},
 		{"LegacyFillWriter_ClassD_CascadeSpinWins", lfCaseLegacyFillWriter_ClassD_CascadeSpinWins},
 		{"LegacyFillWriter_ClassD_UniquenessReject", lfCaseLegacyFillWriter_ClassD_UniquenessReject},
+		{"LegacyFillWriter_ClassD_CostingDuplicateAllowed", lfCaseLegacyFillWriter_ClassD_CostingDuplicateAllowed},
 		{"LegacyFillWriter_ClassS_Guards", lfCaseLegacyFillWriter_ClassS_Guards},
 		{"LegacyFillWriter_SavepointIsolation", lfCaseLegacyFillWriter_SavepointIsolation},
 		{"LegacyFillWriter_MissingAndDeletedSpin", lfCaseLegacyFillWriter_MissingAndDeletedSpin},

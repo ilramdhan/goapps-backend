@@ -55,9 +55,10 @@ type Plan struct {
 // Spin orion (mbs_orion_item_code) is also unique among live spins: the lookup sync
 // MB_SP_* resolves by that code, so no other live spin may carry it.
 // uniqueFields are head fields that must stay unique among live heads (the same set
-// the UI UpdateHandler checks). mbh_code is a shade code shared by many heads, so it is
+// the UI UpdateHandler checks). mb_costing is NOT unique since migration 000619: the
+// MB name follows the Finance Excel, and two live heads may share it. mbh_code is a shade code shared by many heads, so it is
 // not unique; its guard is the FG shade check in the writer.
-var uniqueFields = map[string]bool{"mb_costing": true, "orion": true, "vs": true, "dev": true}
+var uniqueFields = map[string]bool{"orion": true, "vs": true, "dev": true}
 
 func needsUniqueCheck(r Row) bool {
 	if r.Entity == EntitySpin {

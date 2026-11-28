@@ -96,8 +96,9 @@ func lfDiff(before, after map[string]string) *lfImage {
 }
 
 // lfUniqueSQL maps a head column to its in-tx uniqueness probe (TRIM compared, non-empty values only).
+// mbh_mb_costing is not unique since migration 000619 (MB name follows the Finance Excel).
 var lfUniqueCols = map[string]bool{
-	"mbh_mb_costing": true, "mbh_orion_item_code": true, "mbh_vs_number": true, "mbh_dev_code": true,
+	"mbh_orion_item_code": true, "mbh_vs_number": true, "mbh_dev_code": true,
 }
 
 // lfSpinUniqueCols are spin columns unique among live spins.
