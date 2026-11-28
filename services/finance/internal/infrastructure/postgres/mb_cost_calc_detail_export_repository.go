@@ -219,11 +219,22 @@ SELECT
     pc.cpc_period,
     h.mbh_current_version,
     pc.cpc_calculated_at,
-    cv.validated_at
+    cv.validated_at,
+    COALESCE(NULLIF(TRIM(h.mbh_orion_item_code), ''), sp.orion, ''),
+    COALESCE(NULLIF(NULLIF(TRIM(h.mbh_vs_number), ''), '0'), sp.vs, '')
 FROM mst_mb_head h
 CROSS JOIN target_period tp
 JOIN cost_product_master p
        ON p.cpm_product_sys_id = h.mbh_cost_product_id
+LEFT JOIN LATERAL (
+    -- ponytail: oldest live spin of the head (created_at, mbs_id), any depth; upgrade to
+    -- root-spin-only if child spins ever carry divergent codes.
+    SELECT NULLIF(TRIM(x.mbs_orion_item_code), '') AS orion, NULLIF(NULLIF(TRIM(x.mbs_vs_number), ''), '0') AS vs
+    FROM mst_mb_spin x
+    WHERE x.mbs_mbh_id = h.mbh_id AND x.deleted_at IS NULL
+    ORDER BY x.created_at ASC, x.mbs_id ASC
+    LIMIT 1
+) sp ON TRUE
 JOIN LATERAL (
     SELECT x.cpc_cost_id, x.cpc_version, x.cpc_status, x.cpc_period,
            x.cpc_calculated_at,
@@ -454,6 +465,7 @@ type costCalcDetailDTO struct {
 	CompositionVersion int32
 	CalculatedAt       sql.NullTime
 	ValidatedAt        sql.NullTime
+	CMBCode, VSNumber  string
 }
 
 func scanCostCalcDetailRow(rows *sql.Rows) (appmbhead.CostCalcDetailRow, error) {
@@ -470,6 +482,7 @@ func scanCostCalcDetailRow(rows *sql.Rows) (appmbhead.CostCalcDetailRow, error) 
 		&d.ValuationFlagV2, &d.FlagValuationUsed, &d.HasRMCost,
 		&d.CLRate, &d.SLRate, &d.FLRate, &d.CRRate, &d.SRRate, &d.PRRate,
 		&d.CalcPeriod, &d.CompositionVersion, &d.CalculatedAt, &d.ValidatedAt,
+		&d.CMBCode, &d.VSNumber,
 	)
 	if err != nil {
 		return appmbhead.CostCalcDetailRow{}, fmt.Errorf("mb_cost_calc_detail_export_repository: scan row: %w", err)
@@ -506,6 +519,8 @@ func scanCostCalcDetailRow(rows *sql.Rows) (appmbhead.CostCalcDetailRow, error) 
 		RMRateTier:      resolveRMRateTier(&d),
 		CostActual:      nullFloatPtr(d.CostActual),
 
+		CMBCode:                d.CMBCode,
+		VSNumber:               d.VSNumber,
 		CalcPeriod:             d.CalcPeriod,
 		CompositionVersion:     d.CompositionVersion,
 		SnapshotCalculatedAt:   nullTimePtr(d.CalculatedAt),

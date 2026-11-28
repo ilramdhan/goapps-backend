@@ -71,6 +71,8 @@ var costCalcDetailHeaders = []string{
 	// Staleness block, appended after the original 29.
 	"calc_period", "composition_version", "snapshot_calculated_at",
 	"composition_validated_at", "snapshot_stale",
+	// CMB/VS block, appended last (downstream keys on names).
+	"cmb_code", "vs_number",
 }
 
 // Handle executes the calc-detail dump and returns the workbook bytes and file name.
@@ -240,6 +242,8 @@ var costCalcDetailColumnWidths = []struct {
 	{"X", "X", 22}, // rm_ref, holds long codes
 	{"Y", "AC", 16},
 	{"AD", "AH", 24}, // staleness block
+	{"AI", "AI", 20}, // cmb_code
+	{"AJ", "AJ", 18}, // vs_number
 }
 
 // setCostCalcDetailColumnWidths widens the calc-dump columns so the sheet is readable.
@@ -318,6 +322,8 @@ func writeCostCalcDetailRow(w *excelWriter, row int, r *CostCalcDetailRow) {
 		optTime(r.SnapshotCalculatedAt),
 		optTime(r.CompositionValidatedAt),
 		yesNo(r.SnapshotStale),
+		r.CMBCode,
+		r.VSNumber,
 	}
 	for col, v := range values {
 		cell, err := excelize.CoordinatesToCellName(col+1, row)

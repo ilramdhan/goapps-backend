@@ -148,6 +148,7 @@ func TestCostCalcDetail_HeaderIs29OriginalPlus5StalenessColumns(t *testing.T) {
 		"rm_rate_tier", "cost_actual",
 		"calc_period", "composition_version", "snapshot_calculated_at",
 		"composition_validated_at", "snapshot_stale",
+		"cmb_code", "vs_number",
 	}
 
 	rows := sheetRows(t, []mbhead.CostCalcDetailRow{referenceRow()})
@@ -502,9 +503,10 @@ func TestCostCalcDetail_StalenessColumnsRender(t *testing.T) {
 	r := referenceRow()
 	r.CalcPeriod, r.CompositionVersion = "202611", 3
 	r.SnapshotCalculatedAt, r.CompositionValidatedAt, r.SnapshotStale = &calc, &vald, true
+	r.CMBCode, r.VSNumber = "CMB0001130", "VS-78545"
 	rows := sheetRows(t, []mbhead.CostCalcDetailRow{r})
 	got := rows[1][29:]
-	want := []string{"202611", "3", "2026-11-01T00:00:00Z", "2026-11-01T01:00:00Z", "Y"}
+	want := []string{"202611", "3", "2026-11-01T00:00:00Z", "2026-11-01T01:00:00Z", "Y", "CMB0001130", "VS-78545"}
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("col %d: got %q, want %q", 30+i, got[i], want[i])

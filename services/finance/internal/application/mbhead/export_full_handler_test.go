@@ -467,6 +467,8 @@ func colOf(t *testing.T, header string) int {
 func TestExportFullHandler_MBCostValuesLandInTheCostColumns(t *testing.T) {
 	h := NewExportFullHandler(&fakeRecipeFullReader{rows: []RecipeFullRow{{
 		MBCosting:        "MB-001",
+		CMBCode:          strp("CMB0001130"),
+		VSNumber:         strp("VS-78545"),
 		EntryStatus:      "VALIDATED",
 		CompSeqNo:        i32p(1),
 		CompSourceType:   strp("GROUP"),
@@ -493,6 +495,8 @@ func TestExportFullHandler_MBCostValuesLandInTheCostColumns(t *testing.T) {
 	body := sheet[1]
 
 	for _, tc := range []struct{ header, want string }{
+		{"CMB Code", "CMB0001130"},
+		{"VS Number", "VS-78545"},
 		{"Cost Period", "202608"},
 		{"Cost Type", "ACTUAL"},
 		{"Cost Value", "12345.6789"},
@@ -546,5 +550,11 @@ func TestExportFullHandler_RecipeWithoutMBCostLeavesCostColumnsBlank(t *testing.
 		if col < len(body) && body[col] != "" {
 			t.Errorf("column %q = %q, want blank for a never-pushed recipe", header, body[col])
 		}
+	}
+}
+
+func TestRecipeFullHeaders_CMBCodeFollowsCode(t *testing.T) {
+	if colOf(t, "CMB Code") != colOf(t, "Code")+1 {
+		t.Fatal("CMB Code must sit right after Code")
 	}
 }

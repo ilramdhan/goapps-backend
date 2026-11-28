@@ -172,6 +172,9 @@ type CostCalcDetailRow struct {
 	SnapshotCalculatedAt   *time.Time
 	CompositionValidatedAt *time.Time
 	SnapshotStale          bool
+	// CMBCode / VSNumber: appended last columns; empty string when unknown (never "0").
+	CMBCode  string
+	VSNumber string
 }
 
 // IsSnapshotStale is true when the cost snapshot was calculated BEFORE the head's current

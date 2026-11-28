@@ -50,6 +50,7 @@ type RecipeFullRow struct {
 	MBCosting    string
 	MgtName      *string
 	Code         *string
+	CMBCode      *string // head orion code, else oldest live spin's (empty when none)
 	DevCode      string
 	VSNumber     *string
 	NoOfProcess  *string
