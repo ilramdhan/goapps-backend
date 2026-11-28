@@ -87,8 +87,8 @@ Caveat: a UI save of the MB_SP_CODE parameter re-resolves the pointer from the t
 
 Run it AFTER relink / child creation and after spin-ldr (`DuplicateSpin` copies the parent's adjustment).
 No input file: `plan` reads the DB. Scope = every live (`deleted_at IS NULL`) `mst_mb_spin`, active AND inactive, where
-adj is not NULL and <> 0, OR `mbs_ldr_is_actual = false`, OR `mbs_ldr_type <> 'ACTUAL'`, OR calc <> run_ldr (4dp). Spins already
-locked ACTUAL are forced too. Target: `run_ldr` = the CURRENT `mbs_run_ldr_pct` (never calc+adj: run_ldr is the effective value);
+adj is not NULL (0 included), OR `mbs_ldr_is_actual = false`, OR `mbs_ldr_type <> 'ACTUAL'`, OR calc <> run_ldr (4dp). Spins already
+locked ACTUAL are forced too. Superseded spins and spins of deleted heads are in scope on purpose (all live spins). Target: `run_ldr` = the CURRENT `mbs_run_ldr_pct` (never calc+adj: run_ldr is the effective value);
 adjustment -> NULL, calc = run_ldr, type ACTUAL, locked, via the domain `SetActualLDR` + `updateOn` (same path as spin-ldr).
 
 ```

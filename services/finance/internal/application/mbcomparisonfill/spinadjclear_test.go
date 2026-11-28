@@ -1,6 +1,7 @@
 package mbcomparisonfill
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -48,4 +49,47 @@ func TestAdjCSVRoundTripAndTamper(t *testing.T) {
 	assert.True(t, adjConsistent(back[0]))
 	back[0].Target = 9
 	assert.False(t, adjConsistent(back[0]), "target != run_ldr must be rejected")
+}
+
+type fakeAdj struct{ batches [][]string }
+
+func (f *fakeAdj) Candidates(context.Context) ([]AdjRow, error) { return nil, nil }
+func (f *fakeAdj) ApplyBatch(_ context.Context, _ string, rows []AdjRow, _ bool) ([]AdjResult, error) {
+	var ids []string
+	var out []AdjResult
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+		out = append(out, AdjResult{AdjRow: r, Result: ResultApplied})
+	}
+	f.batches = append(f.batches, ids)
+	return out, nil
+}
+func (f *fakeAdj) Revert(_ context.Context, _ string, r AdjResult) (AdjResult, error) { return r, nil }
+
+func TestApplyAdjClear_LimitBatchTamperAndSkips(t *testing.T) {
+	mk := func(id string, d Decision, target float64) AdjRow {
+		return AdjRow{ID: id, RunLDR: f64(2), Target: target, Decision: d}
+	}
+	rows := []AdjRow{mk("a", DecisionApply, 2), mk("skip", DecisionSkipSame, 2), mk("bad", DecisionApply, 9),
+		mk("b", DecisionApply, 2), mk("rep", DecisionReport, 0), mk("c", DecisionApply, 2)}
+	f := &fakeAdj{}
+	res, err := ApplyAdjClear(context.Background(), f, "mbcmp-local", rows, 0, 2, true)
+	require.NoError(t, err)
+	assert.Equal(t, [][]string{{"a", "b"}, {"c"}}, f.batches, "batch slicing, non-APPLY rows skipped")
+	var tampered []string
+	for _, r := range res {
+		if r.Result == ResultFailed {
+			assert.Equal(t, "plan_tampered", r.Detail)
+			tampered = append(tampered, r.ID)
+		}
+	}
+	assert.Equal(t, []string{"bad"}, tampered)
+
+	f = &fakeAdj{}
+	_, err = ApplyAdjClear(context.Background(), f, "mbcmp-local", rows, 2, 100, true)
+	require.NoError(t, err)
+	assert.Equal(t, [][]string{{"a", "b"}}, f.batches, "limit counts spins (tampered rows excluded)")
+
+	_, err = ApplyAdjClear(context.Background(), f, "bob", rows, 0, 0, true)
+	assert.Error(t, err, "actor validated")
 }

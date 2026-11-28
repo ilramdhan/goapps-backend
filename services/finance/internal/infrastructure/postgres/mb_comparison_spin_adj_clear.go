@@ -31,7 +31,7 @@ const adjScopeSQL = `
 	       COALESCE(mbs_ldr_type, ''), COALESCE(mbs_ldr_is_actual, FALSE)
 	  FROM mst_mb_spin
 	 WHERE deleted_at IS NULL
-	   AND ((mbs_ldr_adjustment_pct IS NOT NULL AND mbs_ldr_adjustment_pct <> 0)
+	   AND (mbs_ldr_adjustment_pct IS NOT NULL
 	     OR COALESCE(mbs_ldr_is_actual, FALSE) = FALSE
 	     OR COALESCE(mbs_ldr_type, '') <> 'ACTUAL'
 	     OR ROUND(mbs_ldr_calculated_pct, 4) IS DISTINCT FROM ROUND(mbs_run_ldr_pct, 4))
