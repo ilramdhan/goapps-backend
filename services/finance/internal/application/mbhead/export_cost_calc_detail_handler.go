@@ -36,8 +36,8 @@ type ExportCostCalcDetailCommand struct {
 //
 // ⛔ READ-ONLY: it holds only a reader port and issues no writes.
 //
-// ⛔ DELIBERATELY SEPARATE from ExportFullHandler. That handler owns the 37-column
-// recipe+cost report, which must stay byte-for-byte unchanged. This one is a different
+// ⛔ DELIBERATELY SEPARATE from ExportFullHandler. That handler owns the
+// full recipe+cost report, which must stay byte-for-byte unchanged. This one is a different
 // report at a different grain (RM lines from the persisted COST SNAPSHOT, not
 // composition rows) with a different, snake_case column set. ⛔ Do not unify them.
 type ExportCostCalcDetailHandler struct {
@@ -49,7 +49,7 @@ func NewExportCostCalcDetailHandler(reader CostCalcDetailReader) *ExportCostCalc
 	return &ExportCostCalcDetailHandler{reader: reader}
 }
 
-// costCalcDetailHeaders lists the 29 calc-dump column headers in column order.
+// costCalcDetailHeaders lists the 36 calc-dump column headers (29 original + 5 staleness + cmb_code, vs_number) in column order.
 //
 // ⚠ These are snake_case ON PURPOSE — this workbook is a machine-readable calc dump
 // consumed by downstream tooling that keys on these exact names, not a human-facing

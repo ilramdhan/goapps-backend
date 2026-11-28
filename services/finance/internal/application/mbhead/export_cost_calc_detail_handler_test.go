@@ -135,9 +135,9 @@ func TestCostCalcDetail_ReferenceIdentities(t *testing.T) {
 	}
 }
 
-// TestCostCalcDetail_HeaderIs29OriginalPlus5StalenessColumns pins the contract with the
+// TestCostCalcDetail_HeaderIs36Columns pins the contract with the
 // downstream tooling that keys on these exact names.
-func TestCostCalcDetail_HeaderIs29OriginalPlus5StalenessColumns(t *testing.T) {
+func TestCostCalcDetail_HeaderIs36Columns(t *testing.T) {
 	want := []string{
 		"mb_code", "mb_name", "total_fix", "pct_waste", "pct_quality_loss",
 		"pct_efficiency", "dev_expense", "packing", "prod_per_day",

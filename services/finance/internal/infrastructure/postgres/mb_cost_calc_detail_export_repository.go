@@ -227,11 +227,12 @@ CROSS JOIN target_period tp
 JOIN cost_product_master p
        ON p.cpm_product_sys_id = h.mbh_cost_product_id
 LEFT JOIN LATERAL (
-    -- ponytail: oldest live spin of the head (created_at, mbs_id), any depth; upgrade to
-    -- root-spin-only if child spins ever carry divergent codes.
+    -- ponytail: oldest ACTIVE, non-deleted spin of the head (any depth); inactive spins are
+    -- ignored so idx_mst_mb_spin_mbh_id (partial, 000389) is usable. Upgrade: index on
+    -- (mbs_mbh_id, created_at, mbs_id) WHERE deleted_at IS NULL.
     SELECT NULLIF(TRIM(x.mbs_orion_item_code), '') AS orion, NULLIF(NULLIF(TRIM(x.mbs_vs_number), ''), '0') AS vs
     FROM mst_mb_spin x
-    WHERE x.mbs_mbh_id = h.mbh_id AND x.deleted_at IS NULL
+    WHERE x.mbs_mbh_id = h.mbh_id AND x.mbs_is_active = TRUE AND x.deleted_at IS NULL
     ORDER BY x.created_at ASC, x.mbs_id ASC
     LIMIT 1
 ) sp ON TRUE
