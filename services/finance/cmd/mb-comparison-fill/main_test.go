@@ -21,7 +21,12 @@ func TestParseArgs(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"a.csv", "b.csv"}, o.results)
 
+	o, err = parseArgs([]string{"spin-adj-clear", "plan"}, io.Discard)
+	require.NoError(t, err)
+	assert.True(t, o.adj)
+
 	for _, args := range [][]string{
+		{"spin-adj-clear"}, {"spin-adj-clear", "apply", "--actor", "mbcmp-x"},
 		nil, {"nope"}, {"plan"}, {"plan", "--file", "d"}, {"apply", "--actor", "mbcmp-x"},
 		{"apply", "--plan-file", "p", "--actor", "bob"}, {"apply", "--plan-file", "p", "--actor", "mbcmp-x", "--limit", "-1"},
 		{"revert", "--actor", "mbcmp-x"}, {"revert", "--results", "a"},

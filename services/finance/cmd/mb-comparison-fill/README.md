@@ -82,3 +82,24 @@ Apply and revert require `--actor mbcmp-<env>` where `<env>` is the plan's `env`
 Children: created with the PARENT's name (no "(copy)"). Revert considers every child id any result row recorded (also FAILED rows, since the child commits before the pointer batch) and deletes it only if unreferenced, childless and created by the actor.
 Result CSV columns: `env, row, product_sys_id, decision, status, reason, before_json, after_json, child_spin_id, child_created`. Marker: `cpp_updated_by` = actor.
 Caveat: a UI save of the MB_SP_CODE parameter re-resolves the pointer from the text and would undo a relink.
+
+## spin-adj-clear mode (mb-comparison p2 p2b: clear ALL spin LDR adjustments)
+
+Run it AFTER relink / child creation and after spin-ldr (`DuplicateSpin` copies the parent's adjustment).
+No input file: `plan` reads the DB. Scope = every live (`deleted_at IS NULL`) `mst_mb_spin`, active AND inactive, where
+adj is not NULL (0 included), OR `mbs_ldr_is_actual = false`, OR `mbs_ldr_type <> 'ACTUAL'`, OR calc <> run_ldr (4dp). Spins already
+locked ACTUAL are forced too. Superseded spins and spins of deleted heads are in scope on purpose (all live spins). Target: `run_ldr` = the CURRENT `mbs_run_ldr_pct` (never calc+adj: run_ldr is the effective value);
+adjustment -> NULL, calc = run_ldr, type ACTUAL, locked, via the domain `SetActualLDR` + `updateOn` (same path as spin-ldr).
+
+```
+mb-comparison-fill spin-adj-clear plan   --out-dir out/
+mb-comparison-fill spin-adj-clear apply  --plan-file out/mb-comparison-fill-spin-adj-clear-plan-*.csv --actor mbcmp-<env> [--limit N] [--batch N] [--commit]
+mb-comparison-fill spin-adj-clear revert --results out/mb-comparison-fill-spin-adj-clear-apply-result-*.csv --actor mbcmp-<env>
+```
+
+Decisions: `APPLY`, `SKIP_SAME` (already clean ACTUAL), `REPORT` (`run_ldr_null` / `run_ldr_not_positive`, never written).
+Plan CSV = before-image (run_ldr, calc, adj, type, is_actual) + target + decision. Run steps as spin-ldr: plan, dry-run (`*-spin-adj-clear-apply-dryrun-*.csv`,
+all `WOULD_APPLY`), canary `--limit 1`/`5` (counts spins), full `--commit`. One tx per `--batch` (default 100), spin `FOR UPDATE`, savepoint per row;
+the live LDR group must equal the plan snapshot, else `FAILED changed_since_plan`. Re-run is idempotent (`ALREADY_APPLIED`).
+Revert restores the LDR group only where the spin still equals the after-image (`CHANGED_SINCE_APPLY` otherwise). Result CSV carries
+`before_json` / `after_json`. Marker: `updated_by` = actor.

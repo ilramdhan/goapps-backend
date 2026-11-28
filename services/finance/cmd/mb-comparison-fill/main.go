@@ -13,6 +13,10 @@
 //	mb-comparison-fill relink apply  --plan-file PLAN.csv --actor mbcmp-<env> [--limit N] [--batch N] [--commit] [--out-dir D]
 //	mb-comparison-fill relink revert --results RESULT.csv[,R2.csv] --actor mbcmp-<env> [--out-dir D]
 //
+//	mb-comparison-fill spin-adj-clear plan   [--out-dir D]
+//	mb-comparison-fill spin-adj-clear apply  --plan-file PLAN.csv --actor mbcmp-<env> [--limit N] [--batch N] [--commit] [--out-dir D]
+//	mb-comparison-fill spin-adj-clear revert --results RESULT.csv[,R2.csv] --actor mbcmp-<env> [--out-dir D]
+//
 // apply is a DRY-RUN (everything rolled back) unless --commit is given. See README.md.
 package main
 
@@ -44,6 +48,7 @@ const (
 	modeRevert = "revert"
 	modeSpin   = "spin-ldr"
 	modeRelink = "relink"
+	modeAdj    = "spin-adj-clear"
 )
 
 type options struct {
@@ -55,6 +60,7 @@ type options struct {
 	outDir                       string
 	spin                         bool // spin-ldr mode: mode holds the sub-mode
 	relink                       bool // relink mode: mode holds the sub-mode
+	adj                          bool // spin-adj-clear mode: mode holds the sub-mode
 	eFile, dFile, conflictFile   string
 }
 
@@ -63,11 +69,11 @@ func parseArgs(args []string, usage io.Writer) (o options, err error) {
 		return o, errors.New("mode required: plan | apply | revert")
 	}
 	o.mode = args[0]
-	if o.mode == modeSpin || o.mode == modeRelink {
+	if o.mode == modeSpin || o.mode == modeRelink || o.mode == modeAdj {
 		if len(args) < 2 {
 			return o, fmt.Errorf("%s needs a sub-mode: plan | apply | revert", o.mode)
 		}
-		o.spin, o.relink = o.mode == modeSpin, o.mode == modeRelink
+		o.spin, o.relink, o.adj = o.mode == modeSpin, o.mode == modeRelink, o.mode == modeAdj
 		o.mode, args = args[1], args[1:]
 	}
 	fs := flag.NewFlagSet(cmdName+" "+o.mode, flag.ContinueOnError)
@@ -124,6 +130,9 @@ func (o options) validate() error {
 }
 
 func (o options) validatePlan() error {
+	if o.adj {
+		return nil // no input file: the plan reads the DB
+	}
 	if o.relink {
 		if o.eFile == "" && o.dFile == "" && o.conflictFile == "" {
 			return errors.New("relink plan requires --e and/or --d and/or --conflict")
@@ -166,6 +175,9 @@ func run(ctx context.Context, o options) error {
 			log.Printf("WARN: close database: %v", cErr)
 		}
 	}()
+	if o.adj {
+		return runAdj(ctx, o, postgres.NewMBComparisonSpinAdjClear(db))
+	}
 	if o.relink {
 		return runRelink(ctx, o, postgres.NewMBComparisonRelink(db))
 	}
