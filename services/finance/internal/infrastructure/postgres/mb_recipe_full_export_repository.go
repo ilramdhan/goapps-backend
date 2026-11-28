@@ -58,8 +58,9 @@ SELECT
     h.mbh_mb_costing,
     h.mbh_mgt_name,
     h.mbh_code,
+    COALESCE(NULLIF(TRIM(h.mbh_orion_item_code), ''), sp.orion, ''),
     COALESCE(h.mbh_dev_code, ''),
-    h.mbh_vs_number,
+    COALESCE(NULLIF(NULLIF(TRIM(h.mbh_vs_number), ''), '0'), sp.vs, ''),
     h.mbh_no_of_process,
     COALESCE(h.mbh_shade_code, ''),
     COALESCE(h.mbh_shade_name, ''),
@@ -93,6 +94,16 @@ SELECT
     p.cpm_product_code,
     h.mbh_cost_generated_at
 FROM mst_mb_head h
+LEFT JOIN LATERAL (
+    -- ponytail: oldest ACTIVE, non-deleted spin of the head (any depth); inactive spins are
+    -- ignored so idx_mst_mb_spin_mbh_id (partial, 000389) is usable. Upgrade: index on
+    -- (mbs_mbh_id, created_at, mbs_id) WHERE deleted_at IS NULL.
+    SELECT NULLIF(TRIM(x.mbs_orion_item_code), '') AS orion, NULLIF(NULLIF(TRIM(x.mbs_vs_number), ''), '0') AS vs
+    FROM mst_mb_spin x
+    WHERE x.mbs_mbh_id = h.mbh_id AND x.mbs_is_active = TRUE AND x.deleted_at IS NULL
+    ORDER BY x.created_at ASC, x.mbs_id ASC
+    LIMIT 1
+) sp ON TRUE
 LEFT JOIN mst_mb_head_shade s2
        ON s2.mbhs_mbh_id = h.mbh_id AND s2.mbhs_seq_no = 1 AND s2.deleted_at IS NULL
 LEFT JOIN mst_mb_head_shade s3
@@ -162,7 +173,7 @@ func (r *MBRecipeFullExportRepository) ListRecipeFullRows(
 // value (D13).
 type recipeFullDTO struct {
 	MBCosting                        string
-	MgtName, Code                    sql.NullString
+	MgtName, Code, CMBCode           sql.NullString
 	DevCode                          string
 	VSNumber, NoOfProcess            sql.NullString
 	ShadeCode, ShadeName             string
@@ -189,7 +200,7 @@ type recipeFullDTO struct {
 func scanRecipeFullRow(rows *sql.Rows) (appmbhead.RecipeFullRow, error) {
 	var d recipeFullDTO
 	err := rows.Scan(
-		&d.MBCosting, &d.MgtName, &d.Code, &d.DevCode, &d.VSNumber, &d.NoOfProcess,
+		&d.MBCosting, &d.MgtName, &d.Code, &d.CMBCode, &d.DevCode, &d.VSNumber, &d.NoOfProcess,
 		&d.ShadeCode, &d.ShadeName,
 		&d.Shade2Code, &d.Shade2Name, &d.Shade3Code, &d.Shade3Name,
 		&d.Denier, &d.Filament, &d.CrossSection, &d.LustureCode,
@@ -211,6 +222,7 @@ func (d *recipeFullDTO) toRow() appmbhead.RecipeFullRow {
 		MBCosting:         d.MBCosting,
 		MgtName:           nullStrPtr(d.MgtName),
 		Code:              nullStrPtr(d.Code),
+		CMBCode:           nullStrPtr(d.CMBCode),
 		DevCode:           d.DevCode,
 		VSNumber:          nullStrPtr(d.VSNumber),
 		NoOfProcess:       nullStrPtr(d.NoOfProcess),

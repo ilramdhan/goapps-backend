@@ -74,7 +74,7 @@ func NewExportFullHandler(reader RecipeFullReader) *ExportFullHandler {
 // lists would make those columns look importable. ⛔ Do not unify them.
 var recipeFullHeaders = []string{
 	// Recipe block
-	"No", "MB Costing", "MB Name", "Code", "Dev No", "VS Number", "No of Process",
+	"No", "MB Costing", "MB Name", "Code", "CMB Code", "Dev No", "VS Number", "No of Process",
 	"Shade Code", "Shade Name", "Shade 2 Code", "Shade 2 Name", "Shade 3 Code", "Shade 3 Name",
 	"Denier", "Filament", "Cross Section", "Lusture", "LDR %", "Dozing",
 	"Status", "Check Status (Legacy)", "Check Status (Calc)", "Final Product",
@@ -215,6 +215,7 @@ func writeRecipeFullRow(w *excelWriter, row, idx int, r *RecipeFullRow) {
 		r.MBCosting,
 		optStr(r.MgtName),
 		optStr(r.Code),
+		optStr(r.CMBCode),
 		r.DevCode,
 		optStr(r.VSNumber),
 		optStr(r.NoOfProcess),

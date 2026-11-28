@@ -36,8 +36,8 @@ type ExportCostCalcDetailCommand struct {
 //
 // ⛔ READ-ONLY: it holds only a reader port and issues no writes.
 //
-// ⛔ DELIBERATELY SEPARATE from ExportFullHandler. That handler owns the 37-column
-// recipe+cost report, which must stay byte-for-byte unchanged. This one is a different
+// ⛔ DELIBERATELY SEPARATE from ExportFullHandler. That handler owns the
+// full recipe+cost report, which must stay byte-for-byte unchanged. This one is a different
 // report at a different grain (RM lines from the persisted COST SNAPSHOT, not
 // composition rows) with a different, snake_case column set. ⛔ Do not unify them.
 type ExportCostCalcDetailHandler struct {
@@ -49,7 +49,7 @@ func NewExportCostCalcDetailHandler(reader CostCalcDetailReader) *ExportCostCalc
 	return &ExportCostCalcDetailHandler{reader: reader}
 }
 
-// costCalcDetailHeaders lists the 29 calc-dump column headers in column order.
+// costCalcDetailHeaders lists the 36 calc-dump column headers (29 original + 5 staleness + cmb_code, vs_number) in column order.
 //
 // ⚠ These are snake_case ON PURPOSE — this workbook is a machine-readable calc dump
 // consumed by downstream tooling that keys on these exact names, not a human-facing
@@ -71,6 +71,8 @@ var costCalcDetailHeaders = []string{
 	// Staleness block, appended after the original 29.
 	"calc_period", "composition_version", "snapshot_calculated_at",
 	"composition_validated_at", "snapshot_stale",
+	// CMB/VS block, appended last (downstream keys on names).
+	"cmb_code", "vs_number",
 }
 
 // Handle executes the calc-detail dump and returns the workbook bytes and file name.
@@ -240,6 +242,8 @@ var costCalcDetailColumnWidths = []struct {
 	{"X", "X", 22}, // rm_ref, holds long codes
 	{"Y", "AC", 16},
 	{"AD", "AH", 24}, // staleness block
+	{"AI", "AI", 20}, // cmb_code
+	{"AJ", "AJ", 18}, // vs_number
 }
 
 // setCostCalcDetailColumnWidths widens the calc-dump columns so the sheet is readable.
@@ -318,6 +322,8 @@ func writeCostCalcDetailRow(w *excelWriter, row int, r *CostCalcDetailRow) {
 		optTime(r.SnapshotCalculatedAt),
 		optTime(r.CompositionValidatedAt),
 		yesNo(r.SnapshotStale),
+		r.CMBCode,
+		r.VSNumber,
 	}
 	for col, v := range values {
 		cell, err := excelize.CoordinatesToCellName(col+1, row)
