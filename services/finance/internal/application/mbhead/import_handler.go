@@ -170,7 +170,7 @@ func (h *ImportHandler) processRow(ctx context.Context, row []string, rowNum int
 		return
 	}
 
-	exists, err := h.repo.ExistsByMBCosting(ctx, data.mbCosting)
+	n, err := h.repo.CountByMBCosting(ctx, data.mbCosting)
 	if err != nil {
 		result.FailedCount++
 		result.Errors = append(result.Errors, ImportError{
@@ -181,7 +181,18 @@ func (h *ImportHandler) processRow(ctx context.Context, row []string, rowNum int
 		return
 	}
 
-	if exists {
+	if n > 1 {
+		// Names are not unique: never update/skip an arbitrary head.
+		result.FailedCount++
+		result.Errors = append(result.Errors, ImportError{
+			RowNumber: rowNum,
+			Field:     "mb_costing",
+			Message:   fmt.Sprintf("MB costing name is ambiguous (%d heads); use sys id", n),
+		})
+		return
+	}
+
+	if n == 1 {
 		h.handleDuplicate(ctx, data, denier, filament, dozing, isBoughtout, rowNum, cmd, result)
 		return
 	}

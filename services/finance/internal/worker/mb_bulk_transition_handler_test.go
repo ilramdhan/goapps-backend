@@ -88,7 +88,7 @@ func (f *fakeWorkerMBHeadRepo) SoftDelete(_ context.Context, _ uuid.UUID, _ stri
 	panic("not used by MBBulkTransitionHandler tests")
 }
 
-func (f *fakeWorkerMBHeadRepo) ExistsByMBCosting(_ context.Context, _ string) (bool, error) {
+func (f *fakeWorkerMBHeadRepo) CountByMBCosting(_ context.Context, _ string) (int, error) {
 	panic("not used by MBBulkTransitionHandler tests")
 }
 

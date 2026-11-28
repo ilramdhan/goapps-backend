@@ -42,7 +42,6 @@ func TestCreateHandler_Fg(t *testing.T) {
 	}
 	setup := func(r *fakeFgReader, created bool) (*mbhead.CreateHandler, *MockRepository) {
 		repo := new(MockRepository)
-		repo.On("ExistsByMBCosting", ctx, "MB-FG").Return(false, nil)
 		if created {
 			repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 		}
@@ -102,7 +101,6 @@ func TestCreateHandler_Fg(t *testing.T) {
 
 	t.Run("no FG behaves as before without a reader", func(t *testing.T) {
 		repo := new(MockRepository)
-		repo.On("ExistsByMBCosting", ctx, "MB-FG").Return(false, nil)
 		repo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 		cmd := newCmd()
 		cmd.FgProductID = 0

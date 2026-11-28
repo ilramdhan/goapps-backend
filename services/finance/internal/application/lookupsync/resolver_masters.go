@@ -3,6 +3,8 @@ package lookupsync
 import (
 	"context"
 	"fmt"
+
+	"github.com/mutugading/goapps-backend/services/finance/internal/domain/mbhead"
 )
 
 func (r *Resolver) fillFromMachine(ctx context.Context, mcCode, triggerParamCode string) (FillResult, error) {
@@ -117,6 +119,11 @@ func (r *Resolver) fillFromProductGrade(ctx context.Context, pgCode, triggerPara
 }
 
 func (r *Resolver) fillFromMBHead(ctx context.Context, mbCosting, triggerParamCode string) (FillResult, error) {
+	if n, cErr := r.mbHeadRepo.CountByMBCosting(ctx, mbCosting); cErr != nil {
+		return FillResult{}, cErr
+	} else if n > 1 {
+		return FillResult{}, fmt.Errorf("%w: %q matches %d heads", mbhead.ErrMBCostingAmbiguous, mbCosting, n)
+	}
 	mbh, err := r.mbHeadRepo.GetByMBCosting(ctx, mbCosting)
 	if err != nil {
 		return FillResult{}, err

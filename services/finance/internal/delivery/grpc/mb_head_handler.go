@@ -410,7 +410,7 @@ func (h *MBHeadHandler) UpdateMBHead(ctx context.Context, req *financev1.UpdateM
 // domain mapping.
 func mbHeadWriteErrToBase(err error) *commonv1.BaseResponse {
 	if errors.Is(err, mbhead.ErrAlreadyExists) {
-		return ConflictResponse("MB Costing code already exists")
+		return ConflictResponse("MB Head already exists (duplicate Oracle sys id)")
 	}
 	if errors.Is(err, mbhead.ErrDuplicateOrionItemCode) {
 		return ConflictResponse("Orion Item Code already exists")

@@ -121,7 +121,6 @@ func TestUpdateHandler_Cascade_NonCPPEdit_NoRefreeze(t *testing.T) {
 			spinID := uuid.New()
 
 			repo.On("GetByID", ctx, head.ID()).Return(head, nil)
-			repo.On("ExistsByMBCosting", ctx, mock.Anything).Return(false, nil).Maybe()
 			repo.On("ExistsByVSNumber", ctx, mock.Anything, mock.Anything).Return(false, nil).Maybe()
 			repo.On("UpdateWithCascade", ctx, mock.AnythingOfType("*mbhead.Entity"), "MB001", (*mbheaddomain.ParamSnapshot)(nil)).
 				Return([]uuid.UUID{spinID}, nil)

@@ -63,9 +63,9 @@ func (m *MockRepository) SoftDelete(ctx context.Context, id uuid.UUID, deletedBy
 	return args.Error(0)
 }
 
-func (m *MockRepository) ExistsByMBCosting(ctx context.Context, mbCosting string) (bool, error) {
+func (m *MockRepository) CountByMBCosting(ctx context.Context, mbCosting string) (int, error) {
 	args := m.Called(ctx, mbCosting)
-	return args.Bool(0), args.Error(1)
+	return args.Int(0), args.Error(1)
 }
 
 func (m *MockRepository) ExistsByID(ctx context.Context, id uuid.UUID) (bool, error) {
@@ -149,7 +149,6 @@ func TestCreateHandler_Handle(t *testing.T) {
 			CreatedBy: "admin",
 		}
 
-		mockRepo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		mockRepo.On("Create", ctx, mock.AnythingOfType("*mbhead.Entity")).Return(nil)
 
 		result, err := handler.Handle(ctx, cmd)
@@ -157,25 +156,6 @@ func TestCreateHandler_Handle(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, "MB001", result.MBCosting())
-		mockRepo.AssertExpectations(t)
-	})
-
-	t.Run("error - duplicate mb_costing", func(t *testing.T) {
-		mockRepo := new(MockRepository)
-		handler := mbhead.NewCreateHandler(mockRepo, newMBMachineRepo(), nil)
-		ctx := context.Background()
-
-		cmd := mbhead.CreateCommand{
-			MBCosting: "MB001",
-			CreatedBy: "admin",
-		}
-
-		mockRepo.On("ExistsByMBCosting", ctx, "MB001").Return(true, nil)
-
-		result, err := handler.Handle(ctx, cmd)
-
-		assert.Nil(t, result)
-		assert.ErrorIs(t, err, mbheaddomain.ErrAlreadyExists)
 		mockRepo.AssertExpectations(t)
 	})
 
@@ -188,8 +168,6 @@ func TestCreateHandler_Handle(t *testing.T) {
 			MBCosting: "",
 			CreatedBy: "admin",
 		}
-
-		mockRepo.On("ExistsByMBCosting", ctx, "").Return(false, nil)
 
 		result, err := handler.Handle(ctx, cmd)
 
@@ -206,8 +184,6 @@ func TestCreateHandler_Handle(t *testing.T) {
 			MBCosting: "MB002",
 			CreatedBy: "",
 		}
-
-		mockRepo.On("ExistsByMBCosting", ctx, "MB002").Return(false, nil)
 
 		result, err := handler.Handle(ctx, cmd)
 
@@ -286,7 +262,6 @@ func TestUpdateHandler_Handle(t *testing.T) {
 		}
 
 		mockRepo.On("GetByID", ctx, id).Return(entity, nil)
-		mockRepo.On("ExistsByMBCosting", ctx, "MB001-UPD").Return(false, nil)
 		mockRepo.On("UpdateWithCascade", ctx, mock.AnythingOfType("*mbhead.Entity"), "MB001", (*mbheaddomain.ParamSnapshot)(nil)).Return(nil, nil)
 
 		result, err := handler.Handle(ctx, cmd)

@@ -23,7 +23,6 @@ func TestCreateHandler_OrionItemCodeUniqueness(t *testing.T) {
 		repo := new(MockRepository)
 		mrepo := new(MockMachineRepository)
 		mrepo.On("GetByCode", ctx, "MB").Return(mb, nil).Maybe()
-		repo.On("ExistsByMBCosting", ctx, "MB001").Return(false, nil)
 		return repo, mrepo
 	}
 
